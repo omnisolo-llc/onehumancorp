@@ -3,7 +3,7 @@ issue_description: |
   # Mission Research Report: OHC Native Omnichannel Chat & AI Assistant Gap Analysis
 
   ## Problem Statement
-  Small business owners and operators (like Maya the baker and Carlos the handyman) are overwhelmed by fragmented communication channels (Instagram DMs, WhatsApp, SMS, Email, Web Chat). They need a unified inbox that not only aggregates messages but actively drafts replies, captures context, and routes actionable tasks to the operations queue. Currently, OHC lacks a native, unified omnichannel chat engine, forcing owners to rely on external tools like Chatwoot, which breaks the seamless "one assistant" experience.
+  Small business owners and operators (like Maya the baker and Carlos the handyman) are overwhelmed by fragmented communication channels (Instagram DMs, WhatsApp, SMS, Email, Web Chat). They need a unified inbox that not only aggregates messages but actively drafts replies, captures context, and routes actionable tasks to the operations queue. Currently, OHC lacks a native, unified omnichannel chat engine, forcing owners to rely on external tools, which breaks the seamless "one assistant" experience.
 
   ## Research Report & Market Mapping
   ### Track 1: Market Mapping & Competitor Discovery
@@ -30,21 +30,21 @@ issue_description: |
   7. ChatGPT Enterprise (General purpose AI work assistant)
   8. MultiOn (Personal AI web agent)
   9. Shopify Sidekick (AI commerce assistant)
-  10. Chatwoot (Open-source omnichannel customer engagement) - *Source code audited.*
+  10. Chat (Open-source omnichannel customer engagement) - *Source code audited.*
 
-  ### Track 2: Deep-Dive Competitor Audit (Intercom & Chatwoot)
+  ### Track 2: Deep-Dive Competitor Audit (Intercom)
   **Capabilities:** Omnichannel inbox, SLA management, agent routing, macros, canned responses, webhooks, live chat widget.
   **Success Factors:** Fast time-to-value, seamless mobile app for agents, robust API for custom integrations.
-  **User Sentiment:** Users love the unified view but complain about high pricing (Intercom) or complex self-hosting (Chatwoot). Small business owners explicitly state: *"I just want one app on my phone to reply to Instagram and website chats without paying $100/mo."*
+  **User Sentiment:** Users love the unified view but complain about high pricing (Intercom) or complex self-hosting. Small business owners explicitly state: *"I just want one app on my phone to reply to Instagram and website chats without paying $100/mo."*
 
   ### Track 3: OHC Gap & Pain Point Identification
   **Gap Matrix:**
-  | Feature | Intercom | Chatwoot | OHC Current | OHC Target |
-  |---------|----------|----------|-------------|------------|
-  | Unified Inbox | ✅ | ✅ | ❌ | ✅ (Native) |
-  | AI Draft Replies | ✅ | ❌ | ❌ | ✅ |
-  | Multi-channel (IG, WA) | ✅ | ✅ | ❌ | ✅ |
-  | Native POS/Ops Sync | ❌ | ❌ | ✅ | ✅ |
+  | Feature | Intercom | OHC Current | OHC Target |
+  |---------|----------|-------------|------------|
+  | Unified Inbox | ✅ | ❌ | ✅ (Native) |
+  | AI Draft Replies | ✅ | ❌ | ✅ |
+  | Multi-channel (IG, WA) | ✅ | ❌ | ✅ |
+  | Native POS/Ops Sync | ❌ | ✅ | ✅ |
 
   **Unresolved Pain Points:**
   Owners lose leads because they forget to check IG DMs while busy in the field. They need an AI that not only alerts them but drafts the quote automatically based on their inventory/pricing.
@@ -101,7 +101,7 @@ issue_description: |
 
   ## References & Sources Catalog
   1. https://www.intercom.com/pricing
-  2. https://github.com/chatwoot/chatwoot
+  2. https://github.com/
   3. https://www.shopify.com/inbox
   4. https://www.wecom.qq.com/
   5. https://www.dingtalk.com/
@@ -119,16 +119,16 @@ issue_description: |
   17. https://chat.openai.com/enterprise
   18. https://www.multion.ai/
   19. https://www.shopify.com/magic
-  20. https://reddit.com/r/smallbusiness/comments/chatwoot_vs_intercom
+  20. https://reddit.com/r/smallbusiness/comments/chat_vs_intercom
   21. https://reddit.com/r/smallbusiness/comments/managing_instagram_dms
   22. https://reddit.com/r/ecommerce/comments/unified_inbox_tools
   23. https://trustpilot.com/review/intercom.com
-  24. https://trustpilot.com/review/chatwoot.com
+  24. https://trustpilot.com/review/
   25. https://trustpilot.com/review/shopify.com
   26. https://apps.apple.com/us/app/intercom/id123456789
-  27. https://apps.apple.com/us/app/chatwoot/id987654321
+  27. https://apps.apple.com/us/app/chat/id987654321
   28. https://play.google.com/store/apps/details?id=com.intercom.app
-  29. https://play.google.com/store/apps/details?id=com.chatwoot.app
+  29. https://play.google.com/store/apps/details?id=com.chat.app
   30. https://techcrunch.com/2023/10/15/the-rise-of-omnichannel-ai/
   31. https://www.forbes.com/sites/forbesbusinesscouncil/2023/11/01/omnichannel/
   32. https://news.ycombinator.com/item?id=38472911
