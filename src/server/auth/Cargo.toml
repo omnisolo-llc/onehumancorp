@@ -23,7 +23,7 @@ server_ohc = { path = "../ohc" }
 server_oidc = { path = "../oidc" }
 sha2 = "0.10"
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "mysql", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
-uuid = { version = "1", features = ["v4"] }
+uuid = { version = "1", features = ["v4", "v5"] }
 tokio = { workspace = true }
 tonic = { workspace = true, features = ["transport", "tls"] }
 tracing = "0.1"
