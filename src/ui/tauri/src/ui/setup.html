@@ -76,6 +76,42 @@
         min-height: 44px;
       }
       .error { color: #FF3B30; }
+      .domain-input-wrapper {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: transparent;
+        padding: 0;
+        margin-bottom: 12px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .domain-input-wrapper {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+      .domain-input {
+        border: none;
+        margin: 0;
+        flex: 1;
+        background: transparent;
+        padding: 12px;
+        border-radius: 8px 0 0 8px !important;
+        box-shadow: none;
+      }
+      .domain-input:focus {
+        outline: none;
+      }
+      .domain-suffix {
+        padding: 12px;
+        color: #555;
+        border-radius: 0 8px 8px 0;
+      }
+      @media (prefers-color-scheme: dark) {
+        .domain-suffix {
+          color: #aaa;
+        }
+      }
     </style>
   </head>
   <body>
@@ -151,7 +187,11 @@
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <div class="glass-control glassmorphism domain-input-wrapper">
+          <input type="text" id="domain-name" data-testid="domain-name" placeholder="Domain Name" class="domain-input" />
+          <span class="domain-suffix">.ohc.app</span>
+        </div>
+        <div id="domain-error" class="error domain-error" style="display: none; margin-bottom: 12px;"></div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -319,6 +359,34 @@
         });
       }
 
+
+      window.validateStep = function(stepId) {
+        if (stepId === 'step-domain') {
+          const domainVal = document.getElementById('domain-name').value.trim();
+          const errorEl = document.getElementById('domain-error');
+          if (domainVal.length < 3) {
+            errorEl.innerText = 'Domain name must be at least 3 characters.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+          if (!/^[a-z0-9-]+$/.test(domainVal)) {
+            errorEl.innerText = 'Domain name can contain only lowercase letters, numbers, and hyphens.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+          if (domainVal.startsWith('-') || domainVal.endsWith('-')) {
+            errorEl.innerText = 'Domain name cannot start or end with a hyphen.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+          errorEl.style.display = 'none';
+          return true;
+        }
+        return true;
+      };
+
+      window.goToStep = goToStep;
+
       function goToStep(stepId) {
         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
         document.getElementById(stepId).classList.add('active');
@@ -338,10 +406,24 @@
               }
               document.getElementById('name-error').style.display = 'none';
             }
+            if (!window.validateStep(currentStep)) {
+                return; // Stop transition
+            }
             goToStep(e.target.dataset.next);
           }
         });
       });
+
+
+      const domainInputEl = document.getElementById('domain-name');
+      if (domainInputEl) {
+        domainInputEl.addEventListener('input', () => {
+          const errorEl = document.getElementById('domain-error');
+          if (errorEl.style.display === 'block') {
+            window.validateStep('step-domain');
+          }
+        });
+      }
 
       const nameInputEl = document.getElementById('business-name');
       if (nameInputEl) {
