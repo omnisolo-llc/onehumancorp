@@ -1,0 +1,10 @@
+--- BUILD.bazel
++++ BUILD.bazel
+@@ -75,6 +75,7 @@
+     "//src/e2e:login_auth.spec.ts",
+     "//src/e2e:real_data_contract.spec.ts",
+     "//src/ui/next:src/e2e/app-shell-style.spec.ts",
++    "//src/e2e:native_chat_system.spec.ts",
+ ]
+
+ # Historical browser contracts that relied on response interception, injected
