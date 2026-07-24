@@ -128,7 +128,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         self.parse_with_prompt_and_strategy(
             req,
             max_retries,
-            &ExponentialBackoffWithJitter::default(),
+            &crate::retry::StripeRetryStrategy::new(Box::new(ExponentialBackoffWithJitter::default())),
         )
         .await
     }
@@ -140,7 +140,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         strategy: &dyn RetryStrategy,
     ) -> Result<T, ToolError> {
         // SOTA Harness Patterns (2025-2026): Error Handling
-        let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
+        let max_retries = strategy.max_retries(max_retries);
         let mut current_req = req.clone();
 
         // Inject the schema as a tool definition to encourage the model to use tool_calls API

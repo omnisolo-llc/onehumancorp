@@ -20,9 +20,10 @@ impl ToolExecutionEngine {
         // Enforce Anthropic 3-stage tool gating before execution
         ToolGater::check_gating(tc, tool.is_read_only, cfg)?;
         // SOTA Harness Patterns (2025-2026): Error Handling
-        let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
+
         let mut retry_count = 0;
-        let retry_strategy = ExponentialBackoffWithJitter::default();
+        let retry_strategy = crate::retry::StripeRetryStrategy::new(Box::new(ExponentialBackoffWithJitter::default()));
+        let max_retries = retry_strategy.max_retries(max_retries);
 
         loop {
             // Enhanced telemetry to explicitly log the start of the LangGraph tool execution mechanic
