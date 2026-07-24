@@ -937,6 +937,27 @@
         </div>
       </div>
 
+      <div class="ohc-growth-card app-card" id="viral-share-to-unlock-section" style="margin-bottom: 20px;">
+        <h2>Viral Share-to-Unlock</h2>
+        <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">Incentivize customers to share their purchase to unlock a secret coupon. Your AI will automatically DM the coupon when they mention your store.</p>
+        <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+          <div style="flex: 1; background: rgba(255, 255, 255, 0.65); padding: 12px; border-radius: 8px;">
+            <p style="margin: 0; font-size: 12px; color: #6b7280;">Shares</p>
+            <p style="margin: 0; font-size: 18px; font-weight: 700;">84</p>
+          </div>
+          <div style="flex: 1; background: rgba(255, 255, 255, 0.65); padding: 12px; border-radius: 8px;">
+            <p style="margin: 0; font-size: 12px; color: #6b7280;">Conversions</p>
+            <p style="margin: 0; font-size: 18px; font-weight: 700;">12</p>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid rgba(0,0,0,0.1); margin-top: 16px; padding-top: 16px;">
+          <h3 style="margin-top: 0; font-size: 16px;">AI Auto-Reply Settings <span style="font-size: 12px; background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; color: #666; margin-left: 8px;">PRO</span></h3>
+          <p style="font-size: 14px; color: #666; margin-bottom: 12px;">Customize the automated DM sent by your AI agent, including custom coupon codes and branded messaging.</p>
+          <button id="upgrade-share-to-unlock-btn" class="btn-primary" style="width: 100%;">Upgrade to Pro</button>
+        </div>
+      </div>
+
       <div class="ohc-growth-card app-card" id="subscription-replenishment-section" style="margin-bottom: 20px;">
         <h2>Subscription Replenishment</h2>
         <p>You have <strong>12</strong> one-time buyers of consumable products. Convert them to recurring revenue.</p>
@@ -1468,6 +1489,12 @@
               window.location.href = 'pricing.html';
             }
           });
+
+        document.getElementById('upgrade-share-to-unlock-btn')?.addEventListener('click', () => {
+          if (confirm('Upgrade to Pro to access AI Auto-Reply Settings?')) {
+            window.location.href = '/pricing.html';
+          }
+        });
         }
 
         if (enableAutomationsBtn) {

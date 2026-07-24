@@ -80,3 +80,40 @@ test.describe('Viral Share to Unlock Loop', () => {
     await publicPage.close();
   });
 });
+test.describe('Viral Share-to-Unlock Dashboard Widget', () => {
+  test('Dashboard displays the new Viral Share-to-Unlock widget with paywall', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+
+    // 1. Navigate to dashboard
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+
+    // 2. Verify widget presence and basic metrics
+    const dashboard = page.locator('#dashboard-screen');
+    await expect(dashboard).toBeVisible();
+
+    await expect(dashboard.getByRole('heading', { name: 'Viral Share-to-Unlock' })).toBeVisible();
+    await expect(dashboard.getByText('Shares')).toBeVisible();
+    await expect(dashboard.getByText('Conversions')).toBeVisible();
+
+    // 3. Verify locked AI Auto-Reply Settings with upgrade CTA
+    await expect(dashboard.getByText('AI Auto-Reply Settings')).toBeVisible();
+    await expect(dashboard.getByText('Customize the automated DM sent by your AI agent')).toBeVisible();
+
+    // The button is within the new section
+    const sectionUpgradeBtn = dashboard.locator('#viral-share-to-unlock-section').getByRole('button', { name: 'Upgrade to Pro' });
+    await expect(sectionUpgradeBtn).toBeVisible();
+
+    // Set up dialog handler
+    page.on('dialog', async dialog => {
+      expect(dialog.message()).toContain('Upgrade to Pro to access AI Auto-Reply Settings?');
+      await dialog.accept();
+    });
+
+    await sectionUpgradeBtn.click();
+
+    // Verify it navigates to pricing-screen
+    const pricingScreen = page.locator('#pricing-screen');
+    await expect(pricingScreen).toBeVisible();
+  });
+});
