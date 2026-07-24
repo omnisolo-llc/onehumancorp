@@ -7810,6 +7810,7 @@ async fn create_ui_bom_item_handler(
             omnichannel_webhook_router,
             http_auth_store.clone(),
         ))
+        .nest("/api/v1/native-chat", api::native_chat::router(db.pool.clone()))
         .nest(
             "/api/v1/inbox",
             protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),
