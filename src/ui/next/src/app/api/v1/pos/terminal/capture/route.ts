@@ -38,10 +38,6 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-
-    // We would notify the event bus / operations agent here.
-    // For now we assume optimistic UI + webhook fallback handling.
-
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error capturing Stripe payment intent:', error);

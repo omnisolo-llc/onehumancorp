@@ -78,7 +78,7 @@ export default function POSPage() {
          setMessage("Saved Offline. Will sync when connection is restored.");
       } else {
          // Process via online API
-         const response = await fetch("/api/terminal/charge", {
+         const response = await fetch("/api/v1/terminal/charge", {
              method: "POST",
              headers: { "Content-Type": "application/json" },
              body: JSON.stringify(payload),
@@ -125,7 +125,7 @@ export default function POSPage() {
       try {
           // In a real app, send batch or individual requests
           for (const tx of queue) {
-              await fetch("/api/terminal/charge", {
+              await fetch("/api/v1/terminal/charge", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify(tx)
