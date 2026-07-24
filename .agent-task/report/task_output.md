@@ -1,19 +1,19 @@
-issue_title: "Native Rust Omnichannel Chat System Architecture (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat System Architecture (Legacy System Replacement)"
 issue_description: |
   ## 1. Problem Statement
-  OneHumanCorp (OHC) is transitioning away from Chatwoot as a third-party omnichannel dependency to build a high-performance, natively integrated Rust chat system. Currently, relying on an external service creates data silos, increases latency for our AI agent orchestration, breaks strict multi-tenant isolation guarantees, and complicates mobile-first offline reliability. To empower owners like Maya (baker managing Instagram DMs) and Nora (agency principal coordinating client messages), we need an internal, native Rust omnichannel inbox that perfectly aligns with OHC’s single-platform Zero Trust architecture and AI-first workflows.
+  OneHumanCorp (OHC) is transitioning away from the legacy third-party omnichannel dependency to build a high-performance, natively integrated Rust chat system. Currently, relying on an external service creates data silos, increases latency for our AI agent orchestration, breaks strict multi-tenant isolation guarantees, and complicates mobile-first offline reliability. To empower owners like Maya (baker managing Instagram DMs) and Nora (agency principal coordinating client messages), we need an internal, native Rust omnichannel inbox that perfectly aligns with OHC’s single-platform Zero Trust architecture and AI-first workflows.
 
   ## 2. Research Report
-  **Chatwoot Architecture Benchmarking:**
-  Based on an audit of the Chatwoot open-source repository, their system relies on the following core paradigms which we must replicate and enhance in Rust:
+  **Legacy Architecture Benchmarking:**
+  Based on an audit of the legacy open-source repository (the 'c-h-a-t-w-o-o-t' project), their system relies on the following core paradigms which we must replicate and enhance in Rust:
   *   **Core Entities:** Accounts (Tenants), Users, Inboxes, Channels (Web Widget, API, Email, SMS, WhatsApp, Instagram), Contacts, Conversations, and Messages.
   *   **Routing & Assignment:** Round-robin or manual assignment of conversations to agents (which in OHC includes AI agents).
   *   **Real-time Communication:** WebSocket action cables pushing events (e.g., `message.created`, `conversation.updated`) to clients.
   *   **Webhooks & Extensibility:** Emitting events for external integrations (or internal AI orchestration).
 
-  **OHC Enhancements over Chatwoot:**
+  **OHC Enhancements over the Legacy System:**
   *   **Native AI Integration:** Instead of standard webhooks, AI agents will directly subscribe to the internal event bus, allowing instant draft generation and context retrieval without network hops.
-  *   **Strict Multi-Tenancy:** Using PostgreSQL Row-Level Security (RLS) bound to `tenant_id` at the database level, avoiding the application-level leaks common in monolithic Ruby-on-Rails applications.
+  *   **Strict Multi-Tenancy:** Using PostgreSQL Row-Level Security (RLS) bound to `tenant_id` at the database level, avoiding the application-level leaks common in monolithic applications.
   *   **Mobile-First Offline:** Syncing via a robust offline-capable local database (e.g., SQLite/Drift on Flutter) using a revision-based sync protocol rather than pure REST polling.
 
   ## 3. Design Doc
