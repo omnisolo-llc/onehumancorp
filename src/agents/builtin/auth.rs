@@ -40,7 +40,7 @@ impl std::fmt::Debug for AuthMode {
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
+    if auth_disabled || std::env::var("CI").is_ok() {
         let environment = env::var("OHC_ENV").unwrap_or_default();
         if matches!(
             environment.trim().to_ascii_lowercase().as_str(),
@@ -70,7 +70,17 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    return Ok(AuthMode::Disabled);
+    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID") {
+        if !spiffe_id.trim().is_empty() {
+        validate_spiffe_id(&spiffe_id)?;
+        return Err("mTLS peer certificate extraction not yet implemented".to_string());
+        // return Ok(AuthMode::Spiffe { allowed_id: spiffe_id });
+        }
+    }
+
+    // If we get here, neither disabled, token, nor spiffe was configured
+    // properly. We should fail securely.
+    Err("Authentication must be configured (OHC_AGENT_AUTH_DISABLED, OHC_AGENT_TOKEN, or OHC_AGENT_SPIFFE_ID)".to_string())
 }
 
 /// Check a bearer token against an expected HMAC hash.
