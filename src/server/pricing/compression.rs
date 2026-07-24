@@ -50,8 +50,7 @@ static STOP_WORDS: &[&str] = &[
     "she's", "should", "shouldn't", "so", "some", "such", "than", "that", "that's", "the",
     "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd",
     "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until",
-    "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were",
-    "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who",
+    "up", "very", "was", "wasn't", "we", "we'd", "we_ve", "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who",
     "who's", "whom", "why", "why's", "will", "with", "won't", "would", "wouldn't", "you",
     "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves",
 ];
@@ -158,12 +157,19 @@ pub fn minify_json_prompt(data: &str) -> String {
 
 /// Optimizes an image by resizing it to a maximum dimension and converting it to WebP.
 pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), String> {
+    optimize_image_tiered(data, max_dim, &crate::rate_limit::PlanTier::Free)
+}
+
+/// Optimizes an image by resizing it to a maximum dimension and converting it using tier-aware settings.
+pub fn optimize_image_tiered(data: &[u8], max_dim: u32, tier: &crate::rate_limit::PlanTier) -> Result<(Vec<u8>, String), String> {
     let img = image::load_from_memory(data).map_err(|e| e.to_string())?;
 
-    // Only resize if it exceeds max_dim
+    // Scale dimension dynamically based on tier to save extra bandwidth and storage
+    let tier_max_dim = tier.max_image_dimension(max_dim);
+
     let (width, height) = image::GenericImageView::dimensions(&img);
-    let resized = if width > max_dim || height > max_dim {
-        img.thumbnail(max_dim, max_dim)
+    let resized = if width > tier_max_dim || height > tier_max_dim {
+        img.thumbnail(tier_max_dim, tier_max_dim)
     } else {
         img
     };
@@ -171,8 +177,6 @@ pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), St
     let mut webp_data = Vec::new();
     let mut cursor = Cursor::new(&mut webp_data);
 
-    // We use a default quality for WebP encoding
-    // This reduces storage compression and CDN transit costs significantly.
     let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
     resized.write_with_encoder(encoder).map_err(|e| e.to_string())?;
 
@@ -284,7 +288,7 @@ mod tests {
         assert_eq!(mime, "image/webp");
         assert!(!optimized.is_empty());
 
-        // Verify it's actually WebP and resized
+        // Verify it's actually JPEG/WebP and resized
         let opt_img = image::load_from_memory(&optimized).expect("failed to unwrap");
         let (w, h) = image::GenericImageView::dimensions(&opt_img);
         assert!(w <= 5);
@@ -296,6 +300,45 @@ mod tests {
         let invalid_data = vec![0, 1, 2, 3];
         let result = optimize_image(&invalid_data, 5);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_optimize_image_tiered_sizes() {
+        use image::{ImageBuffer, Rgb};
+
+        // Create a large 1024x1024 image with complex gradient colors to ensure WebP compression outputs distinct sizes
+        let mut img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(1024, 1024);
+        for (x, y, pixel) in img.enumerate_pixels_mut() {
+            let r = (x ^ y) as u8;
+            let g = (x.wrapping_add(y)) as u8;
+            let b = (x.wrapping_mul(y) / 1024) as u8;
+            *pixel = Rgb([r, g, b]);
+        }
+
+        let mut png_data = Vec::new();
+        let mut cursor = Cursor::new(&mut png_data);
+        img.write_to(&mut cursor, image::ImageFormat::Png).expect("failed to write original PNG");
+
+        // Optimize for Free tier (max dim 512)
+        let (free_data, mime_free) = optimize_image_tiered(&png_data, 1024, &crate::rate_limit::PlanTier::Free)
+            .expect("failed to optimize for Free tier");
+        assert_eq!(mime_free, "image/webp");
+
+        // Optimize for Pro tier (max dim 2048, but restricted by the original 1024px)
+        let (pro_data, mime_pro) = optimize_image_tiered(&png_data, 1024, &crate::rate_limit::PlanTier::Pro)
+            .expect("failed to optimize for Pro tier");
+        assert_eq!(mime_pro, "image/webp");
+
+        assert!(!free_data.is_empty(), "Free tier output should not be empty");
+        assert!(!pro_data.is_empty(), "Pro tier output should not be empty");
+
+        // Free tier (smaller dimension WebP) should result in a smaller file size than Pro tier (larger dimension WebP)
+        assert!(
+            free_data.len() < pro_data.len(),
+            "Free tier size ({}) must be smaller than Pro tier size ({})",
+            free_data.len(),
+            pro_data.len()
+        );
     }
 
     #[test]

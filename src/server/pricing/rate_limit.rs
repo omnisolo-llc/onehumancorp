@@ -117,6 +117,24 @@ impl PlanTier {
             PlanTier::Business => std::time::Duration::from_secs(30 * 24 * 60 * 60), // 30 days
         }
     }
+
+    pub fn max_image_dimension(&self, requested: u32) -> u32 {
+        match self {
+            PlanTier::Free => std::cmp::min(requested, 512),
+            PlanTier::Starter => std::cmp::min(requested, 1024),
+            PlanTier::Pro => std::cmp::min(requested, 2048),
+            PlanTier::Business => requested,
+        }
+    }
+
+    pub fn image_compression_quality(&self) -> u32 {
+        match self {
+            PlanTier::Free => 70,
+            PlanTier::Starter => 80,
+            PlanTier::Pro => 85,
+            PlanTier::Business => 100,
+        }
+    }
 }
 #[derive(Debug, Clone)]
 pub struct RateLimitStatus {
