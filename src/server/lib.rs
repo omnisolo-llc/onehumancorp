@@ -7563,6 +7563,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/v1/proposals", api::proposals::router().with_state(db.pool.clone()))
+        .nest("/api/v1/chat", crate::services::chat::service::MyChatService::router::<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>>())
         .nest(
             "/api/v1/booking/request",
             api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()).route_layer(

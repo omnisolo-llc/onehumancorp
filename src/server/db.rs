@@ -1096,6 +1096,51 @@ impl DB {
             }
             (DbStore::Sqlite(sqlite_pool), None) => {
                 let schema = r#"
+                    CREATE TABLE IF NOT EXISTS inboxes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        channel_type TEXT NOT NULL,
+                        settings TEXT,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        inbox_id TEXT NOT NULL REFERENCES inboxes(id) ON DELETE CASCADE,
+                        customer_id TEXT,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        assignee_id TEXT,
+                        priority TEXT DEFAULT 'normal',
+                        labels TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS conversation_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+                        sender_type TEXT NOT NULL,
+                        sender_id TEXT,
+                        content TEXT,
+                        content_type TEXT DEFAULT 'text',
+                        metadata TEXT,
+                        is_private BOOLEAN DEFAULT FALSE,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS canned_responses (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        short_code TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,
