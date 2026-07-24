@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS entitlements (
 );
 
 ALTER TABLE IF EXISTS entitlements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS entitlements FORCE ROW LEVEL SECURITY;
 
--- +goose Down
-DROP TABLE IF EXISTS entitlements;
+CREATE POLICY tenant_isolation_policy ON entitlements
+    USING (tenant_id = current_setting('app.current_tenant', true))
+    WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
