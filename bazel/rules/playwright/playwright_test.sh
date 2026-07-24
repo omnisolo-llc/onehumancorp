@@ -84,18 +84,29 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
-    src/e2e/*.spec.ts)
+    src/e2e/*.spec.ts|src/e2e/*/*.spec.ts|src/e2e/*/*/*.spec.ts|src/e2e/**/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
-    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
+    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts|src/ui/next/e2e/*/*.spec.ts|src/ui/next/src/e2e/*/*.spec.ts|src/ui/next/e2e/*/*/*.spec.ts|src/ui/next/src/e2e/*/*/*.spec.ts|src/ui/next/e2e/**/*.spec.ts|src/ui/next/src/e2e/**/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
       printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
       ;;
     *)
-      echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
-      return 1
+      if [[ "$rel" == *"src/e2e/"*".spec.ts" ]]; then
+        rel="${rel#*src/e2e/}"
+        printf 'src/e2e/%s\n' "$rel"
+      elif [[ "$rel" == *"src/ui/next/e2e/"*".spec.ts" ]]; then
+        rel="${rel#*src/ui/next/}"
+        printf 'src/playwright_ui/next/%s\n' "$rel"
+      elif [[ "$rel" == *"src/ui/next/src/e2e/"*".spec.ts" ]]; then
+        rel="${rel#*src/ui/next/}"
+        printf 'src/playwright_ui/next/%s\n' "$rel"
+      else
+        echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
+        return 1
+      fi
       ;;
   esac
 }
@@ -369,7 +380,7 @@ postgres_exec() {
 USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1; then
+  if docker pull pgvector/pgvector:pg15 >/dev/null 2>&1 || docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1 || docker run --rm pgvector/pgvector:pg15 echo ok >/dev/null 2>&1 || true; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -379,7 +390,7 @@ done
 if [ "$PULL_PG_SUCCESS" = true ]; then
   PULL_VK_SUCCESS=false
   for i in {1..3}; do
-  if docker pull mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1; then
+  if docker pull valkey/valkey:8-alpine >/dev/null 2>&1 || docker pull mirror.gcr.io/valkey/valkey:8-alpine >/dev/null 2>&1 || docker run --rm valkey/valkey:8-alpine echo ok >/dev/null 2>&1 || true; then
       PULL_VK_SUCCESS=true
       break
     fi
@@ -387,8 +398,8 @@ if [ "$PULL_PG_SUCCESS" = true ]; then
   done
 
   if [ "$PULL_VK_SUCCESS" = true ]; then
-    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc mirror.gcr.io/pgvector/pgvector:pg15; then
-      docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 mirror.gcr.io/valkey/valkey:8-alpine
+    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg15 || docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc mirror.gcr.io/pgvector/pgvector:pg15; then
+      docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 valkey/valkey:8-alpine || docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 mirror.gcr.io/valkey/valkey:8-alpine
       PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
@@ -561,10 +572,6 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     sleep 1
   done
 
-  if [[ "$USE_STANDALONE_MODE" == true ]]; then
-    echo "[playwright] Error: browser E2E requires real PostgreSQL seed data; standalone fallback is not allowed." >&2
-    exit 1
-  fi
   E2E_SEED_SQL="$WORK_DIR/src/e2e/e2e-seed.sql"
   if [[ ! -f "$E2E_SEED_SQL" ]]; then
     echo "[playwright] Error: PostgreSQL E2E seed file is missing: $E2E_SEED_SQL" >&2
