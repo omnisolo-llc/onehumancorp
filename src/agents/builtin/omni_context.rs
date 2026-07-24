@@ -6,6 +6,10 @@ use std::path::PathBuf;
 /// Automatically reads project-level grounding (AGENTS.md / CLAUDE.md)
 /// and injects it into task context.
 
+<<<<<<< HEAD
+pub struct OmniContextRouter {
+    context_root: PathBuf,
+=======
 use std::sync::RwLock;
 use std::time::{Instant, Duration};
 
@@ -18,20 +22,41 @@ pub struct OmniContextRouter {
     context_root: PathBuf,
     cached_grounding: RwLock<Option<CacheEntry>>,
     ttl: Duration,
+>>>>>>> fe5b90eb (fix(auth): add v5 feature to uuid crate dependency in Cargo.toml files)
 }
 
 impl OmniContextRouter {
     pub fn new(context_root: impl Into<PathBuf>) -> Self {
         Self {
             context_root: context_root.into(),
+<<<<<<< HEAD
+=======
             cached_grounding: RwLock::new(None),
             ttl: Duration::from_secs(5), // 5 seconds TTL
+>>>>>>> fe5b90eb (fix(auth): add v5 feature to uuid crate dependency in Cargo.toml files)
         }
     }
 
     /// Reads AGENTS.md or CLAUDE.md (prioritizing AGENTS.md)
     /// Returns the content with the [SYSTEM GROUNDING] prefix.
     pub fn get_system_grounding(&self) -> Option<String> {
+<<<<<<< HEAD
+        let agents_path = self.context_root.join("AGENTS.md");
+        if agents_path.exists()
+            && let Ok(content) = fs::read_to_string(&agents_path)
+        {
+            return Some(format!("[SYSTEM GROUNDING]\n{}", content));
+        }
+
+        let claude_path = self.context_root.join("CLAUDE.md");
+        if claude_path.exists()
+            && let Ok(content) = fs::read_to_string(&claude_path)
+        {
+            return Some(format!("[SYSTEM GROUNDING]\n{}", content));
+        }
+
+        None
+=======
         // Check cache first (read lock)
         if let Ok(cache) = self.cached_grounding.read() {
             if let Some(entry) = &*cache {
@@ -66,6 +91,7 @@ impl OmniContextRouter {
         }
 
         grounding_content
+>>>>>>> fe5b90eb (fix(auth): add v5 feature to uuid crate dependency in Cargo.toml files)
     }
 }
 
