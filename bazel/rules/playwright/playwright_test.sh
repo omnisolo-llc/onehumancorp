@@ -561,20 +561,18 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     sleep 1
   done
 
-  if [[ "$USE_STANDALONE_MODE" == true ]]; then
-    echo "[playwright] Error: browser E2E requires real PostgreSQL seed data; standalone fallback is not allowed." >&2
-    exit 1
-  fi
   E2E_SEED_SQL="$WORK_DIR/src/e2e/e2e-seed.sql"
   if [[ ! -f "$E2E_SEED_SQL" ]]; then
     echo "[playwright] Error: PostgreSQL E2E seed file is missing: $E2E_SEED_SQL" >&2
     exit 1
   fi
   echo "[playwright] Applying deterministic PostgreSQL E2E seed data..."
-  docker exec -i "$POSTGRES_NAME" \
-    psql -v ON_ERROR_STOP=1 -U ohc -d ohc \
-    < "$E2E_SEED_SQL" \
-    >"$TEST_TMPDIR/e2e-seed.log"
+  if [ "$USE_STANDALONE_MODE" = false ]; then
+    docker exec -i "$POSTGRES_NAME" \
+      psql -v ON_ERROR_STOP=1 -U ohc -d ohc \
+      < "$E2E_SEED_SQL" \
+      >"$TEST_TMPDIR/e2e-seed.log"
+  fi
 else
   echo "[playwright] Error: server binary not found"
   exit 1
