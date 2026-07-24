@@ -207,13 +207,13 @@ export default function TriagePage() {
             <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full"></div>
           </div>
         ) : !error && items.length === 0 ? (
-          <div className="app-empty flex flex-col items-center justify-center py-12" data-testid="triage-feed-empty">
-            <div className="text-4xl mb-4">✨</div>
-            <div className="text-lg font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
-              All caught up! You're a hero.
+          <div className="app-empty flex flex-col items-center justify-center py-16 px-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[24px] border border-white/40 dark:border-white/10" data-testid="triage-feed-empty">
+            <div className="text-5xl mb-6">✨</div>
+            <div className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+              Inbox Zero Achieved
             </div>
-            <div className="text-sm text-gray-500 mt-2 text-center">
-              Your AI assistant has handled all outstanding items. Great job!
+            <div className="text-[15px] text-gray-500 dark:text-gray-400 text-center max-w-[280px]">
+              Your AI assistant has handled all outstanding items. Take a breath, you're all caught up!
             </div>
           </div>
         ) : (

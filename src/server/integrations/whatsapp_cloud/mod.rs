@@ -1,3 +1,5 @@
+#[cfg(test)]
+pub mod client_test;
 pub mod client;
 pub mod provider;
 

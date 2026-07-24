@@ -359,7 +359,7 @@ pub async fn create_checkout_session_handler(
 
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
         let product_id_opt = req.product_id.clone();
-        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval, product_id_opt).await {
+        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval, product_id_opt, None).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails

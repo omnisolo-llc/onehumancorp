@@ -7,6 +7,7 @@ exports_files(
         "client.rs",
         "mod.rs",
         "provider.rs",
+        "whatsapp.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -18,6 +19,7 @@ rust_library(
         "client.rs",
         "mod.rs",
         "provider.rs",
+        "whatsapp.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -26,7 +28,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server:server_lib",
+
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",

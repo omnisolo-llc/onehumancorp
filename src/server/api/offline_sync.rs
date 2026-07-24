@@ -84,7 +84,7 @@ pub async fn offline_sync_handler(
 
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
-                let mut db_tx = db_clone.begin().await.unwrap();
+                let mut db_tx = match db_clone.begin().await { Ok(tx) => tx, Err(e) => return Err(e.to_string()) };
 
                 if let Some(ref mutation_id) = mutation.client_mutation_id {
                     let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
@@ -119,7 +119,7 @@ pub async fn offline_sync_handler(
                 }).to_string())
                 .execute(&mut *db_tx)
                 .await;
-                db_tx.commit().await.unwrap();
+                if let Err(e) = db_tx.commit().await { return Err(e.to_string()); }
                 Ok(None)
             }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>);
             continue;
@@ -198,7 +198,7 @@ pub async fn offline_sync_handler(
             };
 
 
-            let mut db_tx = db_clone.begin().await.unwrap();
+            let mut db_tx = match db_clone.begin().await { Ok(tx) => tx, Err(e) => return Err(e.to_string()) };
 
             if let Some(ref mutation_id) = mutation.client_mutation_id {
                 let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
@@ -306,7 +306,7 @@ pub async fn offline_sync_handler(
                              WHERE tenant_id = $2
                              AND device_id = (SELECT client_id FROM pos_offline_transactions WHERE id = $3)"
                         )
-                        .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap()]))
+                        .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap_or(serde_json::json!({}))]))
                         .bind(&tenant_id_clone)
                         .bind(&mutation.transaction_id)
                         .execute(&mut *db_tx)
@@ -358,7 +358,7 @@ pub async fn offline_sync_handler(
                         }
                     });
 
-                    db_tx.commit().await.unwrap();
+                    if let Err(e) = db_tx.commit().await { return Err(e.to_string()); }
 
                     // Publish mesh event
                     let event = ::server_ohc::orchestration::TeammateMeshEvent {
@@ -929,6 +929,31 @@ mod tests {
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-offline-1', 'tenant-offline', 'Test Prod', 5) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS pos_terminal_sessions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                device_id TEXT NOT NULL,
+                sync_status TEXT NOT NULL DEFAULT 'SYNCED',
+                pending_reconciliation JSONB DEFAULT '[]'::jsonb
+            )"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS pos_offline_transactions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                amount_cents INT,
+                currency TEXT,
+                payload JSONB,
+                created_at TIMESTAMPTZ,
+                updated_at TIMESTAMPTZ,
+                _sync_status TEXT
+            )"
+        ).execute(&pool).await.unwrap();
 
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool.clone(), mesh.clone()));
