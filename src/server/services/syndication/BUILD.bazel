@@ -6,6 +6,8 @@ exports_files(
         "mesh.rs",
         "adapter.rs",
         "mesh_test.rs",
+        "engine.rs",
+        "engine_test.rs",
     ],
     visibility = ["//visibility:public"],
 )

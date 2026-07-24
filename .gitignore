@@ -139,3 +139,7 @@ dummy_*
 /*.patch
 *.pid
 *.tsbuildinfo
+node_modules/
+__pycache__/
+target/
+bazel-*/

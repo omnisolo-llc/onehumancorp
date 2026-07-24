@@ -91,7 +91,17 @@ playwright_spec_workspace_name() {
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
-      printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
+      if [[ "$rel" == *"src/ui/next/src/e2e"* ]]; then
+        printf 'src/playwright_ui/next/src/e2e/%s\n' "${rel##*ui/next/src/e2e/}"
+      elif [[ "$rel" == *"src/ui/next/e2e"* ]]; then
+        printf 'src/playwright_ui/next/e2e/%s\n' "${rel##*ui/next/e2e/}"
+      elif [[ "$rel" == *"src/ui/next/src/"* ]]; then
+        printf 'src/playwright_ui/next/src/%s\n' "${rel##*ui/next/src/}"
+      elif [[ "$rel" == *"src/ui/next"* ]]; then
+        printf 'src/playwright_ui/next/%s\n' "${rel##*ui/next/}"
+      else
+        printf 'src/playwright_ui/next/%s\n' "${rel##*/}"
+      fi
       ;;
     *)
       echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
@@ -654,8 +664,8 @@ if [[ ! -d "$NEXT_APP_ROOT/node_modules" ]]; then
   fi
 fi
 
-NEXT_WORK_DIR="$WORK_DIR/src/ui/next"
-mkdir -p "$WORK_DIR/src/ui"
+NEXT_WORK_DIR="$WORK_DIR/src/playwright_ui/next"
+mkdir -p "$WORK_DIR/src/playwright_ui"
 mkdir -p "$NEXT_WORK_DIR"
 tar -C "$NEXT_APP_ROOT" \
   --exclude='./node_modules' \
