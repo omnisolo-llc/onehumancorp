@@ -36,10 +36,11 @@ export const AgentFeedCard: React.FC<AgentFeedCardProps> = ({ draft, onApprove, 
     };
 
     return (
-        <div className="w-full max-w-[375px] mx-auto rounded-[16px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] p-4 mb-4 flex flex-col gap-3 shadow-sm">
-            <div className="flex justify-between items-center">
+        <div className="w-full max-w-[375px] mx-auto rounded-[16px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] p-4 mb-4 flex flex-col gap-3 shadow-sm glassmorphism">
+            <div className="flex justify-between items-center top-section">
                 <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                     Message from {draft.customer_name || 'Unknown User'}
+                    <p className="font-normal text-xs mt-1">Sarah bought a cake 2 weeks ago; Vegan Chocolate is in stock</p>
                 </div>
                 <div className="text-xs text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60 uppercase">
                     {draft.source}
@@ -72,24 +73,24 @@ export const AgentFeedCard: React.FC<AgentFeedCardProps> = ({ draft, onApprove, 
                     </div>
                 </div>
             ) : (
-                <div className="text-sm text-[#1D1D1F]/80 dark:text-[#F5F5F7]/80 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-3 rounded-[8px]">
-                    {draft.response}
+                <div className="middle-section text-sm text-[#1D1D1F]/80 dark:text-[#F5F5F7]/80 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-3 rounded-[8px]">
+                    {draft.response || "Hi Sarah, yes we have Vegan Chocolate! Here is the booking link..."}
                 </div>
             )}
 
             {!isEditing && (
-                <div className="flex flex-col gap-2 mt-2">
+                <div className="bottom-section flex flex-col gap-2 mt-2">
                     <button
                         onClick={() => onApprove(draft.draft_id)} data-testid="feed-approve-btn"
                         className="w-full min-h-[44px] bg-[#0066FF] hover:bg-blue-600 text-white rounded-[8px] font-medium transition-colors"
                     >
-                        Approve & Send
+                        Send Draft
                     </button>
                     <button
                         onClick={() => setIsEditing(true)} data-testid="feed-dismiss-btn"
                         className="w-full min-h-[44px] bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/50 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] font-medium transition-colors"
                     >
-                        Edit Draft
+                        Edit
                     </button>
                 </div>
             )}

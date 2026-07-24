@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { parseAuthRuntimeConfig } from "@/lib/auth/runtimeConfig";
-import { parseSessionKeyRing } from "@/lib/auth/sessionKeys";
-import { cookieDeletion, serializeSessionCookie } from "@/lib/auth/sessionCookie";
+import { parseAuthRuntimeConfig } from "./lib/auth/runtimeConfig";
+import { parseSessionKeyRing } from "./lib/auth/sessionKeys";
+import { cookieDeletion, serializeSessionCookie } from "./lib/auth/sessionCookie";
 import {
   evaluateAuthMiddleware,
   isPublicFrameworkAsset,
   type MiddlewareDependencies,
-} from "@/lib/auth/middlewareCore";
+} from "./lib/auth/middlewareCore";
 
 let liveDependencies: Promise<MiddlewareDependencies> | undefined;
 
