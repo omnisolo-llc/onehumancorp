@@ -431,7 +431,19 @@ mod tests {
             message: "Hello".into(),
         };
 
-        let res = handle_omnichannel_webhook(State(app_state), Json(payload)).await.into_response();
+        let claims = ::server_common::Claims {
+            sub: "test".into(),
+            exp: 0,
+            iat: 0,
+            organization_id: Some("t-1".into()),
+            username: "test".into(),
+            email: "test@example.com".into(),
+            roles: vec![],
+            session_id: None,
+            jti: "test".into(),
+        };
+
+        let res = handle_omnichannel_webhook(State(app_state), Extension(claims), Json(payload)).await.into_response();
 
         assert_eq!(res.status(), StatusCode::OK);
     }

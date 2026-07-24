@@ -15,6 +15,3 @@ CREATE TABLE IF NOT EXISTS entitlements (
 );
 
 ALTER TABLE IF EXISTS entitlements ENABLE ROW LEVEL SECURITY;
-
--- +goose Down
-DROP TABLE IF EXISTS entitlements;
