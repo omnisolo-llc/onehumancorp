@@ -5,13 +5,8 @@ import { SyncManager } from '../../../lib/sync/SyncManager';
 import StripeTerminalClient from '../terminal/StripeTerminalClient';
 import { useSearchParams } from 'next/navigation';
 
-const DEFAULT_CATALOG = [
-  { id: 'prod_1', name: 'Premium Coffee', price: 4.50 },
-  { id: 'prod_2', name: 'Pastry', price: 3.00 }
-];
-
 export default function POSTerminalMobile() {
-  const [catalog, setCatalog] = useState<{id: string, name: string, price: number, image?: string}[]>(DEFAULT_CATALOG);
+  const [catalog, setCatalog] = useState<{id: string, name: string, price: number, image?: string}[]>([]);
   const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
   const [isOffline, setIsOffline] = useState(false);
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);

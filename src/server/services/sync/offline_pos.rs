@@ -14,7 +14,6 @@ pub struct OfflineMutation {
     pub currency: Option<String>,
     pub mutation_type: Option<String>,
     pub payload: Option<String>,
-    pub client_mutation_id: Option<String>,
 }
 
 pub struct CRDTOfflineSynchronizer;

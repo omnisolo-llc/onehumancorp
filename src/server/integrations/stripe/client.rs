@@ -125,7 +125,7 @@ impl StripeClient {
         Ok(url)
     }
 
-    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>, product_id: Option<String>, target_currency: Option<String>) -> Result<String, String> {
+    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>, product_id: Option<String>) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);
         tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
@@ -177,8 +177,7 @@ impl StripeClient {
         } else {
             form.insert("mode".to_string(), "payment".to_string());
         }
-        let currency = target_currency.unwrap_or_else(|| "usd".to_string()).to_lowercase();
-        form.insert("line_items[0][price_data][currency]".to_string(), currency);
+        form.insert("line_items[0][price_data][currency]".to_string(), "usd".to_string());
         let display_name = if price_id_or_name.trim().is_empty() { "Checkout".to_string() } else { price_id_or_name.to_string() };
         form.insert("line_items[0][price_data][product_data][name]".to_string(), display_name);
         form.insert("line_items[0][price_data][unit_amount]".to_string(), amount_cents.to_string());

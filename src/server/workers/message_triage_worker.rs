@@ -118,7 +118,6 @@ Message from {}: '{}'
 Source: {}
 
 Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
-If the customer asks for product availability (e.g. cakes), auto-detect inventory mentions and propose inventory reductions by adding '[Send & Deduct Inventory]' at the end of the action_payload reply text.
 If you decide action_type is 'Draft Quote', the action_payload MUST be a JSON string with 'total_amount_cents', 'required_deposit_cents', and 'line_items' (array of {{description, unit_price_cents, quantity, is_optional}}).
 If you decide action_type is 'Draft Booking', the action_payload MUST be a JSON string with 'service_id' (optional), 'start_time' (RFC3339), 'end_time' (RFC3339).
 You have access to the following Staff Availability Data (Simulated):
@@ -321,16 +320,6 @@ Output JSON format:
 
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
-            let mut past_orders = String::new();
-            if let Some(cid) = customer_id_val {
-                if let Ok(orders) = sqlx::query_as::<_, (f64,)>("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
-                    .bind(&tenant_id).bind(&cid).fetch_all(&self.db.pool).await {
-                    if !orders.is_empty() {
-                        past_orders = format!("Returning Customer ({} past orders).", orders.len());
-                    }
-                }
-            }
-
             let mut quote_id_opt: Option<String> = None;
             let mut _quote_total_amount_cents: Option<i64> = None;
 
@@ -604,7 +593,6 @@ Output JSON format:
                         "feature_type": event_source,
                         "priority": priority,
                         "context": context_summary,
-                        "past_orders": past_orders,
                         "inbox_message_id": message_id,
                         "customer_id": customer_id_val
                     }))
@@ -734,7 +722,6 @@ Output JSON format:
                         "feature_type": event_source,
                         "priority": priority,
                         "context": context_summary,
-                        "past_orders": past_orders,
                         "inbox_message_id": message_id,
                         "customer_id": customer_id_val
                     }).to_string())

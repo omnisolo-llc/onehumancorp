@@ -308,7 +308,6 @@ impl Department for SalesAgent {
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
             "tenant.work_intake.received".to_string(),
-            "tenant.lead.created".to_string(),
             "agent:sales:approved".to_string(),
             "pos_sales".to_string(),
             "tenant.order.created".to_string(),
@@ -367,7 +366,7 @@ impl Department for SalesAgent {
                             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
                         );
 
-                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, None, None, None).await {
+                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, None, None).await {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
                                 // Update proposals table to persist Stripe URL
@@ -423,55 +422,6 @@ impl Department for SalesAgent {
             }
         }
 
-
-        if event.event_type == "tenant.lead.created" {
-            let lead_id = event.payload.get("lead_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-            let contact_info = event.payload.get("contact_info").and_then(|v| v.as_str()).unwrap_or("");
-            let context = event.payload.get("context").and_then(|v| v.as_str()).unwrap_or("");
-            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
-
-            // 1. Researcher: Query long-term memory for context
-            let query_embedding = self.generate_embedding(context).await;
-            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 3).await.unwrap_or_default();
-            let context_summary = memories.join(" ");
-
-            // 2. Qualifier & Ambassador: Draft a response
-            let prompt = format!(
-                "You are an AI Sales Development Representative. A new lead was just created. Source: {}. Contact Info: {}. Context: {}. Internal CRM memories: {}. Draft a short, warm, and highly personalized introductory response aiming to qualify the lead and suggest booking a time or providing a quote. Output strict JSON with key 'drafted_message'. Do not use markdown.",
-                source, contact_info, context, context_summary
-            );
-
-            let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
-                Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
-                }
-                _ => crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default(),
-            };
-
-            let mut drafted_message = format!("Hi, thanks for reaching out via {}. How can we help you today?", source);
-            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
-                if let Some(m) = parsed.get("drafted_message").and_then(|v| v.as_str()) {
-                    drafted_message = m.to_string();
-                }
-            }
-
-            let action_payload = serde_json::json!({
-                "feature_type": "lead_engagement_draft",
-                "lead_id": lead_id,
-                "contact_info": contact_info,
-                "generated_response": drafted_message,
-            });
-
-            self.orchestrator.execute_action(
-                DepartmentType::Sales,
-                format!("Draft response for new lead {}", lead_id),
-                event.tenant_id.clone(),
-                ActionRisk::DraftForReview, // Require owner review before sending
-                action_payload,
-            ).await.map(|_| ())?;
-            return Ok(());
-        }
 
                 if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
             let planned_intent = match self

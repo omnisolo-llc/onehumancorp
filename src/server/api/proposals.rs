@@ -22,8 +22,6 @@ pub struct Proposal {
     pub total_amount_cents: i64,
     pub required_deposit_cents: i64,
     pub checkout_url: Option<String>,
-    pub project_scope: Option<String>,
-    pub milestones: Option<serde_json::Value>,
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
 }
@@ -133,7 +131,6 @@ where
 {
     Router::new()
         .route("/draft", post(draft_narrative))
-        .route("/intake", post(client_intake))
         .route("/draft_agent", post(draft_agent))
         .route("/{id}", get(get_proposal))
         .route("/{id}/approve", post(approve_proposal))
@@ -406,7 +403,6 @@ async fn approve_proposal(
             &format!("Proposal #{}", proposal.id),
             &proposal.customer_id,
             amount_usd,
-            None,
             None,
             None,
         )
@@ -800,87 +796,4 @@ mod social_tests {
         let res = app.oneshot(req).await.unwrap();
         assert_ne!(res.status(), StatusCode::NOT_FOUND);
     }
-}
-
-#[derive(Deserialize)]
-pub struct ClientIntakeRequest {
-    pub inquiry: String,
-    pub customer_id: String,
-}
-
-pub async fn client_intake(
-    State(pool): State<PgPool>,
-    Extension(claims): Extension<::server_common::Claims>,
-    Json(payload): Json<ClientIntakeRequest>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id {
-        Some(organization_id) => organization_id,
-        None => return StatusCode::UNAUTHORIZED.into_response(),
-    };
-
-    // Simulate Sales Agent creating a proposal with milestones and scope
-    let id = Uuid::new_v4().to_string();
-    let total_amount_cents = 500000;
-    let required_deposit_cents = 250000;
-    let project_scope = Some("Website Redesign & Branding".to_string());
-    let milestones = Some(serde_json::json!([
-        { "name": "Discovery", "amount_cents": 100000 },
-        { "name": "Design", "amount_cents": 200000 },
-        { "name": "Development & Handoff", "amount_cents": 200000 }
-    ]));
-
-    let proposal = Proposal {
-        id: id.clone(),
-        tenant_id: tenant_id.clone(),
-        customer_id: payload.customer_id.clone(),
-        status: "DRAFT".to_string(),
-        total_amount_cents,
-        required_deposit_cents,
-        checkout_url: None,
-        project_scope: project_scope.clone(),
-        milestones: milestones.clone(),
-        created_at: Some(chrono::Utc::now()),
-        updated_at: Some(chrono::Utc::now()),
-    };
-
-    let mut tx = match pool.begin().await {
-        Ok(tx) => tx,
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-
-    if let Err(e) = sqlx::query(
-        r#"
-        INSERT INTO proposals (
-            id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, project_scope, milestones
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        "#,
-    )
-    .bind(&proposal.id)
-    .bind(&proposal.tenant_id)
-    .bind(&proposal.customer_id)
-    .bind(&proposal.status)
-    .bind(proposal.total_amount_cents)
-    .bind(proposal.required_deposit_cents)
-    .bind(&proposal.project_scope)
-    .bind(&proposal.milestones)
-    .execute(&mut *tx)
-    .await
-    {
-        tracing::error!("Failed to insert proposal: {}", e);
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    if let Err(e) = tx.commit().await {
-        tracing::error!("Failed to commit tx: {}", e);
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    (
-        StatusCode::OK,
-        Json(ProposalResponse {
-            proposal,
-            line_items: vec![],
-        }),
-    )
-        .into_response()
 }

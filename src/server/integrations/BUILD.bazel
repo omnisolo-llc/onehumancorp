@@ -33,7 +33,6 @@ rust_library(
         "//src/server/integrations/meta:client.rs",
         "//src/server/integrations/meta:mod.rs",
         "//src/server/integrations/meta:provider.rs",
-        "//src/server/integrations/meta:whatsapp.rs",
         "//src/server/integrations/shipday:client.rs",
         "//src/server/integrations/shipday:mod.rs",
         "//src/server/integrations/shipday:provider.rs",

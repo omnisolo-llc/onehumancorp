@@ -753,11 +753,6 @@
               <p style="margin: 0; font-size: 12px; color: #6b7280;">AI Hours Saved</p>
               <p id="wrapped-ai-hours" style="margin: 0; font-size: 18px; font-weight: 700;">-</p>
             </div>
-            <div style="background: rgba(255, 255, 255, 0.65); border-radius: 8px; padding: 12px;" data-tooltip-id="seo-performance-tooltip">
-              <p style="margin: 0; font-size: 12px; color: #6b7280;">Performance & SEO</p>
-              <p id="performance-seo-stat" style="margin: 0; font-size: 18px; font-weight: 700; color: #16a34a;">-</p>
-              <p id="note-performance-seo" style="margin: 0; font-size: 10px; color: #6b7280; margin-top: 4px;">Site is running blazing fast globally</p>
-            </div>
           </div>
 
           <button id="wrapped-share-btn" style="background: #0066FF; color: white; border-radius: 8px; padding: 12px; font-weight: 700;">
@@ -1822,11 +1817,6 @@
               document.getElementById('wrapped-orders').innerText = data.total_orders;
               document.getElementById('wrapped-customers').innerText = data.total_customers;
               document.getElementById('wrapped-ai-hours').innerText = data.ai_hours_saved;
-              if (data.performance_seo && document.getElementById('performance-seo-stat')) {
-                  document.getElementById('performance-seo-stat').innerText = data.performance_seo.seo_score + '%';
-                  document.getElementById('note-performance-seo').innerText = data.performance_seo.status_message;
-              }
-
 
               const shareBtn = document.getElementById('wrapped-share-btn');
               shareBtn.onclick = () => {
@@ -2363,7 +2353,7 @@
 
 
 
-          if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft' || item.payload?.feature_type === 'social_post_draft' || item.proposed_action?.feature_type === 'social_post_draft') {
+          if (actionType === 'SocialPostDraft' || item.context_payload?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft') {
             let parsedPayload = item.proposed_action || item.context_payload || {};
             return `
               <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
@@ -2683,41 +2673,6 @@
             `;
           }
 
-          if (item.source === 'CustomerSuccessAgent') {
-            let parsedPayload = {};
-            try {
-                parsedPayload = typeof item.payload === 'string' ? JSON.parse(item.payload) : (item.payload || {});
-            } catch (e) {}
-            const draftText = parsedPayload.draft || 'No draft available.';
-            return `
-              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border-radius: 16px; padding: 16px; border: 1px solid rgba(0, 102, 255, 0.4); position: relative; overflow: hidden;">
-                <div style="position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: #0066FF;"></div>
-                <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: start;">
-                  <div>
-                    <h2 style="font-size: 20px; font-weight: 700; color: #1D1D1F; display: flex; align-items: center; gap: 8px; margin: 0;">
-                      <span style="font-size: 24px;">✨</span> Needs Attention: Pending Draft
-                    </h2>
-                  </div>
-                  <div class="triage-priority" style="font-size: 12px; font-weight: 600; color: #0066FF; background: rgba(0, 102, 255, 0.1); padding: 4px 8px; border-radius: 8px;">Action Needed</div>
-                </div>
-                <div class="triage-context" style="font-weight: 500; margin-top: 4px; margin-bottom: 12px; font-size: 16px; color: #1D1D1F;">
-                  ${description}
-                </div>
-                <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; color: #0044BB;" data-testid="triage-draft-${item.id}">
-                  <span style="font-weight: 600; font-size: 10px; text-transform: uppercase; margin-bottom: 4px; display: block;">Agent's Proposed Reply</span>
-                  ${draftText}
-                </div>
-                <div class="triage-controls" style="display: flex; gap: 8px; margin-top: 12px; flex-direction: column;">
-                  <button class="triage-btn-approve" data-testid="triage-approve-${item.id}" onclick="handleTriageAction('${item.id}', true)" style="width: 100%; min-height: 44px; min-width: 44px; background: #0066FF; color: white; padding: 12px; border-radius: 16px; font-weight: 600; border: none; box-shadow: 0 4px 12px rgba(0,102,255,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
-                    <span class="btn-text">Approve & Send</span>
-                    <span class="btn-loader" style="display: none; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; margin-left: 8px;"></span>
-                  </button>
-                  <button class="triage-btn-dismiss" data-testid="triage-dismiss-${item.id}" onclick="handleTriageAction('${item.id}', false)" style="width: 100%; min-height: 44px; min-width: 44px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(0, 102, 255, 0.3); border-radius: 16px; color: #0066FF; padding: 12px; font-weight: 600; cursor: pointer;">Edit / Deny</button>
-                </div>
-              </div>
-            `;
-          }
-
           if (item.source === 'Proactive Context Agent') {
             return `
               <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 243, 230, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 165, 0, 0.4); position: relative; overflow: hidden; box-sizing: border-box; width: 100%;">
@@ -2898,18 +2853,7 @@
 window.handleTriageAction = async function(id, state) {
 
         const itemEl = document.getElementById(`triage-${id}`);
-        if (itemEl) {
-            itemEl.style.opacity = '0.5';
-            const btn = itemEl.querySelector('.triage-btn-approve');
-            if (btn) {
-                const text = btn.querySelector('.btn-text');
-                const loader = btn.querySelector('.btn-loader');
-                if (text && loader) {
-                    text.style.display = 'none';
-                    loader.style.display = 'inline-block';
-                }
-            }
-        }
+        if (itemEl) itemEl.style.opacity = '0.5';
 
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';

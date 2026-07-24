@@ -97,7 +97,7 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
 
         // Fallback to fake url if external integration fails to prevent silently erroring
         if payload.get("stripe_payment_link").is_none() {
-            match stripe_client.create_checkout_session(scope, client_id, price, None, None, None).await {
+            match stripe_client.create_checkout_session(scope, client_id, price, None, None).await {
                  Ok(link) => {
                      stripe_payment_link = link;
                  }

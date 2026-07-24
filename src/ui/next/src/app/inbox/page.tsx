@@ -199,7 +199,6 @@ function InboxWorkspace({
 
 
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
-  const unreadLeadsCount = messages.filter((message) => (message.status || "").toLowerCase() === "unread").length;
 
   async function handleDraftQuoteWithAI(message: Message) {
     try {
@@ -330,13 +329,6 @@ function InboxWorkspace({
               </div>
             </div>
             <div id="messages-list" className="app-list p-2">
-              {unreadLeadsCount > 0 && (
-                <div className="app-card daily-summary mb-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 p-4 rounded-xl">
-                  <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    ✨ You have {unreadLeadsCount} unread {unreadLeadsCount === 1 ? 'lead' : 'leads'}.
-                  </div>
-                </div>
-              )}
               {messages.length === 0 ? (
                 <div className="app-empty">No inbox messages found for this tenant.</div>
               ) : messages.map((message) => (
@@ -434,23 +426,12 @@ function InboxWorkspace({
                     <div>{renderMessageContent((showOriginal ? selected.original_content : selected.content) || "Empty message")}</div>
                   </div>
                 </div>
-
                 <div className="mb-4">
                   <div className="app-metric-label">Draft Reply</div>
                   <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
                     <div>{renderMessageContent(selected.draft_reply || "No draft reply stored for this message.")}</div>
                   </div>
-                  {selected.checkout_link && (
-                    <div className="mt-3 flex items-center bg-white/60 dark:bg-black/20 border border-black/5 dark:border-white/5 rounded-lg p-3 backdrop-filter backdrop-blur-md">
-                      <div className="bg-blue-600 text-white rounded w-8 h-8 flex items-center justify-center font-bold mr-3">🛍️</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white m-0">Product: {selected.proposed_product_id || "Checkout Link"}</p>
-                        <a href={selected.checkout_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 dark:text-blue-400 truncate block">{selected.checkout_link}</a>
-                      </div>
-                    </div>
-                  )}
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div className="app-card">
                     <div className="app-metric-label">Status</div>
@@ -486,19 +467,6 @@ function InboxWorkspace({
                            buttonText = "✨ Approve & Send Draft";
                         }
                       }
-
-                      const isInventoryDeduction = selected.draft_reply?.includes("[Send & Deduct Inventory]");
-                      if (isInventoryDeduction) {
-                        return (
-                          <button
-                            className="app-button primary w-full min-h-[44px] min-w-[44px] backdrop-filter bg-white/10 glassmorphism shadow-lg bg-gradient-to-r from-green-500/80 to-emerald-600/80 text-white font-bold border border-white/20"
-                            onClick={() => handleApproveAndSend(selected.id)}
-                          >
-                            ✨ Approve & Send (Deduct Inventory)
-                          </button>
-                        );
-                      }
-
                       return (
                         <button
                           className="app-button primary w-full min-h-[44px] min-w-[44px] rounded-[8px] backdrop-filter bg-white/10"
