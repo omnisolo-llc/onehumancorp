@@ -19,6 +19,6 @@ rust_test(
     name = "server_integrations_whatsapp_test",
     crate = ":server_integrations_whatsapp",
     deps = [
-        "@crates//:tower",
+        "@crates//:tower-0.4.13",
     ],
 )
