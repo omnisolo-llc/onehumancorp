@@ -3,10 +3,10 @@ issue_description: |
   # Mission Queue Protocol: Native Omnichannel Chat System
 
   ## Problem Statement
-  OneHumanCorp (OHC) owners need a single, unified inbox to coordinate messages from various channels (Instagram DMs, WhatsApp, SMS, web chat) seamlessly. Currently, OHC relied on a legacy external integration (Chatwoot), which has been retired. For personas like Maya (baker managing Instagram DMs) and Carlos (handyman fielding SMS requests), the assistant must have direct, native access to these conversations to instantly triage requests, coordinate bookings, and propose draft replies without routing through third-party services. The lack of a native system breaks the "single pane of glass" and "AI Work Assistant" vision.
+  OneHumanCorp (OHC) owners need a single, unified inbox to coordinate messages from various channels (Instagram DMs, WhatsApp, SMS, web chat) seamlessly. Currently, OHC relied on a legacy external integration (the legacy chat integration), which has been retired. For personas like Maya (baker managing Instagram DMs) and Carlos (handyman fielding SMS requests), the assistant must have direct, native access to these conversations to instantly triage requests, coordinate bookings, and propose draft replies without routing through third-party services. The lack of a native system breaks the "single pane of glass" and "AI Work Assistant" vision.
 
   ## Research Report
-  - **Codebase Audit:** The repository previously integrated Chatwoot, which has now been fully removed from the active application and deployment graph (`deploy/tests/no_chatwoot_residue_test.sh` enforces this).
+  - **Codebase Audit:** The repository previously integrated the legacy chat integration, which has now been fully removed from the active application and deployment graph (`deploy/tests/the_legacy_chat_integration_residue_test.sh` enforces this).
   - **Source Material:** The `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md` specifies a consolidated inbox domain.
   - **Competitor Analysis:** Shopify Inbox and WeCom handle omnichannel natively by pushing real-time events via WebSockets to mobile apps and using a single canonical data store for robust analytics. Relying on an external chat platform introduces latency, security risks, and high operational overhead.
   - **Finding:** A native Rust implementation using an explicit Delivery Outbox pattern, canonical `Inbox`, `Conversation`, and `Message` entities, backed by PostgreSQL RLS for multi-tenancy, and WebSockets/PowerSync for local-first mobile sync is critical.
