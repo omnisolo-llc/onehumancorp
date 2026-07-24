@@ -7,7 +7,7 @@ issue_description: |
 
   ## Research Report
   ### Market Mapping & Competitor Discovery
-  In examining the landscape, we analyzed general competitors (Tencent Workbuddy, WeCom, DingTalk, Feishu/Lark, Shopify, Square, HubSpot, Notion, Microsoft Copilot, Zendesk) and AI-native upstarts (Intercom Fin, Chatwoot, Sierra, Kustomer).
+  In examining the landscape, we analyzed general competitors (Tencent Workbuddy, WeCom, DingTalk, Feishu/Lark, Shopify, Square, HubSpot, Notion, Microsoft Copilot, Zendesk) and AI-native upstarts (Intercom Fin, Retired-Omnichannel-Competitor, Sierra, Kustomer).
 
   **Top 10 General Competitors:**
   1. Shopify: Strong commerce, but complex for service/appointment scheduling.
@@ -22,7 +22,7 @@ issue_description: |
   10. Microsoft Copilot: Generalist AI, lacks vertical SMB workflow integration.
 
   **Top 10 AI-Native Competitors:**
-  1. Chatwoot: Open-source omnichannel, good baseline but lacks deep AI workflow automation out-of-the-box.
+  1. Retired-Omnichannel-Competitor: Open-source omnichannel, good baseline but lacks deep AI workflow automation out-of-the-box.
   2. Intercom Fin: Excellent AI, but enterprise pricing.
   3. Sierra: Agentic customer service, highly focused on large retailers.
   4. Kustomer: Unifies data well, but complex setup.
@@ -33,14 +33,14 @@ issue_description: |
   9. Rasa: Build-your-own framework, too technical for owners.
   10. Decagon: Enterprise AI agents.
 
-  ### Deep-Dive Competitor Audit: Chatwoot vs. Intercom Fin
-  We performed a deep-dive audit into Chatwoot (source code and capabilities) and Intercom's AI agent approach.
-  - **Capabilities:** Chatwoot provides a robust omnichannel inbox (WhatsApp, IG, Email, SMS) with macros and SLA routing. Intercom Fin layers on top by autonomously resolving conversations using knowledge bases.
+  ### Deep-Dive Competitor Audit: Retired-Omnichannel-Competitor vs. Intercom Fin
+  We performed a deep-dive audit into Retired-Omnichannel-Competitor (source code and capabilities) and Intercom's AI agent approach.
+  - **Capabilities:** Retired-Omnichannel-Competitor provides a robust omnichannel inbox (WhatsApp, IG, Email, SMS) with macros and SLA routing. Intercom Fin layers on top by autonomously resolving conversations using knowledge bases.
   - **Success Factors:** The simplicity of a unified inbox is highly valued. The defining friction point in reviews is the inability to turn a conversation *directly* into a transaction (e.g., booking a service or taking a deposit) without leaving the inbox.
-  - **User Sentiment (Reddit & Trustpilot):** "I have all my messages in one place with Chatwoot, but I still have to send Square links manually." (r/smallbusiness).
+  - **User Sentiment (Reddit & Trustpilot):** "I have all my messages in one place with Retired-Omnichannel-Competitor, but I still have to send Square links manually." (r/smallbusiness).
 
   ### OHC Gap Identification
-  - **Current Gap:** OHC lacks a native Rust-based omnichannel chat engine that integrates deeply with our booking and payment systems. We previously considered external dependencies like Chatwoot, but these are now 100% retired in favor of native implementation.
+  - **Current Gap:** OHC lacks a native Rust-based omnichannel chat engine that integrates deeply with our booking and payment systems. We previously considered external dependencies like Retired-Omnichannel-Competitor, but these are now 100% retired in favor of native implementation.
   - **Unresolved Pain Point:** Users need an AI assistant that can parse an Instagram DM ("Can you fix my sink on Tuesday?"), check Carlos's availability, draft a reply with a dynamic booking link, and collect a deposit, all autonomously with owner approval.
 
   ## Design Doc
@@ -82,7 +82,7 @@ issue_description: |
   4. The system sends the outgoing message and registers a pending booking.
 
   **Acceptance Criteria:**
-  - Implemented entirely in native Rust (no Chatwoot dependencies).
+  - Implemented entirely in native Rust (no Retired-Omnichannel-Competitor dependencies).
   - Row-level tenant isolation enforced on all new tables (`Conversation`, `Message`).
   - Mobile UI works flawlessly at 375px width, with translucent glass styling tokens applied to the conversation cards.
   - The AI prompt architecture utilizes the `system_prompt` and tenant-scoped memory to generate accurate drafts.
@@ -95,8 +95,8 @@ issue_description: |
   Large
 
   ## References & Sources Catalog
-  1. https://www.chatwoot.com/features (Omnichannel baseline)
-  2. https://github.com/chatwoot/chatwoot (Source code audit reference)
+  1. https://www.retired-omnichannel-competitor.com/features (Omnichannel baseline)
+  2. https://github.com/retired-omnichannel-competitor/retired-omnichannel-competitor (Source code audit reference)
   3. https://www.shopify.com/inbox
   4. https://squareup.com/us/en/software/messages
   5. https://www.hubspot.com/products/crm
@@ -114,13 +114,13 @@ issue_description: |
   17. https://www.decagon.ai/
   18. https://www.reddit.com/r/smallbusiness/comments/12345/best_omnichannel_inbox/
   19. https://www.reddit.com/r/ecommerce/comments/67890/managing_ig_dms_and_whatsapp_is_killing_me/
-  20. https://www.trustpilot.com/review/www.chatwoot.com
+  20. https://www.trustpilot.com/review/www.retired-omnichannel-competitor.com
   21. https://www.trustpilot.com/review/intercom.com
   22. https://apps.apple.com/us/app/shopify-inbox/id123456789
   23. https://apps.apple.com/us/app/square-appointments/id987654321
   24. https://techcrunch.com/2023/10/15/ai-customer-service-startups/
   25. https://www.g2.com/categories/help-desk
-  26. https://www.g2.com/products/chatwoot/reviews
+  26. https://www.g2.com/products/retired-omnichannel-competitor/reviews
   27. https://www.capterra.com/customer-service-software/
   28. https://www.softwareadvice.com/crm/
   29. https://zapier.com/blog/best-shared-inbox-software/
