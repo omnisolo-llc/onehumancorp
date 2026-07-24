@@ -1179,6 +1179,10 @@ export default function OnboardingWizard() {
                         autoFocus
                         autoCapitalize="words"
                         autoComplete="organization"
+                      spellCheck={false}
+                      aria-required="true"
+                      aria-invalid={validationError === "Business Name must be at least 3 characters." ? "true" : "false"}
+                      aria-describedby="validation-error"
                         value={businessName}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1206,7 +1210,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Business Name must be at least 3 characters." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
+                      className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px] ${validationError === "Business Name must be at least 3 characters." ? "border-[#FF3B30] focus:ring-[#FF3B30]/20" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
                         inputMode="text"
                         enterKeyHint="next"
                       />
@@ -1214,7 +1218,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {validationError && (
-                    <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                  <p id="validation-error" className="text-[#FF3B30] text-sm font-semibold mb-2">
                       {validationError}
                     </p>
                   )}
@@ -1234,7 +1238,12 @@ export default function OnboardingWizard() {
                       disabled={false}
                       className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                     >
-                      <IconLabel icon="next">Next</IconLabel>
+                    <IconLabel icon="next">
+                      <span className="inline-flex items-center gap-2">
+                        Next
+                        <span className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-semibold text-white/70 bg-white/10 rounded border border-white/20 select-none">Enter ↵</span>
+                      </span>
+                    </IconLabel>
                     </button>
                   </div>
                 </div>
@@ -1291,6 +1300,13 @@ export default function OnboardingWizard() {
                       <textarea
                         autoFocus
                         autoCapitalize="sentences"
+                        spellCheck={true}
+                        autoComplete="off"
+                        autoCorrect="on"
+                        enterKeyHint="next"
+                        aria-required="true"
+                        aria-invalid={validationError === "Please tell us what you sell." ? "true" : "false"}
+                        aria-describedby="validation-error"
                         value={whatYouSell}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1316,13 +1332,13 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us what you sell." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 focus:ring-2 focus:ring-[#0066FF]/30"}`}
+                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px] ${validationError === "Please tell us what you sell." ? "border-[#FF3B30] focus:ring-[#FF3B30]/20" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 focus:ring-2 focus:ring-[#0066FF]/30"}`}
                       />
                     </div>
                   </div>
 
                   {validationError && (
-                    <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                    <p id="validation-error" className="text-[#FF3B30] text-sm font-semibold mb-2">
                       {validationError}
                     </p>
                   )}
@@ -1340,7 +1356,12 @@ export default function OnboardingWizard() {
                       disabled={false}
                       className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                     >
-                      <IconLabel icon="next">Next</IconLabel>
+                      <IconLabel icon="next">
+                        <span className="inline-flex items-center gap-2">
+                          Next
+                          <span className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-semibold text-white/70 bg-white/10 rounded border border-white/20 select-none">Enter ↵</span>
+                        </span>
+                      </IconLabel>
                     </button>
                   </div>
                 </div>
@@ -1398,6 +1419,14 @@ export default function OnboardingWizard() {
                         type="text"
                         autoFocus
                         autoCapitalize="words"
+                        autoComplete="address-level2"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        aria-required="true"
+                        aria-invalid={validationError === "Please tell us your location." ? "true" : "false"}
+                        aria-describedby="validation-error"
+                        inputMode="text"
+                        enterKeyHint="next"
                         value={location}
                         onChange={(e) =>
                           updateState({ location: e.target.value })
@@ -1418,13 +1447,13 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us your location." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px] ${validationError === "Please tell us your location." ? "border-[#FF3B30] focus:ring-[#FF3B30]/20" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
                       />
                     </div>
                   </div>
 
                   {validationError && (
-                    <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                    <p id="validation-error" className="text-[#FF3B30] text-sm font-semibold mb-2">
                       {validationError}
                     </p>
                   )}
@@ -1442,7 +1471,12 @@ export default function OnboardingWizard() {
                       disabled={false}
                       className="w-full bg-[#0066FF] text-white p-4 font-bold min-h-[44px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                     >
-                      <IconLabel icon="next">Next</IconLabel>
+                      <IconLabel icon="next">
+                        <span className="inline-flex items-center gap-2">
+                          Next
+                          <span className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-semibold text-white/70 bg-white/10 rounded border border-white/20 select-none">Enter ↵</span>
+                        </span>
+                      </IconLabel>
                     </button>
                   </div>
                 </div>
@@ -1501,6 +1535,14 @@ export default function OnboardingWizard() {
                         type="text"
                         autoFocus
                         autoCapitalize="words"
+                        autoComplete="off"
+                        autoCorrect="on"
+                        spellCheck={true}
+                        aria-required="true"
+                        aria-invalid={validationError === "Please tell us your target audience." ? "true" : "false"}
+                        aria-describedby="validation-error"
+                        inputMode="text"
+                        enterKeyHint="done"
                         value={targetAudience}
                         onChange={(e) =>
                           updateState({ targetAudience: e.target.value })
@@ -1520,13 +1562,13 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us your target audience." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px] ${validationError === "Please tell us your target audience." ? "border-[#FF3B30] focus:ring-[#FF3B30]/20" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
                       />
                     </div>
                   </div>
 
                   {validationError && (
-                    <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                    <p id="validation-error" className="text-[#FF3B30] text-sm font-semibold mb-2">
                       {validationError}
                     </p>
                   )}
@@ -1573,7 +1615,12 @@ export default function OnboardingWizard() {
                           Analyzing...
                         </span>
                       ) : (
-                        <IconLabel icon="launch">Next</IconLabel>
+                        <IconLabel icon="launch">
+                          <span className="inline-flex items-center gap-2">
+                            Next
+                            <span className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-semibold text-white/70 bg-white/10 rounded border border-white/20 select-none">Enter ↵</span>
+                          </span>
+                        </IconLabel>
                       )}
                     </button>
                   </div>
@@ -1638,6 +1685,11 @@ export default function OnboardingWizard() {
                     type="text"
                     autoFocus
                     autoCapitalize="words"
+                    autoComplete="organization"
+                    spellCheck={false}
+                    aria-required="true"
+                    aria-invalid={!!validationErrors.businessName}
+                    aria-describedby={validationErrors.businessName ? "business-name-review-error" : undefined}
                     value={businessName}
                     onChange={(e) => {
                       updateState({ businessName: e.target.value });
@@ -1646,10 +1698,10 @@ export default function OnboardingWizard() {
                         return rest;
                       });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-[#FF3B30] focus:ring-[#FF3B30]/20" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px]`}
                   />
                   {validationErrors.businessName && (
-                    <p className="text-[#FF3B30] text-xs mt-1">
+                    <p id="business-name-review-error" className="text-[#FF3B30] text-xs mt-1">
                       {validationErrors.businessName}
                     </p>
                   )}
@@ -1661,6 +1713,11 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     autoCapitalize="words"
+                    autoComplete="off"
+                    spellCheck={true}
+                    aria-required="true"
+                    aria-invalid={!!validationErrors.businessType}
+                    aria-describedby={validationErrors.businessType ? "business-type-review-error" : undefined}
                     value={businessType}
                     onChange={(e) => {
                       updateState({ businessType: e.target.value });
@@ -1669,10 +1726,10 @@ export default function OnboardingWizard() {
                         return rest;
                       });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-[#FF3B30] focus:ring-[#FF3B30]/20" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px]`}
                   />
                   {validationErrors.businessType && (
-                    <p className="text-[#FF3B30] text-xs mt-1">
+                    <p id="business-type-review-error" className="text-[#FF3B30] text-xs mt-1">
                       {validationErrors.businessType}
                     </p>
                   )}
@@ -1684,6 +1741,8 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     autoCapitalize="words"
+                    autoComplete="off"
+                    spellCheck={false}
                     value={categories.join(", ")}
                     onChange={(e) =>
                       updateState({
@@ -1692,7 +1751,7 @@ export default function OnboardingWizard() {
                           .map((c) => c.trim()),
                       })
                     }
-                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1703,11 +1762,13 @@ export default function OnboardingWizard() {
                     <input
                       type="text"
                       autoCapitalize="words"
+                      autoComplete="off"
+                      spellCheck={true}
                       value={firstProductName}
                       onChange={(e) =>
                         updateState({ firstProductName: e.target.value })
                       }
-                      className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                      className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px]"
                     />
                   </div>
                   <div>
@@ -1717,6 +1778,12 @@ export default function OnboardingWizard() {
                     <input
                       type="text"
                       inputMode="decimal"
+                      pattern="[0-9]*"
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-required="true"
+                      aria-invalid={!!validationErrors.firstProductPrice}
+                      aria-describedby={validationErrors.firstProductPrice ? "first-product-price-error" : undefined}
                       value={firstProductPrice}
                       onChange={(e) => {
                         updateState({ firstProductPrice: e.target.value });
@@ -1735,10 +1802,10 @@ export default function OnboardingWizard() {
                           });
                         }
                       }}
-                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-[#FF3B30] focus:ring-[#FF3B30]/20" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] bg-white/45 dark:bg-[#16161a]/45 backdrop-blur-[15px]`}
                     />
                     {validationErrors.firstProductPrice && (
-                      <p className="text-[#FF3B30] text-xs mt-1">
+                      <p id="first-product-price-error" className="text-[#FF3B30] text-xs mt-1">
                         {validationErrors.firstProductPrice}
                       </p>
                     )}

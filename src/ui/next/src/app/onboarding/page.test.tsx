@@ -1308,4 +1308,51 @@ describe("OnboardingWizard", () => {
     });
     await user.click(skipBtns[0]);
   });
+
+  it("proactively optimizes input attributes for mobile-first and screen-reader accessibility", async () => {
+    const user = userEvent.setup({ delay: null });
+    await renderOnboardingWizard();
+    if (screen.queryByRole("button", { name: "Start My Business" })) {
+      await user.click(
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
+      );
+    }
+
+    // Chat Step 1 input attributes
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    expect(nameInput).toHaveAttribute("spellcheck", "false");
+    expect(nameInput).toHaveAttribute("aria-required", "true");
+    expect(nameInput).toHaveAttribute("aria-invalid", "false");
+
+    // Enter bad business name to check aria-invalid changes
+    await user.type(nameInput, "Ma");
+    const nextBtn = screen.getAllByRole("button", { name: /Next/i }).pop()!;
+    await user.click(nextBtn);
+    expect(nameInput).toHaveAttribute("aria-invalid", "true");
+    expect(nameInput).toHaveAttribute("aria-describedby", "validation-error");
+
+    // Clear and enter valid name
+    await user.clear(nameInput);
+    await user.type(nameInput, "Maya Bakery{Enter}");
+
+    // Chat Step 2 input attributes
+    const sellInput = await screen.findByPlaceholderText(/I bake custom vegan cakes/i);
+    expect(sellInput).toHaveAttribute("spellcheck", "true");
+    expect(sellInput).toHaveAttribute("autocomplete", "off");
+    expect(sellInput).toHaveAttribute("autocorrect", "on");
+    expect(sellInput).toHaveAttribute("aria-required", "true");
+
+    // Proceed
+    await user.type(sellInput, "Vegan Cakes{Enter}");
+
+    // Chat Step 3 input attributes
+    const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
+    expect(locInput).toHaveAttribute("autocomplete", "address-level2");
+    expect(locInput).toHaveAttribute("autocorrect", "off");
+    expect(locInput).toHaveAttribute("spellcheck", "false");
+    expect(locInput).toHaveAttribute("aria-required", "true");
+
+    // Verify Enter ↵ desktop badge is present
+    expect(screen.queryByText("Enter ↵")).toBeInTheDocument();
+  });
 });
