@@ -179,12 +179,12 @@ pub struct JsonRpcError {
     pub message: String,
 }
 
-pub struct AppServer {
+pub struct CodexAppServer {
     pub runner: Arc<Runner>,
     pub marketplace: Arc<crate::tools::marketplace::MarketplaceClient>,
 }
 
-impl AppServer {
+impl CodexAppServer {
     pub fn new(runner: Arc<Runner>) -> Self {
         let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
             crate::tools::marketplace::HttpMarketplaceProvider::new(
@@ -1224,10 +1224,10 @@ mod tests {
 
         let core = Arc::new(CodexCore::new(agent, config));
         let runner = Arc::new(Runner::new_with_core(core));
-        let app_server = AppServer::new(runner);
+        let app_server = CodexAppServer::new(runner);
 
         let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_agent", "params": {"message": "hello", "handoff_target": "agent_b"}}"#;
-        let resp_json = app_server.handle_request(req_json).await;
+        let resp_json: String = app_server.handle_request(&req_json).await;
 
         let resp: JsonRpcResponse = serde_json::from_str(&resp_json).unwrap();
         assert!(resp.error.is_some(), "Expected guardrail rejection error");
@@ -1256,10 +1256,10 @@ mod tests {
         let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
             crate::tools::marketplace::test_utils::MockMarketplaceProvider,
         )));
-        let app_server = AppServer::new_with_marketplace(runner, marketplace);
+        let app_server = CodexAppServer::new_with_marketplace(runner, marketplace);
 
         let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_agent", "params": {"message": "hello"}}"#;
-        let resp_json = app_server.handle_request(req_json).await;
+        let resp_json: String = app_server.handle_request(&req_json).await;
 
         let resp: JsonRpcResponse = serde_json::from_str(&resp_json).unwrap();
         assert_eq!(resp.id.unwrap(), serde_json::json!("1"));
@@ -1277,7 +1277,7 @@ mod tests {
 
         // Test run_scalable_agents method
         let req_json_scalable = r#"{"jsonrpc": "2.0", "id": "2", "method": "run_scalable_agents", "params": {"message": "hello", "count": 2}}"#;
-        let resp_json_scalable = app_server.handle_request(req_json_scalable).await;
+        let resp_json_scalable: String = app_server.handle_request(&req_json_scalable).await;
         let resp_scalable: JsonRpcResponse = serde_json::from_str(&resp_json_scalable).unwrap();
         assert!(resp_scalable.error.is_none());
         let outputs = resp_scalable
@@ -1303,7 +1303,7 @@ mod tests {
             }
         })
         .to_string();
-        let resp_json_ralph = app_server.handle_request(&req_json_ralph).await;
+        let resp_json_ralph: String = app_server.handle_request(&req_json_ralph).await;
         let resp_ralph: JsonRpcResponse = serde_json::from_str(&resp_json_ralph).unwrap();
         assert!(resp_ralph.error.is_none());
         assert_eq!(
@@ -1320,7 +1320,7 @@ mod tests {
 
         // Test Agent Protocol ap_create_task method
         let req_json_ap_create = r#"{"jsonrpc": "2.0", "id": "10", "method": "ap_create_task", "params": {"input": "do this task"}}"#;
-        let resp_json_ap_create = app_server.handle_request(req_json_ap_create).await;
+        let resp_json_ap_create: String = app_server.handle_request(&req_json_ap_create).await;
         let resp_ap_create: JsonRpcResponse = serde_json::from_str(&resp_json_ap_create).unwrap();
         assert!(
             resp_ap_create.error.is_none(),
@@ -1344,7 +1344,7 @@ mod tests {
             r#"{{"jsonrpc": "2.0", "id": "11", "method": "ap_get_task", "params": {{"task_id": "{}"}}}}"#,
             task_id
         );
-        let resp_json_ap_get = app_server.handle_request(&req_json_ap_get).await;
+        let resp_json_ap_get: String = app_server.handle_request(&req_json_ap_get).await;
         let resp_ap_get: JsonRpcResponse = serde_json::from_str(&resp_json_ap_get).unwrap();
         assert!(resp_ap_get.error.is_none());
         assert_eq!(
@@ -1362,7 +1362,7 @@ mod tests {
         let req_json_ap_list = format!(
             r#"{{"jsonrpc": "2.0", "id": "11a", "method": "ap_list_tasks", "params": {{}}}}"#
         );
-        let resp_json_ap_list = app_server.handle_request(&req_json_ap_list).await;
+        let resp_json_ap_list: String = app_server.handle_request(&req_json_ap_list).await;
         let resp_ap_list: JsonRpcResponse = serde_json::from_str(&resp_json_ap_list).unwrap();
         assert!(resp_ap_list.error.is_none());
         assert!(resp_ap_list.result.unwrap().get("tasks").is_some());
@@ -1372,7 +1372,7 @@ mod tests {
             r#"{{"jsonrpc": "2.0", "id": "11b", "method": "ap_list_steps", "params": {{"task_id": "{}"}}}}"#,
             task_id
         );
-        let resp_json_ap_list_steps = app_server.handle_request(&req_json_ap_list_steps).await;
+        let resp_json_ap_list_steps: String = app_server.handle_request(&req_json_ap_list_steps).await;
         let resp_ap_list_steps: JsonRpcResponse =
             serde_json::from_str(&resp_json_ap_list_steps).unwrap();
         assert!(resp_ap_list_steps.error.is_none());
@@ -1380,19 +1380,19 @@ mod tests {
 
         // SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
         let req_json_am_search = r#"{"jsonrpc": "2.0", "id": "13", "method": "am_search_agents", "params": {"query": "Rust"}}"#;
-        let resp_json_am_search = app_server.handle_request(req_json_am_search).await;
+        let resp_json_am_search: String = app_server.handle_request(&req_json_am_search).await;
         let resp_am_search: JsonRpcResponse = serde_json::from_str(&resp_json_am_search).unwrap();
         assert!(resp_am_search.error.is_none());
 
         // SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
         let req_json_am_fetch = r#"{"jsonrpc": "2.0", "id": "14", "method": "am_fetch_agent", "params": {"agent_id": "agent-1"}}"#;
-        let resp_json_am_fetch = app_server.handle_request(req_json_am_fetch).await;
+        let resp_json_am_fetch: String = app_server.handle_request(&req_json_am_fetch).await;
         let resp_am_fetch: JsonRpcResponse = serde_json::from_str(&resp_json_am_fetch).unwrap();
         assert!(resp_am_fetch.error.is_none());
 
         // SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
         let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
-        let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
+        let resp_json_am_publish: String = app_server.handle_request(&req_json_am_publish).await;
         let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();
         assert!(resp_am_publish.error.is_none());
 
@@ -1401,7 +1401,7 @@ mod tests {
             r#"{{"jsonrpc": "2.0", "id": "12", "method": "ap_execute_step", "params": {{"task_id": "{}", "input": "step 1"}}}}"#,
             task_id
         );
-        let resp_json_ap_execute = app_server.handle_request(&req_json_ap_execute).await;
+        let resp_json_ap_execute: String = app_server.handle_request(&req_json_ap_execute).await;
         let resp_ap_execute: JsonRpcResponse = serde_json::from_str(&resp_json_ap_execute).unwrap();
         assert!(resp_ap_execute.error.is_none());
         let step_result = resp_ap_execute.result.unwrap();
@@ -1420,20 +1420,20 @@ mod tests {
 
         // Test SONA endpoints
         let record_req = r#"{"jsonrpc": "2.0", "id": "1", "method": "record_sona_pattern", "params": { "id": "p1", "initial_context": "ctx", "successful_tools": ["bash"], "outcome_score": 1.0 }}"#;
-        let record_resp = app_server.handle_request(record_req).await;
+        let record_resp: String = app_server.handle_request(&record_req).await;
         let resp: JsonRpcResponse = serde_json::from_str(&record_resp).unwrap();
         assert!(resp.error.is_none());
 
         // Get patterns
         let get_req =
             r#"{"jsonrpc": "2.0", "id": "2", "method": "get_sona_patterns", "params": {}}"#;
-        let get_resp = app_server.handle_request(get_req).await;
+        let get_resp: String = app_server.handle_request(&get_req).await;
         let resp2: JsonRpcResponse = serde_json::from_str(&get_resp).unwrap();
         assert!(resp2.error.is_none());
 
         // Test get_task method
         let req_json_get = r#"{"jsonrpc": "2.0", "id": "4", "method": "get_task", "params": {"task_id": "task-abc"}}"#;
-        let resp_json_get = app_server.handle_request(req_json_get).await;
+        let resp_json_get: String = app_server.handle_request(&req_json_get).await;
         let resp_get: JsonRpcResponse = serde_json::from_str(&resp_json_get).unwrap();
         assert!(resp_get.error.is_none());
 
@@ -1451,7 +1451,7 @@ mod tests {
 
         // Test unknown method
         let req_json_bad = r#"{"jsonrpc": "2.0", "id": "4", "method": "unknown", "params": {}}"#;
-        let resp_json_bad = app_server.handle_request(req_json_bad).await;
+        let resp_json_bad: String = app_server.handle_request(&req_json_bad).await;
         let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
         assert_eq!(resp_bad.error.unwrap().code, -32601);
     }
@@ -1561,10 +1561,10 @@ mod tests_goose {
     async fn test_goose_mcp_endpoints() {
         let agent = Arc::new(Agent::new(Arc::new(DummyLlm), vec![]));
         let runner = Runner::new(agent);
-        let server = AppServer::new(Arc::new(runner));
+        let server = CodexAppServer::new(Arc::new(runner));
 
         let list_req = r#"{"jsonrpc": "2.0", "id": "1", "method": "goose_mcp_list", "params": {}}"#;
-        let list_res_str = server.handle_request(list_req).await;
+        let list_res_str: String = server.handle_request(&list_req).await;
         assert!(
             list_res_str.contains("sample_mcp"),
             "Response was: {}",
@@ -1572,7 +1572,7 @@ mod tests_goose {
         );
 
         let exec_req = r#"{"jsonrpc": "2.0", "id": "2", "method": "goose_mcp_execute", "params": {"id": "sample_mcp", "args": {"echo": "hello test"}}}"#;
-        let exec_res_str = server.handle_request(exec_req).await;
+        let exec_res_str: String = server.handle_request(&exec_req).await;
         assert!(
             exec_res_str.contains("hello test"),
             "Response was: {}",

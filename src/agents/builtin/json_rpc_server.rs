@@ -201,7 +201,7 @@ async fn handle_rpc(
             }
         }
         _method => {
-            let app_server = crate::codex_runner::AppServer::new(state.runner.clone());
+            let app_server = crate::codex_runner::CodexAppServer::new(state.runner.clone());
             let req_str = serde_json::to_string(&payload).unwrap_or_default();
             let res_str = app_server.handle_request(&req_str).await;
             if let Ok(resp) = serde_json::from_str::<JsonRpcResponse>(&res_str) {
