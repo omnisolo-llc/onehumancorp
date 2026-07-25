@@ -1,14 +1,14 @@
 issue_title: "Implement Native Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp currently lacks a native, high-performance omnichannel chat system. While previous iterations relied on external services like Chatwoot, these introduced latency, synchronization issues, and violated our absolute data residency and multi-tenant isolation principles. For our core personas—like Maya (baker managing IG DMs), Carlos (handyman handling SMS leads), and Fatima (food cart operator responding to pre-order queries)—fragmented communications lead to missed opportunities. OHC requires a highly scalable, strictly isolated, natively integrated Rust-based chat engine to unify all customer interactions (Instagram, WhatsApp, SMS, Web Chat, Email) into a single actionable owner feed.
+  OneHumanCorp currently lacks a native, high-performance omnichannel chat system. While previous iterations relied on external services, these introduced latency, synchronization issues, and violated our absolute data residency and multi-tenant isolation principles. For our core personas—like Maya (baker managing IG DMs), Carlos (handyman handling SMS leads), and Fatima (food cart operator responding to pre-order queries)—fragmented communications lead to missed opportunities. OHC requires a highly scalable, strictly isolated, natively integrated Rust-based chat engine to unify all customer interactions (Instagram, WhatsApp, SMS, Web Chat, Email) into a single actionable owner feed.
 
   ## Research Report
-  Our audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) reveals a mature but monolithic Ruby-on-Rails architecture. Key findings from Chatwoot's `app/models` include:
+  Our audit of the legacy open-source platform's source code reveals a mature but monolithic Ruby-on-Rails architecture. Key findings from its `app/models` include:
   - **Core Entities**: Accounts (Tenants), Inboxes, Channels (WebWidget, FB, Twitter, API), Contacts, Conversations, and Messages.
   - **Real-time Layer**: ActionCable (WebSockets) handles event broadcasting.
   - **Extensibility**: Webhooks and Agent Bots to automate responses.
-  - **Shortcomings for OHC**: Chatwoot lacks strict row-level security (RLS) enforcement at the DB level, relies heavily on background Sidekiq workers with potential Ruby-induced latency, and its UI is not natively built for our 375px mobile-first owner requirement.
+  - **Shortcomings for OHC**: It lacks strict row-level security (RLS) enforcement at the DB level, relies heavily on background Sidekiq workers with potential Ruby-induced latency, and its UI is not natively built for our 375px mobile-first owner requirement.
 
   Comparing this with our needs and modern high-performance messaging (e.g., Discord's Rust services, Stripe's isolated processing), we need a Rust-based async system (using Tokio) leveraging PostgreSQL with strict RLS for multi-tenancy, and Redis for pub/sub and distributed locking.
 
