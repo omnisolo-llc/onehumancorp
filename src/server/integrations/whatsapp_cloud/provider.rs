@@ -55,11 +55,19 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
 
+    use crate::client::MessagePayload;
+
     struct MockWhatsAppCloudClient;
 
     #[async_trait]
     impl WhatsAppCloudClientWrapper for MockWhatsAppCloudClient {
         async fn send_message(&self, _to: &str, _body: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_custom_message(&self, _payload: &MessagePayload) -> Result<(), String> {
+            Ok(())
+        }
+        async fn register_phone_number(&self, _pin: &str) -> Result<(), String> {
             Ok(())
         }
     }

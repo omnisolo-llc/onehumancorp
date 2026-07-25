@@ -22,7 +22,7 @@ rust_library(
         "@crates//:tokio",
         "@crates//:serde_json",
         "@crates//:serde",
-
+        "@crates//:redis",
     ],
 )
 
