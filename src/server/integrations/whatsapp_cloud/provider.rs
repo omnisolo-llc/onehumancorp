@@ -62,6 +62,15 @@ mod tests {
         async fn send_message(&self, _to: &str, _body: &str) -> Result<(), String> {
             Ok(())
         }
+        async fn send_template_message(&self, _to: &str, _template: serde_json::Value) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_interactive_message(&self, _to: &str, _interactive: serde_json::Value) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_media_message(&self, _to: &str, _media_type: &str, _media: serde_json::Value) -> Result<(), String> {
+            Ok(())
+        }
     }
 
     #[test]

@@ -1,7 +1,8 @@
 {
-  "key_learnings": [
-    "The codebase has a comprehensive set of implementations for the 'Agent Harness' mechanisms requested in the task.",
-    "When randomly selecting a mechanic, it's common for it to already be partially or fully implemented in the current Rust microservice.",
-    "Ensure the tests cover edge cases (e.g., recursive condensation in ClaudeSubagentSpawner)."
+  "task": "Build Native Rust Omnichannel Chat System Parity with Chatwoot",
+  "learnings": [
+    "When modifying WhatsApp client libraries, ensure serde_json keys are mutated correctly using `as_object_mut().unwrap().insert(...)` rather than direct index mutation `payload[key] = value` which panics.",
+    "When configuring webhooks with idempotency in Rust, use `redis::cmd(\"SET\").arg(key).arg(\"1\").arg(\"NX\").arg(\"EX\").arg(ttl)` via multiplexed connection to prevent duplicate processing safely.",
+    "Be careful to preserve existing `axum` route signatures (like not changing `Router` to `Router<AppState>`) unless prepared to update the entire workspace routing graph. Fallback to `OnceLock` for isolated state where necessary."
   ]
 }
