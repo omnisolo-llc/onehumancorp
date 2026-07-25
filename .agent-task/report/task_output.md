@@ -1,12 +1,12 @@
-issue_title: "Architecture Design: Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Architecture Design: Native Rust Omnichannel Chat System (the legacy chat platform Replacement)"
 issue_description: |
   # Mission Queue Protocol: Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  OneHumanCorp (OHC) currently lacks a native, high-performance, multi-tenant omnichannel customer support and chat engine, having fully retired external dependencies like Chatwoot. Our non-technical owner/operators (e.g., Maya the baker, Carlos the handyman) need a unified inbox that aggregates Instagram DMs, WhatsApp, web chat, and email into a single, seamless, and mobile-friendly command center. They need this unified inbox to coordinate seamlessly with their AI Customer and Operations Assistants to automatically draft replies, manage context, and handle routine inquiries without needing technical configuration.
+  OneHumanCorp (OHC) currently lacks a native, high-performance, multi-tenant omnichannel customer support and chat engine, having fully retired external dependencies like the legacy chat platform. Our non-technical owner/operators (e.g., Maya the baker, Carlos the handyman) need a unified inbox that aggregates Instagram DMs, WhatsApp, web chat, and email into a single, seamless, and mobile-friendly command center. They need this unified inbox to coordinate seamlessly with their AI Customer and Operations Assistants to automatically draft replies, manage context, and handle routine inquiries without needing technical configuration.
 
   ## Research Report
-  - **Chatwoot Audit**: Based on an architectural review of Chatwoot's source code, its core strengths lie in its structured data models (`Inbox`, `Conversation`, `Message`, `Contact`, `Channel`), its WebSocket-based real-time messaging, and its clear channel adapter pattern for unifying diverse message sources.
+  - **the legacy chat platform Audit**: Based on an architectural review of the legacy chat platform's source code, its core strengths lie in its structured data models (`Inbox`, `Conversation`, `Message`, `Contact`, `Channel`), its WebSocket-based real-time messaging, and its clear channel adapter pattern for unifying diverse message sources.
   - **Market Dynamics**: SMBs struggle with fractured communications across multiple apps. A unified inbox is critical for converting leads and retaining customers. Our competitors (e.g., Front, Zendesk) provide these, but they are designed for support teams, not solo owner/operators. OHC's differentiation is AI-first triage and response drafting directly integrated into the core operations engine.
 
   ## Design Doc
@@ -96,7 +96,7 @@ issue_description: |
   - **Multi-Tenant Isolation**: Row-level tenant isolation enforced via `tenant_id` on all tables (`ENABLE ROW LEVEL SECURITY` in Postgres). Distributed Redis locks used to coordinate agent processing per conversation.
 
   ## Implementation Prompt
-  **Goal:** Implement the foundational Rust API and data models for the Native Omnichannel Inbox, completely replacing Chatwoot dependencies.
+  **Goal:** Implement the foundational Rust API and data models for the Native Omnichannel Inbox, completely replacing the legacy chat platform dependencies.
 
   **CUJ:** As an owner (Maya), I receive an Instagram DM. It appears in my OHC Unified Inbox. The AI Customer Assistant drafts a reply, which I can view and send with one tap on my mobile device.
 
