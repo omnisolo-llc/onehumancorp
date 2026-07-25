@@ -1,10 +1,10 @@
 issue_title: "Architecture Design: Native Rust Omnichannel Chat System"
 issue_description: |
   **Problem Statement**
-  The external dependency on Chatwoot for omnichannel customer support has been explicitly retired to align with the core product vision. OHC must own the end-to-end multi-tenant customer communication channel natively within `onehumancorp/mono`. We need a high-performance, strictly isolated Rust implementation of the core omnichannel model (Inboxes, Contacts, Conversations, Messages, and Channels) that powers the Work Triage and Customer & Relationship Assistant capabilities.
+  The external dependency on the third-party open-source chat solution for omnichannel customer support has been explicitly retired to align with the core product vision. OHC must own the end-to-end multi-tenant customer communication channel natively within `onehumancorp/mono`. We need a high-performance, strictly isolated Rust implementation of the core omnichannel model (Inboxes, Contacts, Conversations, Messages, and Channels) that powers the Work Triage and Customer & Relationship Assistant capabilities.
 
   **Research Report**
-  An audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) reveals its core data modeling around several key domain entities:
+  An audit of the retired legacy third-party source code reveals its core data modeling around several key domain entities:
   - `Account` (matches OHC's `tenant`)
   - `Inbox` (the aggregation point for channels like Email, SMS, Web Widget)
   - `Contact` (the customer interacting via channels)
