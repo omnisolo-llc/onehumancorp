@@ -1,29 +1,41 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AppShell } from '../components/AppShell';
 
 export default function WorkIntakeWidgetPage() {
   const router = useRouter();
-  const [tenant, setTenant] = useState('my-business');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [title, setTitle] = useState('Work Request');
-  const [copied, setCopied] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const [tenantId, setTenantId] = useState('demo-tenant');
+  const [buttonColor, setButtonColor] = useState('#0066FF');
+  const [formTitle, setFormTitle] = useState('Contact Us');
+  const [theme, setTheme] = useState('light');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
-      setTenant(storedTenant);
+  const handleRemoveBrandingClick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setShowSoftPaywall(true);
+      setRemoveBranding(false); // They must upgrade to check it
     }
-    document.title = "Embed Work Intake | OHC";
-  }, []);
+  };
 
-  const encodedTenant = encodeURIComponent(tenant);
-  const embedUrl = `https://ohc.app/api/v1/growth/work-intake/embed?tenant=${encodedTenant}&theme=${theme}&title=${encodeURIComponent(title)}`;
-  const embedCode = `<iframe src="${embedUrl}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+  const embedCode = `<!-- Powered by OHC -->
+<div id="ohc-work-intake-widget" style="width: 100%; max-width: 400px; margin: 0 auto; filter: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15))">
+  <iframe
+      src="https://ohc.app/api/v1/growth/work-intake/embed?tenant=${tenantId}&theme=${theme}&title=${encodeURIComponent(formTitle)}&color=${encodeURIComponent(buttonColor)}"
+      width="320"
+      height="400"
+      frameBorder="0"
+      scrolling="no"
+      style="border: none; border-radius: 16px; background-color: transparent; width: 100%;"
+  ></iframe>
+  ${!removeBranding ? `<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;">
+      <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" rel="noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+  </div>` : ''}
+</div>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -31,172 +43,151 @@ export default function WorkIntakeWidgetPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getThemeStyles = () => {
-    if (theme === 'dark') {
-      return { background: '#1D1D1F', color: '#ffffff', borderColor: '#333333' };
-    }
-    return { background: '#ffffff', color: '#111827', borderColor: '#e5e7eb' };
-  };
-
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50/50 via-white/50 to-blue-50/50">
-      {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <div className="flex items-center gap-3">
-             <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Work-Intake Widget 📋</h1>
-             <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">Lead Capture Loop</span>
-         </div>
-         <div className="flex items-center gap-3">
-             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
-               Back to Dashboard
+    <AppShell title="Work Intake Widget" subtitle="Generate an embeddable contact form to capture leads directly into your triage inbox.">
+      <div className="max-w-6xl mx-auto space-y-6 lg:space-y-0 lg:flex lg:gap-8">
+        {/* Configuration Panel */}
+        <div className="flex-1 space-y-6">
+          <div className="bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Widget Configuration</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Tenant ID (For routing)
+                </label>
+                <input
+                  type="text"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-transparent"
+                  data-testid="input-tenant-id"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Form Title
+                </label>
+                <input
+                  type="text"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-transparent"
+                  data-testid="input-form-title"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Theme
+                </label>
+                <select
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-transparent"
+                  data-testid="select-theme"
+                >
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="auto">Auto (System)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Button Color
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={buttonColor}
+                    onChange={(e) => setButtonColor(e.target.value)}
+                    className="w-10 h-10 rounded cursor-pointer"
+                    data-testid="input-button-color"
+                  />
+                  <span className="text-sm text-gray-500">{buttonColor}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={removeBranding}
+                    onChange={handleRemoveBrandingClick}
+                    className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                    data-testid="input-remove-branding"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 transition-colors">
+                    Remove "Powered by OHC" watermark
+                  </span>
+                  <span className="ml-auto text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full uppercase tracking-wider">
+                    Pro
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm">
+             <button
+               onClick={() => setShowModal(true)}
+               className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+               data-testid="btn-get-code"
+             >
+               Get Embed Code
              </button>
-         </div>
-      </header>
-
-      <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
-        {/* Editor Sidebar */}
-        <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 app-card shadow-lg">
-                <h2 className="text-lg font-semibold font-outfit mb-4">Widget Settings</h2>
-
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                    <div className="flex bg-gray-100 p-1 rounded-lg">
-                        <button
-                            aria-pressed={theme === 'light'}
-                            onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            Light
-                        </button>
-                        <button
-                            aria-pressed={theme === 'dark'}
-                            onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium min-h-[44px] min-w-[44px] transition-all ${theme === 'dark' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-                        >
-                            Dark
-                        </button>
-                    </div>
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tenant ID</label>
-                    <input
-                        type="text"
-                        value={tenant}
-                        onChange={(e) => setTenant(e.target.value)}
-                        className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] backdrop-blur-[30px] saturate-[210%] transition-all"
-                        placeholder="e.g. my-business"
-                    />
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Form Title</label>
-                    <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-[8px] min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] backdrop-blur-[30px] saturate-[210%] transition-all"
-                        placeholder="e.g. Work Request"
-                    />
-                </div>
-
-                <div className="mb-6">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={removeBranding}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                  setShowSoftPaywall(true);
-                                  setRemoveBranding(false);
-                              } else {
-                                  setRemoveBranding(false);
-                              }
-                          }}
-                            className="w-4 h-4 text-[#0071E3] rounded focus:ring-[#0066FF]"
-                        />
-                        <span className="text-sm text-gray-700">Remove "Powered by OHC" branding</span>
-                    </label>
-                    <p className="text-xs text-gray-500 mt-1 ml-6">Requires Pro plan or higher.</p>
-                </div>
-            </div>
-
-            <div className="p-6 app-card shadow-lg flex flex-col justify-center gap-4">
-               <h3 className="font-semibold text-gray-900">Embed on Your Website</h3>
-               <p className="text-sm text-gray-600">Copy this code snippet to add the widget directly to your own site, Notion document, or blog.</p>
-               <button
-                  onClick={() => setShowModal(true)}
-                  className="w-full py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm"
-               >
-                  Get Widget Code
-               </button>
-            </div>
+          </div>
         </div>
 
-        {/* Live Preview */}
-        <section className="w-full md:w-2/3 flex flex-col gap-4 items-center">
-             <h2 className="text-xl font-semibold font-outfit self-start" style={{ color: '#1D1D1F' }}>Live Preview</h2>
+        {/* Preview Panel */}
+        <div className="flex-1">
+          <div className="bg-white/80 dark:bg-black/40 backdrop-blur-md rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm h-full min-h-[500px]">
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Live Preview</h2>
 
-             {/* Realistic environment wrapper */}
-             <div className="w-full max-w-2xl app-card min-h-[44px] min-w-[44px] overflow-hidden shadow-2xl relative mt-4">
-                 <div className="bg-gray-100 border-b border-gray-300 px-4 py-3 flex items-center gap-2">
-                     <div className="flex gap-1.5">
-                         <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                         <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                         <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                     </div>
-                     <div className="ml-4 bg-white px-3 py-1 rounded border border-gray-200 text-xs text-gray-500 flex-1 text-center font-mono">
-                         yourwebsite.com
-                     </div>
-                 </div>
+            <div className="flex justify-center w-full" data-testid="widget-preview">
+               <div style={{ width: '100%', maxWidth: '400px', margin: '0 auto', filter: 'drop-shadow(0 25px 25px rgb(0 0 0 / 0.15))' }}>
+                  {/* Mock iframe representation for preview */}
+                  <div style={{ width: '100%', height: '400px', border: '1px solid #e5e7eb', borderRadius: '16px', backgroundColor: theme === 'dark' ? '#1f2937' : '#ffffff', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ padding: '20px', flex: 1 }}>
+                          <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem', color: theme === 'dark' ? '#ffffff' : '#111827' }}>{formTitle}</h3>
+                          <div style={{ width: '100%', height: '38px', marginBottom: '1rem', border: '1px solid #d1d5db', borderRadius: '6px' }}></div>
+                          <div style={{ width: '100%', height: '38px', marginBottom: '1rem', border: '1px solid #d1d5db', borderRadius: '6px' }}></div>
+                          <div style={{ width: '100%', height: '80px', marginBottom: '1rem', border: '1px solid #d1d5db', borderRadius: '6px' }}></div>
+                          <button style={{ width: '100%', padding: '0.75rem', backgroundColor: buttonColor, color: 'white', border: 'none', borderRadius: '6px', fontWeight: 500 }}>
+                            Submit Request
+                          </button>
+                      </div>
+                  </div>
+                  {!removeBranding && (
+                      <div style={{ fontFamily: 'sans-serif', textAlign: 'center', fontSize: '12px', marginTop: '8px' }}>
+                          <span style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OHC</span>
+                      </div>
+                  )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-                 <div className="p-8 min-h-[500px] flex flex-col lg:flex-row items-center justify-center gap-12" style={{ backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-
-                    <div className="text-left flex-1 max-w-sm hidden lg:block">
-                        <h3 className="text-3xl font-bold mb-4 text-gray-800">Ready to start?</h3>
-                        <p className="text-gray-600 mb-6">Drop your information in the form and we'll get right back to you. This form connects directly to your OHC workspace.</p>
-                        <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
-                        <div className="h-4 w-48 bg-gray-200 rounded"></div>
-                    </div>
-
-                    {/* The Actual Widget Iframe Preview */}
-                    <div className="flex-shrink-0" style={{ filter: 'drop-shadow(0 25px 25px rgb(0 0 0 / 0.15))' }}>
-                        <iframe
-                            src={`/api/v1/growth/work-intake/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}`}
-                            width="320"
-                            height="400"
-                            frameBorder="0"
-                            scrolling="no"
-                            style={{ border: 'none', borderRadius: '16px', backgroundColor: 'transparent' }}
-                        />
-                        {!removeBranding && (
-                            <div style={{ fontFamily: 'sans-serif', textAlign: 'center', fontSize: '12px', marginTop: '8px' }}>
-                                <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OHC</a>
-                            </div>
-                        )}
-                    </div>
-
-                 </div>
-             </div>
-        </section>
-      </main>
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
-        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4" data-testid="paywall-modal">
+          <div className="bg-white w-full max-w-md p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center rounded-2xl">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">
               <button
                 onClick={() => setShowSoftPaywall(false)}
                 className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+                data-testid="btn-close-paywall"
               >
                 <span className="text-xl leading-none">&times;</span>
               </button>
             </div>
 
-            <div className="w-16 h-16 bg-indigo-100 flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
+            <div className="w-16 h-16 bg-indigo-100 flex items-center justify-center text-3xl rounded-full text-indigo-600 mx-auto mb-6">
               ✨
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
@@ -206,21 +197,20 @@ export default function WorkIntakeWidgetPage() {
 
             <button
               onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
-              className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
+              className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+              data-testid="btn-upgrade-pro"
             >
               Upgrade to Pro
             </button>
-            <p className="text-sm text-gray-500">Share-based unlocking is unavailable because no referral verification service is connected.</p>
           </div>
         </div>
       )}
-
 
       {/* Embed Code Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[30px] saturate-[210%]" onClick={() => setShowModal(false)}></div>
-            <div className="app-card shadow-2xl p-8 max-w-xl w-full relative z-10 animate-fade-in-up">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 max-w-xl w-full relative z-10 animate-fade-in-up border border-gray-200 dark:border-gray-800">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -231,20 +221,22 @@ export default function WorkIntakeWidgetPage() {
                     </svg>
                 </button>
 
-                <h2 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Embed Work-Intake Widget</h2>
-                <p className="text-gray-600 mb-6">Copy and paste this HTML snippet into your website to capture leads instantly.</p>
+                <h2 className="text-2xl font-bold font-outfit mb-2 text-gray-900 dark:text-white">Embed Work-Intake Widget</h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">Copy and paste this HTML snippet into your website to capture leads instantly.</p>
 
                 <div className="relative group">
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
+                        className="w-full h-48 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 min-h-[44px] min-w-[44px] font-mono text-sm text-gray-800 dark:text-gray-300 resize-none rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0066FF]/20 focus:border-[#0066FF] transition-all"
+                        data-testid="embed-code-block"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
                             onClick={handleCopy}
-                            className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-[#0071E3] transition-colors"
+                            className="p-2 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 shadow-sm text-gray-600 dark:text-gray-300 hover:text-[#0071E3] transition-colors"
                             title="Copy to clipboard"
+                            data-testid="btn-copy-code-icon"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                         </button>
@@ -254,13 +246,14 @@ export default function WorkIntakeWidgetPage() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
-                        className="flex-1 py-3 bg-[#0071E3] hover:bg-blue-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        className="flex-1 py-3 rounded-lg bg-[#0071E3] hover:bg-blue-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
+                        data-testid="btn-copy-code"
                     >
                         {copied ? 'Copied!' : 'Copy Code'}
                     </button>
                     <button
                         onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium min-h-[44px] min-w-[44px] transition-colors"
+                        className="flex-1 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-white font-medium min-h-[44px] min-w-[44px] transition-colors"
                     >
                         Close
                     </button>
@@ -268,18 +261,6 @@ export default function WorkIntakeWidgetPage() {
             </div>
         </div>
       )}
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-
-        @keyframes fade-in-up {
-          0% { opacity: 0; transform: translateY(20px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up { animation: fade-in-up 0.2s ease-out forwards; }
-      `}} />
-    </div>
+    </AppShell>
   );
 }
