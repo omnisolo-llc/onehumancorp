@@ -44,50 +44,71 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("connect to OHC_POSTGRES_ADMIN_URL: {error}"))?;
 
-    sqlx::query("CREATE EXTENSION IF NOT EXISTS vector")
-        .execute(&admin_pool)
+    let mut conn = admin_pool
+        .acquire()
         .await
-        .map_err(|error| format!("create vector extension: {error}"))?;
-    sqlx::query("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
-        .execute(&admin_pool)
-        .await
-        .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
+        .map_err(|e| format!("acquire connection: {e}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
+    sqlx::query("SELECT pg_advisory_lock(123456789)")
+        .execute(&mut *conn)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .map_err(|error| format!("acquire advisory lock: {error}"))?;
 
-    sqlx::raw_sql(
-        r#"
-        DO $$
-        BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_security_test') THEN
-                CREATE ROLE ohc_security_test LOGIN PASSWORD 'ohc_security_test';
-            END IF;
-            EXECUTE format(
-                'GRANT CONNECT ON DATABASE %I TO ohc_security_test',
-                current_database()
-            );
-        END
-        $$;
-        ALTER ROLE ohc_security_test NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
-        GRANT ohc_bypassrls TO ohc_security_test;
-        GRANT USAGE ON SCHEMA public TO ohc_security_test;
-        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ohc_security_test;
-        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ohc_security_test;
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public
-            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ohc_security_test;
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public
-            GRANT USAGE, SELECT ON SEQUENCES TO ohc_security_test;
-        "#,
-    )
-    .execute(&admin_pool)
-    .await
-    .map_err(|error| format!("provision non-superuser test role: {error}"))?;
+    let result = async {
+        sqlx::query("CREATE EXTENSION IF NOT EXISTS vector")
+            .execute(&mut *conn)
+            .await
+            .map_err(|error| format!("create vector extension: {error}"))?;
+
+        sqlx::query("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
+            .execute(&mut *conn)
+            .await
+            .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
+
+        MIGRATOR
+            .run(&mut *conn)
+            .await
+            .map_err(|error| format!("run src/server/migrations: {error}"))?;
+
+        sqlx::raw_sql(
+            r#"
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_security_test') THEN
+                    CREATE ROLE ohc_security_test LOGIN PASSWORD 'ohc_security_test';
+                END IF;
+                EXECUTE format(
+                    'GRANT CONNECT ON DATABASE %I TO ohc_security_test',
+                    current_database()
+                );
+            END
+            $$;
+            ALTER ROLE ohc_security_test NOSUPERUSER NOCREATEROLE NOINHERIT NOBYPASSRLS;
+            GRANT ohc_bypassrls TO ohc_security_test;
+            GRANT USAGE ON SCHEMA public TO ohc_security_test;
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ohc_security_test;
+            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ohc_security_test;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ohc_security_test;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                GRANT USAGE, SELECT ON SEQUENCES TO ohc_security_test;
+            "#,
+        )
+        .execute(&mut *conn)
+        .await
+        .map_err(|error| format!("provision non-superuser test role: {error}"))?;
+
+        Ok::<(), String>(())
+    }
+    .await;
+
+    sqlx::query("SELECT pg_advisory_unlock(123456789)")
+        .execute(&mut *conn)
+        .await
+        .map_err(|error| format!("release advisory lock: {error}"))?;
 
     admin_pool.close().await;
-    Ok(())
+    result
 }
 
 pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPool> {
