@@ -923,6 +923,7 @@ pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub mod services {
+    pub mod omnichannel_native_service;
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;

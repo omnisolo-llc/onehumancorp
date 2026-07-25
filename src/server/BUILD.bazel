@@ -58,6 +58,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:health.rs",
     "//src/server/api:syndication_handler.rs",
     "//src/server/api:omnichannel_webhook.rs",
+    "//src/server/api:omnichannel_native.rs",
+
     "//src/server/api:unified_inbox_webhook.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
@@ -263,6 +265,8 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration/statemachine:mod.rs",
     "//src/server/services:booking.rs",
     "//src/server/services:omnichannel_service.rs",
+    "//src/server/services:omnichannel_native_service.rs",
+
     "//src/server/services:mod.rs",
     "//src/server/services:quoting/mod.rs",
     "//src/server/services:inventory_sync.rs",
