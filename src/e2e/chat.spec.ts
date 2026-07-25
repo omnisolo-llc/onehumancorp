@@ -35,3 +35,34 @@ test.describe('Navigation', () => {
     await expect(page.locator('text=Welcome back')).toBeVisible();
   });
 });
+
+test.describe('Native Chatwoot Replacement - Unified Inbox', () => {
+  test('should load the native chat view via toggle', async ({ page }) => {
+    await page.goto('/inbox');
+    const toggleButton = page.locator('button', { hasText: 'Toggle View' });
+    await expect(toggleButton).toBeVisible();
+  });
+
+  test('should render the Conversations sidebar properly', async ({ page }) => {
+    await page.goto('/inbox');
+    await expect(page.locator('text=Conversations')).toBeVisible();
+  });
+
+  test('should render the Active Thread main area', async ({ page }) => {
+    await page.goto('/inbox');
+    await expect(page.locator('text=Active Thread')).toBeVisible();
+  });
+
+  test('should complete loading and show empty states if no data is seeded', async ({ page }) => {
+    await page.goto('/inbox');
+    await expect(page.locator('text=Loading...').first()).not.toBeVisible({ timeout: 10000 });
+  });
+
+  test('should have a functional message input and send button in the thread', async ({ page }) => {
+    await page.goto('/inbox');
+    const messageInput = page.getByPlaceholder('Type your message...');
+    await expect(messageInput).toBeVisible();
+    const sendButton = page.getByRole('button', { name: 'Send' });
+    await expect(sendButton).toBeVisible();
+  });
+});

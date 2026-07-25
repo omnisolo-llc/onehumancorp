@@ -1,10 +1,12 @@
 "use client";
 
+
 import { Fragment, useEffect, useMemo, useState, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
 import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
+import { ChatwootInbox } from "./chat";
 
 type Message = {
   id: string;
@@ -583,12 +585,17 @@ function ApiInboxFallback() {
 }
 
 export default function InboxPage() {
+  const [useNativeChat, setUseNativeChat] = useState(true);
   return (
-    <PowerSyncProvider
-      fallback={<InboxLoadingState />}
-      unsupportedFallback={<ApiInboxFallback />}
-    >
-      <PowerSyncInboxContent />
-    </PowerSyncProvider>
+    <div className="flex flex-col h-full">
+      <div className="p-2 flex justify-end">
+         <button onClick={() => setUseNativeChat(!useNativeChat)} className="text-xs text-gray-500 hover:text-blue-500">Toggle View</button>
+      </div>
+      {useNativeChat ? <ChatwootInbox /> :
+      <PowerSyncProvider fallback={<InboxLoadingState />} unsupportedFallback={<ApiInboxFallback />}>
+        <PowerSyncInboxContent />
+      </PowerSyncProvider>
+      }
+    </div>
   );
 }
