@@ -131,7 +131,7 @@ function CheckoutContent() {
           quantity,
         }),
       });
-      if (response.status === 409) throw new Error("The selected product just sold out.");
+      if (response.status === 409) throw new Error("Oops! Item just sold out.");
       const payload: unknown = await response.json();
       const url = isRecord(payload) ? trustedCheckoutUrl(payload.checkout_url) : null;
       if (!response.ok || !url) throw new Error("Checkout is temporarily unavailable.");
@@ -172,7 +172,13 @@ function CheckoutContent() {
               {total !== null && <span className="font-outfit text-xl font-bold">${(total / 100).toFixed(2)}</span>}
             </div>
             <p className="mt-5 text-sm text-gray-600">Taxes, fees, and any verified discounts are calculated by the payment provider.</p>
-            {checkoutStatus && <p className="mt-4 text-sm font-medium text-indigo-700" role="status">{checkoutStatus}</p>}
+            {checkoutStatus && (
+              checkoutStatus.includes("sold out") ? (
+                <h3 className="mt-4 text-lg font-bold text-red-600" role="alert">{checkoutStatus}</h3>
+              ) : (
+                <p className="mt-4 text-sm font-medium text-indigo-700" role="status">{checkoutStatus}</p>
+              )
+            )}
             <button onClick={handlePayment} disabled={isProcessing} className="mt-6 w-full rounded-lg bg-black px-4 py-3 font-medium text-white disabled:opacity-50">
               {isProcessing ? "Processing…" : tier ? "Upgrade" : "Pay"}
             </button>
