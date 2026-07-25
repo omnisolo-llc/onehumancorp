@@ -92,7 +92,7 @@ issue_description: |
   2. Implement the corresponding Rust struct models and CRUD repositories using `sqlx`.
   3. Build a service layer (`ChatService`) with methods to create inboxes, start conversations, and send messages.
   4. Ensure sending a message publishes an event to the message bus for real-time delivery and agent processing.
-  5. The acceptance criteria is that a user can create an inbox, a contact can start a conversation, and messages can be sent/retrieved via API endpoints, completely independently of Chatwoot.
+  5. The acceptance criteria is that a user can create an inbox, a contact can start a conversation, and messages can be sent/retrieved via API endpoints, completely independently of the external third-party service previously used.
 
   **Priority**: P0
   **Estimated Scope**: Large
