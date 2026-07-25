@@ -1,12 +1,12 @@
-issue_title: "[Architecture] Native Rust Omnichannel Chat Engine to Replace Chatwoot"
+issue_title: "[Architecture] Native Rust Omnichannel Chat Engine"
 issue_description: |
   ## Problem Statement
-  OHC requires a seamless, unified, and native real-time chat experience for owner/operators like Maya and Carlos, who need to unify Instagram DMs, SMS, WhatsApp, and Web Chat into a single triage feed. Previously, we relied on Chatwoot, but as per our architectural mandate, Chatwoot is 100% RETIRED as a third-party dependency. We must build our own high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust to achieve tighter integration with our AI agents and backend systems, eliminating external dependencies.
+  OHC requires a seamless, unified, and native real-time chat experience for owner/operators like Maya and Carlos, who need to unify Instagram DMs, SMS, WhatsApp, and Web Chat into a single triage feed. We must build our own high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust to achieve tighter integration with our AI agents and backend systems, eliminating external dependencies.
 
   ## Research Report
-  - **Market Context**: Platforms like Shopify Inbox, Meta Business Suite, and Chatwoot offer unified inbox capabilities. Chatwoot provides an open-source model but relies heavily on Ruby on Rails, Sidekiq, and external moving parts.
+  - **Market Context**: Platforms like Shopify Inbox, Meta Business Suite offer unified inbox capabilities.
   - **Codebase Audit**: Our Rust backend under `src/server` supports gRPC/Axum and PostgreSQL. We need to introduce real-time WebSocket capabilities, channel adapters (e.g., for Meta APIs, SMS/Twilio), and a robust data model for unified conversations.
-  - **Chatwoot Benchmarking**: Reviewing Chatwoot's architecture reveals a structured approach to Inboxes, Contacts, Conversations, Messages, and Channel Adapters. We can map these entities into Rust `structs` backed by Postgres, with Valkey (Redis) for real-time pub/sub across multi-tenant boundaries.
+  - **Benchmarking**: Reviewing the architecture reveals a structured approach to Inboxes, Contacts, Conversations, Messages, and Channel Adapters. We can map these entities into Rust `structs` backed by Postgres, with Valkey (Redis) for real-time pub/sub across multi-tenant boundaries.
 
   ## Design Doc
   ### Architecture Diagram (Mental/Mermaid Model)
