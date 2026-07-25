@@ -47,7 +47,7 @@ impl<T: Send + Sync> AdvancedPydanticOutputParser<T> {
     }
 }
 
-impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for AdvancedPydanticOutputParser<T> {
+impl<T: serde::de::DeserializeOwned + Send + Sync> OutputParser<T> for AdvancedPydanticOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
@@ -84,7 +84,7 @@ impl<T: Send + Sync> StructuredOutputParser<T> {
     }
 }
 
-impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputParser<T> {
+impl<T: serde::de::DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
         if !msg.tool_calls.is_empty()
@@ -103,7 +103,7 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputPars
         }
 
         // Strict enforcement: Rely entirely on native tool_calls API objects.
-        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
+        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
     }
 }
 
