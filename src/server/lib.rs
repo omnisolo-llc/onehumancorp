@@ -7806,6 +7806,7 @@ async fn create_ui_bom_item_handler(
             ::server_auth::strict_bearer_auth_middleware,
         )))
         .merge(meta_webhook_router)
+        .nest("/api/v1/omnichannel", api::omnichannel_ws::router(api::omnichannel_ws::OmniWsState { hub: hub.clone() }))
         .merge(protect_internal_ingress(
             omnichannel_webhook_router,
             http_auth_store.clone(),
