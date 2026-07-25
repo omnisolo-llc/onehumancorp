@@ -1711,8 +1711,9 @@ mod store_tests {
 
     #[test]
     fn standalone_auth_rpc_accepts_only_a_strict_spiffe_identity() {
-        let service =
-            AuthServiceServerImpl::new(Arc::new(Store::new()), AuthTransportMode::Standalone);
+        temp_env::with_var("JWT_SECRET", Some("01234567890123456789012345678901"), || {
+            let service =
+                AuthServiceServerImpl::new(Arc::new(Store::new()), AuthTransportMode::Standalone);
         let mut valid = Request::new(());
         valid.metadata_mut().insert(
             "x-spiffe-id",
@@ -1752,6 +1753,7 @@ mod store_tests {
                 tonic::Code::Unauthenticated,
             );
         }
+        });
     }
 
     struct FailingRepository;
