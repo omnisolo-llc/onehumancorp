@@ -53,6 +53,7 @@ pub struct ChangeValue {
     pub metadata: Metadata,
     pub contacts: Option<Vec<Contact>>,
     pub messages: Option<Vec<Message>>,
+    pub statuses: Option<Vec<Status>>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -78,6 +79,12 @@ pub struct Message {
     pub id: String,
     pub timestamp: String,
     pub text: Option<Text>,
+    pub image: Option<Media>,
+    pub video: Option<Media>,
+    pub audio: Option<Media>,
+    pub document: Option<Media>,
+    pub interactive: Option<Interactive>,
+    pub location: Option<Location>,
     #[serde(rename = "type")]
     pub msg_type: String,
 }
@@ -87,11 +94,120 @@ pub struct Text {
     pub body: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Media {
+    pub id: String,
+    pub link: Option<String>,
+    pub caption: Option<String>,
+    pub filename: Option<String>,
+    pub mime_type: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Interactive {
+    #[serde(rename = "type")]
+    pub interactive_type: String,
+    pub button_reply: Option<ButtonReply>,
+    pub list_reply: Option<ListReply>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ButtonReply {
+    pub id: String,
+    pub title: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ListReply {
+    pub id: String,
+    pub title: String,
+    pub description: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Location {
+    pub latitude: f64,
+    pub longitude: f64,
+    pub name: Option<String>,
+    pub address: Option<String>,
+    pub url: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Status {
+    pub id: String,
+    pub status: String,
+    pub timestamp: String,
+    pub recipient_id: String,
+    pub errors: Option<Vec<Error>>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Error {
+    pub code: i32,
+    pub title: String,
+    pub message: Option<String>,
+    pub error_data: Option<ErrorData>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ErrorData {
+    pub details: String,
+}
+
+
+
+
+
+
+
+
+
 pub async fn handle_webhook(
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
     // Process incoming webhook payload
     tracing::info!("Received WhatsApp webhook: {:?}", payload);
+
+    for entry in payload.entry {
+        for change in entry.changes {
+            let val = change.value;
+
+            // Handle Statuses
+            if let Some(statuses) = val.statuses {
+                for status in statuses {
+                    tracing::info!("Processing status update for message id: {}, status: {}", status.id, status.status);
+                    if status.status == "failed" {
+                        if let Some(errors) = status.errors {
+                            for error in errors {
+                                if error.code == 131060 {
+                                    tracing::warn!("Message id {} failed with unsupported message type (131060)", status.id);
+                                } else {
+                                    tracing::warn!("Message id {} failed with error code: {}", status.id, error.code);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Handle Messages
+            if let Some(messages) = val.messages {
+                for message in messages {
+                    tracing::info!("Processing message id: {} of type {}", message.id, message.msg_type);
+
+                    // Example mapping to internal types
+                    match message.msg_type.as_str() {
+                        "text" => tracing::info!("Text message: {:?}", message.text),
+                        "image" | "video" | "audio" | "document" => tracing::info!("Media message received"),
+                        "interactive" => tracing::info!("Interactive message: {:?}", message.interactive),
+                        "location" => tracing::info!("Location message: {:?}", message.location),
+                        _ => tracing::warn!("Unsupported message type: {}", message.msg_type),
+                    }
+                }
+            }
+        }
+    }
 
     // Send a 200 OK response to acknowledge receipt
     StatusCode::OK
