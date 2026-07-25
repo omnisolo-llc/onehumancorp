@@ -13,6 +13,7 @@ name = "server_lib"
 path = "src/server/lib.rs"
 
 [dependencies]
+anyhow = "1"
 tower = "0.4"
 libc = "0.2"
 tracing = "0.1"

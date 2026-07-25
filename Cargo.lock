@@ -5609,6 +5609,7 @@ name = "ohc-mono"
 version = "0.4.47"
 dependencies = [
  "aes-gcm",
+ "anyhow",
  "async-nats",
  "async-recursion",
  "async-trait",
