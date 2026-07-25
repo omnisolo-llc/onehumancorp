@@ -23,6 +23,7 @@ test.describe('Autonomous Booking System UI', () => {
 
     // 4. Submit
     // Route mock to avoid actual backend errors if not fully seeded
+    await page.route('/api/v1/booking/public/checkout', async (route) => {
         await route.fulfill({
             status: 200,
             json: {
@@ -46,6 +47,7 @@ test.describe('Autonomous Booking System UI', () => {
     await expect(page.getByRole('heading', { name: 'Booking Management' })).toBeVisible();
 
     // Route mocks
+    await page.route('/api/v1/booking/admin/resources', async (route) => {
         if (route.request().method() === 'GET') {
             await route.fulfill({
                 status: 200,
@@ -56,6 +58,7 @@ test.describe('Autonomous Booking System UI', () => {
         }
     });
 
+    await page.route('/api/v1/booking/admin/availability', async (route) => {
         if (route.request().method() === 'GET') {
             await route.fulfill({
                 status: 200,

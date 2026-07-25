@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Omni Inbox Agentic Triage', () => {
   test('displays unread leads summary and allows inventory deduction approval', async ({ page }) => {
     // 1. Intercept the inbox messages fetch to return our simulated data
+    await page.route('**/api/ui/inbox/messages*', async (route) => {
       const json = [
         {
           id: 'msg_triage_1',
@@ -19,6 +20,7 @@ test.describe('Omni Inbox Agentic Triage', () => {
     });
 
     // 2. Intercept the approvals fetch to simulate an active approval for this message
+    await page.route('**/api/agents/approvals*', async (route) => {
       const json = {
         pending_approvals: [
           {
@@ -35,6 +37,7 @@ test.describe('Omni Inbox Agentic Triage', () => {
 
     // 3. Intercept the approve action
     let approveCalled = false;
+    await page.route('**/api/agents/approvals/app_triage_1', async (route) => {
       if (route.request().method() === 'POST') {
         const body = JSON.parse(route.request().postData() || '{}');
         if (body.approved === true) {
