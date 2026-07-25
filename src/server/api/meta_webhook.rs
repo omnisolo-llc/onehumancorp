@@ -223,7 +223,7 @@ mod signature_tests {
     }
 }
 
-async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String, source: String, sender_id: String, text: String) {
+pub async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String, source: String, sender_id: String, text: String) {
     let inbox_id = Uuid::new_v4().to_string();
     let pool = &state.db.pool;
 

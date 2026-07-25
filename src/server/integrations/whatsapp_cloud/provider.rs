@@ -48,6 +48,10 @@ impl WhatsAppCloudProvider {
     pub async fn send_message(&self, to: &str, body: &str) -> Result<(), String> {
         self.client.send_message(to, body).await
     }
+
+    pub async fn register_phone_number(&self, pin: &str) -> Result<(), String> {
+        self.client.register_phone_number(pin).await
+    }
 }
 
 #[cfg(test)]
@@ -55,11 +59,28 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
 
+    use super::super::client::{InteractiveMessage, LocationPayload};
+
     struct MockWhatsAppCloudClient;
 
     #[async_trait]
     impl WhatsAppCloudClientWrapper for MockWhatsAppCloudClient {
         async fn send_message(&self, _to: &str, _body: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_template_message(&self, _to: &str, _template_name: &str, _lang_code: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_interactive_message(&self, _to: &str, _interactive: &InteractiveMessage) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_media_message(&self, _to: &str, _media_type: &str, _media_link: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_location_message(&self, _to: &str, _location: &LocationPayload) -> Result<(), String> {
+            Ok(())
+        }
+        async fn register_phone_number(&self, _pin: &str) -> Result<(), String> {
             Ok(())
         }
     }

@@ -12,6 +12,9 @@ rust_library(
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:tracing",
+        "@crates//:redis",
+        "@crates//:sqlx",
+        "//src/server:server_lib",
     ],
 )
 
@@ -20,5 +23,9 @@ rust_test(
     crate = ":server_integrations_whatsapp",
     deps = [
         "@crates//:tower-0.4.13",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
     ],
 )
