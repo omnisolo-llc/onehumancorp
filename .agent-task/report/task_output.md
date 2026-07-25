@@ -1,19 +1,19 @@
-issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Implement Custom Rust Omnichannel Chat System"
 issue_description: |
-  # Replace Chatwoot with a Native Rust Omnichannel Chat System
+  # Replace legacy chat platform with a Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  Currently, OneHumanCorp (OHC) uses Chatwoot as its core component for managing omnichannel communications. However, Chatwoot introduces an external Ruby-on-Rails/PostgreSQL/Redis dependency which violates the project goal of consolidating around a single monolithic architecture backed by Go/Rust and Bazel. We need a fully native implementation of Chatwoot's functionality in Rust that natively integrates into our existing multi-tenant PostgreSQL/Kubernetes stack without adding external components. The OHC Assistant needs deep, synchronous access to chat channels (web widget, Whatsapp, SMS) to enable the "Work Triage", "Customer & Relationship Assistant" and "Operations Assistant" workflows seamlessly.
+  Currently, OneHumanCorp (OHC) uses an external chat platform as its core component for managing omnichannel communications. However, this introduces an external Ruby-on-Rails/PostgreSQL/Redis dependency which violates the project goal of consolidating around a single monolithic architecture backed by Go/Rust and Bazel. We need a fully native implementation of omnichannel functionality in Rust that natively integrates into our existing multi-tenant PostgreSQL/Kubernetes stack without adding external components. The OHC Assistant needs deep, synchronous access to chat channels (web widget, Whatsapp, SMS) to enable the "Work Triage", "Customer & Relationship Assistant" and "Operations Assistant" workflows seamlessly.
 
   ## Research Report
-  I performed an audit of the `chatwoot/chatwoot` GitHub repository to understand the core functionality. Here are the core data models and concepts that need replicating:
+  I performed an audit of the relevant features to understand the core functionality. Here are the core data models and concepts that need replicating:
   *   **Inboxes & Channels:** Represents the intake mechanism (Email, SMS, API, WebWidget, Whatsapp). Channels hold provider-specific configuration. Inboxes bind channels to the account/tenant.
   *   **Conversations:** The thread of messages between a customer and the business.
   *   **Messages:** Individual items within a conversation (incoming, outgoing, private notes). Handled internally by a background queue (`SendReplyJob`).
   *   **Contacts & ContactInboxes:** Represents the external user and links them to the specific inbox.
   *   **Webhooks & WebSocket Realtime messaging:** Used for real-time widget updates.
 
-  Competitor Analysis (Zendesk, Intercom, Chatwoot): All use a pub/sub mechanism to push events to the web client. OHC's architecture uses Postgres for persistence and Redis for distributed locks/pubsub. We must implement a fast Rust-based WebSocket server that communicates with our gRPC backend.
+  Competitor Analysis (Zendesk, Intercom): All use a pub/sub mechanism to push events to the web client. OHC's architecture uses Postgres for persistence and Redis for distributed locks/pubsub. We must implement a fast Rust-based WebSocket server that communicates with our gRPC backend.
 
   ## Design Doc
 
@@ -28,7 +28,7 @@ issue_description: |
       CoreGo --> Postgres
   ```
 
-  ### Core Entities (Rust implementation of Chatwoot models)
+  ### Core Entities (Rust implementation of chat models)
   *   `Tenant`: (Existing in OHC)
   *   `Channel`: Extensible trait/struct for different channel types (WebWidget, WhatsApp, SMS).
   *   `Inbox`: Ties a `Channel` to a `Tenant`.
@@ -46,7 +46,7 @@ issue_description: |
   *   The "Operations Assistant" can inject private `Message` entries into the conversation thread to notify the owner of actions taken (e.g., "Created a booking request based on this message").
 
   ## Implementation Prompt
-  Implement a native Rust microservice (or crate within the monorepo) that handles omnichannel chat, fully replicating Chatwoot's core messaging, conversation, and inbox models.
+  Implement a native Rust microservice (or crate within the monorepo) that handles omnichannel chat, fully replicating core messaging, conversation, and inbox models.
 
   The implementation must:
   1. Use Rust with a high-performance web framework (e.g., Axum) for WebSocket and REST endpoints.
