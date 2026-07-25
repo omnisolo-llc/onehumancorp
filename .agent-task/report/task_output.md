@@ -3,10 +3,10 @@ issue_description: |
   # Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing Chatwoot as an external dependency. We need a native, high-performance, multi-tenant omnichannel customer support & chat engine built natively in Rust. This system must handle real-time messaging, multi-channel integrations (Web Widget, Email, Instagram, WhatsApp, etc.), and multi-tenant data isolation. For our target personas (like Maya who handles Instagram DMs, or Carlos who uses a web widget for service requests), having a unified inbox that is fast and reliable is crucial.
+  OneHumanCorp (OHC) is replacing legacy external chat system as an external dependency. We need a native, high-performance, multi-tenant omnichannel customer support & chat engine built natively in Rust. This system must handle real-time messaging, multi-channel integrations (Web Widget, Email, Instagram, WhatsApp, etc.), and multi-tenant data isolation. For our target personas (like Maya who handles Instagram DMs, or Carlos who uses a web widget for service requests), having a unified inbox that is fast and reliable is crucial.
 
   ## Research Report
-  Based on an audit of the Chatwoot source code, their architecture heavily relies on polymorphic associations (e.g., Channels), multi-tenant isolation (Account ID on every model), and real-time pub/sub via WebSockets.
+  Based on an audit of the legacy external chat system source code, their architecture heavily relies on polymorphic associations (e.g., Channels), multi-tenant isolation (Account ID on every model), and real-time pub/sub via WebSockets.
 
   To build this in Rust, we need to replicate these core models:
   - **Account/Tenant**: The root of multi-tenancy.
