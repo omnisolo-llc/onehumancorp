@@ -2,7 +2,6 @@ use sqlx::{FromRow};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use std::sync::Arc;
-use crate::db::DB;
 
 #[derive(Clone, Debug, FromRow)]
 pub struct CustomerProfile {
@@ -206,8 +205,7 @@ impl OmniChannelRepo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DB;
-    use uuid::Uuid;
+        use uuid::Uuid;
 
     // A mock DB trait or trait bound would be ideal, but for now we'll mock the functions or
     // leave them as integration tests that require a real database to connect to.
