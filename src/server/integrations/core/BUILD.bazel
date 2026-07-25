@@ -1,11 +1,28 @@
 exports_files(["Cargo.toml"])
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_integrations_core",
-    srcs = ["mod.rs"],
-    crate_root = "mod.rs",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:chrono",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_core_test",
+    crate = ":server_integrations_core",
+    deps = [
+        "@crates//:tokio",
+    ],
 )
