@@ -52,6 +52,7 @@ rust_library(
         "//src/server/services/campaign:mod.rs",
         "//src/server/services/campaign:service.rs",
         "//src/server/services/chat:mod.rs",
+        "//src/server/services/chat:ws.rs",
         "//src/server/services/chat:service.rs",
         "//src/server/services/dashboard:mod.rs",
         "//src/server/services/dashboard:service.rs",
