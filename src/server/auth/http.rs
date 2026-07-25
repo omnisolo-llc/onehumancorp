@@ -388,7 +388,7 @@ async fn generate_api_key(
     let key_hash = format!("{:x}", Sha256::digest(raw_key.as_bytes()));
     let created_at = chrono::Utc::now().to_rfc3339();
     let key_id = uuid::Uuid::new_v4().to_string();
-    let member_id = get_member_uuid(&claims.sub);
+    let member_id = &claims.sub;
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
     let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
@@ -441,7 +441,7 @@ async fn list_api_keys(
 
     if has_db {
         let pool = crate::db::get_pool();
-        let member_id = get_member_uuid(&claims.sub);
+        let member_id = &claims.sub;
         let organization_id = claims.organization_id.clone().unwrap_or_default();
 
         let query_res = sqlx::query(
@@ -511,7 +511,7 @@ async fn revoke_api_key(
                 );
             }
         };
-        let member_id = get_member_uuid(&claims.sub);
+        let member_id = &claims.sub;
         let organization_id = claims.organization_id.clone().unwrap_or_default();
 
         let delete_res = sqlx::query(
