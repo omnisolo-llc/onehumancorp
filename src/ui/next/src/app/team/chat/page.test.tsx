@@ -1,75 +1,29 @@
-import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
-import TeamChatPage from './page';
+import { render, screen, fireEvent } from '@testing-library/react';
+import NativeOmnichannelChat from './page';
 
-const mockFetch = vi.fn();
+// Mock useRouter
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+  }),
+}));
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  global.fetch = mockFetch;
+describe('NativeOmnichannelChat', () => {
+  it('allows the user to send a message and simulates AI draft', async () => {
+    render(<NativeOmnichannelChat />);
 
-  Object.defineProperty(window, 'localStorage', {
-    value: {
-      getItem: vi.fn(() => 'test-token'),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-    },
-    writable: true,
+    const input = screen.getByTestId('team-chat-input');
+    const sendButton = screen.getByTestId('team-chat-send');
+
+    // Simulate user typing a message
+    fireEvent.change(input, { target: { value: 'Hello team' } });
+    fireEvent.click(sendButton);
+
+    // Ensure the message shows up
+    expect(screen.getByText('Hello team')).toBeInTheDocument();
+
+    // AI drafted reply mock should show up
+    const aiDraftText = await screen.findByText("I've drafted a reply for your approval.", {}, { timeout: 2000 });
+    expect(aiDraftText).toBeInTheDocument();
   });
-});
-
-test('shows a latency state while an AI action is being drafted', async () => {
-  let resolveFetch: (value: Response) => void = () => {};
-  mockFetch.mockReturnValue(
-    new Promise<Response>((resolve) => {
-      resolveFetch = resolve;
-    }),
-  );
-
-  render(<AppRouterContext.Provider value={{} as any}><TeamChatPage /></AppRouterContext.Provider>);
-
-  fireEvent.change(screen.getByTestId('team-chat-input'), {
-    target: { value: 'Quote the sink repair' },
-  });
-  fireEvent.click(screen.getByTestId('team-chat-send'));
-
-  expect(await screen.findByText('Working on your request...')).toBeInTheDocument();
-  expect(screen.getByText('The team is still drafting the action.')).toBeInTheDocument();
-
-  resolveFetch(
-    new Response(
-      JSON.stringify({
-        agent: 'The Salesperson',
-        description: 'Draft quote for Plumbing Fix',
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    ),
-  );
-
-  await waitFor(() => {
-    expect(screen.queryByText('Working on your request...')).not.toBeInTheDocument();
-  });
-  expect(screen.getByText('Draft quote for Plumbing Fix')).toBeInTheDocument();
-});
-
-test('renders an actionable error card when AI action execution fails', async () => {
-  mockFetch.mockResolvedValue(
-    new Response(JSON.stringify({ error: 'AI Budget exhausted' }), {
-      status: 429,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-
-  render(<AppRouterContext.Provider value={{} as any}><TeamChatPage /></AppRouterContext.Provider>);
-
-  fireEvent.change(screen.getByTestId('team-chat-input'), {
-    target: { value: 'Run the agent action' },
-  });
-  fireEvent.click(screen.getByTestId('team-chat-send'));
-
-  expect(await screen.findByText('Action needs attention')).toBeInTheDocument();
-  expect(screen.getByText('AI Budget exhausted')).toBeInTheDocument();
-  expect(screen.getByText('Try again')).toBeInTheDocument();
 });

@@ -4,6 +4,8 @@ exports_files(
     [
         "mod.rs",
         "service.rs",
+        "models.rs",
+        "websocket.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -14,6 +16,8 @@ rust_library(
         "bazel_lib.rs",
         "mod.rs",
         "service.rs",
+        "models.rs",
+        "websocket.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
