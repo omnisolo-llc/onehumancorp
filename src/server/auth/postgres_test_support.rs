@@ -109,7 +109,7 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
         )
     });
     POSTGRES_SETUP
-        .get_or_init(|| initialize_postgres(&admin_url))
+        .get_or_init(|| async { initialize_postgres(&admin_url).await })
         .await
         .as_ref()
         .unwrap_or_else(|error| panic!("PostgreSQL security test setup failed: {error}"));
