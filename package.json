@@ -63,12 +63,6 @@
     "vitest": "^4.1.10",
     "zustand": "^5.0.13"
   },
-  "pnpm": {
-    "overrides": {
-      "brace-expansion": "^5.0.8",
-      "postcss": "^8.5.19"
-    }
-  },
   "overrides": {
     "@hono/node-server": "2.0.10",
     "@modelcontextprotocol/sdk": "1.29.0",
