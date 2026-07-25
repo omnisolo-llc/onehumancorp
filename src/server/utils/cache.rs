@@ -152,11 +152,13 @@ where
             }
         }
 
-        if rx.changed().await.is_ok() {
-            rx.borrow().clone()
-        } else {
-            rx.borrow().clone()
+        while rx.changed().await.is_ok() {
+            let val = rx.borrow().clone();
+            if val.is_some() {
+                return val;
+            }
         }
+        rx.borrow().clone()
     }
 
     pub async fn get_or_fetch_with_swr<F, Fut>(&self, key: &str, ttl: Duration, fetch: F) -> Option<T>
@@ -218,11 +220,13 @@ where
             }
         }
 
-        if rx.changed().await.is_ok() {
-            rx.borrow().clone()
-        } else {
-            rx.borrow().clone()
+        while rx.changed().await.is_ok() {
+            let val = rx.borrow().clone();
+            if val.is_some() {
+                return val;
+            }
         }
+        rx.borrow().clone()
     }
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
