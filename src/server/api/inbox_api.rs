@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use uuid::Uuid;
 use server_common::Result;
-use ohc_mono::app::AppState;
+use server_common::app::AppState;
 use server_auth::extractors::RequireUser;
 
 pub fn router() -> Router<Arc<AppState>> {

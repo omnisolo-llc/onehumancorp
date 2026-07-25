@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
-import { db } from './db_utils';
+import { expect } from '@playwright/test';
+import { memberPage as test } from './fixtures';
+import { e2eDbQuery } from './db_utils';
 
 test.describe('Native Omnichannel Chat System', () => {
     test.beforeEach(async () => {
         // Seed conversation and messages via database to avoid mock data in UI
-        await db.query(`
+        await e2eDbQuery(`
             DO $$
             DECLARE
                 tenant_uuid uuid;
