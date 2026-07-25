@@ -116,15 +116,20 @@ impl VectorRepository {
         let emb_str = serde_json::to_string(&record.embedding)
             .map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {}", e))?;
 
-        const UPSERT_ON_CONFLICT_CLAUSE: &str = "ON CONFLICT(id) DO UPDATE SET \
-            content=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.content WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.content ELSE consolidated_memory.content END, \
-            embedding=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.embedding WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.embedding ELSE consolidated_memory.embedding END, \
-            created_at=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.created_at WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.created_at ELSE consolidated_memory.created_at END, \
+        const EXCLUDED_WINS_COND: &str = "(excluded.owner_override = TRUE AND consolidated_memory.owner_override = FALSE) OR (excluded.owner_override = consolidated_memory.owner_override AND excluded.reliability_score > consolidated_memory.reliability_score) OR (excluded.owner_override = consolidated_memory.owner_override AND excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at)";
+
+        let upsert_on_conflict_clause = format!(
+            "ON CONFLICT(id) DO UPDATE SET \
+            content=CASE WHEN {cond} THEN excluded.content ELSE consolidated_memory.content END, \
+            embedding=CASE WHEN {cond} THEN excluded.embedding ELSE consolidated_memory.embedding END, \
+            created_at=CASE WHEN {cond} THEN excluded.created_at ELSE consolidated_memory.created_at END, \
             last_referenced_at=excluded.last_referenced_at, \
             reference_count=excluded.reference_count, \
-            reliability_score=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.reliability_score WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.reliability_score ELSE consolidated_memory.reliability_score END, \
-            owner_override=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.owner_override WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.owner_override ELSE consolidated_memory.owner_override END, \
-            metadata=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.metadata WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.metadata ELSE consolidated_memory.metadata END";
+            reliability_score=CASE WHEN {cond} THEN excluded.reliability_score ELSE consolidated_memory.reliability_score END, \
+            owner_override=CASE WHEN {cond} THEN excluded.owner_override ELSE consolidated_memory.owner_override END, \
+            metadata=CASE WHEN {cond} THEN excluded.metadata ELSE consolidated_memory.metadata END",
+            cond = EXCLUDED_WINS_COND
+        );
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
@@ -132,7 +137,7 @@ impl VectorRepository {
                     "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
                      {}",
-                    UPSERT_ON_CONFLICT_CLAUSE
+                    upsert_on_conflict_clause
                 );
                 sqlx::query(&query_str)
                     .bind(&record.id)
@@ -156,7 +161,7 @@ impl VectorRepository {
                     "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
                      {}",
-                    UPSERT_ON_CONFLICT_CLAUSE
+                    upsert_on_conflict_clause
                 );
                 sqlx::query(&query_str)
                     .bind(&record.id)
@@ -701,8 +706,12 @@ impl VectorRepository {
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count;
         updated_winner.last_referenced_at = chrono::Utc::now();
-        updated_winner.reliability_score =
-            std::cmp::max(winner.reliability_score, loser.reliability_score);
+
+        if !updated_winner.owner_override {
+            updated_winner.reliability_score =
+                std::cmp::max(winner.reliability_score, loser.reliability_score);
+        }
+
         if loser.owner_override && !updated_winner.owner_override {
             updated_winner.owner_override = true;
         }
