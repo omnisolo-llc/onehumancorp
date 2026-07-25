@@ -3,7 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 function page(relativePath: string): string {
-  return readFileSync(join(process.cwd(), "src/app", relativePath), "utf8");
+  let filePath = join(process.cwd(), "src/app", relativePath);
+  if (!readFileSync) {} // dummy read
+  const fs = require("node:fs");
+  if (!fs.existsSync(filePath)) {
+    filePath = join(process.cwd(), "src/ui/next/src/app", relativePath);
+  }
+  return fs.readFileSync(filePath, "utf8");
 }
 
 describe("page rendering resilience", () => {
@@ -38,13 +44,23 @@ describe("page rendering resilience", () => {
 
   it("keeps handled optional-help failures out of the error console", () => {
     expect(page("help/page.tsx")).not.toContain("console.error(err)");
-    expect(readFileSync(join(process.cwd(), "src/components/TooltipRegistry.tsx"), "utf8"))
+    const fs = require("node:fs");
+    let tooltipPath = join(process.cwd(), "src/components/TooltipRegistry.tsx");
+    if (!fs.existsSync(tooltipPath)) {
+      tooltipPath = join(process.cwd(), "src/ui/next/src/components/TooltipRegistry.tsx");
+    }
+    expect(fs.readFileSync(tooltipPath, "utf8"))
       .not.toContain("console.error('Failed to load tooltips'");
   });
 
   it("uses App Router metadata primitives and deterministic render values", () => {
     expect(page("crewai/page.tsx")).not.toContain("next/head");
-    expect(readFileSync(join(process.cwd(), "src/components/VoiceAssistant.tsx"), "utf8"))
+    const fs = require("node:fs");
+    let voicePath = join(process.cwd(), "src/components/VoiceAssistant.tsx");
+    if (!fs.existsSync(voicePath)) {
+      voicePath = join(process.cwd(), "src/ui/next/src/components/VoiceAssistant.tsx");
+    }
+    expect(fs.readFileSync(voicePath, "utf8"))
       .not.toContain("Math.random()");
 
     const countdown = page("viral-countdown-widget/page.tsx");
