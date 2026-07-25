@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package ohc.omnichannel;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/omnichannel;omnichannelpb";
+
+message Tenant {
+    string id = 1;
+    string name = 2;
+}
+
+message Inbox {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+}
+
+message Channel {
+    string id = 1;
+    string provider_type = 2;
+}
+
+message Contact {
+    string id = 1;
+    string tenant_id = 2;
+    string email = 3;
+    string phone = 4;
+}
+
+message Conversation {
+    string id = 1;
+    string inbox_id = 2;
+    string contact_id = 3;
+    string status = 4;
+    string tenant_id = 5;
+}
+
+message Message {
+    string id = 1;
+    string conversation_id = 2;
+    string content = 3;
+    string status = 4;
+    string tenant_id = 5;
+}
+
+message CreateInboxRequest {
+    string tenant_id = 1;
+    string name = 2;
+}
+
+message GetInboxRequest {
+    string id = 1;
+}
+
+message CreateConversationRequest {
+    string inbox_id = 1;
+    string contact_id = 2;
+    string status = 3;
+}
+
+message GetConversationRequest {
+    string id = 1;
+}
+
+message CreateMessageRequest {
+    string conversation_id = 1;
+    string content = 2;
+    string status = 3;
+}
+
+message GetMessageRequest {
+    string id = 1;
+}
+
+service OmnichannelService {
+    rpc CreateInbox(CreateInboxRequest) returns (Inbox);
+    rpc GetInbox(GetInboxRequest) returns (Inbox);
+    rpc CreateConversation(CreateConversationRequest) returns (Conversation);
+    rpc GetConversation(GetConversationRequest) returns (Conversation);
+    rpc CreateMessage(CreateMessageRequest) returns (Message);
+    rpc GetMessage(GetMessageRequest) returns (Message);
+}

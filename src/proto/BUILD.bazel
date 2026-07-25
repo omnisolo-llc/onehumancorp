@@ -17,6 +17,7 @@ exports_files([
     "skills.proto",
     "invoice.proto",
     "inbox.proto",
+    "omnichannel.proto",
 ], visibility = ["//visibility:public"])
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
@@ -353,5 +354,32 @@ proto_rust_library(
 proto_library(
     name = "search_proto",
     srcs = ["search.proto"],
+    visibility = ["//visibility:public"],
+)
+
+# ── Omnichannel ────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "omnichannel_proto",
+    srcs = ["omnichannel.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "omnichannel_prost",
+    proto = ":omnichannel_proto",
+    visibility = ["//visibility:public"],
+)
+proto_rust_library(
+    name = "omnichannel",
+    proto = ":omnichannel_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "omnichannel_tonic",
+    proto = ":omnichannel_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )

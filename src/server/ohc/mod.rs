@@ -41,6 +41,9 @@ pub mod ohc {
     pub mod inventory {
         tonic::include_proto!("ohc.inventory");
     }
+    pub mod omnichannel {
+        tonic::include_proto!("ohc.omnichannel");
+    }
 }
 
 #[cfg(ohc_bazel)]
@@ -86,6 +89,9 @@ pub mod ohc {
     pub mod inventory {
         pub use inventory_proto::ohc::inventory::*;
     }
+    pub mod omnichannel {
+        pub use omnichannel_proto::ohc::omnichannel::*;
+    }
 }
 
 pub mod interop {
@@ -127,4 +133,7 @@ pub mod invoice {
 
 pub mod inventory {
     pub use crate::ohc::inventory::*;
+}
+pub mod omnichannel {
+    pub use crate::ohc::omnichannel::*;
 }
