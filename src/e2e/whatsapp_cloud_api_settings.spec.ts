@@ -14,6 +14,7 @@ test.describe('WhatsApp Cloud API Integrations Setting', () => {
     await loginAsE2eTenant(page);
   });
 
+
   test('Owner can navigate to Settings -> Integrations and see WhatsApp Cloud API', async ({ page }) => {
     // 1. Navigate to Settings -> Integrations
     await page.goto('/settings/integrations');
