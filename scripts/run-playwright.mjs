@@ -109,7 +109,7 @@ async function main() {
 
   try {
     const args = process.argv.slice(2);
-    await runCommand('npx', ['playwright', 'test', ...args]);
+    await runCommand("npx", ["playwright", "test", ...args.filter(arg => arg !== "--test")]);
   } finally {
     server.kill();
     if (process.env.E2E_SKIP_DOCKER !== 'true') {
