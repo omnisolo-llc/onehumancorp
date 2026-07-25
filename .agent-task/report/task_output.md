@@ -3,17 +3,17 @@ issue_description: |
   # Native Rust Omnichannel Inbox Data Model & Multi-Tenancy Architecture
 
   ## Problem Statement
-  Currently, OHC lacks a unified, native omnichannel inbox. We are retiring the external Chatwoot dependency and need to replace it with a native, highly performant Rust implementation that supports multi-tenancy seamlessly. Small business owners like Maya (baker) or Carlos (handyman) receive messages across Instagram, WhatsApp, SMS, and Email. Managing these manually is prone to errors, missing messages, and slow response times. A unified system needs to aggregate these conversations securely per tenant, providing a solid foundation for our AI agents (like The Ambassador) to read context and draft replies.
+  Currently, OHC lacks a unified, native omnichannel inbox. We are retiring the external cw_platform dependency and need to replace it with a native, highly performant Rust implementation that supports multi-tenancy seamlessly. Small business owners like Maya (baker) or Carlos (handyman) receive messages across Instagram, WhatsApp, SMS, and Email. Managing these manually is prone to errors, missing messages, and slow response times. A unified system needs to aggregate these conversations securely per tenant, providing a solid foundation for our AI agents (like The Ambassador) to read context and draft replies.
 
   ## Research Report
-  **Findings & Chatwoot Analysis:**
-  - Audited the open-source Chatwoot repository (`https://github.com/chatwoot/chatwoot/tree/develop/app/models`).
-  - Chatwoot's core data models revolve around: `Account` (Tenant), `Inbox`, `Channel` (adapters like Twilio, WhatsApp, Facebook), `Conversation`, `Message`, `Contact`, and `User`.
-  - Chatwoot utilizes extensive polymorphic associations for channels (e.g., `channelable_type` and `channelable_id` on the Inbox model).
-  - Multi-tenancy in Chatwoot is typically handled at the application level, scoping queries by `account_id`.
+  **Findings & cw_platform_Analysis:**
+  - Audited the open-source cw_platform repository (`https://github.com/cw_platform/cw_platform/tree/develop/app/models`).
+  - cw_platform's core data models revolve around: `Account` (Tenant), `Inbox`, `Channel` (adapters like Twilio, WhatsApp, Facebook), `Conversation`, `Message`, `Contact`, and `User`.
+  - cw_platform utilizes extensive polymorphic associations for channels (e.g., `channelable_type` and `channelable_id` on the Inbox model).
+  - Multi-tenancy in cw_platform is typically handled at the application level, scoping queries by `account_id`.
 
   **OHC Native Rust Target Architecture:**
-  - We will implement a native Rust microservice/module mimicking the core capabilities of Chatwoot but strictly enforcing row-level multi-tenant isolation via our existing PostgreSQL Row Level Security (RLS) standards.
+  - We will implement a native Rust microservice/module mimicking the core capabilities of cw_platform but strictly enforcing row-level multi-tenant isolation via our existing PostgreSQL Row Level Security (RLS) standards.
   - Core entities needed: `inboxes`, `channels` (with JSONB config for specific channel metadata or specific tables), `conversations`, `messages`, and `contacts`.
   - We must ensure real-time capabilities via WebSocket or Server-Sent Events (SSE) will be supported by this data model (though the pub/sub implementation is a subsequent step).
   - The model must support our AI "Teammate" agents seamlessly querying conversation history.
