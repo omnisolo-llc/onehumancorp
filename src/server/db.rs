@@ -1267,7 +1267,39 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(tenant_id)
                     );
-CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+CREATE TABLE IF NOT EXISTS ohc_chat_channels (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        provider TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'active',
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_chat_conversations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        channel_id TEXT NOT NULL,
+                        assignee_id TEXT,
+                        customer_id TEXT,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_chat_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        conversation_id TEXT NOT NULL,
+                        sender_type TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        ai_draft_status TEXT NOT NULL DEFAULT 'none',
+                        draft_content TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         source TEXT NOT NULL,
@@ -4794,6 +4826,9 @@ mod e2e_search_workspace_tests {
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE ohc_chat_channels (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, provider TEXT NOT NULL, name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active', created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE ohc_chat_conversations (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, channel_id TEXT NOT NULL, assignee_id TEXT, customer_id TEXT, status TEXT NOT NULL DEFAULT 'open', created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE ohc_chat_messages (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, conversation_id TEXT NOT NULL, sender_type TEXT NOT NULL, content TEXT NOT NULL, ai_draft_status TEXT NOT NULL DEFAULT 'none', draft_content TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
         sqlx::query("CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, status TEXT)")
             .execute(&sqlite_pool)
             .await
