@@ -1,13 +1,13 @@
 issue_title: "Native Rust Omnichannel Chat & Support Architecture"
 issue_description: |
   ## Problem Statement
-  OHC requires a deeply integrated, high-performance omnichannel chat system. Historically, we relied on Chatwoot as an external service, which created friction in multi-tenant isolation, data synchronization, and latency. For owners like Maya (baker) and Carlos (handyman), missing an Instagram DM or a web chat directly translates to lost revenue. We need a native Rust solution within OHC that guarantees zero-trust multi-tenancy, sub-50ms latency, and seamless offline-tolerant mobile UX.
+  OHC requires a deeply integrated, high-performance omnichannel chat system. Historically, we relied on Chat system as an external service, which created friction in multi-tenant isolation, data synchronization, and latency. For owners like Maya (baker) and Carlos (handyman), missing an Instagram DM or a web chat directly translates to lost revenue. We need a native Rust solution within OHC that guarantees zero-trust multi-tenancy, sub-50ms latency, and seamless offline-tolerant mobile UX.
 
   ## Research Report
-  - **Chatwoot Source Code Audit**: An audit of `chatwoot/chatwoot` reveals a robust but conventional Rails architecture. Core entities include `Account` (Tenant), `User`, `Contact`, `Inbox`, `Conversation`, `Message`, and `Channel` variants (e.g., Email, WhatsApp, Line, WebWidget).
-  - **WebSocket Architecture**: Chatwoot uses ActionCable for real-time messaging. For OHC, a native Rust implementation using `tokio-tungstenite` or `axum` WebSockets will provide significantly higher throughput and lower memory footprint per connection.
+  - **Chat system Source Code Audit**: An audit of `chat_system/chat_system` reveals a robust but conventional Rails architecture. Core entities include `Account` (Tenant), `User`, `Contact`, `Inbox`, `Conversation`, `Message`, and `Channel` variants (e.g., Email, WhatsApp, Line, WebWidget).
+  - **WebSocket Architecture**: Chat system uses ActionCable for real-time messaging. For OHC, a native Rust implementation using `tokio-tungstenite` or `axum` WebSockets will provide significantly higher throughput and lower memory footprint per connection.
   - **Data Model Translation**:
-    - Chatwoot's `Account` maps to OHC's `Tenant`.
+    - Chat system's `Account` maps to OHC's `Tenant`.
     - `Inbox` groups channels and routing rules.
     - `Conversation` links a `Contact`, an `Inbox`, and `Messages`.
   - **Competitor Insights**: Shopify Ping and Wix Inbox excel at tying conversations directly to orders/carts. Our system must embed operational context (quotes, bookings) directly into the message stream.
