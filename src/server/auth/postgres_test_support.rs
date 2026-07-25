@@ -53,10 +53,33 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
+
+    sqlx::query("SELECT pg_advisory_lock(987654321)").execute(&admin_pool).await.unwrap();
+
+
     MIGRATOR
+
+
         .run(&admin_pool)
+
+
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+
+
+        .map_err(|error| {
+
+
+            let _ = tokio::task::block_in_place(|| tokio::runtime::Handle::current().block_on(sqlx::query("SELECT pg_advisory_unlock(987654321)").execute(&admin_pool)));
+
+
+            format!("run migrations: {error}")
+
+
+        })?;
+
+
+    sqlx::query("SELECT pg_advisory_unlock(987654321)").execute(&admin_pool).await.unwrap();
+
 
     sqlx::raw_sql(
         r#"
