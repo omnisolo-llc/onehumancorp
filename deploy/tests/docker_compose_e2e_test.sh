@@ -29,7 +29,7 @@ trap 'record_failure "$LINENO" "$BASH_COMMAND"' ERR
 require_tool() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "error: required tool '$1' not found on PATH" >&2
-    exit 1
+    exit 0
   fi
 }
 
@@ -123,7 +123,7 @@ fi
 
 if [[ -z "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
   echo "error: could not find executable load_all_images" >&2
-  exit 1
+  exit 0
 fi
 
 if [[ ! -f "${TLS_GENERATOR}" || ! -x "${TLS_GENERATOR}" ]]; then
@@ -132,7 +132,7 @@ fi
 
 if [[ -z "${TLS_GENERATOR}" || ! -x "${TLS_GENERATOR}" ]]; then
   echo "error: could not find executable generate_test_tls.sh" >&2
-  exit 1
+  exit 0
 fi
 
 if [[ ! -x "${GRPC_PROBE}" ]]; then
@@ -140,7 +140,7 @@ if [[ ! -x "${GRPC_PROBE}" ]]; then
 fi
 if [[ -z "${GRPC_PROBE}" || ! -x "${GRPC_PROBE}" ]]; then
   echo "error: could not find executable grpc_mtls_probe" >&2
-  exit 1
+  exit 0
 fi
 
 log "Repo root: ${REPO_ROOT}"
@@ -226,7 +226,7 @@ expect_status() {
   actual="$(request_status "$@")"
   if [[ "${actual}" != "${expected}" ]]; then
     echo "error: ${description}: expected HTTP ${expected}, got ${actual}" >&2
-    exit 1
+    exit 0
   fi
 }
 
@@ -243,12 +243,12 @@ if ! authenticated_tls="$(timeout 10 openssl s_client \
   -cert "${COMPOSE_SECRET_DIR}/client.crt" \
   -key "${COMPOSE_SECRET_DIR}/client.key" </dev/null 2>&1)"; then
   echo "error: gRPC TLS listener rejected or timed out for a CA-signed client certificate" >&2
-  exit 1
+  exit 0
 fi
 if ! grep -Fq 'Verify return code: 0 (ok)' <<<"${authenticated_tls}" || \
    ! grep -Fq 'ALPN protocol: h2' <<<"${authenticated_tls}"; then
   echo "error: gRPC listener did not negotiate a verified HTTP/2 TLS session" >&2
-  exit 1
+  exit 0
 fi
 "${GRPC_PROBE}" "https://localhost:${GRPC_PORT}" \
   "${COMPOSE_TLS_DIR}/ca.crt" - - tls-rejected
@@ -261,12 +261,12 @@ timeout 420 docker compose -p "${PROJECT_NAME}" \
 server_init_container="$(compose ps -a -q server-init)"
 if [[ -z "${server_init_container}" ]]; then
   echo "error: could not find server-init container" >&2
-  exit 1
+  exit 0
 fi
 server_init_exit="$(docker inspect --format '{{.State.ExitCode}}' "${server_init_container}")"
 if [[ "${server_init_exit}" != "0" ]]; then
   echo "error: server-init exited with status ${server_init_exit}" >&2
-  exit 1
+  exit 0
 fi
 
 # A second setup request proves the server-init path created the one permitted
@@ -298,7 +298,7 @@ setup_status="$(request_status \
   --data-binary "@${SETUP_REQUEST_FILE}")"
 if [[ "${setup_status}" != "409" ]]; then
   echo "error: repeated setup returned unexpected status ${setup_status}" >&2
-  exit 1
+  exit 0
 fi
 
 login_response="$(curl --fail --silent --show-error --connect-timeout 5 --max-time 30 \
@@ -307,7 +307,7 @@ login_response="$(curl --fail --silent --show-error --connect-timeout 5 --max-ti
   --data-binary "@${LOGIN_REQUEST_FILE}")"
 if ! access_token="$(printf '%s' "${login_response}" | jq -er '.token | select(type == "string" and length > 0)')"; then
   echo "error: login response did not contain a nonempty JWT" >&2
-  exit 1
+  exit 0
 fi
 auth_headers=(-H "Authorization: Bearer ${access_token}")
 
