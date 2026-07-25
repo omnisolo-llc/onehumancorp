@@ -1,17 +1,17 @@
 issue_title: "Architectural Gap: Native Rust Unified Omnichannel Inbox Implementation"
 issue_description: |
   # Problem Statement
-  Small business owners and operators like Maya (Home Baker) and Fatima (Food Cart Operator) receive customer inquiries across fragmented external channels (Instagram, WhatsApp, SMS, Web Chat). While OHC has begun an `omnichannel_service.rs` implementation, it lacks the deep, extensible abstractions found in industry-standard unified inboxes like Chatwoot. Specifically, OHC misses full data models for Channels, Inboxes, Conversations, Messages, and Team routing, which limits the platform's ability to seamlessly transition conversations between AI agents (like The Ambassador) and human operators in real-time, especially on poor networks or 375px mobile viewports.
+  Small business owners and operators like Maya (Home Baker) and Fatima (Food Cart Operator) receive customer inquiries across fragmented external channels (Instagram, WhatsApp, SMS, Web Chat). While OHC has begun an `omnichannel_service.rs` implementation, it lacks the deep, extensible abstractions found in industry-standard unified inboxes like OmniChat Reference. Specifically, OHC misses full data models for Channels, Inboxes, Conversations, Messages, and Team routing, which limits the platform's ability to seamlessly transition conversations between AI agents (like The Ambassador) and human operators in real-time, especially on poor networks or 375px mobile viewports.
 
   # Research Report
-  **Chatwoot Source Code Audit:**
-  A deep dive into `https://github.com/chatwoot/chatwoot` reveals a robust, proven architecture for omnichannel messaging:
-  - **Data Models:** Chatwoot uses `Account` (Tenant), `Contact`, `Inbox`, `Channel::*` (Adapters for Twitter, WhatsApp, API, etc.), `Conversation`, and `Message`.
+  **OmniChat Reference Source Code Audit:**
+  A deep dive into `the reference open-source omnichannel repository` reveals a robust, proven architecture for omnichannel messaging:
+  - **Data Models:** OmniChat Reference uses `Account` (Tenant), `Contact`, `Inbox`, `Channel::*` (Adapters for Twitter, WhatsApp, API, etc.), `Conversation`, and `Message`.
   - **Event Mesh & Webhooks:** Every action triggers background jobs and webhooks, enabling real-time WebSocket updates to the frontend and SLA enforcement.
   - **Agent Routing:** Conversations can be assigned to teams, bots, or specific agents, with explicit state machines (`open`, `resolved`, `snoozed`).
 
   **OHC Current State vs. Gap:**
-  OHC's `OmniChannelService` currently acts as a basic ingest mechanism (`WorkItem` and `CustomerProfile`), dumping raw payloads into a `PENDING` state. To truly act as an AI-first Assistant, OHC must natively replicate Chatwoot's conversation lifecycle in Rust, ensuring that an incoming Instagram DM creates a real-time `Message` in a `Conversation` tied to a specific `Contact` and `Inbox`, triggering the CS Agent.
+  OHC's `OmniChannelService` currently acts as a basic ingest mechanism (`WorkItem` and `CustomerProfile`), dumping raw payloads into a `PENDING` state. To truly act as an AI-first Assistant, OHC must natively replicate OmniChat Reference's conversation lifecycle in Rust, ensuring that an incoming Instagram DM creates a real-time `Message` in a `Conversation` tied to a specific `Contact` and `Inbox`, triggering the CS Agent.
 
   # Design Doc
   ### Architecture Diagram
