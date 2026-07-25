@@ -1,3 +1,5 @@
+// mock: network interception
+// mock: synthetic response
 import { test, expect } from '@playwright/test';
 
 test.describe('Loyalty & Rewards Engine', () => {

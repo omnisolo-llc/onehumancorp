@@ -1,3 +1,5 @@
+// mock: fabricated browser storage
+// mock: fabricated business payload
 import { expect, test } from '@playwright/test';
 
 test.describe('Unified Inbox Triage Feed for Instagram DMs', () => {

@@ -1,3 +1,4 @@
+// mock: fabricated business payload
 import { test, expect } from '@playwright/test';
 
 test.describe('Edge Ledger Sync Protocol', () => {

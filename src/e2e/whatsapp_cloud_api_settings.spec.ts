@@ -1,3 +1,4 @@
+// mock: unresolved local import
 import { test, expect } from '@playwright/test';
 import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
 
