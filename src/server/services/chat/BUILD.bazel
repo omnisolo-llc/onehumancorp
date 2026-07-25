@@ -2,8 +2,20 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
+        "models.rs",
+        "db.rs",
+        "db_test.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+exports_files(
+    [
         "mod.rs",
         "service.rs",
+        "models.rs",
+        "db.rs",
+        "db_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -14,6 +26,9 @@ rust_library(
         "bazel_lib.rs",
         "mod.rs",
         "service.rs",
+        "models.rs",
+        "db.rs",
+        "db_test.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -115,6 +130,9 @@ rust_test(
     edition = "2024",
     env = {
         "RUST_TEST_THREADS": "1",
+        "DATABASE_URL": "postgres://postgres:postgres@localhost:5432/postgres",
+        "SQLX_OFFLINE": "true",
+        "CARGO": "true",
     },
     target_compatible_with = select({
         "@platforms//os:linux": [],
