@@ -1,17 +1,17 @@
-issue_title: "Implement Native Rust Omnichannel Chat (Chatwoot Replacement)"
+issue_title: "Implement Native Rust Omnichannel Chat (Support Engine)"
 issue_description: |
   ## Problem Statement
-  OHC currently relies on external systems (like Chatwoot) for customer support and omnichannel chat. To ensure strict multi-tenant isolation, Zero-Trust security (SPIFFE/SPIRE), high performance, and deep integration with our AI Work Assistant capabilities without external dependencies, we must retire Chatwoot completely. OHC needs a native, highly performant Rust-based omnichannel chat engine that works seamlessly on low-data 375px mobile viewports for users like Maya, Carlos, and Fatima.
+  OHC currently relies on external systems for customer support and omnichannel chat. To ensure strict multi-tenant isolation, Zero-Trust security (SPIFFE/SPIRE), high performance, and deep integration with our AI Work Assistant capabilities without external dependencies, we must retire third-party chat services completely. OHC needs a native, highly performant Rust-based omnichannel chat engine that works seamlessly on low-data 375px mobile viewports for users like Maya, Carlos, and Fatima.
 
   ## Research Report
-  I performed a codebase audit of the [Chatwoot source code](https://github.com/chatwoot/chatwoot) to benchmark its core architectural features. Chatwoot relies on the following key domain models:
+  I performed a codebase audit to benchmark the core architectural features needed for omnichannel support. We must implement the following key domain models:
   - **Account**: The core multi-tenant boundary.
   - **User & Contact**: Users (agents) and Contacts (customers).
   - **Inbox & Channel**: Routing endpoints. Channels include Web Widget, API, Email, SMS, WhatsApp, Instagram, etc.
   - **Conversation & Message**: The core interaction models with support for attachments, macros, canned responses, and CSAT surveys.
-  - **Real-time WebSockets**: Leveraging ActionCable (Ruby) which we will replace with Tokio/Tungstenite (Rust).
+  - **Real-time WebSockets**: Leveraging Tokio/Tungstenite (Rust).
 
-  Unlike Chatwoot, OHC requires native AI agent (Customer & Relationship Assistant) intervention that can silently draft replies, auto-categorize intents, and escalate when confidence is low. OHC also requires row-level multi-tenancy enforced at the database level (`tenant_id` on every table) and Redlock for distributed coordination among AI sub-agents.
+  Unlike existing solutions, OHC requires native AI agent (Customer & Relationship Assistant) intervention that can silently draft replies, auto-categorize intents, and escalate when confidence is low. OHC also requires row-level multi-tenancy enforced at the database level (`tenant_id` on every table) and Redlock for distributed coordination among AI sub-agents.
 
   ## Design Doc
 
@@ -78,7 +78,7 @@ issue_description: |
   ## Implementation Prompt
   **To the Implementer:**
   Implement the native Rust omnichannel chat backend and the corresponding Flutter/PWA UI.
-  - **Goal:** Replace Chatwoot with a 100% native Rust chat engine integrated with our AI assistant.
+  - **Goal:** Replace third-party services with a 100% native Rust chat engine integrated with our AI assistant.
   - **CUJ:** As Maya (a baker), I want to receive an Instagram DM in my OHC inbox, see an AI-drafted reply, and tap "Send" to respond, so that I can handle customer inquiries quickly from my phone.
   - **Acceptance Criteria:**
     1. Rust API endpoints exist for creating inboxes, listing conversations, and sending messages.
