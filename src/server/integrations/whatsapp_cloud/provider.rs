@@ -48,6 +48,22 @@ impl WhatsAppCloudProvider {
     pub async fn send_message(&self, to: &str, body: &str) -> Result<(), String> {
         self.client.send_message(to, body).await
     }
+
+    pub async fn send_template(&self, to: &str, template_name: &str, language_code: &str) -> Result<(), String> {
+        self.client.send_template(to, template_name, language_code).await
+    }
+
+    pub async fn send_interactive(&self, to: &str, interactive_payload: serde_json::Value) -> Result<(), String> {
+        self.client.send_interactive(to, interactive_payload).await
+    }
+
+    pub async fn send_media(&self, to: &str, media_type: &str, media_id: Option<&str>, media_link: Option<&str>) -> Result<(), String> {
+        self.client.send_media(to, media_type, media_id, media_link).await
+    }
+
+    pub async fn send_location(&self, to: &str, latitude: f64, longitude: f64, name: Option<&str>, address: Option<&str>) -> Result<(), String> {
+        self.client.send_location(to, latitude, longitude, name, address).await
+    }
 }
 
 #[cfg(test)]
@@ -60,6 +76,18 @@ mod tests {
     #[async_trait]
     impl WhatsAppCloudClientWrapper for MockWhatsAppCloudClient {
         async fn send_message(&self, _to: &str, _body: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_template(&self, _to: &str, _template_name: &str, _language_code: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_interactive(&self, _to: &str, _interactive_payload: serde_json::Value) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_media(&self, _to: &str, _media_type: &str, _media_id: Option<&str>, _media_link: Option<&str>) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_location(&self, _to: &str, _latitude: f64, _longitude: f64, _name: Option<&str>, _address: Option<&str>) -> Result<(), String> {
             Ok(())
         }
     }
