@@ -12,6 +12,8 @@ rust_library(
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:tracing",
+        "@crates//:redis",
+        "//src/server/common:server_common",
     ],
 )
 

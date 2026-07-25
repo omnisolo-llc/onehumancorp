@@ -62,6 +62,24 @@ mod tests {
         async fn send_message(&self, _to: &str, _body: &str) -> Result<(), String> {
             Ok(())
         }
+        async fn send_template(&self, _to: &str, _template_name: &str, _language_code: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_interactive(&self, _to: &str, _interactive_payload: serde_json::Value) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_media(&self, _to: &str, _media_type: &str, _media_id: Option<&str>, _media_link: Option<&str>, _caption: Option<&str>) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_location(&self, _to: &str, _lat: f64, _long: f64, _name: Option<&str>, _address: Option<&str>) -> Result<(), String> {
+            Ok(())
+        }
+        async fn register_phone_number(&self, _pin: &str) -> Result<(), String> {
+            Ok(())
+        }
+        async fn subscribe_phone_number_webhook(&self, _override_callback_uri: &str, _verify_token: &str) -> Result<(), String> {
+            Ok(())
+        }
     }
 
     #[test]
