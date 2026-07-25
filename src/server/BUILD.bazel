@@ -4,6 +4,9 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
+    "//src/server/services:chat/mod.rs",
+    "//src/server/services:chat/models.rs",
+    "//src/server/services:chat/service.rs",
     "health_test.rs",
     "analytics.rs",
     "autodream_sync.rs",
@@ -286,8 +289,6 @@ SERVER_RS_SRCS = [
     "//src/server/services/campaign:activation_routing.rs",
     "//src/server/services/campaign:mod.rs",
     "//src/server/services/campaign:service.rs",
-    "//src/server/services/chat:mod.rs",
-    "//src/server/services/chat:service.rs",
     "//src/server/services/dashboard:mod.rs",
     "//src/server/services/dashboard:service.rs",
     "//src/server/services/growth:experiments.rs",
@@ -688,7 +689,7 @@ SERVER_LIB_SUBCRATE_TESTS = [
     "//src/server/orchestration:server_orchestration_unit_test",
     "//src/server/services:server_services_unit_test",
     "//src/server/services/billing:server_services_billing_unit_test",
-    "//src/server/services/chat:server_services_chat_unit_test",
+
     "//src/server/services/dashboard:server_services_dashboard_unit_test",
     "//src/server/services/growth:server_services_growth_unit_test",
     "//src/server/services/mcp:server_services_mcp_unit_test",
