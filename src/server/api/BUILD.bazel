@@ -2,7 +2,7 @@
 exports_files([
         "work_triage.rs",
         "walkup.rs",
-        "perplexity.rs","chaos.rs", "sync_gateway.rs"])
+        "perplexity.rs","chaos.rs", "sync_gateway.rs", "chat.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 
