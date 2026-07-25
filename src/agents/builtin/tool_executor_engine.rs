@@ -70,8 +70,9 @@ impl ToolExecutionEngine {
                         "LLM-recoverable error encountered in tool '{}' (Pydantic-first schema failure or similar): {}",
                         tool.name, msg
                     );
-                    let formatted_msg = msg; // Do not format twice. Let agent.rs call `new_llm_recoverable`.
-                    return Err(ToolError::LlmRecoverable(formatted_msg));
+                    // Note: agent.rs expects the raw msg to build the full ToolMessage,
+                    // so we just return it exactly as it came from the tool.
+                    return Err(ToolError::LlmRecoverable(msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: immediately bubble up to the orchestrator to request human-in-loop input.
