@@ -553,6 +553,7 @@ impl AppServer {
 
             struct LlmClientAdapter {
                 inner: Arc<dyn crate::llm::LlmClient>,
+                total_cost: Arc<tokio::sync::Mutex<f64>>,
             }
 
             #[async_trait::async_trait]
@@ -564,12 +565,26 @@ impl AppServer {
                     ohc_builtin_agent_core::types::ChatResponse,
                     Box<dyn std::error::Error + Send + Sync>,
                 > {
-                    self.inner.chat(req).await
+                    let result = self.inner.chat(req).await?;
+                    let turn_cost = ::server_pricing::calculator::calculate_cost(
+                        "gpt-4o",
+                        result.usage.input_tokens as i64,
+                        result.usage.output_tokens as i64,
+                        result.usage.cache_read_input_tokens as i64,
+                    );
+                    if turn_cost > 0.0 {
+                        let mut cost = self.total_cost.lock().await;
+                        *cost += turn_cost;
+                    }
+                    Ok(result)
                 }
             }
 
+            let total_cost = Arc::new(tokio::sync::Mutex::new(0.0));
+
             let adapter = Arc::new(LlmClientAdapter {
                 inner: self.runner.core.agent.llm.clone(),
+                total_cost: total_cost.clone(),
             });
 
             // Expert Team Implementation
@@ -606,6 +621,7 @@ impl AppServer {
                 &manager,
                 &initial_message,
             ) {
+                let final_cost = *total_cost.lock().await;
                 let resp = JsonRpcResponse {
                     jsonrpc: "2.0".to_string(),
                     id: req.id.clone(),
@@ -614,7 +630,7 @@ impl AppServer {
                         code: -32000,
                         message: e,
                     }),
-                    meta: None,
+                    meta: Some(serde_json::json!({ "total_cost_usd": final_cost })),
                 };
                 return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
             }
@@ -629,6 +645,7 @@ impl AppServer {
                     if let Err(e) =
                         ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries)
                     {
+                        let final_cost = *total_cost.lock().await;
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
                             id: req.id.clone(),
@@ -637,7 +654,7 @@ impl AppServer {
                                 code: -32000,
                                 message: e,
                             }),
-                            meta: None,
+                            meta: Some(serde_json::json!({ "total_cost_usd": final_cost })),
                         };
                         return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
                     }
@@ -661,6 +678,7 @@ impl AppServer {
                         &trace,
                         &expected_roles,
                     ) {
+                        let final_cost = *total_cost.lock().await;
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
                             id: req.id.clone(),
@@ -669,21 +687,23 @@ impl AppServer {
                                 code: -32000,
                                 message: e,
                             }),
-                            meta: None,
+                            meta: Some(serde_json::json!({ "total_cost_usd": final_cost })),
                         };
                         return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
                     }
 
+                    let final_cost = *total_cost.lock().await;
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
                         id: req.id.clone(),
                         result: Some(serde_json::json!({ "output": final_output })),
                         error: None,
-                        meta: None,
+                        meta: Some(serde_json::json!({ "total_cost_usd": final_cost })),
                     };
                     serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
                 Err(e) => {
+                    let final_cost = *total_cost.lock().await;
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
                         id: req.id.clone(),
@@ -692,7 +712,7 @@ impl AppServer {
                             code: -32000,
                             message: e,
                         }),
-                        meta: None,
+                        meta: Some(serde_json::json!({ "total_cost_usd": final_cost })),
                     };
                     serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string())
                 }
