@@ -44,7 +44,7 @@ pub struct CreateMessageReq {
     pub additional_attributes: Option<serde_json::Value>,
 }
 
-pub fn router(pool: PgPool) -> Router {
+pub fn router<S>(pool: PgPool) -> Router<S> where S: Clone + Send + Sync + 'static {
     let state = ChatAppState {
         service: Arc::new(ChatService::new(pool)),
     };
