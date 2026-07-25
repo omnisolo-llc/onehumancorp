@@ -38,7 +38,7 @@ pub(crate) fn decide_postgres_test(
 
 async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
     let admin_pool = PgPoolOptions::new()
-        .max_connections(1)
+        .max_connections(2)
         .acquire_timeout(Duration::from_secs(10))
         .connect(admin_url)
         .await
@@ -53,10 +53,20 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
+    let mut conn = admin_pool.acquire().await.map_err(|e| format!("acquire connection for lock: {e}"))?;
+    sqlx::query("SELECT pg_advisory_lock(8888888)")
+        .execute(&mut *conn)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .map_err(|e| format!("acquire advisory lock: {e}"))?;
+
+    let result = MIGRATOR.run(&admin_pool).await;
+
+    sqlx::query("SELECT pg_advisory_unlock(8888888)")
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| format!("release advisory lock: {e}"))?;
+
+    result.map_err(|error| format!("run src/server/migrations: {error}"))?;
 
     sqlx::raw_sql(
         r#"
