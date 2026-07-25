@@ -4,7 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct VerifyQuery {
@@ -91,7 +91,9 @@ pub async fn handle_webhook(
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
     // Process incoming webhook payload
-    tracing::info!("Received WhatsApp webhook: {:?}", payload);
+    let obj = &payload.object;
+    let len = payload.entry.len();
+    tracing::info!("Received WhatsApp webhook for object {} with {} entries", obj, len);
 
     // Send a 200 OK response to acknowledge receipt
     StatusCode::OK

@@ -156,7 +156,7 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
             let payload: String = match msg.get_payload() {
                 Ok(p) => p,
                 Err(e) => {
-                    tracing::error!("Failed to get pubsub payload: {}", e);
+                    tracing::error!("Failed to get pubsub message content: {}", e);
                     continue;
                 }
             };
