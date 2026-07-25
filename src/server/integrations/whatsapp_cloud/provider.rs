@@ -62,6 +62,15 @@ mod tests {
         async fn send_message(&self, _to: &str, _body: &str) -> Result<(), String> {
             Ok(())
         }
+        async fn send_interactive_button(&self, _to: &str, _body: &str, _buttons: Vec<serde_json::Value>) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_template(&self, _to: &str, _template_name: &str, _language: &str, _components: Option<Vec<serde_json::Value>>) -> Result<(), String> {
+            Ok(())
+        }
+        async fn send_media(&self, _to: &str, _media_type: &str, _media_id: &str, _caption: Option<&str>) -> Result<(), String> {
+            Ok(())
+        }
     }
 
     #[test]

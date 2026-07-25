@@ -9,6 +9,7 @@ rust_library(
         "mod.rs",
         "client_test.rs",
         "provider.rs",
+        "setup.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -18,11 +19,12 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/integrations/core:server_integrations_core",
+        "@crates//:axum",
         "@crates//:reqwest",
-        "@crates//:tokio",
-        "@crates//:serde_json",
         "@crates//:serde",
-
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
     ],
 )
 

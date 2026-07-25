@@ -5,3 +5,5 @@ pub mod provider;
 
 pub use client::{RealWhatsAppCloudClient, WhatsAppCloudClientWrapper};
 pub use provider::WhatsAppCloudProvider;
+pub mod setup;
+pub use setup::*;
