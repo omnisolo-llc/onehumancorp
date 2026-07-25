@@ -31,7 +31,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
   onUpgrade,
 }) => {
   return (
-    <div className={`p-6 flex flex-col justify-between ${isRecommended ? 'relative shadow-xl' : 'shadow-lg'} app-card ohc-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full`}>
+    <div className={`p-6 flex flex-col justify-between ${isRecommended ? 'relative shadow-xl' : 'shadow-lg'} app-card ohc-growth-card glassmorphism glass-card backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-black/40 border border-white/40 dark:border-white/10 rounded-2xl hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 w-full`}>
       {isRecommended && (
         <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">Recommended</div>
       )}
