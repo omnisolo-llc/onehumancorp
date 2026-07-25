@@ -23,13 +23,13 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
   onSaveEdit,
   setEditContent
 }) => {
-  const payloadSource = approval.payload?.original_payload || approval.payload || approval.proposed_action || approval.context_payload || {};
+  const payloadSource = approval?.payload?.original_payload || approval?.payload || approval?.proposed_action || approval?.context_payload || {};
   const pastOrders = payloadSource.past_orders;
   const contextUsed = payloadSource.context_used;
 
   return (
     <div className="app-list-item mb-4 p-4 bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] flex flex-col gap-3" data-testid="ambassador-reply-card">
-      <div className="text-gray-900 dark:text-gray-100 font-bold mb-2">1 New Message from {(approval.payload?.source || (approval.proposed_action || approval.context_payload)?.source || (approval.proposed_action || approval.context_payload)?.original_payload?.source || approval.payload?.original_payload?.source || "unknown").replace("_", " ")}</div>
+      <div className="text-gray-900 dark:text-gray-100 font-bold mb-2">1 New Message from {(payloadSource?.source || "unknown").replace("_", " ")}</div>
 
       {(pastOrders || contextUsed) && (
         <div className="bg-blue-50/50 dark:bg-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-800/30">
@@ -57,7 +57,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
       )}
 
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center text-[#0066FF] font-semibold text-sm">
-        {(approval.lifecycle_state === "PENDING_APPROVAL" || approval.lifecycle_state === "PENDING") && (
+        {(approval?.lifecycle_state === "PENDING_APPROVAL" || approval?.lifecycle_state === "PENDING") && (
           <span className="text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 px-2 py-1 rounded-[8px] self-start sm:self-center">
             Action Required: Approve Reply
           </span>
@@ -68,7 +68,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
         Customer Inquiry
       </div>
       <div className="bg-white/50 dark:bg-black/20 p-3 rounded-[8px] text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic shadow-sm break-words">
-        "{approval.payload?.original_message || (approval.proposed_action || approval.context_payload)?.original_message || (approval.proposed_action || approval.context_payload)?.original_payload?.original_message || approval.payload?.original_payload?.original_message || "Customer message"}"
+        "{payloadSource?.original_message || "Customer message"}"
       </div>
       <div className="text-[#0066FF] font-semibold text-sm mt-2 flex items-center gap-2">
         <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-1 rounded-[8px] mr-2">
@@ -117,7 +117,7 @@ export const AmbassadorReplyCard: React.FC<AmbassadorReplyCardProps> = ({
       ) : (
         <>
           <div className="bg-[#0066FF] p-3 rounded-[8px] text-xs text-white shadow-inner">
-            {approval.payload?.generated_response || (approval.proposed_action || approval.context_payload)?.generated_response || (approval.proposed_action || approval.context_payload)?.original_payload?.generated_response || approval.payload?.original_payload?.generated_response || "Ready to send."}
+            {payloadSource?.generated_response || "Ready to send."}
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
             {onApprove && (
