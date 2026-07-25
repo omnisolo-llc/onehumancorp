@@ -5,6 +5,11 @@ exports_files(
     [
         "booking.rs",
         "omnichannel_service.rs",
+        "omnichannel_system/mod.rs",
+        "omnichannel_system/grpc.rs",
+        "omnichannel_system/models.rs",
+        "omnichannel_system/ws.rs",
+        "omnichannel_system/tests.rs",
         "mod.rs",
 
         "cache_invalidator.rs",
