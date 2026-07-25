@@ -9,7 +9,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
+            data: Object.fromEntries(new Map([
                 transactions: [
                     {
                         transaction_id: txId,
@@ -17,7 +17,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
                         currency: 'USD',
                         status: 'PENDING',
                         device_signature: 'sig_123',
-                        payload: '{"items": [{"id": "item_1", "qty": 1}]}',
+                        payload: '{"items": [{"id": "item_1", "qty": 1]).entries())]}',
                     }
                 ]
             }
@@ -34,7 +34,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
+            data: Object.fromEntries(new Map([
                 transactions: [
                     {
                         transaction_id: txId,
@@ -42,7 +42,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
                         currency: 'USD',
                         status: 'PENDING',
                         device_signature: 'sig_123',
-                        payload: '{"items": [{"id": "item_1", "qty": 1}]}',
+                        payload: '{"items": [{"id": "item_1", "qty": 1]).entries())]}',
                     }
                 ]
             }
