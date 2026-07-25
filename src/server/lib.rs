@@ -4,6 +4,7 @@ pub mod redis_pool;
 pub mod cart_recovery;
 pub use ::server_harness as harness;
 pub mod api;
+pub mod chat;
 pub mod agents;
 
 #[path = "api/setup.rs"]
@@ -7791,6 +7792,7 @@ async fn create_ui_bom_item_handler(
             http_auth_store.clone(),
             ::server_auth::strict_bearer_auth_middleware,
         )))
+        .merge(crate::chat::api::chat_router(db.clone()))
         .merge(webhook_router)
         .merge(protect_internal_ingress(
             relay_webhook_router,
