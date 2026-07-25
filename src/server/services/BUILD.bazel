@@ -3,6 +3,9 @@ load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 exports_files(
     [
+        "chat/mod.rs",
+        "chat/models.rs",
+        "chat/service.rs",
         "booking.rs",
         "omnichannel_service.rs",
         "mod.rs",
@@ -23,6 +26,9 @@ rust_library(
     name = "server_services",
     srcs = [
         "bazel_lib.rs",
+        "chat/mod.rs",
+        "chat/models.rs",
+        "chat/service.rs",
         "booking.rs",
         "omnichannel_service.rs",
         "mod.rs",
@@ -51,8 +57,6 @@ rust_library(
         "//src/server/services/campaign:activation_routing.rs",
         "//src/server/services/campaign:mod.rs",
         "//src/server/services/campaign:service.rs",
-        "//src/server/services/chat:mod.rs",
-        "//src/server/services/chat:service.rs",
         "//src/server/services/dashboard:mod.rs",
         "//src/server/services/dashboard:service.rs",
         "//src/server/services/docs:mod.rs",
