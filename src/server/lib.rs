@@ -7815,6 +7815,18 @@ async fn create_ui_bom_item_handler(
             protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),
         )
         .nest(
+            "/api/v1/native-chat",
+            api::native_chat::router(api::native_chat::NativeChatState {
+                db: db.clone(),
+                orchestrator: dept_orchestrator.clone(),
+            }).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            )
+        )
+        .nest(
             "/api/v1/memory",
             api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
         )

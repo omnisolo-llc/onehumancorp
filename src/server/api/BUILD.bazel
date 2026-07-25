@@ -57,6 +57,7 @@ exports_files(
         "agent_feed.rs",
         "agent_stream.rs",
         "unified_ws.rs",
+        "native_chat.rs",
         "incidents.rs",
         "audio_command.rs",
         "invoice.rs",
