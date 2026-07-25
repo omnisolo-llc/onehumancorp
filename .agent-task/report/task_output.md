@@ -1,15 +1,15 @@
-issue_title: "[Research] Architect Native Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "[Research] Architect Native Rust Omnichannel Chat System to Replace legacy chat system"
 issue_description: |
   # Problem Statement
-  OHC aims to provide an integrated "Owner Work Assistant" capable of receiving messages from multiple platforms (Instagram, WhatsApp, Email, Web Widget) and presenting them in a unified triage interface. Previously, Chatwoot was considered for this. However, Chatwoot as an external dependency is 100% RETIRED according to our OHC Engineering Standards. We need a native Rust omnichannel customer support & chat engine built directly into our monorepo (`onehumancorp/mono`) to guarantee multi-tenant row-level security, reduce operational complexity, and seamlessly coordinate with our AI agents without external API hops.
+  OHC aims to provide an integrated "Owner Work Assistant" capable of receiving messages from multiple platforms (Instagram, WhatsApp, Email, Web Widget) and presenting them in a unified triage interface. Previously, legacy chat system was considered for this. However, legacy chat system as an external dependency is 100% RETIRED according to our OHC Engineering Standards. We need a native Rust omnichannel customer support & chat engine built directly into our monorepo (`onehumancorp/mono`) to guarantee multi-tenant row-level security, reduce operational complexity, and seamlessly coordinate with our AI agents without external API hops.
 
   # Research Report
-  Our analysis of the Chatwoot open-source repository (`https://github.com/chatwoot/chatwoot`) reveals the core architectural components needed for a modern unified inbox:
+  Our analysis of the legacy chat system open-source repository (`https://github.com/legacy chat system/legacy chat system`) reveals the core architectural components needed for a modern unified inbox:
 
   *   **Core Entities**: Account (Tenant), Inbox, Channel (Web, Email, API, WhatsApp, etc.), Contact, Conversation, Message, AgentBot.
   *   **Communication Flow**: Inbound webhooks/API calls are translated by "Channel Adapters" into normalized `Message` and `Conversation` models.
-  *   **Real-time Updates**: WebSockets (ActionCable in Chatwoot) broadcast message events to active subscribers.
-  *   **AI Integration Points**: Chatwoot uses `AgentBot` entities. OHC will need a robust hook system to allow our specialized AI agents (Customer Assistant, Operations Assistant) to intercept, draft, or automatically reply to messages.
+  *   **Real-time Updates**: WebSockets (ActionCable in legacy chat system) broadcast message events to active subscribers.
+  *   **AI Integration Points**: legacy chat system uses `AgentBot` entities. OHC will need a robust hook system to allow our specialized AI agents (Customer Assistant, Operations Assistant) to intercept, draft, or automatically reply to messages.
   *   **Extensibility**: Macro support and automation rules are critical for SMB operational efficiency (e.g., auto-assigning tags based on keywords).
 
   # Design Doc
@@ -41,7 +41,7 @@ issue_description: |
   *   **Customer Assistant Agent**: Subscribes to the `message.created` event. If the message needs a reply, it generates a draft and saves it to the conversation context, triggering a UI update.
 
   # Implementation Prompt
-  *Implement the foundational native Rust omnichannel chat system to replace external Chatwoot dependencies. This includes defining the core database schema (Inboxes, Conversations, Messages) with strict `tenant_id` Row-Level Security. Create the foundational Rust models and a unified API endpoint to fetch active conversations for a tenant. Ensure the API response is structured to support our AI agent drafting capabilities. Do not build specific channel adapters (WhatsApp/Instagram) yet; focus on the core normalized internal models and the API layer that the frontend unified inbox will consume. Implement at least one comprehensive E2E test verifying the creation and retrieval of a conversation within a tenant context.*
+  *Implement the foundational native Rust omnichannel chat system to replace external legacy chat system dependencies. This includes defining the core database schema (Inboxes, Conversations, Messages) with strict `tenant_id` Row-Level Security. Create the foundational Rust models and a unified API endpoint to fetch active conversations for a tenant. Ensure the API response is structured to support our AI agent drafting capabilities. Do not build specific channel adapters (WhatsApp/Instagram) yet; focus on the core normalized internal models and the API layer that the frontend unified inbox will consume. Implement at least one comprehensive E2E test verifying the creation and retrieval of a conversation within a tenant context.*
 
   # Priority
   P0
