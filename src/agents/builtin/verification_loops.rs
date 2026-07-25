@@ -849,3 +849,26 @@ mod c4_architectural_mechanics_tests {
         assert!(*sensor_called.lock().await, "Sensors must be called after action to observe result");
     }
 }
+
+#[cfg(test)]
+mod additional_verification_tests {
+    use super::*;
+
+    struct AlwaysFailingComputationalGuide;
+    #[async_trait::async_trait]
+    impl ComputationalGuide for AlwaysFailingComputationalGuide {
+        async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
+            Err("Test failure".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_failing_guide() {
+        let guide = AlwaysFailingComputationalGuide;
+        let res = guide.verify("fn main() {}", "ctx").await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Test failure");
+    }
+}
+
+// Master Catalog C.4. Verification Loops: Guides (steer before action) vs Sensors (observe after action).

@@ -1610,3 +1610,33 @@ mod additional_tests {
         assert!(res2.is_err());
     }
 }
+
+#[cfg(test)]
+mod newly_added_tests {
+    use super::*;
+
+    #[test]
+    fn test_node_type_serialization() {
+        let node = NodeType::Llm {
+            prompt_template: "Hello {{name}}".to_string(),
+        };
+        let serialized = serde_json::to_string(&node).unwrap();
+        assert!(serialized.contains(r#""type":"Llm""#));
+        assert!(serialized.contains(r#""prompt_template":"Hello {{name}}""#));
+    }
+}
+
+#[cfg(test)]
+mod tests_again {
+    use super::*;
+
+    #[test]
+    fn test_node_type_deserialization() {
+        let serialized = r#"{"type":"Llm","prompt_template":"Hello {{name}}"}"#;
+        let node: NodeType = serde_json::from_str(serialized).unwrap();
+        match node {
+            NodeType::Llm { prompt_template } => assert_eq!(prompt_template, "Hello {{name}}"),
+            _ => panic!("Incorrect deserialization"),
+        }
+    }
+}

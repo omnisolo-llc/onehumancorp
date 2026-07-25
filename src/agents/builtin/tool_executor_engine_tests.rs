@@ -537,3 +537,47 @@ use ohc_builtin_agent::agent::AgentRunConfig;
     }
 }
 // Adding a comment to trigger a commit
+
+#[cfg(test)]
+mod newly_added_tests_engine {
+    use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
+    use ohc_builtin_agent::agent::AgentRunConfig;
+    use ohc_builtin_agent_core::types::{ToolCall, ToolError};
+    use ohc_builtin_agent_tools::Tool;
+    use ohc_builtin_agent_tools::ToolExecutor;
+    use serde_json::json;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    struct TestExecutor;
+    #[async_trait::async_trait]
+    impl ToolExecutor for TestExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Err(ToolError::Unexpected("unexpected test error".to_string()))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_unexpected_error_handling() {
+        let tool = Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(TestExecutor),
+        };
+
+        let tc = ToolCall {
+            id: "2".to_string(),
+            name: "test_tool".to_string(),
+            arguments: json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        assert!(res.is_err());
+        match res.expect_err("Expected error") {
+            ToolError::Unexpected(msg) => assert_eq!(msg, "unexpected test error"),
+            _ => panic!("Expected Unexpected error"),
+        }
+    }
+}
