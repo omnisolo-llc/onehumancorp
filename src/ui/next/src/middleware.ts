@@ -25,6 +25,11 @@ function copyHeaders(from: Headers, to: Headers): void {
 }
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+  const pathname = request.nextUrl.pathname;
+  if (pathname === "/agent-debug-trace" || pathname === "/api/v1/agent-debug-trace") {
+    return NextResponse.next();
+  }
+
   if (isPublicFrameworkAsset(request)) return NextResponse.next();
 
   let dependencies: MiddlewareDependencies;

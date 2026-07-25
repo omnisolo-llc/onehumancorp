@@ -10,6 +10,20 @@ export const PUBLIC_ROUTE_ENTRIES = [
     owner: "authentication",
   },
   {
+    method: "GET",
+    invocation: "page",
+    matcher: { kind: "exact", path: "/agent-debug-trace" },
+    reason: "render agent debug trace",
+    owner: "framework",
+  },
+  {
+    method: "GET",
+    invocation: "route-handler",
+    matcher: { kind: "exact", path: "/api/v1/agent-debug-trace" },
+    reason: "proxy agent debug trace",
+    owner: "framework",
+  },
+  {
     method: "POST",
     invocation: "route-handler",
     matcher: { kind: "exact", path: "/api/v1/auth/login" },
