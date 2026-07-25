@@ -23,11 +23,11 @@ CREATE TABLE IF NOT EXISTS calendar_integrations (
 -- RLS
 ALTER TABLE availability_schedules ENABLE ROW LEVEL SECURITY;
 CREATE POLICY availability_schedules_tenant_isolation ON availability_schedules
-    USING (tenant_id = current_setting('app.current_tenant_id', true));
+    USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE calendar_integrations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY calendar_integrations_tenant_isolation ON calendar_integrations
-    USING (tenant_id = current_setting('app.current_tenant_id', true));
+    USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 -- Add payment_intent_id to bookings table if it doesn't exist
 DO $$
@@ -35,7 +35,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                    WHERE table_name='bookings' AND column_name='payment_intent_id') THEN
         ALTER TABLE bookings ADD COLUMN payment_intent_id TEXT;
-    END IF;
+    END If;
 END $$;
 
 -- Add deposit_required to services table if it doesn't exist

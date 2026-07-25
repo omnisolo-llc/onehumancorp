@@ -16,4 +16,4 @@ ALTER TABLE social_post_proposals ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_social_post_proposals
 ON social_post_proposals
 FOR ALL
-USING (tenant_id = current_setting('app.current_tenant_id'));
+USING (tenant_id::text = current_setting('app.current_tenant', true));
