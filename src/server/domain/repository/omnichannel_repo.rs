@@ -259,3 +259,185 @@ mod tests {
         assert_eq!(draft.status, "PENDING");
     }
 }
+
+#[derive(Clone, Debug, FromRow)]
+pub struct OmniInbox {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub channel_id: Option<Uuid>,
+    pub channel_type: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow)]
+pub struct OmniChannelWebWidget {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub website_url: String,
+    pub widget_color: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow)]
+pub struct OmniContact {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub email: Option<String>,
+    pub phone_number: Option<String>,
+    pub identifier: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow)]
+pub struct OmniContactInbox {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub contact_id: Uuid,
+    pub inbox_id: Uuid,
+    pub source_id: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow)]
+pub struct OmniConversation {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub inbox_id: Uuid,
+    pub contact_inbox_id: Uuid,
+    pub assignee_id: Option<Uuid>,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow)]
+pub struct OmniMessage {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub conversation_id: Uuid,
+    pub contact_id: Uuid,
+    pub sender_type: String,
+    pub sender_id: Uuid,
+    pub content: String,
+    pub message_type: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+impl OmniChannelRepo {
+    pub async fn create_omni_inbox(&self, tenant_id: Uuid, name: String, channel_type: String) -> Result<OmniInbox, sqlx::Error> {
+        let id = Uuid::new_v4();
+        let record = sqlx::query_as::<_, OmniInbox>(
+            "INSERT INTO omni_inbox (id, tenant_id, name, channel_type) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, name, channel_id, channel_type, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(name)
+        .bind(channel_type)
+        .fetch_one(&self.db.pool)
+        .await?;
+        Ok(record)
+    }
+
+    pub async fn create_omni_channel_web_widget(&self, tenant_id: Uuid, website_url: String, widget_color: String) -> Result<OmniChannelWebWidget, sqlx::Error> {
+        let id = Uuid::new_v4();
+        let record = sqlx::query_as::<_, OmniChannelWebWidget>(
+            "INSERT INTO omni_channel_web_widget (id, tenant_id, website_url, widget_color) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, website_url, widget_color, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(website_url)
+        .bind(widget_color)
+        .fetch_one(&self.db.pool)
+        .await?;
+        Ok(record)
+    }
+
+    pub async fn update_inbox_channel_id(&self, inbox_id: Uuid, channel_id: Uuid) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE omni_inbox SET channel_id = $1 WHERE id = $2")
+            .bind(channel_id)
+            .bind(inbox_id)
+            .execute(&self.db.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn create_omni_contact(&self, tenant_id: Uuid, name: String, email: Option<String>, phone_number: Option<String>, identifier: Option<String>) -> Result<OmniContact, sqlx::Error> {
+        let id = Uuid::new_v4();
+        let record = sqlx::query_as::<_, OmniContact>(
+            "INSERT INTO omni_contact (id, tenant_id, name, email, phone_number, identifier) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, tenant_id, name, email, phone_number, identifier, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(name)
+        .bind(email)
+        .bind(phone_number)
+        .bind(identifier)
+        .fetch_one(&self.db.pool)
+        .await?;
+        Ok(record)
+    }
+
+    pub async fn create_omni_contact_inbox(&self, tenant_id: Uuid, contact_id: Uuid, inbox_id: Uuid, source_id: Option<String>) -> Result<OmniContactInbox, sqlx::Error> {
+        let id = Uuid::new_v4();
+        let record = sqlx::query_as::<_, OmniContactInbox>(
+            "INSERT INTO omni_contact_inbox (id, tenant_id, contact_id, inbox_id, source_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, contact_id, inbox_id, source_id, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(contact_id)
+        .bind(inbox_id)
+        .bind(source_id)
+        .fetch_one(&self.db.pool)
+        .await?;
+        Ok(record)
+    }
+
+    pub async fn create_omni_conversation(&self, tenant_id: Uuid, inbox_id: Uuid, contact_inbox_id: Uuid) -> Result<OmniConversation, sqlx::Error> {
+        let id = Uuid::new_v4();
+        let record = sqlx::query_as::<_, OmniConversation>(
+            "INSERT INTO omni_conversation (id, tenant_id, inbox_id, contact_inbox_id, status) VALUES ($1, $2, $3, $4, 'open') RETURNING id, tenant_id, inbox_id, contact_inbox_id, assignee_id, status, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(inbox_id)
+        .bind(contact_inbox_id)
+        .fetch_one(&self.db.pool)
+        .await?;
+        Ok(record)
+    }
+
+    pub async fn create_omni_message(&self, tenant_id: Uuid, conversation_id: Uuid, contact_id: Uuid, sender_type: String, sender_id: Uuid, content: String, message_type: String) -> Result<OmniMessage, sqlx::Error> {
+        let id = Uuid::new_v4();
+        let record = sqlx::query_as::<_, OmniMessage>(
+            "INSERT INTO omni_message (id, tenant_id, conversation_id, contact_id, sender_type, sender_id, content, message_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, tenant_id, conversation_id, contact_id, sender_type, sender_id, content, message_type, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(conversation_id)
+        .bind(contact_id)
+        .bind(sender_type)
+        .bind(sender_id)
+        .bind(content)
+        .bind(message_type)
+        .fetch_one(&self.db.pool)
+        .await?;
+        Ok(record)
+    }
+
+    pub async fn get_conversations_by_inbox(&self, inbox_id: Uuid) -> Result<Vec<OmniConversation>, sqlx::Error> {
+        let records = sqlx::query_as::<_, OmniConversation>(
+            "SELECT id, tenant_id, inbox_id, contact_inbox_id, assignee_id, status, created_at, updated_at FROM omni_conversation WHERE inbox_id = $1 ORDER BY created_at DESC",
+        )
+        .bind(inbox_id)
+        .fetch_all(&self.db.pool)
+        .await?;
+        Ok(records)
+    }
+}
