@@ -53,6 +53,12 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "omnichannel/mod.rs",
+        "omnichannel/auto_responder.rs",
+        "omnichannel/copilot.rs",
+        "omnichannel/handoff.rs",
+        "omnichannel/intent.rs",
+        "omnichannel/models.rs",
         "actor_model.rs",
         "agent.rs",
         "agent_protocol.rs",
@@ -444,5 +450,57 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "omnichannel_intent_tests",
+    srcs = ["omnichannel/intent.rs", "omnichannel/models.rs"],
+    crate_root = "omnichannel/intent.rs",
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
+        "@crates//:tokio",
+        "@crates//:serde",
+    ],
+)
+
+rust_test(
+    name = "omnichannel_auto_responder_tests",
+    srcs = ["omnichannel/auto_responder.rs", "omnichannel/models.rs"],
+    crate_root = "omnichannel/auto_responder.rs",
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
+        "@crates//:tokio",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:serde",
+    ],
+)
+
+rust_test(
+    name = "omnichannel_copilot_tests",
+    srcs = ["omnichannel/copilot.rs", "omnichannel/models.rs"],
+    crate_root = "omnichannel/copilot.rs",
+    proc_macro_deps = ["@crates//:async-trait"],
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
+        "@crates//:tokio",
+        "@crates//:serde",
+    ],
+)
+
+rust_test(
+    name = "omnichannel_handoff_tests",
+    srcs = ["omnichannel/handoff.rs", "omnichannel/models.rs"],
+    crate_root = "omnichannel/handoff.rs",
+    deps = [
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:serde",
     ],
 )
