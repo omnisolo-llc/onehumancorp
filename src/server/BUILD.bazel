@@ -2,7 +2,6 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
-
 SERVER_RS_SRCS = [
     "health_test.rs",
     "analytics.rs",
@@ -96,8 +95,6 @@ SERVER_RS_SRCS = [
     "//src/server/api:shipping.rs",
     "//src/server/api:setup.rs",
     "//src/server/api/booking:mod.rs",
-
-
     "//src/server/api/booking:request.rs",
     "//src/server/api/booking:available_slots.rs",
     "//src/server/api/booking:reserve.rs",
@@ -168,6 +165,7 @@ SERVER_RS_SRCS = [
     "//src/server/integrations/chat:models.rs",
     "//src/server/integrations/chat:service.rs",
     "//src/server/integrations/chat:api_test.rs",
+    "//src/server/integrations/chat:mod.rs",
     "//src/server/integrations:mod.rs",
     "//src/server/integrations:registry.rs",
     "//src/server/integrations/alipay:client.rs",
@@ -300,9 +298,6 @@ SERVER_RS_SRCS = [
     "//src/server/services/growth:quota.rs",
     "//src/server/services/growth:referral_api.rs",
     "//src/server/services/growth:referrals.rs",
-
-
-
     "//src/server/services/growth:service.rs",
     "//src/server/services/growth:viral_loop.rs",
     "//src/server/services/growth:event_listener.rs",
@@ -398,9 +393,7 @@ SERVER_RS_SRCS = [
     "//src/server/voice:engine.rs",
     "//src/server/voice:router.rs",
 ]
-
 # build_script removed as protos are now built with Bazel rules
-
 rust_library(
     name = "minimax",
     srcs = ["minimax.rs"],
@@ -408,7 +401,6 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:libc",
-
         "//src/server/pricing:server_pricing",
         "@crates//:reqwest",
         "@crates//:serde",
@@ -418,7 +410,6 @@ rust_library(
         "@crates//:tracing",
     ],
 )
-
 rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
@@ -435,7 +426,6 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:libc",
-
         ":minimax",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
@@ -532,7 +522,6 @@ rust_library(
         "@crates//:walkdir",
     ],
 )
-
 rust_test(
     name = "hybridfsmcp_unit_test",
     size = "large",
@@ -557,7 +546,6 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:temp-env",
@@ -565,7 +553,6 @@ rust_test(
         "@crates//:tokio",
     ],
 )
-
 rust_test(
     name = "setup_unit_test",
     size = "large",
@@ -584,7 +571,6 @@ rust_test(
         "@crates//:tower-0.4.13",
     ],
 )
-
 rust_test(
     name = "database_url_unit_test",
     size = "large",
@@ -601,7 +587,6 @@ rust_test(
         "@crates//:uuid",
     ],
 )
-
 rust_binary(
     name = "server",
     srcs = ["main.rs"],
@@ -609,7 +594,6 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:libc",
-
         ":server_lib",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:mcp_proxy_prost",
@@ -617,7 +601,6 @@ rust_binary(
         "@crates//:tokio",
     ],
 )
-
 # Keep the remaining root server_lib groups stable and non-overlapping. Rust
 # libtest filters are plain substring matches, not module globs, so broad
 # filters like "hub::" or "tasks::" can accidentally select tests from another
@@ -671,7 +654,6 @@ SERVER_LIB_TEST_GROUPS = {
         "msgbus::",
     ],
 }
-
 SERVER_LIB_SUBCRATE_TESTS = [
     "//src/server/agents:server_agents_unit_test",
     "//src/server/api:server_api_unit_test",
@@ -705,12 +687,10 @@ SERVER_LIB_SUBCRATE_TESTS = [
     "//src/server/utils:server_utils_unit_test",
     "//src/server/workers:server_workers_unit_test",
 ]
-
 SERVER_LIB_SPLIT_TESTS = [
     "server_lib_%s_unit_test" % group
     for group in SERVER_LIB_TEST_GROUPS
 ] + SERVER_LIB_SUBCRATE_TESTS
-
 [
     rust_test(
         name = "server_lib_%s_unit_test" % group,
@@ -732,7 +712,6 @@ SERVER_LIB_SPLIT_TESTS = [
         }),
         deps = [
         "@crates//:libc",
-
             "@crates//:serde_json",
             "@crates//:sqlx",
             "@crates//:temp-env",
@@ -746,7 +725,6 @@ SERVER_LIB_SPLIT_TESTS = [
     for group, filters in SERVER_LIB_TEST_GROUPS.items()
     if group != "core"
 ]
-
 rust_test(
     name = "server_lib_core_unit_test_bin",
     size = "large",
@@ -768,7 +746,6 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:temp-env",
@@ -779,7 +756,6 @@ rust_test(
         "@crates//:walkdir",
     ],
 )
-
 rust_sharded_test(
     name = "server_lib_core_unit_test",
     size = "large",
@@ -791,12 +767,10 @@ rust_sharded_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
-
 test_suite(
     name = "server_lib_unit_test",
     tests = SERVER_LIB_SPLIT_TESTS,
 )
-
 # Filtered module targets are useful for local debugging, but each one builds a
 # separate test harness for server_lib. Keep them out of wildcard test runs.
 [
@@ -824,7 +798,6 @@ test_suite(
         }),
         deps = [
         "@crates//:libc",
-
             "@crates//:tempfile",
             "@crates//:tokio-tungstenite",
         ],
@@ -850,7 +823,6 @@ test_suite(
         "cart_recovery",
     ]
 ]
-
 rust_test(
     name = "queue_test",
     size = "large",
@@ -870,7 +842,6 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         ":server_lib",
         "@crates//:chrono",
         "@crates//:serde_json",
@@ -879,7 +850,6 @@ rust_test(
         "@crates//:uuid",
     ],
 )
-
 rust_test(
     name = "cart_recovery_standalone_test",
     size = "small",
@@ -891,7 +861,6 @@ rust_test(
     ],
     deps = [
         "@crates//:libc",
-
         "//src/server/common:server_common",
         "//src/server/pricing:server_pricing",
         "//src/server/telemetry:server_telemetry",
@@ -906,7 +875,6 @@ rust_test(
         "//src/agents/builtin:ohc_builtin_agent_lib",
     ],
 )
-
 rust_test(
     name = "telemetry_test",
     size = "large",
@@ -919,7 +887,6 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         ":server_lib",
         "//src/server/config:server_config",
         "//src/server/telemetry:server_telemetry",
@@ -930,7 +897,6 @@ rust_test(
         "@crates//:walkdir",
     ],
 )
-
 rust_test(
     name = "powersync_test",
     size = "large",
@@ -955,12 +921,10 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
     ],
 )
-
 rust_test(
     name = "crypto_test",
     size = "small",
@@ -973,7 +937,6 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/server/utils:server_utils",
@@ -986,12 +949,10 @@ rust_test(
         "@crates//:tracing",
     ],
 )
-
 exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
-
 rust_test(
     name = "hybrid_sync_unit_test",
     size = "large",
@@ -1016,14 +977,12 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         "@crates//:temp-env",
         "@crates//:tempfile",
         "@crates//:tree-sitter-bash",
         "@crates//:walkdir",
     ],
 )
-
 rust_test(
     name = "api_growth_unit_test",
     size = "large",
@@ -1045,12 +1004,10 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
     ],
 )
-
 rust_test(
     name = "config_sync_unit_test",
     size = "large",
@@ -1075,7 +1032,6 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:temp-env",
@@ -1083,7 +1039,6 @@ rust_test(
         "@crates//:tokio",
     ],
 )
-
 rust_test(
     name = "agents_unit_test",
     size = "large",
@@ -1108,13 +1063,11 @@ rust_test(
     }),
     deps = [
         "@crates//:libc",
-
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
     ],
 )
 # To make sure it finds the edge_caching files, since they're not there
-
 sh_test(
     name = "pii_leakage_check_test",
     size = "small",
