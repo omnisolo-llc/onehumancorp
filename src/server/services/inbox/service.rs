@@ -1,41 +1,6 @@
-use sqlx::{PgPool, FromRow};
+use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use tracing::info;
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct UnifiedThread {
-    pub id: String,
-    pub tenant_id: String,
-    pub customer_id: Option<String>,
-    pub channel: String,
-    pub status: String,
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct UnifiedMessage {
-    pub id: String,
-    pub tenant_id: String,
-    pub thread_id: String,
-    pub sender_type: String,
-    pub content: String,
-    pub created_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
-pub struct UnifiedTriageAction {
-    pub id: String,
-    pub tenant_id: String,
-    pub thread_id: String,
-    pub action_type: String,
-    pub action_payload: Option<String>,
-    pub status: String,
-    pub created_at: Option<DateTime<Utc>>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
 
 pub struct InboxService {
     pool: PgPool,
@@ -46,156 +11,138 @@ impl InboxService {
         Self { pool }
     }
 
-    pub async fn ingest_message(
-        &self,
-        tenant_id: &str,
-        customer_id: Option<&str>,
-        channel: &str,
-        sender_type: &str,
-        content: &str,
-    ) -> Result<String, sqlx::Error> {
+    pub async fn create_inbox(&self, tenant_id: Uuid, name: &str) -> Result<Uuid, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
 
         sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(tenant_id)
+            .bind(tenant_id.to_string())
             .execute(&mut *tx)
             .await?;
 
-        let mut thread_id = None;
-        if let Some(cid) = customer_id {
-            let row = sqlx::query_as::<_, (String,)>(
-                r#"SELECT id FROM unified_threads WHERE tenant_id = $1 AND customer_id = $2 AND channel = $3 AND status = 'open' LIMIT 1"#
-            )
-            .bind(tenant_id)
-            .bind(cid)
-            .bind(channel)
-            .fetch_optional(&mut *tx)
-            .await?;
-            if let Some((id,)) = row {
-                thread_id = Some(id);
-            }
-        }
+        let id = Uuid::new_v4();
+        sqlx::query(
+            r#"INSERT INTO omni_inboxes (id, tenant_id, name) VALUES ($1, $2, $3)"#
+        )
+        .bind(id)
+        .bind(tenant_id)
+        .bind(name)
+        .execute(&mut *tx)
+        .await?;
 
-        let tid = match thread_id {
-            Some(id) => id,
+        tx.commit().await?;
+        Ok(id)
+    }
+
+    pub async fn resolve_contact(
+        &self,
+        tenant_id: Uuid,
+        channel_type: &str,
+        identifier: &str,
+    ) -> Result<Uuid, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let row = sqlx::query_as::<_, (Uuid,)>(
+            r#"SELECT contact_id FROM omni_contact_identities WHERE tenant_id = $1 AND channel_type = $2 AND identifier = $3 LIMIT 1"#
+        )
+        .bind(tenant_id)
+        .bind(channel_type)
+        .bind(identifier)
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        let contact_id = match row {
+            Some((id,)) => id,
             None => {
-                let new_tid = Uuid::new_v4().to_string();
+                let new_contact_id = Uuid::new_v4();
                 sqlx::query(
-                    r#"INSERT INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES ($1, $2, $3, $4, 'open')"#
+                    r#"INSERT INTO omni_contacts (id, tenant_id) VALUES ($1, $2)"#
                 )
-                .bind(&new_tid)
+                .bind(new_contact_id)
                 .bind(tenant_id)
-                .bind(customer_id)
-                .bind(channel)
                 .execute(&mut *tx)
                 .await?;
-                new_tid
+
+                let identity_id = Uuid::new_v4();
+                sqlx::query(
+                    r#"INSERT INTO omni_contact_identities (id, tenant_id, contact_id, channel_type, identifier) VALUES ($1, $2, $3, $4, $5)"#
+                )
+                .bind(identity_id)
+                .bind(tenant_id)
+                .bind(new_contact_id)
+                .bind(channel_type)
+                .bind(identifier)
+                .execute(&mut *tx)
+                .await?;
+
+                new_contact_id
             }
         };
 
-        let msg_id = Uuid::new_v4().to_string();
-        sqlx::query(
-            r#"INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES ($1, $2, $3, $4, $5)"#
+        tx.commit().await?;
+        Ok(contact_id)
+    }
+
+    pub async fn ingest_message(
+        &self,
+        tenant_id: Uuid,
+        inbox_id: Uuid,
+        contact_id: Uuid,
+        sender_type: &str,
+        content: &str,
+    ) -> Result<Uuid, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let row = sqlx::query_as::<_, (Uuid,)>(
+            r#"SELECT id FROM omni_conversations WHERE tenant_id = $1 AND inbox_id = $2 AND contact_id = $3 AND status = 'open' LIMIT 1"#
         )
-        .bind(&msg_id)
         .bind(tenant_id)
-        .bind(&tid)
+        .bind(inbox_id)
+        .bind(contact_id)
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        let conversation_id = match row {
+            Some((id,)) => id,
+            None => {
+                let new_conv_id = Uuid::new_v4();
+                sqlx::query(
+                    r#"INSERT INTO omni_conversations (id, tenant_id, inbox_id, contact_id, status) VALUES ($1, $2, $3, $4, 'open')"#
+                )
+                .bind(new_conv_id)
+                .bind(tenant_id)
+                .bind(inbox_id)
+                .bind(contact_id)
+                .execute(&mut *tx)
+                .await?;
+                new_conv_id
+            }
+        };
+
+        let msg_id = Uuid::new_v4();
+        sqlx::query(
+            r#"INSERT INTO omni_messages (id, tenant_id, conversation_id, sender_type, content) VALUES ($1, $2, $3, $4, $5)"#
+        )
+        .bind(msg_id)
+        .bind(tenant_id)
+        .bind(conversation_id)
         .bind(sender_type)
         .bind(content)
         .execute(&mut *tx)
         .await?;
 
-        if sender_type == "customer" {
-            self.trigger_ai_triage(&mut tx, tenant_id, &tid, content).await?;
-        }
-
         tx.commit().await?;
 
-        info!("Ingested message {} into thread {}", msg_id, tid);
+        info!("Ingested message {} into conversation {}", msg_id, conversation_id);
         Ok(msg_id)
-    }
-
-    async fn trigger_ai_triage(
-        &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-        tenant_id: &str,
-        thread_id: &str,
-        _message_content: &str,
-    ) -> Result<(), sqlx::Error> {
-        let action_id = Uuid::new_v4().to_string();
-        let payload = r#"{"draft_reply": "Thank you for reaching out! Let me check on that for you."}"#;
-
-        sqlx::query(
-            r#"INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'DraftReply', $4, 'pending')"#
-        )
-        .bind(action_id)
-        .bind(tenant_id)
-        .bind(thread_id)
-        .bind(payload)
-        .execute(&mut **tx)
-        .await?;
-
-        info!("Triggered AI triage for thread {}", thread_id);
-        Ok(())
-    }
-
-    pub async fn get_pending_actions(&self, tenant_id: &str) -> Result<Vec<UnifiedTriageAction>, sqlx::Error> {
-        let mut tx = self.pool.begin().await?;
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(tenant_id)
-            .execute(&mut *tx)
-            .await?;
-
-        let actions = sqlx::query_as::<_, UnifiedTriageAction>(
-            r#"SELECT id, tenant_id, thread_id, action_type, action_payload, status, created_at, updated_at FROM unified_triage_actions WHERE tenant_id = $1 AND status = 'pending' ORDER BY created_at ASC"#
-        )
-        .bind(tenant_id)
-        .fetch_all(&mut *tx)
-        .await?;
-
-        tx.commit().await?;
-        Ok(actions)
-    }
-
-    pub async fn resolve_action(&self, tenant_id: &str, action_id: &str, resolution: &str) -> Result<(), sqlx::Error> {
-        let mut tx = self.pool.begin().await?;
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(tenant_id)
-            .execute(&mut *tx)
-            .await?;
-
-        let row = sqlx::query_as::<_, (String, Option<String>)>(
-            r#"UPDATE unified_triage_actions SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING thread_id, action_payload"#
-        )
-        .bind(resolution)
-        .bind(action_id)
-        .bind(tenant_id)
-        .fetch_optional(&mut *tx)
-        .await?;
-
-        if let Some((thread_id, action_payload)) = row {
-             if resolution == "approved" {
-                 if let Some(payload) = action_payload {
-                     if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&payload) {
-                         if let Some(reply) = parsed.get("draft_reply").and_then(|v| v.as_str()) {
-                             let msg_id = Uuid::new_v4().to_string();
-                             sqlx::query(
-                                r#"INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES ($1, $2, $3, 'agent', $4)"#
-                             )
-                             .bind(msg_id)
-                             .bind(tenant_id)
-                             .bind(&thread_id)
-                             .bind(reply)
-                             .execute(&mut *tx)
-                             .await?;
-                             info!("Executed approved DraftReply action {} for thread {}", action_id, thread_id);
-                         }
-                     }
-                 }
-             }
-        }
-
-        tx.commit().await?;
-        Ok(())
     }
 }

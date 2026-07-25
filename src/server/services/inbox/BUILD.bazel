@@ -4,6 +4,7 @@ rust_library(
     name = "srcs",
     srcs = [
         "mod.rs",
+        "models.rs",
         "service.rs",
         "test_inbox.rs"
     ],
