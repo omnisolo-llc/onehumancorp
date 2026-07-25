@@ -352,10 +352,6 @@ struct ApiKeyMetadata {
     expires_at: Option<String>,
 }
 
-fn get_member_uuid(sub: &str) -> uuid::Uuid {
-    uuid::Uuid::parse_str(sub)
-        .unwrap_or_else(|_| uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, sub.as_bytes()))
-}
 
 #[derive(Clone)]
 pub struct InMemoryApiKey {
@@ -388,7 +384,7 @@ async fn generate_api_key(
     let key_hash = format!("{:x}", Sha256::digest(raw_key.as_bytes()));
     let created_at = chrono::Utc::now().to_rfc3339();
     let key_id = uuid::Uuid::new_v4().to_string();
-    let member_id = get_member_uuid(&claims.sub);
+    let member_id = claims.sub.clone();
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
     let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
@@ -401,7 +397,7 @@ async fn generate_api_key(
         .bind(uuid::Uuid::parse_str(&key_id).unwrap_or_default())
         .bind(&key_hash)
         .bind(&payload.name)
-        .bind(member_id)
+        .bind(&member_id)
         .bind(&organization_id)
         .execute(&pool)
         .await;
@@ -441,13 +437,13 @@ async fn list_api_keys(
 
     if has_db {
         let pool = crate::db::get_pool();
-        let member_id = get_member_uuid(&claims.sub);
+        let member_id = claims.sub.clone();
         let organization_id = claims.organization_id.clone().unwrap_or_default();
 
         let query_res = sqlx::query(
             "SELECT id, name, created_at, expires_at FROM api_keys WHERE member_id = $1 AND organization_id = $2"
         )
-        .bind(member_id)
+        .bind(&member_id)
         .bind(&organization_id)
         .fetch_all(&pool)
         .await;
@@ -511,14 +507,14 @@ async fn revoke_api_key(
                 );
             }
         };
-        let member_id = get_member_uuid(&claims.sub);
+        let member_id = claims.sub.clone();
         let organization_id = claims.organization_id.clone().unwrap_or_default();
 
         let delete_res = sqlx::query(
             "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND organization_id = $3"
         )
         .bind(key_uuid)
-        .bind(member_id)
+        .bind(&member_id)
         .bind(&organization_id)
         .execute(&pool)
         .await;
