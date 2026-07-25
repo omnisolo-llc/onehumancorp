@@ -1,20 +1,20 @@
-issue_title: "Architecture Design: Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Architecture Design: Native Rust Omnichannel Chat System (Chat-woot Replacement)"
 issue_description: |
   # Mission Queue Protocol: Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  OHC requires a native, high-performance omnichannel chat system built in Rust to permanently retire the external Chatwoot dependency. The business owners (Maya, Carlos, Priya, Leo, Fatima) need a unified inbox that consolidates customer interactions across Instagram DMs, SMS, WhatsApp, Web Chat, and Email without context-switching. Current external dependencies lack the deep, unified integration with OHC's internal AI capabilities (triage, operations, sales, and knowledge assistance), and violate our goal of complete, seamless control over the multi-tenant architecture and mobile-first experience.
+  OHC requires a native, high-performance omnichannel chat system built in Rust to permanently retire the external Chat-woot dependency. The business owners (Maya, Carlos, Priya, Leo, Fatima) need a unified inbox that consolidates customer interactions across Instagram DMs, SMS, WhatsApp, Web Chat, and Email without context-switching. Current external dependencies lack the deep, unified integration with OHC's internal AI capabilities (triage, operations, sales, and knowledge assistance), and violate our goal of complete, seamless control over the multi-tenant architecture and mobile-first experience.
 
   ## Research Report
-  - **Source Code Benchmarking:** Audited the `chatwoot/chatwoot` repository (v3+ architecture). Chatwoot's Ruby on Rails architecture heavily relies on polymorphic associations (Channels, Inboxes) and a unified `Conversation` model linked to `Messages`, `Contacts`, and `Account` (tenant).
+  - **Source Code Benchmarking:** Audited the `chat-woot/chat-woot` repository (v3+ architecture). Chat-woot's Ruby on Rails architecture heavily relies on polymorphic associations (Channels, Inboxes) and a unified `Conversation` model linked to `Messages`, `Contacts`, and `Account` (tenant).
   - **Data Model Mapping:**
     - `Account` -> OHC `Tenant`
     - `Contact` -> OHC `Contact`
     - `Conversation` -> OHC `Conversation` (tied to Tenant and Contact)
     - `Message` -> OHC `Message`
     - `Inbox` & `Channel::*` -> OHC `ChannelAdapter` and `Inbox`
-  - **WebSockets:** Chatwoot uses ActionCable. OHC will use a Rust-based async WebSocket service (via Tokio/Axum/Tungstenite) coupled with Redis for pub/sub across horizontal instances to deliver real-time updates.
-  - **Extensibility & AI:** Chatwoot uses AgentBots. OHC's architecture will natively integrate with our internal `ai_job_queue` using PostgreSQL `SKIP LOCKED`. When a new message arrives, it will immediately trigger OHC's AI triage and drafting capabilities before notifying the human operator.
+  - **WebSockets:** Chat-woot uses ActionCable. OHC will use a Rust-based async WebSocket service (via Tokio/Axum/Tungstenite) coupled with Redis for pub/sub across horizontal instances to deliver real-time updates.
+  - **Extensibility & AI:** Chat-woot uses AgentBots. OHC's architecture will natively integrate with our internal `ai_job_queue` using PostgreSQL `SKIP LOCKED`. When a new message arrives, it will immediately trigger OHC's AI triage and drafting capabilities before notifying the human operator.
 
   ## Design Doc
   ### Architecture Diagram (Mermaid.js)
