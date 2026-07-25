@@ -1,3 +1,4 @@
+pub mod setup;
 pub mod handler;
 pub mod client;
 pub mod webhook;
@@ -7,3 +8,5 @@ mod whatsapp_unit_test;
 pub use handler::*;
 pub use client::*;
 pub use webhook::*;
+
+pub use setup::*;

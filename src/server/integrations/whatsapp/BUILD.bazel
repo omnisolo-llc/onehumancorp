@@ -6,6 +6,7 @@ rust_library(
     crate_root = "mod.rs",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/orchestration:server_orchestration",
         "@crates//:axum",
         "@crates//:reqwest",
         "@crates//:serde",
@@ -19,6 +20,7 @@ rust_test(
     name = "server_integrations_whatsapp_test",
     crate = ":server_integrations_whatsapp",
     deps = [
+        "//src/server/orchestration:server_orchestration",
         "@crates//:tower-0.4.13",
     ],
 )
