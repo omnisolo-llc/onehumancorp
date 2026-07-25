@@ -7,6 +7,8 @@ filegroup(
         "customer_memory.rs",
         "action_required.rs",
         "action_required_test.rs",
+        "core.rs",
+        "core_test.rs",
     ],
     visibility = ["//visibility:public"],
 )

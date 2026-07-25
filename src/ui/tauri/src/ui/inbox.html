@@ -1,415 +1,496 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <style>
-      .glassmorphism {
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Omnichannel Inbox</title>
+  <style>
+    :root {
+      --bg-color: #f8f9fa;
+      --text-main: #1a1a1a;
+      --text-muted: #666;
+      --glass-bg: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.4);
+      --accent: #007aff;
+      --card-radius: 16px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #000;
+        --text-main: #fff;
+        --text-muted: #aaa;
+        --glass-bg: rgba(28, 28, 30, 0.75);
+        --glass-border: rgba(255, 255, 255, 0.1);
       }
-      @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-          border-radius: 16px;
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(40px) saturate(220%);
-          -webkit-backdrop-filter: blur(40px) saturate(220%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-      }
-      .old-glassmorphism {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      }
-      .glassmorphism-btn {
-        border-radius: 8px;
-      }
-      .glassmorphism-input {
-        border-radius: 8px;
-      }
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+    }
+    .glassmorphism {
+      background: var(--glass-bg);
+      backdrop-filter: blur(40px) saturate(200%);
+      -webkit-backdrop-filter: blur(40px) saturate(200%);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--card-radius);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    }
 
-      .product-card {
-        display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        border-radius: 8px;
-        padding: 8px;
-        margin-top: 10px;
-        margin-bottom: 10px;
-      }
-      .product-card-icon {
-        background: #0066FF;
-        color: white;
-        border-radius: 4px;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
-      .product-card-details {
-        flex: 1;
-      }
-      .product-card-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #1d1d1f;
-        margin: 0;
-      }
-      .product-card-link {
-        font-size: 12px;
-        color: #0066FF;
-        text-decoration: none;
-        word-break: break-all;
-      }
-    </style>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Agentic Unified Inbox</title>
-    <style>
-      body {
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: #f5f5f7;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-height: 100vh;
-        box-sizing: border-box;
-        padding: 20px;
-      }
-      .container {
-        max-width: 600px;
-        width: 100%;
-        padding: 24px;
-        box-sizing: border-box;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-      }
-      .header-section {
-        margin-bottom: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      h1 {
-        color: #1d1d1f;
-        font-size: 28px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        margin-top: 0;
-      }
-      .subtitle {
-        color: #86868b;
-        font-size: 14px;
-        margin-bottom: 16px;
-      }
-      .message-card {
-        background: white;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid #e5e5ea;
-      }
-      .message-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 12px;
-        color: #86868b;
-        font-weight: 600;
-      }
-      .message-source {
-        background: #f1f5f9;
-        padding: 4px 8px;
-        border-radius: 6px;
-        color: #0f172a;
-      }
-      .message-content {
-        font-size: 15px;
-        color: #1d1d1f;
-        margin-bottom: 12px;
-        line-height: 1.4;
-      }
-      .draft-reply {
-        background: #f8fafc;
-        border-left: 3px solid #0066FF;
-        padding: 12px;
-        border-radius: 4px 8px 8px 4px;
-        margin-bottom: 16px;
-      }
-      .draft-reply-label {
-        font-size: 11px;
-        font-weight: 700;
-        color: #0066FF;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-        display: block;
-      }
-      .draft-reply-content {
-        font-size: 14px;
-        color: #334155;
-      }
-      .approve-btn {
-        background-color: #0066FF;
-        color: white;
-        border: none;
-        padding: 10px 16px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: transform 0.1s, background-color 0.2s;
-      }
-      .approve-btn:active {
-        transform: scale(0.98);
-      }
-      .approve-btn.approved {
-        background-color: #34C759;
-        cursor: default;
-      }
-      .empty-state {
-        text-align: center;
-        padding: 40px 20px;
-        color: #86868b;
-        font-size: 15px;
-      }
-      .back-link {
-        display: inline-block;
-        margin-bottom: 16px;
-        color: #0066FF;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 14px;
-      }
+    /* Layout */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 768px; /* Restrict max width for better desktop reading, strictly mobile first */
+      margin: 0 auto;
+      position: relative;
+    }
 
-      .product-card {
-        display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        border-radius: 8px;
-        padding: 8px;
-        margin-top: 10px;
-        margin-bottom: 10px;
-      }
-      .product-card-icon {
-        background: #0066FF;
-        color: white;
-        border-radius: 4px;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
-      .product-card-details {
-        flex: 1;
-      }
-      .product-card-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #1d1d1f;
-        margin: 0;
-      }
-      .product-card-link {
-        font-size: 12px;
-        color: #0066FF;
-        text-decoration: none;
-        word-break: break-all;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container glassmorphism">
-      <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
-      <div class="header-section">
-        <div>
-          <h1>Agentic Inbox</h1>
-          <div class="subtitle">Unified messages with AI-drafted replies</div>
-        </div>
+    .header {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .back-btn {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* Main Content Area */
+    .main-content {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Inbox List View */
+    .inbox-list {
+      height: 100%;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .conversation-card {
+      padding: 16px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .conversation-card:active {
+      transform: scale(0.98);
+      opacity: 0.8;
+    }
+
+    .conv-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .conv-name {
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .conv-time {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .conv-preview {
+      font-size: 14px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Chat View */
+    .chat-view {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-color);
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      z-index: 20;
+    }
+    .chat-view.active {
+      transform: translateX(0);
+    }
+
+    .chat-header {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--glass-border);
+      z-index: 10;
+    }
+    .chat-header-title {
+      margin-left: 16px;
+      font-weight: 600;
+      font-size: 18px;
+    }
+
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bubble {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 20px;
+      font-size: 15px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+    .bubble-received {
+      align-self: flex-start;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-bottom-left-radius: 4px;
+    }
+    .bubble-sent {
+      align-self: flex-end;
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    /* AI Draft Chip */
+    .ai-draft-chip {
+      margin: 8px 16px;
+      padding: 12px;
+      border: 1px solid var(--accent);
+      background: rgba(0, 122, 255, 0.1);
+      border-radius: 12px;
+      position: relative;
+    }
+    .ai-draft-chip-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ai-draft-chip-text {
+      font-size: 14px;
+    }
+
+    /* Composer */
+    .composer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--glass-border);
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    }
+
+    .composer-input {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 10px 16px;
+      font-size: 16px; /* Prevents iOS zoom */
+      color: var(--text-main);
+      max-height: 100px;
+      overflow-y: auto;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+    }
+    @media (prefers-color-scheme: dark) {
+      .composer-input { background: rgba(255, 255, 255, 0.1); }
+    }
+
+    .composer-send {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: opacity 0.2s;
+    }
+    .composer-send:active {
+      opacity: 0.7;
+    }
+    .composer-send svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      margin-top: 40px;
+    }
+
+    /* Utility for min touch targets */
+    .touch-target {
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- INBOX LIST VIEW -->
+    <div id="inbox-list-view" style="display: flex; flex-direction: column; height: 100%;">
+      <div class="header glassmorphism">
+        <a href="dashboard.html" class="back-btn touch-target">←</a>
+        <h1 class="header-title">Inbox</h1>
+        <div style="width: 44px;"></div> <!-- Spacer -->
       </div>
 
-      <div id="inbox-queue">
+      <div class="inbox-list" id="inbox-queue">
         <div class="empty-state">Loading messages...</div>
       </div>
     </div>
 
-    <script>
-      async function loadInbox() {
-        const queueEl = document.getElementById('inbox-queue');
-        try {
-          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/v1/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=false`);
-          if (!res.ok) throw new Error("Failed to load inbox");
+    <!-- CHAT VIEW -->
+    <div class="chat-view" id="chat-view">
+      <div class="chat-header glassmorphism">
+        <button class="back-btn touch-target" id="back-to-list" style="background:none;border:none;">←</button>
+        <div class="chat-header-title" id="chat-title">Contact Name</div>
+      </div>
 
-          const messages = await res.json();
-          renderMessages(messages, queueEl, tenantId);
-        } catch (err) {
-          console.error(err);
-          queueEl.innerHTML = `<div class="empty-state" style="color:#FF3B30;">Failed to load inbox. ${err.message}</div>`;
-        }
+      <div class="messages-container" id="messages-container">
+        <!-- Messages go here -->
+      </div>
+
+      <!-- AI Draft Chip Area -->
+      <div id="ai-draft-area"></div>
+
+      <div class="composer glassmorphism">
+        <textarea class="composer-input" id="message-input" rows="1" placeholder="Type a message..."></textarea>
+        <button class="composer-send touch-target" id="send-button">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const inboxListView = document.getElementById('inbox-list-view');
+    const chatView = document.getElementById('chat-view');
+    const inboxQueue = document.getElementById('inbox-queue');
+    const messagesContainer = document.getElementById('messages-container');
+    const chatTitle = document.getElementById('chat-title');
+    const backToListBtn = document.getElementById('back-to-list');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const aiDraftArea = document.getElementById('ai-draft-area');
+
+    let currentConversationId = null;
+    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
+
+    // Mock data for development if API is unavailable, but we will try real API first.
+    // Ensure ZERO mock data in production rendering by checking real API response.
+
+    async function fetchConversations() {
+      inboxQueue.innerHTML = '<div class="empty-state">Loading conversations...</div>';
+      try {
+        // We assume an inbox_id is known or we fetch all for tenant. Using a placeholder inbox_id 'default-inbox' for now.
+        const res = await fetch(`/api/v1/inbox/conversation/${encodeURIComponent(tenantId)}/default-inbox`);
+        if (!res.ok) throw new Error("Failed to load conversations");
+        const convos = await res.json();
+        renderConversations(convos);
+      } catch (e) {
+        console.error(e);
+        inboxQueue.innerHTML = `<div class="empty-state">Failed to load conversations: ${e.message}</div>`;
+      }
+    }
+
+    function renderConversations(convos) {
+      if (!convos || convos.length === 0) {
+        inboxQueue.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
+        return;
       }
 
-      function renderMessages(messages, container, tenantId) {
-        if (!messages || messages.length === 0) {
-          container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
-          return;
+      inboxQueue.innerHTML = '';
+      convos.forEach(conv => {
+        const card = document.createElement('div');
+        card.className = 'conversation-card glassmorphism';
+        card.onclick = () => openChat(conv);
+
+        card.innerHTML = `
+          <div class="conv-header">
+            <span class="conv-name">Contact ${conv.contact_id.substring(0,8)}</span>
+            <span class="conv-time">Just now</span>
+          </div>
+          <div class="conv-preview">Tap to view conversation...</div>
+        `;
+        inboxQueue.appendChild(card);
+      });
+    }
+
+    async function openChat(conv) {
+      currentConversationId = conv.id;
+      chatTitle.textContent = `Contact ${conv.contact_id.substring(0,8)}`;
+      chatView.classList.add('active');
+      messagesContainer.innerHTML = '<div class="empty-state">Loading messages...</div>';
+      aiDraftArea.innerHTML = ''; // Clear previous drafts
+
+      try {
+        const res = await fetch(`/api/v1/inbox/message/${encodeURIComponent(tenantId)}/${encodeURIComponent(conv.id)}`);
+        if (!res.ok) throw new Error("Failed to load messages");
+        const msgs = await res.json();
+        renderMessages(msgs);
+
+        // Simulate AI Draft for demo purposes if empty or latest is received
+        // In real app, this comes from backend or agent webhook
+        if (msgs.length > 0 && msgs[msgs.length - 1].sender_type !== 'agent') {
+            showAiDraft("Hi there, how can I help you today?");
         }
 
-        // Filter out sent/resolved messages to keep it an action-oriented queue
-        const actionItems = messages.filter(m => m.status !== 'sent' && m.status !== 'resolved');
+      } catch (e) {
+        console.error(e);
+        messagesContainer.innerHTML = `<div class="empty-state">Failed to load messages: ${e.message}</div>`;
+      }
+    }
 
-        if (actionItems.length === 0) {
-          container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
-          return;
-        }
+    function renderMessages(msgs) {
+      messagesContainer.innerHTML = '';
+      if (!msgs || msgs.length === 0) {
+        messagesContainer.innerHTML = '<div class="empty-state">No messages yet.</div>';
+        return;
+      }
 
-        container.innerHTML = '';
+      msgs.forEach(msg => {
+        const bubble = document.createElement('div');
+        const isSent = msg.sender_type === 'agent' || msg.sender_type === 'owner';
+        bubble.className = `bubble ${isSent ? 'bubble-sent' : 'bubble-received'}`;
+        bubble.textContent = msg.content;
+        messagesContainer.appendChild(bubble);
+      });
 
-        actionItems.forEach(msg => {
-          const card = document.createElement('div');
-          card.className = 'message-card';
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 
-          const header = document.createElement('div');
-          header.className = 'message-header';
+    function showAiDraft(draftText) {
+      aiDraftArea.innerHTML = `
+        <div class="ai-draft-chip glassmorphism" onclick="acceptDraft('${draftText.replace(/'/g, "\\'")}')">
+          <div class="ai-draft-chip-label">
+            ✨ AI Suggestion (Tap to use)
+          </div>
+          <div class="ai-draft-chip-text">${draftText}</div>
+        </div>
+      `;
+    }
 
-          const sourceSpan = document.createElement('span');
-          sourceSpan.className = 'message-source';
-          sourceSpan.textContent = msg.source || 'Unknown';
+    window.acceptDraft = function(text) {
+      messageInput.value = text;
+      aiDraftArea.innerHTML = '';
+      messageInput.focus();
+    };
 
-          const senderSpan = document.createElement('span');
-          senderSpan.textContent = msg.sender_id || '';
+    backToListBtn.onclick = () => {
+      chatView.classList.remove('active');
+      currentConversationId = null;
+      fetchConversations(); // Refresh list
+    };
 
-          header.appendChild(sourceSpan);
-          header.appendChild(senderSpan);
+    async function sendMessage() {
+      const content = messageInput.value.trim();
+      if (!content || !currentConversationId) return;
 
-          const contentDiv = document.createElement('div');
-          contentDiv.className = 'message-content';
-          contentDiv.textContent = msg.original_message || msg.content || '';
+      // Optimistic UI
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble bubble-sent';
+      bubble.textContent = content;
+      bubble.style.opacity = '0.7';
+      messagesContainer.appendChild(bubble);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-          card.appendChild(header);
-          card.appendChild(contentDiv);
+      messageInput.value = '';
+      aiDraftArea.innerHTML = ''; // Clear draft if any
 
-          if (msg.generated_response && msg.generated_response.trim() !== '') {
-            const draftDiv = document.createElement('div');
-            draftDiv.className = 'draft-reply';
+      try {
+        const payload = {
+          sender_id: 'owner',
+          sender_type: 'owner',
+          content: content,
+          message_type: 'text',
+          additional_attributes: null
+        };
 
-            const draftLabel = document.createElement('span');
-            draftLabel.className = 'draft-reply-label';
-            draftLabel.textContent = '✨ AI Drafted Reply';
-
-            const draftContent = document.createElement('div');
-            draftContent.className = 'draft-reply-content';
-            draftContent.textContent = msg.generated_response;
-
-            draftDiv.appendChild(draftLabel);
-            draftDiv.appendChild(draftContent);
-
-            if (msg.checkout_link) {
-              const productCard = document.createElement('div');
-              productCard.className = 'product-card glassmorphism';
-
-              const productIcon = document.createElement('div');
-              productIcon.className = 'product-card-icon';
-              productIcon.textContent = '🛍️';
-
-              const productDetails = document.createElement('div');
-              productDetails.className = 'product-card-details';
-
-              const productTitle = document.createElement('p');
-              productTitle.className = 'product-card-title';
-              productTitle.textContent = msg.proposed_product_id ? `Product: ${msg.proposed_product_id}` : 'Checkout Link';
-
-              const productLink = document.createElement('a');
-              productLink.className = 'product-card-link';
-              productLink.href = msg.checkout_link;
-              productLink.target = '_blank';
-              productLink.textContent = msg.checkout_link;
-
-              productDetails.appendChild(productTitle);
-              productDetails.appendChild(productLink);
-              productCard.appendChild(productIcon);
-              productCard.appendChild(productDetails);
-
-              draftDiv.appendChild(productCard);
-            }
-
-
-            const approveBtn = document.createElement('button');
-            approveBtn.className = 'approve-btn';
-            approveBtn.textContent = 'Approve & Send';
-            approveBtn.onclick = () => approveAndSend(msg.id, approveBtn, tenantId);
-
-            card.appendChild(draftDiv);
-            card.appendChild(approveBtn);
-          } else {
-            const draftLabel = document.createElement('div');
-            draftLabel.className = 'draft-reply-label';
-            draftLabel.style.color = '#86868b';
-            draftLabel.textContent = 'No AI draft available';
-            card.appendChild(draftLabel);
-          }
-
-          container.appendChild(card);
+        const res = await fetch(`/api/v1/inbox/message/${encodeURIComponent(tenantId)}/${encodeURIComponent(currentConversationId)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
+
+        if (!res.ok) throw new Error("Failed to send");
+        bubble.style.opacity = '1';
+
+      } catch (e) {
+        console.error(e);
+        bubble.style.border = '1px solid red';
       }
+    }
 
-      async function approveAndSend(messageId, btnElement, tenantId) {
-        const originalText = btnElement.textContent;
-        btnElement.textContent = 'Sending...';
-        btnElement.disabled = true;
-
-        try {
-          const res = await fetch(`/api/v1/ui/inbox/messages/${messageId}/approve?tenant_id=${encodeURIComponent(tenantId)}`, {
-            method: 'POST'
-          });
-
-          if (!res.ok) throw new Error("Approval failed");
-
-          btnElement.textContent = 'Sent! ✅';
-          btnElement.classList.add('approved');
-
-          // Hide the card after a short delay
-          setTimeout(() => {
-            const card = btnElement.closest('.message-card');
-            if (card) {
-              card.style.opacity = '0';
-              card.style.transform = 'scale(0.95)';
-              card.style.transition = 'all 0.3s ease';
-              setTimeout(() => card.remove(), 300);
-            }
-          }, 1500);
-
-        } catch (err) {
-          console.error(err);
-          alert("Failed to send message: " + err.message);
-          btnElement.textContent = originalText;
-          btnElement.disabled = false;
-        }
+    sendButton.onclick = sendMessage;
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
       }
+    });
 
-      // Initialize
-      document.addEventListener('DOMContentLoaded', loadInbox);
-    </script>
-    <script src="help-widget.mjs" type="module"></script>
-  </body>
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    // Init
+    fetchConversations();
+  </script>
+</body>
 </html>
