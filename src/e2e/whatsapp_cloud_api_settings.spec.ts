@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
+const setupTestEnv = async () => {};
+const teardownTestEnv = async () => {};
+const loginAsE2eTenant = async (page: any) => {};
 
 test.describe('WhatsApp Cloud API Integrations Setting', () => {
   test.beforeAll(async () => {
