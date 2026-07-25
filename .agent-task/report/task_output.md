@@ -1,10 +1,10 @@
-issue_title: "Retire Chatwoot: Native Rust Omnichannel Chat System Architecture"
+issue_title: "Retire the legacy third-party chat dependency: Native Rust Omnichannel Chat System Architecture"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) is transitioning away from Chatwoot as a third-party omnichannel customer support dependency to build a fully native, high-performance omnichannel chat system in Rust within our monorepo. This allows deep integration with our existing tenant model, AI agents, billing, and order management, while avoiding the operational overhead and feature limitations of external dependencies. Non-technical owners need an integrated inbox where all communications (Instagram DMs, Web Chat, Email, WhatsApp) are triaged by the AI agent before escalating to the human owner.
+  OneHumanCorp (OHC) is transitioning away from the legacy third-party chat dependency as a third-party omnichannel customer support dependency to build a fully native, high-performance omnichannel chat system in Rust within our monorepo. This allows deep integration with our existing tenant model, AI agents, billing, and order management, while avoiding the operational overhead and feature limitations of external dependencies. Non-technical owners need an integrated inbox where all communications (Instagram DMs, Web Chat, Email, WhatsApp) are triaged by the AI agent before escalating to the human owner.
 
   ## Research Report
-  Based on an audit of the current Chatwoot architecture (via their GitHub repository), the system relies heavily on several key entities:
+  Based on an audit of the current the legacy third-party chat dependency architecture (via their GitHub repository), the system relies heavily on several key entities:
   - **Conversations**: The central aggregation unit tracking thread status, assignees (Agent/Bot), priority, SLA, and timestamps.
   - **Messages**: Individual communication units within a conversation, containing text, attachments, and metadata, typed as `incoming`, `outgoing`, or `template`.
   - **Contacts & Inboxes**: Modeling the customer identity and the channel entry point (e.g., a specific WhatsApp number or web widget).
