@@ -1,20 +1,20 @@
 issue_title: "Architectural Design: Native Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  Currently, OneHumanCorp (OHC) lacks a high-performance, fully integrated native omnichannel chat system. Relying on external third-party services like Chatwoot introduces multi-tenancy fragmentation, breaks zero-trust identity flow, and creates friction for our core personas (like Maya responding to Instagram DMs or Carlos fielding service requests via SMS). To achieve the OHC promise of an "Assistant-First Shell" where the AI unifies messages and drafts replies, we must build a native, Rust-based omnichannel engine inside the OHC monolith. This will provide seamless tenant isolation, offline-tolerant mobile access, and direct integration with our AI agent orchestrators.
+  Currently, OneHumanCorp (OHC) lacks a high-performance, fully integrated native omnichannel chat system. Relying on external third-party services like the legacy open-source chat platform introduces multi-tenancy fragmentation, breaks zero-trust identity flow, and creates friction for our core personas (like Maya responding to Instagram DMs or Carlos fielding service requests via SMS). To achieve the OHC promise of an "Assistant-First Shell" where the AI unifies messages and drafts replies, we must build a native, Rust-based omnichannel engine inside the OHC monolith. This will provide seamless tenant isolation, offline-tolerant mobile access, and direct integration with our AI agent orchestrators.
 
   ## Research Report
-  **Chatwoot Source Code Audit**:
-  We audited the open-source Chatwoot codebase (`https://github.com/chatwoot/chatwoot`) to understand industry-standard omnichannel patterns:
-  - **Data Models**: Chatwoot centralizes around `Account` (Tenant), `Inbox`, `Conversation`, `Message`, and `Contact`. Channel-specific logic is abstracted into `Channel::*` models (e.g., `Channel::WebWidget`, `Channel::Email`, `Channel::Whatsapp`).
+  **the legacy open-source chat platform Source Code Audit**:
+  We audited the open-source the legacy open-source chat platform codebase (`https://github.com/the-legacy-open-source-chat-platform/the-legacy-open-source-chat-platform`) to understand industry-standard omnichannel patterns:
+  - **Data Models**: the legacy open-source chat platform centralizes around `Account` (Tenant), `Inbox`, `Conversation`, `Message`, and `Contact`. Channel-specific logic is abstracted into `Channel::*` models (e.g., `Channel::WebWidget`, `Channel::Email`, `Channel::Whatsapp`).
   - **Messaging Flow**: Webhooks hit controllers, which route payloads to channel-specific processors. These processors normalize the data into standard `Message` records associated with a `Conversation`.
   - **Real-time Engine**: WebSockets broadcast updates to subscribers using Redis Pub/Sub, ensuring clients (web/mobile) receive instant updates.
-  - **AI Integration**: Chatwoot relies on basic agent bots. OHC needs a deeper integration where AI is a first-class participant capable of drafting, approving, and sending replies automatically.
+  - **AI Integration**: the legacy open-source chat platform relies on basic agent bots. OHC needs a deeper integration where AI is a first-class participant capable of drafting, approving, and sending replies automatically.
 
   **Competitor Analysis**:
   - Shopify Inbox: highly integrated with storefront and orders but limited omnichannel reach.
   - WeCom/DingTalk: strong unified messaging but complex enterprise setup.
-  - **OHC Gap**: OHC requires the simplicity of Shopify Inbox combined with the reach of Chatwoot, governed seamlessly by AI assistants that understand business context (sales, operations, scheduling).
+  - **OHC Gap**: OHC requires the simplicity of Shopify Inbox combined with the reach of the legacy open-source chat platform, governed seamlessly by AI assistants that understand business context (sales, operations, scheduling).
 
   ## Design Doc
 
