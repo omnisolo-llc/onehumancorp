@@ -4,7 +4,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_ohc",
-    srcs = glob(["**/*.rs"], exclude = ["**/*_test.rs", "tests/**/*.rs"]),
+    srcs = glob(["**/*.rs"]),
     crate_root = "mod.rs",
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
@@ -37,9 +37,6 @@ rust_test(
     name = "server_ohc_test",
     crate = ":server_ohc",
     rustc_flags = ["--cfg=ohc_bazel"],
-    rustc_env = {
-        "OUT_DIR": "",
-    },
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
