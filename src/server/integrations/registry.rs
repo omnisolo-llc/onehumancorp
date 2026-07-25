@@ -149,7 +149,7 @@ impl IntegrationsRegistry {
                           }
                       }
                   }
-                 "twilio" => {
+                 "twilio" | "whatsapp" => {
                      if !creds.from_phone.is_empty() {
                          let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
                          let from = creds.from_phone.clone();
@@ -172,7 +172,7 @@ impl IntegrationsRegistry {
                          }
                      }
                  }
-                 "meta" | "whatsapp" | "whatsapp_cloud_api" => {
+                 "meta" | "whatsapp_cloud_api" => {
                      if !creds.api_token.is_empty() {
                          let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
                          let text = content.to_string();
@@ -233,7 +233,7 @@ impl IntegrationsRegistry {
             api_token: creds.api_token.clone(),
             from_phone: creds.from_phone.clone(),
         });
-        if integration_id == "twilio" {
+        if integration_id == "twilio" || integration_id == "whatsapp" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
         }
@@ -255,7 +255,7 @@ impl IntegrationsRegistry {
                 Some(if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { creds.from_phone.clone() })
             )));
         }
-        if integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+        if integration_id == "meta" || integration_id == "whatsapp_cloud_api" {
             let mut clients = self.meta_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
                 creds.api_token.clone(),
@@ -504,7 +504,7 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_whatsapp(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
-        if integration_id == "twilio" {
+        if integration_id == "twilio" || integration_id == "whatsapp" {
             let client = {
                 let clients = self.twilio_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -512,7 +512,7 @@ impl IntegrationsRegistry {
             if let Some(c) = client {
                 return c.send_whatsapp(to, from, body).await;
             }
-        } else if integration_id == "meta" || integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+        } else if integration_id == "meta" || integration_id == "whatsapp_cloud_api" {
             let client = {
                 let clients = self.meta_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -617,7 +617,7 @@ impl IntegrationsRegistry {
 
     pub async fn send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
         let client = {
-            if integration_id == "meta" || integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
+            if integration_id == "meta" || integration_id == "whatsapp_cloud_api" {
                 let clients = self.meta_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -632,7 +632,7 @@ impl IntegrationsRegistry {
 
     pub async fn send_sms(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
         let client = {
-            if integration_id == "twilio" {
+            if integration_id == "twilio" || integration_id == "whatsapp" {
                 let clients = self.twilio_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -640,7 +640,7 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            let res = if integration_id == "twilio" && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:")) {
+            let res = if (integration_id == "twilio" || integration_id == "whatsapp") && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:")) {
                 let r = c.send_whatsapp(to, from, body).await;
                 if r.is_ok() {
                     let _ = ::server_telemetry::record_api_call_cost(&crate::db::get_pool(), "unknown", "twilio_whatsapp", 0.015).await;
