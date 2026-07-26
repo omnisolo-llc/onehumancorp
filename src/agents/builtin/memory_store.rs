@@ -776,19 +776,23 @@ impl VectorRepository {
             a.owner_override,
             a.reliability_score,
             a.created_at,
-            std::cmp::Reverse(&a.id),
         )
             .cmp(&(
                 b.owner_override,
                 b.reliability_score,
                 b.created_at,
-                std::cmp::Reverse(&b.id),
             ));
 
         if cmp == std::cmp::Ordering::Greater {
             (a, b)
-        } else {
+        } else if cmp == std::cmp::Ordering::Less {
             (b, a)
+        } else {
+            if a.id <= b.id {
+                (a, b)
+            } else {
+                (b, a)
+            }
         }
     }
 
