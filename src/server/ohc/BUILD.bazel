@@ -1,6 +1,6 @@
 exports_files(["Cargo.toml"])
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_ohc",
@@ -25,10 +25,23 @@ rust_library(
         "@crates//:tonic",
         "@crates//:chrono",
         "@crates//:serde",
-        "@crates//:serde_json",
         "@crates//:uuid",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+)
+
+rust_test(
+    name = "server_ohc_unit_test",
+    size = "small",
+    crate = ":server_ohc",
+    edition = "2024",
+    deps = [
+        "@crates//:serde_json",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
