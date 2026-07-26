@@ -11,6 +11,13 @@ path = "mod.rs"
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
+chrono = { workspace = true }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+serde_json = { workspace = true }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "mysql", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+
+[dev-dependencies]
+tokio = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"
