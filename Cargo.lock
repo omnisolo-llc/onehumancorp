@@ -9167,6 +9167,12 @@ dependencies = [
 name = "server_ohc"
 version = "0.1.0"
 dependencies = [
+<<<<<<< HEAD
+ "prost 0.13.5",
+ "serde",
+ "tonic 0.12.3",
+ "tonic-build",
+=======
  "chrono",
  "prost 0.13.5",
  "serde",
@@ -9174,6 +9180,7 @@ dependencies = [
  "tonic 0.12.3",
  "tonic-build",
  "uuid",
+>>>>>>> b1e691c9d (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
 ]
 
 [[package]]

@@ -43,7 +43,10 @@ vi.mock('../../components/AppShell', () => {
 });
 vi.mock('@/app/components/AppShell', () => {
     return {
+<<<<<<< HEAD
+=======
         AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
+>>>>>>> b1e691c9d (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
     }
 });

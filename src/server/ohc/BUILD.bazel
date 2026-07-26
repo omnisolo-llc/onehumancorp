@@ -1,11 +1,19 @@
 exports_files(["Cargo.toml"])
 
+<<<<<<< HEAD
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_ohc",
+    srcs = ["mod.rs"],
+=======
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_ohc",
     srcs = glob(["**/*.rs"], exclude=["build.rs"]),
     crate_root = "mod.rs",
+>>>>>>> b1e691c9d (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
@@ -23,6 +31,9 @@ rust_library(
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
         "//src/proto:invoice_tonic",
+<<<<<<< HEAD
+        "@crates//:tonic",
+=======
         "@crates//:chrono",
         "@crates//:serde",
         "@crates//:serde_json",
@@ -41,5 +52,6 @@ rust_test(
         "@crates//:serde_json",
         "@crates//:tonic",
         "@crates//:uuid",
+>>>>>>> b1e691c9d (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     ],
 )

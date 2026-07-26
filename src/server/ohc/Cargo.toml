@@ -11,9 +11,12 @@ path = "mod.rs"
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
+<<<<<<< HEAD
+=======
 chrono = { workspace = true }
 uuid = { version = "1", features = ["v4", "serde"] }
 serde_json = { workspace = true }
+>>>>>>> b1e691c9d (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
 
 [build-dependencies]
 tonic-build = "0.12"
