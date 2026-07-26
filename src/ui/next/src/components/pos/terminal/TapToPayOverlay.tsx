@@ -33,7 +33,7 @@ export function TapToPayOverlay({ isOpen, onClose, amount, currency, orderId, on
 
       // 1. Get Connection Token
       const tokenRes = await fetch('/api/v1/pos/terminal/connection-token', { method: 'POST' });
-      if (!tokenRes.ok) throw new Error('Failed to initialize terminal.');
+      if (!tokenRes.ok) { setStatus('error'); setErrorMessage('Failed to initialize terminal.'); return; }
 
       // 2. Create Payment Intent
       setStatus('ready');
