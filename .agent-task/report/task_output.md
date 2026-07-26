@@ -1,13 +1,13 @@
 issue_title: "Implement WhatsApp Business API integration"
 issue_description: |
-  **Mission:** Expand OHC's capabilities by integrating WhatsApp Business API natively to avoid using third-party Chatwoot services, achieving full feature parity via Rust implementations.
+  **Mission:** Expand OHC's capabilities by integrating WhatsApp Business API natively to avoid using third-party Chat Systems services, achieving full feature parity via Rust implementations.
 
   **Problem Statement:**
   Small-business owners like Maya and Carlos often communicate with customers through WhatsApp. Manually tracking orders, requests, and follow-ups via personal or basic business WhatsApp is messy. They need OHC to triage WhatsApp messages natively alongside their other operations.
 
   **Research Report:**
   Based on competitors (like WeCom, Tencent Workbuddy) and community forums, WhatsApp integration is critical, especially in LATAM and India, but also for small businesses globally. The official Meta WhatsApp Business API allows businesses to send and receive messages, use templates, and integrate seamlessly with third-party platforms.
-  Following the Chatwoot retirement mandate, we investigated Chatwoot's approach in `app/models/channel/whatsapp.rb`, `WhatsappCloudService`, and `WebhookSetupService`. Chatwoot manages a WhatsApp channel utilizing `phone_number_id`, `business_account_id`, and `api_key` for Meta WhatsApp Cloud API credentials. It handles text, attachment, interactive messages, and templates, while using Webhooks for receiving inbound messages and maintaining a sync of WhatsApp templates. We should build a native Rust multi-tenant WhatsApp connector inspired by these features.
+  Following the Chat Systems retirement mandate, we investigated Chat Systems's approach in `app/models/channel/whatsapp.rb`, `WhatsappCloudService`, and `WebhookSetupService`. Chat Systems manages a WhatsApp channel utilizing `phone_number_id`, `business_account_id`, and `api_key` for Meta WhatsApp Cloud API credentials. It handles text, attachment, interactive messages, and templates, while using Webhooks for receiving inbound messages and maintaining a sync of WhatsApp templates. We should build a native Rust multi-tenant WhatsApp connector inspired by these features.
 
   **Design Doc:**
   - Create a new Rust crate/service within `onehumancorp/mono` for the Omnichannel Chat System, starting with a WhatsApp channel connector.
