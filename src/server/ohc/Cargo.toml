@@ -8,9 +8,11 @@ build = "build.rs"
 path = "mod.rs"
 
 [dependencies]
+chrono = "0.4.38"
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
+uuid = "1.10.0"
 
 [build-dependencies]
 tonic-build = "0.12"
