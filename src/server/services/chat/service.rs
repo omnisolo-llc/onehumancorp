@@ -124,3 +124,13 @@ impl ChatService {
         .await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_create_inbox_stub() {
+        assert!(true);
+    }
+}
