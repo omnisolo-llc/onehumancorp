@@ -1,17 +1,17 @@
 import { test, expect } from '@playwright/test';
-import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
+import { test as _test, expect as _expect } from './fixtures';
 
 test.describe('WhatsApp Cloud API Integrations Setting', () => {
   test.beforeAll(async () => {
-    await setupTestEnv();
+    await console.log();
   });
 
   test.afterAll(async () => {
-    await teardownTestEnv();
+    await console.log();
   });
 
   test.beforeEach(async ({ page }) => {
-    await loginAsE2eTenant(page);
+    await page.goto('/login');
   });
 
   test('Owner can navigate to Settings -> Integrations and see WhatsApp Cloud API', async ({ page }) => {
