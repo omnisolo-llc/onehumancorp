@@ -26,7 +26,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': '/app/src/ui/next/src',
+      '@': './src/ui/next/src',
     },
   },
 })
