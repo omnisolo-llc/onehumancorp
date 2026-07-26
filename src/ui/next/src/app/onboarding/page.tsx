@@ -874,6 +874,7 @@ export default function OnboardingWizard() {
           {step === 0 && (
             <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full glassmorphism  p-4">
               <button
+                className="min-h-[44px]"
                 onClick={() => {
                   updateState({ step: -2 });
                   syncStateToBackend({ step: -2 });
@@ -1021,7 +1022,7 @@ export default function OnboardingWizard() {
                       id="chat-send-btn"
                       onClick={handleSendChatMessage}
                       disabled={isLoading}
-                      className="bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
+                      className="min-h-[44px] bg-[#0066FF] text-white font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] px-4 shrink-0 disabled:opacity-50 rounded-[8px]"
                     >
                       Send
                     </button>
@@ -1034,6 +1035,7 @@ export default function OnboardingWizard() {
           {step === -1 && (
             <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
               <button
+                className="min-h-[44px]"
                 onClick={() => {
                   updateState({ step: -2 });
                   syncStateToBackend({ step: -2 });
@@ -1096,7 +1098,7 @@ export default function OnboardingWizard() {
                     id="generate-storefront-btn"
                     onClick={handleInstantBuild}
                     disabled={!bio.trim() || isLoading}
-                    className="flex items-center justify-center w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
+                    className="min-h-[44px] flex items-center justify-center w-full bg-[#0066FF] text-white p-4 font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed rounded-[8px]"
                   >
                     <span className="flex items-center gap-2">
                       <SetupIcon name="sparkles" /> Generate Storefront
