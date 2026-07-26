@@ -124,3 +124,79 @@ impl ChatService {
         .await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+    use serde_json::json;
+
+    #[test]
+    fn test_chat_models_serialization_deserialization() {
+        let inbox = ChatInbox {
+            id: Uuid::new_v4(),
+            tenant_id: Uuid::new_v4(),
+            name: "Main Inbox".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let serialized = serde_json::to_string(&inbox).unwrap();
+        let deserialized: ChatInbox = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized.name, "Main Inbox");
+
+        let channel = ChatChannel {
+            id: Uuid::new_v4(),
+            tenant_id: Uuid::new_v4(),
+            inbox_id: Uuid::new_v4(),
+            channel_type: "whatsapp".to_string(),
+            config: json!({"phone_number": "+123456789"}),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let channel_serialized = serde_json::to_string(&channel).unwrap();
+        let channel_deserialized: ChatChannel = serde_json::from_str(&channel_serialized).unwrap();
+        assert_eq!(channel_deserialized.channel_type, "whatsapp");
+        assert_eq!(channel_deserialized.config["phone_number"], "+123456789");
+
+        let contact = ChatContact {
+            id: Uuid::new_v4(),
+            tenant_id: Uuid::new_v4(),
+            name: Some("John Doe".to_string()),
+            email: Some("john@example.com".to_string()),
+            phone: Some("+123456".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let contact_serialized = serde_json::to_string(&contact).unwrap();
+        let contact_deserialized: ChatContact = serde_json::from_str(&contact_serialized).unwrap();
+        assert_eq!(contact_deserialized.name.as_deref(), Some("John Doe"));
+
+        let conv = ChatConversation {
+            id: Uuid::new_v4(),
+            tenant_id: Uuid::new_v4(),
+            inbox_id: Uuid::new_v4(),
+            contact_id: Uuid::new_v4(),
+            assignee_id: Some(Uuid::new_v4()),
+            status: "open".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let conv_serialized = serde_json::to_string(&conv).unwrap();
+        let conv_deserialized: ChatConversation = serde_json::from_str(&conv_serialized).unwrap();
+        assert_eq!(conv_deserialized.status, "open");
+
+        let msg = ChatMessage {
+            id: Uuid::new_v4(),
+            tenant_id: Uuid::new_v4(),
+            conversation_id: Uuid::new_v4(),
+            sender_type: "contact".to_string(),
+            sender_id: Some(Uuid::new_v4()),
+            content: "Hello!".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let msg_serialized = serde_json::to_string(&msg).unwrap();
+        let msg_deserialized: ChatMessage = serde_json::from_str(&msg_serialized).unwrap();
+        assert_eq!(msg_deserialized.content, "Hello!");
+    }
+}
