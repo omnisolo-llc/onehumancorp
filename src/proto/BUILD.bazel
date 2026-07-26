@@ -4,7 +4,7 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 exports_files([
     "inventory.proto",
-    "chat.proto",
+    "ohc/chat.proto",
     "agent.proto",
     "agent_service.proto",
     "app.proto",
@@ -360,7 +360,7 @@ proto_library(
 
 proto_library(
     name = "chat_proto",
-    srcs = ["chat.proto"],
+    srcs = ["ohc/chat.proto"],
     visibility = ["//visibility:public"],
 )
 

@@ -49,7 +49,7 @@ pub mod ohc {
 #[cfg(ohc_bazel)]
 pub mod ohc {
     pub mod chat {
-        tonic::include_proto!("ohc.chat");
+        pub use chat_proto::ohc::chat::*;
     }
     pub mod interop {
         pub use interop_proto::ohc::interop::*;
