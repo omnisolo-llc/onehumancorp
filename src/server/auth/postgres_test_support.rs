@@ -53,10 +53,27 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
+    let _ = sqlx::query(
+        "CREATE TABLE IF NOT EXISTS _test_migration_lock (id INT PRIMARY KEY, locked BOOLEAN)",
+    )
+    .execute(&admin_pool)
+    .await;
+    let _ = sqlx::query("INSERT INTO _test_migration_lock (id, locked) VALUES (1, true) ON CONFLICT DO NOTHING")
+        .execute(&admin_pool)
+        .await;
+
+    let mut tx = admin_pool.begin().await.map_err(|e| e.to_string())?;
+    sqlx::query("SELECT pg_advisory_xact_lock(1)")
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
     MIGRATOR
-        .run(&admin_pool)
+        .run(&mut *tx)
         .await
         .map_err(|error| format!("run src/server/migrations: {error}"))?;
+
+    tx.commit().await.map_err(|e| e.to_string())?;
 
     sqlx::raw_sql(
         r#"
