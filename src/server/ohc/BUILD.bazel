@@ -4,11 +4,15 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_ohc",
-    srcs = ["mod.rs"],
+    srcs = ["mod.rs", "domain/mod.rs", "domain/staff_tasks/mod.rs", "domain/staff_tasks/staff_tasks.rs", "domain/inbox.rs", "domain/conversation.rs", "domain/message.rs", "domain/contact.rs"],
+    crate_root = "mod.rs",
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:serde",
+        "@crates//:chrono",
+        "@crates//:uuid",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",
@@ -24,4 +28,14 @@ rust_library(
         "//src/proto:invoice_tonic",
         "@crates//:tonic",
     ],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_ohc_test",
+    crate = ":server_ohc",
+    rustc_flags = ["--cfg=ohc_bazel"],
+    env = {"OUT_DIR": "/tmp"},
+    rustc_env = {"OUT_DIR": "/tmp"},
 )
