@@ -1,10 +1,11 @@
 exports_files(["Cargo.toml"])
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_ohc",
-    srcs = ["mod.rs"],
+    srcs = glob(["**/*.rs"]),
+    crate_root = "mod.rs",
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
@@ -23,5 +24,13 @@ rust_library(
         "//src/proto:organization_prost",
         "//src/proto:invoice_tonic",
         "@crates//:tonic",
+        "@crates//:serde",
+        "@crates//:uuid",
+        "@crates//:chrono",
     ],
+)
+
+rust_test(
+    name = "server_ohc_test",
+    crate = ":server_ohc",
 )
