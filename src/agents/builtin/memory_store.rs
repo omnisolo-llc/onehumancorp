@@ -776,15 +776,27 @@ impl VectorRepository {
             a.owner_override,
             a.reliability_score,
             a.created_at,
+<<<<<<< HEAD
+            std::cmp::Reverse(&a.id),
+=======
+>>>>>>> a4459a148 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         )
             .cmp(&(
                 b.owner_override,
                 b.reliability_score,
                 b.created_at,
+<<<<<<< HEAD
+                std::cmp::Reverse(&b.id),
+=======
+>>>>>>> a4459a148 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
             ));
 
         if cmp == std::cmp::Ordering::Greater {
             (a, b)
+<<<<<<< HEAD
+        } else {
+            (b, a)
+=======
         } else if cmp == std::cmp::Ordering::Less {
             (b, a)
         } else {
@@ -793,6 +805,7 @@ impl VectorRepository {
             } else {
                 (b, a)
             }
+>>>>>>> a4459a148 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         }
     }
 
