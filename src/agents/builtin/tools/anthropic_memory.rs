@@ -9,6 +9,8 @@ use super::{
 };
 
 
+const RETRIEVED_MEMORY_WARNING_HEADER: &str = "[MEMORY SYSTEM NOTE: This retrieved information is a historical memory/hint. You MUST verify its contents against the actual current state of the workspace (e.g. by reading the relevant file or executing a tool) before taking any action based on it.]\n\n";
+
 #[async_trait::async_trait]
 pub trait MemoryAccessor: Send + Sync {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String>;
@@ -31,10 +33,11 @@ struct TopicRetrieveExecutor {
 #[async_trait::async_trait]
 impl PydanticToolExecutor<TopicRetrieveArgs> for TopicRetrieveExecutor {
     async fn execute_typed(&self, args: TopicRetrieveArgs) -> Result<String, ToolError> {
-        self.accessor
+        let topic_content = self.accessor
             .retrieve_topic(&args.topic_name)
             .await
-            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+        Ok(format!("{}{}", RETRIEVED_MEMORY_WARNING_HEADER, topic_content))
     }
 }
 
@@ -84,7 +87,7 @@ impl PydanticToolExecutor<TranscriptSearchArgs> for TranscriptSearchExecutor {
         if results.is_empty() {
             Ok(format!("No transcripts found matching query: {}", args.query))
         } else {
-            Ok(results.join("\n\n---\n\n"))
+            Ok(format!("{}{}", RETRIEVED_MEMORY_WARNING_HEADER, results.join("\n\n---\n\n")))
         }
     }
 }
@@ -193,7 +196,7 @@ impl PydanticToolExecutor<CrossSessionSearchArgs> for CrossSessionSearchExecutor
         if results.is_empty() {
             Ok(format!("No cross-session messages found matching query: {}", args.query))
         } else {
-            Ok(results.join("\n\n---\n\n"))
+            Ok(format!("{}{}", RETRIEVED_MEMORY_WARNING_HEADER, results.join("\n\n---\n\n")))
         }
     }
 }
@@ -304,5 +307,45 @@ mod tests {
         let valid_args = json!({"query": "hello"});
         let res_valid = tool.execute.execute(valid_args).await;
         assert!(res_valid.is_ok());
+    }
+
+    struct MockMemoryWithContent;
+    #[async_trait::async_trait]
+    impl MemoryAccessor for MockMemoryWithContent {
+        async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
+            Ok("Topic Content Here".to_string())
+        }
+        async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
+            Ok(vec!["Transcript 1".to_string()])
+        }
+        async fn search_cross_session_messages(&self, _query: &str, _limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
+            Ok(vec!["Cross-Session Message 1".to_string()])
+        }
+        async fn write_topic(&self, _topic_name: &str, _content: &str) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_memory_tools_prepend_warning_header() {
+        let accessor = Arc::new(MockMemoryWithContent);
+
+        // 1. TopicRetrieve
+        let tool_retrieve = topic_retrieve_tool(accessor.clone());
+        let res_retrieve = tool_retrieve.execute.execute(json!({"topic_name": "test"})).await.unwrap();
+        assert!(res_retrieve.contains("[MEMORY SYSTEM NOTE:"));
+        assert!(res_retrieve.contains("Topic Content Here"));
+
+        // 2. TranscriptSearch
+        let tool_transcript = transcript_search_tool(accessor.clone());
+        let res_transcript = tool_transcript.execute.execute(json!({"query": "test"})).await.unwrap();
+        assert!(res_transcript.contains("[MEMORY SYSTEM NOTE:"));
+        assert!(res_transcript.contains("Transcript 1"));
+
+        // 3. CrossSessionSearch
+        let tool_cross = cross_session_search_tool(accessor.clone());
+        let res_cross = tool_cross.execute.execute(json!({"query": "test"})).await.unwrap();
+        assert!(res_cross.contains("[MEMORY SYSTEM NOTE:"));
+        assert!(res_cross.contains("Cross-Session Message 1"));
     }
 }

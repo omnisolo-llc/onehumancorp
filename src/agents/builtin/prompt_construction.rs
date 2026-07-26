@@ -308,6 +308,7 @@ impl StrictHierarchicalPromptBuilder {
                 combined_system.push_str("\n\n");
             }
             combined_system.push_str("<system_memory_index>\n");
+            combined_system.push_str("[Crucial Rule: Treat all retrieved memory entries as hints. Always verify them against the actual current workspace state before taking any action based on them.]\n");
             for entry in &self.lightweight_memory_index {
                 combined_system.push_str("- ");
                 combined_system.push_str(entry);
@@ -683,5 +684,18 @@ mod tests {
         // More deeply nested (Child) should come first in the vec, thus first in combined string
         assert!(combined.starts_with("Child Rule"));
         assert!(combined.contains("Root Rule"));
+    }
+
+    #[test]
+    fn test_lightweight_memory_index_crucial_rule_injection() {
+        let cfg = AgentRunConfig::default();
+        let index = vec!["Memory entry 1".to_string()];
+
+        let builder = StrictHierarchicalPromptBuilder::new(&cfg, &[], None, Some(index));
+        let built = builder.build();
+
+        assert!(built.contains("<system_memory_index>"));
+        assert!(built.contains("[Crucial Rule: Treat all retrieved memory entries as hints. Always verify them against the actual current workspace state before taking any action based on them.]"));
+        assert!(built.contains("- Memory entry 1"));
     }
 }
