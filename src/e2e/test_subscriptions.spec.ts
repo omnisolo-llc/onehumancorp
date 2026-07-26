@@ -9,7 +9,7 @@ test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => 
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Verify container width doesn't cause horizontal scroll
-    const scrollWidth = await page.e_valuate(() => document.documentElement.scrollWidth);
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(375);
 
     await expect(page.locator('h1')).toHaveText('Recurring Membership');
