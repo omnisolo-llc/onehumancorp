@@ -1,4 +1,3 @@
-use uuid::Uuid;
 use super::saga::*;
 use sqlx::PgPool;
 use std::env;
