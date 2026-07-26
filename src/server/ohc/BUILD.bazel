@@ -5,6 +5,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "server_ohc",
     srcs = glob(["**/*.rs"]),
+    crate_root = "mod.rs",
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
