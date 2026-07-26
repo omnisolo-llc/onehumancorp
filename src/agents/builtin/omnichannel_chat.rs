@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-/// OmnichannelChatEngine replaces the external Chatwoot dependency.
+/// OmnichannelChatEngine replaces the external legacy omnichannel dependency.
 /// It provides native Rust implementations for Intent Classification,
 /// Auto-responder, Copilot Response Drafting, and Human Agent Handoff.
 
