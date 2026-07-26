@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
 test.describe('Mobile Unified Feed MVP', () => {
   // Use a mobile viewport to simulate 375px

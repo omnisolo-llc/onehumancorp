@@ -1,17 +1,8 @@
-import { test, expect } from '@playwright/test';
-import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
+import { test, expect } from './fixtures';
 
 test.describe('WhatsApp Cloud API Integrations Setting', () => {
-  test.beforeAll(async () => {
-    await setupTestEnv();
-  });
-
-  test.afterAll(async () => {
-    await teardownTestEnv();
-  });
-
-  test.beforeEach(async ({ page }) => {
-    await loginAsE2eTenant(page);
+  test.beforeEach(async ({ loginAs }) => {
+    await loginAs('admin');
   });
 
   test('Owner can navigate to Settings -> Integrations and see WhatsApp Cloud API', async ({ page }) => {
@@ -37,7 +28,7 @@ test.describe('WhatsApp Cloud API Integrations Setting', () => {
     const modalHeading = page.locator('h2:has-text("Connect WhatsApp Cloud API")');
     await expect(modalHeading).toBeVisible();
 
-    // 7. Verify the Meta 'Continue with Facebook' button
+    // 7. Verify the Meta \'Continue with Facebook\' button
     const metaButton = page.locator('button:has-text("Continue with Meta")');
     await expect(metaButton).toBeVisible();
 
