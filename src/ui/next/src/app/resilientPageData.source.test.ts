@@ -1,8 +1,28 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const rootDir = process.cwd().endsWith("src/ui/next") ? process.cwd() : join(process.cwd(), "src/ui/next");
+const testDir = typeof __dirname !== "undefined" ? __dirname : dirname(fileURLToPath(import.meta.url));
+
+function findNextProjectRoot() {
+  let current = testDir;
+  while (current && current !== "/") {
+    if (existsSync(join(current, "next.config.mjs")) && existsSync(join(current, "src/app"))) {
+      return current;
+    }
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  const fallback = process.cwd();
+  if (existsSync(join(fallback, "src/ui/next/next.config.mjs"))) {
+    return join(fallback, "src/ui/next");
+  }
+  return fallback;
+}
+
+const rootDir = findNextProjectRoot();
 
 function page(relativePath: string): string {
   return readFileSync(join(rootDir, "src/app", relativePath), "utf8");
