@@ -248,7 +248,11 @@ impl GatherActVerifyHarness {
                                             content: res.clone(),
                                             error: String::new(),
                                         }),
-                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg))),
+                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => Ok(ohc_builtin_agent_core::types::ToolResult {
+                                            tool_call_id: tc.id.clone(),
+                                            content: String::new(),
+                                            error: format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg),
+                                        }),
                                         Err(e) => Err(e),
                                     }
                                 } else {
@@ -366,7 +370,11 @@ impl GatherActVerifyHarness {
                                                 skip_remaining = true;
                                             }
                                         }
-                                        Ok(ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg)))
+                                        Ok(ohc_builtin_agent_core::types::ToolResult {
+                                            tool_call_id: tc.id.clone(),
+                                            content: String::new(),
+                                            error: format!("{}\n\n[WORKSPACE ROLLBACK NOTICE] The workspace was safely rolled back to the state before this super-step.", msg),
+                                        })
                                     },
                                     Err(e) => Err(e),
                                 }
