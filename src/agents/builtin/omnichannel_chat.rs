@@ -2,10 +2,10 @@
 use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-/// Master Catalog Harness Pattern: Chatwoot Retirement & Native Rust Omnichannel Chat Integration
-/// External Chatwoot dependencies are 100% RETIRED. The builtin AI agent microservice connects
+/// Master Catalog Harness Pattern: LegacyChat Retirement & Native Rust Omnichannel Chat Integration
+/// External LegacyChat dependencies are 100% RETIRED. The builtin AI agent microservice connects
 /// directly via high-performance Rust IPC/gRPC to OHC's native Rust Chat Engine.
-/// This module audits Chatwoot bot/webhook protocols and replicates matching native
+/// This module audits LegacyChat bot/webhook protocols and replicates matching native
 /// AI auto-responder, copilot response drafting, intent classification, and human agent handoff features in Rust.
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -17,7 +17,7 @@ pub enum Intent {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChatwootMessageEvent {
+pub struct LegacyChatMessageEvent {
     pub event: String, // e.g. "message_created"
     pub conversation_id: String,
     pub message_id: String,
@@ -33,10 +33,10 @@ pub enum OmnichannelAction {
     NoAction,
 }
 
-pub struct ChatwootProtocolReplicator;
+pub struct LegacyChatProtocolReplicator;
 
-impl ChatwootProtocolReplicator {
-    pub fn parse_webhook(payload: &str) -> Result<ChatwootMessageEvent, String> {
+impl LegacyChatProtocolReplicator {
+    pub fn parse_webhook(payload: &str) -> Result<LegacyChatMessageEvent, String> {
         serde_json::from_str(payload).map_err(|e| e.to_string())
     }
 }
@@ -87,7 +87,7 @@ impl OmnichannelChatEngine {
         Ok(resp.message.content.trim().to_string())
     }
 
-    pub async fn process_incoming_message(&self, event: &ChatwootMessageEvent) -> Result<OmnichannelAction, String> {
+    pub async fn process_incoming_message(&self, event: &LegacyChatMessageEvent) -> Result<OmnichannelAction, String> {
         if event.sender_type != "Contact" {
             return Ok(OmnichannelAction::NoAction);
         }
@@ -156,7 +156,7 @@ mod tests {
             "sender_type": "Contact"
         }"#;
 
-        let event = ChatwootProtocolReplicator::parse_webhook(payload).unwrap();
+        let event = LegacyChatProtocolReplicator::parse_webhook(payload).unwrap();
         assert_eq!(event.event, "message_created");
         assert_eq!(event.content, "How much does it cost?");
         assert_eq!(event.sender_type, "Contact");
@@ -170,7 +170,7 @@ mod tests {
         });
         let engine = OmnichannelChatEngine::new(llm);
 
-        let event = ChatwootMessageEvent {
+        let event = LegacyChatMessageEvent {
             event: "message_created".to_string(),
             conversation_id: "c1".to_string(),
             message_id: "m1".to_string(),
@@ -195,7 +195,7 @@ mod tests {
         });
         let engine = OmnichannelChatEngine::new(llm);
 
-        let event = ChatwootMessageEvent {
+        let event = LegacyChatMessageEvent {
             event: "message_created".to_string(),
             conversation_id: "c1".to_string(),
             message_id: "m1".to_string(),
@@ -219,7 +219,7 @@ mod tests {
         });
         let engine = OmnichannelChatEngine::new(llm);
 
-        let event = ChatwootMessageEvent {
+        let event = LegacyChatMessageEvent {
             event: "message_created".to_string(),
             conversation_id: "c1".to_string(),
             message_id: "m1".to_string(),
@@ -238,7 +238,7 @@ mod tests {
         });
         let engine = OmnichannelChatEngine::new(llm);
 
-        let event = ChatwootMessageEvent {
+        let event = LegacyChatMessageEvent {
             event: "message_created".to_string(),
             conversation_id: "c1".to_string(),
             message_id: "m1".to_string(),
