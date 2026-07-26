@@ -1,12 +1,12 @@
-issue_title: "Architect Native Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Architect Native Rust Omnichannel Chat System to Replace External Chat Service"
 issue_description: |
-  ## Title: Architect Native Rust Omnichannel Chat System to Replace Chatwoot
+  ## Title: Architect Native Rust Omnichannel Chat System to Replace External Chat Service
 
   ## Problem Statement
-  OHC is retiring the external Chatwoot dependency to bring omnichannel customer support natively into the platform. Non-technical owner/operators (like Maya the baker and Carlos the handyman) need a unified inbox where they can seamlessly interact with customers across Instagram DMs, WhatsApp, SMS, and Web Chat, without dealing with third-party integrations, external service limits, or fragmented data silos. By building this natively in Rust, we ensure high performance, strict multi-tenant isolation, and deep AI integration across all work contexts, allowing the assistant to triage messages, draft replies, and automate workflows securely.
+  OHC is retiring the external legacy chat dependency to bring omnichannel customer support natively into the platform. Non-technical owner/operators (like Maya the baker and Carlos the handyman) need a unified inbox where they can seamlessly interact with customers across Instagram DMs, WhatsApp, SMS, and Web Chat, without dealing with third-party integrations, external service limits, or fragmented data silos. By building this natively in Rust, we ensure high performance, strict multi-tenant isolation, and deep AI integration across all work contexts, allowing the assistant to triage messages, draft replies, and automate workflows securely.
 
   ## Research Report
-  - **Chatwoot Source Code Audit**: An audit of Chatwoot (`https://github.com/chatwoot/chatwoot`) reveals a strong architecture based around `Accounts` (Tenants), `Inboxes`, `Channels` (Adapters for Web Widget, Email, API, Twitter, Facebook, etc.), `Conversations`, and `Messages`.
+  - **Source Code Audit**: An audit of the prior external chat solution reveals a strong architecture based around `Accounts` (Tenants), `Inboxes`, `Channels` (Adapters for Web Widget, Email, API, Twitter, Facebook, etc.), `Conversations`, and `Messages`.
   - **Core Entities**:
     - `Conversation`: The central unit of engagement.
     - `Message`: Individual messages within a conversation.
