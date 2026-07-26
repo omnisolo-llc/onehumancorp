@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    setupFiles: ['./setupTests.ts'],
     include: [
       'src/ui/next/src/**/*.test.{ts,tsx}',
       'src/ui/tauri/src/**/*.test.{ts,tsx}',
@@ -22,5 +23,10 @@ export default defineConfig({
       '**/.cache/**',
     ],
     cache: false,
+  },
+  resolve: {
+    alias: {
+      '@': '/app/src/ui/next/src',
+    },
   },
 })
