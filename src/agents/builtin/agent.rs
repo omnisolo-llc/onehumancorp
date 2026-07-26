@@ -1304,7 +1304,7 @@ impl Agent {
                         }
 
                         // Termination Condition: Guardrail tripwire fires
-                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg)
+                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, true, cfg)
                         {
                             return Err(Box::new(std::io::Error::other(format!(
                                 "Termination: Guardrail tripwire fires: {:?}",
