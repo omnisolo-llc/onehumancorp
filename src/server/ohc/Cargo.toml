@@ -11,6 +11,11 @@ path = "mod.rs"
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
+chrono = { workspace = true }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"
