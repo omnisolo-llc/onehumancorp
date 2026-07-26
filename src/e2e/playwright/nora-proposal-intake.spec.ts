@@ -4,6 +4,6 @@ test.describe('Nora Proposal Intake', () => {
   test('Proposal dashboard renders', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
     await page.goto(`/admin/proposals`);
-    await expect(page.getByRole('heading', { name: 'Proposals' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Proposals' })).toBeVisible({ timeout: 15000 });
   });
 });

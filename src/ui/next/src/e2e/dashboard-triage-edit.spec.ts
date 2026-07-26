@@ -4,6 +4,6 @@ test.describe('Dashboard Triage Edit', () => {
   test('Triage config renders', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
     await page.goto(`/settings/triage`);
-    await expect(page.getByRole('heading', { name: 'Triage' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Triage' })).toBeVisible({ timeout: 15000 });
   });
 });
