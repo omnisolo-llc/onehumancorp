@@ -1,13 +1,13 @@
-issue_title: "[Omnichannel Chat] Native Rust Implementation of Chatwoot Core Entities and Messaging"
+issue_title: "[Omnichannel Chat] Native Rust Implementation of Chat system Core Entities and Messaging"
 issue_description: |
   # Problem Statement
   Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales.
 
-  OHC previously relied on Chatwoot as an external dependency for omnichannel messaging. However, Chatwoot as an external service is 100% RETIRED. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `onehumancorp/mono` to achieve feature parity, absolute control over data tenancy, and seamless integration with our AI agents.
+  OHC previously relied on Chat system as an external dependency for omnichannel messaging. However, Chat system as an external service is 100% RETIRED. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `onehumancorp/mono` to achieve feature parity, absolute control over data tenancy, and seamless integration with our AI agents.
 
   # Research Report
   **Findings & Competitive Analysis:**
-  - **Chatwoot Source Code Audit:** Chatwoot uses a robust core model consisting of Accounts (Tenants), Inboxes, Channels, Contacts, ContactInboxes, Conversations, and Messages. It heavily utilizes WebSockets for real-time updates and relies on background workers for integrations.
+  - **Chat system Source Code Audit:** Chat system uses a robust core model consisting of Accounts (Tenants), Inboxes, Channels, Contacts, ContactInboxes, Conversations, and Messages. It heavily utilizes WebSockets for real-time updates and relies on background workers for integrations.
   - **Shopify/Wix Inboxes:** Often lack deep, native agentic integration (proactive drafting) and are limited in their external channel support compared to dedicated tools.
   - **OHC Native Rust Approach:** By building this natively in Rust, we can guarantee strong multi-tenant isolation at the DB and application level, extremely low latency for real-time messaging, and tight integration with `The Ambassador` AI agent for proactive context-aware reply drafting.
 
