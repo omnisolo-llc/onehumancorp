@@ -92,6 +92,9 @@ pub struct ToolResult {
 
 /// Formats an LLM-Recoverable error string according to the LangGraph 4-tier error handling mechanic.
 pub fn format_llm_recoverable_error(tool_name: &str, msg: &str) -> String {
+    if msg.contains("SOTA Recovery Protocol:") || msg.contains("LLM-Recoverable Tool Error") {
+        return msg.to_string();
+    }
     format!("LLM-Recoverable Tool Error ({}): {}
 
 SOTA Recovery Protocol: Please deeply analyze this validation/execution error, verify your previous arguments against the tool's strict Pydantic JSON schema, correct the arguments, and call the tool again.", tool_name, msg)
@@ -399,6 +402,9 @@ mod tests {
         let result = format_llm_recoverable_error("test_tool", "test error message");
         assert!(result.contains("LLM-Recoverable Tool Error (test_tool): test error message"));
         assert!(result.contains("SOTA Recovery Protocol:"));
+
+        let result2 = format_llm_recoverable_error("test_tool", &result);
+        assert_eq!(result, result2);
     }
 
     #[test]
