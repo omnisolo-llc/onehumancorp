@@ -4,7 +4,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_ohc",
-    srcs = ["mod.rs"],
+    srcs = glob(["**/*.rs"]),
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
@@ -23,5 +23,12 @@ rust_library(
         "//src/proto:organization_prost",
         "//src/proto:invoice_tonic",
         "@crates//:tonic",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
     ],
 )
