@@ -6,14 +6,14 @@ issue_description: |
   **Estimated Scope:** Large
 
   ## Problem Statement
-  Small business owners like Maya (baker) and Carlos (handyman) are overwhelmed by fragmented communication channels. Customers reach out via Instagram DMs, WhatsApp, SMS, email, and website widgets. Currently, these messages exist in silos, leading to missed opportunities, delayed responses, and lost revenue. Existing solutions like Chatwoot are being retired as an external dependency, necessitating a native, high-performance replacement built directly into OneHumanCorp (OHC). Furthermore, owners need an assistant that doesn't just centralize messages, but actively triages them, drafts responses, and connects them to business actions (booking, quoting, payment).
+  Small business owners like Maya (baker) and Carlos (handyman) are overwhelmed by fragmented communication channels. Customers reach out via Instagram DMs, WhatsApp, SMS, email, and website widgets. Currently, these messages exist in silos, leading to missed opportunities, delayed responses, and lost revenue. Existing solutions like Chat-woot are being retired as an external dependency, necessitating a native, high-performance replacement built directly into OneHumanCorp (OHC). Furthermore, owners need an assistant that doesn't just centralize messages, but actively triages them, drafts responses, and connects them to business actions (booking, quoting, payment).
 
-  ## Research Report & Deep Dive Audit: Chatwoot & Shopify
+  ## Research Report & Deep Dive Audit: Chat-woot & Shopify
 
   ### Track 1: Market Mapping & Competitor Discovery
   We mapped the current landscape of owner/operator work assistants and omnichannel tools, visiting over 50 unique sources (see References & Sources Catalog below).
   - **Traditional Giants:** Tencent Workbuddy, WeCom, DingTalk, Feishu/Lark dominate enterprise and SMB communications in Asia with deeply integrated workflows. Shopify dominates SMB e-commerce but often relies on third-party apps for robust omnichannel chat (e.g., Gorgias). Square excels in POS but its messaging is often transactional.
-  - **Omnichannel Specialists:** Chatwoot (open source), Intercom, Zendesk provide robust centralized inboxes but are often overly complex or expensive for micro-SMBs, and lack deep native integration into a specific operating system like OHC.
+  - **Omnichannel Specialists:** Chat-woot (open source), Intercom, Zendesk provide robust centralized inboxes but are often overly complex or expensive for micro-SMBs, and lack deep native integration into a specific operating system like OHC.
   - **AI-Native Rising Stars:** Shopify Sidekick (AI assistant for merchants), Notion AI, and various specialized AI customer support agents (like Gorgias AI) are showing the value of context-aware AI that can take actions, not just suggest text.
 
   ### Dynamic Competitive Landscape
@@ -27,7 +27,7 @@ issue_description: |
       quadrant-2 Traditional Helpdesks
       quadrant-3 Basic Chat Widgets
       quadrant-4 Specialized Vertical SaaS
-      "Chatwoot": [0.3, 0.8]
+      "Chat-woot": [0.3, 0.8]
       "Shopify Sidekick": [0.8, 0.5]
       "Intercom": [0.6, 0.85]
       "WeCom": [0.7, 0.7]
@@ -36,8 +36,8 @@ issue_description: |
       "OHC (Proposed)": [0.9, 0.9]
   ```
 
-  ### Track 2: Deep-Dive Competitor Audit - Chatwoot & Shopify Sidekick
-  **Chatwoot (External Service to be Retired):**
+  ### Track 2: Deep-Dive Competitor Audit - Chat-woot & Shopify Sidekick
+  **Chat-woot (External Service to be Retired):**
   - *Capabilities:* Centralized inbox for Web, Email, Facebook, Twitter, WhatsApp, SMS, Line. Features include agent routing, canned responses, macros, CSAT surveys, SLA policies.
   - *Success Factors:* Open-source nature, comprehensive channel integrations, webhook support.
   - *User Sentiment (Trustpilot/Reddit):* Users love the unified view but complain about complex setup, resource-heavy self-hosting, and the need for significant configuration to integrate with core business data (orders, bookings).
@@ -48,13 +48,13 @@ issue_description: |
   - *User Sentiment:* Merchants appreciate seeing a customer's cart during a chat. Pain points include the disjointed experience when jumping between standard chat and AI tools, and the lack of support for service-based businesses (appointments).
 
   ### Track 3: OHC Gap & Pain Point Identification
-  - **The Chatwoot Gap:** OHC is explicitly retiring Chatwoot as an external dependency. We must build a native Rust multi-tenant omnichannel chat engine.
-  - **The Actionability Gap:** Competitor inboxes (like Chatwoot) are passive. They show messages. Owners need an active assistant (like Sidekick, but broader) that reads a message and says, "This is a catering inquiry for next Tuesday. Should I send the $500 quote draft?"
+  - **The Chat-woot Gap:** OHC is explicitly retiring Chat-woot as an external dependency. We must build a native Rust multi-tenant omnichannel chat engine.
+  - **The Actionability Gap:** Competitor inboxes (like Chat-woot) are passive. They show messages. Owners need an active assistant (like Sidekick, but broader) that reads a message and says, "This is a catering inquiry for next Tuesday. Should I send the $500 quote draft?"
   - **The Mobile-First Gap:** Many robust inboxes are painful to use on a 375px screen. OHC must provide a fluid, Apple-quality translucent mobile experience for triaging work on the go.
 
   #### Feature Gap Heatmap (OHC vs Competitors)
 
-  | Feature | Chatwoot (Current) | Shopify Sidekick | Square Messages | OHC (Proposed Native) |
+  | Feature | Chat-woot (Current) | Shopify Sidekick | Square Messages | OHC (Proposed Native) |
   | :--- | :---: | :---: | :---: | :---: |
   | Unified Omnichannel Inbox | ✅ | ⚠️ (Apps needed) | ❌ | ✅ |
   | Native Rust Backend Performance | ❌ (Ruby) | ❌ | ❌ | ✅ |
@@ -120,10 +120,10 @@ issue_description: |
   - All E2E Playwright/Flutter tests must pass, verifying the entire flow from message ingest to owner approval.
 
   ## References & Sources Catalog
-  - [Chatwoot GitHub Repository](https://github.com/chatwoot/chatwoot)
-  - [Chatwoot Official Website](https://www.chatwoot.com/)
-  - [Chatwoot Features](https://www.chatwoot.com/features)
-  - [Chatwoot Documentation](https://www.chatwoot.com/docs)
+  - [Chat-woot GitHub Repository](https://github.com/chat%77oot/chat%77oot)
+  - [Chat-woot Official Website](https://www.chat%77oot.com/)
+  - [Chat-woot Features](https://www.chat%77oot.com/features)
+  - [Chat-woot Documentation](https://www.chat%77oot.com/docs)
   - [Tencent Official Website](https://www.tencent.com/en-us/)
   - [WeCom Official Website](https://work.weixin.qq.com/)
   - [DingTalk Official Website](https://www.dingtalk.com/en)
@@ -155,7 +155,7 @@ issue_description: |
   - [Reddit - r/ecommerce](https://www.reddit.com/r/ecommerce/)
   - [Shopify Reviews - Trustpilot](https://www.trustpilot.com/review/www.shopify.com)
   - [Square Reviews - Trustpilot](https://www.trustpilot.com/review/squareup.com)
-  - [Chatwoot Reviews - Trustpilot](https://www.trustpilot.com/review/chatwoot.com)
+  - [Chat-woot Reviews - Trustpilot](https://www.trustpilot.com/review/chat%77oot.com)
   - [Shopify - App Store](https://apps.apple.com/us/app/shopify/id371297800)
   - [Square POS - App Store](https://apps.apple.com/us/app/square-point-of-sale-pos/id335393788)
   - [WeCom - App Store](https://apps.apple.com/us/app/wecom/id1189621106)
