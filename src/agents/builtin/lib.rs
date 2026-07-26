@@ -2,6 +2,7 @@ pub mod claude_subagents;
 pub mod compaction;
 pub mod durable_execution;
 pub mod omni_context;
+pub mod omnichannel_chat;
 pub mod plugins;
 pub mod scalable_multi_agent;
 // ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.

@@ -90,6 +90,7 @@ rust_library(
         "perplexity.rs",
         "observation_masking.rs",
         "omni_context.rs",
+        "omnichannel_chat.rs",
         "output_parser.rs",
         "human_in_loop.rs",
         "plane.rs",
@@ -280,6 +281,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "sona_patterns",
     "visual_workflow",
     "visual_workflow_client",
+    "omnichannel_chat",
 ]
 
 rust_test(
