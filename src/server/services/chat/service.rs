@@ -107,7 +107,7 @@ impl ChatService {
         sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
-        sqlx::query_as(
+        let msg = sqlx::query_as::<_, ChatMessage>(
             r#"
             INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -121,6 +121,23 @@ impl ChatService {
         .bind(sender_id)
         .bind(content)
         .fetch_one(&self.pool)
-        .await
+        .await?;
+
+        // Broadcast the new message via WebSocket
+        let tx = crate::api::unified_ws::get_broadcast_tx();
+        let topic = format!("chat_messages:{}", tenant_id);
+        let seq = crate::api::unified_ws::next_seq();
+        let envelope = crate::api::unified_ws::build_envelope(
+            "mesh",
+            &topic,
+            serde_json::json!({
+                "action": "new_message",
+                "message": msg
+            }),
+            seq,
+        );
+        let _ = tx.send(envelope);
+
+        Ok(msg)
     }
 }
