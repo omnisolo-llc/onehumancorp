@@ -265,19 +265,21 @@ Expected Schema:
         } else {
             current_req.messages.push(msg.clone());
             let error_context = if parse_error_msg.contains("Expected native tool_calls") {
-                format!(
-                    "Validation Error: You returned plain text instead of using a tool call. You MUST use the `structured_output` tool call. Do not return raw JSON text.\nFailed completion: {}",
-                    msg.content
+                crate::types::format_pydantic_error_string(
+                    "You returned plain text instead of using a tool call.",
+                    Some(&msg.content),
+                    Some("You MUST use the `structured_output` tool call. Do not return raw plain text.")
                 )
-            } else if parse_error_msg.contains("Validation Error") {
+            } else if parse_error_msg.contains("Validation Error") || parse_error_msg.contains("Semantic validation failed") {
                 format!(
                     "{}\nFailed completion: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.",
                     parse_error_msg, msg.content
                 )
             } else {
-                format!(
-                    "Validation Error (Pydantic-first tool schema): Your previous completion failed to parse.\nFailed completion: {}\nReason: {}\nPlease strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type. Check the Pydantic JSON schema constraints.",
-                    msg.content, parse_error_msg
+                crate::types::format_pydantic_error_string(
+                    parse_error_msg,
+                    Some(&msg.content),
+                    Some("Your previous completion failed to parse. Please strictly use the 'structured_output' tool to return the requested data, ensuring all required fields are present and of the correct type.")
                 )
             };
             let mut error_msg = Message {
