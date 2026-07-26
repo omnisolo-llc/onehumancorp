@@ -1,7 +1,4 @@
 -- Migration 217: Ensure user authentication columns and TEXT id format exist regardless of table creation order
-<<<<<<< HEAD
-ALTER TABLE user_sessions DROP CONSTRAINT IF EXISTS fk_rails_9fa262d742;
-=======
 -- Check if the table exists before attempting to alter it
 DO $$
 BEGIN
@@ -10,7 +7,6 @@ BEGIN
     END IF;
 END $$;
 
->>>>>>> 62ba541d9 (fix: chatwoot residue check failure)
 ALTER TABLE users ALTER COLUMN id TYPE TEXT USING id::text;
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
