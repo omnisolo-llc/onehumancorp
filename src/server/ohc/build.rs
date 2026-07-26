@@ -1,3 +1,5 @@
+use std::env;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let protos = [
         "../../../src/proto/agent.proto",
@@ -21,6 +23,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../src/proto/supply_chain.proto",
         "../../../src/proto/inventory.proto",
     ];
+
+    if env::var("OUT_DIR").is_err() {
+        env::set_var("OUT_DIR", std::env::temp_dir().join("ohc_protos").to_str().unwrap());
+    }
 
     tonic_build::configure()
         .build_client(true)
