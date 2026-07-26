@@ -1,0 +1,15 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+server_common = { path = "../../common" }
+tracing = "0.1"
+async-trait = "0.1"
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid"] }
