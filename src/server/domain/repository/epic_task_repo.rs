@@ -33,16 +33,17 @@ impl EpicTaskRepo {
         Self { db }
     }
 
-    pub async fn create_epic(&self, title: &str) -> Result<Epic, String> {
+    pub async fn create_epic(&self, tenant_id: &str, title: &str) -> Result<Epic, String> {
         match &self.db.store {
             DbStore::Postgres => {
                 let row = sqlx::query_as::<_, Epic>(
                     r#"
-                    INSERT INTO epics (title)
-                    VALUES ($1)
+                    INSERT INTO epics (tenant_id, title)
+                    VALUES ($1, $2)
                     RETURNING id, title, status, created_at, updated_at
                     "#
                 )
+                .bind(tenant_id)
                 .bind(title)
                 .fetch_one(&self.db.pool)
                 .await
@@ -54,11 +55,12 @@ impl EpicTaskRepo {
                 let now = Utc::now();
                 sqlx::query(
                     r#"
-                    INSERT INTO epics (id, title, status, created_at, updated_at)
-                    VALUES (?, ?, 'PENDING', ?, ?)
+                    INSERT INTO epics (id, tenant_id, title, status, created_at, updated_at)
+                    VALUES (?, ?, ?, \'PENDING\', ?, ?)
                     "#
                 )
                 .bind(id.to_string())
+                .bind(tenant_id)
                 .bind(title)
                 .bind(now)
                 .bind(now)
@@ -77,16 +79,17 @@ impl EpicTaskRepo {
         }
     }
 
-    pub async fn create_task(&self, epic_id: Option<Uuid>, title: &str, status: &str) -> Result<EpicTask, String> {
+    pub async fn create_task(&self, tenant_id: &str, epic_id: Option<Uuid>, title: &str, status: &str) -> Result<EpicTask, String> {
         match &self.db.store {
             DbStore::Postgres => {
                 let row = sqlx::query_as::<_, EpicTask>(
                     r#"
-                    INSERT INTO tasks (epic_id, title, status)
-                    VALUES ($1, $2, $3)
+                    INSERT INTO tasks (tenant_id, epic_id, title, status)
+                    VALUES ($1, $2, $3, $4)
                     RETURNING id, epic_id, title, status, assigned_agent, created_at, updated_at
                     "#
                 )
+                .bind(tenant_id)
                 .bind(epic_id)
                 .bind(title)
                 .bind(status)
@@ -100,11 +103,12 @@ impl EpicTaskRepo {
                 let now = Utc::now();
                 sqlx::query(
                     r#"
-                    INSERT INTO tasks (id, epic_id, title, status, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO tasks (id, tenant_id, epic_id, title, status, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(id.to_string())
+                .bind(tenant_id)
                 .bind(epic_id.map(|e| e.to_string()))
                 .bind(title)
                 .bind(status)
@@ -127,16 +131,17 @@ impl EpicTaskRepo {
         }
     }
 
-    pub async fn get_tasks_for_epic(&self, epic_id: Uuid) -> Result<Vec<EpicTask>, String> {
+    pub async fn get_tasks_for_epic(&self, tenant_id: &str, epic_id: Uuid) -> Result<Vec<EpicTask>, String> {
         match &self.db.store {
             DbStore::Postgres => {
                 let tasks = sqlx::query_as::<_, EpicTask>(
                     r#"
                     SELECT id, epic_id, title, status, assigned_agent, created_at, updated_at
                     FROM tasks
-                    WHERE epic_id = $1
+                    WHERE tenant_id = $1 AND epic_id = $2
                     "#
                 )
+                .bind(tenant_id)
                 .bind(epic_id)
                 .fetch_all(&self.db.pool)
                 .await
@@ -148,9 +153,10 @@ impl EpicTaskRepo {
                     r#"
                     SELECT id, epic_id, title, status, assigned_agent, created_at, updated_at
                     FROM tasks
-                    WHERE epic_id = ?
+                    WHERE tenant_id = ? AND epic_id = ?
                     "#
                 )
+                .bind(tenant_id)
                 .bind(epic_id.to_string())
                 .fetch_all(sqlite_pool)
                 .await
@@ -206,6 +212,7 @@ mod tests {
             r#"
             CREATE TABLE epics (
                 id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
                 title TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'PENDING',
                 created_at TEXT NOT NULL,
@@ -221,6 +228,7 @@ mod tests {
             r#"
             CREATE TABLE tasks (
                 id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
                 epic_id TEXT REFERENCES epics(id),
                 title TEXT NOT NULL,
                 status TEXT NOT NULL,
@@ -249,18 +257,18 @@ mod tests {
         let db = setup_test_db().await;
         let repo = EpicTaskRepo::new(db);
 
-        let epic = repo.create_epic("Test Epic").await.unwrap();
+        let epic = repo.create_epic("test-tenant", "Test Epic").await.unwrap();
         assert_eq!(epic.title, "Test Epic");
         assert_eq!(epic.status, "PENDING");
 
-        let task1 = repo.create_task(Some(epic.id), "Test Task 1", "PENDING").await.unwrap();
+        let task1 = repo.create_task("test-tenant", Some(epic.id), "Test Task 1", "PENDING").await.unwrap();
         assert_eq!(task1.title, "Test Task 1");
         assert_eq!(task1.epic_id, Some(epic.id));
 
-        let task2 = repo.create_task(Some(epic.id), "Test Task 2", "CLAIMED").await.unwrap();
+        let task2 = repo.create_task("test-tenant", Some(epic.id), "Test Task 2", "CLAIMED").await.unwrap();
         assert_eq!(task2.title, "Test Task 2");
 
-        let tasks = repo.get_tasks_for_epic(epic.id).await.unwrap();
+        let tasks = repo.get_tasks_for_epic("test-tenant", epic.id).await.unwrap();
         assert_eq!(tasks.len(), 2);
     }
 }
