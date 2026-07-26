@@ -117,7 +117,11 @@ describe('CustomerReferralProgramPage', () => {
 
     expect(screen.queryByText('Pro Feature')).toBeNull();
     // The exact text "⚡ Powered by OHC" in the preview should be removed
-    expect(screen.queryByText('⚡ Powered by OHC')).toBeNull();
+    // We check that the specific badge element is not rendered
+    const previewBadges = screen.queryAllByText('⚡ Powered by OHC');
+    // Ensure that none of the instances are rendered in the preview area when removed.
+    // The main badge inside the widget will be removed.
+    expect(previewBadges.length).toBe(0);
   });
 
 });

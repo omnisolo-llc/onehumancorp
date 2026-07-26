@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import InboxPage from './page';
+import { AppRouterContext } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
 const queryState = vi.hoisted(() => ({
   data: [] as Array<Record<string, string>>,
@@ -24,7 +25,11 @@ beforeEach(() => {
 });
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
-  const { container } = render(<InboxPage />);
+  const { container } = render(
+    <AppRouterContext.Provider value={{} as any}>
+      <InboxPage />
+    </AppRouterContext.Provider>
+  );
 
   expect(screen.getByText('No inbox messages found for this tenant.')).toBeInTheDocument();
   expect(screen.getByText('Select a database-backed message to inspect it.')).toBeInTheDocument();
@@ -39,7 +44,11 @@ test('renders message markup as text while preserving safe HTTPS media', () => {
     status: 'resolved',
   }];
 
-  const { container } = render(<InboxPage />);
+  const { container } = render(
+    <AppRouterContext.Provider value={{} as any}>
+      <InboxPage />
+    </AppRouterContext.Provider>
+  );
 
   expect(screen.getByText('<script>window.compromised = true</script>')).toBeInTheDocument();
   expect(container.querySelector('script')).toBeNull();
