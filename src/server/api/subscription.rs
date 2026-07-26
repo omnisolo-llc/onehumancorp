@@ -186,7 +186,7 @@ async fn fetch_subscription_overview(
 }
 
 async fn get_subscription_overview(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -195,7 +195,7 @@ async fn get_subscription_overview(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    match fetch_subscription_overview(&hub.pool, &tenant_id).await {
+    match fetch_subscription_overview(&_hub.pool, &tenant_id).await {
         Ok(overview) => (StatusCode::OK, Json(overview)).into_response(),
         Err(error) => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch subscription overview");
@@ -206,7 +206,7 @@ async fn get_subscription_overview(
 }
 
 async fn get_plans(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -215,7 +215,7 @@ async fn get_plans(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    match fetch_subscription_plans(&hub.pool, &tenant_id).await {
+    match fetch_subscription_plans(&_hub.pool, &tenant_id).await {
         Ok(plans) => (StatusCode::OK, Json(plans)).into_response(),
         Err(e) => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch subscription plans");
@@ -226,7 +226,7 @@ async fn get_plans(
 }
 
 async fn get_subscribers(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -235,7 +235,7 @@ async fn get_subscribers(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    match fetch_subscribers(&hub.pool, &tenant_id).await {
+    match fetch_subscribers(&_hub.pool, &tenant_id).await {
         Ok(subscribers) => (StatusCode::OK, Json(subscribers)).into_response(),
         Err(e) => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch subscribers");
@@ -246,7 +246,7 @@ async fn get_subscribers(
 }
 
 async fn get_fulfillment_batches(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -255,7 +255,7 @@ async fn get_fulfillment_batches(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    match fetch_fulfillment_batches(&hub.pool, &tenant_id).await {
+    match fetch_fulfillment_batches(&_hub.pool, &tenant_id).await {
         Ok(batches) => (StatusCode::OK, Json(batches)).into_response(),
         Err(e) => {
             ::server_telemetry::record_error_signal("[bug] Failed to fetch fulfillment batches");
@@ -266,7 +266,7 @@ async fn get_fulfillment_batches(
 }
 
 async fn create_fulfillment_batch(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
     Extension(orchestrator): Extension<Option<Arc<DepartmentOrchestrator>>>,
@@ -277,7 +277,7 @@ async fn create_fulfillment_batch(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    let service = SubscriptionService::new(Arc::new(hub.pool.clone()));
+    let service = SubscriptionService::new(Arc::new(_hub.pool.clone()));
     let batch = match service
         .generate_fulfillment_schedule(
             &tenant_id,
@@ -400,10 +400,10 @@ pub fn verify_magic_link_token(
 }
 
 async fn handle_magic_link(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Json(payload): Json<MagicLinkRequest>,
 ) -> impl IntoResponse {
-    let mut transaction = match hub.pool.begin().await {
+    let mut transaction = match _hub.pool.begin().await {
         Ok(transaction) => transaction,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
     };
@@ -469,7 +469,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
 }
 
 async fn get_subscription_by_id(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     axum::extract::Path(id): axum::extract::Path<String>,
     Extension(claims): Extension<::server_common::Claims>,
@@ -479,7 +479,7 @@ async fn get_subscription_by_id(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    let mut transaction = match begin_subscription_tenant_transaction(&hub.pool, &tenant_id).await {
+    let mut transaction = match begin_subscription_tenant_transaction(&_hub.pool, &tenant_id).await {
         Ok(transaction) => transaction,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
     };
@@ -544,7 +544,7 @@ pub struct SubscriptionActionRequest {
 
 async fn subscription_action(
     axum::extract::Path(id): axum::extract::Path<String>,
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<SubscriptionActionRequest>,
@@ -554,7 +554,7 @@ async fn subscription_action(
         Err(status) => return (status, "Organization is required").into_response(),
     };
 
-    let mut transaction = match begin_subscription_tenant_transaction(&hub.pool, &tenant_id).await {
+    let mut transaction = match begin_subscription_tenant_transaction(&_hub.pool, &tenant_id).await {
         Ok(transaction) => transaction,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
     };
@@ -597,7 +597,7 @@ pub struct ParseSubscriptionResponse {
 }
 
 pub async fn parse_subscription_description(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Json(req): Json<ParseSubscriptionRequest>,
 ) -> impl IntoResponse {
     // Hardcode parsing logic here for now instead of relying on the LLM, as it fails in e2e tests
