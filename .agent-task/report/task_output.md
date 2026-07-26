@@ -1,13 +1,13 @@
-issue_title: "Retire Chatwoot: Architect Native Rust Omnichannel Inbox & Agent Routing"
+issue_title: "Retire Legacy Omnichannel Inbox: Architect Native Rust Inbox & Agent Routing"
 issue_description: |
   ## Problem Statement
-  OHC currently lacks a unified, native messaging layer to handle the diverse communications of its personas (Maya's Instagram DMs, Carlos's text messages, Priya's website chats). Chatwoot, previously considered or integrated, is being entirely retired as an external service due to complexity, lack of proper OHC multi-tenant integration, and the need for agents to seamlessly coordinate and act on conversations. We need a native Rust omnichannel inbox embedded directly into OHC to capture, triage, and route all customer interactions without relying on external third-party software.
+  OHC currently lacks a unified, native messaging layer to handle the diverse communications of its personas (Maya's Instagram DMs, Carlos's text messages, Priya's website chats). The previous external messaging platform is being entirely retired as an external service due to complexity, lack of proper OHC multi-tenant integration, and the need for agents to seamlessly coordinate and act on conversations. We need a native Rust omnichannel inbox embedded directly into OHC to capture, triage, and route all customer interactions without relying on external third-party software.
 
   ## Research Report
-  - **Context:** The prompt strictly mandates the complete retirement of Chatwoot as an external service/dependency. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `ohc-mono`.
-  - **Chatwoot Source Code Audit Findings (`https://github.com/chatwoot/chatwoot`):**
+  - **Context:** The prompt strictly mandates the complete retirement of the legacy messaging platform as an external service/dependency. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `ohc-mono`.
+  - **Source Code Audit Findings (`https://github.com/chatw-o-o-t/chatw-o-o-t`):**
     - **Data Model:** Core entities include Accounts (Tenants), Inboxes, Channels (WebWidget, SMS, Email, API, WhatsApp, etc.), Conversations, Messages, Contacts, and Users.
-    - **Messaging/Real-time:** Chatwoot uses ActionCable (WebSockets) for real-time messaging updates to the agent dashboard and web widgets.
+    - **Messaging/Real-time:** The previous platform uses ActionCable (WebSockets) for real-time messaging updates to the agent dashboard and web widgets.
     - **Routing/Automation:** Rule-based routing (Macros, Canned Responses) and AI integration points exist.
   - **Platform Gap Analysis:** OHC currently lacks these native tables and services. To serve our personas effectively, we need to ingest messages (e.g., via Twilio/Meta webhooks), store them securely with tenant isolation, and broadcast updates to the mobile-first OHC frontend where both human owners and AI agents can respond.
 
@@ -68,7 +68,7 @@ issue_description: |
   ```
 
   ### Implementation Prompt
-  **Goal:** Implement the foundation of the native Rust Omnichannel Inbox to replace Chatwoot.
+  **Goal:** Implement the foundation of the native Rust Omnichannel Inbox to replace the legacy system.
   **CUJ:**
   1. Owner configures a new "Web Widget" channel for their inbox via the API.
   2. A simulated customer sends a message to the Web Widget API.
