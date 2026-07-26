@@ -1,11 +1,11 @@
 issue_title: "Native Rust Omnichannel Chat & Support System"
 issue_description: |
   ### Problem Statement
-  OmniSolo (formerly One Human Corp) has retired the Chatwoot external service dependency, meaning there is currently a critical architectural gap for our owner/operator personas. They need a unified omnichannel inbox to manage customer communications across SMS, email, WhatsApp, Web Widget, and Instagram DMs. Without a robust native chat architecture, our non-technical operators (like Maya the baker and Carlos the handyman) cannot reliably coordinate customer inquiries, send quotes via chat, or enable AI agents to automatically handle incoming leads.
+  OmniSolo (formerly One Human Corp) has retired the legacy external chat service dependency, meaning there is currently a critical architectural gap for our owner/operator personas. They need a unified omnichannel inbox to manage customer communications across SMS, email, WhatsApp, Web Widget, and Instagram DMs. Without a robust native chat architecture, our non-technical operators (like Maya the baker and Carlos the handyman) cannot reliably coordinate customer inquiries, send quotes via chat, or enable AI agents to automatically handle incoming leads.
 
   ### Research Report
-  **Chatwoot Source Code Audit Findings:**
-  I conducted a deep-dive analysis of the Chatwoot codebase (`https://github.com/chatwoot/chatwoot`) to understand its data model and real-time execution flows:
+  **Legacy Source Code Audit Findings:**
+  I conducted a deep-dive analysis of the legacy chat codebase to understand its data model and real-time execution flows:
   - **Data Models:**
     - `Inbox`: Represents a channel endpoint (e.g., specific Facebook Page, Email inbox). Includes configuration like auto-assignment rules.
     - `Conversation`: Links an `Inbox` to a `Contact`. Stores metadata like `status` (open, resolved, pending), `assignee_id`, and `unread_count`.
