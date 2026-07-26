@@ -8,10 +8,6 @@ build = "build.rs"
 path = "mod.rs"
 
 [dependencies]
-serde_json = { workspace = true }
-sqlx = { version = "0.8", features = ["postgres", "chrono", "uuid"] }
-uuid = { version = "1", features = ["serde"] }
-chrono = { workspace = true }
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
