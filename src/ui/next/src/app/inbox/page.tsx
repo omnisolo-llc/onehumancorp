@@ -27,7 +27,6 @@ function badgeTone(status?: string) {
   return "";
 }
 
-
 function normalizeExternalHttpUrl(value: string) {
   try {
     const url = new URL(value);
@@ -48,547 +47,363 @@ function renderMessageContent(content: string): ReactNode {
   if (!content) return "Empty message";
 
   const tokenPattern = /\[Media:\s*(.+?)\s+-\s+(https?:\/\/[^\]\s]+)\]|!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
-  const nodes: ReactNode[] = [];
-  let cursor = 0;
-  let tokenIndex = 0;
 
-  for (const match of content.matchAll(tokenPattern)) {
-    const offset = match.index ?? cursor;
-    nodes.push(...textWithLineBreaks(content.slice(cursor, offset), `text-${tokenIndex}`));
+  const elements: ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
 
-    const mediaType = match[1]?.trim();
-    const rawUrl = match[2] ?? match[4];
-    const url = rawUrl ? normalizeExternalHttpUrl(rawUrl) : null;
-    const alt = mediaType ?? match[3] ?? "Attached image";
-
-    if (!url) {
-      nodes.push(...textWithLineBreaks(match[0], `invalid-${tokenIndex}`));
-    } else if (!mediaType || mediaType.startsWith("image/")) {
-      nodes.push(
-        <span className="my-2 block" key={`image-${tokenIndex}`}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- customer media uses an external, runtime URL */}
-          <img
-            src={url}
-            alt={alt}
-            className="h-auto max-h-[300px] max-w-full rounded-md shadow-sm"
-          />
-        </span>,
-      );
-    } else {
-      nodes.push(
-        <span className="my-2 block" key={`attachment-${tokenIndex}`}>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 underline"
-          >
-            Attached Media ({mediaType})
-          </a>
-        </span>,
-      );
+  while ((match = tokenPattern.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      const text = content.slice(lastIndex, match.index);
+      elements.push(...textWithLineBreaks(text, `text-${lastIndex}`));
     }
 
-    cursor = offset + match[0].length;
-    tokenIndex += 1;
+    if (match[1] && match[2]) {
+      const type = match[1].toLowerCase();
+      const rawUrl = match[2];
+      const validUrl = normalizeExternalHttpUrl(rawUrl);
+
+      if (validUrl) {
+        if (type === "image") {
+          elements.push(
+            <div key={`media-${match.index}`} className="my-2 max-w-full overflow-hidden rounded-lg border border-white/20">
+              <img src={validUrl} alt="Attached Media" className="max-w-full max-h-64 object-cover block" loading="lazy" />
+            </div>
+          );
+        } else if (type === "video") {
+          elements.push(
+            <div key={`media-${match.index}`} className="my-2 max-w-full overflow-hidden rounded-lg border border-white/20">
+              <video src={validUrl} controls className="max-w-full max-h-64 object-cover block" preload="metadata" />
+            </div>
+          );
+        } else if (type === "audio") {
+          elements.push(
+            <div key={`media-${match.index}`} className="my-2 max-w-full overflow-hidden rounded-lg border border-white/20">
+              <audio src={validUrl} controls className="max-w-full block" preload="metadata" />
+            </div>
+          );
+        } else if (type === "document" || type === "file") {
+          elements.push(
+            <a key={`media-${match.index}`} href={validUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 my-2 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-sm font-medium transition-colors">
+              <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+              View Document
+            </a>
+          );
+        } else {
+           elements.push(
+            <a key={`media-${match.index}`} href={validUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30">
+              {rawUrl}
+            </a>
+          );
+        }
+      } else {
+         elements.push(
+            <span key={`media-${match.index}`} className="text-red-400 italic">
+              [Invalid Media Link]
+            </span>
+          );
+      }
+    } else if (match[3] !== undefined && match[4]) {
+      const altText = match[3];
+      const rawUrl = match[4];
+      const validUrl = normalizeExternalHttpUrl(rawUrl);
+
+      if (validUrl) {
+         elements.push(
+            <div key={`md-img-${match.index}`} className="my-2 max-w-full overflow-hidden rounded-lg border border-white/20">
+              <img src={validUrl} alt={altText || "Image"} className="max-w-full max-h-64 object-cover block" loading="lazy" />
+            </div>
+          );
+      } else {
+         elements.push(
+            <span key={`md-img-${match.index}`} className="text-red-400 italic">
+              [Invalid Image Link]
+            </span>
+          );
+      }
+    }
+
+    lastIndex = match.index + match[0].length;
   }
 
-  nodes.push(...textWithLineBreaks(content.slice(cursor), `text-${tokenIndex}`));
-  return nodes;
+  if (lastIndex < content.length) {
+    const text = content.slice(lastIndex);
+    elements.push(...textWithLineBreaks(text, `text-${lastIndex}`));
+  }
+
+  return <>{elements}</>;
 }
 
-function formatStatus(status?: string) {
-  const normalized = (status || "").toLowerCase();
-  if (normalized === "auto_replied") return "✨ AI Handled";
-  return status || "Open";
-}
-
-function CustomerContextCard({ customerId }: { customerId: string }) {
-  const [summary, setSummary] = useState<any>(null);
-
-  useEffect(() => {
-    async function fetchSummary() {
-      try {
-        const res = await fetch(`/api/v1/memory/summary/${customerId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setSummary(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch customer memory summary:", err);
-      }
-    }
-    fetchSummary();
-  }, [customerId]);
-
-  if (!summary) return null;
-  if (summary.total_interactions === 0 && summary.segments.length === 0) return null;
-
-  return (
-    <div className="mt-4 rounded-xl border border-gray-100 bg-blue-50/50 p-4 dark:border-white/10 dark:bg-blue-900/10">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Unified Customer Memory</h3>
-        <span className="app-badge good">{summary.total_interactions} interactions</span>
-      </div>
-      {summary.segments.length > 0 && (
-        <div className="mb-2 text-xs text-gray-700 dark:text-gray-300">
-          <span className="font-semibold text-gray-900 dark:text-white">Segments: </span>
-          {summary.segments.join(", ")}
-        </div>
-      )}
-      {summary.preferences.length > 0 && (
-        <div className="mb-2 text-xs text-gray-700 dark:text-gray-300">
-          <span className="font-semibold text-gray-900 dark:text-white">Preferences: </span>
-          {summary.preferences.join(", ")}
-        </div>
-      )}
-      <div className="text-xs text-gray-600 dark:text-gray-400">
-        {summary.summary}
-      </div>
-    </div>
-  );
-}
-
-function InboxWorkspace({
-  messages,
-  sourceLabel,
-}: {
-  messages: Message[];
-  sourceLabel: string;
-}) {
+function InnerInboxPage() {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showOriginal, setShowOriginal] = useState(false);
-  const [actionStatus, setActionStatus] = useState("");
-  const [manualReply, setManualReply] = useState("");
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
 
-
-  const selected = useMemo(() => {
-    if (messages.length === 0) return null;
-    return messages.find((m) => m.id === selectedId) || messages[0];
-  }, [messages, selectedId]);
-
-  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  // Real-time Chat state
+  const [wsConnected, setWsConnected] = useState(false);
+  const [realtimeMessages, setRealtimeMessages] = useState<Message[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    async function fetchApprovals() {
-      try {
-        const res = await fetch(`/api/v1/agents/approvals?limit=50`);
-        if (res.ok) {
-          const data = await res.json();
-          setPendingApprovals(data.pending_approvals || []);
-        }
-      } catch (e) {
-        console.error(e);
-      }
+    // We would connect to our native Rust backend websocket instead of Chatwoot
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/chat/ws`;
+
+    console.log("Connecting to Native OHC Chat WebSocket...");
+
+    try {
+      const ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        setWsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        // Native chat real-time events
+        console.log("WS message:", event.data);
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+      };
+
+      wsRef.current = ws;
+    } catch (e) {
+      console.error("Failed to connect to WS:", e);
     }
-    fetchApprovals();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, []);
 
-  const activeApproval = useMemo(() => {
-    if (!selected) return null;
-    return pendingApprovals.find((a: any) => {
-      try {
-        const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
-        return payload && payload.inbox_message_id === selected.id;
-      } catch (e) {
-        return false;
-      }
-    });
-  }, [selected, pendingApprovals]);
+  const { data: messages = [], isLoading, error } = useQuery(`
+    SELECT
+      m.id,
+      m.sender_type as source,
+      m.content,
+      '' as original_content,
+      '' as translated_from_language,
+      '' as draft_reply,
+      m.status,
+      m.sender_id,
+      c.contact_id as customer_id,
+      m.created_at
+    FROM chat_messages m
+    LEFT JOIN chat_conversations c ON m.conversation_id = c.id
+    ORDER BY m.created_at DESC
+    LIMIT 100
+  `);
 
+  const displayMessages = useMemo(() => {
+    // Combine local messages and real-time messages for display
+    return messages as Message[];
+  }, [messages]);
 
-  const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
-  const unreadLeadsCount = messages.filter((message) => (message.status || "").toLowerCase() === "unread").length;
-
-  async function handleDraftQuoteWithAI(message: Message) {
-    try {
-      setActionStatus("Drafting quote with AI...");
-      const res = await fetch("/api/v1/quotes/draft_agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inquiry: message.content || "",
-          customer_id: message.customer_id || message.sender_id || "unknown",
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to draft quote");
-      const data = await res.json();
-      if (data.id) {
-        setActionStatus("Quote drafted successfully!");
-        router.push(`/quotes/${data.id}`);
-      }
-    } catch (err: any) {
-      setActionStatus(`Error drafting quote: ${err.message}`);
-    } finally {
-      setTimeout(() => setActionStatus(""), 3000);
-    }
-  }
-
-
-  async function handleSendManualReply(inboxMessageId: string) {
-    if (!manualReply.trim()) return;
-    try {
-      setActionStatus("Sending reply...");
-      const res = await fetch(`/api/v1/ui/omni_inbox/action`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message_id: inboxMessageId,
-          approved: true,
-          edited_reply: manualReply
-        })
-      });
-      if (res.ok) {
-        setActionStatus("Manual reply sent.");
-        setManualReply("");
-      } else {
-        setActionStatus("Failed to send manual reply.");
-      }
-    } catch (e) {
-      console.error(e);
-      setActionStatus("Error sending manual reply.");
-    }
-  }
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  function handleAttachPhoto() {
-    fileInputRef.current?.click();
-  }
-
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64String = event.target?.result as string;
-      setManualReply(prev => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + `![Image](${base64String})`);
-    };
-    reader.readAsDataURL(file);
-
-    // reset input
-    if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-    }
-  }
-
-  async function handleApproveAndSend(inboxMessageId: string) {
-    try {
-      const approval = pendingApprovals.find((a: any) => {
-        try {
-          const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
-          return payload && payload.inbox_message_id === inboxMessageId;
-        } catch (e) {
-          return false;
-        }
-      });
-
-      if (!approval) {
-        setActionStatus("Could not find a pending approval for this message.");
-        return;
-      }
-
-      const approveRes = await fetch(`/api/v1/agents/approvals/${approval.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved: true })
-      });
-
-      if (approveRes.ok) {
-        // Optimistic UI updates are handled by PowerSync once backend completes sync,
-        // but we show the status to the user.
-        setActionStatus("Draft approved and sent.");
-      } else {
-        setActionStatus("Failed to approve and send message.");
-      }
-    } catch (e) {
-      console.error(e);
-      setActionStatus("Error approving message.");
-    }
-  }
+  const selectedMessage = useMemo(() => {
+    return displayMessages.find(m => m.id === selectedMessageId) || null;
+  }, [displayMessages, selectedMessageId]);
 
   return (
-    <AppShell
-      title="Unified Inbox"
-      subtitle="Local-first offline unified customer conversations and drafts."
-      statusItems={[
-        { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
-        { label: "Open", value: String(openCount), tone: openCount > 0 ? "warn" : "good" },
-      ]}
-      actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
-    >
-      {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
-      <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
-        <div className="app-grid two gap-4">
-          <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
-            <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
-              <div>
-                <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
-                <div className="app-list-subtitle text-xs text-gray-500">{sourceLabel}</div>
-              </div>
+    <AppShell>
+      <div className="flex h-[calc(100vh-64px)] w-full">
+        {/* Inbox Sidebar (Translucent Glass) */}
+        <div className={`
+          flex flex-col border-r border-white/10
+          bg-white/60 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%]
+          w-full md:w-[380px] flex-shrink-0 transition-all duration-300
+          ${selectedMessageId ? 'hidden md:flex' : 'flex'}
+        `}>
+          <div className="flex items-center justify-between p-4 border-b border-white/10 h-16 flex-shrink-0">
+            <h1 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">Unified Inbox</h1>
+            <div className="flex items-center gap-2">
+              <span className={`flex h-2 w-2 rounded-full ${wsConnected ? 'bg-[#34C759]' : 'bg-[#FF9500]'}`} title={wsConnected ? "Connected to OHC Chat Engine" : "Connecting..."} />
             </div>
-            <div id="messages-list" className="app-list p-2">
-              {unreadLeadsCount > 0 && (
-                <div className="app-card daily-summary mb-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 p-4 rounded-xl">
-                  <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    ✨ You have {unreadLeadsCount} unread {unreadLeadsCount === 1 ? 'lead' : 'leads'}.
-                  </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {isLoading && (
+              <div className="p-6 text-center text-sm font-medium opacity-50">Loading messages...</div>
+            )}
+
+            {error && (
+              <div className="p-6 text-center text-sm font-medium text-[#FF3B30]">Error: {error.message}</div>
+            )}
+
+            {!isLoading && displayMessages.length === 0 && (
+              <div className="p-8 text-center flex flex-col items-center justify-center h-full">
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                  <svg className="w-5 h-5 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
                 </div>
-              )}
-              {messages.length === 0 ? (
-                <div className="app-empty">No inbox messages found for this tenant.</div>
-              ) : messages.map((message) => (
+                <h3 className="text-base font-semibold mb-1">All Caught Up</h3>
+                <p className="text-[13px] opacity-60">No pending messages in your inbox.</p>
+              </div>
+            )}
+
+            <div className="divide-y divide-white/5">
+              {displayMessages.map((msg) => (
                 <button
-                  key={message.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedId(message.id);
-                    setShowOriginal(false);
-                  }}
-                  className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-[8px] transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
+                  key={msg.id}
+                  onClick={() => setSelectedMessageId(msg.id)}
+                  className={`
+                    w-full text-left p-4 transition-all hover:bg-white/5
+                    min-h-[44px] /* Touch target minimum */
+                    ${selectedMessageId === msg.id ? 'bg-[#0066FF]/10 dark:bg-[#0071E3]/20 border-l-2 border-l-[#0066FF] dark:border-l-[#0071E3]' : 'border-l-2 border-l-transparent'}
+                  `}
                 >
-                  <div className="min-w-0">
-                    <div className="app-list-title">{message.source || "Unknown source"}</div>
-                    <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
+                  <div className="flex justify-between items-baseline mb-1 gap-2">
+                    <span className="font-semibold text-[15px] truncate text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {msg.source || "Direct Message"}
+                    </span>
+                    <span className="text-[11px] font-medium opacity-50 whitespace-nowrap">
+                      {msg.created_at ? new Date(msg.created_at).toLocaleDateString() : ""}
+                    </span>
                   </div>
-                  <span className={`app-badge ${badgeTone(message.status)}`}>{formatStatus(message.status)}</span>
+                  <div className="text-[13px] opacity-70 line-clamp-2 leading-relaxed mb-2">
+                    {msg.content || "No content"}
+                  </div>
+                  <div className="flex gap-1.5 mt-2">
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-[4px] text-[10px] font-semibold tracking-wide uppercase ${
+                      badgeTone(msg.status) === 'good' ? 'bg-[#34C759]/20 text-[#34C759]' :
+                      badgeTone(msg.status) === 'warn' ? 'bg-[#FF9500]/20 text-[#FF9500]' :
+                      badgeTone(msg.status) === 'bad' ? 'bg-[#FF3B30]/20 text-[#FF3B30]' :
+                      'bg-white/10 opacity-70'
+                    }`}>
+                      {msg.status || "NEW"}
+                    </span>
+                    {msg.draft_reply && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-[4px] text-[10px] font-semibold tracking-wide uppercase bg-purple-500/20 text-purple-400">
+                        AI Draft
+                      </span>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
+          </div>
+        </div>
 
-                {/* Manual Reply Box */}
-                {selected && selected.status !== "resolved" && selected.status !== "dismissed" && (
-                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="app-metric-label mb-2">Manual Reply</div>
-                    <textarea
-                      className="w-full min-h-[100px] p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 mb-3"
-                      placeholder="Type your reply here..."
-                      value={manualReply}
-                      onChange={(e) => setManualReply(e.target.value)}
-                    />
-                    <div className="flex gap-3 mt-4 flex-wrap">
-                      <button
-                        onClick={() => handleSendManualReply(selected.id)}
-                        className="app-btn-primary min-h-[44px] min-w-[44px] rounded-[8px]"
-                        disabled={!manualReply.trim()}
-                      >
-                        Send Reply
-                      </button>
-                      <button
-                        onClick={handleAttachPhoto}
-                        className="app-btn-secondary flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-[8px]"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                        Attach Photo
-                      </button>
-                      <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileSelected} />
+        {/* Conversation Stream (Translucent Glass) */}
+        <div className={`
+          flex-1 flex flex-col bg-white/40 dark:bg-[#16161A]/40 backdrop-blur-[30px]
+          transition-all duration-300
+          ${!selectedMessageId ? 'hidden md:flex' : 'flex'}
+        `}>
+          {selectedMessage ? (
+            <>
+              {/* Header */}
+              <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 bg-white/60 dark:bg-[#16161A]/80 backdrop-blur-md flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedMessageId(null)}
+                    className="md:hidden flex items-center justify-center w-10 h-10 -ml-3 rounded-full hover:bg-white/10 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <h2 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    Conversation
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-white/10 text-[11px] font-medium opacity-60">
+                    ID: {selectedMessage.id.split('-')[0]}
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <button className="h-9 px-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[13px] font-medium transition-colors">
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              {/* Message Stream */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+                <div className="flex flex-col gap-1 items-start max-w-[85%]">
+                  <span className="text-[11px] font-medium opacity-50 px-3">
+                    {selectedMessage.created_at ? new Date(selectedMessage.created_at).toLocaleString() : ""}
+                  </span>
+                  <div className="bg-white/80 dark:bg-white/10 border border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] px-5 py-3.5 rounded-2xl rounded-tl-sm text-[15px] leading-relaxed shadow-sm">
+                    {renderMessageContent(selectedMessage.content || "Empty message")}
+                  </div>
+                </div>
+
+                {selectedMessage.original_content && (
+                  <div className="flex flex-col gap-1 items-start max-w-[85%] mt-2">
+                    <span className="text-[11px] font-medium text-[#0066FF] dark:text-[#0071E3] px-3">
+                      Translated from {selectedMessage.translated_from_language || 'unknown'}
+                    </span>
+                    <div className="bg-white/40 dark:bg-white/5 border border-white/10 text-[#1D1D1F] dark:text-[#F5F5F7] px-4 py-3 rounded-2xl rounded-tl-sm text-[13px] opacity-70 italic leading-relaxed">
+                      {selectedMessage.original_content}
                     </div>
                   </div>
                 )}
-          </section>
 
-          <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
-            <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
-              <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
-            </div>
-            {!selected ? (
-              <div className="app-empty p-8 text-center text-gray-500">Select a database-backed message to inspect it.</div>
-            ) : (
-              <div className="app-panel-body p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <div className="app-metric-label">Source</div>
-                    <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
-                  </div>
-                  {selected.sender_id && (
-                    <div className="text-right">
-                      <div className="app-metric-label">Sender</div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">{selected.sender_id}</span>
-                        {selected.customer_id && (
-                          <span className="app-badge good">Known Customer</span>
-                        )}
-                      </div>
+                {selectedMessage.draft_reply && (
+                  <div className="flex flex-col gap-1 items-end max-w-[85%] self-end ml-auto mt-6 relative">
+                    <span className="text-[11px] font-medium text-purple-500 px-3 flex items-center gap-1.5">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      AI Drafted Response
+                    </span>
+                    <div className="bg-purple-500/10 border border-purple-500/30 text-[#1D1D1F] dark:text-[#F5F5F7] px-5 py-3.5 rounded-2xl rounded-tr-sm text-[15px] leading-relaxed shadow-sm">
+                       {renderMessageContent(selectedMessage.draft_reply)}
                     </div>
-                  )}
-                </div>
-                {selected.customer_id && (
-                  <CustomerContextCard customerId={selected.customer_id} />
-                )}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="app-metric-label">Customer Message</div>
-                    {selected.original_content && selected.original_content !== selected.content && (
-                      <button
-                        type="button"
-                        className="app-badge"
-                        onClick={() => setShowOriginal((value) => !value)}
-                      >
-                        {showOriginal ? "Translated" : `Original ${selected.translated_from_language || ""}`.trim()}
+
+                    <div className="flex gap-2 mt-2 w-full justify-end">
+                      <button className="h-9 px-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-[13px] font-medium transition-colors">
+                        Edit
                       </button>
-                    )}
-                  </div>
-                  <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
-                    <div>{renderMessageContent((showOriginal ? selected.original_content : selected.content) || "Empty message")}</div>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="app-metric-label">Draft Reply</div>
-                  <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
-                    <div>{renderMessageContent(selected.draft_reply || "No draft reply stored for this message.")}</div>
-                  </div>
-                  {selected.checkout_link && (
-                    <div className="mt-3 flex items-center bg-white/60 dark:bg-black/20 border border-black/5 dark:border-white/5 rounded-lg p-3 backdrop-filter backdrop-blur-md">
-                      <div className="bg-blue-600 text-white rounded w-8 h-8 flex items-center justify-center font-bold mr-3">🛍️</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white m-0">Product: {selected.proposed_product_id || "Checkout Link"}</p>
-                        <a href={selected.checkout_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 dark:text-blue-400 truncate block">{selected.checkout_link}</a>
-                      </div>
+                      <button className="h-9 px-4 rounded-lg bg-purple-500 hover:bg-purple-600 text-white shadow-sm text-[13px] font-semibold transition-colors flex items-center gap-2">
+                        <span>Send Draft</span>
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                      </button>
                     </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="app-card">
-                    <div className="app-metric-label">Status</div>
-                    <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{formatStatus(selected.status)}</span></div>
-                  </div>
-                  <div className="app-card">
-                    <div className="app-metric-label">Created</div>
-                    <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
-                  </div>
-                </div>
-                {badgeTone(selected.status) === "warn" && (
-                  <div className="mt-6">
-                    {(() => {
-                      let buttonText = "✨ Approve & Send Draft";
-                      let parsedPayload = null;
-                      if (activeApproval && activeApproval.payload) {
-                        try {
-                          parsedPayload = typeof activeApproval.payload === 'string' ? JSON.parse(activeApproval.payload) : activeApproval.payload;
-                        } catch(e) {}
-                        if (parsedPayload && parsedPayload.action_type === "Draft Quote") {
-                           let amount = 0;
-                           if (parsedPayload.total_amount_cents !== undefined && parsedPayload.total_amount_cents !== null) {
-                              amount = parsedPayload.total_amount_cents / 100;
-                           } else if (parsedPayload.total_amount !== undefined && parsedPayload.total_amount !== null) {
-                              amount = parsedPayload.total_amount;
-                           }
-                           buttonText = `✨ Send quote for $${amount.toFixed(2)}`;
-                        } else if (parsedPayload && parsedPayload.action_type === "Draft Booking") {
-                           buttonText = "✨ Approve booking";
-                        } else if (parsedPayload && parsedPayload.action_type === "Draft Reply") {
-                           buttonText = "✨ Approve & Send Draft";
-                        } else if (parsedPayload && parsedPayload.feature_type === "ambassador_reply") {
-                           buttonText = "✨ Approve & Send Draft";
-                        }
-                      }
-
-                      const isInventoryDeduction = selected.draft_reply?.includes("[Send & Deduct Inventory]");
-                      if (isInventoryDeduction) {
-                        return (
-                          <button
-                            className="app-button primary w-full min-h-[44px] min-w-[44px] backdrop-filter bg-white/10 glassmorphism shadow-lg bg-gradient-to-r from-green-500/80 to-emerald-600/80 text-white font-bold border border-white/20"
-                            onClick={() => handleApproveAndSend(selected.id)}
-                          >
-                            ✨ Approve & Send (Deduct Inventory)
-                          </button>
-                        );
-                      }
-
-                      return (
-                        <button
-                          className="app-button primary w-full min-h-[44px] min-w-[44px] rounded-[8px] backdrop-filter bg-white/10"
-                          onClick={() => handleApproveAndSend(selected.id)}
-                        >
-                          {buttonText}
-                        </button>
-                      );
-                    })()}
-                  </div>
-                )}
-                {!activeApproval && (
-                  <div className="mt-4 flex flex-col gap-4">
-                    <button
-                      onClick={() => handleDraftQuoteWithAI(selected)}
-                      className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
-                    >✨ Draft Quote with AI</button>
                   </div>
                 )}
               </div>
-            )}
-          </section>
+
+              {/* Composer */}
+              <div className="p-4 border-t border-white/10 bg-white/60 dark:bg-[#16161A]/80 backdrop-blur-md flex-shrink-0">
+                <div className="flex items-end gap-3 bg-white/80 dark:bg-black/20 border border-white/20 rounded-xl p-2 shadow-inner">
+                  <button className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center hover:bg-white/10 text-opacity-60 transition-colors">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                  </button>
+                  <textarea
+                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none min-h-[44px] max-h-32 text-[15px] placeholder-opacity-50 py-2.5 outline-none"
+                    placeholder="Type a message..."
+                    rows={1}
+                  />
+                  <button className="flex-shrink-0 h-9 px-4 rounded-lg bg-[#0066FF] dark:bg-[#0071E3] hover:brightness-110 text-white font-semibold text-[13px] shadow-sm transition-all flex items-center gap-2">
+                    Send
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center opacity-50 p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6">
+                <svg className="w-6 h-6 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <p className="text-[15px] font-medium">Select a conversation</p>
+              <p className="text-[13px] mt-1 opacity-70">Choose a message from the list to view details and reply.</p>
+            </div>
+          )}
         </div>
       </div>
     </AppShell>
   );
-}
-
-function PowerSyncInboxContent() {
-  const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
-  return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
-}
-
-function InboxLoadingState() {
-  return (
-    <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-      <div className="app-panel">
-        <div className="app-empty">Loading inbox messages...</div>
-      </div>
-    </AppShell>
-  );
-}
-
-function ApiInboxFallback() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function loadMessages() {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await fetch(`/api/v1/ui/omni_inbox`);
-        if (!res.ok) throw new Error("Failed to load inbox messages");
-        const data = await res.json();
-        setMessages(Array.isArray(data) ? data : []);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load inbox messages");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadMessages();
-  }, []);
-
-  if (error) {
-    return (
-      <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-        <div className="app-panel" data-testid="inbox-settled">
-          <div className="app-empty">{error}</div>
-        </div>
-      </AppShell>
-    );
-  }
-
-  if (loading) {
-    return <InboxLoadingState />;
-  }
-
-  return <InboxWorkspace messages={messages} sourceLabel="Live inbox messages for the current tenant." />;
 }
 
 export default function InboxPage() {
   return (
-    <PowerSyncProvider
-      fallback={<InboxLoadingState />}
-      unsupportedFallback={<ApiInboxFallback />}
-    >
-      <PowerSyncInboxContent />
+    <PowerSyncProvider>
+      <InnerInboxPage />
     </PowerSyncProvider>
   );
 }
