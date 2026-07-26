@@ -17,6 +17,7 @@
     "@powersync/react": "^1.10.0",
     "@powersync/web": "^1.38.3",
     "@stripe/terminal-js": "^0.26.0",
+    "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/dom": "^10.4.1",
     "@types/dompurify": "^3.0.5",
     "@types/pg": "^8.20.0",
