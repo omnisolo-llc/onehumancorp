@@ -23,6 +23,7 @@ exports_files(
         "booking.rs",
         "estimator.rs",
         "money.rs",
+        "chat.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -52,6 +53,7 @@ rust_library(
         "booking.rs",
         "estimator.rs",
         "money.rs",
+        "chat.rs",
         "//src/server/domain/repository:campaign_repo.rs",
         "//src/server/domain/repository:social_post_proposal_repo.rs",
         "//src/server/domain/repository:mod.rs",
