@@ -394,8 +394,8 @@ CREATE POLICY tenant_isolation_availability_ledger ON availability_ledger USING 
 
 src/server/migrations/079_service_bookings.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
 src/server/migrations/079_service_bookings.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-src/server/migrations/079_service_bookings.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true));
-src/server/migrations/079_service_bookings.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true));
+src/server/migrations/079_service_bookings.sql-    USING (tenant_id = current_setting('app.current_tenant', true));
+src/server/migrations/079_service_bookings.sql-    USING (tenant_id = current_setting('app.current_tenant', true));
 -- Adding RLS for availability_schedules
 ALTER TABLE IF EXISTS availability_schedules ADD COLUMN IF NOT EXISTS tenant_id VARCHAR;
 ALTER TABLE IF EXISTS availability_schedules ENABLE ROW LEVEL SECURITY;
@@ -539,8 +539,8 @@ DROP POLICY IF EXISTS tenant_isolation_businesses ON businesses;
 CREATE POLICY tenant_isolation_businesses ON businesses USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 src/server/migrations/079_service_bookings.sql-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-src/server/migrations/079_service_bookings.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true));
-src/server/migrations/079_service_bookings.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true));
+src/server/migrations/079_service_bookings.sql-    USING (tenant_id = current_setting('app.current_tenant', true));
+src/server/migrations/079_service_bookings.sql-    USING (tenant_id = current_setting('app.current_tenant', true));
 -- Adding RLS for calendar_integrations
 ALTER TABLE IF EXISTS calendar_integrations ADD COLUMN IF NOT EXISTS tenant_id VARCHAR;
 ALTER TABLE IF EXISTS calendar_integrations ENABLE ROW LEVEL SECURITY;
@@ -1745,12 +1745,12 @@ ALTER TABLE IF EXISTS pos_terminal_sessions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_pos_terminal_sessions ON pos_terminal_sessions;
 CREATE POLICY tenant_isolation_pos_terminal_sessions ON pos_terminal_sessions USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    tenant_id UUID NOT NULL,
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    WITH CHECK (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 -- Adding RLS for pre_order_entries
 ALTER TABLE IF EXISTS pre_order_entries ADD COLUMN IF NOT EXISTS tenant_id VARCHAR;
 ALTER TABLE IF EXISTS pre_order_entries ENABLE ROW LEVEL SECURITY;
@@ -2618,12 +2618,12 @@ DROP POLICY IF EXISTS tenant_isolation_video_tutorials ON video_tutorials;
 CREATE POLICY tenant_isolation_video_tutorials ON video_tutorials USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    tenant_id UUID NOT NULL,
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    WITH CHECK (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    tenant_id UUID NOT NULL,
-src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+src/server/db/migrations/151_pre_order_waitlist_campaigns.sql-    USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
 -- Adding RLS for waitlist_campaigns
 ALTER TABLE IF EXISTS waitlist_campaigns ADD COLUMN IF NOT EXISTS tenant_id VARCHAR;
 ALTER TABLE IF EXISTS waitlist_campaigns ENABLE ROW LEVEL SECURITY;

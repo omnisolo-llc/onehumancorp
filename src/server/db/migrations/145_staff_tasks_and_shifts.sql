@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS staff_shifts (
 );
 
 ALTER TABLE staff_shifts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY staff_shifts_tenant_isolation ON staff_shifts USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY staff_shifts_tenant_isolation ON staff_shifts USING (tenant_id = current_setting('app.current_tenant')::UUID);
 
 CREATE TABLE IF NOT EXISTS staff_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS staff_members (
 );
 
 ALTER TABLE staff_members ENABLE ROW LEVEL SECURITY;
-CREATE POLICY staff_members_tenant_isolation ON staff_members USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY staff_members_tenant_isolation ON staff_members USING (tenant_id = current_setting('app.current_tenant')::UUID);
 
 CREATE TABLE IF NOT EXISTS staff_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS staff_tasks (
 );
 
 ALTER TABLE staff_tasks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY staff_tasks_tenant_isolation ON staff_tasks USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY staff_tasks_tenant_isolation ON staff_tasks USING (tenant_id = current_setting('app.current_tenant')::UUID);
 
 CREATE TABLE IF NOT EXISTS staff_task_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -50,4 +50,4 @@ CREATE TABLE IF NOT EXISTS staff_task_assignments (
 );
 
 ALTER TABLE staff_task_assignments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY staff_task_assignments_tenant_isolation ON staff_task_assignments USING (tenant_id = current_setting('app.current_tenant_id')::UUID);
+CREATE POLICY staff_task_assignments_tenant_isolation ON staff_task_assignments USING (tenant_id = current_setting('app.current_tenant')::UUID);
