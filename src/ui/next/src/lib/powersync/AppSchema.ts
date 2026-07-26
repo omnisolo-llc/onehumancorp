@@ -1,4 +1,4 @@
-import { column, Schema, Table } from '@powersync/web';
+import { column, Schema, Table } from "@powersync/web";
 
 const agentFeedItems = new Table({
   tenant_id: column.text,
@@ -7,7 +7,7 @@ const agentFeedItems = new Table({
   proposed_action: column.text,
   lifecycle_state: column.text,
   created_at: column.text,
-  updated_at: column.text
+  updated_at: column.text,
 });
 
 const omniInboxMessages = new Table({
@@ -22,16 +22,15 @@ const omniInboxMessages = new Table({
   sender_id: column.text,
   customer_id: column.text,
   created_at: column.text,
-  updated_at: column.text
+  updated_at: column.text,
 });
 
 const pendingActions = new Table({
   id: column.text, // added id column to make the insert work properly
   type: column.text,
   payload: column.text,
-  timestamp: column.integer
+  timestamp: column.integer,
 });
-
 
 const appointments = new Table({
   id: column.text,
@@ -46,7 +45,7 @@ const appointments = new Table({
   location_address: column.text,
   notes: column.text,
   actual_start_time: column.text,
-  actual_end_time: column.text
+  actual_end_time: column.text,
 });
 
 const serviceRoutes = new Table({
@@ -60,7 +59,7 @@ const serviceRoutes = new Table({
   end_location_lat: column.real,
   end_location_lng: column.real,
   created_at: column.text,
-  updated_at: column.text
+  updated_at: column.text,
 });
 
 const posOfflineTransactions = new Table({
@@ -78,7 +77,7 @@ const posOfflineTransactions = new Table({
   subscription_discount_percent: column.integer,
   _sync_status: column.text,
   version: column.integer,
-  device_signature: column.text
+  device_signature: column.text,
 });
 
 const posTerminalSessions = new Table({
@@ -90,7 +89,55 @@ const posTerminalSessions = new Table({
   last_synced_at: column.text,
   offline_changes_count: column.integer,
   sync_status: column.text,
-  pending_reconciliation: column.text
+  pending_reconciliation: column.text,
+});
+
+const inboxes = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  name: column.text,
+  channel_type: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const channelAdapters = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  inbox_id: column.text,
+  credentials: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const contacts = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  name: column.text,
+  email: column.text,
+  phone: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const conversations = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  inbox_id: column.text,
+  contact_id: column.text,
+  status: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const messages = new Table({
+  id: column.text,
+  tenant_id: column.text,
+  conversation_id: column.text,
+  content: column.text,
+  sender_type: column.text,
+  draft_reply: column.text,
+  created_at: column.text
 });
 
 export const AppSchema = new Schema({
@@ -100,5 +147,10 @@ export const AppSchema = new Schema({
   omni_inbox_messages: omniInboxMessages,
   pending_actions: pendingActions,
   pos_offline_transactions: posOfflineTransactions,
-  pos_terminal_sessions: posTerminalSessions
+  pos_terminal_sessions: posTerminalSessions,
+  inboxes: inboxes,
+  channel_adapters: channelAdapters,
+  contacts: contacts,
+  conversations: conversations,
+  messages: messages
 });

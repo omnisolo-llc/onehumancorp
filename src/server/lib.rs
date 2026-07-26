@@ -3387,11 +3387,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .with_state(omnichannel_webhook_state);
 
-    let inbox_webhook_state = api::inbox::webhook::OmnichannelWebhookState {
-        orchestrator: dept_orchestrator.clone(),
-        db: db.clone(),
-    };
-    let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
 
         // Create Twilio Voice engines
     let twilio_voice_engine = std::sync::Arc::new(crate::voice::VoiceAIEdgeEngine::new());
@@ -7812,7 +7807,7 @@ async fn create_ui_bom_item_handler(
         ))
         .nest(
             "/api/v1/inbox",
-            protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),
+            protect_internal_ingress(api::inbox::webhook::router(db.clone(), dept_orchestrator.clone()), http_auth_store.clone()),
         )
         .nest(
             "/api/v1/memory",
@@ -7826,6 +7821,10 @@ async fn create_ui_bom_item_handler(
         .merge(twilio_voice_webhook_router)
         .merge(protect_internal_ingress(
             api::unified_inbox_webhook::router(db.clone()),
+            http_auth_store.clone(),
+        ))
+        .merge(protect_internal_ingress(
+            api::inbox::webhook::router(db.clone(), dept_orchestrator.clone()),
             http_auth_store.clone(),
         ))
         .merge(health_router)
