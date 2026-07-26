@@ -11,7 +11,7 @@ impl InboxService {
         InboxService { pool }
     }
 
-    pub async fn create_inbox(&self, tenant_id: Uuid, name: &str, channel_type: &str) -> Result<Inbox, sqlx::Error> {
+    pub async fn create_inbox(&self, tenant_id: String, name: &str, channel_type: &str) -> Result<Inbox, sqlx::Error> {
         let id = Uuid::new_v4();
         let inbox = sqlx::query_as!(
             Inbox,
@@ -27,7 +27,7 @@ impl InboxService {
         Ok(inbox)
     }
 
-    pub async fn create_contact(&self, tenant_id: Uuid, name: Option<&str>, email: Option<&str>) -> Result<Contact, sqlx::Error> {
+    pub async fn create_contact(&self, tenant_id: String, name: Option<&str>, email: Option<&str>) -> Result<Contact, sqlx::Error> {
         let id = Uuid::new_v4();
         let contact = sqlx::query_as!(
             Contact,
@@ -43,7 +43,7 @@ impl InboxService {
         Ok(contact)
     }
 
-    pub async fn create_conversation(&self, tenant_id: Uuid, inbox_id: Uuid, contact_id: Uuid) -> Result<Conversation, sqlx::Error> {
+    pub async fn create_conversation(&self, tenant_id: String, inbox_id: Uuid, contact_id: Uuid) -> Result<Conversation, sqlx::Error> {
         let id = Uuid::new_v4();
         let conversation = sqlx::query_as!(
             Conversation,
@@ -59,7 +59,7 @@ impl InboxService {
         Ok(conversation)
     }
 
-    pub async fn create_message(&self, tenant_id: Uuid, conversation_id: Uuid, sender_type: &str, content: &str) -> Result<Message, sqlx::Error> {
+    pub async fn create_message(&self, tenant_id: String, conversation_id: Uuid, sender_type: &str, content: &str) -> Result<Message, sqlx::Error> {
         let id = Uuid::new_v4();
         let message = sqlx::query_as!(
             Message,
@@ -75,7 +75,7 @@ impl InboxService {
         Ok(message)
     }
 
-    pub async fn get_messages(&self, tenant_id: Uuid, conversation_id: Uuid) -> Result<Vec<Message>, sqlx::Error> {
+    pub async fn get_messages(&self, tenant_id: String, conversation_id: Uuid) -> Result<Vec<Message>, sqlx::Error> {
         let messages = sqlx::query_as!(
             Message,
             r#"
