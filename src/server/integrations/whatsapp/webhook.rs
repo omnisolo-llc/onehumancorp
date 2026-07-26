@@ -90,8 +90,9 @@ pub struct Text {
 pub async fn handle_webhook(
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
+    let entry_count = payload.entry.len();
     // Process incoming webhook payload
-    tracing::info!("Received WhatsApp webhook: {:?}", payload);
+    tracing::info!("Received WhatsApp webhook with {} entries", entry_count);
 
     // Send a 200 OK response to acknowledge receipt
     StatusCode::OK
