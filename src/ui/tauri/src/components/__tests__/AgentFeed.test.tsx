@@ -11,7 +11,7 @@ vi.mock('../AgentFeedCard', () => {
             <div data-testid={`feed-card-${draft.draft_id}`}>
                 <div data-testid={`draft-name-${draft.draft_id}`}>{draft.customer_name}</div>
                 <button onClick={() => onApprove(draft.draft_id)}>Approve {draft.draft_id}</button>
-                <button onClick={() => onEdit(draft.draft_id)}>Edit {draft.draft_id}</button>
+                <button onClick={() => onEdit(draft.draft_id, "Edited text")}>Edit {draft.draft_id}</button>
             </div>
         )
     };
@@ -77,8 +77,8 @@ describe('AgentFeed', () => {
         render(<AgentFeed />);
 
         await waitFor(() => {
-            expect(screen.getByText('All caught up!')).toBeDefined();
-            expect(screen.getByText('No pending actions right now.')).toBeDefined();
+            expect(screen.getByText('All caught up')).toBeDefined();
+            expect(screen.getByText('No pending actions required at this time.')).toBeDefined();
         });
     });
 

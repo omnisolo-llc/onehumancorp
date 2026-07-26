@@ -56,7 +56,7 @@ describe('AgentFeedCard', () => {
         expect(mockApprove).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onEdit with draft_id when Edit button is clicked', () => {
+    it('opens edit mode, allows editing, and calls onEdit with draft_id and edited response when Save button is clicked', () => {
         const mockApprove = vi.fn();
         const mockEdit = vi.fn();
 
@@ -71,7 +71,17 @@ describe('AgentFeedCard', () => {
         const editButton = screen.getByRole('button', { name: 'Edit Draft' });
         fireEvent.click(editButton);
 
-        expect(mockEdit).toHaveBeenCalledWith('draft-123');
+        // Edit text area should be visible
+        const textarea = screen.getByTestId('feed-edit-textarea') as HTMLTextAreaElement;
+        expect(textarea).toBeDefined();
+        expect(textarea.value).toBe(mockDraft.response);
+
+        // Change response and save
+        fireEvent.change(textarea, { target: { value: 'New edited response!' } });
+        const saveButton = screen.getByTestId('feed-save-btn');
+        fireEvent.click(saveButton);
+
+        expect(mockEdit).toHaveBeenCalledWith('draft-123', 'New edited response!');
         expect(mockEdit).toHaveBeenCalledTimes(1);
     });
 

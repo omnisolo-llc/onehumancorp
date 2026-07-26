@@ -19,8 +19,21 @@ vi.mock('../components/AppShell', () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(""),
+}));
+
 beforeEach(() => {
   queryState.data = [];
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => []
+  });
 });
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
