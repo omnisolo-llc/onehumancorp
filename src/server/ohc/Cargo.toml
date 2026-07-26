@@ -8,9 +8,13 @@ build = "build.rs"
 path = "mod.rs"
 
 [dependencies]
+tokio = { workspace = true, features = ["full"] }
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
+uuid = { version = "1.8.0", features = ["v4", "serde"] }
+sqlx = { version = "0.8", features = ["postgres", "chrono", "uuid", "runtime-tokio"] }
+chrono = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"

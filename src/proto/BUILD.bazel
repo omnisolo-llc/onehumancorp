@@ -4,6 +4,7 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 exports_files([
     "inventory.proto",
+    "chat.proto",
     "agent.proto",
     "agent_service.proto",
     "app.proto",
@@ -353,5 +354,19 @@ proto_rust_library(
 proto_library(
     name = "search_proto",
     srcs = ["search.proto"],
+    visibility = ["//visibility:public"],
+)
+
+
+proto_library(
+    name = "chat_proto",
+    srcs = ["chat.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "chat",
+    proto = ":chat_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )

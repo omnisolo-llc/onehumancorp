@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package ohc.chat;
+
+service ChatService {
+  rpc CreateInbox (CreateInboxRequest) returns (CreateInboxResponse);
+  rpc StartConversation (StartConversationRequest) returns (StartConversationResponse);
+  rpc SendMessage (SendMessageRequest) returns (SendMessageResponse);
+}
+
+message Inbox {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+}
+
+message Conversation {
+  string id = 1;
+  string tenant_id = 2;
+  string inbox_id = 3;
+  string contact_id = 4;
+  string status = 5;
+}
+
+message Message {
+  string id = 1;
+  string tenant_id = 2;
+  string conversation_id = 3;
+  string sender_type = 4;
+  string sender_id = 5;
+  string content = 6;
+}
+
+message CreateInboxRequest {
+  string tenant_id = 1;
+  string name = 2;
+}
+
+message CreateInboxResponse {
+  Inbox inbox = 1;
+}
+
+message StartConversationRequest {
+  string tenant_id = 1;
+  string inbox_id = 2;
+  string contact_id = 3;
+}
+
+message StartConversationResponse {
+  Conversation conversation = 1;
+}
+
+message SendMessageRequest {
+  string tenant_id = 1;
+  string conversation_id = 2;
+  string sender_type = 3;
+  string sender_id = 4;
+  string content = 5;
+}
+
+message SendMessageResponse {
+  Message message = 1;
+}
