@@ -1,10 +1,10 @@
-issue_title: "Native Rust Omnichannel Chat System Architecture (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat System Architecture (cw Replacement)"
 issue_description: |
   ### Problem Statement
-  OHC currently relies on fragmented, rudimentary chat implementations or external dependencies (like Chatwoot) which breaks our multi-tenant Zero Trust model, creates disconnected data silos, and hinders the "One Assistant" vision. Our core owner personas (e.g., Maya taking Instagram orders, Carlos receiving SMS quotes, Fatima handling WhatsApp pre-orders) need a unified, high-performance Inbox that natively ingests all channels. The current implementation in `src/server/domain/repository/omnichannel_repo.rs` and `src/server/services/chat` is too simplistic to handle Chatwoot-level omnichannel routing, macros, SLA policies, and real-time WebSocket syncing for a 375px mobile-first work command center.
+  OHC currently relies on fragmented, rudimentary chat implementations or external dependencies (like cw) which breaks our multi-tenant Zero Trust model, creates disconnected data silos, and hinders the "One Assistant" vision. Our core owner personas (e.g., Maya taking Instagram orders, Carlos receiving SMS quotes, Fatima handling WhatsApp pre-orders) need a unified, high-performance Inbox that natively ingests all channels. The current implementation in `src/server/domain/repository/omnichannel_repo.rs` and `src/server/services/chat` is too simplistic to handle cw-level omnichannel routing, macros, SLA policies, and real-time WebSocket syncing for a 375px mobile-first work command center.
 
   ### Research Report
-  - **Chatwoot Codebase Audit**: Exhaustive review of `/app/models` in Chatwoot (Conversation, Message, Contact, Channel, Inbox). Chatwoot relies on heavily polymorphic channels (`Channel::FacebookPage`, `Channel::Whatsapp`, `Channel::WebWidget`) feeding into a unified `Conversation` and `Message` model.
+  - **cw Codebase Audit**: Exhaustive review of `/app/models` in cw (Conversation, Message, Contact, Channel, Inbox). cw relies on heavily polymorphic channels (`Channel::FacebookPage`, `Channel::Whatsapp`, `Channel::WebWidget`) feeding into a unified `Conversation` and `Message` model.
   - **OHC Existing Architecture**: `src/server/services/chat/models.rs` has basic struct definitions (`ChatInbox`, `ChatChannel`, `ChatContact`, `ChatConversation`, `ChatMessage`), but lacks proper polymorphic channel adapters, webhook routing, AI draft injection, and SLA tracking schemas.
   - **Competitor Insights**: Shopify Ping (Sidekick) and WeCom use unified inboxes where the AI acts as a co-pilot, drafting responses before the human sees them. This perfectly aligns with our AI capabilities (e.g., `OmniChannelService::ingest_signal` injecting drafts).
 
@@ -53,7 +53,7 @@ issue_description: |
   - **Customer Assistant Agent**: Generates an `AiDraft` for incoming customer messages. The draft is pushed via WebSocket and displayed in the UI composer.
 
   #### Key Design Decisions
-  - **Native Rust**: Replace all external Chatwoot dependencies with a native Rust implementation in `ohc-mono` (`src/server/services/chat` + `omnichannel_repo.rs`).
+  - **Native Rust**: Replace all external cw dependencies with a native Rust implementation in `ohc-mono` (`src/server/services/chat` + `omnichannel_repo.rs`).
   - **Unified WebSocket**: Leverage the existing `src/server/api/unified_ws.rs` for real-time delivery to the Flutter/PWA client.
   - **Row-Level Security**: Every table requires `tenant_id` and strict PostgreSQL RLS.
   - **Polymorphic Channels**: Use JSONB `provider_config` on `ChatChannel` rather than separate tables for each channel type, simplifying the schema while maintaining flexibility.
