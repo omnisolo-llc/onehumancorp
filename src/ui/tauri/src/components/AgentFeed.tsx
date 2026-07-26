@@ -117,7 +117,7 @@ export const AgentFeed: React.FC = () => {
     }
 
     return (
-        <div className="w-full max-w-[375px] mx-auto p-4 flex flex-col items-center">
+        <div className="w-full max-w-[375px] mx-auto p-4 flex flex-col items-center" data-testid="agent-feed">
             <h2 className="text-xl font-semibold mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] self-start">Agent Feed</h2>
             {drafts.map((draft) => {
                 const actionType = draft.action_type || draft.status;
