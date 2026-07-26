@@ -1,14 +1,14 @@
-issue_title: "[Native Chat] Architect Rust-native Chatwoot Omnichannel System"
+issue_title: "[Native Chat] Architect Rust-native Omnichannel System"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) is retiring its dependency on the external Chatwoot service in favor of a fully native, Rust-backed omnichannel chat system. The goal is to provide non-technical owners with a unified inbox that tracks customer conversations across channels (DMs, SMS, Web Widget, Email) securely within OHC's multi-tenant architecture, eliminating external dependencies and improving performance. Maya the baker needs to answer Instagram DMs seamlessly within the OHC app; Carlos the handyman needs to read SMS inquiries in the same place.
+  OneHumanCorp (OHC) is retiring its dependency on external chat systems in favor of a fully native, Rust-backed omnichannel chat system. The goal is to provide non-technical owners with a unified inbox that tracks customer conversations across channels (DMs, SMS, Web Widget, Email) securely within OHC's multi-tenant architecture, eliminating external dependencies and improving performance. Maya the baker needs to answer Instagram DMs seamlessly within the OHC app; Carlos the handyman needs to read SMS inquiries in the same place.
 
   ## Research Report
-  - We analyzed the open-source Chatwoot repository to understand their omnichannel data models (Account, Inbox, Contact, Conversation, Message, Attachment).
-  - Chatwoot uses a robust polymorphic channel architecture (`Channel::Api`, `Channel::Email`, `Channel::TwilioSms`, `Channel::WebWidget`, etc.).
+  - We analyzed the open-source omnichannel repositories to understand their data models (Account, Inbox, Contact, Conversation, Message, Attachment).
+  - Robust polymorphic channel architecture (`Channel::Api`, `Channel::Email`, `Channel::TwilioSms`, `Channel::WebWidget`, etc.).
   - Conversations belong to Inboxes, which in turn map to Channels.
   - Messages track sender type (Contact, User, Bot), status, and attachments.
-  - OHC needs to replicate these core domain entities natively in Rust within `src/server/ohc/domain/` to achieve 100% feature parity without the Ruby on Rails overhead.
+  - OHC needs to replicate these core domain entities natively in Rust within `src/server/ohc/domain/` to achieve 100% feature parity.
 
   ## Design Doc
   ### Architecture Diagram
@@ -44,7 +44,7 @@ issue_description: |
   **To the Implementer:**
   Your task is to implement the core Rust data models and database schemas for the new Native Omnichannel Chat system in `src/server/ohc/domain/`.
   1. Define the domain structs (`Inbox`, `Conversation`, `Message`, `Contact`, `Channel`) with strict multi-tenant isolation (`tenant_id` on all entities).
-  2. Ensure the models support the core Chatwoot features (polymorphic channels, participant tracking, message statuses).
+  2. Ensure the models support the core features (polymorphic channels, participant tracking, message statuses).
   3. Write comprehensive unit tests for the domain models to verify tenant isolation and relationship integrity.
   4. Integrate these models with the existing OHC database layer.
   *Remember to evaluate the implementation against the personas: The models must support Maya's IG DMs and Carlos's SMS inquiries.*
