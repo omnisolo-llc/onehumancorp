@@ -242,35 +242,43 @@ impl JetBrainsObservationMasker {
                                         let mut factor_low = 1;
                                         let mut factor_high = 100;
 
-                                        while factor_low <= factor_high {
-                                            let factor_mid =
-                                                factor_low + (factor_high - factor_low) / 2;
+                                        // Optimization: Fast-path check at 100% factor to see if structural masking is sufficient
+                                        let mut initial_val = json_val.clone();
+                                        Self::mask_json_value(&mut initial_val, self.size_limit, self.element_limit, 0);
+                                        let initial_content = serde_json::to_string(&initial_val).unwrap_or_else(|_| tr.content.clone());
 
-                                            let test_element_limit = std::cmp::max(
-                                                1,
-                                                (self.element_limit * factor_mid) / 100,
-                                            );
-                                            let test_size_limit = std::cmp::max(
-                                                10,
-                                                (self.size_limit * factor_mid) / 100,
-                                            );
+                                        if initial_content.len() <= self.size_limit {
+                                            best_content = Some(initial_content);
+                                        } else {
+                                            while factor_low <= factor_high {
+                                                let factor_mid = factor_low + (factor_high - factor_low) / 2;
 
-                                            let mut temp_val = json_val.clone();
-                                            Self::mask_json_value(
-                                                &mut temp_val,
-                                                test_size_limit,
-                                                test_element_limit,
-                                                0,
-                                            );
+                                                let test_element_limit = std::cmp::max(
+                                                    1,
+                                                    (self.element_limit * factor_mid) / 100,
+                                                );
+                                                let test_size_limit = std::cmp::max(
+                                                    10,
+                                                    (self.size_limit * factor_mid) / 100,
+                                                );
 
-                                            let new_content = serde_json::to_string(&temp_val)
-                                                .unwrap_or_else(|_| tr.content.clone());
+                                                let mut temp_val = json_val.clone();
+                                                Self::mask_json_value(
+                                                    &mut temp_val,
+                                                    test_size_limit,
+                                                    test_element_limit,
+                                                    0,
+                                                );
 
-                                            if new_content.len() <= self.size_limit {
-                                                best_content = Some(new_content);
-                                                factor_low = factor_mid + 1;
-                                            } else {
-                                                factor_high = factor_mid - 1;
+                                                let new_content = serde_json::to_string(&temp_val)
+                                                    .unwrap_or_else(|_| tr.content.clone());
+
+                                                if new_content.len() <= self.size_limit {
+                                                    best_content = Some(new_content);
+                                                    factor_low = factor_mid + 1;
+                                                } else {
+                                                    factor_high = factor_mid - 1;
+                                                }
                                             }
                                         }
 
