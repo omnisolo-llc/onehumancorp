@@ -1124,6 +1124,17 @@ export default function Dashboard() {
             </Link>
             </WithTooltip>
 
+            <WithTooltip id="viral-secret-menu-tooltip" defaultText="Create a hidden menu item or secret offer that unlocks upon sharing.">
+            <Link id="viral-secret-menu-link" href="/viral-secret-menu-generator" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤫</div>
+                <div className="text-slate-600 dark:text-slate-400 font-semibold text-sm bg-slate-50 dark:bg-slate-900/30 px-3 py-1 rounded-full">Growth</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Secret Menu</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create a hidden menu item or secret offer that unlocks upon sharing.</p>
+            </Link>
+            </WithTooltip>
+
             <WithTooltip id="spin-to-win-tooltip" defaultText="Create interactive discount wheels to capture emails.">
             <Link href="/spin-to-win-generator" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
