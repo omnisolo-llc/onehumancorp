@@ -1,12 +1,12 @@
-issue_title: "Implement Native Rust Omnichannel Inbox to Replace Chatwoot"
+issue_title: "Implement Native Rust Omnichannel Inbox to Replace Legacy Third-Party Chat"
 issue_description: |
   # Native Rust Omnichannel Inbox Replacement
 
   **Problem Statement:**
-  OneHumanCorp (OHC) currently relies on Chatwoot for omnichannel customer communication. However, as an external service, Chatwoot breaks our multi-tenant isolation guarantees, adds latency to our core workflows, and prevents deep integration with our AI assistant engine. We need to retire Chatwoot completely and implement a high-performance, native Rust omnichannel inbox system within the OHC mono-repo.
+  OneHumanCorp (OHC) currently relies on a legacy third-party system for omnichannel customer communication. However, as an external service, it breaks our multi-tenant isolation guarantees, adds latency to our core workflows, and prevents deep integration with our AI assistant engine. We need to retire it completely and implement a high-performance, native Rust omnichannel inbox system within the OHC mono-repo.
 
   **Research Report:**
-  Based on an audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) and leading competitors (Zendesk, Intercom, Slack), a modern omnichannel inbox requires:
+  Based on an audit of the external source code and leading competitors (Zendesk, Intercom, Slack), a modern omnichannel inbox requires:
   - **Core Entities:** `Account`, `Inbox`, `Conversation`, `Message`, `Contact`, `ChannelAdapter`.
   - **Real-time Communication:** WebSockets for instant message delivery and typing indicators.
   - **Multi-tenancy:** Strict data isolation per tenant (Row-Level Security in PostgreSQL).
@@ -16,7 +16,7 @@ issue_description: |
 
   *Architecture Overview:*
   1.  **Data Layer (Rust/PostgreSQL):**
-      -   Implement core models mimicking Chatwoot's capabilities but optimized for OHC's multi-tenant architecture.
+      -   Implement core models mimicking the legacy system's capabilities but optimized for OHC's multi-tenant architecture.
       -   Entities: `Inbox`, `Conversation`, `Message`, `Contact`, `ChannelAdapter` (Email, Web Widget, SMS, etc.).
   2.  **Service Layer (Rust/gRPC):**
       -   Create microservices/crates for managing inboxes, routing messages, and handling channel webhooks.
