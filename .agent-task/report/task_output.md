@@ -3,18 +3,18 @@ issue_description: |
   # Native Rust Omnichannel Chat Engine
 
   ## Problem Statement
-  OneHumanCorp (OHC) has strictly retired Chatwoot as an external dependency. Our small business owners (Maya, Carlos, Priya, Leo, Fatima) need a unified, multi-tenant inbox to receive and respond to inquiries from Instagram DMs, WhatsApp, SMS, and web chat. Currently, OHC lacks a native chat system that provides these unified capabilities. Without this, owners have to context-switch between apps or rely on disconnected tools, breaking the "owner clarity" promise.
+  OneHumanCorp (OHC) has strictly retired the legacy third-party dependency as an external dependency. Our small business owners (Maya, Carlos, Priya, Leo, Fatima) need a unified, multi-tenant inbox to receive and respond to inquiries from Instagram DMs, WhatsApp, SMS, and web chat. Currently, OHC lacks a native chat system that provides these unified capabilities. Without this, owners have to context-switch between apps or rely on disconnected tools, breaking the "owner clarity" promise.
 
   ## Research Report
-  ### Benchmarking Chatwoot
-  An audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) reveals its core architecture:
+  ### Benchmarking
+  An audit of omnichannel source code reveals the core architecture needed:
   - **Data Models**: `Account` (tenant), `Inbox`, `Conversation`, `Message`, `Contact`, `ContactInbox`.
   - **Channels**: Modular adapters (`Channel::Api`, `Channel::Email`, `Channel::FacebookPage`, `Channel::Whatsapp`, `Channel::WebWidget`, etc.).
-  - **Real-time**: WebSockets pushing events to a Vue frontend.
+  - **Real-time**: WebSockets pushing events to a frontend.
   - **Automation**: AgentBots, Macros, and automated SLA rules.
 
   ### OHC Architecture Alignment
-  OHC requires replacing this Ruby/Rails implementation with a high-performance **Native Rust Microservice/Crate** (in `onehumancorp/mono`) that integrates natively with our gRPC APIs, PostgreSQL (Row Level Security enabled via `tenant_id`), and Redis (for pub/sub WebSocket events).
+  OHC requires replacing the legacy implementation with a high-performance **Native Rust Microservice/Crate** (in `onehumancorp/mono`) that integrates natively with our gRPC APIs, PostgreSQL (Row Level Security enabled via `tenant_id`), and Redis (for pub/sub WebSocket events).
 
   ## Design Doc
 
@@ -84,7 +84,7 @@ issue_description: |
 
   ## Implementation Prompt
   **Target Implementer:** Backend & Frontend Engineers
-  **Objective:** Build the foundational Native Rust Omnichannel Chat System inside `onehumancorp/mono` to replace Chatwoot.
+  **Objective:** Build the foundational Native Rust Omnichannel Chat System inside `onehumancorp/mono`.
   **Requirements:**
   1. Define the Protobuf schemas for Inbox, Conversation, Contact, and Message.
   2. Implement the Rust gRPC server and `sqlx` PostgreSQL models using strict `tenant_id` Row-Level Security.
