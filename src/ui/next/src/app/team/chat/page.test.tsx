@@ -74,3 +74,4 @@ test('renders an actionable error card when AI action execution fails', async ()
   expect(screen.getByText('AI Budget exhausted')).toBeInTheDocument();
   expect(screen.getByText('Try again')).toBeInTheDocument();
 });
+// Additional UI change

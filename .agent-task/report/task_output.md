@@ -1,14 +1,14 @@
-issue_title: "[Architectural Design] Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "[Architectural Design] Native Rust Omnichannel Chat System (CW Replacement)"
 issue_description: |
   # Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing Chatwoot with a high-performance, multi-tenant native Rust omnichannel chat system inside `onehumancorp/mono`. Small business owners like Carlos (handyman) or Maya (baker) receive messages across fragmented channels (Instagram DMs, WhatsApp, SMS, email, web chat). Without a unified inbox, they miss leads, drop context, and lose revenue. A native implementation allows OHC to deeply integrate its AI "Teammates" (e.g., The Ambassador Agent) to proactively draft and manage responses directly against the OHC backend, bypassing third-party platform limitations and latency.
+  OneHumanCorp (OHC) is replacing CW with a high-performance, multi-tenant native Rust omnichannel chat system inside `onehumancorp/mono`. Small business owners like Carlos (handyman) or Maya (baker) receive messages across fragmented channels (Instagram DMs, WhatsApp, SMS, email, web chat). Without a unified inbox, they miss leads, drop context, and lose revenue. A native implementation allows OHC to deeply integrate its AI "Teammates" (e.g., The Ambassador Agent) to proactively draft and manage responses directly against the OHC backend, bypassing third-party platform limitations and latency.
 
   ## Research Report & Gap Analysis
-  - **Chatwoot Source Code Audit:**
-    - Chatwoot's core models (`Account`, `Inbox`, `Conversation`, `Message`, `Contact`, `Channel::*`) dictate how messages flow from disparate adapters into a unified view.
-    - Chatwoot relies on Ruby on Rails, Sidekiq for background jobs, ActionCable for WebSockets, and Postgres for storage.
+  - **CW Source Code Audit:**
+    - CW's core models (`Account`, `Inbox`, `Conversation`, `Message`, `Contact`, `Channel::*`) dictate how messages flow from disparate adapters into a unified view.
+    - CW relies on Ruby on Rails, Sidekiq for background jobs, ActionCable for WebSockets, and Postgres for storage.
     - The `Inbox` model represents a channel-specific pipeline into a unified `Conversation`.
     - `Message` handles content, types (incoming, outgoing, template), and associations with `Sender` (User vs. Contact).
   - **OHC Implementation Gap:**
