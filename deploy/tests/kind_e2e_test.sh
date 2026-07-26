@@ -518,7 +518,7 @@ helm template "${STANDALONE_RELEASE_NAME}" "${CHART_DIR}" "${STANDALONE_HELM_SMO
 
 log "Loading images into Kind cluster ..."
   kind load docker-image onehumancorp/server:e2e --name "${CLUSTER_NAME}"
-  ensure_image_loaded_in_kind pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+  ensure_image_loaded_in_kind pgvector/pgvector:pg16
   ensure_image_loaded_in_kind valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
 
 # ── Create namespace ───────────────────────────────────────────────────────────
@@ -613,7 +613,7 @@ kubectl create secret generic "${GRPC_TLS_SECRET_NAME}" \
 log "Installing PostgreSQL ..."
 kubectl run postgres \
   --namespace "${NAMESPACE}" \
-  --image pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee \
+  --image pgvector/pgvector:pg16 \
   --env POSTGRES_USER=ohc \
   --env POSTGRES_PASSWORD=ohc \
   --env POSTGRES_DB=ohc \

@@ -8,7 +8,7 @@ services:
     image: onehumancorp/server:latest
 
   postgres:
-    image: pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+    image: pgvector/pgvector:pg16
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
 

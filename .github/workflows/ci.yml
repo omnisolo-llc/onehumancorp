@@ -424,7 +424,7 @@ jobs:
       - name: Pull E2E Docker images
         run: |
           # Keep these identical to deploy/docker-compose.e2e.yml.
-          docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+          docker pull pgvector/pgvector:pg16
           docker pull mirror.gcr.io/library/redis:7@sha256:a8f08480e1f88f2647fed492d1178c06abb0d0c1fbf02c682a61e2f483fb3954
 
       - name: Test Playwright UI E2E target
@@ -586,11 +586,11 @@ jobs:
           if [[ -f /tmp/ohc-kind-images/images.tar ]]; then
             docker load -i /tmp/ohc-kind-images/images.tar
           fi
-          docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+          docker pull pgvector/pgvector:pg16
           docker pull valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
           mkdir -p /tmp/ohc-kind-images
           docker save \
-            pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee \
+            pgvector/pgvector:pg16 \
             valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885 \
             -o /tmp/ohc-kind-images/images.tar
 
@@ -658,12 +658,12 @@ jobs:
       - name: Pull Docker Compose images
         run: |
           # Keep these identical to the effective base + E2E override stack.
-          docker pull pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+          docker pull pgvector/pgvector:pg16
           docker pull valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
           docker pull curlimages/curl:8.10.1@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b
           mkdir -p /tmp/ohc-docker-compose-images
           docker save \
-            pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee \
+            pgvector/pgvector:pg16 \
             valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885 \
             curlimages/curl:8.10.1@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b \
             -o /tmp/ohc-docker-compose-images/images.tar
