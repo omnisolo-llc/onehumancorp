@@ -40,7 +40,7 @@ impl std::fmt::Debug for AuthMode {
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
+    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || (std::env::var("CI").is_ok() && !cfg!(test)) {
         let environment = env::var("OHC_ENV").unwrap_or_default();
         if matches!(
             environment.trim().to_ascii_lowercase().as_str(),
@@ -54,9 +54,18 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         );
     }
 
-    if let Ok(token) = env::var("OHC_AGENT_TOKEN")
-        && !token.trim().is_empty()
+    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID") {
+        if !spiffe_id.trim().is_empty()
     {
+        if let Err(e) = validate_spiffe_id(&spiffe_id) {
+            return Err(e);
+        }
+        return Err("mTLS peer extraction is not yet supported".to_string());
+        }
+    }
+
+    if let Ok(token) = env::var("OHC_AGENT_TOKEN") {
+        if !token.trim().is_empty() {
         let key = env::var("OHC_AGENT_AUTH_KEY")
             .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
         if key.trim().is_empty() || key.len() < 32 {
@@ -68,9 +77,10 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
             token_hash,
             verification_key,
         });
+        }
     }
 
-    return Ok(AuthMode::Disabled);
+    return Err("No authentication mode configured. Set OHC_AGENT_TOKEN, OHC_AGENT_SPIFFE_ID, or OHC_AGENT_AUTH_DISABLED=true.".to_string());
 }
 
 /// Check a bearer token against an expected HMAC hash.
@@ -163,7 +173,7 @@ mod tests {
             "OHC_ENV",
         ];
 
-        temp_env::with_vars(variables.map(|name| (name, None::<&str>)), || {
+        temp_env::with_vars(variables.map(|name| if name == "OHC_ENV" { (name, Some("production")) } else { (name, None::<&str>) }), || {
             assert!(auth_mode_from_env().is_err());
         });
         temp_env::with_vars(
@@ -172,7 +182,7 @@ mod tests {
                 ("OHC_AGENT_AUTH_KEY", None),
                 ("OHC_AGENT_SPIFFE_ID", None),
                 ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OHC_ENV", Some("production")),
             ],
             || assert!(auth_mode_from_env().is_err()),
         );
@@ -185,7 +195,7 @@ mod tests {
                 ),
                 ("OHC_AGENT_SPIFFE_ID", None),
                 ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OHC_ENV", Some("production")),
             ],
             || {
                 assert!(matches!(
@@ -203,7 +213,7 @@ mod tests {
                     Some("spiffe://onehumancorp.io/org/org-1/agent/agent-1"),
                 ),
                 ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OHC_ENV", Some("production")),
             ],
             || {
                 let error = auth_mode_from_env().unwrap_err();

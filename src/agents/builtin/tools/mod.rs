@@ -161,6 +161,7 @@ pub fn all_tools(
         subagent::subagent_tool(runner.clone(), llm.clone()),
         workflow::workflow_tool(runner.clone()),
         hybrid_blob::hybrid_blob_tool(),
+        artifact::publish_artifact_tool(),
         screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
         generative_visibility::generative_visibility_tool(),
         magentic::magentic_tool(task_store.clone()),
@@ -278,3 +279,4 @@ pub mod agent_protocol;
 mod agent_protocol_test;
 #[cfg(test)]
 mod glob_test;
+pub mod artifact;
