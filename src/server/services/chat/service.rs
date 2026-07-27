@@ -107,7 +107,11 @@ impl ChatService {
         sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
+<<<<<<< HEAD
+        sqlx::query_as(
+=======
         let msg = sqlx::query_as::<_, ChatMessage>(
+>>>>>>> 1f738e684 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
             r#"
             INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -117,6 +121,12 @@ impl ChatService {
         .bind(Uuid::new_v4())
         .bind(tenant_id)
         .bind(conversation_id)
+<<<<<<< HEAD
+        .bind(sender_type)
+        .bind(sender_id)
+        .bind(content)
+        .fetch_one(&self.pool)
+=======
         .bind(sender_type.clone())
         .bind(sender_id)
         .bind(content.clone())
@@ -209,6 +219,7 @@ impl ChatService {
         .bind(tenant_id)
         .bind(conversation_id)
         .fetch_all(&self.pool)
+>>>>>>> 1f738e684 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         .await
     }
 }

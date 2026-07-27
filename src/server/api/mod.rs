@@ -59,5 +59,8 @@ pub mod ohc_job_queue;
 pub mod checkout_api;
 pub mod agent_stream;
 pub mod unified_ws;
+<<<<<<< HEAD
+=======
 
 pub mod omnichannel_chat;
+>>>>>>> 1f738e684 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))

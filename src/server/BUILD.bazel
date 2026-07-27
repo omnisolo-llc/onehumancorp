@@ -61,7 +61,10 @@ SERVER_RS_SRCS = [
     "//src/server/api:health.rs",
     "//src/server/api:syndication_handler.rs",
     "//src/server/api:omnichannel_webhook.rs",
+<<<<<<< HEAD
+=======
     "//src/server/api:omnichannel_chat.rs",
+>>>>>>> 1f738e684 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     "//src/server/api:unified_inbox_webhook.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",

@@ -55,7 +55,11 @@ static GLOBAL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::
 
 static GLOBAL_BROADCAST: std::sync::OnceLock<broadcast::Sender<String>> = std::sync::OnceLock::new();
 
+<<<<<<< HEAD
+fn get_broadcast_tx() -> &'static broadcast::Sender<String> {
+=======
 pub fn get_broadcast_tx() -> &'static broadcast::Sender<String> {
+>>>>>>> 1f738e684 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     GLOBAL_BROADCAST.get_or_init(|| {
         let (tx, _) = broadcast::channel(4096);
         tx
