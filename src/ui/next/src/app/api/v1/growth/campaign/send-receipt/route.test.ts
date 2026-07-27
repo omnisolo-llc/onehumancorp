@@ -22,4 +22,20 @@ describe("POST /api/v1/growth/campaign/send-receipt", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/campaign/send-receipt");
     expect(response).toBe(upstream);
   });
+
+  it("fails closed with the backend error status instead of a mock receipt email body on fetch failure", async () => {
+    const upstream = new Response("{}", { status: 503 });
+    proxyBackendRequest.mockResolvedValue(upstream);
+    const request = new Request(`https://app.example.test/api/v1/growth/campaign/send-receipt`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+
+    const response = await POST(request);
+
+    expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/campaign/send-receipt");
+    expect(response.status).toBe(503);
+    expect(response).toBe(upstream);
+  });
 });

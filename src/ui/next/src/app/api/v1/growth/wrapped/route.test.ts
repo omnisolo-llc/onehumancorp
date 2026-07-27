@@ -35,4 +35,24 @@ describe("GET /api/v1/growth/wrapped", () => {
     });
     expect(response).toBe(upstream);
   });
+
+  it("fails closed with the backend error status instead of a mock analytics fallback on fetch failure", async () => {
+    const upstream = new Response(JSON.stringify({ error: "backend unavailable" }), {
+      status: 503,
+      headers: { "content-type": "application/json" },
+    });
+    proxyBackendRequest.mockResolvedValue(upstream);
+
+    const req = new Request("http://localhost/api/v1/growth/wrapped", {
+      method: "GET",
+    });
+
+    const response = await GET(req);
+
+    expect(proxyBackendRequest).toHaveBeenCalledWith(req, "/api/v1/growth/wrapped", {
+      suppressRequestBody: true,
+    });
+    expect(response.status).toBe(503);
+    expect(response).toBe(upstream);
+  });
 });
