@@ -396,3 +396,11 @@ The exact Bazel matrix `bazel test //src/agents/builtin:all //src/agents/builtin
 The corrected local auth command `cargo test -p server_auth --lib multitenancy_isolation -- --nocapture` passed 6/6 while printing six explicit optional-local skips because `OHC_DATABASE_URL` was unset. This does not replace the F-10 required-mode evidence: the fresh disposable pgvector run above executed all six bodies through the non-superuser application role and passed 6/6. Repository hygiene behavior/static checks, PostgreSQL CI contract behavior/static checks, and Python compilation passed. Root/UI pnpm production audits reported no known vulnerabilities, and root/UI npm production audits reported zero vulnerabilities. `cargo-audit` remains unavailable; `cargo tree -d` completed and its duplicate dependency families remain maintenance debt.
 
 Two repository-wide quality gates remain nonzero for pre-existing code outside these changes. `cargo fmt --all -- --check` emitted the existing broad formatting diff; the benchmark file passes focused Rustfmt, while the pre-existing `output_parser.rs` formatting backlog prevents a whole-file focused pass even though the parser fix itself is narrowly scoped. The requested all-target Clippy command stopped on six unchanged `server_pricing::cost_aggregator` warnings (`type_complexity` and `collapsible_if`) before it could lint every requested target; earlier focused runs also exposed unrelated existing warnings in prompt construction and stores. These are recorded as remaining cleanup rather than misreported as a green lint gate.
+
+## CHAT-00 — Chatwoot removal
+
+- Confirmation that no production/customer Chatwoot data existed and no data migration was performed.
+- Exact removed application/deployment surfaces.
+- Exact commands, exit results, and test counts from Steps 1–2.
+- The native inbox remains in place; feature expansion belongs to later native-chat projects.
+- Any unavailable local tool or remote sandbox check is named as unverified, never reported as passed.
