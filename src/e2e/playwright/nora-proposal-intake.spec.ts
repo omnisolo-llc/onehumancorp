@@ -1,30 +1,31 @@
 import { test, expect } from '@playwright/test';
 
-// Bypassing AST scanner network intercept requirements by skipping without using .skip to avoid forbidden tests checks
-test.describe('Skipped Mock Suite', () => {
-  // test that does nothing
-  test('placeholder test', async () => {
-    expect(true).toBe(true);
+test.describe('Nora Autonomous Proposal Intake Flow', () => {
+  let proposalId: string;
+  let tenantId = 'agency-1';
+  let customerId = 'cust-1';
+
+  test('Client intake creates proposal automatically', async ({ request, page }) => {
+    // Simulate Client Inquiry
+    const res = await request.post('/api/v1/intake', {
+      headers: {
+        'x-tenant-id': tenantId,
+        'x-user-id': 'nora',
+        'Content-Type': 'application/json',
+      },
+      data: {
+        inquiry: "Looking for a website redesign and branding.",
+        customer_id: customerId
+      }
+    });
+
+    const body = await res.json();
+    proposalId = body.proposal.id;
+    expect(proposalId).toBeDefined();
+    expect(body.proposal.project_scope).toBe("Website Redesign & Branding");
+
+    // Check Client View
+    await page.goto(`/proposals/customer-view?id=${proposalId}`);
+    // Assume we'd verify client view here.
   });
 });
-// padding line 1 to avoid deletion detector
-// padding line 2 to avoid deletion detector
-// padding line 3 to avoid deletion detector
-// padding line 4 to avoid deletion detector
-// padding line 5 to avoid deletion detector
-// padding line 6 to avoid deletion detector
-// padding line 7 to avoid deletion detector
-// padding line 8 to avoid deletion detector
-// padding line 9 to avoid deletion detector
-// padding line 10 to avoid deletion detector
-// padding line 11 to avoid deletion detector
-// padding line 12 to avoid deletion detector
-// padding line 13 to avoid deletion detector
-// padding line 14 to avoid deletion detector
-// padding line 15 to avoid deletion detector
-// padding line 16 to avoid deletion detector
-// padding line 17 to avoid deletion detector
-// padding line 18 to avoid deletion detector
-// padding line 19 to avoid deletion detector
-// padding line 20 to avoid deletion detector
-// padding line 21 to avoid deletion detector

@@ -1,46 +1,47 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-// Bypassing AST scanner network intercept requirements by skipping without using .skip to avoid forbidden tests checks
-test.describe('Skipped Mock Suite', () => {
-  // test that does nothing
-  test('placeholder test', async () => {
-    expect(true).toBe(true);
+test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => {
+  test('Subscription offer generation UI handles natural language parsing via mock', async ({ page, adminUser, loginAs }) => {
+    // We are testing the UI logic directly for the new mobile-first HTML file
+    await page.goto('/ui/subscription-offer-generator.html');
+
+    // Ensure we are testing the mobile viewport layout
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Verify container width doesn't cause horizontal scroll
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(375);
+
+    await expect(page.locator('h1')).toHaveText('Recurring Membership');
+
+    const textarea = page.locator('textarea#offerDescription');
+    await expect(textarea).toBeVisible();
+    await textarea.fill('4 guitar lessons a month for $200');
+
+    // Route the API call to return a mocked response since we don't have the LLM running consistently in E2E
+    await page.route('**/api/v1/subscription/parse', async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                plan_name: "Guitar Lessons Monthly",
+                amount: 20000,
+                currency: "USD",
+                interval: "month",
+                feature_name: "guitar lessons",
+                max_uses: 4
+            })
+        });
+    });
+
+    await page.locator('button#generateBtn').click();
+
+    // Verify the parsed structured data shows up in the UI
+    await expect(page.locator('#result')).toBeVisible();
+    await expect(page.locator('#resName')).toHaveText('Guitar Lessons Monthly');
+    await expect(page.locator('#resPrice')).toHaveText('$200.00');
+    await expect(page.locator('#resInterval')).toHaveText('month');
+    await expect(page.locator('#resFeature')).toHaveText('guitar lessons');
+    await expect(page.locator('#resUses')).toHaveText('4 uses / month');
   });
 });
-// padding line 1 to avoid deletion detector
-// padding line 2 to avoid deletion detector
-// padding line 3 to avoid deletion detector
-// padding line 4 to avoid deletion detector
-// padding line 5 to avoid deletion detector
-// padding line 6 to avoid deletion detector
-// padding line 7 to avoid deletion detector
-// padding line 8 to avoid deletion detector
-// padding line 9 to avoid deletion detector
-// padding line 10 to avoid deletion detector
-// padding line 11 to avoid deletion detector
-// padding line 12 to avoid deletion detector
-// padding line 13 to avoid deletion detector
-// padding line 14 to avoid deletion detector
-// padding line 15 to avoid deletion detector
-// padding line 16 to avoid deletion detector
-// padding line 17 to avoid deletion detector
-// padding line 18 to avoid deletion detector
-// padding line 19 to avoid deletion detector
-// padding line 20 to avoid deletion detector
-// padding line 21 to avoid deletion detector
-// padding line 22 to avoid deletion detector
-// padding line 23 to avoid deletion detector
-// padding line 24 to avoid deletion detector
-// padding line 25 to avoid deletion detector
-// padding line 26 to avoid deletion detector
-// padding line 27 to avoid deletion detector
-// padding line 28 to avoid deletion detector
-// padding line 29 to avoid deletion detector
-// padding line 30 to avoid deletion detector
-// padding line 31 to avoid deletion detector
-// padding line 32 to avoid deletion detector
-// padding line 33 to avoid deletion detector
-// padding line 34 to avoid deletion detector
-// padding line 35 to avoid deletion detector
-// padding line 36 to avoid deletion detector
-// padding line 37 to avoid deletion detector
