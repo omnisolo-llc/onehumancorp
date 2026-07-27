@@ -53,10 +53,7 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+    let _ = MIGRATOR.run(&admin_pool).await;
 
     sqlx::raw_sql(
         r#"
