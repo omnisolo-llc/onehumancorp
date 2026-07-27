@@ -3,7 +3,11 @@ use std::time::Duration;
 use tokio::sync::OnceCell;
 
 static POSTGRES_SETUP: OnceCell<Result<(), String>> = OnceCell::const_new();
-static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../migrations");
+    if let Err(e) = MIGRATOR.run(&admin_pool).await {
+        if !e.to_string().contains("duplicate key value violates unique constraint \"_sqlx_migrations_pkey\"") {
+            return Err(format!("run src/server/migrations: {e}"));
+        }
+    }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PostgresTestDecision {
@@ -53,10 +57,14 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
+    if let Err(e) = MIGRATOR.run(&admin_pool).await {
+        if !e.to_string().contains("duplicate key value violates unique constraint \"_sqlx_migrations_pkey\"") {
+            return Err(format!("run src/server/migrations: {e}"));
+        }
+    }
         .run(&admin_pool)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        ;
 
     sqlx::raw_sql(
         r#"
