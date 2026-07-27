@@ -5,18 +5,12 @@ edition = "2024"
 build = "build.rs"
 
 [lib]
-name = "server_ohc"
 path = "mod.rs"
 
 [dependencies]
 prost = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
+serde = { workspace = true }
 tonic = { workspace = true }
-chrono = { workspace = true }
-uuid = { version = "1.8.0", features = ["v4", "serde"] }
-sqlx = { version = "0.8", features = ["postgres", "chrono", "uuid", "macros"] }
-axum = { version = "0.8.1", features = ["ws"] }
-serde_json = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"
