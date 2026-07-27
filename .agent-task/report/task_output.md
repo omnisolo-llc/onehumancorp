@@ -1,17 +1,17 @@
 issue_title: "Native Rust Omnichannel Chat: Architecture & Design"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) recently retired Chatwoot as an external third-party service, adopting a mandate to build a high-performance, native Rust omnichannel customer support and chat engine. Currently, OHC lacks the foundational database models, gRPC definitions, and business logic to replicate Chatwoot's core entities (Inboxes, Channels, Conversations, Messages, and Contacts) required to support our target owner/operator personas (Maya the Baker, Carlos the Handyman) who rely on unified messaging across Instagram, WhatsApp, SMS, and Email.
+  OneHumanCorp (OHC) recently retired an external third-party chat service, adopting a mandate to build a high-performance, native Rust omnichannel customer support and chat engine. Currently, OHC lacks the foundational database models, gRPC definitions, and business logic to replicate the external tool's core entities (Inboxes, Channels, Conversations, Messages, and Contacts) required to support our target owner/operator personas (Maya the Baker, Carlos the Handyman) who rely on unified messaging across Instagram, WhatsApp, SMS, and Email.
 
   ## Research Report
-  Based on an audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) and OHC's mandate, we need to design a system that supports:
+  Based on an audit of the external open-source omnichannel codebase and OHC's mandate, we need to design a system that supports:
   - **Inboxes**: The central collection point for conversations, associated with a specific channel.
-  - **Channels**: The underlying medium (Web Widget, Email, API, WhatsApp, Instagram, SMS). In Chatwoot, these are polymorphic associations to the Inbox.
+  - **Channels**: The underlying medium (Web Widget, Email, API, WhatsApp, Instagram, SMS). In the legacy platform, these are polymorphic associations to the Inbox.
   - **Conversations**: A thread of messages between a contact and the tenant (agents/bots).
   - **Messages**: Individual text/media payloads within a conversation.
   - **Contacts**: The end-user communicating with the tenant.
 
-  Chatwoot relies heavily on ActiveRecord's polymorphic associations for channels (e.g., `Channel::WebWidget`, `Channel::Whatsapp`). In Rust/PostgreSQL, we will implement this using concrete foreign keys or a single `Channel` table with a `type` enum and JSONB configuration, ensuring strict row-level security (`tenant_id`).
+  The legacy app relies heavily on ActiveRecord's polymorphic associations for channels. In Rust/PostgreSQL, we will implement this using concrete foreign keys or a single `Channel` table with a `type` enum and JSONB configuration, ensuring strict row-level security (`tenant_id`).
 
   ## Design Doc
 
@@ -42,7 +42,7 @@ issue_description: |
 
   ## Implementation Prompt
   **To the Implementer Agent:**
-  Your task is to implement the foundational database schema and gRPC API layer for OHC's native omnichannel chat system, replacing Chatwoot.
+  Your task is to implement the foundational database schema and gRPC API layer for OHC's native omnichannel chat system, replacing the legacy external service.
 
   1. **Database Schema**: Create SQL migrations (using SeaORM or the existing DB migration tool) to define the following tables with strict `tenant_id` Row-Level Security (RLS):
      - `contacts`, `channels`, `inboxes`, `conversations`, `messages`.
