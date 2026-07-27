@@ -8,6 +8,12 @@ pub struct ChatInbox {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub name: String,
+    pub working_hours_enabled: Option<bool>,
+    pub out_of_office_message: Option<String>,
+    pub greeting_enabled: Option<bool>,
+    pub greeting_message: Option<String>,
+    pub csat_survey_enabled: Option<bool>,
+    pub auto_assignment_config: Option<serde_json::Value>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -41,7 +47,9 @@ pub struct ChatConversation {
     pub inbox_id: Uuid,
     pub contact_id: Uuid,
     pub assignee_id: Option<Uuid>,
+    pub bot_assignee_id: Option<Uuid>,
     pub status: String,
+    pub waiting_since: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

@@ -6,11 +6,13 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
+use uuid::Uuid;
 use crate::services::inbox::service::{InboxService, UnifiedTriageAction};
 
 #[derive(Clone)]
 pub struct AppState {
     pub inbox_service: Arc<InboxService>,
+    pub pool: PgPool,
 }
 
 #[derive(Deserialize)]
@@ -19,14 +21,24 @@ pub struct ResolveActionRequest {
     pub resolution: String, // "approved", "rejected", "edited"
 }
 
+#[derive(Deserialize)]
+pub struct UpdateInboxConfigRequest {
+    pub working_hours_enabled: Option<bool>,
+    pub out_of_office_message: Option<String>,
+    pub greeting_enabled: Option<bool>,
+    pub greeting_message: Option<String>,
+}
+
 pub fn router(pool: PgPool) -> Router {
     let state = AppState {
-        inbox_service: Arc::new(InboxService::new(pool)),
+        inbox_service: Arc::new(InboxService::new(pool.clone())),
+        pool,
     };
 
     Router::new()
         .route("/api/v1/inbox/:tenant_id/actions", get(get_pending_actions))
         .route("/api/v1/inbox/:tenant_id/actions/:action_id/resolve", post(resolve_action))
+        .route("/api/v1/inbox/:tenant_id/inboxes/:inbox_id/config", post(update_inbox_config))
         .with_state(state)
 }
 
@@ -55,6 +67,36 @@ async fn resolve_action(
         Ok(_) => Ok(axum::http::StatusCode::OK),
         Err(e) => {
             tracing::error!("Failed to resolve triage action: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn update_inbox_config(
+    State(state): State<AppState>,
+    Path((tenant_id, inbox_id)): Path<(String, String)>,
+    Json(payload): Json<UpdateInboxConfigRequest>,
+) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let tenant_uuid = match Uuid::parse_str(&tenant_id) {
+        Ok(uuid) => uuid,
+        Err(_) => return Err(axum::http::StatusCode::BAD_REQUEST),
+    };
+    let inbox_uuid = match Uuid::parse_str(&inbox_id) {
+        Ok(uuid) => uuid,
+        Err(_) => return Err(axum::http::StatusCode::BAD_REQUEST),
+    };
+    let chat_service = crate::services::chat::service::ChatService::new(state.pool);
+    match chat_service.update_inbox_config(
+        tenant_uuid,
+        inbox_uuid,
+        payload.working_hours_enabled,
+        payload.out_of_office_message,
+        payload.greeting_enabled,
+        payload.greeting_message,
+    ).await {
+        Ok(_) => Ok(axum::http::StatusCode::OK),
+        Err(e) => {
+            tracing::error!("Failed to update inbox config: {}", e);
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
