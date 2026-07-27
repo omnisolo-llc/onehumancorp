@@ -58,10 +58,3 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_messages_tenant_isolation_policy ON chat_messages FOR ALL USING (tenant_id = current_setting('app.current_tenant', true));
-
--- +goose Down
-DROP TABLE IF EXISTS chat_messages CASCADE;
-DROP TABLE IF EXISTS chat_conversations CASCADE;
-DROP TABLE IF EXISTS chat_contacts CASCADE;
-DROP TABLE IF EXISTS chat_channels CASCADE;
-DROP TABLE IF EXISTS chat_inboxes CASCADE;
