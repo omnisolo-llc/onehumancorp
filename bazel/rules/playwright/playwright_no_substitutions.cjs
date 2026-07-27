@@ -274,7 +274,7 @@ function scanMarkers(filenames) {
       const initializer = declarationInitializer(symbol);
       if (initializer?.binding) {
         const property = initializer.binding.propertyName || initializer.binding.name;
-        const name = evaluateString(property) || property.getText().replace(/^['"]|['"]$/g, "");
+        const name = property ? (evaluateString(property) || property.getText().replace(/^['"]|['"]$/g, "")) : undefined;
         return classifyMarkerMember(initializer.receiver, name);
       }
       return initializer ? classifyMarkerReference(initializer, seen) : undefined;
@@ -506,7 +506,7 @@ function scanFiles(filenames) {
       const initializer = declarationInitializer(symbol);
       if (initializer?.binding) {
         const property = initializer.binding.propertyName || initializer.binding.name;
-        const name = evaluateString(property) || property.getText().replace(/^['"]|['"]$/g, "");
+        const name = property ? (evaluateString(property) || property.getText().replace(/^['"]|['"]$/g, "")) : undefined;
         return classifyMember(initializer.receiver, name);
       }
       if (initializer) return classifyMethodReference(initializer, seen);
@@ -632,7 +632,7 @@ function scanFiles(filenames) {
     if (initializer?.iteration) return initializer.receiver;
     if (!initializer?.binding) return initializer;
     const property = initializer.binding.propertyName || initializer.binding.name;
-    const name = evaluateString(property) || property.getText().replace(/^['"]|['"]$/g, "");
+    const name = property ? (evaluateString(property) || property.getText().replace(/^['"]|['"]$/g, "")) : undefined;
     return propertyValue(initializer.receiver, name);
   }
 
@@ -1007,7 +1007,7 @@ function scanFiles(filenames) {
       const initializer = declarationInitializer(symbol);
       if (initializer?.binding) {
         const property = initializer.binding.propertyName || initializer.binding.name;
-        const name = evaluateString(property) || property.getText().replace(/^['"]|['"]$/g, "");
+        const name = property ? (evaluateString(property) || property.getText().replace(/^['"]|['"]$/g, "")) : undefined;
         return name === "setItem"
           && isAmbientBrowserStorage(
             initializer.receiver,
