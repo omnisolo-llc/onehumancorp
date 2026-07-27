@@ -33,6 +33,7 @@ impl ChatService {
     pub async fn add_message(&self, tenant_id: &str, conversation_id: Uuid, content: &str, sender_type: &str, sender_id: Option<String>) -> Result<ChatMessage, sqlx::Error> {
         self.repo.add_message(tenant_id, conversation_id, content, sender_type, sender_id).await
     }
+
 }
 
 #[cfg(test)]
