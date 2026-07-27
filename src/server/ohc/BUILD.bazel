@@ -18,6 +18,7 @@ rust_library(
         "//src/proto:collective_tonic",
         "//src/proto:common_prost",
         "//src/proto:hub_tonic",
+        "//src/proto:inbox_tonic",
         "//src/proto:interop_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",

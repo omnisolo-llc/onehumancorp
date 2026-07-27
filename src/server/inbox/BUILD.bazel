@@ -1,0 +1,13 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_inbox",
+    srcs = ["mod.rs", "service.rs"],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/ohc:server_ohc",
+        "@crates//:tonic",
+    ],
+)

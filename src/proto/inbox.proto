@@ -4,45 +4,195 @@ package ohc.inbox;
 
 option go_package = "github.com/onehumancorp/mono/src/proto/ohc/inbox;inboxpb";
 
-message OmniMessage {
-    string id = 1;
-    string tenant_id = 2;
-    string source = 3;
-    string original_content = 4;
-    string translated_content = 5;
-    string source_language = 6;
-    string target_language = 7;
-    string draft_reply = 8;
-    string status = 9;
-    string sender_id = 10;
-    string customer_id = 11;
-    int64 created_at_unix = 12;
-    int64 updated_at_unix = 13;
+enum ConversationStatus {
+  CONVERSATION_STATUS_UNSPECIFIED = 0;
+  CONVERSATION_STATUS_OPEN = 1;
+  CONVERSATION_STATUS_SNOOZED = 2;
+  CONVERSATION_STATUS_RESOLVED = 3;
+}
+
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_INCOMING = 1;
+  MESSAGE_TYPE_OUTGOING = 2;
+  MESSAGE_TYPE_NOTE = 3;
+  MESSAGE_TYPE_TEMPLATE = 4;
+}
+
+enum SenderType {
+  SENDER_TYPE_UNSPECIFIED = 0;
+  SENDER_TYPE_CONTACT = 1;
+  SENDER_TYPE_AGENT = 2;
+  SENDER_TYPE_BOT = 3;
+}
+
+message Inbox {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string channel_type = 4;
+  string config_json = 5;
+  int64 created_at_unix = 6;
+  int64 updated_at_unix = 7;
+}
+
+message Contact {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string email = 4;
+  string phone = 5;
+  string avatar_url = 6;
+  int64 created_at_unix = 7;
+  int64 updated_at_unix = 8;
 }
 
 message Conversation {
-    string id = 1;
-    string tenant_id = 2;
-    string customer_id = 3;
-    string channel = 4;
-    string status = 5;
-    int64 created_at_unix = 6;
-    int64 updated_at_unix = 7;
+  string id = 1;
+  string tenant_id = 2;
+  string inbox_id = 3;
+  string contact_id = 4;
+  ConversationStatus status = 5;
+  string assignee_id = 6;
+  int64 created_at_unix = 7;
+  int64 updated_at_unix = 8;
 }
 
-message FetchConversationsRequest {
-    string tenant_id = 1;
+message OmniMessage {
+  string id = 1;
+  string tenant_id = 2;
+  string conversation_id = 3;
+  string content = 4;
+  MessageType message_type = 5;
+  SenderType sender_type = 6;
+  string sender_id = 7;
+  string channel_source_id = 8;
+  string draft_reply = 9;
+  int64 created_at_unix = 10;
+  int64 updated_at_unix = 11;
 }
 
-message FetchConversationsResponse {
-    repeated Conversation conversations = 1;
+message CreateInboxRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string channel_type = 3;
+  string config_json = 4;
 }
 
-message FetchMessagesRequest {
-    string tenant_id = 1;
-    string conversation_id = 2;
+message CreateInboxResponse {
+  Inbox inbox = 1;
 }
 
-message FetchMessagesResponse {
-    repeated OmniMessage messages = 1;
+message GetInboxRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetInboxResponse {
+  Inbox inbox = 1;
+}
+
+message ListInboxesRequest {
+  string tenant_id = 1;
+}
+
+message ListInboxesResponse {
+  repeated Inbox inboxes = 1;
+}
+
+message CreateContactRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string email = 3;
+  string phone = 4;
+  string avatar_url = 5;
+}
+
+message CreateContactResponse {
+  Contact contact = 1;
+}
+
+message GetContactRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetContactResponse {
+  Contact contact = 1;
+}
+
+message ListContactsRequest {
+  string tenant_id = 1;
+}
+
+message ListContactsResponse {
+  repeated Contact contacts = 1;
+}
+
+message CreateConversationRequest {
+  string tenant_id = 1;
+  string inbox_id = 2;
+  string contact_id = 3;
+}
+
+message CreateConversationResponse {
+  Conversation conversation = 1;
+}
+
+message GetConversationRequest {
+  string id = 1;
+  string tenant_id = 2;
+}
+
+message GetConversationResponse {
+  Conversation conversation = 1;
+}
+
+message ListConversationsRequest {
+  string tenant_id = 1;
+  string inbox_id = 2;
+}
+
+message ListConversationsResponse {
+  repeated Conversation conversations = 1;
+}
+
+message CreateMessageRequest {
+  string tenant_id = 1;
+  string conversation_id = 2;
+  string content = 3;
+  MessageType message_type = 4;
+  SenderType sender_type = 5;
+  string sender_id = 6;
+  string channel_source_id = 7;
+}
+
+message CreateMessageResponse {
+  OmniMessage message = 1;
+}
+
+message ListMessagesRequest {
+  string tenant_id = 1;
+  string conversation_id = 2;
+}
+
+message ListMessagesResponse {
+  repeated OmniMessage messages = 1;
+}
+
+service InboxService {
+  rpc CreateInbox(CreateInboxRequest) returns (CreateInboxResponse);
+  rpc GetInbox(GetInboxRequest) returns (GetInboxResponse);
+  rpc ListInboxes(ListInboxesRequest) returns (ListInboxesResponse);
+
+  rpc CreateContact(CreateContactRequest) returns (CreateContactResponse);
+  rpc GetContact(GetContactRequest) returns (GetContactResponse);
+  rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
+
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+  rpc GetConversation(GetConversationRequest) returns (GetConversationResponse);
+  rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+
+  rpc CreateMessage(CreateMessageRequest) returns (CreateMessageResponse);
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
 }
