@@ -144,7 +144,7 @@ function InnerInboxPage() {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    // We would connect to our native Rust backend websocket instead of Chatwoot
+    // We would connect to our native Rust backend websocket instead of the legacy system
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/api/chat/ws`;
 
