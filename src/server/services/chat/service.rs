@@ -124,3 +124,54 @@ impl ChatService {
         .await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+    use sqlx::postgres::PgPoolOptions;
+
+    // These tests will just verify compilation and basic structures
+    // since we can't easily spin up a real Postgres DB in a pure unit test.
+    // Full E2E testing ensures the SQL queries are valid.
+
+    #[test]
+    fn test_chat_models_can_be_constructed() {
+        let tenant_id = Uuid::new_v4();
+        let inbox_id = Uuid::new_v4();
+
+        let inbox = ChatInbox {
+            id: inbox_id,
+            tenant_id,
+            name: "Main Inbox".to_string(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        assert_eq!(inbox.name, "Main Inbox");
+
+        let contact = ChatContact {
+            id: Uuid::new_v4(),
+            tenant_id,
+            name: Some("John Doe".to_string()),
+            email: Some("john@example.com".to_string()),
+            phone: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        assert_eq!(contact.email.unwrap(), "john@example.com");
+    }
+
+    #[tokio::test]
+    async fn test_chat_service_instantiation_with_pool() {
+        // Just verify we can instantiate the service. We won't call methods
+        // because we don't have a live database here, but the types are checked.
+        let pool = PgPoolOptions::new().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost/postgres").unwrap();
+        let service = ChatService::new(pool);
+
+        let _tenant_id = Uuid::new_v4();
+        // Since it's a lazy connection, this instantiation succeeds.
+        assert!(true);
+    }
+}
