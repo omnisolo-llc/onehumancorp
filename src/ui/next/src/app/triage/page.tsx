@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { WithTooltip } from "../../components/TooltipRegistry";
 import { SyncManager } from "../../lib/sync/SyncManager";
 import { getActions } from "../utils/offlineQueue";
 
@@ -318,17 +319,19 @@ export default function TriagePage() {
                       <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
                         {item.action_type ? (
                           <>
-                            <button
-                              disabled={isProcessing}
-                              className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
-                              data-testid={`triage-review-btn-${item.id}`}
-                              onClick={() => {
-                                setEditingId(item.id);
-                                setEditValue(item.action_payload || "");
-                              }}
-                            >
-                              Review Draft
-                            </button>
+                            <WithTooltip id="triage-review-btn-tooltip" defaultText="Review the AI-generated draft before sending.">
+                              <button
+                                disabled={isProcessing}
+                                className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
+                                data-testid={`triage-review-btn-${item.id}`}
+                                onClick={() => {
+                                  setEditingId(item.id);
+                                  setEditValue(item.action_payload || "");
+                                }}
+                              >
+                                Review Draft
+                              </button>
+                            </WithTooltip>
                             <button
                               disabled={isProcessing}
                               className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 border border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-black/50 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center disabled:opacity-50 shadow-sm"
