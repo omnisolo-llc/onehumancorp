@@ -7,7 +7,7 @@ export const test = base.extend({
   }
 });
 
-test.describe('Omnichannel Chatwoot Parity CUJ', () => {
+test.describe('Omnichannel Chat Parity CUJ', () => {
   test('CUJ: Verify Inbox config, conversation threads, and AI Drafts', async ({ page }) => {
     await page.goto('/omni-chat');
 
