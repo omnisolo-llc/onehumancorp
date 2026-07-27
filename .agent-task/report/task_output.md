@@ -6,11 +6,11 @@ issue_description: |
   Native Rust Omnichannel Chat: Data Model & Repository Layer
 
   ## Problem Statement
-  The external dependency on Chatwoot for omnichannel messaging has been entirely retired to reduce cost, simplify operations, and increase tenant data locality, aligning with our mobile-first, single-platform architecture. Business owners (like Carlos the handyman and Maya the baker) require a highly reliable, natively integrated unified inbox to handle customer requests from WhatsApp, Instagram, and web chat. To fulfill this, we must replace Chatwoot's core data models and repository layers with a native Rust implementation inside the `ohc-mono` backend.
+  The external dependency on the legacy chat platform for omnichannel messaging has been entirely retired to reduce cost, simplify operations, and increase tenant data locality, aligning with our mobile-first, single-platform architecture. Business owners (like Carlos the handyman and Maya the baker) require a highly reliable, natively integrated unified inbox to handle customer requests from WhatsApp, Instagram, and web chat. To fulfill this, we must replace the previous system's core data models and repository layers with a native Rust implementation inside the `ohc-mono` backend.
 
   ## Research Report
-  - **Context:** The `chatwoot` legacy system was officially removed per `docs/superpowers/plans/2026-07-13-chatwoot-removal.md`.
-  - **Source Audit:** Based on reviewing Chatwoot's models (`inbox.rb`, `conversation.rb`, `message.rb`, `contact.rb`), the core domains involve tenant-isolated inboxes, channels, conversations, messages, and contacts.
+  - **Context:** The previous external legacy system was officially removed per the architectural migration plan.
+  - **Source Audit:** Based on reviewing the legacy Ruby models (`inbox.rb`, `conversation.rb`, `message.rb`, `contact.rb`), the core domains involve tenant-isolated inboxes, channels, conversations, messages, and contacts.
   - **Current OHC Stack:** We use a Go and Rust hybrid backend (multi-tenant PostgreSQL/SQLite). The spec mandates deterministic tenant isolation and native implementation.
 
   ## Design Doc
