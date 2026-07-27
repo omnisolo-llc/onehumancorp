@@ -1928,14 +1928,6 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
-                    CREATE TABLE IF NOT EXISTS agent_draft (
-                        id TEXT PRIMARY KEY,
-                        work_item_id TEXT NOT NULL,
-                        response TEXT NOT NULL,
-                        status TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    );
 
                     CREATE TABLE IF NOT EXISTS applied_client_mutations (
                         client_mutation_id TEXT PRIMARY KEY,
@@ -3018,16 +3010,6 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
-                    CREATE TABLE IF NOT EXISTS work_item (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        customer_id TEXT NOT NULL,
-                        source TEXT NOT NULL,
-                        payload TEXT,
-                        status TEXT NOT NULL,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    );
 
                     CREATE TABLE IF NOT EXISTS work_tasks (
                         id TEXT PRIMARY KEY ,

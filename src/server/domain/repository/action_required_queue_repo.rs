@@ -32,19 +32,19 @@ impl ActionRequiredQueueRepo {
         let records = sqlx::query_as::<_, ActionRequiredDraft>(
             r#"
             SELECT
-                d.id as draft_id,
-                w.id as work_item_id,
-                w.tenant_id,
-                p.id as customer_id,
+                d.id::uuid as draft_id,
+                w.id::uuid as work_item_id,
+                w.tenant_id::uuid,
+                p.id::uuid as customer_id,
                 p.name as customer_name,
-                w.source,
-                d.response,
+                w.channel as source,
+                d.action_payload as response,
                 d.status,
                 d.created_at
-            FROM agent_draft d
-            JOIN work_item w ON d.work_item_id = w.id
-            JOIN customer_profile p ON w.customer_id = p.id AND p.tenant_id = w.tenant_id
-            WHERE w.tenant_id = $1 AND d.status = 'DRAFT'
+            FROM unified_triage_actions d
+            JOIN unified_threads w ON d.thread_id = w.id
+            LEFT JOIN chat_contacts p ON w.customer_id = p.id AND p.tenant_id = w.tenant_id
+            WHERE w.tenant_id = $1::text AND d.status = 'pending' AND d.action_type = 'DraftReply'
             ORDER BY d.created_at ASC
             "#
         )
@@ -63,15 +63,15 @@ impl ActionRequiredQueueRepo {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let result = sqlx::query(
             r#"
-            UPDATE agent_draft
-            SET status = 'APPROVED', updated_at = NOW()
-            WHERE id = $1 AND work_item_id IN (
-                SELECT id FROM work_item WHERE tenant_id = $2
+            UPDATE unified_triage_actions
+            SET status = 'approved', updated_at = NOW()
+            WHERE id = $1::text AND thread_id IN (
+                SELECT id FROM unified_threads WHERE tenant_id = $2::text
             )
             "#
         )
-        .bind(draft_id)
-        .bind(tenant_id)
+        .bind(draft_id.to_string())
+        .bind(tenant_id.to_string())
         .execute(&mut *tx)
         .await?;
         tx.commit().await?;
@@ -84,16 +84,16 @@ impl ActionRequiredQueueRepo {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let result = sqlx::query(
             r#"
-            UPDATE agent_draft
-            SET response = $1, updated_at = NOW()
-            WHERE id = $2 AND work_item_id IN (
-                SELECT id FROM work_item WHERE tenant_id = $3
+            UPDATE unified_triage_actions
+            SET action_payload = $1, updated_at = NOW()
+            WHERE id = $2::text AND thread_id IN (
+                SELECT id FROM unified_threads WHERE tenant_id = $3::text
             )
             "#
         )
         .bind(new_response)
-        .bind(draft_id)
-        .bind(tenant_id)
+        .bind(draft_id.to_string())
+        .bind(tenant_id.to_string())
         .execute(&mut *tx)
         .await?;
         tx.commit().await?;
