@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package ohc.nativechat;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/nativechat;nativechatpb";
+
+message Contact {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string email = 4;
+    string phone_number = 5;
+    string avatar_url = 6;
+    string custom_attributes = 7;
+}
+
+message Inbox {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string channel_type = 4;
+    string channel_id = 5;
+    string avatar_url = 6;
+    string settings = 7;
+}
+
+message Conversation {
+    string id = 1;
+    string tenant_id = 2;
+    string inbox_id = 3;
+    string contact_id = 4;
+    string assignee_id = 5;
+    string status = 6;
+    string custom_attributes = 7;
+}
+
+message Message {
+    string id = 1;
+    string tenant_id = 2;
+    string conversation_id = 3;
+    string sender_type = 4;
+    string sender_id = 5;
+    string content = 6;
+    string message_type = 7;
+    string content_type = 8;
+    string status = 9;
+    string metadata = 10;
+}
+
+message CreateContactRequest {
+    string name = 1;
+    string email = 2;
+    string phone_number = 3;
+    string avatar_url = 4;
+    string custom_attributes = 5;
+}
+
+message CreateContactResponse {
+    Contact contact = 1;
+}
+
+message CreateInboxRequest {
+    string name = 1;
+    string channel_type = 2;
+    string channel_id = 3;
+    string avatar_url = 4;
+    string settings = 5;
+}
+
+message CreateInboxResponse {
+    Inbox inbox = 1;
+}
+
+message CreateConversationRequest {
+    string inbox_id = 1;
+    string contact_id = 2;
+    string assignee_id = 3;
+    string status = 4;
+    string custom_attributes = 5;
+}
+
+message CreateConversationResponse {
+    Conversation conversation = 1;
+}
+
+message SendMessageRequest {
+    string conversation_id = 1;
+    string sender_type = 2;
+    string sender_id = 3;
+    string content = 4;
+    string message_type = 5;
+    string content_type = 6;
+    string status = 7;
+    string metadata = 8;
+}
+
+message SendMessageResponse {
+    Message message = 1;
+}
+
+service NativeChatService {
+    rpc CreateContact(CreateContactRequest) returns (CreateContactResponse);
+    rpc CreateInbox(CreateInboxRequest) returns (CreateInboxResponse);
+    rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+}
