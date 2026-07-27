@@ -56,6 +56,10 @@ message Conversation {
   string assignee_id = 6;
   int64 created_at_unix = 7;
   int64 updated_at_unix = 8;
+
+  string customer_id = 9; // legacy
+  string channel = 10; // legacy
+  string status_str = 11; // legacy
 }
 
 message OmniMessage {
@@ -70,6 +74,14 @@ message OmniMessage {
   string draft_reply = 9;
   int64 created_at_unix = 10;
   int64 updated_at_unix = 11;
+
+  string source = 12; // legacy
+  string original_content = 13; // legacy
+  string translated_content = 14; // legacy
+  string source_language = 15; // legacy
+  string target_language = 16; // legacy
+  string status = 17; // legacy
+  string customer_id = 18; // legacy
 }
 
 message CreateInboxRequest {
@@ -180,6 +192,23 @@ message ListMessagesResponse {
   repeated OmniMessage messages = 1;
 }
 
+message FetchConversationsRequest {
+    string tenant_id = 1;
+}
+
+message FetchConversationsResponse {
+    repeated Conversation conversations = 1;
+}
+
+message FetchMessagesRequest {
+    string tenant_id = 1;
+    string conversation_id = 2;
+}
+
+message FetchMessagesResponse {
+    repeated OmniMessage messages = 1;
+}
+
 service InboxService {
   rpc CreateInbox(CreateInboxRequest) returns (CreateInboxResponse);
   rpc GetInbox(GetInboxRequest) returns (GetInboxResponse);
@@ -195,4 +224,7 @@ service InboxService {
 
   rpc CreateMessage(CreateMessageRequest) returns (CreateMessageResponse);
   rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
+
+  rpc FetchConversations(FetchConversationsRequest) returns (FetchConversationsResponse);
+  rpc FetchMessages(FetchMessagesRequest) returns (FetchMessagesResponse);
 }

@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use crate::ohc::inbox::inbox_service_server::InboxService;
-use crate::ohc::inbox::{
+use server_ohc::ohc::inbox::inbox_service_server::InboxService;
+use server_ohc::ohc::inbox::{
     CreateInboxRequest, CreateInboxResponse, GetInboxRequest, GetInboxResponse,
     ListInboxesRequest, ListInboxesResponse, CreateContactRequest,
     CreateContactResponse, GetContactRequest, GetContactResponse,
@@ -8,6 +8,8 @@ use crate::ohc::inbox::{
     CreateConversationResponse, GetConversationRequest, GetConversationResponse,
     ListConversationsRequest, ListConversationsResponse, CreateMessageRequest,
     CreateMessageResponse, ListMessagesRequest, ListMessagesResponse,
+    FetchConversationsRequest, FetchConversationsResponse,
+    FetchMessagesRequest, FetchMessagesResponse,
 };
 
 #[derive(Default)]
@@ -90,5 +92,41 @@ impl InboxService for InboxServiceImplementation {
         _request: Request<ListMessagesRequest>,
     ) -> Result<Response<ListMessagesResponse>, Status> {
         Err(Status::unimplemented("Not yet implemented"))
+    }
+
+    async fn fetch_conversations(
+        &self,
+        _request: Request<FetchConversationsRequest>,
+    ) -> Result<Response<FetchConversationsResponse>, Status> {
+        Err(Status::unimplemented("Not yet implemented"))
+    }
+
+    async fn fetch_messages(
+        &self,
+        _request: Request<FetchMessagesRequest>,
+    ) -> Result<Response<FetchMessagesResponse>, Status> {
+        Err(Status::unimplemented("Not yet implemented"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+    use server_ohc::ohc::inbox::inbox_service_server::InboxService;
+
+    #[tokio::test]
+    async fn test_create_inbox() {
+        let service = InboxServiceImplementation::default();
+        let request = Request::new(server_ohc::ohc::inbox::CreateInboxRequest {
+            tenant_id: "test".to_string(),
+            name: "test".to_string(),
+            channel_type: "test".to_string(),
+            config_json: "test".to_string(),
+        });
+
+        let result = service.create_inbox(request).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::Unimplemented);
     }
 }

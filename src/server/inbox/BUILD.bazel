@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_inbox",
@@ -9,5 +9,13 @@ rust_library(
     deps = [
         "//src/server/ohc:server_ohc",
         "@crates//:tonic",
+    ],
+)
+
+rust_test(
+    name = "test",
+    crate = ":server_inbox",
+    deps = [
+        "@crates//:tokio",
     ],
 )
