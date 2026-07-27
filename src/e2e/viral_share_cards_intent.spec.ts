@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Social Share Cards Direct Intents - Owner Journey', () => {
     test('owner navigates from dashboard to share cards, configures, and verifies social share buttons', async ({ page }) => {
         // Assume test runner handles login and initial navigation if necessary.
-        // We will directly test the page route for unit verification in UI
+        // We will directly test the product route for unit verification in UI
         await page.goto('/share-cards');
 
         // Verify the copy link button is present

@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Invisible Offline-to-Online QR Commerce Bridge', () => {
     test('merchant can generate a contextual QR code for an imported product', async ({ page }) => {
         // Assume test runner handles login and initial navigation via fixtures if necessary.
-        // We will directly test the products page route.
+        // We will directly test the products product route.
         await page.goto('/products');
 
         // Verify the page title
