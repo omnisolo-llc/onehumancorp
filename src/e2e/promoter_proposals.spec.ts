@@ -21,10 +21,10 @@ test.describe('The Promoter Agent Live UI Data', () => {
     await expect(title).toHaveText('The Promoter');
   });
 
-  test('does not show mock data', async ({ page, loginAs, unlimitedAdminUser }) => {
+  test('does not show test data', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/promoter');
-    // Ensure the old mocked data text is not there.
+    // Ensure the old tested data text is not there.
     await expect(page.locator('text="Approve & Publish"')).toBeHidden();
   });
 

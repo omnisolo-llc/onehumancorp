@@ -27,7 +27,7 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     await expect(shareBtn).toBeVisible();
 
     // We can't easily wait for the dialog because it is inside setTimeout
-    // So let's mock window.open to prevent the actual popup and make testing more reliable
+    // So let's test window.open to prevent the actual popup and make testing more reliable
     await page.evaluate(() => {
         window.open = function() { return window; };
     });

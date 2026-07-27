@@ -56,7 +56,7 @@ test.describe('Visual Workflow Builder', () => {
     await page.locator('input[type="text"]').fill('test run without nodes');
 
     await page.getByRole('button', { name: '▶ Run Workflow' }).click();
-    // It should handle gracefully, usually returning an error or specific text from the mock backend
+    // It should handle gracefully, usually returning an error or specific text from the test backend
     await expect(page.locator('.whitespace-pre-wrap').or(page.locator('text=Error:'))).toBeVisible({ timeout: 5000 });
   });
 

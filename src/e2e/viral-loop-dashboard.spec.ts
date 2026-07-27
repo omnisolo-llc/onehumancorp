@@ -58,7 +58,7 @@ test.describe('Viral Loop Dashboard Widget', () => {
         await expect(newInvitesSentLabel).toBeVisible();
         const newNumberLocator = newInvitesSentLabel.locator('..').locator('.text-3xl');
 
-        // Note: Our local mock server might not increment the actual metric unless the API route is fully implemented to do so.
+        // Note: Our local test server might not increment the actual metric unless the API route is fully implemented to do so.
         // We will just verify it renders properly for now.
         await expect(newNumberLocator).not.toBeEmpty();
     });

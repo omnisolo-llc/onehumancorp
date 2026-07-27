@@ -8,7 +8,7 @@ test.describe('Work-Intake Widget Viral Loop', () => {
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Work-Intake Widget 📋' })).toBeVisible();
 
-    // 2. Click the remove branding checkbox (Note: it is a fake checkbox that opens a modal, so use .click())
+    // 2. Click the remove branding checkbox (Note: it is a test checkbox that opens a modal, so use .click())
     const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OHC" branding');
     await removeBrandingCheckbox.click();
 
@@ -17,7 +17,7 @@ test.describe('Work-Intake Widget Viral Loop', () => {
     await expect(modalHeading).toBeVisible();
     await expect(page.getByText('Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.')).toBeVisible();
 
-    // 4. Mock window.open to prevent opening a new tab
+    // 4. test window.open to prevent opening a new tab
     await page.evaluate(() => {
         window.open = function() { return window; };
     });

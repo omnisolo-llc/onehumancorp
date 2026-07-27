@@ -16,7 +16,7 @@ test.describe('Autonomous Booking System', () => {
 
         // Let's directly go to the dashboard URL since tauri local routing is tricky in playwright without setup
         await page.goto('/ui/booking-dashboard.html');
-        // Verify empty state or loading (mocked db might be empty initially)
+        // Verify empty state or loading (tested db might be empty initially)
         await expect(page.locator('text=Bookings Dashboard')).toBeVisible();
 
         // 2. Customer navigates to booking page

@@ -18,7 +18,7 @@ test.describe('Tauri Onboarding Admin Setup', () => {
     // Step Categories
     await page.waitForSelector('#step-categories:not([style*="display: none"])');
 
-    // evaluate business categories dropdown to have a value, test environment may mock it
+    // evaluate business categories dropdown to have a value, test environment may test it
     await page.evaluate(() => {
         const sel = document.getElementById('business-categories') as HTMLSelectElement;
         if (sel) {

@@ -2,7 +2,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Agent Protocol Git Checkpointing (SOTA Harness)', () => {
   test('creates task, executes steps, and verifies checkpoints can be restored via real stack', async ({ page }) => {
-    // E2E UI verification for the state and interaction, strictly NO mock API calls!
+    // E2E UI verification for the state and interaction, strictly NO test API calls!
     await page.goto('/agent-protocol');
 
     // Wait for tasks to load

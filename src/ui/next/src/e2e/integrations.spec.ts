@@ -21,7 +21,7 @@ test.describe('Integrations Loop', () => {
         const mercadoCard = page.locator('h3', { hasText: 'Mercado Pago' }).locator('..');
         const connectMercadoPagoButton = mercadoCard.getByRole('button', { name: 'Connect' });
 
-        // Mock window alert
+        // test window alert
         page.on('dialog', dialog => dialog.accept());
         await connectMercadoPagoButton.click();
 

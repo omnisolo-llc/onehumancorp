@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('CFOAgentCard Integration', () => {
   test('should load safe-to-spend data correctly on the dashboard', async ({ page }) => {
     // Navigate to the dashboard. The stack (frontend and backend) should be running,
-    // so we should not mock anything here and rely on the actual response.
+    // so we should not test anything here and rely on the actual response.
     // Explicitly add baseURL from environment or hardcode to 8080 if not set,
     // as it seems Playwright baseURL is somehow not picked up in this standalone test.
     const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:8080';

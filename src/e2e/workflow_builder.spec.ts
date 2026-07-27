@@ -43,7 +43,7 @@ test.describe('Visual Workflow Builder', () => {
     // Expect some result text from the real backend execution
     // wait for it to stop saying "Compiling graph & running workflow..."
     await expect(resultEl).not.toContainText('Compiling graph & running workflow...', { timeout: 15000 });
-    // Expect either Result: or Error: depending on backend response, but not an empty mock
+    // Expect either Result: or Error: depending on backend response, but not an empty test
     await expect(resultEl).not.toBeEmpty();
 
     // Verify the payload contains the graph nodes

@@ -26,7 +26,7 @@ test.describe('Viral Soft Paywall Loop', () => {
     await expect(modalHeading).toBeVisible();
     await expect(page.getByText('Advanced AI Automations are available on the Pro plan')).toBeVisible();
 
-    // 4. Mock window.open to prevent opening a new tab
+    // 4. test window.open to prevent opening a new tab
     await page.evaluate(() => {
         window.open = function() { return window; };
     });

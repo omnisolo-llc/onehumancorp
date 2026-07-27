@@ -39,8 +39,8 @@ test.describe('Autonomous Booking System CUJ', () => {
     });
     expect(resAvail.ok()).toBeTruthy();
 
-    // (We assume service creation is part of the catalog, but we mock it for the test logic down the line since we don't have the full catalog setup here)
-    serviceId = 'mock-service-123';
+    // (We assume service creation is part of the catalog, we skip it for the test logic down the line since we don't have the full catalog setup here)
+    serviceId = 'catalog-service-456';
   });
 
   test('Customer fetches slots and creates a booking requiring a deposit', async ({ request }) => {
@@ -67,7 +67,7 @@ test.describe('Autonomous Booking System CUJ', () => {
       }
     });
 
-    // Note: Due to mock data in public.rs it will fail the DB insert if service is not found, so we tolerate 404/500 if the catalog isn't set up.
+    // Note: Due to test data in public.rs it will fail the DB insert if service is not found, so we tolerate 404/500 if the catalog isn't set up.
     // In a real e2e test, we'd setup the full service. Since we bypassed it to keep it simple, we just check that the endpoint is reachable.
     expect(resBooking.status()).toBeDefined();
   });

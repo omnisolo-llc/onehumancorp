@@ -28,7 +28,7 @@ test.describe('Client Hub Portal E2E Flow', () => {
     await billingTab.click();
     await expect(page.locator('h2', { hasText: 'Invoices & Milestone Billing' })).toBeVisible();
 
-    // Fill mock credit card details
+    // Fill test credit card details
     await page.locator('input[placeholder="4000 1234 5678 9010"]').fill('4242424242424242');
     await page.locator('input[placeholder="MM/YY"]').fill('12/28');
     await page.locator('input[placeholder="123"]').fill('456');

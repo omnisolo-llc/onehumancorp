@@ -43,7 +43,7 @@ test.describe('Viral Trial Extension Loop', () => {
     await expect(poweredByLink).toBeVisible();
     await expect(poweredByLink).toHaveAttribute('href', /.*\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=trial_extension/);
 
-    // We cannot use waitForEvent('popup') because we mock window.open
+    // We cannot use waitForEvent('popup') because we test window.open
     await page.evaluate(() => {
       window.open = function() { return null; };
     });
@@ -89,7 +89,7 @@ test.describe('Viral Trial Extension Loop', () => {
     await expect(shareButton).toBeVisible();
     await expect(shareButton).toBeEnabled();
 
-    // Mock window.open to prevent popup
+    // test window.open to prevent popup
     await page.evaluate(() => {
       window.open = function() { return null; };
     });

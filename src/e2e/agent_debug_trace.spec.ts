@@ -11,7 +11,7 @@ test.describe('Agent Debug Trace UI', () => {
     // Assert that the page title is correct
     await expect(page.locator('text=Agent Execution Trace')).toBeVisible();
 
-    // Since we enforce ZERO mock data, and the test database might be empty for swarm_checkpoints,
+    // Since we enforce ZERO test data, and the test database might be empty for swarm_checkpoints,
     // we just assert that the page loads without crashing and successfully displays the shell.
     // If the database has records with LLM-Recoverable errors, it will render them.
     const recoverableBadge = page.locator('[data-testid="llm-recoverable-badge"]');

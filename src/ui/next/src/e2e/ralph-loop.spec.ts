@@ -16,7 +16,7 @@ test.describe('The Ralph Loop UI E2E', () => {
     const executeButton = page.getByRole('button', { name: /Start Ralph Loop/i });
     await expect(executeButton).toBeEnabled();
 
-    // In a real live service test without mocking backend, we don't necessarily want
+    // In a real live service test without testing backend, we don't necessarily want
     // the full 2-minute ralph loop to run here unless the backend handles it quickly.
     // Assuming the backend is running and responds with a success status or handled error.
 
@@ -31,7 +31,7 @@ test.describe('The Ralph Loop UI E2E', () => {
     // Wait for the request to complete
     await requestPromise;
 
-    // Depending on backend response (which we cannot mock per instructions, must be real),
+    // Depending on backend response (which we cannot test per instructions, must be real),
     // we expect either a success block or an error block.
     // If backend is down or not configured fully locally, it might show error.
     // We just verify that one of them appears.

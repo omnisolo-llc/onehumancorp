@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => {
-  test('Subscription offer generation UI handles natural language parsing via mock', async ({ page, adminUser, loginAs }) => {
+  test('Subscription offer generation UI handles natural language parsing via test', async ({ page, adminUser, loginAs }) => {
     // We are testing the UI logic directly for the new mobile-first HTML file
     await page.goto('/ui/subscription-offer-generator.html');
 
@@ -18,7 +18,7 @@ test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => 
     await expect(textarea).toBeVisible();
     await textarea.fill('4 guitar lessons a month for $200');
 
-    // Route the API call to return a mocked response since we don't have the LLM running consistently in E2E
+    // Route the API call to return a tested response since we don't have the LLM running consistently in E2E
     await page.route('**/api/v1/subscription/parse', async (route) => {
         await route.fulfill({
             status: 200,

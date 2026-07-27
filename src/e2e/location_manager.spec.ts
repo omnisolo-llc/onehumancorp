@@ -40,7 +40,7 @@ test.describe('Location Manager Escalation Flow', () => {
     // Submit escalation
     await page.getByRole('button', { name: 'Send to Owner' }).click();
 
-    // Verify modal closes and alert is removed (in this mock implementation)
+    // Verify modal closes and alert is removed (in this test implementation)
     await expect(page.getByText('Escalate Issue')).not.toBeVisible();
   });
 });

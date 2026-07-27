@@ -117,7 +117,7 @@ function externalHostAllowed(hostname: string) {
   return allowedExternalHosts.some((allowedHost) => hostname === allowedHost || hostname.endsWith(`.${allowedHost}`));
 }
 
-function isFakeOHCUrl(href: string) {
+function istestOHCUrl(href: string) {
   try {
     const url = new URL(href, 'http://dummy.base');
     return url.protocol === 'ohc:' || url.hostname === 'ohc.store' || url.hostname.endsWith('.ohc.store');
@@ -245,7 +245,7 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
       if (!result.href.trim()) failures.push(`${target} has no href`);
       if (result.href === '#' || result.href.startsWith('#')) failures.push(`${target} uses a placeholder hash href`);
       if (result.href.startsWith('javascript:')) failures.push(`${target} uses a javascript: href`);
-      if (isFakeOHCUrl(result.href)) failures.push(`${target} uses fake OHC destination ${result.href}`);
+      if (istestOHCUrl(result.href)) failures.push(`${target} uses test OHC destination ${result.href}`);
     }
     if ((result.tag === 'button' || result.role === 'button') && /^button$/i.test(result.purpose)) {
       failures.push(`${target} exposes only a generic button purpose`);
@@ -458,8 +458,8 @@ test.describe('comprehensive UI contract', () => {
           failures.push(`${target} uses a javascript: href`);
           continue;
         }
-        if (isFakeOHCUrl(link.href)) {
-          failures.push(`${target} uses fake OHC destination ${link.href}`);
+        if (istestOHCUrl(link.href)) {
+          failures.push(`${target} uses test OHC destination ${link.href}`);
           continue;
         }
         if (link.href.startsWith('mailto:') || link.href.startsWith('tel:')) {

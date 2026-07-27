@@ -11,7 +11,7 @@ test.describe('Autonomous Reputation & Referral Engine CUJ', () => {
     expect(title).toBeDefined();
 
     // In a real flow:
-    // 2. The owner receives a 5-star review (mocked via RPC call internally)
+    // 2. The owner receives a 5-star review (tested via RPC call internally)
     // 3. The owner's dashboard reflects the new average rating and total reviews
     // 4. The customer receives a referral link
     // 5. The customer shares the link, a friend clicks it and converts

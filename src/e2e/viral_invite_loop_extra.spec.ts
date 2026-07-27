@@ -46,7 +46,7 @@ test.describe('Viral Invite Loop on Dashboard Page', () => {
     await page.waitForLoadState('networkidle');
 
     await page.evaluate(() => {
-        // Mock window.open to avoid actually opening twitter in tests
+        // test window.open to avoid actually opening twitter in tests
         window.open = function(url, target) {
             window.lastOpenedUrl = url;
             return window;

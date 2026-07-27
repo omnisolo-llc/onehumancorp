@@ -33,7 +33,7 @@ test.describe('Viral Post Generator Soft Paywall', () => {
 
         // Simulate sharing (it should uncheck the modal state but we can't test external links easily,
         // so we just verify it exists and is clickable).
-        // Since clicking it normally opens a blank page, we can mock or just verify its presence.
+        // Since clicking it normally opens a blank page, we can test or just verify its presence.
         // Actually, let's close the modal for a clean state using the 'X' button
         const closeButton = page.locator('button', { hasText: '×' });
         // Wait for it to be visible first

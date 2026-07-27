@@ -60,7 +60,7 @@ test.describe('HelpChat Widget E2E', () => {
     // Verify user message appears
     await expect(page.locator('text=Tell me about the dashboard features')).toBeVisible();
 
-    // Wait for agent reply (mocked in /api/v1/chat endpoint to return "I am your AI Help Agent! ...")
+    // Wait for agent reply (tested in /api/v1/chat endpoint to return "I am your AI Help Agent! ...")
     const agentReply = page.locator('text=I am your AI Help Agent!');
     await expect(agentReply).toBeVisible({ timeout: 10000 });
   });

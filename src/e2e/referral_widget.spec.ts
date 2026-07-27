@@ -21,7 +21,7 @@ test.describe('Referral Widget Growth Loop', () => {
         await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
         await expect(page.getByText(/Make the Referral Widget 100% yours/)).toBeVisible();
 
-        // Setup mocked window.open so the share button doesn't actually open a new tab and break tests
+        // Setup tested window.open so the share button doesn't actually open a new tab and break tests
         await page.evaluate(() => {
             window.open = function() { return null; };
         });

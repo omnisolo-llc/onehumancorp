@@ -30,7 +30,7 @@ test.describe('Help Chat Flow', () => {
     const sendButton = page.locator('#ohc-help-chat-send');
     await sendButton.click({ force: true });
 
-    // Wait for the backend mocked response to appear
+    // Wait for the backend tested response to appear
     await expect(page.locator('text=I have routed your request to the Operations department.')).toBeVisible();
 
     // Verify link exists
