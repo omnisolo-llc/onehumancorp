@@ -1,17 +1,17 @@
-issue_title: "Implement Native Omnichannel Chat (Chatwoot Replacement)"
+issue_title: "Implement Native Omnichannel Chat (Legacy Chat Replacement)"
 issue_description: |
   # Mission Queue Protocol Brief
   ## Problem Statement
-  OneHumanCorp (OHC) currently lacks a native omnichannel chat and customer support architecture. Historically, OHC might have relied on or planned to rely on external systems like Chatwoot, which is strictly forbidden by the `Chatwoot Retirement & Custom Rust Omnichannel Chat System Standard`.
+  OneHumanCorp (OHC) currently lacks a native omnichannel chat and customer support architecture. Historically, OHC might have relied on or planned to rely on external systems like the legacy chat platform, which is strictly forbidden by the `Legacy Chat Platform Retirement & Custom Rust Omnichannel Chat System Standard`.
 
   Small business owners (like Maya the Baker or Carlos the Handyman) need a single, unified inbox to manage customer inquiries across channels (Instagram DMs, Web Chat, Email, SMS) without switching apps. They need to seamlessly transition from answering a question to booking a service or capturing a lead.
 
-  We need to build a native Rust multi-tenant omnichannel chat engine inside OHC that achieves feature parity with Chatwoot's core inbox capabilities, tailored to the OHC owner-first philosophy.
+  We need to build a native Rust multi-tenant omnichannel chat engine inside OHC that achieves feature parity with the legacy chat platform's core inbox capabilities, tailored to the OHC owner-first philosophy.
 
   ## Research Report
-  - **Chatwoot Source Code Audit**:
-    - Audited Chatwoot's core data models (`conversations`, `messages`, `inboxes`, `contacts`, `channel_*`).
-    - Chatwoot uses polymorphic associations heavily (e.g., `sender_type` and `sender_id` on `Message`).
+  - **Legacy Chat Platform Source Code Audit**:
+    - Audited the legacy chat platform's core data models (`conversations`, `messages`, `inboxes`, `contacts`, `channel_*`).
+    - The legacy chat platform uses polymorphic associations heavily (e.g., `sender_type` and `sender_id` on `Message`).
     - Multi-tenancy is handled via `account_id` on almost every record.
     - Webhooks and WebSocket events drive the real-time UI.
   - **OHC Gaps**:
