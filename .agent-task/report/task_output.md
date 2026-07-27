@@ -87,7 +87,7 @@ issue_description: "# OHC Owner Work Assistant: Competitive Deep Dive & Agentic 
   \    OHC[OHC: Agentic Assistant] --> Traditional[Traditional Tools];\n    OHC -->\
   \ AINative[AI-Native Rivals];\n\n    Traditional --> Shopify[Shopify: Sidekick];\n\
   \    Traditional --> Squarespace[Squarespace: Guided];\n    Traditional --> HubSpot[HubSpot:\
-  \ Breeze];\n    Traditional --> Chatwoot[Chat woot: Omnichannel];\n\n    AINative\
+  \ Breeze];\n    Traditional --> Chat woot[Chat woot: Omnichannel];\n\n    AINative\
   \ --> Durable[Durable: 30s Site];\n    AINative --> Lindy[Lindy: Executive EA];\n\
   \    AINative --> 11x[11x: Alice Sales];\n\n    OHCGap((OHC Gap: Native Rust Inbox\
   \ & Proactive Ops));\n    OHC --> OHCGap;\n```\n\n### Feature Gap Heatmap\n| Capability\
@@ -121,7 +121,7 @@ issue_description: "# OHC Owner Work Assistant: Competitive Deep Dive & Agentic 
   42. https://www.hubspot.com/spotlight\n43. https://www.hubspot.com/new\n44. https://www.wix.com/blog/how-does-ai-work\n\
   45. https://www.wix.com/blog/best-ai-website-builder\n46. https://durable.com/ai-website-builder\n\
   47. https://durable.com/blog/durable-vs-squarespace\n48. https://www.lindy.ai/integrations\n\
-  49. https://www.lindy.ai/security\n50. https://skyvern.com/healthcare\n51. https://github.com/chatwoot/chatwoot\n\
+  49. https://www.lindy.ai/security\n50. https://skyvern.com/healthcare\n51. https://github.com/chat woot/chat woot\n\
   52. https://copilot.microsoft.com/\n53. https://work.weixin.qq.com/\n54. https://dingtalk.com/\n\
   55. https://larksuite.com/\n"
 issue_priority: P0
