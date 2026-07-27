@@ -27,6 +27,10 @@ impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
         if path.contains("..") {
             return Err(ToolError::LlmRecoverable("head: path traversal via '..' is not allowed".to_string()));
         }
+        let p = std::path::Path::new(&path);
+        if p.is_absolute() {
+            return Err(ToolError::LlmRecoverable("head: absolute paths are not allowed".to_string()));
+        }
 
         let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
@@ -125,6 +129,19 @@ mod tests {
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("path traversal"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_head_absolute_path() {
+        let tool = head_tool(None);
+        let args = json!({ "path": "/etc/passwd" });
+        let result = tool.execute.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("absolute paths"));
         } else {
             panic!("Expected LlmRecoverable error");
         }
