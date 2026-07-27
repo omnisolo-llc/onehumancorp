@@ -391,7 +391,12 @@ function InboxWorkspace({
 
           <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
             <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
-              <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
+
+  <div className="flex items-center gap-4">
+    <button onClick={() => setSelected(null)} className="md:hidden text-[#0066FF] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-lg">← Back</button>
+    <div className="app-panel-title font-bold text-gray-900 dark:text-white tracking-wide" style={{ fontFamily: 'Outfit, sans-serif' }}>Conversation Detail</div>
+  </div>
+
             </div>
             {!selected ? (
               <div className="app-empty p-8 text-center text-gray-500">Select a database-backed message to inspect it.</div>
@@ -523,6 +528,54 @@ function InboxWorkspace({
           </section>
         </div>
       </div>
+
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#16161a] border border-white/20 rounded-[16px] p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold mb-4 tracking-wide" style={{ fontFamily: 'Outfit, sans-serif' }}>Inbox Settings</h2>
+
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={workingHoursEnabled}
+                  onChange={(e) => setWorkingHoursEnabled(e.target.checked)}
+                  className="rounded text-[#0066FF] focus:ring-[#0066FF]"
+                />
+                <span className="font-medium text-gray-900 dark:text-white">Enable Working Hours</span>
+              </label>
+            </div>
+
+            <div className="mb-6">
+              <label className="block font-medium text-gray-900 dark:text-white mb-2">Out of Office Message</label>
+              <textarea
+                value={outOfOfficeMessage}
+                onChange={(e) => setOutOfOfficeMessage(e.target.value)}
+                className="w-full rounded-[8px] border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
+                rows={3}
+                placeholder="We are currently closed..."
+                disabled={!workingHoursEnabled}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveSettings}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-[#0066FF] text-white hover:bg-blue-600 shadow-lg"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </AppShell>
   );
 }
