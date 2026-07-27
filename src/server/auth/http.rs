@@ -401,7 +401,7 @@ async fn generate_api_key(
         .bind(uuid::Uuid::parse_str(&key_id).unwrap_or_default())
         .bind(&key_hash)
         .bind(&payload.name)
-        .bind(member_id)
+        .bind(member_id.to_string())
         .bind(&organization_id)
         .execute(&pool)
         .await;
@@ -447,7 +447,7 @@ async fn list_api_keys(
         let query_res = sqlx::query(
             "SELECT id, name, created_at, expires_at FROM api_keys WHERE member_id = $1 AND organization_id = $2"
         )
-        .bind(member_id)
+        .bind(member_id.to_string())
         .bind(&organization_id)
         .fetch_all(&pool)
         .await;
@@ -518,7 +518,7 @@ async fn revoke_api_key(
             "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND organization_id = $3"
         )
         .bind(key_uuid)
-        .bind(member_id)
+        .bind(member_id.to_string())
         .bind(&organization_id)
         .execute(&pool)
         .await;
