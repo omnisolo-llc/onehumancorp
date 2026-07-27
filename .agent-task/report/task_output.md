@@ -1,12 +1,12 @@
-issue_title: "Architectural Design: Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Architectural Design: Native Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  OHC currently relies on external Chatwoot for omnichannel customer support. Chatwoot as an external third-party service is being 100% RETIRED. We need to implement our own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `onehumancorp/mono`. This new system must handle multi-tenant isolation, real-time WebSockets, agent routing, and channel adapters (Instagram, WhatsApp, Email, Web Widget) to serve our primary non-technical owner personas like Maya and Carlos directly from their mobile devices.
+  OHC currently relies on external Chat system for omnichannel customer support. We need to implement our own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `onehumancorp/mono`. This new system must handle multi-tenant isolation, real-time WebSockets, agent routing, and channel adapters (Instagram, WhatsApp, Email, Web Widget) to serve our primary non-technical owner personas like Maya and Carlos directly from their mobile devices.
 
   ## Research Report
-  Based on an audit of the Chatwoot source code (https://github.com/chatwoot/chatwoot) and competitor tools (Zendesk, Intercom, WeCom):
-  - **Data Models**: Chatwoot relies on `Accounts` (Tenants), `Inboxes`, `Conversations`, `Messages`, `Contacts`, and `Channel` models (e.g., `Channel::WebWidget`, `Channel::Email`, `Channel::Whatsapp`).
-  - **Controllers & Channels**: They use ActionCable for real-time WebSocket messaging. Events like `message.created` and `conversation.updated` are pushed down to clients.
+  Based on an audit of the source code and competitor tools:
+  - **Data Models**: Relies on `Accounts` (Tenants), `Inboxes`, `Conversations`, `Messages`, `Contacts`, and `Channel` models.
+  - **Controllers & Channels**: Use ActionCable for real-time WebSocket messaging. Events like `message.created` and `conversation.updated` are pushed down to clients.
   - **Agent Routing & SLA**: Round-robin assignment, SLA policies, and macros are used to automate replies.
   - **AI Integration**: AI agents must be able to hook into `message.created` events to auto-draft replies based on context.
 
@@ -44,7 +44,7 @@ issue_description: |
   3. Create the WebSocket server using `axum` that accepts connections and can broadcast `message.created` events.
   4. Ensure all database writes are protected by `tenant_id` and test for cross-tenant data leakage.
   5. Provide a basic Flutter frontend component (375px width optimized) that connects to this WebSocket and displays a placeholder inbox.
-  6. **Acceptance Criteria**: A user (like Maya) can open the mobile view, see a hardcoded or newly created conversation, send a message, and see it echoed back via WebSocket without any external Chatwoot dependencies.
+  6. **Acceptance Criteria**: A user (like Maya) can open the mobile view, see a hardcoded or newly created conversation, send a message, and see it echoed back via WebSocket without any external dependencies.
 
   ## Priority
   P0
