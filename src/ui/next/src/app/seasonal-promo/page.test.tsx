@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import SeasonalPromoPage from './page';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 
 vi.mock('next/navigation', () => {
     return {
@@ -22,12 +24,12 @@ describe('SeasonalPromoPage', () => {
   });
 
   it('renders the page correctly', () => {
-    render(<SeasonalPromoPage />);
+    act(() => { render(<SeasonalPromoPage />); });
     expect(screen.getByText('Seasonal Promotion Generator ✨')).toBeInTheDocument();
   });
 
   it('renders the PoweredByOHC component', () => {
-    render(<SeasonalPromoPage />);
+    act(() => { render(<SeasonalPromoPage />); });
     expect(screen.getByTestId('powered-by-ohc')).toBeInTheDocument();
   });
 });

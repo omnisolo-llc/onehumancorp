@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-function source(relativePath: string): string {
+function source(relativePath: string): string { relativePath = relativePath.replace(/^src\//, 'src/ui/next/src/');
   return readFileSync(join(process.cwd(), relativePath), "utf8");
 }
 

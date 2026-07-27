@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import DeerFlowOrchestrationPage from "./page";
 import { vi, describe, it, expect } from "vitest";

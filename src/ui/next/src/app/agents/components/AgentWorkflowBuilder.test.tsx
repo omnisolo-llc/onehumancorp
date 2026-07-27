@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { AgentWorkflowBuilder } from './AgentWorkflowBuilder';
 
 test('renders builder and allows adding/removing blocks', async () => {

@@ -1,3 +1,5 @@
+import { act } from "react";
+import "@testing-library/jest-dom/vitest";
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import InvoiceGeneratorPage from './page';
@@ -35,7 +37,7 @@ describe('InvoiceGeneratorPage', () => {
     });
 
     it('renders the Invoice Generator form correctly', () => {
-        render(<InvoiceGeneratorPage />);
+        act(() => { render(<InvoiceGeneratorPage />); });
         expect(screen.getByText('Create Professional Invoice')).toBeInTheDocument();
         expect(screen.getByLabelText(/Client Name/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Project Details/i)).toBeInTheDocument();
@@ -46,7 +48,7 @@ describe('InvoiceGeneratorPage', () => {
     it('validates form inputs before generating link', () => {
         // Mock alert
         const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {});
-        render(<InvoiceGeneratorPage />);
+        act(() => { render(<InvoiceGeneratorPage />); });
 
         fireEvent.click(screen.getByRole('button', { name: /Generate Shareable Invoice/i }));
         expect(alertMock).toHaveBeenCalledWith('Please fill out all fields.');

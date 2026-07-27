@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CartRecoveryPage from './page';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { act } from 'react';
 
 // Mock Next.js router
 vi.mock('next/navigation', () => ({
@@ -26,14 +27,14 @@ describe('CartRecoveryPage', () => {
     });
 
     it('renders the Cart Recovery page correctly', async () => {
-        render(<CartRecoveryPage />);
+        act(() => { render(<CartRecoveryPage />); });
         expect(screen.getByText('Recover Abandoned Carts')).toBeInTheDocument();
         expect(screen.getByText('Generate AI Campaign')).toBeInTheDocument();
     });
 
     it('toggles auto recovery', () => {
-        const { container } = render(<CartRecoveryPage />);
-        const toggleBtn = container.querySelector('#auto-recovery-toggle') as HTMLButtonElement;
+        act(() => { render(<CartRecoveryPage />); });
+        const toggleBtn = document.getElementById('auto-recovery-toggle')!;
         fireEvent.click(toggleBtn);
         // Add more specific expectations as needed
     });

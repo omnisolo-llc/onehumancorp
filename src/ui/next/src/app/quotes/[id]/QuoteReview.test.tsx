@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import QuoteReviewPage from './page';
 import { useParams, useRouter } from 'next/navigation';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import { TooltipProvider } from '../../../components/TooltipRegistry';
 
 vi.mock('next/navigation', () => ({

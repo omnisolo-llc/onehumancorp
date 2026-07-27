@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import VisualWorkflowPage from "./page";
 import { vi, describe, it, expect } from "vitest";
+import "@testing-library/jest-dom/vitest";
 
 // Mock the walkthrough context
 vi.mock("../../components/help", () => ({

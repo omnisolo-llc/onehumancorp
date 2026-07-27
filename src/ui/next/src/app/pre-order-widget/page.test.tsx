@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import PreOrderWidgetPage from './page';
 
 vi.mock('next/navigation', () => ({
@@ -16,7 +18,7 @@ describe('PreOrderWidgetPage', () => {
   });
 
   it('shows soft paywall when checkbox is checked without pro and includes viral loop option', () => {
-    render(<PreOrderWidgetPage />);
+    act(() => { render(<PreOrderWidgetPage />); });
 
     // Click checkbox
     const checkbox = screen.getByLabelText('Remove "Powered by OHC" branding');
@@ -33,7 +35,7 @@ describe('PreOrderWidgetPage', () => {
   });
 
   it('updates embed code and preview based on branding toggle', () => {
-    render(<PreOrderWidgetPage />);
+    act(() => { render(<PreOrderWidgetPage />); });
 
     // Initially, branding should be present
     expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
@@ -47,7 +49,7 @@ describe('PreOrderWidgetPage', () => {
   });
 
   it('renders the configuration form correctly', () => {
-    render(<PreOrderWidgetPage />);
+    act(() => { render(<PreOrderWidgetPage />); });
     expect(screen.getByText('Pre-Order Waitlist Engine')).toBeInTheDocument();
     expect(screen.getByText('Product Name')).toBeInTheDocument();
     expect(screen.getByText('Special Offer (Optional)')).toBeInTheDocument();
@@ -55,7 +57,7 @@ describe('PreOrderWidgetPage', () => {
   });
 
   it('updates the live preview when form is filled', () => {
-    render(<PreOrderWidgetPage />);
+    act(() => { render(<PreOrderWidgetPage />); });
     const nameInput = screen.getByPlaceholderText('e.g. The Vegan Chocolate Cake');
     fireEvent.change(nameInput, { target: { value: 'Limited Sneakers' } });
 
@@ -64,7 +66,7 @@ describe('PreOrderWidgetPage', () => {
   });
 
   it('shows the embed modal when button is clicked', () => {
-    render(<PreOrderWidgetPage />);
+    act(() => { render(<PreOrderWidgetPage />); });
 
     // Check that modal is not initially visible
     expect(screen.queryByText('Embed Your Waitlist')).not.toBeInTheDocument();

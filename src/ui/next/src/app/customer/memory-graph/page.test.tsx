@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { act } from 'react';
 import CustomerMemoryGraph from './page';
 
 // Mock the next/navigation hooks
@@ -9,14 +10,14 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock the PoweredByOHC component since we're focused on CustomerMemoryGraph
-vi.mock('@/app/components/PoweredByOHC', () => ({
+vi.mock('../../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
 }));
 
 describe('CustomerMemoryGraph Component', () => {
   it('renders loading state initially', () => {
-    render(<CustomerMemoryGraph />);
-    expect(screen.getByText('Loading customer history...')).toBeInTheDocument();
+    act(() => { render(<CustomerMemoryGraph />); });
+    expect(screen.getByText('Loading customer history...')).toBeDefined();
   });
 
   it('renders error state on fetch failure', async () => {
@@ -24,10 +25,10 @@ describe('CustomerMemoryGraph Component', () => {
       ok: false,
     });
 
-    render(<CustomerMemoryGraph />);
+    act(() => { render(<CustomerMemoryGraph />); });
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to fetch customer history.')).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch customer history.')).toBeDefined();
     });
   });
 
@@ -56,29 +57,29 @@ describe('CustomerMemoryGraph Component', () => {
       json: () => Promise.resolve(mockData),
     });
 
-    render(<CustomerMemoryGraph />);
+    act(() => { render(<CustomerMemoryGraph />); });
 
     await waitFor(() => {
       // Check for main headers
-      expect(screen.getByText('Customer Context')).toBeInTheDocument();
-      expect(screen.getByText('Timeline')).toBeInTheDocument();
+      expect(screen.getByText('Customer Context')).toBeDefined();
+      expect(screen.getByText('Timeline')).toBeDefined();
 
       // Check for AI insights segments
-      expect(screen.getByText('VIP')).toBeInTheDocument();
-      expect(screen.getByText('Frequent Buyer')).toBeInTheDocument();
-      expect(screen.getByText('2 total interactions recorded.')).toBeInTheDocument();
+      expect(screen.getByText('VIP')).toBeDefined();
+      expect(screen.getByText('Frequent Buyer')).toBeDefined();
+      expect(screen.getByText('2 total interactions recorded.')).toBeDefined();
 
       // Check for specific events
-      expect(screen.getByText('Bought in store: Summer Dress')).toBeInTheDocument();
-      expect(screen.getByText('Sent DM: Do you have vegan cakes?')).toBeInTheDocument();
+      expect(screen.getByText('Bought in store: Summer Dress')).toBeDefined();
+      expect(screen.getByText('Sent DM: Do you have vegan cakes?')).toBeDefined();
 
       // Check for channels
-      expect(screen.getByText('pos')).toBeInTheDocument();
-      expect(screen.getByText('instagram')).toBeInTheDocument();
+      expect(screen.getByText('pos')).toBeDefined();
+      expect(screen.getByText('instagram')).toBeDefined();
 
       // Check for action buttons
-      expect(screen.getByText('Draft Reply')).toBeInTheDocument();
-      expect(screen.getByText('Issue Refund')).toBeInTheDocument();
+      expect(screen.getByText('Draft Reply')).toBeDefined();
+      expect(screen.getByText('Issue Refund')).toBeDefined();
     });
   });
 
@@ -94,10 +95,10 @@ describe('CustomerMemoryGraph Component', () => {
       json: () => Promise.resolve(mockData),
     });
 
-    render(<CustomerMemoryGraph />);
+    act(() => { render(<CustomerMemoryGraph />); });
 
     await waitFor(() => {
-      expect(screen.getByText('No interaction history found.')).toBeInTheDocument();
+      expect(screen.getByText('No interaction history found.')).toBeDefined();
     });
   });
 });

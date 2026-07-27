@@ -1,5 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import StoreWrapPage from './page';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -17,7 +19,7 @@ describe('StoreWrapPage', () => {
     });
     global.fetch = fetchMock;
 
-    render(<StoreWrapPage />);
+    act(() => { render(<StoreWrapPage />); });
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/v1/ui/dashboard/metrics'));
     expect(fetchMock).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ method: 'POST' }));

@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { getPowerSyncDB } from './db';
 import { isPowerSyncSupportedForLocation, PowerSyncProvider } from './PowerSyncProvider';
 
@@ -62,16 +63,16 @@ test('keeps local content when the background connection rejects', async () => {
     </PowerSyncProvider>,
   );
 
-  expect(screen.getByText('Stable loading state')).toBeInTheDocument();
-  await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
+  expect(screen.getByText('Stable loading state')).toBeDefined();
+  await waitFor(() => expect(screen.getByText('Inbox content')).toBeDefined());
 
   await act(async () => {
     rejectConnection(new Error('token=credential-bearing-secret'));
     await Promise.resolve();
   });
 
-  expect(screen.getByText('Inbox content')).toBeInTheDocument();
-  expect(screen.queryByText('API fallback')).not.toBeInTheDocument();
+  expect(screen.getByText('Inbox content')).toBeDefined();
+  expect(screen.queryByText('API fallback')).toBeNull();
   expect(consoleWarn).toHaveBeenCalledOnce();
   expect(consoleWarn).toHaveBeenCalledWith('PowerSync background sync connection failed; local data remains available.');
   expect(consoleError).not.toHaveBeenCalled();
@@ -127,7 +128,7 @@ test('keeps the cached database usable after a connection failure and remount', 
       <div>Inbox content</div>
     </PowerSyncProvider>,
   );
-  await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('Inbox content')).toBeDefined());
   await act(async () => {
     await Promise.resolve();
     await Promise.resolve();
@@ -140,7 +141,7 @@ test('keeps the cached database usable after a connection failure and remount', 
     </PowerSyncProvider>,
   );
 
-  await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('Inbox content')).toBeDefined());
   expect(database.disconnect).not.toHaveBeenCalled();
   expect(database.close).not.toHaveBeenCalled();
 });
@@ -161,7 +162,7 @@ test('suppresses a pending background connection rejection after unmount', async
       <div>Inbox content</div>
     </PowerSyncProvider>,
   );
-  await waitFor(() => expect(screen.getByText('Inbox content')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('Inbox content')).toBeDefined());
   unmount();
 
   await act(async () => {
@@ -195,7 +196,7 @@ test('does not dispose the cached database between successful provider mounts', 
       <div>First inbox mount</div>
     </PowerSyncProvider>,
   );
-  await waitFor(() => expect(screen.getByText('First inbox mount')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('First inbox mount')).toBeDefined());
   firstRender.unmount();
 
   render(
@@ -204,7 +205,7 @@ test('does not dispose the cached database between successful provider mounts', 
     </PowerSyncProvider>,
   );
 
-  await waitFor(() => expect(screen.getByText('Second inbox mount')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('Second inbox mount')).toBeDefined());
   expect(database.connect).toHaveBeenCalledTimes(2);
   expect(database.disconnect).not.toHaveBeenCalled();
   expect(database.close).not.toHaveBeenCalled();

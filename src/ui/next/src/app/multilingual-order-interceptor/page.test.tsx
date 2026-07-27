@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import MultilingualOrderInterceptor from './page';
 
 describe('MultilingualOrderInterceptor', () => {
@@ -9,7 +11,7 @@ describe('MultilingualOrderInterceptor', () => {
   });
 
   it('does not fabricate a voice transcript when transcription is unavailable', () => {
-    render(<MultilingualOrderInterceptor />);
+    act(() => { render(<MultilingualOrderInterceptor />); });
 
     expect(screen.getByRole('button', { name: 'Voice transcription unavailable' })).toBeDisabled();
     expect(screen.getByText('Voice transcription is unavailable. Type the order instead.')).toBeInTheDocument();
@@ -21,7 +23,7 @@ describe('MultilingualOrderInterceptor', () => {
       ok: true,
       json: async () => ({ language: 'Spanish', intent: 'Order', items: [] }),
     }));
-    render(<MultilingualOrderInterceptor />);
+    act(() => { render(<MultilingualOrderInterceptor />); });
 
     fireEvent.change(screen.getByPlaceholderText('Type order here...'), {
       target: { value: 'Dos cafés' },

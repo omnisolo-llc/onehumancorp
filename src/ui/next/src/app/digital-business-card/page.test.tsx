@@ -1,6 +1,8 @@
 /** @jsxImportSource react */
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+
 import DigitalBusinessCardGeneratorPage from './page';
 import * as navigation from 'next/navigation';
 import React from 'react';
@@ -37,7 +39,7 @@ describe('DigitalBusinessCardGeneratorPage', () => {
   });
 
   it('renders the generator page with default values', () => {
-    render(<DigitalBusinessCardGeneratorPage />);
+    act(() => { render(<DigitalBusinessCardGeneratorPage />); });
 
     // Check main title
     expect(screen.getByText('Digital Business Card Generator')).toBeInTheDocument();
@@ -50,7 +52,7 @@ describe('DigitalBusinessCardGeneratorPage', () => {
   });
 
   it('updates live preview when form is filled', () => {
-    render(<DigitalBusinessCardGeneratorPage />);
+    act(() => { render(<DigitalBusinessCardGeneratorPage />); });
 
     const nameInput = screen.getByPlaceholderText('e.g. Jane Doe');
     fireEvent.change(nameInput, { target: { value: 'John Smith' } });
@@ -59,7 +61,7 @@ describe('DigitalBusinessCardGeneratorPage', () => {
   });
 
   it('shows paywall when non-pro user tries to remove branding', () => {
-    render(<DigitalBusinessCardGeneratorPage />);
+    act(() => { render(<DigitalBusinessCardGeneratorPage />); });
 
     const brandingCheckbox = screen.getByRole('checkbox');
     fireEvent.click(brandingCheckbox);

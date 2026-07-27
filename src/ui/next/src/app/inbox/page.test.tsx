@@ -1,3 +1,8 @@
+vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ approvals: [] }) })));
+import { useRouter } from "next/navigation";
+import "@testing-library/jest-dom/vitest";
+vi.mock("next/navigation", () => ({ useRouter: vi.fn(() => ({ push: vi.fn() })) }));
+import { act } from "react";
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -24,7 +29,8 @@ beforeEach(() => {
 });
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
-  const { container } = render(<InboxPage />);
+  let container: any;
+  act(() => { const res = render(<InboxPage />); container = res.container; });
 
   expect(screen.getByText('No inbox messages found for this tenant.')).toBeInTheDocument();
   expect(screen.getByText('Select a database-backed message to inspect it.')).toBeInTheDocument();
@@ -39,7 +45,8 @@ test('renders message markup as text while preserving safe HTTPS media', () => {
     status: 'resolved',
   }];
 
-  const { container } = render(<InboxPage />);
+  let container: any;
+  act(() => { const res = render(<InboxPage />); container = res.container; });
 
   expect(screen.getByText('<script>window.compromised = true</script>')).toBeInTheDocument();
   expect(container.querySelector('script')).toBeNull();

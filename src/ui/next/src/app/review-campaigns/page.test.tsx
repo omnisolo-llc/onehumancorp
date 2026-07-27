@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import ReviewCampaignsPage from './page';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 
 vi.mock('next/navigation', () => {
     return {
@@ -20,13 +22,13 @@ describe('ReviewCampaignsPage', () => {
   });
 
   it('renders the page correctly', () => {
-    render(<ReviewCampaignsPage />);
+    act(() => { render(<ReviewCampaignsPage />); });
     expect(screen.getByText('Automated Review Campaigns ⭐️')).toBeInTheDocument();
   });
 
   it('shows an unavailable state instead of fabricating an email when generation fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503 }));
-    render(<ReviewCampaignsPage />);
+    act(() => { render(<ReviewCampaignsPage />); });
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate Email Draft' }));
 
@@ -38,7 +40,7 @@ describe('ReviewCampaignsPage', () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => ({ message: 'Backend draft' }) });
     vi.stubGlobal('fetch', fetchMock);
-    render(<ReviewCampaignsPage />);
+    act(() => { render(<ReviewCampaignsPage />); });
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate Email Draft' }));
     expect(await screen.findByText('Backend draft')).toBeInTheDocument();

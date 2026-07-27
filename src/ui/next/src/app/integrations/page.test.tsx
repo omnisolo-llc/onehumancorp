@@ -1,3 +1,5 @@
+import { act } from "react";
+import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Integrations from "./page";
@@ -30,7 +32,7 @@ describe("Integrations", () => {
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
 
-    render(<Integrations />);
+    act(() => { render(<Integrations />); });
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[0]);
 
@@ -45,7 +47,7 @@ describe("Integrations", () => {
       if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'pending' }) });
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
-    render(<Integrations />);
+    act(() => { render(<Integrations />); });
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
 
@@ -69,7 +71,7 @@ describe("Integrations", () => {
       if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'connected', usable: true }) });
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
-    render(<Integrations />);
+    act(() => { render(<Integrations />); });
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
     fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });

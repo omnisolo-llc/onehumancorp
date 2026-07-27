@@ -25,18 +25,21 @@ describe('CustomerReferralProgramPage', () => {
     Object.defineProperty(window, 'localStorage', {
       value: localStorageMock,
     });
-    render(<CustomerReferralProgramPage />);
+    let container: any;
+    act(() => { const res = render(<CustomerReferralProgramPage />); container = res.container; });
   });
 
   it('renders the configurator', () => {
-    render(<CustomerReferralProgramPage />);
+    let container: any;
+    act(() => { const res = render(<CustomerReferralProgramPage />); container = res.container; });
     expect(screen.getByText('Customer Referral Program')).toBeDefined();
     expect(screen.getByText('They Give ($ Discount)')).toBeDefined();
     expect(screen.getByText('They Get ($ Reward)')).toBeDefined();
   });
 
   it('updates give and get amounts', async () => {
-    render(<CustomerReferralProgramPage />);
+    let container: any;
+    act(() => { const res = render(<CustomerReferralProgramPage />); container = res.container; });
 
     const inputs = screen.getAllByRole('spinbutton');
     const giveInput = inputs[0];
@@ -49,7 +52,8 @@ describe('CustomerReferralProgramPage', () => {
   });
 
   it('shows the embed modal when clicking generate', async () => {
-    render(<CustomerReferralProgramPage />);
+    let container: any;
+    act(() => { const res = render(<CustomerReferralProgramPage />); container = res.container; });
 
     const generateBtn = screen.getByText('Generate Widget Embed');
 
@@ -76,7 +80,8 @@ describe('CustomerReferralProgramPage', () => {
 
 
   it('navigates back', async () => {
-    render(<CustomerReferralProgramPage />);
+    let container: any;
+    act(() => { const res = render(<CustomerReferralProgramPage />); container = res.container; });
     const backBtn = screen.getByText('Back to Dashboard');
     await act(async () => {
         fireEvent.click(backBtn);
@@ -85,13 +90,15 @@ describe('CustomerReferralProgramPage', () => {
   });
 
   it('renders Powered by OHC branding in preview by default', () => {
-    render(<CustomerReferralProgramPage />);
+    let container: any;
+    act(() => { const res = render(<CustomerReferralProgramPage />); container = res.container; });
     const brandingElements = screen.getAllByText(/Powered by OHC/i);
     expect(brandingElements.length).toBeGreaterThan(0);
   });
 
   it('shows soft paywall when attempting to remove branding without pro', async () => {
-    render(<CustomerReferralProgramPage />);
+    let container: any;
+    act(() => { const res = render(<CustomerReferralProgramPage />); container = res.container; });
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
 
@@ -106,8 +113,10 @@ describe('CustomerReferralProgramPage', () => {
   it('removes branding when pro is true and toggle is clicked', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
 
-    render(<CustomerReferralProgramPage />);
+    let container: any;
+    act(() => { const res = render(<CustomerReferralProgramPage />); container = res.container; });
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    await new Promise((r) => setTimeout(r, 0)); // wait for promise resolution to update state
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
 

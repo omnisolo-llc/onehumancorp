@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import ProjectShowcasePage from './page';
 
 vi.mock('next/navigation', () => ({
@@ -20,7 +22,7 @@ describe('ProjectShowcasePage', () => {
   });
 
   it('renders Powered by OHC branding in preview by default', () => {
-    render(<ProjectShowcasePage />);
+    act(() => { render(<ProjectShowcasePage />); });
 
     const brandingElements = screen.getAllByTestId('powered-by-ohc');
     expect(brandingElements.length).toBeGreaterThan(0);
@@ -28,7 +30,7 @@ describe('ProjectShowcasePage', () => {
   });
 
   it('shows paywall when free user tries to remove branding', () => {
-    render(<ProjectShowcasePage />);
+    act(() => { render(<ProjectShowcasePage />); });
 
     const toggle = screen.getByRole('checkbox');
     fireEvent.click(toggle);
@@ -41,7 +43,7 @@ describe('ProjectShowcasePage', () => {
 
   it('allows pro users to remove branding after the plan API confirms pro', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
-    render(<ProjectShowcasePage />);
+    act(() => { render(<ProjectShowcasePage />); });
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
     const toggle = screen.getByRole('checkbox');

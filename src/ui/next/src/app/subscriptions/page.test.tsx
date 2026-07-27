@@ -1,5 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
+import { act } from "react";
 import SubscriptionsPage from "./page";
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -42,7 +44,7 @@ describe("SubscriptionsPage", () => {
       }),
     );
 
-    render(<SubscriptionsPage />);
+    act(() => { render(<SubscriptionsPage />); });
 
     expect(await screen.findByText("$25.00 / month")).toBeInTheDocument();
     expect(screen.getByText("Customer #custom")).toBeInTheDocument();
@@ -55,7 +57,7 @@ describe("SubscriptionsPage", () => {
       Response.json({ error: "database unavailable" }, { status: 503 }),
     );
 
-    render(<SubscriptionsPage />);
+    act(() => { render(<SubscriptionsPage />); });
 
     expect(
       await screen.findByRole("alert", {

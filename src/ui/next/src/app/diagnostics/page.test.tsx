@@ -1,3 +1,5 @@
+import { act } from "react";
+import "@testing-library/jest-dom/vitest";
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import DiagnosticsPage from './page';
@@ -10,7 +12,7 @@ describe('DiagnosticsPage', () => {
       ok: true,
       json: async () => url === '/api/v1/health' ? { status: 'ok' } : { total_sales: 4 },
     }));
-    render(<DiagnosticsPage />);
+    act(() => { render(<DiagnosticsPage />); });
     expect(await screen.findByText('Operational Telemetry')).toBeDefined();
     expect(screen.getByText('Mesh Active:').parentElement).toHaveTextContent('Unknown');
     expect(screen.getByText('Hybrid Mode Ready:').parentElement).toHaveTextContent('Unknown');

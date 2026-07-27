@@ -1,3 +1,5 @@
+import { act } from "react";
+import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ExpertTeamPage from "./page";
 import { vi, describe, it, expect } from "vitest";
@@ -6,7 +8,7 @@ global.fetch = vi.fn();
 
 describe("ExpertTeamPage", () => {
   it("renders correctly", () => {
-    render(<ExpertTeamPage />);
+    act(() => { render(<ExpertTeamPage />); });
     expect(screen.getByText("Collaborative Expert Team")).toBeInTheDocument();
   });
 
@@ -16,7 +18,7 @@ describe("ExpertTeamPage", () => {
       json: async () => ({ result: "Final Expert Synthesis Output" }),
     });
 
-    render(<ExpertTeamPage />);
+    act(() => { render(<ExpertTeamPage />); });
 
     // Set text to enable the button
     const textareas = screen.getAllByRole("textbox");
@@ -42,7 +44,7 @@ describe("ExpertTeamPage", () => {
       json: async () => ({ error: "Pre-flight failed" }),
     });
 
-    render(<ExpertTeamPage />);
+    act(() => { render(<ExpertTeamPage />); });
 
     // Set text to enable the button
     const textareas = screen.getAllByRole("textbox");

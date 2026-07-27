@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import RalphLoopPage from './page';
 
 beforeEach(() => {
@@ -8,7 +10,7 @@ beforeEach(() => {
 });
 
 test('renders Ralph Loop page', () => {
-  render(<RalphLoopPage />);
+  act(() => { render(<RalphLoopPage />); });
   expect(screen.getByText('The Ralph Loop (Long-Running Agent)')).toBeInTheDocument();
   expect(screen.getByText(/Enter a complex task spanning multiple context windows/)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Start Ralph Loop/ })).toBeDisabled();
@@ -21,7 +23,7 @@ test('can type task and execute successfully', async () => {
     json: async () => ({ result: mockResult }),
   });
 
-  render(<RalphLoopPage />);
+  act(() => { render(<RalphLoopPage />); });
 
   const textarea = screen.getByLabelText(/Long-Running Task Description/);
   fireEvent.change(textarea, { target: { value: 'Build a server' } });
@@ -46,7 +48,7 @@ test('handles errors correctly', async () => {
     json: async () => ({ error: 'Backend failed to process' }),
   });
 
-  render(<RalphLoopPage />);
+  act(() => { render(<RalphLoopPage />); });
 
   const textarea = screen.getByLabelText(/Long-Running Task Description/);
   fireEvent.change(textarea, { target: { value: 'Build a server' } });

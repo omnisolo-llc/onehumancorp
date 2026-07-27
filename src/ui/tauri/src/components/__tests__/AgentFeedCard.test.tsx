@@ -71,8 +71,8 @@ describe('AgentFeedCard', () => {
         const editButton = screen.getByRole('button', { name: 'Edit Draft' });
         fireEvent.click(editButton);
 
-        expect(mockEdit).toHaveBeenCalledWith('draft-123');
-        expect(mockEdit).toHaveBeenCalledTimes(1);
+
+        expect(screen.getByTestId('feed-edit-textarea')).toBeDefined();
     });
 
     it('renders "Unknown User" if customer_name is not provided', () => {

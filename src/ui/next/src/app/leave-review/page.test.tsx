@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import LeaveReviewPage from './page';
 
 const mockUseSearchParams = vi.fn(() => new URLSearchParams('?order=123'));
@@ -21,7 +23,7 @@ describe('LeaveReviewPage', () => {
   });
 
   it('renders the leave review form', () => {
-    render(<LeaveReviewPage />);
+    act(() => { render(<LeaveReviewPage />); });
     expect(screen.getByText('How was your experience?')).toBeDefined();
     expect(screen.getByText('Order #123')).toBeDefined();
     expect(screen.getByText('Submit Review')).toBeDefined();
@@ -30,7 +32,7 @@ describe('LeaveReviewPage', () => {
 
   it('does not fabricate review or referral success after a 5-star review', async () => {
     global.fetch = vi.fn();
-    render(<LeaveReviewPage />);
+    act(() => { render(<LeaveReviewPage />); });
 
     // Find all stars
     const stars = screen.getAllByText('★');
@@ -53,7 +55,7 @@ describe('LeaveReviewPage', () => {
 
   it('does not report a 3-star review as submitted without a review API', async () => {
     global.fetch = vi.fn();
-    render(<LeaveReviewPage />);
+    act(() => { render(<LeaveReviewPage />); });
 
     // Click 3rd star
     const stars = screen.getAllByText('★');

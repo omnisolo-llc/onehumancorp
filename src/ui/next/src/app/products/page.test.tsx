@@ -1,5 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import ProductsPage from './page';
 
 // Mock AppShell to avoid complex rendering issues
@@ -29,16 +31,16 @@ describe('ProductsPage', () => {
   });
 
   it('renders correctly', () => {
-    render(<ProductsPage />);
+    act(() => { render(<ProductsPage />); });
     expect(screen.getByText('Imported Products')).toBeDefined();
 
   });
 
   it('does not invent product status and generates checkout QR data from the real product id', async () => {
-    render(<ProductsPage />);
+    act(() => { render(<ProductsPage />); });
 
-    expect(await screen.findByText('Seeded Tea')).toBeInTheDocument();
-    expect(screen.queryByText('Active')).not.toBeInTheDocument();
+    expect(await screen.findByText('Seeded Tea')).toBeDefined();
+    expect(screen.queryByText('Active')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate QR Code' }));
     const qr = screen.getByAltText('QR Code for Seeded Tea') as HTMLImageElement;

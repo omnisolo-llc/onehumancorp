@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 
 vi.mock('../components/AppShell', () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -9,7 +11,7 @@ import ServicesPage from './page';
 
 describe('ServicesPage', () => {
   it('does not fabricate health, resource usage, or restart success', () => {
-    render(<ServicesPage />);
+    act(() => { render(<ServicesPage />); });
     expect(screen.getByRole('status')).toHaveTextContent('No runtime status is being reported');
     expect(screen.queryByText('5%')).toBeNull();
     expect(screen.queryByText('128MB')).toBeNull();

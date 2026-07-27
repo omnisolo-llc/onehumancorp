@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { act } from 'react';
 import OrderDetailsPage from './page';
 
 vi.mock('next/navigation', () => ({ useParams: () => ({ id: 'order-1' }) }));
@@ -24,10 +26,10 @@ describe('OrderDetailsPage', () => {
   });
 
   it('restores validated shipping rate and label purchase flow', async () => {
-    render(<OrderDetailsPage />);
+    act(() => { render(<OrderDetailsPage />); });
     expect(await screen.findByText('A Customer')).toBeDefined();
 
-    expect(screen.getByLabelText('Package weight in ounces')).toHaveValue(null);
+    expect((screen.getByLabelText('Package weight in ounces') as HTMLInputElement).value).toBe('');
     expect(screen.getByLabelText('Package dimensions')).toHaveValue('');
 
     fireEvent.change(screen.getByLabelText('Package weight in ounces'), { target: { value: '16' } });
@@ -52,7 +54,7 @@ describe('OrderDetailsPage', () => {
       }
       return Promise.resolve({ ok: true, json: async () => ({ rates: [{ id: 'rate-1', carrier: 'UPS', service: 'Ground', amount: '12.50', days: 3 }] }) });
     });
-    render(<OrderDetailsPage />);
+    act(() => { render(<OrderDetailsPage />); });
     await screen.findByText('order-1');
     fireEvent.change(screen.getByLabelText('Package weight in ounces'), { target: { value: '16' } });
     fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '10x8x6' } });
@@ -67,7 +69,7 @@ describe('OrderDetailsPage', () => {
       if (url === '/api/v1/shipping/rates') return Promise.resolve({ ok: true, json: async () => ({ rates: [{ id: 'rate-1', carrier: 'UPS', service: 'Ground', amount: '12.50', days: 3 }] }) });
       return Promise.resolve({ ok: true, json: async () => ({ success: true, labelUrl: 'https://attacker.example/order.pdf', trackingNumber: '1Z999', carrier: 'UPS' }) });
     });
-    render(<OrderDetailsPage />);
+    act(() => { render(<OrderDetailsPage />); });
     await screen.findByText('order-1');
     fireEvent.change(screen.getByLabelText('Package weight in ounces'), { target: { value: '16' } });
     fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '10x8x6' } });
@@ -86,7 +88,7 @@ describe('OrderDetailsPage', () => {
       }
       return Promise.resolve({ ok: true, json: async () => ({ rates: [{ id: '', carrier: {}, amount: -1 }] }) });
     });
-    render(<OrderDetailsPage />);
+    act(() => { render(<OrderDetailsPage />); });
     expect(await screen.findAllByText('Unavailable')).toHaveLength(4);
     fireEvent.change(screen.getByLabelText('Package weight in ounces'), { target: { value: '16' } });
     fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '10x8x6' } });
@@ -97,7 +99,8 @@ describe('OrderDetailsPage', () => {
   it('keeps the product shell visible when the database has no matching order', async () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
 
-    const { container } = render(<OrderDetailsPage />);
+    let container: any;
+    act(() => { container = render(<OrderDetailsPage />).container; });
 
     expect(await screen.findByText('This order was not found.')).toBeInTheDocument();
     expect(container.querySelector('.app-main')).not.toBeNull();
