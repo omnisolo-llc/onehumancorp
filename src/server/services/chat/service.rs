@@ -20,7 +20,11 @@ impl ChatService {
             r#"
             INSERT INTO chat_inboxes (id, tenant_id, name)
             VALUES ($1, $2, $3)
+<<<<<<< HEAD
+            RETURNING id, tenant_id, name, created_at, updated_at
+=======
             RETURNING id, tenant_id, name, working_hours_enabled, out_of_office_message, greeting_enabled, greeting_message, created_at, updated_at
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
             "#
         )
         .bind(Uuid::new_v4())
@@ -30,6 +34,8 @@ impl ChatService {
         .await
     }
 
+<<<<<<< HEAD
+=======
     pub async fn update_inbox_config(
         &self,
         tenant_id: Uuid,
@@ -75,6 +81,7 @@ impl ChatService {
         .await
     }
 
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     pub async fn create_channel(
         &self,
         tenant_id: Uuid,
@@ -127,6 +134,14 @@ impl ChatService {
         inbox_id: Uuid,
         contact_id: Uuid,
         assignee_id: Option<Uuid>,
+<<<<<<< HEAD
+    ) -> Result<ChatConversation, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status)
+            VALUES ($1, $2, $3, $4, $5, 'open')
+            RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+=======
         bot_assignee_id: Option<Uuid>,
     ) -> Result<ChatConversation, sqlx::Error> {
         sqlx::query_as(
@@ -134,6 +149,7 @@ impl ChatService {
             INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, bot_assignee_id, status)
             VALUES ($1, $2, $3, $4, $5, $6, 'open')
             RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, bot_assignee_id, status, created_at, updated_at
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
             "#
         )
         .bind(Uuid::new_v4())
@@ -141,7 +157,10 @@ impl ChatService {
         .bind(inbox_id)
         .bind(contact_id)
         .bind(assignee_id)
+<<<<<<< HEAD
+=======
         .bind(bot_assignee_id)
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         .fetch_one(&self.pool)
         .await
     }
@@ -170,6 +189,8 @@ impl ChatService {
         .fetch_one(&self.pool)
         .await
     }
+<<<<<<< HEAD
+=======
 
     pub async fn receive_message(
         &self,
@@ -193,4 +214,5 @@ impl ChatService {
 
         Ok(msg)
     }
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
 }

@@ -27,9 +27,12 @@ function copyHeaders(from: Headers, to: Headers): void {
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (isPublicFrameworkAsset(request)) return NextResponse.next();
 
+<<<<<<< HEAD
+=======
   // Bypass for omni-chat page for e2e tests due to lack of environment config locally
   if (request.nextUrl.pathname.startsWith('/omni-chat')) return NextResponse.next();
 
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
   let dependencies: MiddlewareDependencies;
   try {
     liveDependencies ??= dependenciesFromEnvironment();

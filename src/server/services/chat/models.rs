@@ -8,10 +8,13 @@ pub struct ChatInbox {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub name: String,
+<<<<<<< HEAD
+=======
     pub working_hours_enabled: Option<bool>,
     pub out_of_office_message: Option<String>,
     pub greeting_enabled: Option<bool>,
     pub greeting_message: Option<String>,
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -45,7 +48,10 @@ pub struct ChatConversation {
     pub inbox_id: Uuid,
     pub contact_id: Uuid,
     pub assignee_id: Option<Uuid>,
+<<<<<<< HEAD
+=======
     pub bot_assignee_id: Option<Uuid>,
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     pub status: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

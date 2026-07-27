@@ -6675,7 +6675,10 @@ async fn create_ui_bom_item_handler(
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
+<<<<<<< HEAD
+=======
     let chat_omni_router = api::chat_omni::router(db.pool.clone());
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
 
@@ -7830,7 +7833,10 @@ async fn create_ui_bom_item_handler(
             http_auth_store.clone(),
         ))
         .merge(health_router)
+<<<<<<< HEAD
+=======
         .merge(chat_omni_router)
+>>>>>>> 262e0889a (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         .merge(http_auth_router)
         .merge(setup_router)
         .merge(oauth_callback_router)
