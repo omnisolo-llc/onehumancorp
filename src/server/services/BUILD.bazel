@@ -244,3 +244,4 @@ rust_sharded_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+exports_files(["chat/db.rs"])

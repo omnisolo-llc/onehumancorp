@@ -7547,6 +7547,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/v1/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/v1/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
+        .nest("/api/v1/chat", services::chat::router(std::sync::Arc::new(db.pool.clone())))
         .route("/api/v1/agents/order-interceptor", axum::routing::post(api::agents::order_interceptor::intercept_order_handler).with_state(db.pool.clone()))
         .nest("/api/v1/agents/pydantic", api::agents::pydantic::router())
         .nest("/api/v1/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))

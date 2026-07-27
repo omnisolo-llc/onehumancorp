@@ -1,59 +1,37 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-use sqlx::FromRow;
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
-pub struct ChatInbox {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Tenant {
+    pub tenant_id: String,
     pub name: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
-pub struct ChatChannel {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub inbox_id: Uuid,
-    pub channel_type: String,
-    pub config: serde_json::Value,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Contact {
+    pub contact_id: String,
+    pub tenant_id: String,
+    pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
-pub struct ChatContact {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub name: Option<String>,
-    pub email: Option<String>,
-    pub phone: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Inbox {
+    pub inbox_id: String,
+    pub tenant_id: String,
+    pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
-pub struct ChatConversation {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub inbox_id: Uuid,
-    pub contact_id: Uuid,
-    pub assignee_id: Option<Uuid>,
-    pub status: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Conversation {
+    pub conversation_id: String,
+    pub tenant_id: String,
+    pub inbox_id: String,
+    pub contact_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
-pub struct ChatMessage {
-    pub id: Uuid,
-    pub tenant_id: Uuid,
-    pub conversation_id: Uuid,
-    pub sender_type: String,
-    pub sender_id: Option<Uuid>,
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Message {
+    pub message_id: String,
+    pub tenant_id: String,
+    pub conversation_id: String,
     pub content: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
