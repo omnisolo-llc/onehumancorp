@@ -90,6 +90,7 @@ rust_library(
         "perplexity.rs",
         "observation_masking.rs",
         "omni_context.rs",
+        "omnichannel_chat.rs",
         "output_parser.rs",
         "human_in_loop.rs",
         "plane.rs",
