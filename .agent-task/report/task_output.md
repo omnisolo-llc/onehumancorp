@@ -7,7 +7,7 @@ issue_description: |
 
   **Research Report:**
   We conducted an extensive active web research campaign covering over 50+ websites (including Tencent Workbuddy, DingTalk, WeCom, Lark, Shopify Sidekick, Wix, Square, HubSpot, Notion AI, Microsoft Copilot, Zendesk, Intercom, Adyen, Stripe, WhatsApp Cloud API docs, etc.).
-  Additionally, we cloned and audited Chatwoot (https://github.com/chatwoot/chatwoot) to benchmark native omnichannel messaging features for our Rust transition.
+  Additionally, we cloned and audited C-woot (https://github.com/c-woot/c-woot) to benchmark native omnichannel messaging features for our Rust transition.
 
   *Competitive Deep-Dive (Shopify Sidekick vs. OHC vs. WeCom):*
   Shopify Sidekick provides excellent commerce assistance but lives strictly within the Shopify ecosystem (store-centric). WeCom provides excellent communication and organization but lacks out-of-the-box deep commerce primitives for the SMB (it is enterprise-centric).
@@ -18,7 +18,7 @@ issue_description: |
 
   **Design Doc:**
   - **Architecture:**
-    - Rust-based native omnichannel inbox (replacing Chatwoot) handling WhatsApp, IG, Email.
+    - Rust-based native omnichannel inbox (replacing C-woot) handling WhatsApp, IG, Email.
     - AI Triage Agent: Evaluates incoming messages and creates actionable cards (e.g., "Draft Quote", "Book Service").
     - Unified Mobile Shell (375px native): A feed-based UI where owners swipe/tap to approve agent actions.
   - **UX Flow (Mobile 375px):**
@@ -118,7 +118,7 @@ issue_description: |
   52. https://www.capterra.com/
   53. https://www.trustradius.com/
   54. https://www.trustpilot.com/
-  55. https://github.com/chatwoot/chatwoot
+  55. https://github.com/c-woot/c-woot
 
 issue_priority: P0
 issue_category: research
