@@ -1,8 +1,13 @@
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
-use tokio::sync::OnceCell;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use lazy_static::lazy_static;
 
-static POSTGRES_SETUP: OnceCell<Result<(), String>> = OnceCell::const_new();
+lazy_static! {
+    static ref POSTGRES_SETUP: Arc<Mutex<Option<Result<(), String>>>> = Arc::new(Mutex::new(None));
+}
+
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../migrations");
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,10 +58,26 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
+    // Try to lock migrations using a Postgres advisory lock to avoid concurrent execution crashes
+    let lock_id: i64 = 19485720938475; // Arbitrary lock ID for this test suite
+    let lock_result = sqlx::query!("SELECT pg_try_advisory_lock($1) as got_lock", lock_id)
+        .fetch_one(&admin_pool)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .map_err(|e| format!("failed to try lock: {e}"))?;
+
+    if lock_result.got_lock.unwrap_or(false) {
+        // We have the lock, so run the migrations
+        MIGRATOR
+            .run(&admin_pool)
+            .await
+            .map_err(|error| format!("run src/server/migrations: {error}"))?;
+
+        // Unlock
+        sqlx::query!("SELECT pg_advisory_unlock($1)", lock_id)
+            .execute(&admin_pool)
+            .await
+            .ok();
+    }
 
     sqlx::raw_sql(
         r#"
@@ -108,9 +129,15 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
             "PostgreSQL security tests require OHC_POSTGRES_ADMIN_URL for extension, migration, and application-role setup"
         )
     });
-    POSTGRES_SETUP
-        .get_or_init(|| initialize_postgres(&admin_url))
-        .await
+
+    let mut setup_state = POSTGRES_SETUP.lock().await;
+    if setup_state.is_none() {
+        *setup_state = Some(initialize_postgres(&admin_url).await);
+    }
+
+    setup_state
+        .as_ref()
+        .unwrap()
         .as_ref()
         .unwrap_or_else(|error| panic!("PostgreSQL security test setup failed: {error}"));
 

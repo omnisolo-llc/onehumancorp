@@ -1,10 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import { act } from 'react';
 
+// Real TooltipProvider wrapper
 import { TooltipProvider } from '../../components/TooltipRegistry';
 import TriagePage from './page';
 
+// Mock Next.js router
 vi.mock('next/navigation', () => {
   return {
     useRouter: () => ({
@@ -18,6 +20,7 @@ vi.mock('next/navigation', () => {
   };
 });
 
+// Mock matchMedia for tests
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({
@@ -32,14 +35,19 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Mock AppShell to avoid complex routing/layout rendering
+vi.mock('../../components/AppShell', () => {
+    return {
+        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
+    }
+});
 vi.mock('@/app/components/AppShell', () => {
-  return {
-    __esModule: true,
-    AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
-    default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
-  }
+    return {
+        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
+    }
 });
 
+// Mock fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -69,6 +77,7 @@ describe('Triage Page UI', () => {
       render(<TooltipProvider><TriagePage /></TooltipProvider>);
     });
 
+    // Wait for feed to load
     await waitFor(() => {
         expect(screen.queryByText('Loading triage feed...')).toBeNull();
     });
@@ -98,5 +107,6 @@ describe('Triage Page UI', () => {
     await waitFor(() => {
         expect(screen.queryByText('Loading triage feed...')).toBeNull();
     });
+
   });
 });
