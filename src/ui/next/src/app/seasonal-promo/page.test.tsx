@@ -21,13 +21,19 @@ describe('SeasonalPromoPage', () => {
     vi.spyOn(window, 'open').mockImplementation(() => null);
   });
 
-  it('renders the page correctly', () => {
-    render(<SeasonalPromoPage />);
+  it('renders the page correctly', async () => {
+    const { act } = await import('react');
+    await act(async () => {
+      render(<SeasonalPromoPage />);
+    });
     expect(screen.getByText('Seasonal Promotion Generator ✨')).toBeInTheDocument();
   });
 
-  it('renders the PoweredByOHC component', () => {
-    render(<SeasonalPromoPage />);
+  it('renders the PoweredByOHC component', async () => {
+    const { act } = await import('react');
+    await act(async () => {
+      render(<SeasonalPromoPage />);
+    });
     expect(screen.getByTestId('powered-by-ohc')).toBeInTheDocument();
   });
 });
