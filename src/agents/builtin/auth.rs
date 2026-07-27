@@ -40,7 +40,7 @@ impl std::fmt::Debug for AuthMode {
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
+    if auth_disabled {
         let environment = env::var("OHC_ENV").unwrap_or_default();
         if matches!(
             environment.trim().to_ascii_lowercase().as_str(),
@@ -70,7 +70,19 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    return Ok(AuthMode::Disabled);
+    if let Ok(_spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID") {
+        return Err("OHC_AGENT_SPIFFE_ID requires verified mTLS peer extraction".to_string());
+    }
+
+    let environment = env::var("OHC_ENV").unwrap_or_default();
+    if env::var("CI").is_ok() || matches!(
+        environment.trim().to_ascii_lowercase().as_str(),
+        "development" | "test" | "standalone"
+    ) {
+        return Ok(AuthMode::Disabled);
+    }
+
+    Err("Complete configuration required.".to_string())
 }
 
 /// Check a bearer token against an expected HMAC hash.
