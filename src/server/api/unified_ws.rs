@@ -179,7 +179,7 @@ async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_cha
     };
 
     for ch in &initial_channels {
-        for topic_suffix in &["inventory", "orders", "tenant_events", "agent_feed"] {
+        for topic_suffix in &["inventory", "orders", "tenant_events", "agent_feed", "chat_messages"] {
             let topic = format!("{}:{}", topic_suffix, tenant_id);
             state.subscribed_topics.insert(format!("{}:{}", ch, topic));
         }
@@ -239,7 +239,7 @@ async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_cha
                 .iter()
                 .flat_map(|ch| {
                     let t = tenant_id_ps.clone();
-                    ["inventory", "orders", "tenant_events", "agent_feed"]
+                    ["inventory", "orders", "tenant_events", "agent_feed", "chat_messages"]
                         .iter()
                         .map(move |topic| {
                             format!("unified:{}:{}:{}", ch, t, topic)
@@ -458,7 +458,7 @@ mod tests {
             seq_counters: HashMap::new(),
             subscribed_topics: HashSet::new(),
         };
-        for topic_suffix in &["inventory", "orders", "tenant_events"] {
+        for topic_suffix in &["inventory", "orders", "tenant_events", "chat_messages"] {
             state
                 .subscribed_topics
                 .insert(format!("sync:{}:tenant-1", topic_suffix));
