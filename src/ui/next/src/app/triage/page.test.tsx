@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import { act } from 'react';
+import React from 'react';
 
 // Real TooltipProvider wrapper
 import { TooltipProvider } from '../../components/TooltipRegistry';
@@ -37,19 +38,30 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock AppShell to avoid complex routing/layout rendering
 vi.mock('../../components/AppShell', () => {
+    const MockAppShell = ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>;
     return {
-        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
+        default: MockAppShell,
+        AppShell: MockAppShell
     }
 });
 vi.mock('@/app/components/AppShell', () => {
+    const MockAppShell = ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>;
     return {
-        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
+        default: MockAppShell,
+        AppShell: MockAppShell
+    }
+});
+vi.mock('../components/AppShell', () => {
+    const MockAppShell = ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>;
+    return {
+        default: MockAppShell,
+        AppShell: MockAppShell
     }
 });
 
 // Mock fetch
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+global.fetch = mockFetch as unknown as typeof fetch;
 
 describe('Triage Page UI', () => {
   beforeEach(() => {
