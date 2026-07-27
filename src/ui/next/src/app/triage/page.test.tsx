@@ -41,15 +41,19 @@ vi.mock('../../components/AppShell', () => {
         default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
     }
 });
-vi.mock('@/app/components/AppShell', () => {
-    return {
-        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
-    }
-});
 
 // Mock fetch
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+
+vi.mock('@/app/components/AppShell', () => {
+  const AppShellMock = ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>;
+  return {
+    default: AppShellMock,
+    AppShell: AppShellMock
+  };
+});
 
 describe('Triage Page UI', () => {
   beforeEach(() => {
