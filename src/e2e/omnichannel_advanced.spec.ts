@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { v4 as uuidv4 } from 'uuid';
 import { e2ePlaywrightTestFlow } from './global-setup'; // Utilizing standard setup if needed
 
-test.describe('Omnichannel Advanced Features (Chatwoot Parity)', () => {
+test.describe('Omnichannel Advanced Features (Omnichannel Parity)', () => {
   test('Web Chat Widget functions correctly and displays labels & canned responses', async ({ page }) => {
     // Navigate to a real page where the chat is available
     await page.goto('/team/chat');
