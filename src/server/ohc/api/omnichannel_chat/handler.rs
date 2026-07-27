@@ -38,12 +38,16 @@ async fn create_inbox(
     Json(inbox)
 }
 
+#[derive(Deserialize)]
+pub struct GetInboxesQuery {
+    pub tenant_id: String,
+}
+
 async fn get_inboxes(
     State(state): State<AppState>,
+    axum::extract::Query(query): axum::extract::Query<GetInboxesQuery>,
 ) -> impl IntoResponse {
-    // Hardcode tenant_id for simplicity in this example
-    let tenant_id = "test-tenant-id".to_string();
-    let inboxes = state.chat_service.get_inboxes(&tenant_id).await.unwrap();
+    let inboxes = state.chat_service.get_inboxes(&query.tenant_id).await.unwrap();
     Json(inboxes)
 }
 
@@ -63,12 +67,17 @@ async fn create_conversation(
     Json(conv)
 }
 
+#[derive(Deserialize)]
+pub struct GetConversationsQuery {
+    pub tenant_id: String,
+}
+
 async fn get_conversations(
     State(state): State<AppState>,
     Path(inbox_id): Path<Uuid>,
+    axum::extract::Query(query): axum::extract::Query<GetConversationsQuery>,
 ) -> impl IntoResponse {
-    let tenant_id = "test-tenant-id".to_string();
-    let convs = state.chat_service.get_conversations(&tenant_id, inbox_id).await.unwrap();
+    let convs = state.chat_service.get_conversations(&query.tenant_id, inbox_id).await.unwrap();
     Json(convs)
 }
 
@@ -94,6 +103,12 @@ async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
 }
 
 async fn handle_socket(mut socket: WebSocket) {
+    // In a real implementation, we would connect to Redis Pub/Sub here.
+    // We would subscribe to a channel corresponding to the user's tenant_id and inbox,
+    // and broadcast messages to it.
+    // Since we don't have access to the Redis pool directly in this basic implementation,
+    // we'll just log that we connected, but acknowledge that this is a placeholder.
+    println!("WebSocket connected. Redis Pub/Sub integration pending.");
     while let Some(msg) = socket.recv().await {
         if let Ok(msg) = msg {
             if socket.send(msg).await.is_err() {
