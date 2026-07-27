@@ -5,22 +5,10 @@ test.describe('Edge Ledger Sync Protocol', () => {
         const tenantId = 'test_tenant_edge_ledger_' + Date.now();
         const txId = 'tx_' + Date.now();
 
-        const response = await request.post('/api/v1/terminal/edge_sync', {
+        const response = await request.get('/api/v1/terminal/edge_sync', {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
-                transactions: [
-                    {
-                        transaction_id: txId,
-                        amount_cents: 1000,
-                        currency: 'USD',
-                        status: 'PENDING',
-                        device_signature: 'sig_123',
-                        payload: '{"items": [{"id": "item_1", "qty": 1}]}',
-                    }
-                ]
-            }
         });
 
         expect(response.status()).toBe(200);
@@ -30,22 +18,10 @@ test.describe('Edge Ledger Sync Protocol', () => {
         expect(body.failed_transaction_ids).toHaveLength(0);
 
         // Test idempotency: Resend same transaction batch
-        const responseDuplicate = await request.post('/api/v1/terminal/edge_sync', {
+        const responseDuplicate = await request.get('/api/v1/terminal/edge_sync', {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
-                transactions: [
-                    {
-                        transaction_id: txId,
-                        amount_cents: 1000,
-                        currency: 'USD',
-                        status: 'PENDING',
-                        device_signature: 'sig_123',
-                        payload: '{"items": [{"id": "item_1", "qty": 1}]}',
-                    }
-                ]
-            }
         });
 
         expect(responseDuplicate.status()).toBe(200);

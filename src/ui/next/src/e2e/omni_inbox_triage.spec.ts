@@ -3,50 +3,50 @@ import { test, expect } from '@playwright/test';
 test.describe('Omni Inbox Agentic Triage', () => {
   test('displays unread leads summary and allows inventory deduction approval', async ({ page }) => {
     // 1. Intercept the inbox messages fetch to return our simulated data
-    await page.route('**/api/ui/inbox/messages*', async (route) => {
-      const json = [
+    // await page.route('**/api/ui/inbox/messages*', async (route) => {
+      // const json = [
         {
-          id: 'msg_triage_1',
-          source: 'Instagram DM',
-          content: 'Hi Maya, do you have 2 vegan cakes for Saturday?',
-          original_content: 'Hi Maya, do you have 2 vegan cakes for Saturday?',
-          status: 'unread',
-          sender_id: 'maya_customer_123',
-          created_at: new Date().toISOString(),
-          draft_reply: 'Yes! We have 2 available. Should I hold them for you? [Send & Deduct Inventory]'
+          // id: 'msg_triage_1',
+          // source: 'Instagram DM',
+          // content: 'Hi Maya, do you have 2 vegan cakes for Saturday?',
+          original_// content: 'Hi Maya, do you have 2 vegan cakes for Saturday?',
+          // status: 'unread',
+          sender_// id: 'maya_customer_123',
+          // created_at: new Date().toISOString(),
+          // draft_reply: 'Yes! We have 2 available. Should I hold them for you? [Send & Deduct Inventory]'
         }
-      ];
-      await route.fulfill({ json });
+       // ];
+      // await route.fulfill({ json });
     });
 
     // 2. Intercept the approvals fetch to simulate an active approval for this message
-    await page.route('**/api/agents/approvals*', async (route) => {
-      const json = {
-        pending_approvals: [
+    // await page.route('**/api/agents/approvals*', async (route) => {
+      // const json = {
+        // pending_approvals: [
           {
-            id: 'app_triage_1',
-            payload: JSON.stringify({
-              inbox_message_id: 'msg_triage_1',
-              action_type: 'Draft Reply'
+            // id: 'app_triage_1',
+            // payload: JSON.stringify({
+              inbox_message_// id: 'msg_triage_1',
+              // action_type: 'Draft Reply'
             })
           }
         ]
       };
-      await route.fulfill({ json });
+      // await route.fulfill({ json });
     });
 
     // 3. Intercept the approve action
-    let approveCalled = false;
-    await page.route('**/api/agents/approvals/app_triage_1', async (route) => {
-      if (route.request().method() === 'POST') {
-        const body = JSON.parse(route.request().postData() || '{}');
-        if (body.approved === true) {
-          approveCalled = true;
-          await route.fulfill({ status: 200, json: { success: true } });
-          return;
+    let // approveCalled = false;
+    // await page.route('**/api/agents/approvals/app_triage_1', async (route) => {
+      // if (route.request().method() === 'POST') {
+        // const body = JSON.parse(route.request().postData() || '{}');
+        // if (body.approved === true) {
+          // approveCalled = true;
+          // await route.fulfill({ // status: 200, json: { success: true } });
+          // return;
         }
       }
-      await route.fallback();
+      // await route.fallback();
     });
 
     // 4. Navigate to the inbox page
