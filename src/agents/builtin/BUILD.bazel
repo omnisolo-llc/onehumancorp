@@ -23,6 +23,7 @@ rust_library(
         "pubsub.rs",
         "request_profile.rs",
         "retry.rs",
+        "omnichannel_chat.rs",
         "types.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
