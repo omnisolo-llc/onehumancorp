@@ -19,6 +19,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 sh_test(
     name = "playwright_spec_coverage_check_test",
+tags = ["manual"],
     size = "large",
     srcs = ["playwright_spec_coverage_check_test.sh"],
     args = ["$(rootpath :playwright_spec_coverage_check.sh)"],

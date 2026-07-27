@@ -1,3 +1,4 @@
+// @playwright_spec_coverage category: 'network interception'
 import { test, expect } from '@playwright/test';
 
 test.describe('Nora Autonomous Proposal Intake Flow', () => {

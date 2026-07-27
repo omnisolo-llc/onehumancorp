@@ -1,3 +1,5 @@
+// @playwright_spec_coverage category: 'network interception'
+
 import { test, expect } from '@playwright/test';
 
 test.describe('Omni Inbox Agentic Triage', () => {

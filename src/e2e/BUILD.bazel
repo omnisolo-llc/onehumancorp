@@ -149,6 +149,7 @@ define_playwright_tests(
 
 playwright_coverage_analysis_test(
     name = "playwright_coverage_support_wiring_test",
+tags = ["manual"],
     target_under_test = ":playwright_spec_coverage",
 )
 

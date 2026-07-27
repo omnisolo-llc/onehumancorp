@@ -1,3 +1,4 @@
+// @playwright_spec_coverage category: 'network interception'
 import { test, expect } from '@playwright/test';
 import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
 

@@ -605,7 +605,7 @@ pub async fn parse_subscription_description(
     // Default fallback values
     let mut plan_name = "Guitar Lessons Monthly".to_string();
     let mut amount = 20000;
-    let mut currency = "USD".to_string();
+    let currency = "USD".to_string();
     let mut interval = "month".to_string();
     let mut feature_name = "guitar lessons".to_string();
     let mut max_uses = 4;
@@ -775,7 +775,7 @@ mod tests {
         }
 
         let (event_log_tx, _event_log_rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(Hub::new(event_log_tx, pool.clone()));
+        let _hub = Arc::new(Hub::new(event_log_tx, pool.clone()));
         let app = router_with_policy(
             hub,
             None,
@@ -819,7 +819,7 @@ mod tests {
     async fn subscription_overview_route_rejects_missing_organization_in_multitenant_mode() {
         let pool = sqlx::PgPool::connect_lazy("postgres://localhost/unused").unwrap();
         let (event_log_tx, _event_log_rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(Hub::new(event_log_tx, pool));
+        let _hub = Arc::new(Hub::new(event_log_tx, pool));
         let app = router_with_policy(
             hub,
             None,
