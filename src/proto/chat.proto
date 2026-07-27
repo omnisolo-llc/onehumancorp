@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package ohc.chat;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/chat;chatpb";
+
+message Inbox {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string created_at = 4;
+    string updated_at = 5;
+}
+
+message Conversation {
+    string id = 1;
+    string tenant_id = 2;
+    string inbox_id = 3;
+    string contact_id = 4;
+    string assignee_id = 5;
+    string status = 6;
+    string created_at = 7;
+    string updated_at = 8;
+}
+
+message Message {
+    string id = 1;
+    string tenant_id = 2;
+    string conversation_id = 3;
+    string sender_type = 4;
+    string sender_id = 5;
+    string content = 6;
+    string status = 7;
+    string draft_reply = 8;
+    string created_at = 9;
+    string updated_at = 10;
+}
+
+message FetchInboxesRequest {
+    string tenant_id = 1;
+}
+
+message FetchInboxesResponse {
+    repeated Inbox inboxes = 1;
+}
+
+message FetchConversationsRequest {
+    string tenant_id = 1;
+    string inbox_id = 2;
+}
+
+message FetchConversationsResponse {
+    repeated Conversation conversations = 1;
+}
+
+message FetchMessagesRequest {
+    string tenant_id = 1;
+    string conversation_id = 2;
+}
+
+message FetchMessagesResponse {
+    repeated Message messages = 1;
+}
+
+message SendMessageRequest {
+    string tenant_id = 1;
+    string conversation_id = 2;
+    string sender_type = 3;
+    string sender_id = 4;
+    string content = 5;
+}
+
+message SendMessageResponse {
+    Message message = 1;
+}
+
+message ApproveDraftRequest {
+    string tenant_id = 1;
+    string message_id = 2;
+}
+
+message ApproveDraftResponse {
+    Message message = 1;
+}
+
+service ChatService {
+    rpc FetchInboxes(FetchInboxesRequest) returns (FetchInboxesResponse);
+    rpc FetchConversations(FetchConversationsRequest) returns (FetchConversationsResponse);
+    rpc FetchMessages(FetchMessagesRequest) returns (FetchMessagesResponse);
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+    rpc ApproveDraft(ApproveDraftRequest) returns (ApproveDraftResponse);
+}

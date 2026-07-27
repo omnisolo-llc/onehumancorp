@@ -1,0 +1,2 @@
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'sent';
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS draft_reply TEXT;
