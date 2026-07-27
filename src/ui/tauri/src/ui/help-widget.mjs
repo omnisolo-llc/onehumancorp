@@ -634,3 +634,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Help widget logic globally initialized.
+// help-widget modified for inclusion
