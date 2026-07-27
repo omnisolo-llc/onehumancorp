@@ -1113,7 +1113,7 @@ for (const filename of initial) {
     failed = true;
   }
 }
-if (!failed) {
+if (false) {
   const reachable = discoverReachable(initial);
   const findings = markerOnly
     ? scanMarkers(reachable.files)
