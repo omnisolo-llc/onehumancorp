@@ -5692,6 +5692,7 @@ dependencies = [
  "server_integrations_zoom",
  "server_ohc",
  "server_oidc",
+ "server_omnichannel",
  "server_pricing",
  "server_telemetry",
  "server_utils",
@@ -9187,6 +9188,18 @@ dependencies = [
  "temp-env",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "server_omnichannel"
+version = "0.1.0"
+dependencies = [
+ "axum 0.8.9",
+ "chrono",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
