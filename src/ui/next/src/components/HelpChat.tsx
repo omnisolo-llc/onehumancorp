@@ -206,7 +206,7 @@ export function HelpChat() {
   return (
     <div className="help-chat-wrapper pointer-events-none">
       {/* Floating Button */}
-      <div className="fixed bottom-24 right-6 z-[10000] pointer-events-auto hidden sm:block">
+      <div className="fixed bottom-24 right-6 z-[10000] pointer-events-auto">
         {!isOpen && (
           <WalkthroughTarget id="ai-chat-trigger">
             <button
@@ -228,7 +228,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-6 z-[10000] w-full max-w-[350px] pointer-events-auto bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
+        <div id="ai-chat-interface" role="dialog" aria-labelledby="ai-chat-header-title" aria-modal="false" className="fixed bottom-24 right-4 sm:right-6 z-[10000] w-[calc(100vw-32px)] sm:w-[350px] pointer-events-auto bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden animate-slide-up-chat text-gray-900 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"

@@ -28,7 +28,13 @@ export const DEFAULT_TOOLTIPS: Record<string, string> = {
   "dashboard-walkthrough-btn": "Take a quick tour of the dashboard.",
   "help-advanced-toggle-tooltip": "Show advanced developer options.",
   "help-btn-tooltip-appshell": "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
-  "checkout-pay-tooltip": "Click to process your payment."
+  "checkout-pay-tooltip": "Click to process your payment.",
+  "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan.",
+  "dashboard-tooltip": "View your daily sales and overall business health.",
+  "ai-workspace-tooltip": "All-in-one AI productivity workspace for tasks, projects, schedules, documents, and automation.",
+  "inventory-tooltip": "Manage your inventory, prices, and stock levels.",
+  "orders-tooltip": "See what customers bought and track order fulfillment.",
+  "ask-ai-tooltip": "Open AI Help Chat to get answers instantly."
 };
 
 export function TooltipProvider({ children }: { children: ReactNode }) {

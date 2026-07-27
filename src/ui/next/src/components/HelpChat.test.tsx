@@ -27,6 +27,14 @@ describe('HelpChat Component', () => {
     expect(screen.queryByRole('heading', { name: 'Ask anything' })).not.toBeInTheDocument();
   });
 
+  it('does not have hidden sm:block classes on the floating container to ensure mobile-first accessibility', () => {
+    const { container } = render(<HelpChat />);
+    const floatingContainer = container.querySelector('.fixed.bottom-24.right-6');
+    expect(floatingContainer).toBeInTheDocument();
+    expect(floatingContainer).not.toHaveClass('hidden');
+    expect(floatingContainer).not.toHaveClass('sm:block');
+  });
+
   it('opens the chat interface when the button is clicked', () => {
     render(<HelpChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
