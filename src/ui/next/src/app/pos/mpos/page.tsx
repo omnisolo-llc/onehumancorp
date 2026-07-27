@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 import StripeTerminalClient from '../terminal/StripeTerminalClient';
+import { Suspense } from "react";
 import { useSearchParams } from 'next/navigation';
 
 const DEFAULT_CATALOG = [
@@ -11,6 +12,14 @@ const DEFAULT_CATALOG = [
 ];
 
 export default function POSTerminalMobile() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <POSTerminalMobileContent />
+    </Suspense>
+  );
+}
+
+function POSTerminalMobileContent() {
   const [catalog, setCatalog] = useState<{id: string, name: string, price: number, image?: string}[]>(DEFAULT_CATALOG);
   const [cart, setCart] = useState<{product: any, quantity: number}[]>([]);
   const [isOffline, setIsOffline] = useState(false);
