@@ -597,7 +597,7 @@ pub struct ParseSubscriptionResponse {
 }
 
 pub async fn parse_subscription_description(
-    Extension(_hub): Extension<Arc<Hub>>,
+    Extension(hub): Extension<Arc<Hub>>,
     Json(req): Json<ParseSubscriptionRequest>,
 ) -> impl IntoResponse {
     // Hardcode parsing logic here for now instead of relying on the LLM, as it fails in e2e tests
