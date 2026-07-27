@@ -87,3 +87,21 @@ pub struct Entitlement {
     pub created_at: i64,
     pub updated_at: i64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MembershipTier {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub price: f64,
+    pub interval: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Invoice {
+    pub id: String,
+    pub tenant_id: String,
+    pub subscription_id: String,
+    pub amount: f64,
+    pub status: String,
+}

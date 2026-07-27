@@ -1,4 +1,5 @@
 use crate::domain::subscription::{
+    MembershipTier, Invoice, Subscription,
     FulfillmentSchedule, FulfillmentStatus, SubscriptionPlan, Subscriber, SubscriptionStatus,
 };
 use crate::db::{DB, DbStore};
@@ -60,7 +61,7 @@ pub fn build_payment_failure_sms(business_name: &str) -> String {
     )
 }
 
-pub async fn send_dunning_sms<N: DunningNotifier, G: DunningMessageGenerator>(
+pub async fn send_dunning_sms<N: DunningNotifier + ?Sized, G: DunningMessageGenerator + ?Sized>(
     notifier: &N,
     generator: &G,
     subscriber_id: &str,
@@ -108,6 +109,202 @@ impl SubscriptionService {
             .await
             .map_err(|e| e.to_string())?;
         Ok(transaction)
+    }
+
+
+    pub async fn create_membership_tier(
+        &self,
+        tenant_id: &str,
+        name: &str,
+        price: f64,
+        interval: &str,
+    ) -> Result<MembershipTier, String> {
+        let tier = MembershipTier {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            name: name.to_string(),
+            price,
+            interval: interval.to_string(),
+        };
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut transaction = self.begin_tenant_transaction(tenant_id).await?;
+                sqlx::query(
+                    "INSERT INTO membership_tiers (id, tenant_id, name, price, interval) VALUES ($1, $2, $3, $4, $5)"
+                )
+                .bind(&tier.id)
+                .bind(&tier.tenant_id)
+                .bind(&tier.name)
+                .bind(tier.price)
+                .bind(&tier.interval)
+                .execute(&mut *transaction)
+                .await
+                .map_err(|e| e.to_string())?;
+                transaction.commit().await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "INSERT INTO membership_tiers (id, tenant_id, name, price, interval) VALUES (?, ?, ?, ?, ?)"
+                )
+                .bind(&tier.id)
+                .bind(&tier.tenant_id)
+                .bind(&tier.name)
+                .bind(tier.price)
+                .bind(&tier.interval)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(tier)
+    }
+
+    pub async fn create_subscription(
+        &self,
+        tenant_id: &str,
+        customer_id: &str,
+        plan_id: &str,
+    ) -> Result<Subscription, String> {
+        let now = Utc::now().timestamp();
+        let sub = Subscription {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            customer_id: customer_id.to_string(),
+            plan_id: plan_id.to_string(),
+            status: "ACTIVE".to_string(),
+            current_period_start: now,
+            current_period_end: now + 30 * 24 * 60 * 60, // approximate month
+            cancel_at_period_end: false,
+            canceled_at: None,
+            created_at: now,
+            updated_at: now,
+        };
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut transaction = self.begin_tenant_transaction(tenant_id).await?;
+                sqlx::query(
+                    "INSERT INTO subscriptions (id, tenant_id, customer_id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+                )
+                .bind(&sub.id)
+                .bind(&sub.tenant_id)
+                .bind(&sub.customer_id)
+                .bind(&sub.plan_id)
+                .bind(&sub.status)
+                .bind(sub.current_period_start)
+                .bind(sub.current_period_end)
+                .bind(sub.cancel_at_period_end)
+                .bind(sub.created_at)
+                .bind(sub.updated_at)
+                .execute(&mut *transaction)
+                .await
+                .map_err(|e| e.to_string())?;
+                transaction.commit().await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "INSERT INTO subscriptions (id, tenant_id, customer_id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(&sub.id)
+                .bind(&sub.tenant_id)
+                .bind(&sub.customer_id)
+                .bind(&sub.plan_id)
+                .bind(&sub.status)
+                .bind(sub.current_period_start)
+                .bind(sub.current_period_end)
+                .bind(sub.cancel_at_period_end)
+                .bind(sub.created_at)
+                .bind(sub.updated_at)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(sub)
+    }
+
+    pub async fn generate_invoice(
+        &self,
+        tenant_id: &str,
+        subscription_id: &str,
+        amount: f64,
+    ) -> Result<Invoice, String> {
+        let invoice = Invoice {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            subscription_id: subscription_id.to_string(),
+            amount,
+            status: "PENDING".to_string(),
+        };
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut transaction = self.begin_tenant_transaction(tenant_id).await?;
+                sqlx::query(
+                    "INSERT INTO invoices (id, tenant_id, subscription_id, amount, status) VALUES ($1, $2, $3, $4, $5)"
+                )
+                .bind(&invoice.id)
+                .bind(&invoice.tenant_id)
+                .bind(&invoice.subscription_id)
+                .bind(invoice.amount)
+                .bind(&invoice.status)
+                .execute(&mut *transaction)
+                .await
+                .map_err(|e| e.to_string())?;
+                transaction.commit().await.map_err(|e| e.to_string())?;
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "INSERT INTO invoices (id, tenant_id, subscription_id, amount, status) VALUES (?, ?, ?, ?, ?)"
+                )
+                .bind(&invoice.id)
+                .bind(&invoice.tenant_id)
+                .bind(&invoice.subscription_id)
+                .bind(invoice.amount)
+                .bind(&invoice.status)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(invoice)
+    }
+
+        pub async fn process_failed_invoice(
+        &self,
+        tenant_id: &str,
+        notifier: &(dyn DunningNotifier + Send + Sync),
+        generator: &(dyn DunningMessageGenerator + Send + Sync),
+        invoice_id: &str,
+        business_name: &str,
+    ) -> Result<(), String> {
+        let subscriber_id = match &self.db.store {
+            DbStore::Postgres => {
+                let row = sqlx::query(
+                    "SELECT s.customer_id FROM invoices i JOIN subscriptions s ON i.subscription_id = s.id WHERE i.id = $1 AND i.tenant_id = $2"
+                )
+                .bind(invoice_id)
+                .bind(tenant_id)
+                .fetch_one(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                row.try_get::<String, _>("customer_id").map_err(|e| e.to_string())?
+            }
+            DbStore::Sqlite(pool) => {
+                let row = sqlx::query(
+                    "SELECT s.customer_id FROM invoices i JOIN subscriptions s ON i.subscription_id = s.id WHERE i.id = ? AND i.tenant_id = ?"
+                )
+                .bind(invoice_id)
+                .bind(tenant_id)
+                .fetch_one(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                row.try_get::<String, _>("customer_id").map_err(|e| e.to_string())?
+            }
+        };
+
+        send_dunning_sms(notifier, generator, &subscriber_id, business_name).await
     }
 
     pub async fn create_plan(&self, tenant_id: &str, name: &str, description: &str, amount: i64, currency: &str, interval: &str) -> Result<SubscriptionPlan, String> {
@@ -484,6 +681,50 @@ impl SubscriptionService {
     async fn ensure_subscription_schema(&self) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {
+
+                sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS membership_tiers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        price DOUBLE PRECISION NOT NULL,
+                        interval TEXT NOT NULL
+                    )",
+                )
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS subscriptions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        plan_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        current_period_start BIGINT NOT NULL,
+                        current_period_end BIGINT NOT NULL,
+                        cancel_at_period_end BOOLEAN NOT NULL,
+                        canceled_at BIGINT,
+                        created_at BIGINT NOT NULL,
+                        updated_at BIGINT NOT NULL
+                    )",
+                )
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS invoices (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        subscription_id TEXT NOT NULL,
+                        amount DOUBLE PRECISION NOT NULL,
+                        status TEXT NOT NULL
+                    )",
+                )
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
                 sqlx::query(
                     "CREATE TABLE IF NOT EXISTS subscription_plans (
                         id TEXT PRIMARY KEY,
@@ -534,6 +775,50 @@ impl SubscriptionService {
                 .map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
+
+                sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS membership_tiers (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        price REAL NOT NULL,
+                        interval TEXT NOT NULL
+                    )",
+                )
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS subscriptions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        plan_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        current_period_start INTEGER NOT NULL,
+                        current_period_end INTEGER NOT NULL,
+                        cancel_at_period_end BOOLEAN NOT NULL,
+                        canceled_at INTEGER,
+                        created_at INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL
+                    )",
+                )
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS invoices (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        subscription_id TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        status TEXT NOT NULL
+                    )",
+                )
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
                 sqlx::query(
                     "CREATE TABLE IF NOT EXISTS subscription_plans (
                         id TEXT PRIMARY KEY,
@@ -630,19 +915,44 @@ mod tests {
         assert_eq!(messages[0].1, "LLM generated dunning response");
     }
 
+
+    #[tokio::test]
+    async fn process_failed_invoice_calls_dunning() {
+        let sent = Arc::new(Mutex::new(Vec::new()));
+        let notifier = RecordingDunningNotifier { sent: sent.clone() };
+        let generator = FixedDunningMessageGenerator;
+
+        let service = sqlite_subscription_service().await;
+
+        let tenant_id = "tenant-dunning";
+
+        let tier = service.create_membership_tier(tenant_id, "VIP", 99.0, "month").await.unwrap();
+        let sub = service.create_subscription(tenant_id, "real_customer_99", &tier.id).await.unwrap();
+        let inv = service.generate_invoice(tenant_id, &sub.id, 99.0).await.unwrap();
+
+        service.process_failed_invoice(tenant_id, &notifier, &generator, &inv.id, "Priya's Boutique").await.unwrap();
+
+        let messages = sent.lock().unwrap();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0].0, "real_customer_99");
+        assert_eq!(messages[0].1, "LLM generated dunning response");
+    }
+
     async fn sqlite_subscription_service() -> SubscriptionService {
         let sqlite_pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
             .unwrap();
-        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost:5432/postgres").unwrap_or_else(|_| panic!("unreachable"));
         let db = Arc::new(crate::db::DB {
             pool: pg_pool,
             store: crate::db::DbStore::Sqlite(sqlite_pool),
         });
 
-        SubscriptionService::new_for_db(db)
+        let svc = SubscriptionService::new_for_db(db);
+        svc.ensure_subscription_schema().await.unwrap();
+        svc
     }
 
     #[tokio::test]
