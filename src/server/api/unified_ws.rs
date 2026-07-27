@@ -55,7 +55,7 @@ static GLOBAL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::
 
 static GLOBAL_BROADCAST: std::sync::OnceLock<broadcast::Sender<String>> = std::sync::OnceLock::new();
 
-fn get_broadcast_tx() -> &'static broadcast::Sender<String> {
+pub fn get_broadcast_tx() -> &'static broadcast::Sender<String> {
     GLOBAL_BROADCAST.get_or_init(|| {
         let (tx, _) = broadcast::channel(4096);
         tx

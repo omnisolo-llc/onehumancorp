@@ -2988,10 +2988,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Message Triage Worker
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
+    let omnichannel_chat_worker = Arc::new(crate::workers::omnichannel_chat_worker::OmnichannelChatWorker::new(db.clone()));
     let customer_memory_worker = Arc::new(crate::workers::customer_memory_worker::CustomerMemoryWorker::new(db.clone()));
     customer_memory_worker.start();
 
     message_triage_worker.start();
+    let omnichannel_worker = omnichannel_chat_worker.clone();
+    tokio::spawn(async move {
+        omnichannel_worker.start().await;
+    });
 
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
@@ -7547,6 +7552,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/v1/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/v1/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
+        .nest("/api/v1/omnichannel", api::omnichannel_chat::router(db.pool.clone()))
         .route("/api/v1/agents/order-interceptor", axum::routing::post(api::agents::order_interceptor::intercept_order_handler).with_state(db.pool.clone()))
         .nest("/api/v1/agents/pydantic", api::agents::pydantic::router())
         .nest("/api/v1/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))

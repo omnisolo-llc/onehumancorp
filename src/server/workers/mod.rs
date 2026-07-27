@@ -29,3 +29,5 @@ pub mod booking_reengagement_job;
 pub mod subscription_health_job;
 pub mod subscription_health_worker;
 pub mod customer_memory_worker;
+
+pub mod omnichannel_chat_worker;

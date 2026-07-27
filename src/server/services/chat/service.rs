@@ -107,7 +107,7 @@ impl ChatService {
         sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
-        sqlx::query_as(
+        let msg = sqlx::query_as::<_, ChatMessage>(
             r#"
             INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -117,10 +117,98 @@ impl ChatService {
         .bind(Uuid::new_v4())
         .bind(tenant_id)
         .bind(conversation_id)
-        .bind(sender_type)
+        .bind(sender_type.clone())
         .bind(sender_id)
-        .bind(content)
+        .bind(content.clone())
         .fetch_one(&self.pool)
+        .await?;
+
+        if sender_type == "contact" {
+            let job_id = Uuid::new_v4().to_string();
+            let payload = serde_json::json!({
+                "message_id": msg.id.to_string(),
+                "conversation_id": conversation_id.to_string(),
+                "content": content
+            });
+            sqlx::query(
+                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'draft_omnichannel_reply', $3, 'PENDING')"
+            )
+            .bind(job_id)
+            .bind(tenant_id.to_string())
+            .bind(payload)
+            .execute(&self.pool).await?;
+        }
+
+        // Broadcast to WebSocket
+        let ws_data = serde_json::json!({
+            "action": "new_message",
+            "message": msg
+        });
+        let envelope = serde_json::json!({
+            "channel": "omnichannel",
+            "topic": format!("chat:{}", tenant_id),
+            "seq": 0,
+            "ts": chrono::Utc::now().timestamp_millis(),
+            "data": ws_data
+        });
+
+        let _ = crate::api::unified_ws::get_broadcast_tx().send(envelope.to_string());
+
+        Ok(msg)
+    }
+
+    pub async fn list_inboxes(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Vec<ChatInbox>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, name, created_at, updated_at
+            FROM chat_inboxes
+            WHERE tenant_id = $1
+            ORDER BY created_at DESC
+            "#
+        )
+        .bind(tenant_id)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    pub async fn list_conversations(
+        &self,
+        tenant_id: Uuid,
+        inbox_id: Uuid,
+    ) -> Result<Vec<ChatConversation>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+            FROM chat_conversations
+            WHERE tenant_id = $1 AND inbox_id = $2
+            ORDER BY updated_at DESC
+            "#
+        )
+        .bind(tenant_id)
+        .bind(inbox_id)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    pub async fn list_messages(
+        &self,
+        tenant_id: Uuid,
+        conversation_id: Uuid,
+    ) -> Result<Vec<ChatMessage>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            FROM chat_messages
+            WHERE tenant_id = $1 AND conversation_id = $2
+            ORDER BY created_at ASC
+            "#
+        )
+        .bind(tenant_id)
+        .bind(conversation_id)
+        .fetch_all(&self.pool)
         .await
     }
 }
