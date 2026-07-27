@@ -3,12 +3,12 @@ issue_description: |
   # Native Omnichannel Chat: Architecture & Data Model Design
 
   ## Problem Statement
-  OHC needs to fully replace Chatwoot with a native, high-performance omnichannel support system written in Rust to support the personas (e.g., Maya, Carlos, Priya) effectively without relying on an external third-party integration. The personas rely on varied channels (Instagram, WhatsApp, Web widgets) and require a seamless, tenant-safe inbox experience that integrates deeply with OHC's AI agents. We must implement matching native Rust microservices and data models reflecting Chatwoot's core abstractions, but optimized for OHC's `tenant_id` Row Level Security patterns.
+  OHC needs to fully replace the former third party chat service with a native, high-performance omnichannel support system written in Rust to support the personas (e.g., Maya, Carlos, Priya) effectively without relying on an external integration. The personas rely on varied channels (Instagram, WhatsApp, Web widgets) and require a seamless, tenant-safe inbox experience that integrates deeply with OHC's AI agents. We must implement matching native Rust microservices and data models reflecting core abstractions, but optimized for OHC's `tenant_id` Row Level Security patterns.
 
   ## Research Report
-  - We audited the Chatwoot source code repository (`https://github.com/chatwoot/chatwoot`), particularly its Active Record models: `Conversation`, `Message`, `Inbox`, `Channel`, `Contact`, `Account`.
-  - Chatwoot handles multi-tenancy via `account_id` integer. OHC will handle this natively via PostgreSQL Row-Level Security (RLS) and a `tenant_id` column for rigorous tenant isolation.
-  - Chatwoot relies on Ruby on Rails + PostgreSQL + Redis. OHC leverages Rust + PostgreSQL + Valkey (Redis) ensuring extremely high throughput and low resource footprints suitable for edge or limited footprint deployments.
+  - We audited the external platform repository, particularly its Active Record models: `Conversation`, `Message`, `Inbox`, `Channel`, `Contact`, `Account`.
+  - It handles multi-tenancy via `account_id` integer. OHC will handle this natively via PostgreSQL Row-Level Security (RLS) and a `tenant_id` column for rigorous tenant isolation.
+  - It relies on Ruby on Rails + PostgreSQL + Redis. OHC leverages Rust + PostgreSQL + Valkey (Redis) ensuring extremely high throughput and low resource footprints suitable for edge or limited footprint deployments.
 
   ## Design Doc
 
@@ -68,7 +68,7 @@ issue_description: |
   **Mission:** Implement the core database schema migrations and Rust proto definitions for the native Omnichannel Chat models (`Inbox`, `Contact`, `Conversation`, `Message`), ensuring strict multi-tenant RLS isolation via `tenant_id`.
 
   **Acceptance Criteria:**
-  1. Write SQL migrations to create the core tables mirroring Chatwoot's primary entities but adapted to OHC standards (`uuid`, `tenant_id`, `RLS`).
+  1. Write SQL migrations to create the core tables mirroring the former chat platform's primary entities but adapted to OHC standards (`uuid`, `tenant_id`, `RLS`).
   2. Implement protobuf definitions (`.proto`) for gRPC communication.
   3. Ensure all tests (`bazel test //...`) pass with 100% coverage on the new schemas.
 
