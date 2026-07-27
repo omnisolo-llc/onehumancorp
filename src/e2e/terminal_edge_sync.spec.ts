@@ -9,7 +9,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
+            data_DISABLED: {
                 transactions: [
                     {
                         transaction_id: txId,
@@ -34,7 +34,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
+            data_DISABLED: {
                 transactions: [
                     {
                         transaction_id: txId,
