@@ -160,6 +160,10 @@ function InboxWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [workingHoursEnabled, setWorkingHoursEnabled] = useState(false);
+  const [outOfOfficeMessage, setOutOfOfficeMessage] = useState("");
+
   const [manualReply, setManualReply] = useState("");
 
 
