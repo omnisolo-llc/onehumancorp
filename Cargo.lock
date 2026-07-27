@@ -5656,6 +5656,7 @@ dependencies = [
  "server_integrations_buffer",
  "server_integrations_cal_com",
  "server_integrations_calendly",
+ "server_integrations_chat",
  "server_integrations_chromadb",
  "server_integrations_convertkit",
  "server_integrations_core",
@@ -8627,6 +8628,28 @@ dependencies = [
  "server_integrations_core",
  "sqlx",
  "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "server_integrations_chat"
+version = "0.4.47"
+dependencies = [
+ "axum 0.8.9",
+ "chrono",
+ "futures",
+ "futures-util",
+ "redis",
+ "serde",
+ "serde_json",
+ "server_auth",
+ "server_common",
+ "server_telemetry",
+ "server_utils",
+ "sqlx",
+ "tokio",
+ "tokio-tungstenite",
  "tracing",
  "uuid",
 ]
