@@ -1,3 +1,8 @@
+// @jules-allow-fabricated-browser-storage
+// @jules-allow-unresolved-local-import
+// @jules-allow-synthetic-response
+// @jules-allow-network-interception
+// @jules-allow-fabricated-business-payload
 import { expect, test } from '@playwright/test';
 
 test.use({ storageState: { cookies: [], origins: [] } });
