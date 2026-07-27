@@ -33,7 +33,7 @@ rust_library(
         "//src/server/integrations/meta:client.rs",
         "//src/server/integrations/meta:mod.rs",
         "//src/server/integrations/meta:provider.rs",
-        "//src/server/integrations/meta:whatsapp.rs",
+
         "//src/server/integrations/shipday:client.rs",
         "//src/server/integrations/shipday:mod.rs",
         "//src/server/integrations/shipday:provider.rs",
@@ -93,8 +93,9 @@ rust_library(
         "//src/server/integrations/shipday:server_integrations_shipday",
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
-        "//src/server/integrations/whatsapp_cloud:server_integrations_whatsapp_cloud",
         "//src/server/integrations/taxjar:server_integrations_taxjar",
+
+        "//src/server/integrations/whatsapp:server_integrations_whatsapp",
         "//src/server/integrations/zoom:server_integrations_zoom",
         "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/ohc:server_ohc",

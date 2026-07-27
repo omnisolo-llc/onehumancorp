@@ -17,7 +17,7 @@ pub struct ConnectWhatsAppRequest {
     pub from_phone: Option<String>,
 }
 
-pub async fn connect_whatsapp_cloud_api(
+pub async fn connect_whatsapp(
     State(hub): State<Arc<Hub>>,
     Extension(user): Extension<Claims>,
     Json(payload): Json<ConnectWhatsAppRequest>,
@@ -35,12 +35,12 @@ pub async fn connect_whatsapp_cloud_api(
         "from_phone": from_phone,
     }).to_string();
 
-    let id = format!("{}_whatsapp_cloud_api", tenant_id);
+    let id = format!("{}_whatsapp", tenant_id);
 
     let db_pool = &hub.pool;
     let res = sqlx::query(
         "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
-         VALUES ($1, $2, 'whatsapp_cloud_api', 'connected', $3)
+         VALUES ($1, $2, 'whatsapp', 'connected', $3)
          ON CONFLICT (id) DO UPDATE SET status = 'connected', integration_code = $3"
     )
     .bind(&id)
@@ -57,7 +57,7 @@ pub async fn connect_whatsapp_cloud_api(
     let id_uuid = uuid::Uuid::new_v4().to_string();
     let creds_res = sqlx::query(
         "INSERT INTO integration_credentials (id, tenant_id, integration_id, bot_token, api_token, from_phone)
-         VALUES ($1, $2, 'whatsapp_cloud_api', '', $3, $4)
+         VALUES ($1, $2, 'whatsapp', '', $3, $4)
          ON CONFLICT (tenant_id, integration_id) DO UPDATE SET bot_token = '', api_token = $3, from_phone = $4"
     )
     .bind(&id_uuid)
@@ -73,7 +73,7 @@ pub async fn connect_whatsapp_cloud_api(
     }
 
     let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-        integration_id: "whatsapp_cloud_api".to_string(),
+        integration_id: "whatsapp".to_string(),
         base_url: "https://graph.facebook.com/v19.0".to_string(),
         bot_token: "".to_string(),
         chat_id: "".to_string(),
@@ -82,7 +82,7 @@ pub async fn connect_whatsapp_cloud_api(
         from_phone: from_phone.clone(),
     };
 
-    if let Err(e) = hub.integration_service().connect("whatsapp_cloud_api", "https://graph.facebook.com/v19.0", creds) {
+    if let Err(e) = hub.integration_service().connect("whatsapp", "https://graph.facebook.com/v19.0", creds) {
          tracing::error!("Failed to register WhatsApp Cloud API in memory: {}", e);
          // Do not fail the request if memory registration fails, as DB is the source of truth,
          // but log it.

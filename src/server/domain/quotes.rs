@@ -4,7 +4,7 @@ use serde_json::Value;
 #[cfg(ohc_bazel)]
 use crate::integrations::stripe::client::StripeClient;
 #[cfg(not(ohc_bazel))]
-use server_integrations_stripe::client::StripeClient;
+use crate::integrations::stripe::client::StripeClient;
 
 pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
     // Extract customer info explicitly early on if provided by action payload

@@ -1,5 +1,5 @@
 
-use crate::integrations::google_calendar::provider::GoogleCalendarProvider;
+use server_integrations_google_calendar::provider::GoogleCalendarProvider;
 use ::server_common::auth_utils;
 use sqlx::Row;
 use std::time::Duration;

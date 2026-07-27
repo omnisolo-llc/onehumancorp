@@ -61,6 +61,6 @@ pub mod outlook_calendar;
 #[cfg(not(ohc_bazel))]
 pub mod trello;
 #[cfg(ohc_bazel)]
-pub use ::server_integrations_whatsapp_cloud as whatsapp_cloud;
+pub use ::server_integrations_whatsapp as whatsapp;
 #[cfg(not(ohc_bazel))]
-pub mod whatsapp_cloud;
+pub mod whatsapp;

@@ -90,7 +90,7 @@ fn provider_credentials_present(
     let has_api_token = api_token.is_some_and(|value| !value.trim().is_empty());
     match integration_id {
         "twilio" | "whatsapp" => has_bot_token && has_api_token,
-        "whatsapp_cloud_api" => has_api_token,
+        "whatsapp_meta" => has_api_token,
         _ => has_bot_token || has_api_token,
     }
 }

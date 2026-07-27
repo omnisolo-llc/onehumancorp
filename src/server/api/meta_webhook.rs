@@ -120,7 +120,7 @@ pub async fn meta_webhook_post_handler(
                                   let resolved_tenant_id = match &state.db.store {
                                       crate::db::DbStore::Postgres => {
                                           let mut tid = sqlx::query_scalar::<_, String>(
-                                              "SELECT tenant_id FROM integration_credentials WHERE (from_phone = $1 OR from_phone = $2) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                                              "SELECT tenant_id FROM integration_credentials WHERE (from_phone = $1 OR from_phone = $2) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp') LIMIT 1"
                                           )
                                           .bind(display_phone_number)
                                           .bind(&clean_phone_number)
@@ -145,7 +145,7 @@ pub async fn meta_webhook_post_handler(
                                       },
                                       crate::db::DbStore::Sqlite(sqlite_pool) => {
                                           let mut tid = sqlx::query_scalar::<_, String>(
-                                              "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                                              "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp') LIMIT 1"
                                           )
                                           .bind(display_phone_number)
                                           .bind(&clean_phone_number)

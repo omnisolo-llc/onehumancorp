@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(ohc_bazel)]
 use crate::integrations::mercadopago::client::MercadoPagoClient;
 #[cfg(not(ohc_bazel))]
-use server_integrations_mercadopago::client::MercadoPagoClient;
+use crate::integrations::mercadopago::client::MercadoPagoClient;
 #[cfg(ohc_bazel)]
 use crate::integrations::razorpay::client::RazorpayClient;
 #[cfg(not(ohc_bazel))]

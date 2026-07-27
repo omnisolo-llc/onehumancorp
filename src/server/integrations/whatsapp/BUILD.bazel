@@ -6,6 +6,7 @@ rust_library(
     crate_root = "mod.rs",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/integrations/core:server_integrations_core",
         "@crates//:axum",
         "@crates//:reqwest",
         "@crates//:serde",

@@ -21,7 +21,7 @@ const INTEGRATION_TEMPLATE = [
   { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
   { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
   { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
-  { id: "whatsapp_cloud_api", name: "WhatsApp Cloud API", category: "social", status: "disconnected", icon: "💬", description: "Direct WhatsApp Cloud API connection for messages." },
+  { id: "whatsapp", name: "WhatsApp Cloud API", category: "social", status: "disconnected", icon: "💬", description: "Direct WhatsApp Cloud API connection for messages." },
   { id: "whatsapp", name: "Twilio for WhatsApp", category: "social", status: "disconnected", icon: "💬", description: "Central WhatsApp Inbox for Work Triage and Customer Assistant powered by Twilio." },
   { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Central Instagram and Facebook Inbox." },
   { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Central omnichannel inbox aggregating messages across all channels." },
@@ -99,7 +99,7 @@ export default function Integrations() {
       setStatusMessage("Enter your Twilio API credentials to connect WhatsApp.");
       return;
     }
-    if (id === 'whatsapp_cloud_api') {
+    if (id === 'whatsapp') {
       setShowWhatsAppCloudApiModal(true);
       setStatusMessage("Continue with Meta to connect WhatsApp Cloud API.");
       return;
@@ -194,7 +194,7 @@ export default function Integrations() {
   const saveWhatsAppCloudApiIntegration = async () => {
     try {
       const doBackendConnect = async (token?: string) => {
-        const res = await fetch(`/api/v1/integrations/whatsapp_cloud_api/connect`, {
+        const res = await fetch(`/api/v1/integrations/whatsapp/connect`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -207,7 +207,7 @@ export default function Integrations() {
           return;
         }
         setIntegrations(prev => prev.map(integration =>
-          integration.id === 'whatsapp_cloud_api' ? { ...integration, status: "connected" } : integration
+          integration.id === 'whatsapp' ? { ...integration, status: "connected" } : integration
         ));
         setShowWhatsAppCloudApiModal(false);
         setStatusMessage("WhatsApp Cloud API connected.");

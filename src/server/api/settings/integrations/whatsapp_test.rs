@@ -10,7 +10,7 @@ use tower::ServiceExt;
 use axum::extract::Extension;
 
 use crate::hub::Hub;
-use crate::api::settings::integrations::whatsapp::{connect_whatsapp_cloud_api, connect_whatsapp_twilio};
+use crate::api::settings::integrations::whatsapp::{connect_whatsapp, connect_whatsapp_twilio};
 use ::server_common::Claims;
 
 async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
@@ -90,11 +90,11 @@ fn test_claims() -> Claims {
 }
 
 #[tokio::test]
-async fn test_connect_whatsapp_cloud_api() {
+async fn test_connect_whatsapp() {
     let hub: Arc<Hub> = test_hub().await;
 
     let app = Router::new()
-        .route("/api/v1/settings/integrations/whatsapp_cloud_api", post(connect_whatsapp_cloud_api))
+        .route("/api/v1/settings/integrations/whatsapp", post(connect_whatsapp))
         .layer(Extension(test_claims()))
         .with_state(hub.clone());
 
@@ -105,7 +105,7 @@ async fn test_connect_whatsapp_cloud_api() {
 
     let request = Request::builder()
         .method("POST")
-        .uri("/api/v1/settings/integrations/whatsapp_cloud_api")
+        .uri("/api/v1/settings/integrations/whatsapp")
         .header("content-type", "application/json")
         .body(Body::from(payload.to_string()))
         .unwrap();

@@ -57,7 +57,7 @@ test.describe('Regression Audit: Verify Fake Data Removed and Features Rewired',
   });
 
   test('verify whatsapp cloud api fails gracefully when backend is down instead of returning fake data', async ({ page, request }) => {
-    const response = await request.post('/api/v1/integrations/whatsapp_cloud_api/connect', {
+    const response = await request.post('/api/v1/integrations/whatsapp/connect', {
         data: { token: 'test' }
     });
     // It should throw error instead of returning 200 success

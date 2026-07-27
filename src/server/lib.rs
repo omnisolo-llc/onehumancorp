@@ -377,14 +377,14 @@ struct OmniReplyDispatch {
 }
 
 async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
-    if dispatch.integration_id == "whatsapp_cloud_api" {
-        use crate::integrations::meta::provider::MetaProvider;
-        let provider = MetaProvider::new(dispatch.auth_token, Some(dispatch.from_phone));
+    if dispatch.integration_id == "whatsapp" {
+        use crate::integrations::whatsapp::provider::WhatsAppProvider;
+        let provider = WhatsAppProvider::new(dispatch.from_phone, dispatch.auth_token);
         let to = dispatch
             .sender_id
             .strip_prefix("whatsapp:")
             .unwrap_or(&dispatch.sender_id);
-        if let Err(error) = provider.send_message("whatsapp", to, &dispatch.reply).await {
+        if let Err(error) = provider.send_message(to, &dispatch.reply).await {
             tracing::error!("Failed to send approved WhatsApp reply: {error:?}");
         }
         return;
@@ -398,7 +398,7 @@ async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
         return;
     }
 
-    use crate::integrations::twilio::provider::TwilioProvider;
+    use server_integrations_twilio::provider::TwilioProvider;
     let provider = TwilioProvider::new(dispatch.account_sid, dispatch.auth_token);
     let result = if dispatch.source == "whatsapp" {
         let to = if dispatch.sender_id.starts_with("whatsapp:") {
@@ -478,10 +478,10 @@ async fn apply_omni_inbox_action(
                                     "SELECT integration_id, COALESCE(bot_token, ''),
                                             COALESCE(api_token, ''), COALESCE(from_phone, '')
                                      FROM integration_credentials
-                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
+                                     WHERE integration_id IN ('whatsapp', 'whatsapp', 'twilio')
                                        AND tenant_id = $1
                                      ORDER BY CASE
-                                        WHEN integration_id = 'whatsapp_cloud_api' THEN 1
+                                        WHEN integration_id = 'whatsapp' THEN 1
                                         WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
                                      LIMIT 1",
                                 )
@@ -549,10 +549,10 @@ async fn apply_omni_inbox_action(
                                     "SELECT integration_id, COALESCE(bot_token, ''),
                                             COALESCE(api_token, ''), COALESCE(from_phone, '')
                                      FROM integration_credentials
-                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
+                                     WHERE integration_id IN ('whatsapp', 'whatsapp', 'twilio')
                                        AND tenant_id = ?
                                      ORDER BY CASE
-                                        WHEN integration_id = 'whatsapp_cloud_api' THEN 1
+                                        WHEN integration_id = 'whatsapp' THEN 1
                                         WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
                                      LIMIT 1",
                                 )
@@ -2887,7 +2887,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
             }
         };
 
-        let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+        let provider = server_integrations_twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
         if let Err(_e) = provider.send_sms(&phone, &from_number, message).await {
             tracing::warn!("Failed to dispatch critical SMS. Expected if Twilio is not configured.");
@@ -4489,7 +4489,7 @@ pub async fn update_ui_triage_action_handler(
                                 if !account_sid.is_empty() && !auth_token.is_empty() && !from_number.is_empty() {
                                     // Normally we would lookup new_staff_id phone number from staff_profiles,
                                     // but we can dispatch to a placeholder or use the payload info.
-                                    let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+                                    let provider = server_integrations_twilio::provider::TwilioProvider::new(account_sid, auth_token);
                                     let message = format!("Your shift {} has been reassigned to you.", shift_id);
                                     let _ = provider.send_sms(&from_number, "+15550000000", &message).await;
                                 }
@@ -4758,7 +4758,7 @@ pub async fn update_ui_triage_action_handler(
                                 let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_default();
 
                                 if !account_sid.is_empty() && !auth_token.is_empty() && !from_number.is_empty() {
-                                    let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+                                    let provider = server_integrations_twilio::provider::TwilioProvider::new(account_sid, auth_token);
                                     let message = format!("Your shift {} has been reassigned to you.", shift_id);
                                     let _ = provider.send_sms(&from_number, "+15550000000", &message).await;
                                 }
@@ -6721,7 +6721,7 @@ async fn create_ui_bom_item_handler(
                 }
             };
 
-            let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+            let provider = server_integrations_twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
             let body = format!("Your OHC verification code is {}", otp);
             let phone_clone = phone.clone();
@@ -7550,7 +7550,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/agents/order-interceptor", axum::routing::post(api::agents::order_interceptor::intercept_order_handler).with_state(db.pool.clone()))
         .nest("/api/v1/agents/pydantic", api::agents::pydantic::router())
         .nest("/api/v1/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
-        .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
+        .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .merge(api::agent_stream::router(hub.clone()))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
