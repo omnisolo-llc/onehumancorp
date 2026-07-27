@@ -1,18 +1,18 @@
-issue_title: "Native Rust Omnichannel Chat Engine (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat Engine (the native omnichannel design Replacement)"
 issue_description: |
   ## Problem Statement
-  OHC currently relies on external chat systems or decoupled messaging architectures to handle customer support, omnichannel conversations, and inbox management. As OHC scales to handle more demanding owner/operator use cases (e.g., Maya's Instagram DMs, Carlos's SMS quotes), relying on third-party dependencies like Chatwoot introduces multi-tenancy risks, data fragmentation, performance overhead, and disjointed agent coordination. We need a native, high-performance, multi-tenant omnichannel customer support and chat engine built entirely in Rust, operating inside `onehumancorp/mono`.
+  OHC currently relies on external chat systems or decoupled messaging architectures to handle customer support, omnichannel conversations, and inbox management. As OHC scales to handle more demanding owner/operator use cases (e.g., Maya's Instagram DMs, Carlos's SMS quotes), relying on third-party dependencies like the native omnichannel design introduces multi-tenancy risks, data fragmentation, performance overhead, and disjointed agent coordination. We need a native, high-performance, multi-tenant omnichannel customer support and chat engine built entirely in Rust, operating inside `onehumancorp/mono`.
 
   ## Research Report
   ### Market & Architecture Analysis
-  An audit of Chatwoot's source code (v3.x) reveals the foundational models of a modern omnichannel inbox:
+  An audit of the native omnichannel design's source code (v3.x) reveals the foundational models of a modern omnichannel inbox:
   - **Tenancy**: `Accounts` map to our OHC `Tenants` (Row-Level Security required).
   - **Identities**: `Users` (Agents) and `Contacts` (Customers).
   - **Core Entities**: `Inboxes`, `Conversations`, and `Messages`.
   - **Channel Adapters**: Independent models linking external channels (`Channel::WebWidget`, `Channel::Email`, `Channel::Whatsapp`, `Channel::Instagram`) to `Inboxes`.
   - **Real-time**: WebSocket connections pub/sub via Redis.
 
-  **Limitations of adopting a Ruby-based 3rd-party tool (Chatwoot)**:
+  **Limitations of adopting a Ruby-based 3rd-party tool (the native omnichannel design)**:
   - High memory footprint.
   - No direct integration with OHC's internal `Tenant` context, necessitating messy syncs.
   - Lacks native integration with OHC AI agents for automated replies, triage, and draft generation.
