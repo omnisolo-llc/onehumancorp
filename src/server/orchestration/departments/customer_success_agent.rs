@@ -329,7 +329,7 @@ impl Department for CustomerSuccessAgent {
             tokio::spawn(async move {
                 if source == "whatsapp" && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
-                    let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as("SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp', 'whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1")
+                    let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as("SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_meta', 'whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp_meta' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1")
                         .bind(&tenant_id_for_meta)
                         .fetch_one(&pool)
                         .await;
@@ -337,7 +337,7 @@ impl Department for CustomerSuccessAgent {
                     if let Ok((integration_id, account_sid, auth_token, from_phone)) =
                         integration_row
                     {
-                        if integration_id == "whatsapp" {
+                        if integration_id == "whatsapp_meta" {
                             use crate::integrations::whatsapp::provider::WhatsAppProvider;
                             let provider = WhatsAppProvider::new(from_phone, auth_token);
                             let to = if sender_id.starts_with("whatsapp:") {
