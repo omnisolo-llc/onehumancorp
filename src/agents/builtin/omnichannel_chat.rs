@@ -28,7 +28,7 @@ pub struct ChatMessage {
 }
 
 /// Native Rust Omnichannel Chat Engine
-/// Replaces external Chatwoot dependency by implementing:
+/// Replaces external dependencies by implementing:
 /// 1. Intent Classification
 /// 2. Copilot response drafting
 /// 3. Auto Responder
