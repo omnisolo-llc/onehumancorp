@@ -58,6 +58,33 @@ async fn handle_inquiry_webhook(
     let inquiry_id = Uuid::new_v4();
     let tenant_id = payload.tenant_id.clone();
 
+    // Call intent classification AI
+    let prompt = format!(
+        "Classify the following customer inquiry intent as one of [SERVICE_REQUEST, COMPLAINT, QUESTION, OTHER]. Return ONLY the classification string. Inquiry: '{}'",
+        payload.message
+    );
+    let prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+    let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+        Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+        Ok("minimax") => {
+            if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+                crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+            } else {
+                crate::minimax::LocalLLMClient::new().reason(&prompt).await
+            }
+        }
+        _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+    };
+
+    let intent = llm_res.unwrap_or_else(|_| "SERVICE_REQUEST".to_string());
+    let intent = intent.trim().to_uppercase();
+    let safe_intent = if ["SERVICE_REQUEST", "COMPLAINT", "QUESTION"].contains(&intent.as_str()) {
+        intent
+    } else {
+        "OTHER".to_string()
+    };
+
     // Step 1: Create the inquiry
     let _inquiry = sqlx::query_as::<_, Inquiry>(
         "INSERT INTO inquiries (id, tenant_id, source, raw_message, parsed_intent, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
@@ -66,7 +93,7 @@ async fn handle_inquiry_webhook(
     .bind(&tenant_id)
     .bind(&payload.source)
     .bind(&payload.message)
-    .bind("SERVICE_REQUEST") // In reality, call the intent classification AI here
+    .bind(&safe_intent)
     .bind("QUOTED")
     .fetch_one(&pool)
     .await
