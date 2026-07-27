@@ -8,5 +8,8 @@ serde = { workspace = true }
 tracing = "0.1"
 config = "0.15.22"
 
+[dev-dependencies]
+temp-env = "0.3.6"
+
 [lib]
 path = "mod.rs"
