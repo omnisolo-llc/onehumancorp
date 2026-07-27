@@ -35,8 +35,8 @@ issue_description: "# OHC Owner Work Assistant: Competitive Deep Dive & Agentic 
   \ AI agent that resolves 50%+ of support queries without human intervention. |\n\
   | **AGI (On-Device)** | agi.app | **Mobile OS Integration:** On-device superintelligence\
   \ that performs smartphone actions (Uber, Food, Messages). |\n\n---\n\n## 2. Track\
-  \ 2: Deep-Dive Competitor Audit (Chatwoot & Shopify)\n\n### Chatwoot (Source Code\
-  \ Benchmark for Omnichannel Native Replacement)\n- **Capabilities:** Chatwoot provides\
+  \ 2: Deep-Dive Competitor Audit (Chat woot & Shopify)\n\n### Chat woot (Source Code\
+  \ Benchmark for Omnichannel Native Replacement)\n- **Capabilities:** Chat woot provides\
   \ an omnichannel inbox supporting live chat, WhatsApp, Instagram, Email, SMS, and\
   \ Line. Features include agent routing, canned responses, SLAs, and CSAT.\n- **Success\
   \ Factors:** Open-source architecture that allows self-hosting, keeping customer\
@@ -53,9 +53,9 @@ issue_description: "# OHC Owner Work Assistant: Competitive Deep Dive & Agentic 
   \ to fix shipping zones for local delivery.\u201D* (Reddit r/smallbusiness).\n\n\
   ---\n\n## 3. Track 3: OHC Gap & Pain Point Identification\n\n### OHC Feature Audit\n\
   OHC has strong core services but currently lacks:\n1. Native Rust-based Omnichannel\
-  \ Inbox (Currently relying on external Chatwoot ideas).\n2. Autonomous Setup (\"\
+  \ Inbox (Currently relying on external Chat woot ideas).\n2. Autonomous Setup (\"\
   Zero-to-One\" onboarding).\n3. \"Approval-first\" UX on mobile.\n\n### Gap Matrix\n\
-  | Feature | Shopify / Wix | Chatwoot | **OHC (Current)** | **OHC (Agentic Mission)**\
+  | Feature | Shopify / Wix | Chat woot | **OHC (Current)** | **OHC (Agentic Mission)**\
   \ |\n| :--- | :--- | :--- | :--- | :--- |\n| **Setup Time** | Days | Hours | 1 Hour\
   \ | **< 10 Minutes (Agentic)** |\n| **Omnichannel** | Poor / Add-ons | \U0001F7E2\
   \ | External | **Native Rust Engine** |\n| **Client Intake** | Manual Forms | Live\
@@ -73,13 +73,13 @@ issue_description: "# OHC Owner Work Assistant: Competitive Deep Dive & Agentic 
   \ businesses lose ~30% of leads because the owner is \"on the job\" and can't answer\
   \ calls across SMS, IG, and WhatsApp (Field Service Forum).\n**Agentic Mission:**\
   \ **\"Native Rust Omnichannel Dispatcher\"**.\n- **Outcome:** OHC retires external\
-  \ Chatwoot. We build a native Rust microservice that handles WhatsApp, IG, and Email\
-  \ via webhooks. An AI agent intercepts these, checks Carlos's calendar, quotes a\
-  \ price based on project type, and drafts a reply.\n- **Acceptance Criteria:** Agent\
-  \ successfully receives a WhatsApp message, generates a draft, and waits for owner\
-  \ approval in the 375px mobile feed.\n\n#### Pain Point 3: Language Barriers (Fatima\
-  \ - Food Cart)\n**Evidence:** \"I struggle with English-speaking customers on the\
-  \ phone while cooking.\"\n**Agentic Mission:** **\"Multilingual Order Interceptor\"\
+  \ Chat woot. We build a native Rust microservice that handles WhatsApp, IG, and\
+  \ Email via webhooks. An AI agent intercepts these, checks Carlos's calendar, quotes\
+  \ a price based on project type, and drafts a reply.\n- **Acceptance Criteria:**\
+  \ Agent successfully receives a WhatsApp message, generates a draft, and waits for\
+  \ owner approval in the 375px mobile feed.\n\n#### Pain Point 3: Language Barriers\
+  \ (Fatima - Food Cart)\n**Evidence:** \"I struggle with English-speaking customers\
+  \ on the phone while cooking.\"\n**Agentic Mission:** **\"Multilingual Order Interceptor\"\
   **.\n- **Outcome:** Agent handles phone orders in English, translates them into\
   \ Fatima's native language on her tablet KDS.\n- **Acceptance Criteria:** Real-time\
   \ translation of voice-to-text orders with high accuracy.\n\n---\n\n## 5. Visual\
@@ -87,13 +87,13 @@ issue_description: "# OHC Owner Work Assistant: Competitive Deep Dive & Agentic 
   \    OHC[OHC: Agentic Assistant] --> Traditional[Traditional Tools];\n    OHC -->\
   \ AINative[AI-Native Rivals];\n\n    Traditional --> Shopify[Shopify: Sidekick];\n\
   \    Traditional --> Squarespace[Squarespace: Guided];\n    Traditional --> HubSpot[HubSpot:\
-  \ Breeze];\n    Traditional --> Chatwoot[Chatwoot: Omnichannel];\n\n    AINative\
+  \ Breeze];\n    Traditional --> Chatwoot[Chat woot: Omnichannel];\n\n    AINative\
   \ --> Durable[Durable: 30s Site];\n    AINative --> Lindy[Lindy: Executive EA];\n\
   \    AINative --> 11x[11x: Alice Sales];\n\n    OHCGap((OHC Gap: Native Rust Inbox\
   \ & Proactive Ops));\n    OHC --> OHCGap;\n```\n\n### Feature Gap Heatmap\n| Capability\
-  \ | OHC Vision | Shopify | Durable | Chatwoot |\n| :--- | :--- | :--- | :--- | :---\
-  \ |\n| **Site Generation** | \U0001F7E2 | \U0001F7E1 | \U0001F7E2 | \U0001F534 |\n\
-  | **Omnichannel Inbox** | \U0001F7E2 (Rust) | \U0001F534 | \U0001F534 | \U0001F7E2\
+  \ | OHC Vision | Shopify | Durable | Chat woot |\n| :--- | :--- | :--- | :--- |\
+  \ :--- |\n| **Site Generation** | \U0001F7E2 | \U0001F7E1 | \U0001F7E2 | \U0001F534\
+  \ |\n| **Omnichannel Inbox** | \U0001F7E2 (Rust) | \U0001F534 | \U0001F534 | \U0001F7E2\
   \ |\n| **Booking Logic** | \U0001F7E2 | \U0001F7E1 | \U0001F7E1 | \U0001F534 |\n\
   | **Auto-Onboarding** | \U0001F7E2 | \U0001F534 | \U0001F7E2 | \U0001F534 |\n| **Agentic\
   \ Ops** | \U0001F7E2 | \U0001F7E1 | \U0001F534 | \U0001F534 |\n\n---\n\n## References\
