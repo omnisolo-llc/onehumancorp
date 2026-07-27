@@ -1,12 +1,12 @@
-issue_title: "Retire Chatwoot: Build Native Rust Omnichannel Chat System"
+issue_title: "Retire Chat platform: Build Native Rust Omnichannel Chat System"
 issue_description: |
-  ## Title: Retire Chatwoot: Build Native Rust Omnichannel Chat System
+  ## Title: Retire Chat platform: Build Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  Currently, managing customer communications across different channels (Instagram DMs, WhatsApp, Website Chat, Emails) can feel disjointed or require relying on external third-party systems like Chatwoot, which breaks our unified "One Human Corp" experience. For an owner like Maya the Baker or Carlos the Handyman, jumping between different apps or waiting for third-party syncs means lost leads, missed follow-ups, and an incomplete view of customer history. They need a single, instant, and reliable unified inbox directly within their OHC mobile and desktop app. The system must feel native, be instantly responsive, and automatically coordinate with AI agents to draft replies and manage operational tasks.
+  Currently, managing customer communications across different channels (Instagram DMs, WhatsApp, Website Chat, Emails) can feel disjointed or require relying on external third-party systems, which breaks our unified "One Human Corp" experience. For an owner like Maya the Baker or Carlos the Handyman, jumping between different apps or waiting for third-party syncs means lost leads, missed follow-ups, and an incomplete view of customer history. They need a single, instant, and reliable unified inbox directly within their OHC mobile and desktop app. The system must feel native, be instantly responsive, and automatically coordinate with AI agents to draft replies and manage operational tasks.
 
   ## Research Report
-  - **Chatwoot Source Code Audit**: An audit of Chatwoot's repository (`https://github.com/chatwoot/chatwoot`) reveals a robust MVC architecture in Ruby on Rails. The core domain models that enable its omnichannel capabilities include:
+  - **Source Code Audit**: An audit of an external chat platform reveals a robust MVC architecture. The core domain models that enable its omnichannel capabilities include:
     - `Inbox`: Represents a specific channel connection (e.g., a specific Facebook page, a web widget, or a WhatsApp number).
     - `Conversation`: A unified thread of messages between a contact and the business within a specific inbox.
     - `Message`: The individual chat bubbles or emails within a conversation.
@@ -76,13 +76,13 @@ issue_description: |
   - **Operations Agent**: Can attach structured UI cards (e.g., "Booking Quote") directly into the message feed.
 
   ### Key Design Decisions
-  - **Native Rust Implementation**: Complete retirement of Chatwoot as an external service. All endpoints, WebSocket real-time updates, and data models (`Inbox`, `Conversation`, `Message`, `Contact`) will be built natively in `onehumancorp/mono` (specifically in `src/server/ohc/domain/`).
+  - **Native Rust Implementation**: Complete retirement of external chat platform as an external service. All endpoints, WebSocket real-time updates, and data models (`Inbox`, `Conversation`, `Message`, `Contact`) will be built natively in `onehumancorp/mono` (specifically in `src/server/ohc/domain/`).
   - **Strict Multi-Tenancy**: Every table must include `tenant_id` and utilize PostgreSQL Row Level Security (RLS) to guarantee complete data isolation between owners.
   - **Performance**: Natively integrated WebSockets and Rust Axum endpoints will ensure sub-100ms latency for message delivery, crucial for live chat widget parity.
 
   ## Implementation Prompt
   **Role:** Implementer Agent
-  **Task:** Build the core backend data models and service layer for the native Rust Omnichannel Chat System in OHC, replacing Chatwoot.
+  **Task:** Build the core backend data models and service layer for the native Rust Omnichannel Chat System in OHC, replacing the legacy external chat platform.
   **CUJ:** A business owner needs to view a unified list of incoming messages from multiple sources (simulated by different `Inbox` records) and send a reply to a specific customer `Contact` in a `Conversation`.
   **Acceptance Criteria:**
   1. Define Rust structs, SQLx database migrations, and repository functions for `Inbox`, `Conversation`, `Message`, and `Contact` within `src/server/ohc/domain/`.
