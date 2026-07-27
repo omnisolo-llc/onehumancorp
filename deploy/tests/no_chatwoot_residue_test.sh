@@ -24,6 +24,7 @@ historical=(
   docs/research/ohc_tool_integration_research_report.md
   docs/reports/tool_integration_research_report_q3.md
   docs/research/triage_report_bazel.md
+  docs/research/chatwoot_replacement_research_report.md
 )
 allowed_reference_paths=(
   .github/workflows/ci.yml
