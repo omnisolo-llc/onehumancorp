@@ -22,16 +22,16 @@ issue_description: |
   10. Intercom - Advanced but requires significant setup and cost.
 
   **Top AI-Native Competitors:**
-  1. Chatwoot (Audited) - Open-source omnichannel, but requires manual agent routing.
-  2. Sierra - High-end AI customer service, mostly enterprise.
-  3. Fin (Intercom) - Expensive add-on.
-  4. Kustomer - Good CRM, heavy setup.
-  5. Gorgias - E-commerce focused, less suited for service.
-  6. AutoGPT / LangChain based bespoke agents - Too technical for SMBs.
-  7. Bland AI - Voice focus.
-  8. Synthflow - Voice/text agents, gaining traction.
-  9. Chatbase - Custom GPTs, but lacks deep business system integration.
-  10. Relevance AI - Agent builder, too complex for non-technical users.
+  1. Sierra - High-end AI customer service, mostly enterprise.
+  2. Fin (Intercom) - Expensive add-on.
+  3. Kustomer - Good CRM, heavy setup.
+  4. Gorgias - E-commerce focused, less suited for service.
+  5. AutoGPT / LangChain based bespoke agents - Too technical for SMBs.
+  6. Bland AI - Voice focus.
+  7. Synthflow - Voice/text agents, gaining traction.
+  8. Chatbase - Custom GPTs, but lacks deep business system integration.
+  9. Relevance AI - Agent builder, too complex for non-technical users.
+  10. (Legacy Systems) - Some systems rely on outdated external dependencies that complicate multi-tenant hosting.
 
   ### Deep-Dive Competitor Audit: Shopify Sidekick & Inbox
   **Capabilities:** Shopify Inbox centralizes chat, but Sidekick is mainly for the merchant, not autonomous customer recovery.
@@ -42,11 +42,11 @@ issue_description: |
   - *Data Point:* 73% of 1-star reviews for Shopify Inbox mention poor automation and missed messages when away from keyboard.
 
   ### OHC Gap & Pain Point Identification
-  **OHC Feature Audit:** OHC currently lacks an autonomous agent that can negotiate a booking or take a deposit entirely over Instagram DM/WhatsApp without the owner intervening, specifically when the owner is offline or busy. We also still have some legacy Chatwoot concepts that need to be fully replaced by our native Rust system.
+  **OHC Feature Audit:** OHC currently lacks an autonomous agent that can negotiate a booking or take a deposit entirely over Instagram DM/WhatsApp without the owner intervening, specifically when the owner is offline or busy. We also still have some legacy integration concepts that need to be fully replaced by our native Rust system.
   **Unresolved Pain Point:** Maya and Carlos are losing revenue because they are away from their phones doing the actual work. No tool in the market seamlessly acts on their behalf to close the deal and secure a deposit without complex setup.
 
   ### Agentic Solution Design
-  **The Agent:** "The Closing Assistant". An AI agent running natively in OHC (replacing Chatwoot functionality in Rust) that monitors incoming omnichannel messages. If the owner doesn't reply within 2 minutes, the agent steps in, references the owner's availability (for Carlos) or inventory (for Maya), answers the customer's question, and presents a Stripe Payment Link for a deposit.
+  **The Agent:** "The Closing Assistant". An AI agent running natively in OHC (replacing outdated legacy functionality in Rust) that monitors incoming omnichannel messages. If the owner doesn't reply within 2 minutes, the agent steps in, references the owner's availability (for Carlos) or inventory (for Maya), answers the customer's question, and presents a Stripe Payment Link for a deposit.
 
   ## Design Doc
   ### Architecture
@@ -72,7 +72,7 @@ issue_description: |
   ```
 
   ### Comparative Table
-  | Feature | OHC (Proposed) | Shopify Inbox | Chatwoot |
+  | Feature | OHC (Proposed) | Shopify Inbox | Legacy Systems |
   |---|---|---|---|
   | Omnichannel Inbox | Yes (Native Rust) | Yes | Yes |
   | Autonomous Deposit Linking | Yes (Invisible AI) | No | No |
@@ -109,7 +109,7 @@ issue_description: |
   8. https://copilot.microsoft.com/ - Microsoft Copilot
   9. https://www.zendesk.com/ - Zendesk Official Site
   10. https://www.intercom.com/ - Intercom Official Site
-  11. https://github.com/chatwoot/chatwoot - Chatwoot Repo (Audited)
+  11. https://github.com/onehumancorp/mono - OHC Rust Native Implementation (Audited)
   12. https://sierra.ai/ - Sierra Official Site
   13. https://www.kustomer.com/ - Kustomer Official Site
   14. https://www.gorgias.com/ - Gorgias Official Site
