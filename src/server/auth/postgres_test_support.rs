@@ -1,8 +1,11 @@
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
-use tokio::sync::OnceCell;
+use tokio::sync::{OnceCell, Mutex};
+use std::sync::Arc;
+use once_cell::sync::Lazy;
 
 static POSTGRES_SETUP: OnceCell<Result<(), String>> = OnceCell::const_new();
+static INIT_LOCK: Lazy<Arc<Mutex<()>>> = Lazy::new(|| Arc::new(Mutex::new(())));
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../migrations");
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,6 +40,7 @@ pub(crate) fn decide_postgres_test(
 }
 
 async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
+    let _lock = INIT_LOCK.lock().await;
     let admin_pool = PgPoolOptions::new()
         .max_connections(1)
         .acquire_timeout(Duration::from_secs(10))

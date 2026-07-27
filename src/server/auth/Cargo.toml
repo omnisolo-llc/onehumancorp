@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+once_cell = "1.21.0"
 temp-env = { version = "0.3", features = ["async_closure"] }
 async-trait = "0.1"
 axum = { version = "0.8.1", features = ["ws", "multipart"] }

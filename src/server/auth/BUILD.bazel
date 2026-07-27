@@ -25,6 +25,7 @@ rust_library(
     crate_root = "mod.rs",
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:once_cell",
         "@crates//:base64",
         "@crates//:temp-env",
         "//src/server/config:server_config",
