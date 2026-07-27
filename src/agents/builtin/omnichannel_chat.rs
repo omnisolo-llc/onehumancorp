@@ -62,7 +62,7 @@ impl OmnichannelEngine {
         }
     }
 
-    /// Chatwoot bot/webhook protocol replicate: AI auto-responder
+    /// AI auto-responder
     pub async fn process_incoming_message(&self, mut conv: Conversation, msg: Message) -> Result<Conversation, String> {
         conv.messages.push(msg.clone());
 
@@ -164,7 +164,9 @@ mod tests {
 
             let content = if is_classify {
                 if req.messages[0].content.contains("human") || req.messages[0].content.contains("manager") {
-                    r#"{"intent": "escalation", "confidence": 0.95, "requires_handoff": true}"#.to_string()
+                    r#"```json
+{"intent": "escalation", "confidence": 0.95, "requires_handoff": true}
+```"#.to_string()
                 } else {
                     r#"{"intent": "inquiry", "confidence": 0.85, "requires_handoff": false}"#.to_string()
                 }
