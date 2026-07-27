@@ -14,24 +14,24 @@ impl ChatService {
         }
     }
 
-    pub async fn create_inbox(&self, tenant_id: Uuid, name: &str) -> Result<ChatInbox, sqlx::Error> {
+    pub async fn create_inbox(&self, tenant_id: &str, name: &str) -> Result<ChatInbox, sqlx::Error> {
         self.repo.create_inbox(tenant_id, name).await
     }
 
-    pub async fn get_inboxes(&self, tenant_id: Uuid) -> Result<Vec<ChatInbox>, sqlx::Error> {
+    pub async fn get_inboxes(&self, tenant_id: &str) -> Result<Vec<ChatInbox>, sqlx::Error> {
         self.repo.get_inboxes(tenant_id).await
     }
 
-    pub async fn create_conversation(&self, tenant_id: Uuid, inbox_id: Uuid, contact_id: Uuid, status: &str) -> Result<ChatConversation, sqlx::Error> {
+    pub async fn create_conversation(&self, tenant_id: &str, inbox_id: Uuid, contact_id: Uuid, status: &str) -> Result<ChatConversation, sqlx::Error> {
         self.repo.create_conversation(tenant_id, inbox_id, contact_id, status).await
     }
 
-    pub async fn get_conversations(&self, tenant_id: Uuid, inbox_id: Uuid) -> Result<Vec<ChatConversation>, sqlx::Error> {
+    pub async fn get_conversations(&self, tenant_id: &str, inbox_id: Uuid) -> Result<Vec<ChatConversation>, sqlx::Error> {
         self.repo.get_conversations(tenant_id, inbox_id).await
     }
 
-    pub async fn add_message(&self, tenant_id: Uuid, conversation_id: Uuid, content: &str, message_type: &str, sender_id: Option<Uuid>) -> Result<ChatMessage, sqlx::Error> {
-        self.repo.add_message(tenant_id, conversation_id, content, message_type, sender_id).await
+    pub async fn add_message(&self, tenant_id: &str, conversation_id: Uuid, content: &str, sender_type: &str, sender_id: Option<String>) -> Result<ChatMessage, sqlx::Error> {
+        self.repo.add_message(tenant_id, conversation_id, content, sender_type, sender_id).await
     }
 }
 

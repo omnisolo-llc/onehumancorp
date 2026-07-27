@@ -26,7 +26,7 @@ pub fn router(state: AppState) -> Router {
 
 #[derive(Deserialize)]
 pub struct CreateInboxRequest {
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
     pub name: String,
 }
 
@@ -34,7 +34,7 @@ async fn create_inbox(
     State(state): State<AppState>,
     Json(payload): Json<CreateInboxRequest>,
 ) -> impl IntoResponse {
-    let inbox = state.chat_service.create_inbox(payload.tenant_id, &payload.name).await.unwrap();
+    let inbox = state.chat_service.create_inbox(&payload.tenant_id, &payload.name).await.unwrap();
     Json(inbox)
 }
 
@@ -42,14 +42,14 @@ async fn get_inboxes(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
     // Hardcode tenant_id for simplicity in this example
-    let tenant_id = Uuid::new_v4();
-    let inboxes = state.chat_service.get_inboxes(tenant_id).await.unwrap();
+    let tenant_id = "test-tenant-id".to_string();
+    let inboxes = state.chat_service.get_inboxes(&tenant_id).await.unwrap();
     Json(inboxes)
 }
 
 #[derive(Deserialize)]
 pub struct CreateConversationRequest {
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
     pub contact_id: Uuid,
     pub status: String,
 }
@@ -59,7 +59,7 @@ async fn create_conversation(
     Path(inbox_id): Path<Uuid>,
     Json(payload): Json<CreateConversationRequest>,
 ) -> impl IntoResponse {
-    let conv = state.chat_service.create_conversation(payload.tenant_id, inbox_id, payload.contact_id, &payload.status).await.unwrap();
+    let conv = state.chat_service.create_conversation(&payload.tenant_id, inbox_id, payload.contact_id, &payload.status).await.unwrap();
     Json(conv)
 }
 
@@ -67,17 +67,17 @@ async fn get_conversations(
     State(state): State<AppState>,
     Path(inbox_id): Path<Uuid>,
 ) -> impl IntoResponse {
-    let tenant_id = Uuid::new_v4();
-    let convs = state.chat_service.get_conversations(tenant_id, inbox_id).await.unwrap();
+    let tenant_id = "test-tenant-id".to_string();
+    let convs = state.chat_service.get_conversations(&tenant_id, inbox_id).await.unwrap();
     Json(convs)
 }
 
 #[derive(Deserialize)]
 pub struct AddMessageRequest {
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
     pub content: String,
-    pub message_type: String,
-    pub sender_id: Option<Uuid>,
+    pub sender_type: String,
+    pub sender_id: Option<String>,
 }
 
 async fn add_message(
@@ -85,7 +85,7 @@ async fn add_message(
     Path(conversation_id): Path<Uuid>,
     Json(payload): Json<AddMessageRequest>,
 ) -> impl IntoResponse {
-    let msg = state.chat_service.add_message(payload.tenant_id, conversation_id, &payload.content, &payload.message_type, payload.sender_id).await.unwrap();
+    let msg = state.chat_service.add_message(&payload.tenant_id, conversation_id, &payload.content, &payload.sender_type, payload.sender_id).await.unwrap();
     Json(msg)
 }
 

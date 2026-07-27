@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Omnichannel Chat', () => {
   test('should simulate a new inbound message hitting the API', async ({ request }) => {
-    const tenant_id = '00000000-0000-0000-0000-000000000000'; // Fake UUID
+    const tenant_id = 'test-tenant';
     const res = await request.post('/api/inboxes', {
       data: {
         tenant_id,

@@ -11,12 +11,12 @@ impl ChatRepository {
         Self { pool }
     }
 
-    pub async fn create_inbox(&self, tenant_id: Uuid, name: &str) -> SqlxResult<ChatInbox> {
+    pub async fn create_inbox(&self, tenant_id: &str, name: &str) -> SqlxResult<ChatInbox> {
         let inbox = sqlx::query_as(
             r#"
             INSERT INTO chat_inboxes (id, tenant_id, name)
             VALUES ($1, $2, $3)
-            RETURNING id, tenant_id, name, channel_id
+            RETURNING id, tenant_id, name
             "#,
         )
         .bind(Uuid::new_v4())
@@ -28,10 +28,10 @@ impl ChatRepository {
         Ok(inbox)
     }
 
-    pub async fn get_inboxes(&self, tenant_id: Uuid) -> SqlxResult<Vec<ChatInbox>> {
+    pub async fn get_inboxes(&self, tenant_id: &str) -> SqlxResult<Vec<ChatInbox>> {
         let inboxes = sqlx::query_as(
             r#"
-            SELECT id, tenant_id, name, channel_id
+            SELECT id, tenant_id, name
             FROM chat_inboxes
             WHERE tenant_id = $1
             "#,
@@ -43,12 +43,12 @@ impl ChatRepository {
         Ok(inboxes)
     }
 
-    pub async fn create_conversation(&self, tenant_id: Uuid, inbox_id: Uuid, contact_id: Uuid, status: &str) -> SqlxResult<ChatConversation> {
+    pub async fn create_conversation(&self, tenant_id: &str, inbox_id: Uuid, contact_id: Uuid, status: &str) -> SqlxResult<ChatConversation> {
         let conv = sqlx::query_as(
             r#"
             INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, status)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, tenant_id, inbox_id, contact_id, status
+            RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status
             "#,
         )
         .bind(Uuid::new_v4())
@@ -62,10 +62,10 @@ impl ChatRepository {
         Ok(conv)
     }
 
-    pub async fn get_conversations(&self, tenant_id: Uuid, inbox_id: Uuid) -> SqlxResult<Vec<ChatConversation>> {
+    pub async fn get_conversations(&self, tenant_id: &str, inbox_id: Uuid) -> SqlxResult<Vec<ChatConversation>> {
         let convs = sqlx::query_as(
             r#"
-            SELECT id, tenant_id, inbox_id, contact_id, status
+            SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status
             FROM chat_conversations
             WHERE tenant_id = $1 AND inbox_id = $2
             "#,
@@ -78,19 +78,19 @@ impl ChatRepository {
         Ok(convs)
     }
 
-    pub async fn add_message(&self, tenant_id: Uuid, conversation_id: Uuid, content: &str, message_type: &str, sender_id: Option<Uuid>) -> SqlxResult<ChatMessage> {
+    pub async fn add_message(&self, tenant_id: &str, conversation_id: Uuid, content: &str, sender_type: &str, sender_id: Option<String>) -> SqlxResult<ChatMessage> {
         let msg = sqlx::query_as(
             r#"
-            INSERT INTO chat_messages (id, tenant_id, conversation_id, content, message_type, sender_id)
+            INSERT INTO chat_messages (id, tenant_id, conversation_id, content, sender_type, sender_id)
             VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, tenant_id, conversation_id, content, message_type, sender_id
+            RETURNING id, tenant_id, conversation_id, content, sender_type, sender_id
             "#,
         )
         .bind(Uuid::new_v4())
         .bind(tenant_id)
         .bind(conversation_id)
         .bind(content)
-        .bind(message_type)
+        .bind(sender_type)
         .bind(sender_id)
         .fetch_one(&self.pool)
         .await?;
