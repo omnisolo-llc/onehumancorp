@@ -1,4 +1,3 @@
-
 use uuid::Uuid;
 use chrono::Utc;
 use sqlx::{Pool, Postgres};
@@ -90,8 +89,6 @@ impl ChatEngineService for PgChatService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // Need to test PgChatService, but we would need a DB pool. We can at least write structural tests or logic flow tests.
-    // For now, since the actual DB interactions are mocked out in PgChatService anyway, we will verify its dummy return values.
 
     #[tokio::test]
     async fn test_pg_chat_service_create() {
