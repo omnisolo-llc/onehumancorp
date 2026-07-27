@@ -4,16 +4,19 @@ version = "0.1.0"
 edition = "2024"
 build = "build.rs"
 
-[lib]
-path = "mod.rs"
-
 [dependencies]
-prost = { workspace = true }
-serde = { workspace = true }
 tonic = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+chrono = { workspace = true }
+uuid = { version = "1.8.0", features = ["v4", "serde"] }
+sqlx = { version = "0.8", features = ["postgres", "chrono", "uuid", "macros"] }
+axum = { version = "0.8.1", features = ["ws"] }
+serde_json = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"
 
-[lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ohc_bazel)', 'cfg(ohc_bazel_package)', 'cfg(ohc_bazel_tauri_context)'] }
+[lib]
+name = "server_ohc"
+path = "mod.rs"

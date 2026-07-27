@@ -128,3 +128,6 @@ pub mod invoice {
 pub mod inventory {
     pub use crate::ohc::inventory::*;
 }
+
+pub mod domain;
+pub mod api;
