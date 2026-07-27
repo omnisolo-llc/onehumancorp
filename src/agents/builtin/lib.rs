@@ -1,3 +1,4 @@
+pub mod chatwoot_native;
 pub mod claude_subagents;
 pub mod compaction;
 pub mod durable_execution;
