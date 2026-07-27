@@ -29,8 +29,5 @@ pub mod booking_reengagement_job;
 pub mod subscription_health_job;
 pub mod subscription_health_worker;
 pub mod customer_memory_worker;
-<<<<<<< HEAD
-=======
 
 pub mod omnichannel_chat_worker;
->>>>>>> 1f738e684 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))

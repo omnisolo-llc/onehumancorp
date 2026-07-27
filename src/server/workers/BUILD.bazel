@@ -6,10 +6,7 @@ exports_files(
         "competitor_audit.rs",
         "department_workers.rs",
         "memory.rs",
-<<<<<<< HEAD
-=======
         "omnichannel_chat_worker.rs",
->>>>>>> 1f738e684 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         "pos_sync_worker.rs",
         "pos_conflict_worker.rs",
         "proactive_analysis_job.rs",
@@ -48,10 +45,7 @@ rust_library(
         "competitor_audit.rs",
         "department_workers.rs",
         "memory.rs",
-<<<<<<< HEAD
-=======
         "omnichannel_chat_worker.rs",
->>>>>>> 1f738e684 (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         "pos_sync_worker.rs",
         "pos_conflict_worker.rs",
         "proactive_analysis_job.rs",
