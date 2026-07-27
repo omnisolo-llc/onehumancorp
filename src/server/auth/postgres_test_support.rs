@@ -53,10 +53,20 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+
+    for _ in 0..10 {
+        if let Err(e) = MIGRATOR.run(&admin_pool).await {
+            let err_str = e.to_string();
+            if err_str.contains("violates unique constraint") || err_str.contains("deadlock detected") || err_str.contains("database is locked") || err_str.contains("tuple concurrently updated") || err_str.contains("_sqlx_migrations_pkey") {
+                tokio::time::sleep(Duration::from_millis(500)).await;
+                continue;
+            }
+            return Err(format!("run src/server/migrations: {err_str}"));
+        } else {
+            break;
+        }
+    }
+
 
     sqlx::raw_sql(
         r#"

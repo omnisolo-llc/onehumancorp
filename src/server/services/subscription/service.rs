@@ -1,5 +1,8 @@
 use crate::domain::subscription::{
+<<<<<<< HEAD
+=======
     MembershipTier, Invoice, Subscription,
+>>>>>>> f14bfe4aa (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     FulfillmentSchedule, FulfillmentStatus, SubscriptionPlan, Subscriber, SubscriptionStatus,
 };
 use crate::db::{DB, DbStore};
@@ -61,7 +64,11 @@ pub fn build_payment_failure_sms(business_name: &str) -> String {
     )
 }
 
+<<<<<<< HEAD
+pub async fn send_dunning_sms<N: DunningNotifier, G: DunningMessageGenerator>(
+=======
 pub async fn send_dunning_sms<N: DunningNotifier + ?Sized, G: DunningMessageGenerator + ?Sized>(
+>>>>>>> f14bfe4aa (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     notifier: &N,
     generator: &G,
     subscriber_id: &str,
@@ -111,6 +118,8 @@ impl SubscriptionService {
         Ok(transaction)
     }
 
+<<<<<<< HEAD
+=======
 
     pub async fn create_membership_tier(
         &self,
@@ -307,6 +316,7 @@ impl SubscriptionService {
         send_dunning_sms(notifier, generator, &subscriber_id, business_name).await
     }
 
+>>>>>>> f14bfe4aa (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     pub async fn create_plan(&self, tenant_id: &str, name: &str, description: &str, amount: i64, currency: &str, interval: &str) -> Result<SubscriptionPlan, String> {
         let plan = SubscriptionPlan {
             id: Uuid::new_v4().to_string(),
@@ -681,6 +691,8 @@ impl SubscriptionService {
     async fn ensure_subscription_schema(&self) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {
+<<<<<<< HEAD
+=======
 
                 sqlx::query(
                     "CREATE TABLE IF NOT EXISTS membership_tiers (
@@ -725,6 +737,7 @@ impl SubscriptionService {
                 .await
                 .map_err(|e| e.to_string())?;
 
+>>>>>>> f14bfe4aa (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
                 sqlx::query(
                     "CREATE TABLE IF NOT EXISTS subscription_plans (
                         id TEXT PRIMARY KEY,
@@ -775,6 +788,8 @@ impl SubscriptionService {
                 .map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
+<<<<<<< HEAD
+=======
 
                 sqlx::query(
                     "CREATE TABLE IF NOT EXISTS membership_tiers (
@@ -819,6 +834,7 @@ impl SubscriptionService {
                 .await
                 .map_err(|e| e.to_string())?;
 
+>>>>>>> f14bfe4aa (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
                 sqlx::query(
                     "CREATE TABLE IF NOT EXISTS subscription_plans (
                         id TEXT PRIMARY KEY,
@@ -915,6 +931,8 @@ mod tests {
         assert_eq!(messages[0].1, "LLM generated dunning response");
     }
 
+<<<<<<< HEAD
+=======
 
     #[tokio::test]
     async fn process_failed_invoice_calls_dunning() {
@@ -938,21 +956,30 @@ mod tests {
         assert_eq!(messages[0].1, "LLM generated dunning response");
     }
 
+>>>>>>> f14bfe4aa (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     async fn sqlite_subscription_service() -> SubscriptionService {
         let sqlite_pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect("sqlite::memory:")
             .await
             .unwrap();
+<<<<<<< HEAD
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+=======
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost:5432/postgres").unwrap_or_else(|_| panic!("unreachable"));
+>>>>>>> f14bfe4aa (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
         let db = Arc::new(crate::db::DB {
             pool: pg_pool,
             store: crate::db::DbStore::Sqlite(sqlite_pool),
         });
 
+<<<<<<< HEAD
+        SubscriptionService::new_for_db(db)
+=======
         let svc = SubscriptionService::new_for_db(db);
         svc.ensure_subscription_schema().await.unwrap();
         svc
+>>>>>>> f14bfe4aa (Research Report: Implement Custom Rust Omnichannel Chat System (#35333))
     }
 
     #[tokio::test]
