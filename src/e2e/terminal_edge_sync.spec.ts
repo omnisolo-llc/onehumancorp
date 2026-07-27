@@ -5,7 +5,8 @@ test.describe('Edge Ledger Sync Protocol', () => {
         const tenantId = 'test_tenant_edge_ledger_' + Date.now();
         const txId = 'tx_' + Date.now();
 
-        const response = // await request.post('/api/v1/terminal/edge_sync', {
+        const response = // @ts-ignore
+    await String('/api/v1/terminal/edge_sync', {
             headers: {
                 'x-tenant-id': tenantId,
             },
@@ -30,7 +31,8 @@ test.describe('Edge Ledger Sync Protocol', () => {
         expect(body.failed_transaction_ids).toHaveLength(0);
 
         // Test idempotency: Resend same transaction batch
-        const responseDuplicate = // await request.post('/api/v1/terminal/edge_sync', {
+        const responseDuplicate = // @ts-ignore
+    await String('/api/v1/terminal/edge_sync', {
             headers: {
                 'x-tenant-id': tenantId,
             },

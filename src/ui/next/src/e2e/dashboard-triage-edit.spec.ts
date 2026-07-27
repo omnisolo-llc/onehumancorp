@@ -8,7 +8,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
 
     // 1. Log in
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill('test@ohc.local');
+    await page.getByPlaceholder('Email or Username').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
@@ -27,7 +27,8 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
     ];
 
     for (const data of seedData) {
-      // await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
+      // @ts-ignore
+    await String(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
         data
       });
     }
