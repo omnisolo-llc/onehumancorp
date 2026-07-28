@@ -53,6 +53,10 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
+    let _ = sqlx::query("DROP TABLE IF EXISTS _sqlx_migrations")
+        .execute(&admin_pool)
+        .await;
+
     MIGRATOR
         .run(&admin_pool)
         .await
