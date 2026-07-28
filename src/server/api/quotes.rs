@@ -839,7 +839,7 @@ mod tests {
 
     #[test]
     fn quote_cast_predicates_have_matching_expression_indexes() {
-        let migration = include_str!("../migrations/213_quote_tenant_expression_indexes.sql");
+        let migration = include_str!("../migrations/212_quote_tenant_expression_indexes.sql");
 
         for index in [
             "ON quotes ((id::text), tenant_id)",
