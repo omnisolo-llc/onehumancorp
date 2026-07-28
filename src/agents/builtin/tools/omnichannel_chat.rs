@@ -13,7 +13,7 @@ struct OmnichannelChatArgs {
     action: String,
     tenant_id: String,
     conversation_id: Option<String>,
-    contact_id: Option<String>,
+    _contact_id: Option<String>,
     channel: Option<String>,
     message: Option<String>,
     tags: Option<Vec<String>>,
