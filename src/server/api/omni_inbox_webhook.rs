@@ -9,6 +9,8 @@ use uuid::Uuid;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::identity_resolution::IdentityResolver;
 use crate::Hub;
+use crate::services::chat::service::ChatService;
+use std::str::FromStr;
 
 #[derive(Clone)]
 pub struct OmniInboxWebhookState {
@@ -52,19 +54,48 @@ pub async fn omni_inbox_post_handler(
          return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false })).into_response();
     }
 
-    // 2. Insert into omni_inbox_messages
     let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
-    let inbox_id = Uuid::new_v4().to_string();
+    let omni_inbox_id = Uuid::new_v4().to_string();
+    let tenant_uuid = Uuid::from_str(&tenant_id).unwrap_or(Uuid::new_v4());
+
+    let chat_service = ChatService::new(state.db.pool.clone(), state.hub.pubsub.clone());
+
+    let inbox_id = match sqlx::query_as::<_, (Uuid,)>("SELECT id FROM chat_inboxes WHERE tenant_id = $1 LIMIT 1")
+        .bind(tenant_uuid)
+        .fetch_optional(&state.db.pool).await {
+        Ok(Some((id,))) => id,
+        _ => chat_service.create_inbox(tenant_uuid, "Omni Inbox".to_string()).await.map(|i| i.id).unwrap_or(Uuid::new_v4()),
+    };
+
+    let contact_id = match sqlx::query_as::<_, (Uuid,)>("SELECT id FROM chat_contacts WHERE tenant_id = $1 AND phone = $2 LIMIT 1")
+        .bind(tenant_uuid)
+        .bind(&sender_id)
+        .fetch_optional(&state.db.pool).await {
+        Ok(Some((id,))) => id,
+        _ => chat_service.create_contact(tenant_uuid, None, None, Some(sender_id.clone())).await.map(|c| c.id).unwrap_or(Uuid::new_v4()),
+    };
+
+    let conversation_id = match sqlx::query_as::<_, (Uuid,)>("SELECT id FROM chat_conversations WHERE tenant_id = $1 AND contact_id = $2 LIMIT 1")
+        .bind(tenant_uuid)
+        .bind(contact_id)
+        .fetch_optional(&state.db.pool).await {
+        Ok(Some((id,))) => id,
+        _ => chat_service.start_conversation(tenant_uuid, inbox_id, contact_id, None).await.map(|c| c.id).unwrap_or(Uuid::new_v4()),
+    };
+
+    let _ = chat_service.send_message(tenant_uuid, conversation_id, "contact".to_string(), Some(contact_id), message.clone()).await;
+
+    // Keep existing omni_inbox_messages insertion for backward compatibility or triage job dependence
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
                 "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', 'unread', $6, $7, NOW())"
             )
-            .bind(&inbox_id)
+            .bind(&omni_inbox_id)
             .bind(&tenant_id)
             .bind(&source)
             .bind(&message)
-            .bind(&message) // translated content is same initially
+            .bind(&message)
             .bind(&sender_id)
             .bind(customer_id)
             .execute(&state.db.pool)
@@ -74,7 +105,7 @@ pub async fn omni_inbox_post_handler(
             sqlx::query(
                 "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', 'unread', ?, ?, CURRENT_TIMESTAMP)"
             )
-            .bind(&inbox_id)
+            .bind(&omni_inbox_id)
             .bind(&tenant_id)
             .bind(&source)
             .bind(&message)
@@ -90,12 +121,11 @@ pub async fn omni_inbox_post_handler(
         tracing::error!("Failed to insert omni_inbox_message: {}", e);
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false })).into_response();
     }
-
     // 3. Enqueue to ohc_job_queue
     let job_id = Uuid::new_v4().to_string();
     let mut payload_json = serde_json::json!({
-        "message_id": inbox_id,
-        "inbox_message_id": inbox_id,
+        "message_id": omni_inbox_id,
+        "inbox_message_id": omni_inbox_id,
         "source": source,
         "content": message,
         "sender_id": sender_id

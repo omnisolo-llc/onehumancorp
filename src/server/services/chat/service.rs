@@ -3,12 +3,14 @@ use uuid::Uuid;
 use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage};
 
 pub struct ChatService {
+    pubsub: std::sync::Arc<crate::integrations::pubsub::mcp::PubSubManager>,
+
     pool: PgPool,
 }
 
 impl ChatService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, pubsub: std::sync::Arc<crate::integrations::pubsub::mcp::PubSubManager>) -> Self {
+        Self { pool, pubsub }
     }
 
     pub async fn create_inbox(
@@ -83,7 +85,7 @@ impl ChatService {
         contact_id: Uuid,
         assignee_id: Option<Uuid>,
     ) -> Result<ChatConversation, sqlx::Error> {
-        sqlx::query_as(
+        let conversation: ChatConversation = sqlx::query_as(
             r#"
             INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status)
             VALUES ($1, $2, $3, $4, $5, 'open')
@@ -96,7 +98,16 @@ impl ChatService {
         .bind(contact_id)
         .bind(assignee_id)
         .fetch_one(&self.pool)
-        .await
+        .await?;
+
+        let payload = serde_json::to_vec(&serde_json::json!({
+            "action": "conversation.updated",
+            "conversation": conversation
+        })).unwrap_or_default();
+        let topic = format!("tenant:{}:inbox:{}", tenant_id, inbox_id);
+        let _ = self.pubsub.publish(&tenant_id.to_string(), &topic, payload).await;
+
+        Ok(conversation)
     }
 
     pub async fn send_message(
@@ -107,7 +118,7 @@ impl ChatService {
         sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
-        sqlx::query_as(
+        let message: ChatMessage = sqlx::query_as(
             r#"
             INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -121,6 +132,25 @@ impl ChatService {
         .bind(sender_id)
         .bind(content)
         .fetch_one(&self.pool)
-        .await
+        .await?;
+
+        let row = sqlx::query_as::<_, (Uuid,)>(
+            "SELECT inbox_id FROM chat_conversations WHERE id = $1 AND tenant_id = $2"
+        )
+        .bind(conversation_id)
+        .bind(tenant_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some((inbox_id,)) = row {
+            let payload = serde_json::to_vec(&serde_json::json!({
+                "action": "message.created",
+                "message": message
+            })).unwrap_or_default();
+            let topic = format!("tenant:{}:inbox:{}", tenant_id, inbox_id);
+            let _ = self.pubsub.publish(&tenant_id.to_string(), &topic, payload).await;
+        }
+
+        Ok(message)
     }
 }
