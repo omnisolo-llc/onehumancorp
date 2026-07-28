@@ -59,3 +59,4 @@ pub mod ohc_job_queue;
 pub mod checkout_api;
 pub mod agent_stream;
 pub mod unified_ws;
+pub mod ui;
