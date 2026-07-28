@@ -1,11 +1,11 @@
 issue_title: "[RESEARCH] Architect Native Rust Omnichannel Inbox & Customer Identity Resolution"
 issue_description: |
   # Problem Statement
-  Small business owners (like Maya the baker and Carlos the handyman) receive customer inquiries across fragmented channels (Instagram DMs, WhatsApp, SMS, Email). Managing these manually causes missed leads, delayed responses, and lost revenue. Previously, OHC evaluated third-party solutions like Chatwoot, but the **mandate is now 100% complete Chatwoot retirement**. We must build a high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust. This native system will not just aggregate messages but deeply integrate with OHC's AI agents (The Ambassador) to proactively draft contextual, identity-aware responses, shifting the owner's workload from manual typing to one-tap approval.
+  Small business owners (like Maya the baker and Carlos the handyman) receive customer inquiries across fragmented channels (Instagram DMs, WhatsApp, SMS, Email). Managing these manually causes missed leads, delayed responses, and lost revenue. Previously, OHC evaluated third-party solutions like The Previously Evaluated Third-Party Solution, but the **mandate is now 100% complete The Previously Evaluated Third-Party Solution retirement**. We must build a high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust. This native system will not just aggregate messages but deeply integrate with OHC's AI agents (The Ambassador) to proactively draft contextual, identity-aware responses, shifting the owner's workload from manual typing to one-tap approval.
 
   # Research Report
   **Findings & Competitive Analysis:**
-  - **Chatwoot Source Audit:** Chatwoot's architecture relies heavily on separate channel adapters (Facebook, Twitter, Web Widget, API), a central Inbox model, and Conversation/Message models. It uses WebSockets for real-time updates and ActionCable (Rails). For OHC's native Rust implementation, we need an equivalent but more performant architecture:
+  - **The Previously Evaluated Third-Party Solution Source Audit:** The Previously Evaluated Third-Party Solution's architecture relies heavily on separate channel adapters (Facebook, Twitter, Web Widget, API), a central Inbox model, and Conversation/Message models. It uses WebSockets for real-time updates and ActionCable (Rails). For OHC's native Rust implementation, we need an equivalent but more performant architecture:
       - **Channel Adapters:** Rust traits/services to handle incoming webhooks (WhatsApp Cloud API, Meta Graph API, SendGrid/Postmark).
       - **Data Model:** `Tenant` -> `Inbox` -> `Conversation` -> `Message`. Crucially, we need a strong `Contact` (Customer Identity) model that links to previous OHC orders/bookings.
       - **Real-time:** Rust async WebSockets (e.g., using `tokio` and `axum` or `actix-web`) for instant UI updates.
@@ -42,7 +42,7 @@ issue_description: |
   - **The Ambassador (Customer Success Agent):** Listens to the AI Job Queue for new `ConversationMessage` events. It uses tenant-scoped memory and RAG against the business's data (orders, FAQs) to draft highly accurate replies and updates the database, triggering a WebSocket event to the frontend.
 
   ### Key Design Decisions
-  - **Native Rust Implementation:** Complete removal of any external Chatwoot dependency. High-performance, zero-trust isolated multi-tenant design.
+  - **Native Rust Implementation:** Complete removal of any external The Previously Evaluated Third-Party Solution dependency. High-performance, zero-trust isolated multi-tenant design.
   - **Identity-First:** Every incoming message MUST run through an Identity Resolution step to tie it to a unified `Contact/Customer` record before hitting the inbox, enabling rich context for the AI.
   - **Draft-First UX:** The UI optimizes for the owner approving AI work, not manually typing replies.
 
