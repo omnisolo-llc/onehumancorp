@@ -57,7 +57,7 @@ describe('TooltipRegistry', () => {
 
     await act(async () => {
         fireEvent.mouseEnter(button.parentElement!);
-        await new Promise(r => setTimeout(r, 20));
+        await new Promise(r => setTimeout(r, 350));
     });
 
     expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('TooltipRegistry', () => {
 
     await act(async () => {
         fireEvent.touchStart(button.parentElement!);
-        await new Promise(r => setTimeout(r, 550));
+        await new Promise(r => setTimeout(r, 950));
     });
 
     expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe('TooltipRegistry', () => {
     // Test handleTouchMove clears tooltip
     await act(async () => {
         fireEvent.touchStart(button.parentElement!);
-        await new Promise(r => setTimeout(r, 600)); // Show it
+        await new Promise(r => setTimeout(r, 950)); // Show it
     });
     expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
 
@@ -222,7 +222,7 @@ describe('TooltipRegistry scroll and contextmenu', () => {
 
     await act(async () => {
         fireEvent.mouseEnter(button.parentElement!);
-        vi.advanceTimersByTime(200);
+        vi.advanceTimersByTime(350);
     });
 
     expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();

@@ -130,16 +130,21 @@ export function useTooltip() {
 export function WithTooltip({ children, id, defaultText }: { children: ReactNode, id: string, defaultText?: string }) {
   const { setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = React.useCallback(() => {
-    if (wrapperRef.current) {
-      setTooltipRect(wrapperRef.current.getBoundingClientRect());
-      setTooltipText(getTooltip(id) || defaultText || id);
-      setActiveTooltip(id);
-    }
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      if (wrapperRef.current) {
+        setTooltipRect(wrapperRef.current.getBoundingClientRect());
+        setTooltipText(getTooltip(id) || defaultText || id);
+        setActiveTooltip(id);
+      }
+    }, 300); // 300ms delay before showing tooltip
   }, [id, defaultText, getTooltip, setActiveTooltip, setTooltipRect]);
 
   const handleMouseLeave = React.useCallback(() => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     setActiveTooltip(null);
   }, [setActiveTooltip]);
 
@@ -155,12 +160,14 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
   const handleTouchMove = () => {
     // If the user scrolls, cancel the long press tooltip
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     setActiveTooltip(null);
   };
 
   const handleTouchEnd = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
     const hideTimer = setTimeout(() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
         setActiveTooltip(null);
     }, 2000); // Hide after 2 seconds on mobile
     timerRef.current = hideTimer;
@@ -169,6 +176,7 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
     };
   }, []);
 
