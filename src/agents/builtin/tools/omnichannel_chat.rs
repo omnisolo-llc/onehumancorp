@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
 
-/// Chatwoot Retirement & Custom Rust Omnichannel Chat System Standard
+/// Custom Rust Omnichannel Chat System Standard
 /// This module implements the native Rust multi-tenant omnichannel customer support & chat engine.
 
 #[derive(Deserialize)]
@@ -72,7 +72,7 @@ impl PydanticToolExecutor<OmnichannelChatArgs> for OmnichannelChatExecutor {
 pub fn omnichannel_chat_tool() -> Tool {
     Tool {
         name: "OmnichannelChat".to_string(),
-        description: "Native Rust multi-tenant omnichannel customer support & chat engine (Chatwoot replacement). Use this to manage contacts, conversations, and messages across channels (web widget, WhatsApp, email, etc.).".to_string(),
+        description: "Native Rust multi-tenant omnichannel customer support & chat engine. Use this to manage contacts, conversations, and messages across channels (web widget, WhatsApp, email, etc.).".to_string(),
         is_read_only: false,
         parameters: json!({
             "type": "object",
