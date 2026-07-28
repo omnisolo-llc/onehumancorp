@@ -3,11 +3,11 @@ issue_description: |
   # Native Rust Omnichannel Chat & Support Engine
 
   ## Problem Statement
-  Chatwoot as an external third-party service is being 100% retired. OHC needs its own native, high-performance omnichannel chat system built in Rust. Owners like Maya (baker), Carlos (handyman), and Priya (boutique owner) require a unified inbox to manage customer requests from Instagram DMs, WhatsApp, SMS, and website chat without juggling multiple apps. Without a native solution, multi-tenant isolation, real-time sync, and agent-assisted responses remain fragmented and brittle.
+  The legacy external chat integration as a third-party service is being 100% retired. OHC needs its own native, high-performance omnichannel chat system built in Rust. Owners like Maya (baker), Carlos (handyman), and Priya (boutique owner) require a unified inbox to manage customer requests from Instagram DMs, WhatsApp, SMS, and website chat without juggling multiple apps. Without a native solution, multi-tenant isolation, real-time sync, and agent-assisted responses remain fragmented and brittle.
 
   ## Research Report
-  Based on an audit of the Chatwoot source code (`app/models/`):
-  - **Data Entities:** Chatwoot uses `conversation`, `message`, `inbox`, `contact`, `channel`, `webhook`, `agent_bot` to manage omnichannel support.
+  Based on an audit of the legacy external repository source code (`app/models/`):
+  - **Data Entities:** The legacy system uses `conversation`, `message`, `inbox`, `contact`, `channel`, `webhook`, `agent_bot` to manage omnichannel support.
   - **Mechanics:** It employs WebSocket for real-time messaging, channels for integrations (WhatsApp, email, web widget), and macros/canned responses for agent efficiency.
   - **Competitors:** Zendesk, Shopify Inbox, and Wix Inbox offer similar capabilities, but OHC's key differentiation is the integration of AI Work Assistants directly into the unified inbox, allowing proactive agent responses.
 
