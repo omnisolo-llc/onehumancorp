@@ -4,6 +4,9 @@ use tokio::sync::OnceCell;
 
 static POSTGRES_SETUP: OnceCell<Result<(), String>> = OnceCell::const_new();
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../migrations");
+use tokio::sync::Mutex;
+
+static MIGRATION_LOCK: tokio::sync::OnceCell<Mutex<()>> = tokio::sync::OnceCell::const_new();
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PostgresTestDecision {
@@ -53,6 +56,8 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
+    let lock = MIGRATION_LOCK.get_or_init(|| async { Mutex::new(()) }).await;
+    let _guard = lock.lock().await;
     MIGRATOR
         .run(&admin_pool)
         .await
