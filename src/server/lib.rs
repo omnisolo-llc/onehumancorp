@@ -6972,6 +6972,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
         .route("/api/v1/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/v1/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
+        .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone())).route("/api/v1/ui/inbox/messages/:message_id/approve", axum::routing::post(approve_ui_inbox_message_handler).with_state(db.clone()))
                 .route("/api/v1/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
         .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
