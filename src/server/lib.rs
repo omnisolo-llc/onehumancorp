@@ -7815,6 +7815,10 @@ async fn create_ui_bom_item_handler(
             protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),
         )
         .nest(
+            "/api/v1/omni-chat",
+            api::omni_chat::router(Arc::new(crate::services::chat::service::ChatService::new(db.pool.clone())))
+        )
+        .nest(
             "/api/v1/memory",
             api::inbox::customer_memory::router(db.clone(), http_auth_store.clone()),
         )
