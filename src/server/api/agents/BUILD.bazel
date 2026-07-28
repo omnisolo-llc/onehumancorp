@@ -123,7 +123,6 @@ rust_library(
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
-        "@crates//:tower",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:tree-sitter",
@@ -137,7 +136,6 @@ rust_test(
     name = "server_api_agents_test",
     crate = ":server_api_agents",
     deps = [
-        "@crates//:tower",
         "@crates//:axum",
         "@crates//:sqlx",
         "//src/server/common:server_common",
