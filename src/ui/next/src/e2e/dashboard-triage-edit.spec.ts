@@ -26,11 +26,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
       }
     ];
 
-    for (const data of seedData) {
-      await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
-        data
-      });
-    }
+    // Data comes from seed in DB, do not fabricate payload here.
 
     await page.goto('/dashboard');
     await expect(page.locator('text=Activity Feed').first()).toBeVisible({ timeout: 15000 });

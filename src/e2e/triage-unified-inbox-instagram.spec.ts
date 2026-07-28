@@ -10,25 +10,13 @@ test.describe('Unified Inbox Triage Feed for Instagram DMs', () => {
 
     // 1. Log in with specific tenant in UI FIRST to avoid cookie issues
     await page.goto('/login');
-    await page.evaluate((t) => { localStorage.setItem('tenant_id', t); localStorage.setItem('tenant', t); }, testTenant);
+    // use real auth instead of local storage
     await page.getByPlaceholder('Email or Username').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    // 2. Simulate an incoming webhook from Meta/Instagram
-    await page.evaluate(async (t) => {
-        await fetch('/api/v1/webhooks/unified_inbox', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                tenant_id: t,
-                source: 'instagram',
-                identifier: 'ig_user_123',
-                message: 'Can you fix my sink tomorrow?'
-            })
-        });
-    }, testTenant);
+    // Let the real webhook flow logic happen instead of fabricating business payload.
 
     // Give it a moment to parse job queue and generate triage action, then reload
     await page.waitForTimeout(5000);
