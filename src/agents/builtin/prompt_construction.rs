@@ -188,6 +188,7 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
 // This builder implements a strict hierarchical priority stack for prompt components.
 pub struct StrictHierarchicalPromptBuilder {
     server_system_message: String,
+    tool_definitions: String,
     developer_instructions: String,
     user_instructions: String,
     lightweight_memory_index: Vec<String>,
@@ -198,7 +199,7 @@ impl StrictHierarchicalPromptBuilder {
     /// sole tool-definition representation; `_tools` remains for API stability.
     pub fn new(
         cfg: &AgentRunConfig,
-        _tools: &[crate::tools::Tool],
+        tools: &[crate::tools::Tool],
         cascading_agents_md: Option<String>,
         lightweight_memory_index: Option<Vec<String>>,
     ) -> Self {
@@ -248,8 +249,14 @@ impl StrictHierarchicalPromptBuilder {
             }
         }
 
+        let mut tool_definitions = String::new();
+        for tool in tools {
+            tool_definitions.push_str(&format!("Tool: {}\nDescription: {}\nParameters: {}\n\n", tool.name, tool.description, tool.parameters));
+        }
+
         Self {
             server_system_message: cfg.server_system_message.clone(),
+            tool_definitions,
             developer_instructions: cfg.developer_instructions.clone(),
             user_instructions: user_instr,
             lightweight_memory_index: processed_memory_index,
@@ -282,7 +289,17 @@ impl StrictHierarchicalPromptBuilder {
             combined_system.push_str("\n</server_system_message>");
         }
 
-        // 2. Developer Instructions
+        // 2. Tool Definitions
+        if !self.tool_definitions.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("<tool_definitions>\n");
+            combined_system.push_str(&self.tool_definitions);
+            combined_system.push_str("</tool_definitions>");
+        }
+
+        // 3. Developer Instructions
         if !self.developer_instructions.is_empty() {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");
@@ -292,7 +309,7 @@ impl StrictHierarchicalPromptBuilder {
             combined_system.push_str("\n</developer_instructions>");
         }
 
-        // 3. User Instructions
+        // 4. User Instructions
         if !self.user_instructions.is_empty() {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");
@@ -359,9 +376,13 @@ mod tests {
     }
 
     #[test]
-    fn native_tool_schema_is_not_duplicated_in_system_text() {
+    fn test_strict_hierarchical_prompt_builder_includes_tools() {
         let cfg = AgentRunConfig {
-            server_system_message: "Be accurate".into(),
+            server_system_message: "System".into(),
+            developer_instructions: "Dev".into(),
+            user_instructions: "User".into(),
+            enable_lazy_tool_loading: false,
+            model: "test_model_accurate".into(),
             ..Default::default()
         };
         let tool = crate::tools::Tool {
@@ -377,8 +398,18 @@ mod tests {
 
         let prompt = StrictHierarchicalPromptBuilder::new(&cfg, &[tool], None, None).build();
 
-        assert!(!prompt.contains("<tool_definitions>"));
-        assert!(!prompt.contains("Lookup authoritative facts"));
+        assert!(prompt.contains("<tool_definitions>"));
+        assert!(prompt.contains("Lookup authoritative facts"));
+
+        // Assert the exact 1 -> 2 -> 3 -> 4 -> 5 order (OpenAI Codex Mechanic)
+        let sys_pos = prompt.find("<server_system_message>").unwrap();
+        let tool_pos = prompt.find("<tool_definitions>").unwrap();
+        let dev_pos = prompt.find("<developer_instructions>").unwrap();
+        let user_pos = prompt.find("<user_instructions>").unwrap();
+
+        assert!(sys_pos < tool_pos);
+        assert!(tool_pos < dev_pos);
+        assert!(dev_pos < user_pos);
     }
 
     #[test]
