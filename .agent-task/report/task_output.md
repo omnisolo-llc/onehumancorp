@@ -3,14 +3,14 @@ issue_description: |
   # Native Rust Omnichannel Chat System Architecture
 
   ## Problem Statement
-  OneHumanCorp (OHC) is an AI work assistant for owners and operators. A core requirement is unifying messages across multiple channels (Instagram DMs, WhatsApp, SMS, Web Chat, Email) into a single inbox for the owner. Previously, this capability might have relied on third-party services like Chatwoot, which is now 100% RETIRED according to the OHC Engineering Standards.
+  OneHumanCorp (OHC) is an AI work assistant for owners and operators. A core requirement is unifying messages across multiple channels (Instagram DMs, WhatsApp, SMS, Web Chat, Email) into a single inbox for the owner. Previously, this capability might have relied on third-party services like Chat system, which is now 100% RETIRED according to the OHC Engineering Standards.
 
   Relying on external systems for core communication introduces latency, fractures multi-tenant isolation, complicates AI agent coordination, and fails to meet OHC's offline-tolerant and strict Zero-Trust requirements. Our users (like Maya the baker, who manages custom-order inquiries via Instagram DMs, or Carlos the field service owner, who needs missed-lead recovery via SMS) require a deeply integrated, high-performance, and native omnichannel communication system.
 
   This task plans out the implementation of a high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust inside `onehumancorp/mono`.
 
   ## Research Report
-  - **Goal**: Implement a fully native omnichannel chat engine in Rust, replacing any reliance on Chatwoot or external services.
+  - **Goal**: Implement a fully native omnichannel chat engine in Rust, replacing any reliance on Chat system or external services.
   - **Capabilities Required**:
       - Unified Inbox for organizing conversations.
       - Omnichannel support (Web widget, Email, SMS, WhatsApp, Instagram, FB Messenger).
@@ -19,7 +19,7 @@ issue_description: |
       - Agent assignment (human and AI agents).
       - Canned responses, macros, and SLA policies.
       - Integration with OHC AI agents for automated responses and triage.
-  - **Competitor/Reference Architecture (Chatwoot)**: Chatwoot uses a relational model with Accounts (Tenants), Users, Inboxes, Channels (polymorphic associations for different platform integrations like `Channel::WebWidget`, `Channel::Email`), Conversations, and Messages. It heavily uses WebSockets (ActionCable in Rails) for real-time updates and Sidekiq for background jobs (webhooks, email processing).
+  - **Competitor/Reference Architecture (Chat system)**: Chat system uses a relational model with Accounts (Tenants), Users, Inboxes, Channels (polymorphic associations for different platform integrations like `Channel::WebWidget`, `Channel::Email`), Conversations, and Messages. It heavily uses WebSockets (ActionCable in Rails) for real-time updates and Sidekiq for background jobs (webhooks, email processing).
   - **OHC Translation**: We need to translate these concepts into high-performance Rust:
       - PostgreSQL for relational data with `tenant_id` and RLS on every table.
       - Axum for REST APIs and WebSocket handling.
