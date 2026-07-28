@@ -41,7 +41,7 @@ vi.mock('../../components/AppShell', () => {
         default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
     }
 });
-vi.mock('@/app/components/AppShell', () => {
+vi.mock('../../components/AppShell', () => {
     return {
         default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
     }
