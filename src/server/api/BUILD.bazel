@@ -61,8 +61,8 @@ exports_files(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
-        "chat_inbox/mod.rs",
-        "chat_inbox/routes.rs",
+
+
         "tool_integrations.rs",
     ],
     visibility = ["//visibility:public"],
@@ -124,8 +124,8 @@ rust_library(
         "audio_command.rs",
         "invoice.rs",
     "quotes.rs",
-        "chat_inbox/mod.rs",
-        "chat_inbox/routes.rs",
+
+
         "tool_integrations.rs",
         "sync_gateway.rs",
         "//src/server/api/inbox:srcs",
