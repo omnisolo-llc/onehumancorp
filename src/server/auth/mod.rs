@@ -132,9 +132,9 @@ pub async fn api_key_auth_middleware(
             .await
         {
             use sqlx::Row;
-            let member_id: String = row.get(0);
+            let member_id: uuid::Uuid = row.get(0);
             let organization_id: String = row.get(1);
-            matched_member_id = Some(member_id);
+            matched_member_id = Some(member_id.to_string());
             matched_org_id = Some(organization_id);
         }
     }

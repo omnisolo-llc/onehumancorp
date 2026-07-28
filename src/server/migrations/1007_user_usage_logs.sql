@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS user_usage_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     organization_id VARCHAR(128) NOT NULL,
     feature VARCHAR(128) NOT NULL,
     tokens_used INTEGER NOT NULL DEFAULT 0,
