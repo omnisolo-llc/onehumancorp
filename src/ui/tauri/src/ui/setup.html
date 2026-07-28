@@ -6,6 +6,18 @@
     <title>Setup - OneHumanCorp</title>
     <link rel="stylesheet" href="globals.css" />
     <style>
+      .domain-wrapper {
+          background: rgba(255, 255, 255, 0.65);
+          border: 1px solid rgba(255, 255, 255, 0.4);
+          border-radius: 8px;
+      }
+      @media (prefers-color-scheme: dark) {
+          .domain-wrapper {
+              background: rgba(22, 22, 26, 0.7);
+              border: 1px solid rgba(255, 255, 255, 0.1);
+          }
+      }
+
       body {
         align-items: center;
         background: #f5f5f7;
@@ -43,8 +55,8 @@
           color: #f5f5f7;
         }
       }
-      .step { display: block !important; }
-      .step.active { display: block; }
+      .step { display: none !important; }
+      .step.active { display: block !important; }
       .next-step-btn {
         width: 100%;
         padding: 12px;
@@ -151,7 +163,11 @@
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <div class="glass-control glassmorphism domain-wrapper" style="display: flex; align-items: center; padding-right: 10px;">
+          <input type="text" id="domain-name" data-testid="domain-name" placeholder="Domain Name" style="flex: 1; border: none; background: transparent; outline: none; box-shadow: none; padding: 12px;" />
+          <span>.ohc.app</span>
+        </div>
+        <div id="domain-error" class="error" style="display: none; color: #ff3b30; font-size: 12px; margin-top: 5px;"></div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -319,7 +335,38 @@
         });
       }
 
+      function validateStep(stepId) {
+
+        if (stepId === 'step-domain') {
+          const domainInput = document.getElementById('domain-name');
+          if (!domainInput) return true;
+          const val = domainInput.value.trim();
+          const errorEl = document.getElementById('domain-error');
+
+          if (val.length < 3) {
+            errorEl.innerText = 'Domain must be at least 3 characters long.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+          if (/[^a-z0-9-]/.test(val)) {
+            errorEl.innerText = 'Domain can contain only lowercase letters, numbers, and hyphens.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+          if (val.startsWith('-') || val.endsWith('-')) {
+            errorEl.innerText = 'Domain cannot start or end with a hyphen.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+
+          errorEl.style.display = 'none';
+          return true;
+        }
+        return true;
+      };
+
       function goToStep(stepId) {
+
         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
         document.getElementById(stepId).classList.add('active');
         state.step = stepOrder.indexOf(stepId);
@@ -338,7 +385,11 @@
               }
               document.getElementById('name-error').style.display = 'none';
             }
+            if (window.validateStep && !window.validateStep(currentStep)) {
+              return;
+            }
             goToStep(e.target.dataset.next);
+
           }
         });
       });
@@ -354,13 +405,32 @@
         });
       }
 
-      let saveTimeout;
+
+      window.validateStep = validateStep;
+      window.goToStep = goToStep;
+let saveTimeout;
       const debouncedSave = () => {
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(saveState, 500);
       };
 
-      document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', debouncedSave));
+      document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', (e) => {
+        debouncedSave();
+        const currentStep = e.target.closest('.step');
+        if (currentStep && currentStep.id === 'step-domain') {
+          const errorEl = document.getElementById('domain-error');
+          if (errorEl.style.display === 'block' && window.validateStep) {
+            window.validateStep(currentStep.id);
+          }
+        }
+      }));
+
+      document.querySelectorAll('input, select').forEach(el => el.addEventListener('blur', (e) => {
+        const currentStep = e.target.closest('.step');
+        if (currentStep && currentStep.id && window.validateStep) {
+          window.validateStep(currentStep.id);
+        }
+      }));
       document.querySelectorAll('input, select').forEach(el => el.addEventListener('change', debouncedSave));
 
       document.getElementById('finish-btn').addEventListener('click', async () => {
