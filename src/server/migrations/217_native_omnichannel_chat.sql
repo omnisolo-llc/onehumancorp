@@ -52,8 +52,16 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     sender_type TEXT NOT NULL, -- e.g. 'contact', 'agent', 'bot'
     sender_id UUID,
     content TEXT NOT NULL,
+    message_type TEXT NOT NULL DEFAULT 'incoming',
+    is_private BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_messages_tenant_isolation_policy ON chat_messages FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+CREATE INDEX IF NOT EXISTS idx_chat_inboxes_tenant_id ON chat_inboxes(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_chat_channels_tenant_inbox ON chat_channels(tenant_id, inbox_id);
+CREATE INDEX IF NOT EXISTS idx_chat_contacts_tenant_id ON chat_contacts(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_tenant_inbox ON chat_conversations(tenant_id, inbox_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_tenant_conversation ON chat_messages(tenant_id, conversation_id);
