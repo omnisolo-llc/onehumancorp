@@ -17,6 +17,8 @@ type Message = {
   sender_id?: string;
   customer_id?: string;
   created_at?: string;
+  checkout_link?: string;
+  proposed_product_id?: string;
 };
 
 function badgeTone(status?: string) {
@@ -582,13 +584,40 @@ function ApiInboxFallback() {
   return <InboxWorkspace messages={messages} sourceLabel="Live inbox messages for the current tenant." />;
 }
 
+import { ChatSystemView } from "./ChatSystemView";
+
 export default function InboxPage() {
+  const [activeTab, setActiveTab] = useState<"powersync" | "chatsystem">("chatsystem");
+
   return (
-    <PowerSyncProvider
-      fallback={<InboxLoadingState />}
-      unsupportedFallback={<ApiInboxFallback />}
-    >
-      <PowerSyncInboxContent />
-    </PowerSyncProvider>
+    <div className="h-full flex flex-col">
+      <div className="flex bg-gray-100 p-2 gap-2 border-b">
+        <button
+          className={`px-4 py-2 rounded ${activeTab === 'chatsystem' ? 'bg-white shadow font-bold' : 'text-gray-600'}`}
+          onClick={() => setActiveTab('chatsystem')}
+        >
+          Omnichannel Chat
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${activeTab === 'powersync' ? 'bg-white shadow font-bold' : 'text-gray-600'}`}
+          onClick={() => setActiveTab('powersync')}
+        >
+          Legacy Inbox
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'chatsystem' ? (
+          <ChatSystemView />
+        ) : (
+          <PowerSyncProvider
+            fallback={<InboxLoadingState />}
+            unsupportedFallback={<ApiInboxFallback />}
+          >
+            <PowerSyncInboxContent />
+          </PowerSyncProvider>
+        )}
+      </div>
+    </div>
   );
 }
