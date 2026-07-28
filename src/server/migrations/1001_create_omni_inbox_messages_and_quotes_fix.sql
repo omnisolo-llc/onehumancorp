@@ -1,6 +1,6 @@
 -- Migration 1001: Create missing omnichannel and quoting tables and fix quotes schema
 
-CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+CREATE TABLE IF NOT EXISTS chat_messages (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
     source TEXT NOT NULL,
@@ -16,9 +16,9 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE omni_inbox_messages ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_omni_inbox_messages ON omni_inbox_messages;
-CREATE POLICY tenant_isolation_omni_inbox_messages ON omni_inbox_messages USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_chat_messages ON chat_messages;
+CREATE POLICY tenant_isolation_chat_messages ON chat_messages USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 
 CREATE TABLE IF NOT EXISTS quote_line_items (

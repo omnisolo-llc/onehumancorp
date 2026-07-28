@@ -9,9 +9,9 @@ test.describe("Agent Feed - Dynamic Action Router Protocol", () => {
       data: {
         query: `
           DELETE FROM agent_feed_items WHERE id = 'e2e-action-router-feed-test';
-          DELETE FROM omni_inbox_messages WHERE id = 'e2e-action-router-inbox-test';
+          DELETE FROM chat_messages WHERE id = 'e2e-action-router-inbox-test';
 
-          INSERT INTO omni_inbox_messages (id, tenant_id, source, customer_id, text, status, created_at, updated_at)
+          INSERT INTO chat_messages (id, tenant_id, source, customer_id, text, status, created_at, updated_at)
           VALUES ('e2e-action-router-inbox-test', 'e2e-tenant', 'instagram', 'test-cust', 'How much is the blue cake?', 'unread', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT DO NOTHING;
 
@@ -60,7 +60,7 @@ test.describe("Agent Feed - Dynamic Action Router Protocol", () => {
       data: {
         query: `
           SELECT status, draft_reply
-          FROM omni_inbox_messages
+          FROM chat_messages
           WHERE id = 'e2e-action-router-inbox-test' AND tenant_id = 'e2e-tenant';
         `,
       },

@@ -255,9 +255,9 @@ ALTER TABLE IF EXISTS ohc_universal_ledger ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_ohc_universal_ledger ON ohc_universal_ledger;
 CREATE POLICY tenant_isolation_ohc_universal_ledger ON ohc_universal_ledger USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
-ALTER TABLE IF EXISTS omni_inbox_messages ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_omni_inbox_messages ON omni_inbox_messages;
-CREATE POLICY tenant_isolation_omni_inbox_messages ON omni_inbox_messages USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+ALTER TABLE IF EXISTS chat_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_chat_messages ON chat_messages;
+CREATE POLICY tenant_isolation_chat_messages ON chat_messages USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE IF EXISTS onboarding_state ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_onboarding_state ON onboarding_state;
@@ -665,8 +665,8 @@ ALTER TABLE IF EXISTS ohc_timecard_event DISABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation_ohc_universal_ledger ON ohc_universal_ledger;
 ALTER TABLE IF EXISTS ohc_universal_ledger DISABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS tenant_isolation_omni_inbox_messages ON omni_inbox_messages;
-ALTER TABLE IF EXISTS omni_inbox_messages DISABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation_chat_messages ON chat_messages;
+ALTER TABLE IF EXISTS chat_messages DISABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS tenant_isolation_onboarding_state ON onboarding_state;
 ALTER TABLE IF EXISTS onboarding_state DISABLE ROW LEVEL SECURITY;

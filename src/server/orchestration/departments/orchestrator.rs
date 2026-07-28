@@ -1561,13 +1561,13 @@ pub async fn execute_action(
             DbStore::Postgres => {
                 sqlx::query("UPDATE inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(new_status).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
-                sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                sqlx::query("UPDATE chat_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(new_status).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query("UPDATE inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
                     .bind(new_status).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
-                sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
+                sqlx::query("UPDATE chat_messages SET status = ? WHERE id = ? AND tenant_id = ?")
                     .bind(new_status).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
             }
         }
@@ -1623,13 +1623,13 @@ pub async fn execute_action(
             DbStore::Postgres => {
                 sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(draft_reply).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
-                sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                sqlx::query("UPDATE chat_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(draft_reply).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                     .bind(draft_reply).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
-                sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                sqlx::query("UPDATE chat_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                     .bind(draft_reply).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
             }
         }

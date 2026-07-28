@@ -445,7 +445,7 @@ async fn apply_omni_inbox_action(
             let mut tx = db.pool.begin().await?;
             ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
             let (source, sender_id): (Option<String>, Option<String>) = sqlx::query_as(
-                "UPDATE omni_inbox_messages SET status = $1
+                "UPDATE chat_messages SET status = $1
                  WHERE id = $2 AND tenant_id = $3
                  RETURNING source, sender_id",
             )
@@ -509,7 +509,7 @@ async fn apply_omni_inbox_action(
         crate::db::DbStore::Sqlite(pool) => {
             let mut tx = pool.begin().await?;
             let updated = sqlx::query(
-                "UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?",
+                "UPDATE chat_messages SET status = ? WHERE id = ? AND tenant_id = ?",
             )
             .bind(status)
             .bind(&payload.message_id)
@@ -520,7 +520,7 @@ async fn apply_omni_inbox_action(
                 return Err(OmniInboxActionError::NotFound);
             }
             let (source, sender_id): (Option<String>, Option<String>) = sqlx::query_as(
-                "SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?",
+                "SELECT source, sender_id FROM chat_messages WHERE id = ? AND tenant_id = ?",
             )
             .bind(&payload.message_id)
             .bind(tenant_id)
@@ -586,7 +586,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
             let mut tx = db.pool.begin().await?;
             ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
             let items = if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM chat_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(&mut *tx)
                     .await?.into_iter().map(|row| {
@@ -600,7 +600,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         })
                     }).collect()
             } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM chat_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(&mut *tx)
                     .await?.into_iter().map(|row| {
@@ -621,7 +621,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
         },
         crate::db::DbStore::Sqlite(pool) => {
             if mobile_optimized {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM chat_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -635,7 +635,7 @@ async fn load_ui_omni_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
                         })
                     }).collect())
             } else {
-                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
+                sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(original_content, '') AS original_content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM chat_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50")
                     .bind(tenant_id)
                     .fetch_all(pool)
                     .await.map(|rows| rows.into_iter().map(|row| {
@@ -4256,12 +4256,12 @@ pub async fn mock_omni_inbox_handler(
 
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', $6, 'unread', $7, NULL, NOW())")
+            let _ = sqlx::query("INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', $6, 'unread', $7, NULL, NOW())")
                 .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id)
                 .execute(&db.pool).await;
         },
         crate::db::DbStore::Sqlite(pool) => {
-            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', ?, 'unread', ?, NULL, CURRENT_TIMESTAMP)")
+            let _ = sqlx::query("INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', ?, 'unread', ?, NULL, CURRENT_TIMESTAMP)")
                 .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id)
                 .execute(pool).await;
         }
@@ -4331,8 +4331,8 @@ pub async fn update_ui_triage_action_handler(
                             });
                         }
                     } else {
-                        // Try omni_inbox_messages
-                        if let Ok(Some(row)) = sqlx::query("SELECT draft_reply FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2")
+                        // Try chat_messages
+                        if let Ok(Some(row)) = sqlx::query("SELECT draft_reply FROM chat_messages WHERE id = $1 AND tenant_id = $2")
                             .bind(&payload.triage_item_id)
                             .bind(&tenant_id)
                             .fetch_optional(&mut *tx)
@@ -4553,7 +4553,7 @@ pub async fn update_ui_triage_action_handler(
                 .execute(&mut *tx)
                 .await;
 
-            let _ = sqlx::query("UPDATE omni_inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
+            let _ = sqlx::query("UPDATE chat_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
                 .bind(status)
                 .bind(&payload.triage_item_id)
                 .bind(&tenant_id)
@@ -4622,8 +4622,8 @@ pub async fn update_ui_triage_action_handler(
                             });
                         }
                     } else {
-                        // Try omni_inbox_messages
-                        if let Ok(Some(row)) = sqlx::query("SELECT draft_reply FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?")
+                        // Try chat_messages
+                        if let Ok(Some(row)) = sqlx::query("SELECT draft_reply FROM chat_messages WHERE id = ? AND tenant_id = ?")
                             .bind(&payload.triage_item_id)
                             .bind(&tenant_id)
                             .fetch_optional(&mut *tx)
@@ -4822,7 +4822,7 @@ pub async fn update_ui_triage_action_handler(
                 .execute(&mut *tx)
                 .await;
 
-            let _ = sqlx::query("UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
+            let _ = sqlx::query("UPDATE chat_messages SET status = ? WHERE id = ? AND tenant_id = ?")
                 .bind(status)
                 .bind(&payload.triage_item_id)
                 .bind(&tenant_id)
@@ -8442,7 +8442,7 @@ mod tests {
             return;
         };
         for statement in [
-            "CREATE TABLE omni_inbox_messages (
+            "CREATE TABLE chat_messages (
                 id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, source TEXT,
                 original_content TEXT, draft_reply TEXT, status TEXT NOT NULL,
                 sender_id TEXT, customer_id TEXT,
@@ -8461,7 +8461,7 @@ mod tests {
             sqlx::query(statement).execute(&pool).await.unwrap();
         }
         for table in [
-            "omni_inbox_messages",
+            "chat_messages",
             "inbox_messages",
             "integration_credentials",
         ] {
@@ -8486,7 +8486,7 @@ mod tests {
                 .await
                 .unwrap();
             sqlx::query(
-                "INSERT INTO omni_inbox_messages
+                "INSERT INTO chat_messages
                  (id, tenant_id, source, original_content, draft_reply, status, sender_id, customer_id)
                  VALUES ($1, $2, 'sms', $3, '', 'unread', '+15550001111', 'customer-a')",
             )
@@ -8545,7 +8545,7 @@ mod tests {
             .await
             .unwrap();
         let status: String = sqlx::query_scalar(
-            "SELECT status FROM omni_inbox_messages WHERE id = 'message-a' AND tenant_id = 'tenant-a'",
+            "SELECT status FROM chat_messages WHERE id = 'message-a' AND tenant_id = 'tenant-a'",
         )
         .fetch_one(&mut *tenant_a_tx)
         .await
@@ -8565,7 +8565,7 @@ mod tests {
             .await
             .unwrap();
         let tenant_b_status: String = sqlx::query_scalar(
-            "SELECT status FROM omni_inbox_messages WHERE id = 'message-b' AND tenant_id = 'tenant-b'",
+            "SELECT status FROM chat_messages WHERE id = 'message-b' AND tenant_id = 'tenant-b'",
         )
         .fetch_one(&mut *tenant_b_tx)
         .await

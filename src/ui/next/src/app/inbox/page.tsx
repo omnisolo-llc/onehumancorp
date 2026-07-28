@@ -528,7 +528,7 @@ function InboxWorkspace({
 }
 
 function PowerSyncInboxContent() {
-  const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
+  const { data } = useQuery<Message>("SELECT * FROM chat_messages ORDER BY created_at DESC");
   return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
 }
 

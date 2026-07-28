@@ -27,7 +27,7 @@ pub async fn handle_booking_action(tenant_id: &str, payload: &Value, pool: &PgPo
                 .execute(pool)
                 .await;
 
-            let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+            let _ = sqlx::query("UPDATE chat_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                 .bind(draft_reply)
                 .bind(inbox_id)
                 .bind(tenant_id)
@@ -157,7 +157,7 @@ To secure your booking, please pay the deposit here: {}", drafted_message, strip
             .execute(pool)
             .await;
 
-        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+        let _ = sqlx::query("UPDATE chat_messages SET status = 'sent', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
             .bind(&drafted_message)
             .bind(inbox_id)
             .bind(tenant_id)

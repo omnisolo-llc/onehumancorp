@@ -1934,7 +1934,7 @@ pub async fn bench_ui_omni_inbox_latency() {
         let pool1 = pg_pool.clone();
 
         let _ = tokio::join!(
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool1)
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, CAST(created_at AS text) AS created_at FROM chat_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50").bind("test_tenant").execute(&pool1)
         );
         let duration = start_sim.elapsed();
 
@@ -2731,7 +2731,7 @@ pub async fn bench_ui_omni_inbox_mobile_payload() {
         let pool1 = pg_pool.clone();
 
         let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
+            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS text) AS created_at FROM chat_messages WHERE tenant_id = $1 AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
             let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();
@@ -2750,13 +2750,13 @@ pub async fn bench_ui_omni_inbox_mobile_payload() {
             .await
             .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
-        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS omni_inbox_messages (id TEXT, tenant_id TEXT, source TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS chat_messages (id TEXT, tenant_id TEXT, source TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT)").execute(&sqlite_pool).await;
 
         let start_sim = std::time::Instant::now();
         let pool1 = sqlite_pool.clone();
 
         let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM omni_inbox_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
+            let query_str = "SELECT id, COALESCE(source, '') AS source, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, CAST(created_at AS TEXT) AS created_at FROM chat_messages WHERE tenant_id = ? AND status != 'resolved' ORDER BY created_at DESC LIMIT 50";
             let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
         }).await;
         let duration = start_sim.elapsed();

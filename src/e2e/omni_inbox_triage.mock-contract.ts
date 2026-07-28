@@ -6,12 +6,12 @@ test.describe('Omni Inbox Triage Integration', () => {
   const tenantId = 'e2e-omni-triage-tenant';
 
   test('should display omni inbox messages in triage feed', async ({ page, request }) => {
-    // Seed omni_inbox_messages
+    // Seed chat_messages
     await request.post('/api/v1/builder/seeder/exec', {
       data: {
         sql: `
           INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
-          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
           VALUES ('omni-msg-1', '${tenantId}', 'WhatsApp', 'Need an appointment', 'Need an appointment', 'English', 'I can help with that.', 'unread', 'cust_1', NOW())
           ON CONFLICT DO NOTHING;
         `
@@ -33,7 +33,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       data: {
         sql: `
           INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
-          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
           VALUES ('omni-msg-2', '${tenantId}', 'Instagram DM', 'How much is it?', 'How much is it?', 'English', 'It is $50.', 'unread', 'cust_2', NOW())
           ON CONFLICT DO NOTHING;
         `
@@ -60,7 +60,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       data: {
         sql: `
           INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
-          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
           VALUES ('omni-msg-3', '${tenantId}', 'Email', 'Where are you located?', 'Where are you located?', 'English', 'We are in NY.', 'unread', 'cust_3', NOW())
           ON CONFLICT DO NOTHING;
         `
@@ -95,7 +95,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       data: {
         sql: `
           INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
-          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
           VALUES ('omni-msg-4', '${tenantId}', 'SMS', 'Stop', 'Stop', 'English', '', 'unread', 'cust_4', NOW())
           ON CONFLICT DO NOTHING;
         `
@@ -122,7 +122,7 @@ test.describe('Omni Inbox Triage Integration', () => {
       data: {
         sql: `
           INSERT INTO tenants (id, name, tier) VALUES ('${tenantId}', 'Test', 'free') ON CONFLICT DO NOTHING;
-          INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
+          INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, created_at)
           VALUES ('omni-msg-5', '${tenantId}', 'SMS', 'Hello', 'Hello', 'English', 'Hi!', 'resolved', 'cust_5', NOW()),
                  ('omni-msg-6', '${tenantId}', 'SMS', 'Spam', 'Spam', 'English', '', 'dismissed', 'cust_6', NOW())
           ON CONFLICT DO NOTHING;

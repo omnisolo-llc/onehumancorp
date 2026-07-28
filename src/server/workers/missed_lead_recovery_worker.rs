@@ -34,7 +34,7 @@ impl MissedLeadRecoveryWorker {
                 sqlx::query(
                     r#"
                     SELECT id, tenant_id, source, original_content, customer_id
-                    FROM omni_inbox_messages
+                    FROM chat_messages
                     WHERE status = 'unread'
                       AND created_at < NOW() - INTERVAL '2 hours'
                       AND (draft_reply IS NULL OR draft_reply = '')
@@ -59,7 +59,7 @@ impl MissedLeadRecoveryWorker {
                 sqlx::query(
                     r#"
                     SELECT m.id, m.tenant_id, m.source, m.original_content, m.customer_id, COALESCE(p.tone_instructions, '') as tone
-                    FROM omni_inbox_messages m
+                    FROM chat_messages m
                     LEFT JOIN auto_reply_policies p ON m.tenant_id = p.tenant_id
                     WHERE m.status = 'unread'
                       AND m.created_at < datetime('now', '-' || COALESCE(p.delay_minutes, 5) || ' minutes')
@@ -189,14 +189,14 @@ impl MissedLeadRecoveryWorker {
                 // If it's not safe, mark it as skipped so we don't keep polling
                 match &self.db.store {
                     crate::db::DbStore::Postgres => {
-                        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'skipped_auto_reply' WHERE id = $1 AND tenant_id = $2")
+                        let _ = sqlx::query("UPDATE chat_messages SET status = 'skipped_auto_reply' WHERE id = $1 AND tenant_id = $2")
                             .bind(&message_id)
                             .bind(&tenant_id)
                             .execute(&self.db.pool)
                             .await;
                     },
                     crate::db::DbStore::Sqlite(pool) => {
-                        let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'skipped_auto_reply' WHERE id = ? AND tenant_id = ?")
+                        let _ = sqlx::query("UPDATE chat_messages SET status = 'skipped_auto_reply' WHERE id = ? AND tenant_id = ?")
                             .bind(&message_id)
                             .bind(&tenant_id)
                             .execute(pool)
@@ -256,7 +256,7 @@ impl MissedLeadRecoveryWorker {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                    sqlx::query("UPDATE omni_inbox_messages SET status = 'auto_replied', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    sqlx::query("UPDATE chat_messages SET status = 'auto_replied', draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&follow_up_msg)
                         .bind(&message_id)
                         .bind(&tenant_id)
@@ -292,7 +292,7 @@ impl MissedLeadRecoveryWorker {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                    sqlx::query("UPDATE omni_inbox_messages SET status = 'auto_replied', draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    sqlx::query("UPDATE chat_messages SET status = 'auto_replied', draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&follow_up_msg)
                         .bind(&message_id)
                         .bind(&tenant_id)
@@ -352,7 +352,7 @@ mod tests {
                 .unwrap();
 
             // Insert a stale unread message
-            sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, customer_id, created_at) VALUES (?, ?, 'instagram_dm', 'How much for a cake?', 'How much for a cake?', 'English', 'unread', ?, datetime('now', '-6 minutes'))")
+            sqlx::query("INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, status, customer_id, created_at) VALUES (?, ?, 'instagram_dm', 'How much for a cake?', 'How much for a cake?', 'English', 'unread', ?, datetime('now', '-6 minutes'))")
                 .bind(&msg_id)
                 .bind(&tenant_id)
                 .bind(&customer_id)
@@ -365,7 +365,7 @@ mod tests {
             assert!(processed, "Worker should process the stale message");
 
             // Verify the status was updated to auto_replied and draft_reply is set
-            let (status, draft): (String, Option<String>) = sqlx::query_as("SELECT status, draft_reply FROM omni_inbox_messages WHERE id = ?")
+            let (status, draft): (String, Option<String>) = sqlx::query_as("SELECT status, draft_reply FROM chat_messages WHERE id = ?")
                 .bind(&msg_id)
                 .fetch_one(pool)
                 .await

@@ -9,7 +9,7 @@ test.describe('Missed Lead Recovery Agent', () => {
     // with attributed revenue message properly.
 
     // In actual production, the missed_lead_recovery_worker.rs does this in the background
-    // when it detects an unread omni_inbox_messages older than 2 hours.
+    // when it detects an unread chat_messages older than 2 hours.
     const res = await request.post('/api/v1/dev/simulate-agent-feed-item', {
         data: {
             source: 'Lead Recovery Agent',

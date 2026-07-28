@@ -230,7 +230,7 @@ pub async fn handle_omnichannel_webhook(
 
             if res.is_ok() {
                 if let Err(e) = sqlx::query(
-                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
+                    "INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
                 )
                 .bind(&inbox_id)
                 .bind(tenant_id)
@@ -241,7 +241,7 @@ pub async fn handle_omnichannel_webhook(
                 .bind(&customer_id)
                 .execute(&state.db.pool)
                 .await {
-                    tracing::error!("Failed to insert omni_inbox_messages: {}", e);
+                    tracing::error!("Failed to insert chat_messages: {}", e);
                 }
             }
             res.map(|_| ())
@@ -261,7 +261,7 @@ pub async fn handle_omnichannel_webhook(
 
             if res.is_ok() {
                 if let Err(e) = sqlx::query(
-                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+                    "INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
                 )
                 .bind(&inbox_id)
                 .bind(tenant_id)
@@ -272,7 +272,7 @@ pub async fn handle_omnichannel_webhook(
                 .bind(&customer_id)
                 .execute(sqlite_pool)
                 .await {
-                    tracing::error!("Failed to insert omni_inbox_messages (SQLite): {}", e);
+                    tracing::error!("Failed to insert chat_messages (SQLite): {}", e);
                 }
             }
             res.map(|_| ())
@@ -411,7 +411,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_omnichannel_webhook() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        let schema = "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT); CREATE TABLE customer_identities (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, channel TEXT NOT NULL, channel_identity TEXT NOT NULL, UNIQUE(tenant_id, channel, channel_identity)); CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, created_at TEXT); CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT); CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, job_type TEXT, payload TEXT, status TEXT);";
+        let schema = "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT); CREATE TABLE customer_identities (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, channel TEXT NOT NULL, channel_identity TEXT NOT NULL, UNIQUE(tenant_id, channel, channel_identity)); CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, created_at TEXT); CREATE TABLE chat_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT); CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, job_type TEXT, payload TEXT, status TEXT);";
         sqlx::query(schema).execute(&pool).await.unwrap();
         let db = DB {
             pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(),

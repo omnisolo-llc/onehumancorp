@@ -234,7 +234,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
+                "INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -248,7 +248,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+                "INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -263,13 +263,13 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     };
 
     if let Err(e) = insert_result {
-        tracing::error!("Failed to insert omni_inbox_messages: {}", e);
+        tracing::error!("Failed to insert chat_messages: {}", e);
     }
 
     let omni_insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
+                "INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -283,7 +283,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+                "INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -298,7 +298,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     };
 
     if let Err(e) = omni_insert_result {
-        tracing::error!("Failed to insert omni_inbox_messages: {}", e);
+        tracing::error!("Failed to insert chat_messages: {}", e);
     }
 
     let job_id = Uuid::new_v4().to_string();

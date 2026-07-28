@@ -775,7 +775,7 @@ impl DB {
             }
 
             // Search Messages
-            let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+            let message_rows = sqlx::query("SELECT id, source, original_content FROM chat_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                 .bind(tenant_id)
                 .bind(&query_lower)
                 .bind(&query_lower)
@@ -854,7 +854,7 @@ impl DB {
                     }
 
                     // Search Messages
-                    let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
+                    let message_rows = sqlx::query("SELECT id, source, original_content FROM chat_messages WHERE tenant_id = ? AND (LOWER(original_content) LIKE LOWER(?) OR LOWER(source) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                         .bind(tenant_id)
                         .bind(&query_lower)
                         .bind(&query_lower)
@@ -936,7 +936,7 @@ impl DB {
                     }
 
                     // Search Messages
-                    let message_rows = sqlx::query("SELECT id, source, original_content FROM omni_inbox_messages WHERE tenant_id = $1 AND (original_content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
+                    let message_rows = sqlx::query("SELECT id, source, original_content FROM chat_messages WHERE tenant_id = $1 AND (original_content ILIKE $2 OR source ILIKE $2) ORDER BY id ASC LIMIT 10")
                         .bind(tenant_id)
                         .bind(&query_lower)
                         .fetch_all(&mut *tx)
@@ -1267,7 +1267,7 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(tenant_id)
                     );
-CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+CREATE TABLE IF NOT EXISTS chat_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
                         source TEXT NOT NULL,
@@ -3377,7 +3377,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
-                    CREATE TABLE IF NOT EXISTS omni_inbox_messages (
+                    CREATE TABLE IF NOT EXISTS chat_messages (
                         id VARCHAR(255) PRIMARY KEY,
                         tenant_id VARCHAR(255) NOT NULL,
                         source VARCHAR(255),
@@ -4794,7 +4794,7 @@ mod e2e_search_workspace_tests {
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
-        sqlx::query("CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, status TEXT)")
+        sqlx::query("CREATE TABLE chat_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, status TEXT)")
             .execute(&sqlite_pool)
             .await
             .expect("Database URL or operation failed in test");
@@ -4831,10 +4831,10 @@ mod e2e_search_workspace_tests {
             .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind(0.0f64)
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
-        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
             .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...").bind("").bind("en").bind("unread")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES (?, ?, ?, ?, ?, ?, ?)")
             .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john").bind("").bind("en").bind("unread")
             .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
 
@@ -4881,10 +4881,10 @@ mod e2e_search_workspace_tests {
             .bind("o2").bind(&unique_tenant).bind("v1").bind(None::<&str>).bind("0")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 
-        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        sqlx::query("INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...").bind("").bind("en").bind("unread")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
-        sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        sqlx::query("INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john").bind("").bind("en").bind("unread")
             .execute(&pg_pool).await.expect("Database URL or operation failed in test");
 

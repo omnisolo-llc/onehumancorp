@@ -200,7 +200,7 @@ pub async fn twilio_voice_status_handler(
             let insert_result = match &state.db.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query(
-                        "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, 'voice', $3, $4, 'English', '', 'unread', $5, $6, NOW())"
+                        "INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, 'voice', $3, $4, 'English', '', 'unread', $5, $6, NOW())"
                     )
                     .bind(&inbox_id)
                     .bind(&tenant_id)
@@ -213,7 +213,7 @@ pub async fn twilio_voice_status_handler(
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     sqlx::query(
-                        "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, 'voice', ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+                        "INSERT INTO chat_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, 'voice', ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
                     )
                     .bind(&inbox_id)
                     .bind(&tenant_id)
@@ -227,7 +227,7 @@ pub async fn twilio_voice_status_handler(
             };
 
             if let Err(e) = insert_result {
-                tracing::error!("Failed to insert voice call transcript into omni_inbox_messages: {}", e);
+                tracing::error!("Failed to insert voice call transcript into chat_messages: {}", e);
             }
 
             if has_booking_intent {

@@ -10,7 +10,7 @@ const agentFeedItems = new Table({
   updated_at: column.text
 });
 
-const omniInboxMessages = new Table({
+const chatMessages = new Table({
   tenant_id: column.text,
   source: column.text,
   original_content: column.text,
@@ -97,7 +97,7 @@ export const AppSchema = new Schema({
   appointments: appointments,
   service_routes: serviceRoutes,
   agent_feed_items: agentFeedItems,
-  omni_inbox_messages: omniInboxMessages,
+  chat_messages: chatMessages,
   pending_actions: pendingActions,
   pos_offline_transactions: posOfflineTransactions,
   pos_terminal_sessions: posTerminalSessions
