@@ -4,7 +4,8 @@ export type BlockType = 'Trigger' | 'Action' | 'Condition' | 'Output';
 
 export interface BlockDefinition {
   id: string;
-  type: BlockType;
+  node_type?: any;
+    type?: BlockType;
   label: string;
 }
 
@@ -22,7 +23,8 @@ export const AVAILABLE_BLOCKS: BlockDefinition[] = [
 export interface NodeMap {
   [id: string]: {
     id: string;
-    type: BlockType;
+    node_type?: any;
+    type?: BlockType;
     label: string;
     next: string[];
   }
@@ -51,15 +53,32 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
 
     // Compile visual blocks into a DAG/JSON structure
     const nodeMap: NodeMap = {};
+
     for (let i = 0; i < workflowBlocks.length; i++) {
       const b = workflowBlocks[i];
+
+      let node_type: any = b.type;
+
+      const nextTargets = i < workflowBlocks.length - 1 ? [workflowBlocks[i+1].id] : [];
+
+      if (b.type === 'Trigger') {
+          node_type = { Input: { name: 'input_var' } };
+      } else if (b.type === 'Action') {
+          node_type = { Llm: { prompt_template: b.label } };
+      } else if (b.type === 'Condition') {
+          node_type = { ParallelFork: { targets: nextTargets } };
+      } else if (b.type === 'Output') {
+          node_type = "Output";
+      }
+
       nodeMap[b.id] = {
         id: b.id,
-        type: b.type,
+        node_type: node_type,
         label: b.label,
-        next: i < workflowBlocks.length - 1 ? [workflowBlocks[i+1].id] : []
+        next: nextTargets
       };
     }
+
 
     const payloadString = JSON.stringify({
       version: '1.0',

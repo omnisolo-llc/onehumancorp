@@ -41,7 +41,7 @@ test('renders builder and allows adding/removing blocks', async () => {
   // It should be action_analyze since the first one was removed
   expect(Object.values(payload.nodes).length).toBe(1);
   const firstNode: any = Object.values(payload.nodes)[0];
-  expect(firstNode.type).toBe('Action');
+  expect(firstNode.node_type.Llm.prompt_template).toBe('Analyze Sentiment');
   expect(firstNode.label).toBe('Analyze Sentiment');
 });
 
