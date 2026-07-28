@@ -117,7 +117,9 @@ describe('CustomerReferralProgramPage', () => {
 
     expect(screen.queryByText('Pro Feature')).toBeNull();
     // The exact text "⚡ Powered by OHC" in the preview should be removed
-    expect(screen.queryByText('⚡ Powered by OHC')).toBeNull();
+    await waitFor(() => {
+        expect(screen.queryByText('⚡ Powered by OHC')).toBeNull();
+    });
   });
 
 });
