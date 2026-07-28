@@ -83,11 +83,12 @@ playwright_spec_workspace_name() {
     fi
   done
   rel="${rel#./}"
+  rel="${rel#/app/}"
   case "$rel" in
-    src/e2e/*.spec.ts)
+    src/e2e/*.spec.ts|src/e2e/**/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
-    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
+    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts|src/e2e/**/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.
