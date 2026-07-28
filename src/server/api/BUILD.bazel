@@ -1,3 +1,4 @@
+exports_files(["whatsapp_cloud_webhook.rs", "whatsapp_cloud_webhook_test.rs"])
 
 exports_files([
         "work_triage.rs",

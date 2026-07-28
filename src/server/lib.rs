@@ -3368,6 +3368,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
+    let whatsapp_cloud_webhook_state = api::whatsapp_cloud_webhook::WhatsAppCloudWebhookState { db: db.clone() };
+    let whatsapp_cloud_webhook_router = api::whatsapp_cloud_webhook::whatsapp_cloud_routes().with_state(whatsapp_cloud_webhook_state);
+
     let meta_webhook_state = api::meta_webhook::MetaWebhookState {
         hub: hub.clone(),
         db: db.clone(),
@@ -7805,6 +7808,7 @@ async fn create_ui_bom_item_handler(
             http_auth_store.clone(),
             ::server_auth::strict_bearer_auth_middleware,
         )))
+        .nest("/api/v1/integrations/whatsapp_cloud_api", whatsapp_cloud_webhook_router)
         .merge(meta_webhook_router)
         .merge(protect_internal_ingress(
             omnichannel_webhook_router,

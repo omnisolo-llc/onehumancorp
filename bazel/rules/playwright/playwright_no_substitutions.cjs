@@ -154,7 +154,8 @@ function declarationInitializer(symbol) {
 }
 
 function makeStringEvaluator(checker) {
-  function evaluate(node, seen = new Set()) {
+  function evaluate(node, seen = new Set(), depth = 0) {
+    if (depth > 20) return undefined;
     node = unwrap(node);
     if (!node) return undefined;
     if (ts.isStringLiteralLike(node)) return node.text;
@@ -163,17 +164,17 @@ function makeStringEvaluator(checker) {
       if (!symbol || seen.has(symbol)) return undefined;
       seen.add(symbol);
       const initializer = declarationInitializer(symbol);
-      return initializer && !initializer.binding ? evaluate(initializer, seen) : undefined;
+      return initializer && !initializer.binding ? evaluate(initializer, seen, depth + 1) : undefined;
     }
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-      const left = evaluate(node.left, new Set(seen));
-      const right = evaluate(node.right, new Set(seen));
+      const left = evaluate(node.left, new Set(seen), depth + 1);
+      const right = evaluate(node.right, new Set(seen), depth + 1);
       return left === undefined || right === undefined ? undefined : left + right;
     }
     if (ts.isTemplateExpression(node)) {
       let value = node.head.text;
       for (const span of node.templateSpans) {
-        const expression = evaluate(span.expression, new Set(seen));
+        const expression = evaluate(span.expression, new Set(seen), depth + 1);
         if (expression === undefined) return undefined;
         value += expression + span.literal.text;
       }
@@ -978,7 +979,8 @@ function scanFiles(filenames) {
       && /\/(?:dev|mock|simulate)(?:[-_/]|$)/i.test(url);
   }
 
-  function isAmbientBrowserStorage(expression, expectedNames, seen = new Set()) {
+  function isAmbientBrowserStorage(expression, expectedNames, seen = new Set(), depth = 0) {
+    if (depth > 20) return false;
     expression = unwrap(expression);
     if (ts.isIdentifier(expression)) {
       const symbol = symbolAt(checker, expression);
@@ -987,7 +989,7 @@ function scanFiles(filenames) {
       seen.add(symbol);
       const initializer = bindingValue(declarationInitializer(symbol));
       return Boolean(initializer
-        && isAmbientBrowserStorage(initializer, expectedNames, seen));
+        && isAmbientBrowserStorage(initializer, expectedNames, seen, depth + 1));
     }
     const access = member(expression, evaluateString);
     const receiver = access ? unwrap(access.receiver) : undefined;
@@ -998,7 +1000,8 @@ function scanFiles(filenames) {
       && isAmbientSymbol(symbolAt(checker, receiver)));
   }
 
-  function isBrowserStorageMutationReference(expression, seen = new Set()) {
+  function isBrowserStorageMutationReference(expression, seen = new Set(), depth = 0) {
+    if (depth > 20) return false;
     expression = unwrap(expression);
     if (ts.isIdentifier(expression)) {
       const symbol = symbolAt(checker, expression);
@@ -1015,17 +1018,17 @@ function scanFiles(filenames) {
           );
       }
       return Boolean(initializer
-        && isBrowserStorageMutationReference(initializer, seen));
+        && isBrowserStorageMutationReference(initializer, seen, depth + 1));
     }
     if (ts.isCallExpression(expression)) {
       const invocation = member(expression.expression, evaluateString);
       return Boolean(invocation?.name === "bind"
-        && isBrowserStorageMutationReference(invocation.receiver, seen));
+        && isBrowserStorageMutationReference(invocation.receiver, seen, depth + 1));
     }
     const access = member(expression, evaluateString);
     if (!access) return false;
     if (["apply", "bind", "call"].includes(access.name)) {
-      return isBrowserStorageMutationReference(access.receiver, seen);
+      return isBrowserStorageMutationReference(access.receiver, seen, depth + 1);
     }
     return (access.name === "setItem"
       && isAmbientBrowserStorage(access.receiver, new Set(["localStorage", "sessionStorage"])))

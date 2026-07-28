@@ -51,6 +51,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:payment_ledger.rs",
     "//src/server/api:billing_api.rs",
     "//src/server/api:work_triage.rs",
+    "//src/server/api:whatsapp_cloud_webhook.rs",
+    "//src/server/api:whatsapp_cloud_webhook_test.rs",
         "//src/server/api:walkup.rs",
     "//src/server/api:tool_integrations.rs",
     "//src/server/api:billing_webhook.rs",

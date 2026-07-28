@@ -7,8 +7,8 @@ rust_library(
     srcs = [
         "client.rs",
         "mod.rs",
-        "client_test.rs",
         "provider.rs",
+        "client_test.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -22,7 +22,6 @@ rust_library(
         "@crates//:tokio",
         "@crates//:serde_json",
         "@crates//:serde",
-
     ],
 )
 

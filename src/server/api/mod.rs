@@ -28,6 +28,9 @@ pub mod dynamic_workflows;
 pub mod catalog;
 pub mod shipping;
 pub mod meta_webhook;
+pub mod whatsapp_cloud_webhook;
+#[cfg(test)]
+pub mod whatsapp_cloud_webhook_test;
 pub mod docs;
 pub mod subscription;
 pub mod fulfillment;
