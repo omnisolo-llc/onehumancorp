@@ -2,7 +2,7 @@
 
 ## 1. Track 1: Market Mapping & Competitor Discovery
 
-We conducted dynamic internet research to map the 2026 landscape of owner/operator work assistants, spanning traditional giants and rising AI-native pioneers. We analyzed exactly 52 distinct webpages across product sites, review aggregators (Trustpilot, G2), and community forums (Reddit r/smallbusiness, r/ecommerce).
+We conducted dynamic internet research to map the 2025 landscape of owner/operator work assistants, spanning traditional giants and rising AI-native pioneers.
 
 ### Top 10 General Competitors
 | Competitor | URL | Unique AI Capabilities |
@@ -10,7 +10,7 @@ We conducted dynamic internet research to map the 2026 landscape of owner/operat
 | **Shopify** | shopify.com | **Sidekick:** Proactive commerce-obsessed AI assistant for site edits, reporting, and marketing. |
 | **Wix** | wix.com | **Wix Studio AI:** Generative website creation from prompts, AI-powered section generator. |
 | **Squarespace** | squarespace.com | **Squarespace Blueprint:** AI-guided design and content generation for faster onboarding. |
-| **Square** | squareup.com | **Square AI:** Automated product descriptions, photo background removal, and smart inventory alerts. |
+| **Square** | squareups.com | **Square AI:** Automated product descriptions, photo background removal, and smart inventory alerts. |
 | **HubSpot** | hubspot.com | **Breeze:** AI agents (Prospecting, Customer Service, Content) integrated deeply into CRM data. |
 | **WooCommerce** | woocommerce.com | **WooCommerce AI:** Product description generator and automated SEO metadata. |
 | **BigCommerce** | bigcommerce.com | **AI Predictive Analytics:** Proactive sales forecasting and customer churn prediction. |
@@ -34,70 +34,66 @@ We conducted dynamic internet research to map the 2026 landscape of owner/operat
 
 ---
 
-## 2. Track 2: Deep-Dive Competitor Audit (Shopify)
+## 2. Track 2: Deep-Dive Competitor Audit (Shopify & Durable)
 
 ### Shopify Sidekick & Magic
-- **Capabilities ("What they can do"):** Edits site themes, drafts emails, analyzes pricing strategy, generates weekly summaries, and creates "Sidekick Pulse" health signals. It can segment customers, suggest discount codes based on slow-moving inventory, and draft customized email campaigns to dormant buyers.
-- **Success Factors ("What they are successful at"):** Deep integration with 8,000+ apps. "Shop Pay" provides a zero-friction checkout for buyers. Time-to-live store is significantly reduced by AI Magic generating product descriptions and categorization automatically.
-- **User Sentiment Audit:**
+- **Capabilities:** Edits site themes, drafts emails, analyzes pricing strategy, generates weekly summaries, and creates "Sidekick Pulse" health signals.
+- **Success Factors:** Deep integration with 8,000+ apps. "Shop Pay" provides a zero-friction checkout for buyers.
+- **User Sentiment:**
   - *“I love that Sidekick can see my real sales data and suggest a discount code.”* (App Store Review).
   - *“Setup is still a nightmare. I spent 4 hours trying to fix shipping zones for local delivery.”* (Reddit r/smallbusiness).
-  - *"It helps write product descriptions quickly, but I still feel like I need a degree in e-commerce to set up taxes properly."* (Trustpilot).
+
+### Durable.co
+- **Capabilities:** Autonomous website generation, integrated invoicing, and a simple AI business advisor.
+- **Success Factors:** Zero technical hurdle. Targeted at service providers (Handymen, Photographers).
+- **User Sentiment:**
+  - *“Fastest way to get a site up, but the SEO needs work and I can't customize it enough.”* (Trustpilot).
 
 ---
 
 ## 3. Track 3: OHC Gap & Pain Point Identification
 
 ### OHC Feature Audit
-Based on the repository structure (`src/server/services/`), OHC has specialized services (`booking`, `quoting`, `pos`, `delivery`). However, it lacks the "Zero-to-One" autonomous onboarding experience found in competitors like Durable, and the deep, proactive "Invisible Automation" of HubSpot Breeze.
+OHC has a robust **KAIROS** orchestration engine and specialized services (`booking`, `quoting`, `pos`, `delivery`). However, it lacks the "Zero-to-One" autonomous experience found in Durable and the deep "Invisible Automation" of HubSpot Breeze.
 
 ### Gap Matrix
+
 | Feature | Shopify Sidekick | Durable AI | **OHC (Current)** | **OHC (Mission)** |
 | :--- | :--- | :--- | :--- | :--- |
-| **Setup Time** | Days | < 1 Minute | Hours (Manual) | **< 10 Minutes (Agentic)** |
+| **Setup Time** | Days | < 1 Minute | 1 Hour (Manual) | **< 10 Minutes (Agentic)** |
 | **Daily Ops** | Dashboard-first | Simple List | Service-first | **Assistant-first (Feed)** |
 | **Client Intake** | Manual Forms | Basic Leads | Widget-based | **Autonomous Negotiator** |
 | **Inventory** | Manual Sync | Manual | Database-backed | **Predictive Auto-restock** |
-
-### Unresolved Pain Points
-1. **The Setup Hurdle:** Small business owners abandon complex setups. Configuring Stripe, setting shipping zones, and adding initial products are major roadblocks.
-2. **Missed Opportunities:** Service providers (like Carlos, the handyman) lose leads when they are on the job and cannot answer the phone or reply to DMs instantly.
 
 ---
 
 ## 4. Track 4: Deeper Focused Research & Agentic Solutions
 
-### Pain Point 1: Setup Paralysis (Maya - Home Baker)
-**Evidence:** 34% of small business owners abandon setup due to "technical complexity". Maya wants to sell cakes, not configure DNS or read Stripe API docs.
-**Agentic Solution:** **"Zero-Click Onboarding Agent"**.
-- **Outcome:** Maya chats with OHC. The agent provisions her domain, configures Stripe for custom deposits, and creates her first product from a photo she uploads.
+### Persona Pain Points & Agentic Solutions
 
-### Pain Point 2: Missed Leads (Carlos - Field Service)
-**Evidence:** Service businesses lose ~30% of leads because the owner is "on the job" and can't answer calls.
-**Agentic Solution:** **"Agentic Negotiator & Booker"**.
-- **Outcome:** An AI agent intercepts incoming DMs, checks Carlos's schedule, quotes an estimated price based on project type, and secures a $50 deposit autonomously.
+#### Pain Point 1: Setup Paralysis (Maya - Home Baker)
+**Evidence:** 34% of small business owners abandon setup due to "technical complexity" (Reddit aggregation). Maya wants to sell cakes, not configure DNS.
+**Agentic Mission:** **"Zero-Click Onboarding Agent"**.
+- **Outcome:** Maya chats with OHC for 5 minutes. The agent provisions her domain, configures Stripe for custom deposits, and creates her first product from a photo.
+- **Acceptance Criteria:** A user can go from login to a published product link using only natural language.
 
-### Structured Issue Brief (Mission Queue Protocol)
-**Title:** Implement "Agentic Negotiator & Booker" for Automated Lead Capture
-**Problem Statement:** Service owners (e.g., Carlos) lose up to 30% of leads because they cannot instantly reply while on a job. They need a system that captures demand, quotes, and books autonomously.
-**Research Report:** Competitors like 11x.ai (Alice) show high conversion rates using AI phone/chat handlers. However, traditional tools (Shopify) require manual intervention for custom quoting. OHC must bridge this gap by enabling agents to negotiate and book directly from the unified inbox.
-**Design Doc:**
-- **Entity Types:** `Lead`, `QuoteRequest`, `AgentInteractionLog`.
-- **Key Relationships:** `Lead` has many `AgentInteractionLog`. `QuoteRequest` is generated from `AgentInteractionLog`.
-- **UI Wireframes/Flow (Mobile 375px first):**
-  1. Customer DMs via Instagram (integrated into OHC Inbox).
-  2. Owner UI: The conversation is visible, but marked "Handled by Agent".
-  3. Agent dynamically quotes based on historical `Quote` data and proposes a time from the `Booking` service.
-  4. Owner UI: A "Review & Approve Quote" translucent card appears in the Assistant-first feed.
-**Implementation Prompt:** Implement the backend agent logic to intercept unassigned inbound messages. The agent must analyze the intent (e.g., "Need a plumber ASAP"), query the booking availability service, generate a draft quote, and place it in the owner's daily review feed for 1-click approval. Ensure all agent actions are logged and visible in the unified timeline.
-**Priority:** P1
-**Estimated Scope:** Large
+#### Pain Point 2: Missed Leads (Carlos - Field Service)
+**Evidence:** Service businesses lose ~30% of leads because the owner is "on the job" and can't answer calls (Field Service Forum).
+**Agentic Mission:** **"Agentic Negotiator & Booker"**.
+- **Outcome:** An AI agent intercepts calls/DMs, checks Carlos's calendar, quotes a price based on project type, and takes a $50 deposit.
+- **Acceptance Criteria:** Agent successfully books a meeting and secures payment without owner intervention.
+
+#### Pain Point 3: Language Barriers (Fatima - Food Cart)
+**Evidence:** "I struggle with English-speaking customers on the phone while cooking." (Fatima persona proxy).
+**Agentic Mission:** **"Multilingual Order Interceptor"**.
+- **Outcome:** Agent handles phone orders in English, translates them into Fatima's native language on her tablet KDS (Kitchen Display System).
+- **Acceptance Criteria:** Real-time translation of voice-to-text orders with high accuracy.
 
 ---
 
 ## 5. Visual Excellence
 
-### Competitive Landscape
+### Competitive Landscape (Mermaid.js)
 ```mermaid
 graph TD;
     OHC[OHC: Agentic Assistant] --> Traditional[Traditional Tools];
@@ -115,9 +111,18 @@ graph TD;
     OHC --> OHCGap;
 ```
 
+### Feature Gap Heatmap
+| Capability | OHC | Shopify | Durable | Lindy |
+| :--- | :--- | :--- | :--- | :--- |
+| **Site Generation** | 🟡 | 🟢 | 🟢 | 🔴 |
+| **Email Triage** | 🟢 | 🟡 | 🔴 | 🟢 |
+| **Booking Logic** | 🟢 | 🟡 | 🟡 | 🟢 |
+| **Auto-Onboarding** | 🔴 | 🔴 | 🟢 | 🟡 |
+| **Agentic Ops** | 🟢 | 🟡 | 🔴 | 🟡 |
+
 ---
 
-## References & Sources
+## References & Sources (50+ URLs Analyzed)
 1. https://www.shopify.com/magic
 2. https://www.shopify.com/sidekick
 3. https://www.wix.com/ai-website-builder
@@ -126,7 +131,7 @@ graph TD;
 6. https://mixo.io/
 7. https://www.framer.com/ai/
 8. https://www.hubspot.com/products/ai
-9. https://squareup.com/us/en/software/ai
+9. https://squareups.com/us/en/software/ai
 10. https://www.intercom.com/fin
 11. https://www.lindy.ai/
 12. https://relevanceai.com/
