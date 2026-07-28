@@ -119,9 +119,7 @@
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
         if (!res.ok) {
-          // Fallback for tests
-          renderConversations([{id: 'conv-1', channel: 'instagram', status: 'open'}]);
-          return;
+          throw new Error('Failed to load inboxes');
         }
         const inboxes = await res.json();
         if (inboxes.length > 0) {
@@ -131,11 +129,7 @@
         }
       } catch (err) {
         console.error('Failed to load inboxes', err);
-        // Fallback mock data for test environments
-        renderConversations([
-          { id: 'conv-1', channel: 'instagram', status: 'open', preview: 'Is this available?' },
-          { id: 'conv-2', channel: 'whatsapp', status: 'open', preview: 'Thanks!' }
-        ]);
+        document.getElementById('inbox-container').innerHTML = '<div class="text-center text-red-500 mt-10">Error loading inboxes</div>';
       }
     }
 
@@ -202,23 +196,27 @@
         if (res.ok) {
           const messages = await res.json();
           renderMessages(messages);
+          checkAiDrafts(messages);
         } else {
-           // Fallback for tests
-           renderMessages([{ id: 'msg-1', content: 'Hello there!', sender_type: 'customer' }]);
+           throw new Error('Failed to load messages');
         }
       } catch (err) {
          console.error(err);
-         renderMessages([{ id: 'msg-1', content: 'Hello there!', sender_type: 'customer' }]);
+         document.getElementById('messages-container').innerHTML = '<div class="text-center text-red-500 mt-10">Failed to load messages</div>';
       }
+    }
 
-      // Simulate AI Draft for demo purposes if it's the first test convo
-      if (convoId === 'conv-1') {
-        setTimeout(() => {
-          document.getElementById('agent-assist-draft').classList.remove('hidden');
-          document.getElementById('draft-text').textContent = "Hi! Yes, it's available. Would you like me to reserve it for you?";
-        }, 1000);
-      } else {
-        document.getElementById('agent-assist-draft').classList.add('hidden');
+    function checkAiDrafts(messages) {
+      // In a real implementation this would check if the last message has an AI draft
+      // We will check if the last message was a customer message and we have no draft
+      if (messages.length > 0) {
+          let lastMsg = messages[messages.length - 1];
+          if (lastMsg.sender_type === 'customer' && lastMsg.ai_draft_response) {
+            document.getElementById('agent-assist-draft').classList.remove('hidden');
+            document.getElementById('draft-text').textContent = lastMsg.ai_draft_response;
+          } else {
+            document.getElementById('agent-assist-draft').classList.add('hidden');
+          }
       }
     }
 
