@@ -1,5 +1,4 @@
 import { test, expect } from './fixtures';
-
 test.describe('WhatsApp Cloud API Integrations Setting', () => {
   test.beforeEach(async ({ loginAs }) => {
     await loginAs('admin');
@@ -28,7 +27,7 @@ test.describe('WhatsApp Cloud API Integrations Setting', () => {
     const modalHeading = page.locator('h2:has-text("Connect WhatsApp Cloud API")');
     await expect(modalHeading).toBeVisible();
 
-    // 7. Verify the Meta \'Continue with Facebook\' button
+    // 7. Verify the Meta 'Continue with Facebook' button
     const metaButton = page.locator('button:has-text("Continue with Meta")');
     await expect(metaButton).toBeVisible();
 
