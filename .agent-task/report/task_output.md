@@ -1,13 +1,13 @@
-issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chat system"
 issue_description: |
-  # Replace Chatwoot with Native Rust Omnichannel Chat System
+  # Replace Chat system with Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  Currently, OneHumanCorp (OHC) relies on Chatwoot as an external third-party service for its omnichannel customer support and chat functionality. The OHC Engineering Standards strictly mandate that Chatwoot must be 100% retired. Relying on an external service creates friction for a small-business owner who expects a seamlessly integrated, assistant-first work platform. We need our own high-performance, multi-tenant chat engine natively built in Rust inside `onehumancorp/mono`. This new system must achieve 100% feature parity with Chatwoot, managing omnichannel communications (web widget, email, SMS, Instagram DMs, etc.) invisibly, so our users—like Maya the baker and Carlos the handyman—can triage customer inquiries effortlessly without juggling external admin portals.
+  Currently, OneHumanCorp (OHC) relies on Chat system as an external third-party service for its omnichannel customer support and chat functionality. The OHC Engineering Standards strictly mandate that Chat system must be 100% retired. Relying on an external service creates friction for a small-business owner who expects a seamlessly integrated, assistant-first work platform. We need our own high-performance, multi-tenant chat engine natively built in Rust inside `onehumancorp/mono`. This new system must achieve 100% feature parity with Chat system, managing omnichannel communications (web widget, email, SMS, Instagram DMs, etc.) invisibly, so our users—like Maya the baker and Carlos the handyman—can triage customer inquiries effortlessly without juggling external admin portals.
 
   ## Research Report
-  - **Codebase & Architecture Gap:** The project instructions indicate that Chatwoot is being retired in favor of a native Rust implementation. Our current discovery found placeholders and settings for a chat service (`src/server/services/chat`) but not a fully replicated omnichannel architecture matching Chatwoot's capabilities.
-  - **Chatwoot Source Code Audit:** Chatwoot's core architecture relies on:
+  - **Codebase & Architecture Gap:** The project instructions indicate that Chat system is being retired in favor of a native Rust implementation. Our current discovery found placeholders and settings for a chat service (`src/server/services/chat`) but not a fully replicated omnichannel architecture matching Chat system's capabilities.
+  - **Chat system Source Code Audit:** Chat system's core architecture relies on:
     - **Omnichannel Models:** Concepts like `Inbox`, `Conversation`, `Contact`, `Message`, and `ChannelAdapter`.
     - **Real-time Messaging:** WebSocket connections for live chat and notifications.
     - **Web Widget:** A lightweight frontend chat interface embeddable on websites.
@@ -73,17 +73,17 @@ issue_description: |
   -   **Operations Assistant:** If a message implies a task (e.g., "Cancel my order"), the agent creates a draft operational task alongside the message reply.
 
   ## Implementation Prompt
-  Implement a native Rust omnichannel chat engine to replace Chatwoot.
+  Implement a native Rust omnichannel chat engine to replace Chat system.
   1.  **Data Models:** Create Rust structs and PostgreSQL schemas (with Row Level Security by `tenant_id`) for `Inbox`, `Conversation`, `Contact`, and `Message`.
   2.  **API & WebSockets:** Implement REST endpoints for managing inboxes/conversations and a WebSocket handler for real-time messaging using Axum.
   3.  **Channel Extensibility:** Define a Rust trait `ChannelAdapter` and implement a basic `WebWidgetAdapter`.
-  4.  **UI Updates:** Update the Next.js and Flutter frontends to connect to the new native WebSocket endpoints instead of Chatwoot, ensuring the UI adheres to the macOS-style translucent glass design system and works flawlessly on 375px viewports.
+  4.  **UI Updates:** Update the Next.js and Flutter frontends to connect to the new native WebSocket endpoints instead of Chat system, ensuring the UI adheres to the macOS-style translucent glass design system and works flawlessly on 375px viewports.
   5.  **Testing:** Provide comprehensive unit tests for the Rust services and Playwright E2E tests for the new UI flows, ensuring 100% test pass rate (`bazel test //...`).
 
   **Estimated Scope:** Large
 
   **Acceptance Criteria:**
-  - The external Chatwoot dependency is entirely removed.
+  - The external Chat system dependency is entirely removed.
   - Owners can receive and reply to messages from a native web widget through the unified Triage UI.
   - Real-time updates function correctly across browser tabs using the new Rust WebSocket server.
 
