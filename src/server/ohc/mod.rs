@@ -88,6 +88,8 @@ pub mod ohc {
     }
 }
 
+pub mod omnichannel;
+
 pub mod interop {
     pub use crate::ohc::interop::*;
 }

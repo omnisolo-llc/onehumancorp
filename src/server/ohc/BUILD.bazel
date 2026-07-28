@@ -4,7 +4,12 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_ohc",
-    srcs = ["mod.rs"],
+    srcs = [
+        "mod.rs",
+        "omnichannel/mod.rs",
+        "omnichannel/models.rs",
+        "omnichannel/repository.rs",
+    ],
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
