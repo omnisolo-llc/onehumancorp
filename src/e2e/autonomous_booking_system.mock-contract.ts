@@ -40,7 +40,7 @@ test.describe('Autonomous Booking System CUJ', () => {
     expect(resAvail.ok()).toBeTruthy();
 
     // (We assume service creation is part of the catalog, but we mock it for the test logic down the line since we don't have the full catalog setup here)
-    serviceId = 'mock-service-123';
+    serviceId = resourceId;
   });
 
   test('Customer fetches slots and creates a booking requiring a deposit', async ({ request }) => {
