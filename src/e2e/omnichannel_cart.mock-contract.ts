@@ -62,6 +62,10 @@ test.describe('Omnichannel Cart & Tap-to-Pay Integration', () => {
     await expect(productInput).toBeVisible();
     await productInput.fill(productId);
 
+    const priceInput = page.locator('#price-input');
+    await expect(priceInput).toBeVisible();
+    await priceInput.fill("15.00");
+
     const addItemBtn = page.locator('#add-item-btn');
     await expect(addItemBtn).toBeVisible();
     await addItemBtn.click();

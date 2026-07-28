@@ -9,7 +9,8 @@ export default function OmnichannelCartPage() {
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [cartTotal, setCartTotal] = useState<number>(0);
   const [status, setStatus] = useState<string>("");
-  const [productId, setProductId] = useState<string>("prod_terminal_123");
+  const [productId, setProductId] = useState<string>("");
+  const [priceStr, setPriceStr] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   useEffect(() => {
@@ -55,13 +56,13 @@ export default function OmnichannelCartPage() {
         body: JSON.stringify({
           product_id: productId,
           quantity: 1,
-          unit_price_cents: 1500, // $15.00
+          unit_price_cents: Math.round(parseFloat(priceStr || "0") * 100),
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setCartItems([...cartItems, { product_id: productId, quantity: 1, unit_price_cents: 1500 }]);
-        setCartTotal(cartTotal + 1500);
+        setCartItems([...cartItems, { product_id: productId, quantity: 1, unit_price_cents: Math.round(parseFloat(priceStr || "0") * 100) }]);
+        setCartTotal(cartTotal + Math.round(parseFloat(priceStr || "0") * 100));
         setStatus("Item added successfully.");
       } else {
         setStatus("Failed to add item: " + data.error);
@@ -99,6 +100,14 @@ export default function OmnichannelCartPage() {
                   placeholder="Product ID"
                   className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF]/50"
                   id="product-input"
+                />
+                <input
+                  type="number"
+                  value={priceStr}
+                  onChange={(e) => setPriceStr(e.target.value)}
+                  placeholder="Price"
+                  className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF]/50"
+                  id="price-input"
                 />
                 <button
                   id="add-item-btn"
