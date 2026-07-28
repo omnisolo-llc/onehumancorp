@@ -1,6 +1,6 @@
 use super::saga::*;
 use sqlx::PgPool;
-use std::env;
+
 use uuid::Uuid;
 
 #[tokio::test]

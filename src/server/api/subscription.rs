@@ -603,12 +603,12 @@ pub async fn parse_subscription_description(
     // Hardcode parsing logic here for now instead of relying on the LLM, as it fails in e2e tests
 
     // Default fallback values
-    let mut plan_name = "Guitar Lessons Monthly".to_string();
-    let mut amount = 20000;
-    let mut currency = "USD".to_string();
-    let mut interval = "month".to_string();
-    let mut feature_name = "guitar lessons".to_string();
-    let mut max_uses = 4;
+    let plan_name = "Guitar Lessons Monthly".to_string();
+    let amount = 20000;
+    let currency = "USD".to_string();
+    let interval = "month".to_string();
+    let feature_name = "guitar lessons".to_string();
+    let max_uses = 4;
 
     // Simple naive parsing for E2E tests and demonstration
     if req.description.contains("lesson") || req.description.contains("lessons") {
