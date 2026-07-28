@@ -1,14 +1,16 @@
+use redis::AsyncCommands;
 use sqlx::PgPool;
 use uuid::Uuid;
 use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage};
 
 pub struct ChatService {
     pool: PgPool,
+    redis_client: Option<redis::Client>,
 }
 
 impl ChatService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, redis_client: Option<redis::Client>) -> Self {
+        Self { pool, redis_client }
     }
 
     pub async fn create_inbox(
@@ -83,7 +85,7 @@ impl ChatService {
         contact_id: Uuid,
         assignee_id: Option<Uuid>,
     ) -> Result<ChatConversation, sqlx::Error> {
-        sqlx::query_as(
+        let conversation: ChatConversation = sqlx::query_as(
             r#"
             INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status)
             VALUES ($1, $2, $3, $4, $5, 'open')
@@ -96,7 +98,20 @@ impl ChatService {
         .bind(contact_id)
         .bind(assignee_id)
         .fetch_one(&self.pool)
-        .await
+        .await?;
+
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let channel = format!("tenant:{}:inbox:{}", tenant_id, inbox_id);
+                let payload = serde_json::json!({
+                    "event": "conversation.updated",
+                    "data": conversation
+                });
+                let _: Result<(), redis::RedisError> = conn.publish(channel, payload.to_string()).await;
+            }
+        }
+
+        Ok(conversation)
     }
 
     pub async fn send_message(
@@ -107,7 +122,7 @@ impl ChatService {
         sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
-        sqlx::query_as(
+        let message: ChatMessage = sqlx::query_as(
             r#"
             INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -121,6 +136,34 @@ impl ChatService {
         .bind(sender_id)
         .bind(content)
         .fetch_one(&self.pool)
-        .await
+        .await?;
+
+        if let Some(client) = &self.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                // Fetch the inbox_id for the conversation to broadcast to the correct channel
+                #[derive(sqlx::FromRow)]
+                struct InboxIdResult {
+                    inbox_id: Uuid,
+                }
+
+                if let Ok(inbox_id_record) = sqlx::query_as::<_, InboxIdResult>(
+                    r#"SELECT inbox_id FROM chat_conversations WHERE id = $1 AND tenant_id = $2"#
+                )
+                .bind(conversation_id)
+                .bind(tenant_id)
+                .fetch_one(&self.pool)
+                .await
+                {
+                    let channel = format!("tenant:{}:inbox:{}", tenant_id, inbox_id_record.inbox_id);
+                    let payload = serde_json::json!({
+                        "event": "message.created",
+                        "data": message
+                    });
+                    let _: Result<(), redis::RedisError> = conn.publish(channel, payload.to_string()).await;
+                }
+            }
+        }
+
+        Ok(message)
     }
 }

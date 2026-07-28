@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS chat_inboxes (
 );
 ALTER TABLE chat_inboxes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_inboxes_tenant_isolation_policy ON chat_inboxes FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE INDEX IF NOT EXISTS idx_chat_inboxes_tenant_id ON chat_inboxes(tenant_id);
 
 CREATE TABLE IF NOT EXISTS chat_channels (
     id UUID PRIMARY KEY,
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS chat_channels (
 );
 ALTER TABLE chat_channels ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_channels_tenant_isolation_policy ON chat_channels FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE INDEX IF NOT EXISTS idx_chat_channels_tenant_id_inbox_id ON chat_channels(tenant_id, inbox_id);
 
 CREATE TABLE IF NOT EXISTS chat_contacts (
     id UUID PRIMARY KEY,
@@ -31,6 +33,7 @@ CREATE TABLE IF NOT EXISTS chat_contacts (
 );
 ALTER TABLE chat_contacts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_contacts_tenant_isolation_policy ON chat_contacts FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE INDEX IF NOT EXISTS idx_chat_contacts_tenant_id ON chat_contacts(tenant_id);
 
 CREATE TABLE IF NOT EXISTS chat_conversations (
     id UUID PRIMARY KEY,
@@ -44,6 +47,8 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
 );
 ALTER TABLE chat_conversations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_conversations_tenant_isolation_policy ON chat_conversations FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_tenant_id_inbox_id ON chat_conversations(tenant_id, inbox_id);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_tenant_id_contact_id ON chat_conversations(tenant_id, contact_id);
 
 CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY,
@@ -57,3 +62,4 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_messages_tenant_isolation_policy ON chat_messages FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_tenant_id_conversation_id ON chat_messages(tenant_id, conversation_id);
