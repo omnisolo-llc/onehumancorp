@@ -1,13 +1,14 @@
-issue_title: "Implement Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Implement Native Rust Omnichannel Chat System (ChatPlatform Replacement)"
 issue_description: |
+  > Superseded architecture: ChatPlatform was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
   # Problem Statement
-  Small business owners and operators (Maya the baker, Carlos the handyman, Priya the boutique owner) receive customer inquiries across a multitude of channels: Instagram DMs, WhatsApp, Facebook Messenger, SMS, and Email. Currently, this results in fragmented communication, lost context, and delayed responses. The previous direction was to rely on Chatwoot, but as per the new architectural mandate, external Chatwoot dependencies are 100% RETIRED. OHC must implement a native, high-performance, multi-tenant omnichannel chat engine in Rust to seamlessly integrate with the broader AI Work Assistant ecosystem (like The Ambassador agent).
+  Small business owners and operators (Maya the baker, Carlos the handyman, Priya the boutique owner) receive customer inquiries across a multitude of channels: Instagram DMs, WhatsApp, Facebook Messenger, SMS, and Email. Currently, this results in fragmented communication, lost context, and delayed responses. The previous direction was to rely on ChatPlatform, but as per the new architectural mandate, external ChatPlatform dependencies are 100% RETIRED. OHC must implement a native, high-performance, multi-tenant omnichannel chat engine in Rust to seamlessly integrate with the broader AI Work Assistant ecosystem (like The Ambassador agent).
 
   # Research Report
-  **Findings & Chatwoot Source Code Audit:**
-  - **Chatwoot's Approach**: Chatwoot handles omnichannel via polymorphic `channels` (e.g., `channel_whatsapp`, `channel_email`, `channel_instagram`) that tie back to an `Inbox`.
+  **Findings & ChatPlatform Source Code Audit:**
+  - **ChatPlatform's Approach**: ChatPlatform handles omnichannel via polymorphic `channels` (e.g., `channel_whatsapp`, `channel_email`, `channel_instagram`) that tie back to an `Inbox`.
   - **Entities**: The core graph revolves around `Account` (tenant), `Inbox`, `Contact`, `ContactInbox` (joining a contact's channel-specific identifier to an inbox), `Conversation`, and `Message`.
-  - **Performance/Scale Constraints in Chatwoot**: Ruby on Rails + PostgreSQL with deep polymorphic associations. For OHC, building this in Rust allows significantly higher throughput for webhooks, tighter integration into the event mesh, and lower memory overhead for thousands of concurrent WebSocket connections for real-time mobile updates.
+  - **Performance/Scale Constraints in ChatPlatform**: Ruby on Rails + PostgreSQL with deep polymorphic associations. For OHC, building this in Rust allows significantly higher throughput for webhooks, tighter integration into the event mesh, and lower memory overhead for thousands of concurrent WebSocket connections for real-time mobile updates.
   - **OHC Opportunity**: By building this natively in Rust, we can embed our Zero-Trust multi-tenancy model directly at the protocol level. We can tightly couple the `Contact` model with our AI context graph, allowing "The Ambassador" (Customer Success Agent) to draft replies instantaneously via event-driven hooks without network hops to an external CRM.
 
   # Design Doc
@@ -77,7 +78,7 @@ issue_description: |
   - **Notification**: The system pushes the draft to the mobile app via WebSocket, updating the Work Triage feed.
 
   ### Key Design Decisions
-  - **Native Rust Impl**: Replaces the Chatwoot Ruby backend entirely. Services will be written in Rust, leveraging Axum for API/Webhooks and Tokio for async event handling.
+  - **Native Rust Impl**: Replaces the ChatPlatform Ruby backend entirely. Services will be written in Rust, leveraging Axum for API/Webhooks and Tokio for async event handling.
   - **Multi-Tenant Isolation**: Every table (`inboxes`, `conversations`, `messages`, `contacts`) MUST have a `tenant_id` column. PostgreSQL Row-Level Security (RLS) policies will enforce isolation.
   - **Zero-Mock Policy**: The UI must bind to real gRPC/REST endpoints backed by this Rust service.
 
