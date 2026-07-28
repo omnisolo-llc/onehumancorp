@@ -20,7 +20,7 @@ export default function EdgeStorefrontSetupPage() {
 
   return (
     <AppShell title="Publish Storefront">
-      <div className="max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm glassmorphism">
+      <div className="max-w-md mx-auto p-6 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[2.1] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-sm">
         {/* Back navigation button required by tests */}
         <button
           aria-label="Go back"
