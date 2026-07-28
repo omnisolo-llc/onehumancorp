@@ -292,7 +292,7 @@ export default function UnifiedFeed() {
                         disabled={processingId === item.workItem.id}
                         data-testid="unified-feed-reject-btn"
                       >
-                        Dismiss
+                        {processingId === item.workItem.id ? "Dismissing..." : "Dismiss"}
                       </button>
                       <button
                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-orange-500 text-white rounded-xl hover:bg-orange-600 shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all"
@@ -359,7 +359,7 @@ export default function UnifiedFeed() {
                           disabled={processingId === item.workItem.id}
                           data-testid="unified-feed-reject-btn"
                         >
-                          Reject
+                          {processingId === item.workItem.id ? "Rejecting..." : "Reject"}
                         </button>
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
