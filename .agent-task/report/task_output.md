@@ -1,10 +1,10 @@
 issue_title: "Architecture: Native Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  OHC is retiring its external Chatwoot dependency to build a native, high-performance, multi-tenant Rust omnichannel chat system. Small business owners (like Maya the Baker and Carlos the Handyman) need a unified inbox that captures Instagram DMs, WhatsApp messages, and website chats without needing third-party tools. The current lack of a native engine slows down onboarding and complicates tenant isolation, data latency, and AI triage routing.
+  OHC is retiring its external the legacy chat system dependency to build a native, high-performance, multi-tenant Rust omnichannel chat system. Small business owners (like Maya the Baker and Carlos the Handyman) need a unified inbox that captures Instagram DMs, WhatsApp messages, and website chats without needing third-party tools. The current lack of a native engine slows down onboarding and complicates tenant isolation, data latency, and AI triage routing.
 
   ## Research Report
-  Benchmarking Chatwoot's Ruby-on-Rails source code (`https://github.com/chatwoot/chatwoot`) reveals several core data models crucial for an omnichannel system:
+  Benchmarking the legacy chat system's Ruby-on-Rails source code (`https://github.com/legacy_chat_system/legacy_chat_system`) reveals several core data models crucial for an omnichannel system:
   - `Inbox`: Configuration point for a channel, binding it to a business and managing CSAT, out-of-office rules, and auto-assignment.
   - `Channel`: Specific provider implementations (e.g., `Channel::Whatsapp`, `Channel::WebWidget`). Holds credentials, webhook configurations, and provider-specific states.
   - `Conversation`: The central thread tying messages to an inbox and contact, managing status (open, snoozed, resolved), assignees, and SLA policies.
@@ -15,7 +15,7 @@ issue_description: |
 
   ## Design Doc
   ### Data Model & Invariants
-  We need native Rust representations of Chatwoot's core entities.
+  We need native Rust representations of the legacy chat system's core entities.
   - **Inboxes:** Configured per tenant, linking a channel to a team/agent.
   - **Channels:** Interfaces for Meta (WhatsApp/Instagram) and WebWidget.
   - **Conversations & Messages:** Tracking state and threads securely.
@@ -87,7 +87,7 @@ issue_description: |
 
   ## Implementation Prompt
   **For the Implementer Agent:**
-  Your task is to implement the native Rust data layer and core service handlers for the new Omnichannel Chat System in `src/server/integrations/chat`, fully deprecating Chatwoot logic.
+  Your task is to implement the native Rust data layer and core service handlers for the new Omnichannel Chat System in `src/server/integrations/chat`, fully deprecating the legacy chat system logic.
 
   **Acceptance Criteria:**
   1. Define Rust structs and `sqlx` database schemas/migrations for `Inbox`, `ChannelWhatsapp`, `ChannelWebWidget`, `Conversation`, `Message`, and `Contact`. Ensure all tables have a `tenant_id` with Postgres RLS enabled.
