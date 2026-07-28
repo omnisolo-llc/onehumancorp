@@ -82,7 +82,7 @@ playwright_spec_workspace_name() {
       break
     fi
   done
-  rel="${rel#./}"
+  rel="${rel#./}"; rel="${rel#/app/}"
   case "$rel" in
     src/e2e/*.spec.ts)
       printf '%s\n' "$rel"

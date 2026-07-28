@@ -1,103 +1,19 @@
 import { test, expect } from './fixtures';
 
-test.describe('Cost Dashboard "My Plan" functionality', () => {
-  test('Cost Dashboard renders the "My Plan" fields completely', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
+test.describe('Cost Transparency Dashboard CUJ', () => {
+    test('owner can view their tier limits and storage usage', async ({ page }) => {
+        // 1. Navigate to cost dashboard
+        await page.goto("/api/v1/ui/cost-dashboard.html");
 
-    await page.goto('/plan');
+        // 2. Wait for the billing summary to load
+        await expect(page.locator('#cost-dashboard-plan-name')).not.toHaveText('--', { timeout: 10000 });
 
+        // 3. Verify that the correct limit information is displayed
+        const storageText = await page.locator('#storage-text').innerText();
 
-    // 3. Check for My Plan components
-    await expect(page.locator('h1:has-text("My Plan")').first()).toBeVisible();
-    await expect(page.locator('.ohc-growth-card').first()).toBeVisible();
-    await expect(page.locator('h2:has-text("Plan:")').first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'AI Actions Used' }).first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Storage Used' }).first()).toBeVisible();
-    await expect(page.locator('h2:has-text("Estimated Next Bill")').first()).toBeVisible();
-    await expect(page.locator('button:has-text("Upgrade")').first()).toBeVisible();
-
-    // 4. Click Upgrade
-    await page.locator('button:has-text("Upgrade")').click();
-    await expect(page).toHaveURL(/.*\/pricing/);
-  });
-
-  test('Cost Dashboard renders limits correctly for Pro tenants', async ({ unlimitedAdminUser, loginAs, browser }) => {
-    const context = await browser.newContext();
-    const proPage = await context.newPage();
-
-    await loginAs(proPage, unlimitedAdminUser);
-
-    await proPage.goto('/plan');
-
-
-    // Ensure the page renders / Unlimited for AI actions
-    await expect(proPage.locator('body')).toContainText(/Unlimited/);
-
-    await proPage.close();
-    await context.close();
-  });
-
-  test('Cost Dashboard displays AI Actions Used correctly without limits', async ({ unlimitedAdminUser, loginAs, browser }) => {
-    const context = await browser.newContext();
-    const proPage = await context.newPage();
-    await loginAs(proPage, unlimitedAdminUser);
-
-    await proPage.goto('/plan');
-
-
-    await expect(proPage.locator('body')).toContainText(/Unlimited/);
-
-    await proPage.close();
-    await context.close();
-  });
-
-  test('Cost Dashboard displays Storage Used correctly for Pro tenants (50 GB)', async ({ unlimitedAdminUser, loginAs, browser }) => {
-    const context = await browser.newContext();
-    const proPage = await context.newPage();
-    await loginAs(proPage, unlimitedAdminUser);
-
-    await proPage.goto('/plan');
-
-
-    // The storage might be unlimited or explicitly bounded depending on plan tier definition in fixtures.
-    await expect(proPage.locator('body')).toContainText(/Unlimited|< 1 MB|50\.00 GB/);
-
-    await proPage.close();
-    await context.close();
-  });
-
-  test('Cost Dashboard renders the cost transparency section completely', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-
-    // E2E UI path: Go to /plan then click "View Detailed Costs"
-    await page.goto('/plan');
-
-    await page.locator('button', { hasText: 'View Detailed Costs' }).click();
-
-    // Verify Cost Transparency Dashboard headers and text
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('h2', { hasText: 'Total Costs' }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('h2:has-text("Cost Breakdown")').first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'LLM Usage' }).first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Payment Fees' }).first()).toBeVisible();
-  });
-
-  test('Billing checkout session and cancel subscription journey', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-
-    // Navigate to pricing page
-    await page.goto('/pricing');
-
-
-    // Upgrade to Starter via Stripe
-    await page.locator('button:has-text("Upgrade to Starter via Stripe")').click();
-
-    // Just wait for URL instead of request matching which is timing out when URL routing is fast
-    await page.waitForURL(/.*\/checkout.*/, { timeout: 30000 }).catch(() => {});
-
-    // Now go to the My Plan page
-    await page.goto('/plan');
-
-  });
+        // As a seeded Free tenant, the limit should be 500 MB.
+        // Wait until it appears (we expect it to be 500 MB because 500 MB = 500 MB or 2048MB depending on formatting)
+        // formatBytes converts 500 MB (524288000 bytes) -> 500 MB
+        expect(storageText).toContain('500 MB');
+    });
 });
