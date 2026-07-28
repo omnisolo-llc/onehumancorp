@@ -1,11 +1,11 @@
 issue_title: "Implement Custom Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing Chatwoot as an external dependency. We need a native Rust omnichannel customer support & chat engine built directly into `onehumancorp/mono` to achieve 100% feature parity with Chatwoot, ensuring tight multi-tenant isolation, native performance, and a single cohesive work context for the owner. The system must unify messages from Instagram, email, WhatsApp, and web chat into a single prioritized feed.
+  OneHumanCorp (OHC) is replacing Chat system as an external dependency. We need a native Rust omnichannel customer support & chat engine built directly into `onehumancorp/mono` to achieve 100% feature parity with Chat system, ensuring tight multi-tenant isolation, native performance, and a single cohesive work context for the owner. The system must unify messages from Instagram, email, WhatsApp, and web chat into a single prioritized feed.
 
   ## Research Report
-  - **Context:** The task mandate specifies a complete retirement of Chatwoot as an external service. OHC must implement its own high-performance, multi-tenant chat engine.
-  - **Chatwoot Architecture Audit:** Chatwoot relies heavily on `Conversation`, `Message`, `Inbox`, `Contact`, `ContactInbox`, and various channel models (e.g. `Channel::WebWidget`, `Channel::Email`, etc.).
+  - **Context:** The task mandate specifies a complete retirement of Chat system as an external service. OHC must implement its own high-performance, multi-tenant chat engine.
+  - **Chat system Architecture Audit:** Chat system relies heavily on `Conversation`, `Message`, `Inbox`, `Contact`, `ContactInbox`, and various channel models (e.g. `Channel::WebWidget`, `Channel::Email`, etc.).
   - **Requirements:**
     - **Multi-Tenancy:** Row-level tenant isolation (PostgreSQL RLS with `tenant_id`).
     - **Models:** Core structures for Conversations, Messages, Inboxes, Contacts, and Attachments.
