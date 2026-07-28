@@ -1,10 +1,10 @@
-issue_title: "Native Rust Omnichannel Chat Engine (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat Engine (Chat System Replacement)"
 issue_description: |
   ## Problem Statement
-  Chatwoot as an external service/dependency is 100% RETIRED. OHC requires a high-performance, multi-tenant omnichannel customer support & chat engine natively built in Rust inside `onehumancorp/mono`. We need this native chat system to seamlessly aggregate customer conversations across Instagram DMs, WhatsApp, SMS, and Email into a single Inbox that the owner/operator (like Maya or Carlos) can manage effortlessly from a 375px mobile screen. It must handle real-time messaging, agent routing, auto-assignment, and AI integration for auto-drafting replies without relying on external vendors.
+  Chat System as an external service/dependency is 100% RETIRED. OHC requires a high-performance, multi-tenant omnichannel customer support & chat engine natively built in Rust inside `onehumancorp/mono`. We need this native chat system to seamlessly aggregate customer conversations across Instagram DMs, WhatsApp, SMS, and Email into a single Inbox that the owner/operator (like Maya or Carlos) can manage effortlessly from a 375px mobile screen. It must handle real-time messaging, agent routing, auto-assignment, and AI integration for auto-drafting replies without relying on external vendors.
 
   ## Research Report
-  - **Source Code Audit (Chatwoot)**: Analyzed Chatwoot's Postgres schema (`schema.rb`), which centralizes around `accounts`, `inboxes`, `channels`, `conversations`, `messages`, and `contacts`. Multi-tenancy is achieved via `account_id` on all core models. Real-time updates use ActionCable WebSockets.
+  - **Source Code Audit (Chat System)**: Analyzed Chat System's Postgres schema (`schema.rb`), which centralizes around `accounts`, `inboxes`, `channels`, `conversations`, `messages`, and `contacts`. Multi-tenancy is achieved via `account_id` on all core models. Real-time updates use ActionCable WebSockets.
   - **OHC Native Parity**: Our OHC models in `src/server/services/chat/models.rs` outline the basic foundation (`ChatInbox`, `ChatChannel`, `ChatContact`, `ChatConversation`, `ChatMessage`). However, they lack robust real-time channel abstractions, WebSocket integration, AI-agent auto-reply states, and SLA policies.
   - **Competitor Insights**: Systems like Front and Zendesk use distinct "Channel Adapters" mapping external platform webhooks to internal unified message models.
 
@@ -75,7 +75,7 @@ issue_description: |
   - WebSocket connection broadcasts new messages to connected clients.
   - AI Agent automatically creates a draft reply upon receiving a new customer message.
   - 100% unit test coverage for the service layer and at least 5 Playwright E2E tests verifying the mobile CUJ.
-  - ZERO external dependency on Chatwoot; all logic is native.
+  - ZERO external dependency on Chat System; all logic is native.
 
   ## Priority
   P0
