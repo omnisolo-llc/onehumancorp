@@ -24,6 +24,8 @@ exports_files(
         "health.rs",
         "syndication_handler.rs",
         "omnichannel_webhook.rs",
+        "omnichannel_native.rs",
+
         "unified_inbox_webhook.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
@@ -88,6 +90,8 @@ rust_library(
         "health.rs",
         "syndication_handler.rs",
         "omnichannel_webhook.rs",
+        "omnichannel_native.rs",
+
         "unified_inbox_webhook.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
