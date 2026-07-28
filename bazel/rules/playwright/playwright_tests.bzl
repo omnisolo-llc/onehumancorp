@@ -71,7 +71,7 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
         "//src/e2e:current_app_smoke.ts",
         "//src/e2e:e2e-seed.sql",
         "//src/ui/next:package.json",
-        "//src/ui/next:src/e2e/fixtures/test_img.png",
+
         "//src/agents/builtin:ohc-builtin-agent",
         "//deploy:docker-compose.e2e.yml",
         "//:package.json",

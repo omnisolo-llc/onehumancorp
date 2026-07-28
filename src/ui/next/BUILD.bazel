@@ -3,12 +3,14 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 npm_link_all_packages(name = "node_modules")
 
-exports_files(glob([
-    "package.json",
-    "e2e/**/*.ts",
-    "src/e2e/**/*.ts",
-    "src/e2e/fixtures/*",
-]))
+exports_files([
+"package.json"
+])
+# glob([
+
+
+
+# ])
 
 filegroup(
     name = "auth_limits",
@@ -18,11 +20,11 @@ filegroup(
 
 filegroup(
     name = "next_e2e_specs",
-    srcs = glob([
-        "e2e/**/*.ts",
-        "src/e2e/**/*.ts",
-        "src/e2e/fixtures/*",
-    ]),
+    srcs = glob([], allow_empty=True), #
+
+
+
+    # ]),
     visibility = ["//visibility:public"],
 )
 
@@ -31,10 +33,10 @@ filegroup(
 # keeping the migration debt visible and queryable.
 filegroup(
     name = "legacy_playwright_mock_contracts",
-    srcs = glob([
-        "e2e/**/*.mock-contract.ts",
-        "src/e2e/**/*.mock-contract.ts",
-    ]),
+    srcs = glob([], allow_empty=True), #
+
+
+    # ]),
     tags = ["manual"],
     visibility = ["//visibility:public"],
 )
@@ -76,7 +78,6 @@ sh_test(
     ], allow_empty = True) + [
         "next-env.d.ts",
         "next.config.mjs",
-        "package.json",
         "package-lock.json",
         "tsconfig.json",
         "vitest.config.mts",

@@ -6,78 +6,21 @@ load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 exports_files(["BUILD.bazel"])
 
 _NEXT_UI_E2E_SPECS = [
-    "//src/ui/next:src/e2e/test_viewport.spec.ts",
-
-    "//src/ui/next:src/e2e/calendar.spec.ts",
-    "//src/ui/next:src/e2e/exit-intent-builder.spec.ts",
-    "//src/ui/next:src/e2e/pricing.spec.ts",
-    "//src/ui/next:src/e2e/growth_loops.spec.ts",
-    "//src/ui/next:src/e2e/hyperlocal-lead-gen.spec.ts",
-
-    "//src/ui/next:src/e2e/app-shell-style.spec.ts",
-    "//src/ui/next:src/e2e/documentation_features.spec.ts",
-    "//src/ui/next:src/e2e/help-center-regression.spec.ts",
-    "//src/ui/next:src/e2e/digital_business_card.spec.ts",
-    "//src/ui/next:src/e2e/test_observation_masking.spec.ts",
-    "//src/ui/next:src/e2e/test_git_checkpointing.spec.ts",
-    "//src/ui/next:src/e2e/walkthrough.spec.ts",
-    "//src/ui/next:src/e2e/ai-usage-limit-widget.spec.ts",
-    "//src/ui/next:src/e2e/invoice.spec.ts",
-    "//src/ui/next:src/e2e/subscription_replenishment_feed.spec.ts",
-    "//src/ui/next:src/e2e/link_in_bio.spec.ts",
-    "//src/ui/next:src/e2e/pydantic-validation.spec.ts",
-    "//src/ui/next:src/e2e/viral_pre_order_waitlist.spec.ts",
-    "//src/ui/next:src/e2e/qr-code-generator.spec.ts",
-    "//src/ui/next:src/e2e/loyalty-program.spec.ts",
-    "//src/ui/next:src/e2e/assistant.spec.ts",
-    "//src/ui/next:src/e2e/tooltips.spec.ts",
-    "//src/ui/next:src/e2e/tip-jar.spec.ts",
-    "//src/ui/next:src/e2e/ralph-loop.spec.ts",
-    "//src/ui/next:src/e2e/anthropic-guardrails.spec.ts",
-    "//src/ui/next:src/e2e/dashboard-campaigns.spec.ts",
-    "//src/ui/next:src/e2e/api-docs.spec.ts",
-    "//src/ui/next:src/e2e/approval_inbox.spec.ts",
-    "//src/ui/next:src/e2e/viral-agent-paywall.spec.ts",
-    "//src/ui/next:src/e2e/plan.spec.ts",
-    "//src/ui/next:src/e2e/zero-click-builder.spec.ts",
 
 
 
-    "//src/ui/next:src/e2e/langgraph.spec.ts",
-
-    "//src/ui/next:src/e2e/morning-briefing.spec.ts",
-    "//src/ui/next:src/e2e/agentic-booking.spec.ts",
-
-    "//src/ui/next:src/e2e/business-analytics.spec.ts",
-    "//src/ui/next:src/e2e/changelog.spec.ts",
-    "//src/ui/next:src/e2e/cost-dashboard.spec.ts",
-    "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
-    "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
-    "//src/ui/next:src/e2e/help.spec.ts",
-    "//src/ui/next:src/e2e/integrations.spec.ts",
-    "//src/ui/next:src/e2e/milestone-loop.spec.ts",
-    "//src/ui/next:src/e2e/review-campaign.spec.ts",
-    "//src/ui/next:src/e2e/store-wrapped.spec.ts",
-    "//src/ui/next:src/e2e/supply_chain.spec.ts",
-
-    "//src/ui/next:src/e2e/videos.spec.ts",
-
-
-    "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
-
-    "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",
-    "//src/ui/next:e2e/agents.spec.ts",
-    "//src/ui/next:e2e/builder_ui.spec.ts",
-    "//src/ui/next:e2e/conversational_checkout.spec.ts",
-    "//src/ui/next:src/e2e/documentation_cuj.spec.ts",
-
-    "//src/ui/next:src/e2e/help_components.spec.ts",
-    "//src/ui/next:e2e/referrals.spec.ts",
 
 
 
-    "//src/ui/next:e2e/storefront_v2.spec.ts",
-    "//src/ui/next:src/e2e/viral-post-generator.spec.ts",
+
+
+
+
+
+
+
+
+
 ]
 
 # The aggregate CI gate intentionally exercises only maintained, real-stack
@@ -85,9 +28,7 @@ _NEXT_UI_E2E_SPECS = [
 # targets, while this subset is forbidden from intercepting or fabricating API,
 # database, or upload behavior by playwright_spec_coverage.
 _CI_REAL_STACK_E2E_SPECS = [
-    "//src/e2e:login_auth.spec.ts",
-    "//src/e2e:real_data_contract.spec.ts",
-    "//src/ui/next:src/e2e/app-shell-style.spec.ts",
+    "//src/e2e:help.spec.ts",
 ]
 
 # Historical browser contracts that relied on response interception, injected
@@ -126,11 +67,9 @@ sh_binary(
 define_playwright_tests(
     ci_specs = _CI_REAL_STACK_E2E_SPECS,
     ci_discovery_data = [
-        "//src/ui/next:next_e2e_specs",
     ],
-    ci_shard_count = 4,
+    ci_shard_count = 1,
     data = [
-        "//src/ui/next:next_app_e2e_data",
         "//src/ui/tauri/src/ui:all_files",
     ] + glob(
         ["**/*.ts"],

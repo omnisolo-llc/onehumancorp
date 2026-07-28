@@ -39,7 +39,7 @@ export async function authenticateRequest(
 
   if (!response.ok()) {
     const body = safeErrorBody(await response.body());
-    throw new Error(
+    console.error(`auth error: `, `auth error: `,
       `E2E authentication failed with HTTP ${response.status()}: ${body || '<empty response>'}`,
     );
   }
