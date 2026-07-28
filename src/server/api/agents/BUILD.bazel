@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -15,8 +15,7 @@ exports_files(
         "pydantic.rs",
         "code_native.rs",
         "order_interceptor.rs",
-
-
+        "order_interceptor_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -38,8 +37,7 @@ rust_library(
         "pydantic.rs",
         "code_native.rs",
         "order_interceptor.rs",
-
-
+        "order_interceptor_test.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -125,11 +123,24 @@ rust_library(
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
+        "@crates//:tower",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
         "@crates//:walkdir",
+    ],
+)
+
+rust_test(
+    name = "server_api_agents_test",
+    crate = ":server_api_agents",
+    deps = [
+        "@crates//:tower",
+        "@crates//:axum",
+        "@crates//:sqlx",
+        "//src/server/common:server_common",
+        "//src/server:server_lib",
     ],
 )

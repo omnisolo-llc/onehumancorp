@@ -9,3 +9,6 @@ pub mod client_intake;
 pub mod pydantic;
 pub mod code_native;
 pub mod order_interceptor;
+
+#[cfg(test)]
+mod order_interceptor_test;

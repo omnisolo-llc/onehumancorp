@@ -11,9 +11,9 @@ describe('MultilingualOrderInterceptor', () => {
   it('does not fabricate a voice transcript when transcription is unavailable', () => {
     render(<MultilingualOrderInterceptor />);
 
-    expect(screen.getByRole('button', { name: 'Voice transcription unavailable' })).toBeDisabled();
-    expect(screen.getByText('Voice transcription is unavailable. Type the order instead.')).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('Quiero 3 tacos de pollo')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Voice transcription unavailable' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByText('Voice transcription is unavailable. Type the order instead.')).toBeDefined();
+    expect(screen.queryByDisplayValue('Quiero 3 tacos de pollo')).toBeNull();
   });
 
   it('processes user-entered text through the real order interceptor endpoint', async () => {
