@@ -1,13 +1,13 @@
-issue_title: "Build Native Rust Omnichannel Inbox to Replace Chatwoot"
+issue_title: "Build Native Rust Omnichannel Inbox to Replace LegacyExternalChat"
 issue_description: |
   ### Title
-  Build Native Rust Omnichannel Inbox to Replace Chatwoot
+  Build Native Rust Omnichannel Inbox to Replace LegacyExternalChat
 
   ### Problem Statement
-  Business owners (like Maya the Baker or Carlos the Handyman) receive customer inquiries across many channels: Instagram DMs, WhatsApp, SMS, and website chat. Keeping track of all these messages is chaotic, leading to dropped leads and slow responses. Previously, we relied on an external tool (Chatwoot), but it introduced too much complexity, wasn't perfectly integrated with our AI agents, and didn't feel native to our multi-tenant owner assistant. Owners need a single, unified inbox right inside OHC that seamlessly handles all their conversations, allows AI agents to draft replies automatically, and works flawlessly on a 375px mobile screen without relying on external third-party messaging services.
+  Business owners (like Maya the Baker or Carlos the Handyman) receive customer inquiries across many channels: Instagram DMs, WhatsApp, SMS, and website chat. Keeping track of all these messages is chaotic, leading to dropped leads and slow responses. Previously, we relied on an external tool (LegacyExternalChat), but it introduced too much complexity, wasn't perfectly integrated with our AI agents, and didn't feel native to our multi-tenant owner assistant. Owners need a single, unified inbox right inside OHC that seamlessly handles all their conversations, allows AI agents to draft replies automatically, and works flawlessly on a 375px mobile screen without relying on external third-party messaging services.
 
   ### Research Report
-  - **Chatwoot Source Code Audit**: Chatwoot’s architecture relies on core entities: `Inboxes`, `Conversations`, `Messages`, and `Contacts`. Channels (e.g., WhatsApp, Email, Web Widget) use adapters to normalize messages into a standard format. It heavily utilizes WebSockets for real-time updates and background jobs (like SLA policies and webhooks). As per OHC requirements, Chatwoot is 100% retired, and we must rebuild these capabilities natively in Rust.
+  - **LegacyExternalChat Source Code Audit**: The architecture relies on core entities: `Inboxes`, `Conversations`, `Messages`, and `Contacts`. Channels (e.g., WhatsApp, Email, Web Widget) use adapters to normalize messages into a standard format. It heavily utilizes WebSockets for real-time updates and background jobs (like SLA policies and webhooks). As per OHC requirements, LegacyExternalChat is 100% retired, and we must rebuild these capabilities natively in Rust.
   - **Competitor Benchmarking**:
     - **Shopify Inbox**: Highly integrated into the commerce flow, focusing on turning conversations into sales by easily sending product links and discount codes directly in the chat.
     - **Wix Inbox**: Provides a unified view of site interactions, forms, and chats, serving as a centralized communication hub.
@@ -69,7 +69,7 @@ issue_description: |
 
   ### Implementation Prompt
   **Role**: Implementer Agent
-  **Task**: Build the foundational Rust backend and mobile-first UI for the new Native Omnichannel Inbox, completely replacing any legacy Chatwoot dependencies.
+  **Task**: Build the foundational Rust backend and mobile-first UI for the new Native Omnichannel Inbox, completely replacing any legacy messaging dependencies.
 
   **CUJ (Critical User Journey)**:
   1. Maya (the owner) opens the OHC app on her phone (375px viewport).
