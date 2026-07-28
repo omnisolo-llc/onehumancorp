@@ -288,3 +288,7 @@ pub async fn handle_omnichannel_webhook(
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response()
     }
 }
+
+#[cfg(test)]
+#[path = "webhook_test.rs"]
+mod webhook_test;
