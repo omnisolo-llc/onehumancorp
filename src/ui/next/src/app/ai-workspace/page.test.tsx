@@ -200,7 +200,7 @@ describe('AIWorkspacePage', () => {
     await act(async () => {
       fireEvent.change(textarea, { target: { value: 'Updated note technical design specification.' } });
     });
-    expect(textarea.value).toBe('Updated note technical design specification.');
+    expect((textarea as HTMLTextAreaElement).value).toBe('Updated note technical design specification.');
 
     // Add a new note
     const noteNameInput = screen.getByPlaceholderText('New document name...');

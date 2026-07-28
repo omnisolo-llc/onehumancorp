@@ -8,7 +8,8 @@ vi.mock('@/lib/utils/api', () => ({
 }));
 
 vi.mock('@/app/components/AppShell', () => ({
-  default: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
+  AppShell: ({ children }: any) => <div>{children}</div>,
+  default: ({ children }: any) => <div>{children}</div>
 }));
 
 describe('GlobalCommerceSettings', () => {

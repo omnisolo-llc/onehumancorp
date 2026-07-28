@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import AppShell from '@/app/components/AppShell';
+import { AppShell } from '@/app/components/AppShell';
 const TopNav = ({ title }: { title: string }) => <div className="font-semibold px-4 py-3 border-b border-[#E5E5EA] dark:border-[#38383A]">{title}</div>;
 
 
@@ -61,7 +61,7 @@ export default function GlobalCommerceSettings() {
 
   if (isLoading) {
     return (
-      <AppShell>
+      <AppShell title="Global Commerce">
         <div className="flex flex-col h-full bg-white dark:bg-[#1C1C1E]">
           <TopNav title="Global Commerce" />
           <div className="flex-1 p-4 flex items-center justify-center">
@@ -73,7 +73,7 @@ export default function GlobalCommerceSettings() {
   }
 
   return (
-    <AppShell>
+    <AppShell title="Global Commerce">
       <div className="flex flex-col h-full bg-[#F2F2F7] dark:bg-black overflow-y-auto">
         <TopNav title="Global Commerce" />
 
