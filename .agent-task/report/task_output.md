@@ -3,12 +3,12 @@ issue_description: |
   # Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  As mandated by the engineering standards, OneHumanCorp (OHC) is retiring external reliance on third-party services like Chatwoot for omnichannel customer support and messaging. We need to implement a native, high-performance, and multi-tenant chat engine in Rust within the `onehumancorp/mono` repository to support our owner/operator personas (Maya, Carlos, Priya, Leo, Fatima, Nora, Jun) in managing communications seamlessly across multiple channels (Web Widget, Email, WhatsApp, Instagram, Facebook, SMS, etc.).
+  As mandated by the engineering standards, OneHumanCorp (OHC) is retiring external reliance on third-party services like external omnichannel systems for customer support and messaging. We need to implement a native, high-performance, and multi-tenant chat engine in Rust within the `onehumancorp/mono` repository to support our owner/operator personas (Maya, Carlos, Priya, Leo, Fatima, Nora, Jun) in managing communications seamlessly across multiple channels (Web Widget, Email, WhatsApp, Instagram, Facebook, SMS, etc.).
 
   Currently, our users rely on disparate communication tools, leading to fragmented customer relationships, missed leads, and a lack of unified context for AI agents. An in-house omnichannel system will ensure strict row-level security (RLS) multi-tenancy, deep integration with our AI assistants (Customer, Operations, Sales), and alignment with our mobile-first, translucent glass design principles without exposing the complexity to the owners.
 
   ## Research Report
-  - **Chatwoot Source Code Audit**: A clone and analysis of the `chatwoot/chatwoot` repository (v3) revealed the core domain models required for an omnichannel inbox:
+  - **Source Code Audit**: A clone and analysis of the `external/external` repository (v3) revealed the core domain models required for an omnichannel inbox:
     - **Inbox**: The central configuration point for a channel, linking to `Channel` records (e.g., `Channel::WebWidget`, `Channel::Whatsapp`, etc.).
     - **Conversation**: Represents a thread between a `Contact` and an `Agent`/Bot.
     - **Message**: Individual messages within a conversation, supporting text, attachments, and structured templates.
@@ -91,6 +91,25 @@ issue_description: |
   - **Event-Driven Pub/Sub**: Real-time updates (new messages, typing indicators) will be handled via Redis Pub/Sub, bridging to WebSockets/SSE on the Flutter client.
   - **Abstracted Channels**: The core messaging logic is agnostic to the source channel. Specific adapters (WhatsApp, Email) handle the mapping of external webhook payloads into the standard OHC `Message` format.
 
+  ### Business Journey Mapping
+  - **Acquisition**: Owners enable the Web Widget on their storefront via the "Settings" tab, requiring no code setup.
+  - **Onboarding**: The owner is guided to connect external channels like WhatsApp or Instagram via simplified OAuth flows.
+  - **Activation**: The owner successfully replies to their first incoming message, experiencing the unified inbox and AI-drafted replies.
+  - **Retention**: The owner relies on the unified inbox daily to manage all customer communications, reducing missed leads.
+  - **Revenue**: The AI Sales Assistant suggests sharing a payment link or a new quote directly within a chat conversation based on user intent.
+  - **Referral**: Happy owners refer OHC to other small businesses because of how seamlessly it manages customer relationships.
+
+  ### Technical Integrity & Mobile-First Targets
+  - **Performance Targets**: Under 200ms latency for message sending. Under 1.5s cold startup time for the inbox UI on low-end Android devices.
+  - **Offline Capability**: Conversations should remain readable offline, and drafted messages will queue and sync when network access is restored. Payload sizes should be minimal, leveraging Protobufs.
+  - **Zero Trust & Security**: Identity and authorization will rely entirely on SPIFFE/SPIRE for internal microservice communication and strict row-level security in Postgres. All inter-service calls must enforce tenant isolation.
+
+  ### Priority
+  P0
+
+  ### Estimated Scope
+  Large
+
   ## Implementation Prompt
   **Role**: Implementer Agent
   **Task**: Build the foundational data models, gRPC/REST APIs, and core backend service logic for the Native Rust Omnichannel Chat System in OHC.
@@ -108,7 +127,8 @@ issue_description: |
 
   **Notes**:
   - Do not implement the full frontend UI yet; focus on the robust backend foundation.
-  - Reference the Chatwoot models but adapt them to OHC's architecture (Rust, Tonic, SQLx, strict multi-tenancy).
+  - Reference the external chat models but adapt them to OHC's architecture (Rust, Tonic, SQLx, strict multi-tenancy).
+
 issue_priority: P0
 issue_category: research
 issue_type: task
