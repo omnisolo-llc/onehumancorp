@@ -240,7 +240,7 @@ pub async fn twilio_voice_status_handler(
                 if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
                     task.approval_status = Some("PENDING".to_string());
 
-                    let proposed_content = serde_json::json!({
+                    let mut proposed_content = serde_json::json!({
                         "feature_type": "booking_draft",
                         "summary": summary,
                         "caller_phone": clean_caller,
@@ -257,17 +257,42 @@ pub async fn twilio_voice_status_handler(
                 let mission_id = uuid::Uuid::new_v4().to_string();
 
                 let title = format!("Voice Order Request from {}", clean_caller);
+
+                let language_preference = match &state.db.store {
+                    crate::db::DbStore::Postgres => {
+                        match sqlx::query_scalar::<_, String>("SELECT language_preference FROM tenants WHERE id = $1").bind(&tenant_id).fetch_optional(pool).await {
+                            Ok(Some(lang)) => lang,
+                            _ => "en".to_string(),
+                        }
+                    },
+                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                        match sqlx::query_scalar::<_, String>("SELECT language_preference FROM tenants WHERE id = ?").bind(&tenant_id).fetch_optional(sqlite_pool).await {
+                            Ok(Some(lang)) => lang,
+                            _ => "en".to_string(),
+                        }
+                    }
+                };
+                let intercepted = crate::api::agents::order_interceptor::intercept_order(&tenant_id, &language_preference, &summary).await;
+                let title = if let Ok(ref order) = intercepted {
+                    format!("Incoming Phone Order ({})", order.language)
+                } else {
+                    format!("Incoming Phone Order")
+                };
                 let priority = "P1".to_string();
 
                 if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
                     task.approval_status = Some("PENDING".to_string());
 
-                    let proposed_content = serde_json::json!({
+                    let mut proposed_content = serde_json::json!({
                         "feature_type": "order_draft",
                         "summary": summary,
                         "caller_phone": clean_caller,
                         "order_link": order_link,
                     });
+
+                    if let Ok(order) = intercepted {
+                        proposed_content["intercepted_order"] = serde_json::to_value(order).unwrap();
+                    }
                     task.proposed_content = Some(proposed_content.to_string());
 
                     let _ = task_manager.insert_task(task);

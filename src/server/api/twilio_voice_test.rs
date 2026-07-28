@@ -27,6 +27,10 @@ async fn test_twilio_voice_incoming_handler() {
     let hub = Arc::new(Hub::new());
 
     let twilio = Arc::new(TwilioProvider::new("test".to_string(), "test".to_string()));
+    let db_clone = db.clone();
+    tokio::spawn(async move {
+        let _ = sqlx::query("INSERT OR IGNORE INTO tenants (id, language_preference) VALUES ('test_tenant', 'en')").execute(&db_clone.pool).await;
+    });
 
     let state = TwilioVoiceWebhookState {
         hub,

@@ -151,6 +151,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ||
           (approval.proposed_action || approval.context_payload)
+            ?.feature_type === "order_draft" ||
+          (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_reengagement" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "instagram_dm" ||
@@ -984,7 +986,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </p>
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+
                 ?.feature_type === "social_post_draft" ? (
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center text-sm">
@@ -1011,7 +1013,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </div>
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+
                 ?.feature_type === "subscription_churn_risk" ? (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-red-600 font-semibold text-sm">
@@ -1029,7 +1031,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   "
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+
                 ?.feature_type === "subscription_replenishment" ? (
               <div className="flex flex-col gap-2">
                 <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
@@ -1040,7 +1042,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     "Based on this customer's order history and the estimated consumption rate, they are due for a replenishment. Would you like me to generate a personalized checkout link and draft an email suggesting they refill?"}
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+
                 ?.feature_type === "supply_order" ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
@@ -1116,7 +1118,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </div>
                 </div>
               </>
-            ) : (approval.proposed_action || approval.context_payload)
+
                 ?.feature_type === "stockout_restock_and_price" ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
@@ -1224,7 +1226,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   )}
                 </button>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)?.context
+            ?.context
                 ?.smart_pricing === true ? (
               <>
                 <div className="flex justify-between items-center text-sm mb-1">
@@ -1269,7 +1271,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </span>
                 </div>
               </>
-            ) : (approval.proposed_action || approval.context_payload)
+
                 ?.feature_type === "incident_resolution" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
@@ -1301,7 +1303,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </div>
                 ))}
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+
                 ?.feature_type === "ambassador_reply" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
@@ -1325,7 +1327,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   </span>
                 </div>
               </div>
-            ) : (approval.proposed_action || approval.context_payload)
+
                 ?.feature_type === "quote_draft" ? (
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center text-sm">
@@ -1546,7 +1548,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "booking_reengagement" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
@@ -1658,7 +1660,35 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             </>
           )
-        ) : (approval.proposed_action || approval.context_payload)
+
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "order_draft" ? (
+          <div className="flex flex-col gap-3 w-full">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl mb-4">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{(approval.proposed_action || approval.context_payload)?.intercepted_order?.intent || "Order Details"}</h3>
+              {(approval.proposed_action || approval.context_payload)?.intercepted_order?.items && (
+                <ul className="space-y-2 mb-4">
+                  {(approval.proposed_action || approval.context_payload)?.intercepted_order?.items.map((item: any, idx: number) => (
+                    <li key={idx} className="flex justify-between items-center bg-white dark:bg-gray-800 p-2 rounded-lg">
+                      <span className="font-medium text-gray-800 dark:text-gray-200">{item.item}</span>
+                      <span className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold px-2 py-1 rounded">x{item.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {(approval.proposed_action || approval.context_payload)?.intercepted_order?.translated_notes && (
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  <strong>Notes:</strong> {(approval.proposed_action || approval.context_payload)?.intercepted_order?.translated_notes}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => handleDecision(approval.id, true, undefined, approval.event_source)}
+              className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
+              data-testid="approve-order-draft"
+            >
+              Approve & Add to Orders
+            </button>
+          </div>
             ?.feature_type === "booking_draft" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
@@ -1771,7 +1801,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             </>
           )
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "incident_resolution" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1810,7 +1840,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "subscription_churn_risk" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1849,7 +1879,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "subscription_replenishment" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1887,7 +1917,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "subscription_replenishment" ? (
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center">
@@ -1899,7 +1929,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               <span className="font-medium">1-Click Repurchase Link</span>
             </div>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "supply_order" ? (
           <>
             <button
@@ -1959,7 +1989,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
             </div>
           </>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "newsletter_draft" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -1996,7 +2026,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Skip this week
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "social_post_draft" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -2035,7 +2065,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "supply_order" ? (
           <>
             <div className="flex justify-between items-center text-sm mb-1">
@@ -2109,7 +2139,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </div>
             </div>
           </>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "stockout_restock_and_price" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -2153,7 +2183,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "invoice_draft" ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -2194,7 +2224,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               Dismiss
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "review" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "order" ||
@@ -2301,7 +2331,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
             </div>
           )
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "quote_draft" ? (
           <div className="flex flex-col gap-3 w-full">
             <QuoteReviewModal
@@ -2351,7 +2381,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
             </div>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)?.context
+        ?.context
             ?.smart_pricing === true ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -2434,7 +2464,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)?.context
+        ?.context
             ?.weekly_health_report === true ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             {!isDraftExpanded ? (
@@ -2501,7 +2531,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.remaining_stock !== undefined ? (
           <div className="flex flex-col sm:flex-row gap-3 w-full">
             <button
@@ -2545,7 +2575,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               )}
             </button>
           </div>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "create_product" ? (
           <>
             <button
@@ -2591,7 +2621,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
               </button>
             </div>
           </>
-        ) : (approval.proposed_action || approval.context_payload)
+
             ?.feature_type === "quote_draft" ? (
           <>
             <button
