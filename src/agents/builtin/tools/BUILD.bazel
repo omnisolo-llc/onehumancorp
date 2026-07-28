@@ -6,6 +6,8 @@ rust_library(
     name = "tools",
     srcs = [
         "aider_pair_programming.rs",
+        "omnichannel_chat.rs",
+        "omnichannel_chat_test.rs",
         "agent_tool.rs",
         "agent_protocol.rs",
         "agent_protocol_test.rs",

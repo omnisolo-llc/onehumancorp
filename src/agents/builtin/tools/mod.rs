@@ -11,6 +11,9 @@ use tokio::sync::RwLock;
 
 pub mod bash;
 pub mod edit;
+pub mod omnichannel_chat;
+#[cfg(test)]
+mod omnichannel_chat_test;
 pub mod glob;
 pub mod grep;
 pub mod network_policy;
@@ -177,6 +180,7 @@ pub fn all_tools(
         checkout::conversational_checkout_tool(),
         quote::generate_quote_tool(booking_store, tenant),
         aider_pair_programming::aider_pair_programming_tool(),
+        omnichannel_chat::omnichannel_chat_tool(),
         superpowers_tool::superpowers_skill_tool(),
     ];
 
