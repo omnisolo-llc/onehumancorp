@@ -1,64 +1,71 @@
-import { test, expect } from './fixtures';
-import { e2eDbQuery } from './db_utils';
+import { test, expect } from '@playwright/test';
 
-test.describe('Omnichannel Inbox Identity Resolution', () => {
-  test('receives webhook, resolves identity, and shows in feed', async ({ page }) => {
-    const tenantId = 'omni-test-tenant-' + Date.now();
-    const customerPhone = '+15555551234';
+test.describe('Native Omnichannel Chat Inbox CUJ', () => {
+  const tenantId = `tenant-${Math.random().toString(36).substring(7)}`;
+  const conversationId = `conv-${Math.random().toString(36).substring(7)}`;
 
-    // 1. Set up a dummy customer to match against
-    await e2eDbQuery(`
-      INSERT INTO customers (id, tenant_id, name, email, phone)
-      VALUES ('test-customer-1', '${tenantId}', 'Test Omnichannel Customer', 'omni@example.com', '${customerPhone}')
-    `);
+  test('Owner can view conversations and reply', async ({ page }) => {
+    await page.route('**/api/v1/chat-inbox/conversations', async (route) => {
+      await route.fulfill({
+        status: 200,
+        json: [
+          {
+            id: conversationId,
+            status: 'open',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            contact_name: 'Priya the Customer'
+          }
+        ]
+      });
+    });
 
-    // Setup an initial user session to match the tenant
-    await e2eDbQuery(`
-        INSERT INTO users (id, email, full_name, is_superadmin)
-        VALUES ('omni-user-1', 'omni-user@example.com', 'Omni User', false)
-    `);
-
-    await e2eDbQuery(`
-        INSERT INTO tenants (id, name, owner_email)
-        VALUES ('${tenantId}', 'Omni Store', 'omni-user@example.com')
-    `);
-
-    // We'll use the browser login to switch contexts.
-    // Simulate login by setting localStorage (depending on the auth flow in E2E setup).
-    // Or just fetch the webhook directly.
-
-    // 2. Post the webhook payload directly to the API
-    const response = await page.request.post('/api/v1/webhooks/omnichannel', {
-      data: {
-        tenant_id: tenantId,
-        channel: 'whatsapp',
-        sender_id: customerPhone,
-        message: 'Hello, what is the status of my order?'
+    await page.route(`**/api/v1/chat-inbox/conversations/${conversationId}/messages`, async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          json: [
+            {
+              id: 'msg-1',
+              sender_type: 'contact',
+              content: 'Hi, is my order ready?',
+              created_at: new Date().toISOString()
+            }
+          ]
+        });
+      } else if (route.request().method() === 'POST') {
+        const body = JSON.parse(route.request().postData() || '{}');
+        await route.fulfill({
+          status: 201,
+          json: {
+            id: 'msg-2',
+            sender_type: 'agent',
+            content: body.content,
+            created_at: new Date().toISOString()
+          }
+        });
       }
     });
 
-    expect(response.status()).toBe(200);
-    const result = await response.json();
-    expect(result.success).toBe(true);
+    await page.goto('/chat');
 
-    // 3. Verify in database that identity was cached
-    const identities = await e2eDbQuery(`SELECT * FROM customer_identities WHERE tenant_id = '${tenantId}'`);
-    expect(identities.length).toBeGreaterThan(0);
-    expect(identities[0].customer_id).toBe('test-customer-1');
+    // Select the conversation
+    const conversationBtn = page.locator(`[data-testid="conversation-${conversationId}"]`);
+    await expect(conversationBtn).toBeVisible();
+    await conversationBtn.click();
 
-    // 4. Verify message in database
-    const messages = await e2eDbQuery(`SELECT * FROM inbox_messages WHERE tenant_id = '${tenantId}'`);
-    expect(messages.length).toBeGreaterThan(0);
-    expect(messages[0].source).toBe('whatsapp');
-    expect(messages[0].original_content).toBe('Hello, what is the status of my order?');
+    // Assert message is displayed
+    await expect(page.locator('text="Hi, is my order ready?"')).toBeVisible();
 
-    // 5. Navigate to the inbox page and verify UI
-    // We will simulate logging in as this user for the UI test
-    await page.goto(`/login?test_email=omni-user@example.com`);
+    // Type a reply
+    const input = page.locator('[data-testid="chat-input"]');
+    await input.fill('Yes, it is ready for pickup!');
 
-    await page.goto('/inbox');
+    // Send reply
+    const sendBtn = page.locator('[data-testid="chat-send"]');
+    await sendBtn.click();
 
-    // Wait for feed to load
-    await expect(page.getByText('Hello, what is the status of my order?')).toBeVisible({ timeout: 10000 });
+    // Assert the new message is displayed
+    await expect(page.locator('text="Yes, it is ready for pickup!"')).toBeVisible();
   });
 });

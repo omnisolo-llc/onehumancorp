@@ -36,6 +36,7 @@ exports_files(
         "storefront_delivery.rs",
         "subscription.rs",
         "integrations_settings.rs",
+        "chat_inbox.rs",
         "oauth/mod.rs",
         "oauth/proxy.rs",
         "mod.rs",

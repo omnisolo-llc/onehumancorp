@@ -123,4 +123,40 @@ impl ChatService {
         .fetch_one(&self.pool)
         .await
     }
+
+    pub async fn list_conversations(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Vec<ChatConversation>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+            FROM chat_conversations
+            WHERE tenant_id = $1
+            ORDER BY updated_at DESC
+            "#
+        )
+        .bind(tenant_id)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    pub async fn get_messages_for_conversation(
+        &self,
+        tenant_id: Uuid,
+        conversation_id: Uuid,
+    ) -> Result<Vec<ChatMessage>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            FROM chat_messages
+            WHERE tenant_id = $1 AND conversation_id = $2
+            ORDER BY created_at ASC
+            "#
+        )
+        .bind(tenant_id)
+        .bind(conversation_id)
+        .fetch_all(&self.pool)
+        .await
+    }
 }

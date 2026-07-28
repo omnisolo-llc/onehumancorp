@@ -6980,6 +6980,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/dev/simulate-agent-feed-item", axum::routing::post(simulate_agent_feed_item_handler).with_state(db.clone()))
         .route("/api/v1/dev/simulate-triage-item", axum::routing::post(simulate_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/v1/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+        .nest("/api/v1/chat-inbox", api::chat_inbox::router(db.clone(), http_auth_store.clone()))
         .route("/api/v1/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/v1/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/v1/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
