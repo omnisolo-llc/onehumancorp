@@ -228,7 +228,7 @@ export function HelpWidget() {
           <button
             id="ohc-floating-help-btn"
             onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-800/95 active:scale-90 transition-all min-h-[44px] min-w-[44px]"
             aria-label="Open help chat"
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -239,7 +239,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden z-[90] border border-[rgba(255,255,255,0.4)] transition-all font-inter">
+        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] rounded-3xl shadow-[0_12px_48px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden z-[90] border border-[rgba(255,255,255,0.4)] transition-all font-inter">
           <div className="flex border-b border-white/30 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button
@@ -368,9 +368,9 @@ export function HelpWidget() {
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-1 p-3 border border-[rgba(255,255,255,0.4)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] shadow-[0_4px_24px_rgba(0,0,0,0.04)] min-h-[44px]"
+                    className="flex-1 p-3 border border-[rgba(255,255,255,0.4)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] shadow-[0_12px_48px_rgba(0,0,0,0.12)] min-h-[44px]"
                   />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
+                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-800/95 shadow-sm active:scale-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </form>
