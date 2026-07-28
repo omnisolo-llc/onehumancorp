@@ -59,12 +59,12 @@ export default function ApprovalInbox({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-full sm:w-[375px] max-w-[375px] min-h-[812px] bg-white/65 backdrop-blur-[30px] saturate-[210%] shadow-2xl overflow-hidden flex flex-col relative border border-white/40 rounded-3xl glassmorphism">
+      <div className="w-full sm:w-[375px] max-w-[375px] min-h-[812px] translucent-glass-light dark:translucent-glass-dark shadow-2xl overflow-hidden flex flex-col relative border border-white/40 rounded-3xl glassmorphism">
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
+        <div className="pt-12 pb-6 px-6 translucent-glass-light dark:translucent-glass-dark border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            className="w-[44px] h-[44px] flex items-center justify-center rounded-full translucent-glass-light dark:translucent-glass-dark shadow-sm-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -91,7 +91,7 @@ export default function ApprovalInbox({
         </div>
 
         {/* Settings Toggle */}
-        <div className="px-6 py-4 bg-white/40 border-b border-white/40 flex items-center justify-between">
+        <div className="px-6 py-4 translucent-glass-light dark:translucent-glass-dark border-b border-white/40 flex items-center justify-between">
           <span className="text-sm font-medium text-gray-700">
             Review all messages before sending
           </span>

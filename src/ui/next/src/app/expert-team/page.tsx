@@ -40,12 +40,12 @@ export default function ExpertTeamPage() {
         Enter a complex task. The Lead Agent will coordinate 5 domain experts (Industry Researcher, Financial Analyst, Strategic Analyst, Process Supervisor, Quality Auditor) to execute it in parallel, strictly passing through code-enforced quality gates (Pre-flight, Pre-merge, Pre-deliver). (Tencent Workbuddy (Expert Team) Feature)
       </p>
 
-      <div className="glassmorphism bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 p-6 shadow-sm rounded-2xl mb-6">
+      <div className="glassmorphism translucent-glass-light dark:translucent-glass-dark border border-white/40 p-6 shadow-sm rounded-2xl mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Business Task Context
         </label>
         <textarea
-          className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] bg-white/80 backdrop-blur-[30px] saturate-[210%]"
+          className="w-full p-4 border border-gray-300 rounded-xl shadow-sm focus:ring-[#0066FF] focus:border-[#0066FF] translucent-glass-light dark:translucent-glass-dark"
           rows={5}
           value={task}
           onChange={(e) => setTask(e.target.value)}
@@ -69,7 +69,7 @@ export default function ExpertTeamPage() {
       )}
 
       {result && (
-        <div className="glassmorphism mt-8 p-6 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-sm rounded-2xl expert-output-content">
+        <div className="glassmorphism mt-8 p-6 translucent-glass-light dark:translucent-glass-dark border border-white/40 shadow-sm rounded-2xl expert-output-content">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">Final Delivered Output</h2>
           <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono overflow-auto max-h-[600px]">
             {result}
