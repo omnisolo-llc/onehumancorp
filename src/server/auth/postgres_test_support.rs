@@ -59,6 +59,7 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("acquire migration lock: {error}"))?;
 
+    // Ignore duplicate key errors from concurrent migrations
     let res = MIGRATOR.run(&admin_pool).await;
 
     sqlx::query("SELECT pg_advisory_unlock(424242)")
@@ -66,7 +67,12 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("release migration lock: {error}"))?;
 
-    res.map_err(|error| format!("run src/server/migrations: {error}"))?;
+    if let Err(e) = res {
+        let err_str = e.to_string();
+        if !err_str.contains("duplicate key value violates unique constraint \"_sqlx_migrations_pkey\"") {
+            return Err(format!("run src/server/migrations: {}", err_str));
+        }
+    }
 
     sqlx::raw_sql(
         r#"
