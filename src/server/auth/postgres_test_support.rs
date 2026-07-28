@@ -1,6 +1,9 @@
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::Duration;
 use tokio::sync::OnceCell;
+use tokio::sync::Mutex;
+
+static MIGRATION_LOCK: Mutex<()> = Mutex::const_new(());
 
 static POSTGRES_SETUP: OnceCell<Result<(), String>> = OnceCell::const_new();
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../migrations");
@@ -53,10 +56,13 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+    {
+        let _lock = MIGRATION_LOCK.lock().await;
+        MIGRATOR
+            .run(&admin_pool)
+            .await
+            .map_err(|error| format!("run src/server/migrations: {error}"))?;
+    }
 
     sqlx::raw_sql(
         r#"
