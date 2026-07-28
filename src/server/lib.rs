@@ -6972,7 +6972,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
         .route("/api/v1/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/v1/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
-        .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
+        .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone())).route("/api/v1/ui/inbox/messages/:message_id/approve", axum::routing::post(approve_ui_inbox_message_handler).with_state(db.clone()))
                 .route("/api/v1/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
         .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
         .route("/api/v1/dev/mock-omni-inbox", axum::routing::post(mock_omni_inbox_handler).with_state(db.clone()))
@@ -8664,3 +8664,40 @@ mod health_test;
 // optimization done
 #[cfg(test)]
 pub mod chaos_network_test;
+
+async fn approve_ui_inbox_message_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Path(message_id): axum::extract::Path<String>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+
+    let result = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("UPDATE inbox_messages SET status = 'resolved' WHERE id = $1 AND tenant_id = $2")
+                .bind(&message_id)
+                .bind(&tenant_id)
+                .execute(&db.pool)
+                .await
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query("UPDATE inbox_messages SET status = 'resolved' WHERE id = ? AND tenant_id = ?")
+                .bind(&message_id)
+                .bind(&tenant_id)
+                .execute(pool)
+                .await
+        }
+    };
+
+    match result {
+        Ok(_) => axum::http::StatusCode::OK.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to approve inbox message: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
