@@ -151,7 +151,11 @@
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <div class="glass-control glassmorphism" style="display: flex; align-items: center;">
+          <input type="text" id="domain-name" data-testid="domain-name" placeholder="Domain Name" style="flex: 1; border: none; outline: none; background: transparent; padding: 12px; margin: 0; box-shadow: none;" />
+          <span style="padding-right: 12px; color: #666;">.ohc.app</span>
+        </div>
+        <div id="domain-error" style="display:none; color: #ff3b30; font-size: 12px; margin-top: 4px;"></div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -319,6 +323,43 @@
         });
       }
 
+
+      window.validateStep = function(stepId) {
+        if (stepId === 'step-name') {
+          const nameVal = document.getElementById('business-name').value.trim();
+          if (!nameVal) {
+            document.getElementById('name-error').style.display = 'block';
+            return false;
+          }
+          document.getElementById('name-error').style.display = 'none';
+          return true;
+        }
+        if (stepId === 'step-domain') {
+          const domainInput = document.getElementById('domain-name');
+          const domainError = document.getElementById('domain-error');
+          let val = domainInput.value.trim();
+
+          if (val.length < 3) {
+            domainError.innerText = 'Domain must be at least 3 characters long.';
+            domainError.style.display = 'block';
+            return false;
+          }
+          if (/[^a-z0-9-]/.test(val)) {
+            domainError.innerText = 'Domain can contain only lowercase letters, numbers, and hyphens.';
+            domainError.style.display = 'block';
+            return false;
+          }
+          if (val.startsWith('-') || val.endsWith('-')) {
+            domainError.innerText = 'Domain cannot start or end with a hyphen.';
+            domainError.style.display = 'block';
+            return false;
+          }
+          domainError.style.display = 'none';
+          return true;
+        }
+        return true;
+      };
+
       function goToStep(stepId) {
         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
         document.getElementById(stepId).classList.add('active');
@@ -330,18 +371,22 @@
         btn.addEventListener('click', (e) => {
           if (e.target.dataset.next) {
             const currentStep = e.target.closest('.step').id;
-            if (currentStep === 'step-name') {
-              const nameVal = document.getElementById('business-name').value.trim();
-              if (!nameVal) {
-                document.getElementById('name-error').style.display = 'block';
-                return; // Stop transition
-              }
-              document.getElementById('name-error').style.display = 'none';
-            }
+            if (!window.validateStep(currentStep)) return;
             goToStep(e.target.dataset.next);
           }
         });
       });
+
+
+      const domainInput = document.getElementById('domain-name');
+      if (domainInput) {
+        domainInput.addEventListener('input', () => {
+          const domainError = document.getElementById('domain-error');
+          if (domainError.style.display === 'block') {
+            window.validateStep('step-domain');
+          }
+        });
+      }
 
       const nameInputEl = document.getElementById('business-name');
       if (nameInputEl) {
