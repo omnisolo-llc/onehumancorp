@@ -1,16 +1,16 @@
 issue_title: "Architecture Design: Native Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  Small business owners (Maya, Carlos, Priya, Leo, Fatima) need a unified way to manage communications across multiple channels (Instagram, WhatsApp, Email, Web Widget). The legacy architecture relied on Chatwoot, which has been removed as a dependency. OHC now needs a native Rust-based omnichannel chat system to replace Chatwoot, guaranteeing data privacy, multi-tenant isolation, and a seamless, high-performance experience without the operational overhead of third-party systems.
+  Small business owners (Maya, Carlos, Priya, Leo, Fatima) need a unified way to manage communications across multiple channels (Instagram, WhatsApp, Email, Web Widget). The legacy architecture relied on a third-party chat service which has been removed as a dependency. OHC now needs a native Rust-based omnichannel chat system to replace it, guaranteeing data privacy, multi-tenant isolation, and a seamless, high-performance experience without the operational overhead of third-party systems.
 
   ## Research Report
-  Based on an audit of the `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md` and an inspection of the legacy Chatwoot Ruby on Rails codebase, several key concepts are required:
+  Based on an audit of the `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md` and an inspection of the legacy third-party Ruby on Rails codebase, several key concepts are required:
   - **Conversations & Messages**: The core domain model, mapping messages to a unified conversation timeline.
   - **Channels & Inboxes**: Abstractions for external services (Email, WhatsApp, Facebook, Twilio) routing messages to a tenant-specific inbox.
   - **Contacts**: Omnichannel identity resolution to track a single customer across multiple platforms.
   - **Agents & Automations**: AI/Human routing, SLA policies, macros, and canned responses.
 
-  Unlike Chatwoot, the OHC system must natively integrate our AI agents (like "The Ambassador" and "The Manager") as first-class citizens in the conversation loop, drafting responses and automating operational tasks directly from the unified inbox, all with strict multi-tenant isolation at the row level via PostgreSQL RLS.
+  Unlike the old legacy system, the OHC system must natively integrate our AI agents (like "The Ambassador" and "The Manager") as first-class citizens in the conversation loop, drafting responses and automating operational tasks directly from the unified inbox, all with strict multi-tenant isolation at the row level via PostgreSQL RLS.
 
   ## Design Doc
   ### Architecture Diagram
