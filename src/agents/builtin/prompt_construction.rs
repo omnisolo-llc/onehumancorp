@@ -188,6 +188,7 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
 // This builder implements a strict hierarchical priority stack for prompt components.
 pub struct StrictHierarchicalPromptBuilder {
     server_system_message: String,
+    tool_definitions: String,
     developer_instructions: String,
     user_instructions: String,
     lightweight_memory_index: Vec<String>,
@@ -195,14 +196,21 @@ pub struct StrictHierarchicalPromptBuilder {
 
 impl StrictHierarchicalPromptBuilder {
     /// Builds the textual instruction hierarchy. Provider-native schemas are the
-    /// sole tool-definition representation; `_tools` remains for API stability.
+    /// primary tool-definition representation, but OpenAI Codex Mechanic step 2
+    /// requires injecting them into the system prompt hierarchy as well.
     pub fn new(
         cfg: &AgentRunConfig,
-        _tools: &[crate::tools::Tool],
+        tools: &[crate::tools::Tool],
         cascading_agents_md: Option<String>,
         lightweight_memory_index: Option<Vec<String>>,
     ) -> Self {
         let mut user_instr = cfg.user_instructions.clone();
+
+        let mut tool_defs_str = String::new();
+        for t in tools {
+            let params_json = serde_json::to_string_pretty(&t.parameters).unwrap_or_default();
+            tool_defs_str.push_str(&format!("Tool Name: {}\nDescription: {}\nParameters: {}\n\n", t.name, t.description, params_json));
+        }
 
         // Inject cascading AGENTS.md instructions
         if let Some(agents_md) = cascading_agents_md {
@@ -250,6 +258,7 @@ impl StrictHierarchicalPromptBuilder {
 
         Self {
             server_system_message: cfg.server_system_message.clone(),
+            tool_definitions: tool_defs_str,
             developer_instructions: cfg.developer_instructions.clone(),
             user_instructions: user_instr,
             lightweight_memory_index: processed_memory_index,
@@ -282,7 +291,17 @@ impl StrictHierarchicalPromptBuilder {
             combined_system.push_str("\n</server_system_message>");
         }
 
-        // 2. Developer Instructions
+        // 2. Tool Definitions
+        if !self.tool_definitions.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("<tool_definitions>\n");
+            combined_system.push_str(&self.tool_definitions);
+            combined_system.push_str("</tool_definitions>");
+        }
+
+        // 3. Developer Instructions
         if !self.developer_instructions.is_empty() {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");
@@ -666,6 +685,38 @@ mod tests {
         let truncated_long = format!("- {}...", "A".repeat(147));
         assert!(built.contains(&truncated_long));
         assert!(!built.contains(&"A".repeat(151)));
+    }
+
+    #[test]
+    fn test_strict_hierarchical_prompt_builder() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "Server Message".to_string();
+        cfg.developer_instructions = "Dev Instr".to_string();
+        cfg.user_instructions = "User Instr".to_string();
+
+        let tool = crate::tools::Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool".to_string(),
+            parameters: serde_json::json!({"type": "object"}),
+            is_read_only: false,
+            execute: std::sync::Arc::new(NeverExecutor),
+        };
+        let tools = vec![tool];
+
+        let builder = StrictHierarchicalPromptBuilder::new(&cfg, &tools, None, None);
+        let built = builder.build();
+
+        // Verify ordering: Server -> Tools -> Dev -> User
+        let server_pos = built.find("<server_system_message>").unwrap();
+        let tools_pos = built.find("<tool_definitions>").unwrap();
+        let dev_pos = built.find("<developer_instructions>").unwrap();
+        let user_pos = built.find("<user_instructions>").unwrap();
+
+        assert!(server_pos < tools_pos, "Server message must precede tool definitions");
+        assert!(tools_pos < dev_pos, "Tool definitions must precede developer instructions");
+        assert!(dev_pos < user_pos, "Developer instructions must precede user instructions");
+
+        assert!(built.contains("Tool Name: test_tool"));
     }
 
     #[tokio::test]
