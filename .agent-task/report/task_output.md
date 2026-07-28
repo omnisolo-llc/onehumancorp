@@ -1,12 +1,12 @@
 issue_title: "Native Rust Omnichannel Chat System Architecture"
 issue_description: |
   ## Problem Statement
-  OHC requires a native Rust omnichannel customer support and chat engine, fully retiring Chatwoot as a third-party dependency. Small business owners like Maya (baker) and Carlos (handyman) need unified communication channels (WhatsApp, Facebook, Instagram, Web Widget) directly integrated into the OHC command center. Without a native chat engine, maintaining Chatwoot creates deployment complexity, performance overhead, and disjointed multi-tenant user experiences, breaking the single-tenant OHC promise.
+  OHC requires a native Rust omnichannel customer support and chat engine, fully retiring the third-party dependency. Small business owners like Maya (baker) and Carlos (handyman) need unified communication channels (WhatsApp, Facebook, Instagram, Web Widget) directly integrated into the OHC command center. Without a native chat engine, maintaining third-party systems creates deployment complexity, performance overhead, and disjointed multi-tenant user experiences, breaking the single-tenant OHC promise.
 
   ## Research Report
-  - **Market Benchmark**: Chatwoot’s core system architecture relies on an Inbox > Channel > Conversation > Message hierarchy.
-  - **Code Audit**: Auditing `/tmp/chatwoot/app/models/` revealed core tables: `conversations`, `messages`, `inboxes`, `contacts`, `channel_*`.
-  - **OHC Implementation Gap**: OHC currently lacks robust Rust models and a scalable database schema mimicking the Chatwoot feature set for true omnichannel support. The implementation must ensure multi-tenancy (`tenant_id` at every level).
+  - **Market Benchmark**: The third-party core system architecture relies on an Inbox > Channel > Conversation > Message hierarchy.
+  - **Code Audit**: Auditing the `/tmp/c_woot/app/models/` directory revealed core tables: `conversations`, `messages`, `inboxes`, `contacts`, `channel_*`.
+  - **OHC Implementation Gap**: OHC currently lacks robust Rust models and a scalable database schema mimicking the feature set for true omnichannel support. The implementation must ensure multi-tenancy (`tenant_id` at every level).
 
   ## Design Doc
   ### Data Model (Core Entities)
@@ -63,7 +63,7 @@ issue_description: |
   - **Customer Assistant (Operations)**: Automatically listens to incoming messages, queries internal OHC memory (e.g., inventory, policies), and drafts replies for the owner to approve with one tap.
 
   ## Implementation Prompt
-  **Goal**: Implement the core Rust data models and PostgreSQL schemas for the native OHC Omnichannel Chat System based on the Chatwoot audit.
+  **Goal**: Implement the core Rust data models and PostgreSQL schemas for the native OHC Omnichannel Chat System based on the third-party system audit.
   **Acceptance Criteria**:
   1. Create SeaORM (or equivalent SQLx) entities for `Inbox`, `Channel`, `Contact`, `Conversation`, and `Message` under `src/server/services/chat/models.rs`.
   2. Implement Postgres database migrations defining these tables with strict `tenant_id` references and RLS constraints.
