@@ -42,6 +42,7 @@ pub struct ChatConversation {
     pub contact_id: Uuid,
     pub assignee_id: Option<Uuid>,
     pub status: String,
+    pub last_activity_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -54,6 +55,16 @@ pub struct ChatMessage {
     pub sender_type: String,
     pub sender_id: Option<Uuid>,
     pub content: String,
+    pub message_type: Option<String>,
+    pub is_private: Option<bool>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChatEvent {
+    pub event_type: String, // e.g. "message.created", "conversation.updated"
+    pub tenant_id: Uuid,
+    pub inbox_id: Uuid,
+    pub payload: serde_json::Value,
 }
