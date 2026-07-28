@@ -1,20 +1,20 @@
-issue_title: "Architecture: Native Rust Omnichannel Chat Engine (Replacing Chatwoot)"
+issue_title: "Architecture: Native Rust Omnichannel Chat Engine"
 issue_description: |
   ## Title: Architecture: Native Rust Omnichannel Chat Engine
 
   ## Problem Statement
-  OneHumanCorp (OHC) owners need a single, unified inbox to interact with customers across various channels (Instagram DMs, WhatsApp, SMS, Web Chat, Email, etc.). Previously, OHC relied on an external third-party service, Chatwoot, which introduced integration complexity, latency, external dependency risk, and compromised multi-tenant isolation guarantees. A native omnichannel chat architecture is required to bring these capabilities entirely in-house. It must provide robust real-time communication (WebSockets), support omnichannel data models (inboxes, conversations, messages, channels), and seamlessly integrate with OHC's AI agents to draft replies, execute operations, and extract context directly from the conversation stream.
+  OneHumanCorp (OHC) owners need a single, unified inbox to interact with customers across various channels (Instagram DMs, WhatsApp, SMS, Web Chat, Email, etc.). Previously, OHC relied on an external third-party service which introduced integration complexity, latency, external dependency risk, and compromised multi-tenant isolation guarantees. A native omnichannel chat architecture is required to bring these capabilities entirely in-house. It must provide robust real-time communication (WebSockets), support omnichannel data models (inboxes, conversations, messages, channels), and seamlessly integrate with OHC's AI agents to draft replies, execute operations, and extract context directly from the conversation stream.
 
   ## Research Report
-  - **Context**: External Chatwoot dependency is 100% RETIRED. We are replacing it with a native implementation in Rust, leveraging OHC's existing multi-tenant data architecture.
-  - **Chatwoot Source Code Audit**:
+  - **Context**: External dependency is 100% RETIRED. We are replacing it with a native implementation in Rust, leveraging OHC's existing multi-tenant data architecture.
+  - **Source Code Audit**:
     - **Core Data Models**:
       - `Inbox`: Aggregates conversations for a specific channel or team.
       - `Conversation`: Represents a thread between a `Contact` and `Assignee`/`Team`. Tracks `status` (open, resolved, snoozed), `snoozed_until`, `priority`, and SLAs.
       - `Message`: Represents an individual message within a conversation. Supports `content_type` (text, attachment, template), `message_type` (incoming, outgoing, activity), and `private` notes.
       - `Contact`: Represents the customer across channels, linked via `contact_inbox`.
-    - **Real-time Architecture**: Chatwoot relies on ActionCable (WebSockets) to push real-time updates (message creation, typing status, presence).
-    - **Channel Adapters**: Chatwoot abstracts channels (Web Widget, API, Facebook, WhatsApp, Email, Line, SMS) via polymorphic `channel` associations on the `Inbox`.
+    - **Real-time Architecture**: Relies on ActionCable (WebSockets) to push real-time updates (message creation, typing status, presence).
+    - **Channel Adapters**: Abstracts channels (Web Widget, API, Facebook, WhatsApp, Email, Line, SMS) via polymorphic `channel` associations on the `Inbox`.
   - **Competitor Benchmarking**:
     - Shopify Inbox: Deeply integrated with store data (products, orders), allowing agents to easily send product cards or checkout links.
     - Front / Missive: Excellent at unified team collaboration, collision detection, and private internal notes inside threads.
@@ -71,7 +71,7 @@ issue_description: |
      - Implements multi-tenant RLS via PostgreSQL (all tables have `tenant_id`).
   2. **WebSocket Gateway (Rust)**:
      - Manages persistent connections to the OHC Mobile and Web clients.
-     - Subscribes to Redis Pub/Sub topics for real-time message dispatching (`ohc:chat:tenant_{id}:conversation_{id}`).
+     - Subscribes to Redis Pub/Sub topics for real-time message dispatching (`ohc:chat_system:tenant_{id}:conversation_{id}`).
   3. **Channel Adapter Workers (Rust/Go)**:
      - Background consumers that adapt incoming webhooks (e.g., from Meta for Instagram/WhatsApp) into internal `Message` entities.
   4. **AI Agent Hooks**:
@@ -103,7 +103,7 @@ issue_description: |
   - Implement a basic WebSocket endpoint that clients can connect to, and which broadcasts new messages to active connections for that tenant/conversation.
   - Implement a background worker (or stub) that simulates the AI agent drafting a reply when a new customer message arrives.
   - Implement the unified inbox UI and conversation view in the Flutter frontend, displaying incoming messages and the AI draft, with responsive 375px mobile-first layouts.
-  - Write Playwright E2E tests covering the creation of a message via API, its real-time appearance in the UI, and the display of the AI drafted response. No external Chatwoot APIs are to be mocked or used.
+  - Write Playwright E2E tests covering the creation of a message via API, its real-time appearance in the UI, and the display of the AI drafted response. No external APIs are to be mocked or used.
 
   ## Priority
   P0
