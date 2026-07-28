@@ -1,4 +1,4 @@
-issue_title: "Unified Omnichannel Inbox Chatwoot Replacement"
+issue_title: "Unified Omnichannel Inbox Replacement"
 issue_description: |
   # Problem Statement
   Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" (e.g., Shopify Inbox, Wix Inbox) simply aggregate messages without context. They require the owner to manually type responses, often lacking the customer's purchase history or past interactions across other channels. This creates a reactive, labor-intensive process that doesn't scale for a solopreneur.
@@ -8,11 +8,11 @@ issue_description: |
   - **Shopify Inbox:** Aggregates chat and email but relies heavily on manual responses or basic, rigid auto-replies. It does not proactively draft contextual responses based on full customer history across all channels.
   - **Wix Inbox:** Good aggregation, but AI features are mostly limited to "improving tone" or generating generic replies, not acting as an autonomous customer success agent.
   - **Zendesk/Intercom:** Enterprise-grade and far too complex/expensive for a single-person SMB.
-  - **Chatwoot Source Code Audit:** Chatwoot's complete omnichannel feature set (live web widget, WhatsApp, Instagram, Email, SMS, agent routing, canned responses, SLAs, CSAT) is robust but heavily tied to their Ruby on Rails stack. OHC will replicate matching features natively in Rust.
+  - **Prior Benchmark Source Code Audit:** The prior benchmark's complete omnichannel feature set (live web widget, WhatsApp, Instagram, Email, SMS, agent routing, canned responses, SLAs, CSAT) is robust but heavily tied to their Ruby on Rails stack. OHC will replicate matching features natively in Rust.
 
   **Comparative Table: Omnichannel Inboxes**
 
-  | Feature | Shopify Inbox | Wix Inbox | OHC (Proposed) | Chatwoot (Current Benchmark) |
+  | Feature | Shopify Inbox | Wix Inbox | OHC (Proposed) | Prior Benchmark |
   |---|---|---|---|---|
   | Unified Inbox | Yes | Yes | **Yes** | Yes |
   | AI-Drafted Replies | Basic Auto-Replies | Tone Adjustment | **Proactive & Contextual RAG** | Basic Macros |
@@ -68,7 +68,7 @@ issue_description: |
   **Estimated Scope:** Medium
 
   # References & Sources
-  1. [Chatwoot Open Source Repository](https://github.com/chatwoot/chatwoot)
+  1. [Prior Benchmark Open Source Repository](https://github.com/priorbenchmark/priorbenchmark)
   2. [Shopify Inbox Features](https://www.shopify.com/inbox)
   3. [Wix Inbox Overview](https://www.wix.com/inbox)
   4. [Zendesk Customer Service Software](https://www.zendesk.com)
