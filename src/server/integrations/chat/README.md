@@ -1,6 +1,6 @@
 # Native Rust Omnichannel Chat System
 
-This module implements the native Rust omnichannel chat system for OHC, replacing external dependencies like Chatwoot.
+This module implements the native Rust omnichannel chat system for OHC, replacing external dependencies like the legacy external dependency.
 It is designed to handle WhatsApp Business and Web Widget messages in a unified, lightning-fast manner.
 
 ## Implementation Details
