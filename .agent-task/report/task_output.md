@@ -4,11 +4,11 @@ issue_description: |
   Native Rust Omnichannel Chat: WhatsApp Provider Integration
 
   ## Problem Statement
-  Our owner/operator personas (like Maya, Carlos, and Priya) rely heavily on WhatsApp to communicate with their customers, receive orders, and answer queries. Currently, managing these conversations requires constantly switching between their personal/business WhatsApp app and the OHC assistant. They lack a unified inbox where the OHC assistant can automatically triage messages, draft replies, and track orders directly from WhatsApp. We need a native Rust WhatsApp channel connector in OHC to replace the retired external Chatwoot dependency, allowing owners to manage WhatsApp conversations directly inside their OHC workspace.
+  Our owner/operator personas (like Maya, Carlos, and Priya) rely heavily on WhatsApp to communicate with their customers, receive orders, and answer queries. Currently, managing these conversations requires constantly switching between their personal/business WhatsApp app and the OHC assistant. They lack a unified inbox where the OHC assistant can automatically triage messages, draft replies, and track orders directly from WhatsApp. We need a native Rust WhatsApp channel connector in OHC to replace the retired external the legacy chat provider dependency, allowing owners to manage WhatsApp conversations directly inside their OHC workspace.
 
   ## Research Report
-  - **Tool Evaluated**: WhatsApp Business API (specifically looking at Chatwoot's implementation pattern in `app/models/channel/whatsapp.rb`).
-  - **Competitor/Ecosystem Context**: Platforms like Tencent Workbuddy, WeCom, and Chatwoot provide native WhatsApp integrations. Chatwoot models this as a `channel_whatsapp` with a `phone_number`, `provider` (e.g., Twilio, Cloud API), and `provider_config` (API keys, webhook secrets).
+  - **Tool Evaluated**: WhatsApp Business API (specifically looking at the legacy chat provider's implementation pattern in `app/models/channel/whatsapp.rb`).
+  - **Competitor/Ecosystem Context**: Platforms like Tencent Workbuddy, WeCom, and the legacy chat provider provide native WhatsApp integrations. the legacy chat provider models this as a `channel_whatsapp` with a `phone_number`, `provider` (e.g., Twilio, Cloud API), and `provider_config` (API keys, webhook secrets).
   - **Value to Non-Technical Owner**: Owners can link their WhatsApp Business number to OHC. Once linked, any message sent by a customer to their WhatsApp appears in the OHC Work Triage feed. The AI Assistant can instantly draft replies (e.g., pricing, scheduling) for the owner to approve, saving hours of manual typing and preventing lost leads.
   - **SaaS Viability**: WhatsApp Cloud API is widely available and charges per conversation. OHC can build a multi-tenant webhook handler to receive incoming messages, and route them to the appropriate tenant's workspace using the receiving phone number.
 
