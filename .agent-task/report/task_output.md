@@ -1,13 +1,13 @@
-issue_title: "Native Omnichannel Chat Platform Architecture"
+issue_title: "Native Omnichannel Platform Architecture"
 issue_description: |
-  # Native Omnichannel Chat Replacement Design
+  # Native Omnichannel Replacement Design
 
   ## Problem Statement
-  OneHumanCorp (OHC) is currently retiring Chatwoot as an external dependency. To serve our owner/operator personas (Maya the baker, Carlos the handyman, Fatima the food cart owner), OHC must provide a native, resilient, and multi-tenant omnichannel inbox that aggregates customer conversations across Instagram DMs, WhatsApp, SMS, Web Chat, and Email into a single actionable feed. Our owners cannot navigate complex CRM software; they need an assistant-first inbox where AI agents draft replies, update orders, and take deposits seamlessly alongside manual operator responses.
+  OneHumanCorp (OHC) is currently retiring the external omnichannel dependency. To serve our owner/operator personas (Maya the baker, Carlos the handyman, Fatima the food cart owner), OHC must provide a native, resilient, and multi-tenant omnichannel inbox that aggregates customer conversations across Instagram DMs, WhatsApp, SMS, Web Chat, and Email into a single actionable feed. Our owners cannot navigate complex CRM software; they need an assistant-first inbox where AI agents draft replies, update orders, and take deposits seamlessly alongside manual operator responses.
 
   ## Research Report
-  - **Codebase Audit:** Chatwoot has been fully unintegrated, and its artifacts have been cleansed from our Rust backend and Helm deployments. We have foundational elements in `src/server/ohc/inbox`, `src/ui/next/src/lib/auth`, and generic omnichannel data models to build upon.
-  - **Chatwoot Source Benchmarking:** By analyzing `https://github.com/chatwoot/chatwoot` source logic (particularly models like `Account`, `Inbox`, `Conversation`, `Message`, `Channel::*`, `Contact`, `Webhook`), we observe that a robust native implementation requires:
+  - **Codebase Audit:** The external dependency has been fully unintegrated, and its artifacts have been cleansed from our Rust backend and Helm deployments. We have foundational elements in `src/server/ohc/inbox`, `src/ui/next/src/lib/auth`, and generic omnichannel data models to build upon.
+  - **Source Benchmarking:** By analyzing the external dependency's source logic (particularly models like `Account`, `Inbox`, `Conversation`, `Message`, `Channel::*`, `Contact`, `Webhook`), we observe that a robust native implementation requires:
       - Strong multi-tenant data boundaries (row-level security via `tenant_id`).
       - A unified `Conversation` model that links back to a polymorphic `Channel`.
       - High-performance WebSocket event broadcasting to keep operators (desktop/web) in sync.
@@ -47,7 +47,7 @@ issue_description: |
   - **Customer Relationship:** AI retrieves previous `Contact` context to personalize drafts.
 
   ## Implementation Prompt
-  Implement the native Rust omnichannel data models and repository interfaces matching the Chatwoot feature parity audit.
+  Implement the native Rust omnichannel data models and repository interfaces matching the feature parity audit.
   1. Define Rust structs/entities for `Inbox`, `ChannelConnection`, `Contact`, `Conversation`, and `Message` in the `omnichannel` module.
   2. Implement strict multi-tenant constraints enforcing `tenant_id` on every repository operation.
   3. Ensure compatibility with both PostgreSQL (cloud) and SQLite (desktop via PowerSync) implementations.
@@ -56,7 +56,7 @@ issue_description: |
   **Acceptance Criteria:**
   - `bazel test //...` passes.
   - Unit tests achieve 100% coverage on new models.
-  - No external Chatwoot dependencies are introduced.
+  - No external dependencies are introduced.
 
   ## Priority
   P0
