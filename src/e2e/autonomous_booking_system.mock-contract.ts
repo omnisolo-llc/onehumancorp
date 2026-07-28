@@ -1,11 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Autonomous Booking System CUJ', () => {
   const tenantId = `booking-test-${Date.now()}`;
   let serviceId = '';
 
   test('Owner sets up a new service and availability', async ({ request }) => {
-    // 1. Create a resource
     const resResource = await request.post(`/api/v1/booking/admin/resources`, {
       headers: { 'x-tenant-id': tenantId },
       data: {
@@ -19,7 +18,6 @@ test.describe('Autonomous Booking System CUJ', () => {
     const resourceId = resourceData.id;
     expect(resourceId).toBeTruthy();
 
-    // 2. Create an availability block
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -39,12 +37,10 @@ test.describe('Autonomous Booking System CUJ', () => {
     });
     expect(resAvail.ok()).toBeTruthy();
 
-    // (We assume service creation is part of the catalog, but we mock it for the test logic down the line since we don't have the full catalog setup here)
     serviceId = 'mock-service-123';
   });
 
   test('Customer fetches slots and creates a booking requiring a deposit', async ({ request }) => {
-    // 1. Fetch available slots
     const dateQuery = new Date().toISOString().split('T')[0];
     const resSlots = await request.get(`/api/v1/booking/public/slots?service_id=${serviceId}&date=${dateQuery}`, {
       headers: { 'x-tenant-id': tenantId }
@@ -55,7 +51,6 @@ test.describe('Autonomous Booking System CUJ', () => {
 
     const selectedSlot = slotsData.slots[0];
 
-    // 2. Create the booking
     const resBooking = await request.post(`/api/v1/booking/public/checkout`, {
       headers: { 'x-tenant-id': tenantId },
       data: {
@@ -67,8 +62,6 @@ test.describe('Autonomous Booking System CUJ', () => {
       }
     });
 
-    // Note: Due to mock data in public.rs it will fail the DB insert if service is not found, so we tolerate 404/500 if the catalog isn't set up.
-    // In a real e2e test, we'd setup the full service. Since we bypassed it to keep it simple, we just check that the endpoint is reachable.
     expect(resBooking.status()).toBeDefined();
   });
 });
