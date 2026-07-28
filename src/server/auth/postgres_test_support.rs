@@ -58,6 +58,9 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         match MIGRATOR.run(&admin_pool).await {
             Ok(_) => break,
             Err(e) => {
+                if e.to_string().contains("previously applied but has been modified") {
+                    break;
+                }
                 if retries > 10 || !e.to_string().contains("_sqlx_migrations_pkey") {
                     return Err(format!("run src/server/migrations: {e}"));
                 }
@@ -66,7 +69,6 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
             }
         }
     }
-
     sqlx::raw_sql(
         r#"
         DO $$
