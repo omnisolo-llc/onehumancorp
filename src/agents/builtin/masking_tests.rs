@@ -1,8 +1,8 @@
-use ohc_builtin_agent::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent::tools::recall::recall_observation_tool;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
-use ohc_builtin_agent::llm::LlmClient;
-use ohc_builtin_agent::tools::Tool;
+use crate::agent::{Agent, AgentRunConfig};
+use crate::tools::recall::recall_observation_tool;
+use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+use crate::llm::LlmClient;
+use crate::tools::Tool;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use dashmap::DashMap;
@@ -30,8 +30,8 @@ impl LlmClient for MockLlm {
 
 struct SimpleTool;
 #[async_trait::async_trait]
-impl ohc_builtin_agent::tools::ToolExecutor for SimpleTool {
-    async fn execute(&self, _args: serde_json::Value) -> Result<String, ohc_builtin_agent::types::ToolError> {
+impl crate::tools::ToolExecutor for SimpleTool {
+    async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
         Ok("This is a very long observation that should eventually be masked if it gets old enough and is large enough.".to_string())
     }
 }
@@ -177,8 +177,8 @@ async fn test_masking_logic_depth() {
 
     struct FixedTool;
     #[async_trait::async_trait]
-    impl ohc_builtin_agent::tools::ToolExecutor for FixedTool {
-        async fn execute(&self, _args: serde_json::Value) -> Result<String, ohc_builtin_agent::types::ToolError> {
+    impl crate::tools::ToolExecutor for FixedTool {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
             Ok("Long output content here".to_string())
         }
     }
@@ -212,8 +212,8 @@ async fn test_masking_logic_depth() {
 
 #[test]
 fn test_json_fallback_bug() {
-    use ohc_builtin_agent::types::{Message, Role, ToolResult};
-    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+    use crate::types::{Message, Role, ToolResult};
+    use crate::observation_masking::JetBrainsObservationMasker;
     use serde_json::Value;
 
     let json_str = "{\"a\": 1, \"b\": 2, \"c\": 3, \"d\": 4, \"e\": 5, \"f\": 6, \"g\": 7, \"h\": 8, \"i\": 9, \"j\": 10, \"k\": 11}";
@@ -251,8 +251,8 @@ fn test_json_fallback_bug() {
 
 #[test]
 fn test_plain_text_masking_fallback() {
-    use ohc_builtin_agent::types::{Message, Role, ToolResult};
-    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+    use crate::types::{Message, Role, ToolResult};
+    use crate::observation_masking::JetBrainsObservationMasker;
 
     let plain_text = "This is a very long plain text output. ".repeat(50);
     let mut messages = vec![
@@ -288,8 +288,8 @@ fn test_plain_text_masking_fallback() {
 
 #[test]
 fn test_no_masking_for_short_content() {
-    use ohc_builtin_agent::types::{Message, Role, ToolResult};
-    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+    use crate::types::{Message, Role, ToolResult};
+    use crate::observation_masking::JetBrainsObservationMasker;
 
     let short_json = "{\"a\": 1}";
     let mut messages = vec![
@@ -324,8 +324,8 @@ fn test_no_masking_for_short_content() {
 
 #[test]
 fn test_no_masking_for_errors() {
-    use ohc_builtin_agent::types::{Message, Role, ToolResult};
-    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+    use crate::types::{Message, Role, ToolResult};
+    use crate::observation_masking::JetBrainsObservationMasker;
 
     let error_text = "Error! ".repeat(50);
     let mut messages = vec![
@@ -361,8 +361,8 @@ fn test_no_masking_for_errors() {
 
 #[test]
 fn test_plain_text_masking_exact_boundary() {
-    use ohc_builtin_agent::types::{Message, Role, ToolResult};
-    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+    use crate::types::{Message, Role, ToolResult};
+    use crate::observation_masking::JetBrainsObservationMasker;
 
     let plain_text = "This is a short output.".repeat(5);
     let mut messages = vec![

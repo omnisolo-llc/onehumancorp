@@ -256,20 +256,27 @@ impl JetBrainsObservationMasker {
                                             );
 
                                             let mut temp_val = json_val.clone();
-                                            Self::mask_json_value(
+                                            let modified = Self::mask_json_value(
                                                 &mut temp_val,
                                                 test_size_limit,
                                                 test_element_limit,
                                                 0,
                                             );
 
-                                            let new_content = serde_json::to_string(&temp_val)
-                                                .unwrap_or_else(|_| tr.content.clone());
+                                            if modified {
+                                                let new_content = serde_json::to_string(&temp_val)
+                                                    .unwrap_or_else(|_| tr.content.clone());
 
-                                            if new_content.len() <= self.size_limit {
-                                                best_content = Some(new_content);
-                                                factor_low = factor_mid + 1;
+                                                if new_content.len() <= self.size_limit {
+                                                    best_content = Some(new_content);
+                                                    factor_low = factor_mid + 1;
+                                                } else {
+                                                    factor_high = factor_mid - 1;
+                                                }
                                             } else {
+                                                // If we didn't modify it, the result is identical to the original.
+                                                // We know the original was > size_limit (since we are in this block).
+                                                // So if no truncation happened, it's definitely too large.
                                                 factor_high = factor_mid - 1;
                                             }
                                         }

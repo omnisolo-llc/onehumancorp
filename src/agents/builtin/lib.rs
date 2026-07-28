@@ -471,3 +471,6 @@ pub mod deerflow;
 pub mod deerflow_subagents;
 pub mod jit_retrieval;
 pub mod microagent;
+
+#[cfg(test)]
+mod masking_tests;
