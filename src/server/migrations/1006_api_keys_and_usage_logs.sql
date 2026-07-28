@@ -1,4 +1,4 @@
--- Force rerun to resolve Bazel remote cache eviction flake.
+-- Force rerun to resolve Bazel remote cache eviction flake..
 CREATE TABLE IF NOT EXISTS api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     key_hash VARCHAR(64) NOT NULL UNIQUE,
