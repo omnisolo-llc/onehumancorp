@@ -7832,7 +7832,7 @@ async fn create_ui_bom_item_handler(
         .merge(http_auth_router)
         .merge(setup_router)
         .merge(oauth_callback_router)
-        .merge(api::chat_inbox::routes::router(db.pool.clone()))
+
         .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")

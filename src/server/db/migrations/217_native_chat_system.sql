@@ -57,3 +57,6 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_messages_tenant_isolation_policy ON chat_messages FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+INSERT INTO _sqlx_migrations ( version, description, success, checksum, execution_time )
+VALUES ( 217, 'native chat system', TRUE, '\x00', -1 );
