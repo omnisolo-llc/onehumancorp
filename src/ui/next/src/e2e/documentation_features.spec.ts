@@ -29,8 +29,6 @@ test.describe('Documentation Features', () => {
     await expect(page.locator('#ohc-floating-help-widget')).toBeVisible();
   });
 
-});
-
   test('Walkthroughs can be triggered', async ({ page }) => {
     await page.goto('/');
     const helpButton = page.locator('#ohc-floating-help-btn');
@@ -41,3 +39,5 @@ test.describe('Documentation Features', () => {
     const tourButton = page.locator('button', { hasText: 'Tour: Store Setup' });
     await expect(tourButton).toBeVisible();
   });
+
+});

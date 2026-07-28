@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import { act } from 'react';
 
@@ -36,16 +36,17 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock AppShell to avoid complex routing/layout rendering
-vi.mock('../../components/AppShell', () => {
-    return {
-        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
-    }
-});
 vi.mock('@/app/components/AppShell', () => {
-    return {
-        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
-    }
+  return {
+    AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
+  }
 });
+vi.mock('../components/AppShell', () => {
+  return {
+    AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
+  }
+});
+
 
 // Mock fetch
 const mockFetch = vi.fn();
