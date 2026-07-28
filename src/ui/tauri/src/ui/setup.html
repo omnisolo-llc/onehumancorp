@@ -335,8 +335,8 @@
         });
       }
 
-      function validateStep(stepId) {
 
+      window.validateStep = function(stepId) {
         if (stepId === 'step-domain') {
           const domainInput = document.getElementById('domain-name');
           if (!domainInput) return true;
@@ -388,8 +388,9 @@
             if (window.validateStep && !window.validateStep(currentStep)) {
               return;
             }
+              document.getElementById('name-error').style.display = 'none';
+            }
             goToStep(e.target.dataset.next);
-
           }
         });
       });
@@ -405,10 +406,7 @@
         });
       }
 
-
-      window.validateStep = validateStep;
-      window.goToStep = goToStep;
-let saveTimeout;
+      let saveTimeout;
       const debouncedSave = () => {
         clearTimeout(saveTimeout);
         saveTimeout = setTimeout(saveState, 500);
