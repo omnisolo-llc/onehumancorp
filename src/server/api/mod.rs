@@ -43,6 +43,7 @@ pub mod cart;
 
 pub mod quotes;
 pub mod inbox;
+pub mod chat_inbox;
 pub mod sync_gateway;
 pub mod assistant;
 pub mod payment_ledger;
