@@ -57,6 +57,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/integrations.spec.ts",
     "//src/ui/next:src/e2e/milestone-loop.spec.ts",
     "//src/ui/next:src/e2e/review-campaign.spec.ts",
+
     "//src/ui/next:src/e2e/store-wrapped.spec.ts",
     "//src/ui/next:src/e2e/supply_chain.spec.ts",
 
