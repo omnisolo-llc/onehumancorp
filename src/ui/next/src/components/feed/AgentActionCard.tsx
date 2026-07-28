@@ -121,6 +121,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
           {(approval.proposed_action || approval.context_payload)
             ?.feature_type === "invoice_draft"
             ? `Draft Invoice ready for ${(approval.proposed_action || approval.context_payload)?.milestone_name || "Phase 1"}`
+            : (approval.proposed_action || approval.context_payload)?.feature_type === "order_draft"
+            ? `Incoming Phone Order (${(approval.proposed_action || approval.context_payload)?.language || "English"})`
             : (approval.proposed_action || approval.context_payload)
                   ?.feature_type === "ambassador_reply"
               ? "Action Required: Approve Reply"
@@ -150,6 +152,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
             ?.feature_type === "incident_resolution" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_draft" ||
+          (approval.proposed_action || approval.context_payload)?.feature_type === "order_draft" ||
           (approval.proposed_action || approval.context_payload)
             ?.feature_type === "booking_reengagement" ||
           (approval.proposed_action || approval.context_payload)
@@ -240,6 +243,18 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                   )
                 }
               />
+            )}
+            {(approval.proposed_action || approval.context_payload)?.feature_type === "order_draft" && (
+              <div className="flex flex-col gap-3">
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50">
+                  <p className="text-[13px] text-blue-700 dark:text-blue-300 font-medium mb-1">
+                    Voice Agent transcribed order from {(approval.proposed_action || approval.context_payload)?.caller_phone}
+                  </p>
+                  <p className="text-[11px] text-blue-600/70 dark:text-blue-400/70">
+                    {(approval.proposed_action || approval.context_payload)?.summary}
+                  </p>
+                </div>
+              </div>
             )}
             {(approval.proposed_action || approval.context_payload)
               ?.feature_type === "invoice_draft" && (
@@ -2150,6 +2165,31 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 <span className="animate-pulse">Loading...</span>
               ) : (
                 "Dismiss"
+              )}
+            </button>
+          </div>
+        ) : (approval.proposed_action || approval.context_payload)?.feature_type === "order_draft" ? (
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <button
+              onClick={() => handleDecision(approval.id, true, undefined, "order_draft")}
+              disabled={loadingAction !== null}
+              className="app-btn-primary flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 bg-blue-600 text-white rounded-[8px] font-medium hover:bg-blue-700 shadow-md transition-all flex items-center justify-center"
+            >
+              {isActionLoading("approve") ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                "Accept Order & Notify Customer"
+              )}
+            </button>
+            <button
+              onClick={() => handleDecision(approval.id, false, undefined, "order_draft")}
+              disabled={loadingAction !== null}
+              className="app-button flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden py-2 text-center border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-[8px] font-medium transition-all"
+            >
+              {isActionLoading("dismiss") ? (
+                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                "Decline"
               )}
             </button>
           </div>
