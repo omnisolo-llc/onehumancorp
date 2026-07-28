@@ -1,4 +1,3 @@
-use crate::db::DB;
 use sqlx::{FromRow};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
