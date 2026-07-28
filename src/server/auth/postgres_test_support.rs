@@ -53,34 +53,47 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
+    // To prevent concurrent test suites from running migrations simultaneously
+    // we use a PostgreSQL advisory lock on a fixed unique ID
+    let lock_id = 998877665544i64; // Unique fixed ID for migrations
+    sqlx::query(&format!("SELECT pg_advisory_lock({})", lock_id))
+        .execute(&admin_pool)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .map_err(|error| format!("acquire migration lock: {error}"))?;
 
+    let result = MIGRATOR.run(&admin_pool).await;
+
+    // Always unlock
+    let _ = sqlx::query(&format!("SELECT pg_advisory_unlock({})", lock_id))
+        .execute(&admin_pool)
+        .await;
+
+    result.map_err(|error| format!("run src/server/migrations: {error}"))?;
+
+    let role_name = format!("ohc_security_test_{}", std::process::id());
     sqlx::raw_sql(
-        r#"
+        &format!(r#"
         DO $$
         BEGIN
-            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_security_test') THEN
-                CREATE ROLE ohc_security_test LOGIN PASSWORD 'ohc_security_test';
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{0}') THEN
+                CREATE ROLE {0} LOGIN PASSWORD '{0}';
             END IF;
             EXECUTE format(
-                'GRANT CONNECT ON DATABASE %I TO ohc_security_test',
+                'GRANT CONNECT ON DATABASE %I TO {0}',
                 current_database()
             );
         END
         $$;
-        ALTER ROLE ohc_security_test NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
-        GRANT ohc_bypassrls TO ohc_security_test;
-        GRANT USAGE ON SCHEMA public TO ohc_security_test;
-        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ohc_security_test;
-        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ohc_security_test;
+        ALTER ROLE {0} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+        GRANT ohc_bypassrls TO {0};
+        GRANT USAGE ON SCHEMA public TO {0};
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {0};
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {0};
         ALTER DEFAULT PRIVILEGES IN SCHEMA public
-            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ohc_security_test;
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO {0};
         ALTER DEFAULT PRIVILEGES IN SCHEMA public
-            GRANT USAGE, SELECT ON SEQUENCES TO ohc_security_test;
-        "#,
+            GRANT USAGE, SELECT ON SEQUENCES TO {0};
+        "#, role_name)
     )
     .execute(&admin_pool)
     .await
@@ -114,6 +127,15 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
         .as_ref()
         .unwrap_or_else(|error| panic!("PostgreSQL security test setup failed: {error}"));
 
+    let role_name = format!("ohc_security_test_{}", std::process::id());
+    // Parse it manually since we don't have url crate
+    let split_url: Vec<&str> = database_url.split("@").collect();
+    let after_at = split_url[1];
+    let before_at = split_url[0];
+    let split_before: Vec<&str> = before_at.split("://").collect();
+    let prefix = split_before[0];
+    let new_url = format!("{}://{}:{}@{}", prefix, role_name, role_name, after_at);
+
     let pool = PgPoolOptions::new()
         .before_acquire(|conn, _meta| {
             Box::pin(async move {
@@ -131,7 +153,7 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
         })
         .max_connections(max_connections)
         .acquire_timeout(Duration::from_secs(10))
-        .connect(&database_url)
+        .connect(&new_url)
         .await
         .unwrap_or_else(|error| {
             panic!("connect through OHC_DATABASE_URL application role: {error}")
@@ -151,7 +173,7 @@ pub(crate) async fn postgres_security_pool(max_connections: u32) -> Option<PgPoo
     .fetch_one(&pool)
     .await
     .unwrap_or_else(|error| panic!("verify PostgreSQL application role: {error}"));
-    assert_eq!(session_user, "ohc_security_test", "unexpected session user");
+    assert_eq!(session_user, role_name, "unexpected session user");
     assert_eq!(
         current_user, session_user,
         "pool must start as its login role"
