@@ -208,6 +208,8 @@ export default function FeedPage() {
             const invoicePayload = isInvoiceDraft ? (item.proposed_action || item.context_payload) : null;
             const isInvoiceFollowup = item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup';
             const invoiceFollowupPayload = isInvoiceFollowup ? (item.proposed_action || item.context_payload) : null;
+            const isMultilingualWalkUp = item.proposed_action?.feature_type === 'multilingual_walk_up' || item.context_payload?.feature_type === 'multilingual_walk_up' || item.event_source === 'multilingual_walk_up';
+            const multilingualPayload = isMultilingualWalkUp ? (item.proposed_action || item.context_payload) : null;
 
             return (
               <div
@@ -218,7 +220,7 @@ export default function FeedPage() {
                 <div className="flex justify-between items-start mb-3">
                   <span className={`text-[11px] font-bold uppercase tracking-wider ${isDisputeResolution || isInvoiceFollowup ? 'text-[#FF9500] dark:text-[#FF9F0A]' : 'text-[#0066FF] dark:text-[#0071E3]'} flex items-center gap-1.5`}>
                     <span className={`w-2 h-2 rounded-full ${isDisputeResolution || isInvoiceFollowup ? 'bg-[#FF9500] dark:bg-[#FF9F0A]' : 'bg-[#0066FF] dark:bg-[#0071E3]'} opacity-80`}></span>
-                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isInvoiceFollowup ? 'ACTION REQUIRED' : isInvoiceDraft ? 'INVOICE DRAFT' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
+                    {isDisputeResolution ? 'DISPUTE RESOLUTION' : isMultilingualWalkUp ? 'INCOMING PHONE ORDER' : isInvoiceFollowup ? 'ACTION REQUIRED' : isInvoiceDraft ? 'INVOICE DRAFT' : isAmbassador ? 'CUSTOMER MESSAGE' : item.proposed_action?.action_type === 'Draft Quote' ? 'SMART ESTIMATE' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'DEPOSIT FOLLOW-UP' : item.proposed_action?.action_type === 'Draft Booking' ? 'NEW BOOKING REQUEST' : item.event_source.replace(/_/g, ' ')}
                   </span>
                   <span className="text-[11px] text-gray-400 font-medium">
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -228,6 +230,8 @@ export default function FeedPage() {
                 <h3 className="font-bold text-gray-900 dark:text-white text-[15px] mb-2 leading-snug">
                   {isDisputeResolution
                     ? `Dispute from ${disputePayload?.sender_id || 'Customer'}`
+                    : isMultilingualWalkUp
+                    ? `Order: ${multilingualPayload?.intent || 'New Order'}`
                     : isInvoiceFollowup
                     ? `Action Required: Overdue Invoice`
                     : isInvoiceDraft
@@ -326,6 +330,40 @@ export default function FeedPage() {
                             </div>
                           </div>
                         </div>
+                      ) : isMultilingualWalkUp ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800/50">
+                            <p className="text-[13px] text-blue-700 dark:text-blue-300 font-medium mb-1 flex items-center justify-between">
+                                <span>Voice Order Captured</span>
+                                {multilingualPayload?.language && (
+                                    <span className="text-[10px] bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full">
+                                        {multilingualPayload.language}
+                                    </span>
+                                )}
+                            </p>
+                            <p className="text-[11px] text-blue-600/70 dark:text-blue-400/70">
+                              {multilingualPayload?.summary || 'The AI assistant intercepted and translated a phone order.'}
+                            </p>
+                          </div>
+
+                          <div className="space-y-2 mt-2">
+                            {multilingualPayload?.items && Array.isArray(multilingualPayload.items) && multilingualPayload.items.map((it: any, idx: number) => (
+                                <div key={idx} className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                                    <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{it.item}</span>
+                                    <span className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold px-3 py-1 rounded-md text-sm">x{it.quantity}</span>
+                                </div>
+                            ))}
+                            {multilingualPayload?.notes && (
+                                <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
+                                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Notes</p>
+                                  <p className="text-[12px] text-gray-800 dark:text-gray-200">{multilingualPayload.notes}</p>
+                                  {multilingualPayload.translated_notes && (
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 italic">"{multilingualPayload.translated_notes}"</p>
+                                  )}
+                                </div>
+                            )}
+                          </div>
+                        </div>
                       ) : isPromoter ? (
                         <div className="flex flex-col gap-3">
                           <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg border border-indigo-100 dark:border-indigo-800/50">
@@ -384,7 +422,7 @@ export default function FeedPage() {
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                           data-testid="feed-approve-btn"
                         >
-                          {isProcessing ? 'Processing...' : (item.proposed_action?.feature_type === 'invoice_draft' || item.context_payload?.feature_type === 'invoice_draft') ? 'Approve & Send' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Reassign Shift' ? 'Approve & Notify' : 'Approve'}
+                          {isProcessing ? 'Processing...' : isMultilingualWalkUp ? 'Accept Order & Notify Customer' : (item.proposed_action?.feature_type === 'invoice_draft' || item.context_payload?.feature_type === 'invoice_draft') ? 'Approve & Send' : item.proposed_action?.action_type === 'Draft Quote' ? 'Review Estimate' : item.proposed_action?.action_type === 'Draft Follow-up' ? 'Send Follow-up' : item.proposed_action?.action_type === 'Draft Booking' ? 'Approve & Confirm' : item.proposed_action?.action_type === 'Reassign Shift' ? 'Approve & Notify' : 'Approve'}
                         </button>
                         <button
                           onClick={() => startEditing(item)}

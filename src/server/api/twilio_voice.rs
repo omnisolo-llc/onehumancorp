@@ -256,18 +256,37 @@ pub async fn twilio_voice_status_handler(
                 let task_manager = crate::tasks::TaskManager::with_db(state.db.clone());
                 let mission_id = uuid::Uuid::new_v4().to_string();
 
+                // Intercept and translate order
+                let tenant_lang = match crate::api::agents::order_interceptor::get_tenant_language(pool, &tenant_id).await {
+                    Ok(lang) => lang,
+                    Err(_) => "en".to_string(),
+                };
+
+                let intercepted_order = crate::api::agents::order_interceptor::intercept_order(&tenant_id, &tenant_lang, &summary).await;
+
                 let title = format!("Voice Order Request from {}", clean_caller);
                 let priority = "P1".to_string();
 
                 if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
                     task.approval_status = Some("PENDING".to_string());
 
-                    let proposed_content = serde_json::json!({
-                        "feature_type": "order_draft",
+                    let mut proposed_content = serde_json::json!({
+                        "feature_type": "multilingual_walk_up",
                         "summary": summary,
                         "caller_phone": clean_caller,
                         "order_link": order_link,
                     });
+
+                    if let Ok(order_data) = intercepted_order {
+                        if let Ok(order_json) = serde_json::to_value(order_data) {
+                            if let (Some(dest_obj), Some(src_obj)) = (proposed_content.as_object_mut(), order_json.as_object()) {
+                                for (k, v) in src_obj {
+                                    dest_obj.insert(k.clone(), v.clone());
+                                }
+                            }
+                        }
+                    }
+
                     task.proposed_content = Some(proposed_content.to_string());
 
                     let _ = task_manager.insert_task(task);

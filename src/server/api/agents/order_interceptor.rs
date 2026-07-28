@@ -59,7 +59,7 @@ pub async fn intercept_order_handler(
     }
 }
 
-async fn get_tenant_language(pool: &PgPool, tenant_id: &str) -> Result<String, sqlx::Error> {
+pub async fn get_tenant_language(pool: &PgPool, tenant_id: &str) -> Result<String, sqlx::Error> {
     let row = sqlx::query_as::<_, TenantLanguage>("SELECT language_preference FROM tenants WHERE id = $1")
         .bind(tenant_id)
         .fetch_one(pool)
