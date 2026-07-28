@@ -373,6 +373,9 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
         .route("/unboxing-share/generate", post(handle_unboxing_share_generate))
+        .route("/ambassador/embed", get(handle_ambassador_embed))
+        .route("/ambassador/generate", post(handle_ambassador_generate))
+        .route("/ambassador/signup", post(handle_ambassador_signup))
         .route("/waitlist/embed", get(handle_waitlist_embed))
         .route("/community-goal/embed", get(handle_community_goal_embed))
         .route("/countdown/generate", post(handle_countdown_generate))
@@ -6534,6 +6537,158 @@ pub async fn handle_secret_menu_generate(
     }));
 
     // publish returning result
+    state.hub.append_recent_event(msg).await;
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
+}
+
+#[derive(serde::Deserialize)]
+pub struct AmbassadorParams {
+    pub tenant: String,
+    pub title: Option<String>,
+    pub reward: Option<String>,
+}
+
+pub async fn handle_ambassador_embed(
+    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::extract::Query(params): axum::extract::Query<AmbassadorParams>,
+) -> impl axum::response::IntoResponse {
+    let tenant = escape_html(&params.tenant);
+    let title = escape_html(&params.title.unwrap_or_else(|| "Become a Brand Ambassador".to_string()));
+    let reward = escape_html(&params.reward.unwrap_or_else(|| "15% Commission on all sales".to_string()));
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {{ margin: 0; font-family: -apple-system, sans-serif; background: transparent; }}
+        .widget {{ background: #ffffff; border-radius: 16px; padding: 24px; color: #111827; text-align: center; border: 1px solid #e5e7eb; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }}
+        .icon {{ font-size: 32px; margin: 0 auto 16px; background: rgba(0, 102, 255, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }}
+        .title {{ font-size: 20px; font-weight: bold; margin-bottom: 8px; font-family: 'Outfit', sans-serif; color: #111827; }}
+        .reward {{ color: #0066FF; font-size: 14px; margin-bottom: 24px; font-weight: 700; background: rgba(0, 102, 255, 0.05); padding: 8px; border-radius: 8px; display: inline-block; }}
+
+        .form-group {{ margin-bottom: 12px; text-align: left; }}
+        .form-control {{ width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box; }}
+
+        .join-btn {{ width: 100%; padding: 12px; border-radius: 8px; font-weight: 700; color: white; border: none; cursor: pointer; background: #0066FF; font-size: 15px; transition: background 0.2s; margin-top: 8px; }}
+        .join-btn:hover {{ background: #0052cc; }}
+
+        .powered {{ margin-top: 16px; padding-top: 16px; border-top: 1px solid #f3f4f6; font-size: 10px; font-weight: 700; color: #9ca3af; letter-spacing: 1px; }}
+        a {{ color: inherit; text-decoration: none; }}
+
+        .success-msg {{ display: none; padding: 16px; background: #dcfce7; color: #166534; border-radius: 8px; font-weight: 600; font-size: 14px; margin-top: 16px; }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <div class="icon">🌟</div>
+        <div class="title">{title}</div>
+        <div class="reward">{reward}</div>
+
+        <div id="app-data" data-tenant="{tenant}"></div>
+        <div id="signup-form">
+            <div class="form-group">
+                <input type="text" id="amb-name" class="form-control" placeholder="Your Name" required />
+            </div>
+            <div class="form-group">
+                <input type="email" id="amb-email" class="form-control" placeholder="Your Email Address" required />
+            </div>
+            <button class="join-btn" id="join-btn" onclick="submitAmbassador()">Apply Now</button>
+        </div>
+
+        <div id="success-msg" class="success-msg">
+            Application submitted! We'll be in touch soon.
+        </div>
+
+        <div class="powered">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=ambassador_embed" target="_blank">⚡ POWERED BY OHC GROWTH</a>
+        </div>
+    </div>
+
+    <script>
+        function submitAmbassador() {{
+            const btn = document.getElementById('join-btn');
+            const name = document.getElementById('amb-name').value;
+            const email = document.getElementById('amb-email').value;
+            const tenant_id = document.getElementById('app-data').dataset.tenant;
+
+            if (!name || !email) return alert('Please enter name and email');
+
+            btn.disabled = true;
+            btn.innerText = 'Submitting...';
+
+            fetch('/api/v1/growth/ambassador/signup', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{ tenant: tenant_id, name: name, email: email }})
+            }}).then(res => {{
+                document.getElementById('signup-form').style.display = 'none';
+                document.getElementById('success-msg').style.display = 'block';
+            }}).catch(err => {{
+                btn.disabled = false;
+                btn.innerText = 'Apply Now';
+                console.error(err);
+            }});
+        }}
+    </script>
+</body>
+</html>"#,
+    );
+
+    (
+        axum::http::StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/html")],
+        html,
+    )
+}
+
+#[derive(serde::Deserialize)]
+pub struct AmbassadorGenerateRequest {
+    pub tenant_id: String,
+    pub title: Option<String>,
+    pub reward: Option<String>,
+}
+
+pub async fn handle_ambassador_generate(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Json(req): axum::extract::Json<AmbassadorGenerateRequest>,
+) -> impl axum::response::IntoResponse {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.ambassador_program_generated",
+        "tenant_id": req.tenant_id,
+        "title": req.title,
+        "reward": req.reward,
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }));
+
+    state.hub.append_recent_event(msg).await;
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
+}
+
+#[derive(serde::Deserialize)]
+pub struct AmbassadorSignupRequest {
+    pub tenant: String,
+    pub name: String,
+    pub email: String,
+}
+
+pub async fn handle_ambassador_signup(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Json(req): axum::extract::Json<AmbassadorSignupRequest>,
+) -> impl axum::response::IntoResponse {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.ambassador_signup",
+        "tenant_id": req.tenant,
+        "name": req.name,
+        "email": req.email,
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }));
+
     state.hub.append_recent_event(msg).await;
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
