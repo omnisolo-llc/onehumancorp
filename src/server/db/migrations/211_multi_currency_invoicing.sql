@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS currencies (
     last_updated TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+
+ALTER TABLE currencies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY read_all_currencies ON currencies FOR SELECT USING (true);
+
 CREATE TABLE IF NOT EXISTS product_prices (
     product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     currency_code TEXT NOT NULL REFERENCES currencies(code) ON DELETE CASCADE,

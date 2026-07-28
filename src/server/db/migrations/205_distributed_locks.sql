@@ -1,4 +1,5 @@
 -- +goose Up
+
 CREATE TABLE IF NOT EXISTS distributed_locks (
     id TEXT PRIMARY KEY,
     lock_val TEXT NOT NULL,

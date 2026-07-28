@@ -9,7 +9,7 @@ test.describe('AI Unified Work Triage Architecture', () => {
         try {
             await page.waitForURL('**/dashboard*', { timeout: 3000 });
         } catch(e) {
-            console.log('Skipping dashboard wait to handle dev environment routing');
+            // Skipping dashboard wait to handle dev environment routing
         }
         await page.goto('/ui/triage.html');
 
