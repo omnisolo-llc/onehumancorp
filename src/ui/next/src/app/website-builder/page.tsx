@@ -792,7 +792,7 @@ export default function WebsiteBuilderPage() {
           </div>
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 glassmorphism z-50 rounded-b-[16px]">
+        <div className="absolute bottom-0 w-full p-4 glassmorphism z-50">
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"

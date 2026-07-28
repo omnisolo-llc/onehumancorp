@@ -1,9 +1,13 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TapToPayOverlay } from './TapToPayOverlay';
 
 describe('TapToPayOverlay Component', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn();
@@ -55,6 +59,7 @@ describe('TapToPayOverlay Component', () => {
   });
 
   it('handles API errors gracefully', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     // Mock the connection-token call to fail
     (global.fetch as any).mockResolvedValueOnce({ ok: false });
 
@@ -67,5 +72,6 @@ describe('TapToPayOverlay Component', () => {
       expect(screen.getByText('Failed to initialize terminal.')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
     });
+    consoleSpy.mockRestore();
   });
 });
