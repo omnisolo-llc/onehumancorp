@@ -44,6 +44,7 @@ _NEXT_UI_E2E_SPECS = [
 
 
     "//src/ui/next:src/e2e/langgraph.spec.ts",
+    "//src/ui/next:src/e2e/voice_order_webhook.mock-contract.ts",
 
     "//src/ui/next:src/e2e/morning-briefing.spec.ts",
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
