@@ -139,7 +139,7 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
     id
 }
 
-pub fn router(state: AppState) -> Router {
+pub fn router(state: AppState) -> axum::Router<AppState> {
     Router::new()
         .route("/", post(handle_omnichannel_webhook))
         .with_state(state)

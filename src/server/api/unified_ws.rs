@@ -522,3 +522,10 @@ mod tests {
         }
     }
 }
+
+pub fn broadcast_omnichannel_message(tenant_id: &str, topic: &str, payload: serde_json::Value) {
+    let tx = get_broadcast_tx();
+    let seq = next_seq();
+    let envelope = build_envelope(&format!("omnichannel:{}", tenant_id), topic, payload, seq);
+    let _ = tx.send(envelope);
+}
