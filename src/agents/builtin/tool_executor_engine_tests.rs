@@ -1,13 +1,9 @@
-
-
-
-
 #[cfg(test)]
 mod tests {
 
+    use ohc_builtin_agent::agent::AgentRunConfig;
     use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
-use ohc_builtin_agent::agent::AgentRunConfig;
-    use ohc_builtin_agent_core::types::{ToolCall, ToolError};
+    use ohc_builtin_agent_core::types::{Message, Role, ToolCall, ToolError};
     use ohc_builtin_agent_tools::Tool;
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::json;
@@ -35,13 +31,35 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
             let count = self.call_count.fetch_add(1, Ordering::SeqCst);
             if count < self.fail_until {
-                Err(ToolError::Transient(format!("transient error attempt {}", count)))
+                Err(ToolError::Transient(format!(
+                    "transient error attempt {}",
+                    count
+                )))
             } else {
                 Ok("success".to_string())
             }
         }
     }
 
+    #[tokio::test]
+    async fn test_new_llm_recoverable_tool_message_construction() {
+        let tool_call_id = "test_call_id".to_string();
+        let tool_name = "test_tool";
+        let error_msg = "test error";
+
+        let msg =
+            Message::new_llm_recoverable_tool_message(tool_call_id.clone(), tool_name, error_msg);
+
+        assert_eq!(msg.role, Role::Tool);
+        assert!(msg.tool_calls.is_empty());
+        assert_eq!(msg.tool_results.len(), 1);
+
+        let tool_result = &msg.tool_results[0];
+        assert_eq!(tool_result.tool_call_id, tool_call_id);
+        assert!(tool_result.error.contains("test error"));
+        assert!(tool_result.error.contains("test_tool"));
+        assert!(tool_result.error.contains("SOTA Recovery Protocol"));
+    }
     #[tokio::test(start_paused = true)]
     async fn test_transient_retry_jitter_calc() {
         let call_count = Arc::new(AtomicUsize::new(0));
@@ -63,9 +81,14 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                &tool,
+                &tc,
+                2,
+                &AgentRunConfig::default(),
+            )
+            .await
         });
-
 
         let res = handle.await.unwrap();
 
@@ -94,7 +117,13 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "success");
@@ -123,9 +152,14 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                &tool,
+                &tc,
+                2,
+                &AgentRunConfig::default(),
+            )
+            .await
         });
-
 
         let res = handle.await.unwrap();
 
@@ -155,15 +189,23 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                &tool,
+                &tc,
+                2,
+                &AgentRunConfig::default(),
+            )
+            .await
         });
-
 
         let res = handle.await.unwrap();
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
-            ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
+            ToolError::Unexpected(msg) => assert_eq!(
+                msg,
+                "Transient error after retries: transient error attempt 2"
+            ),
             _ => panic!("Expected Unexpected error"),
         }
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 1 initial + 2 retries = 3 calls
@@ -207,14 +249,20 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         };
 
         // Execute via the engine
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => {
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
                 assert!(msg.contains("missing field `required_int`"));
-            },
+            }
             _ => panic!("Expected LlmRecoverable error from Pydantic adapter"),
         }
     }
@@ -227,7 +275,9 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             parameters: json!({}),
             is_read_only: false,
             execute: Arc::new(DummyToolExecutor {
-                result: Err(ToolError::LlmRecoverable("Validation Error (Pydantic-first tool schema): Failed to parse".to_string())),
+                result: Err(ToolError::LlmRecoverable(
+                    "Validation Error (Pydantic-first tool schema): Failed to parse".to_string(),
+                )),
             }),
         };
 
@@ -238,11 +288,23 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         };
 
         // We simulate the pydantic loop which returns the recoverable error directly
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool_fail,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
         assert!(res.is_err());
-        assert!(res.as_ref().expect_err("Expected error in test").to_string().contains("Validation Error (Pydantic-first tool schema)"));
+        assert!(res
+            .as_ref()
+            .expect_err("Expected error in test")
+            .to_string()
+            .contains("Validation Error (Pydantic-first tool schema)"));
         match res.expect_err("Expected error in test") {
-            ToolError::LlmRecoverable(msg) => assert!(msg.contains("Validation Error (Pydantic-first tool schema)")),
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("Validation Error (Pydantic-first tool schema)"))
+            }
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
@@ -256,7 +318,10 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             parameters: json!({}),
             is_read_only: false,
             execute: Arc::new(DummyToolExecutor {
-                result: Err(ToolError::LlmRecoverable("Validation Error (Pydantic-first tool schema): Failed to parse arguments".to_string())),
+                result: Err(ToolError::LlmRecoverable(
+                    "Validation Error (Pydantic-first tool schema): Failed to parse arguments"
+                        .to_string(),
+                )),
             }),
         };
 
@@ -266,14 +331,20 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool_fail, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool_fail,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
 
         // Ensure the engine correctly bubbles up the exact recoverable error back to the orchestration loop
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => {
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-            },
+            }
             _ => panic!("Expected LlmRecoverable error"),
         }
     }
@@ -296,7 +367,13 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => assert!(msg.contains("parse error")),
@@ -322,7 +399,13 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::UserFixable(msg) => assert_eq!(msg, "ask user"),
@@ -348,7 +431,13 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::Fatal(msg) => assert_eq!(msg, "fatal error"),
@@ -374,7 +463,13 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::Unexpected(msg) => assert_eq!(msg, "unexpected error"),
@@ -400,7 +495,13 @@ use ohc_builtin_agent::agent::AgentRunConfig;
             arguments: json!({}),
         };
 
-        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            &tool,
+            &tc,
+            2,
+            &AgentRunConfig::default(),
+        )
+        .await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::HandoffRequested(msg) => assert_eq!(msg, "agent_2"),
@@ -430,15 +531,23 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
         // Pass max_retries = 5, but it should be clamped to 2
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 5, &AgentRunConfig::default()).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                &tool,
+                &tc,
+                5,
+                &AgentRunConfig::default(),
+            )
+            .await
         });
-
 
         let res = handle.await.unwrap();
 
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
-            ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
+            ToolError::Unexpected(msg) => assert_eq!(
+                msg,
+                "Transient error after retries: transient error attempt 2"
+            ),
             _ => panic!("Expected Unexpected error"),
         }
         // 1 initial + 2 clamped retries = 3 calls
@@ -448,8 +557,8 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
 #[cfg(test)]
 mod additional_transient_tests {
+    use ohc_builtin_agent::agent::AgentRunConfig;
     use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
-use ohc_builtin_agent::agent::AgentRunConfig;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::Tool;
     use ohc_builtin_agent_tools::ToolExecutor;
@@ -467,7 +576,10 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
             let count = self.call_count.fetch_add(1, Ordering::SeqCst);
             if count < self.fail_until {
-                Err(ToolError::Transient(format!("transient error attempt {}", count)))
+                Err(ToolError::Transient(format!(
+                    "transient error attempt {}",
+                    count
+                )))
             } else {
                 Ok("success".to_string())
             }
@@ -495,9 +607,14 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                &tool,
+                &tc,
+                2,
+                &AgentRunConfig::default(),
+            )
+            .await
         });
-
 
         let res = handle.await.unwrap();
 
@@ -528,7 +645,13 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         };
 
         let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await
+            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                &tool,
+                &tc,
+                2,
+                &AgentRunConfig::default(),
+            )
+            .await
         });
         let res = handle.await.unwrap();
         assert!(res.is_ok());

@@ -38,6 +38,26 @@ pub struct Message {
 }
 
 impl Message {
+    /// Helper to create a Tool Message containing an LLM-recoverable ToolResult.
+    pub fn new_llm_recoverable_tool_message(
+        tool_call_id: String,
+        tool_name: &str,
+        err_msg: &str,
+    ) -> Self {
+        Self {
+            role: Role::Tool,
+            content: String::new(),
+            tool_calls: vec![],
+            tool_results: vec![ToolResult::new_llm_recoverable(
+                tool_call_id,
+                tool_name,
+                err_msg,
+            )],
+            response_id: None,
+            previous_response_id: None,
+        }
+    }
+
     pub fn user(content: impl Into<String>) -> Self {
         Self {
             role: Role::User,
@@ -207,8 +227,7 @@ impl std::fmt::Display for HumanInLoopSpectrum {
     }
 }
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, Default)]
 /// Master Catalog C.5. Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval)
 pub enum PermissionArchitecture {
     /// Permissive (auto-approve): All tools are auto-approved unless explicitly in high-risk.
@@ -228,8 +247,20 @@ impl std::fmt::Display for PermissionArchitecture {
 }
 
 /// Centralized Pydantic-first tool schema error formatter.
-pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
-    let error_type = if e.is_data() { "type_error" } else if e.is_syntax() { "syntax_error" } else if e.is_eof() { "eof_error" } else { "unknown_error" };
+pub fn format_pydantic_error(
+    e: &serde_json::Error,
+    args_str: Option<&str>,
+    custom_instruction: Option<&str>,
+) -> String {
+    let error_type = if e.is_data() {
+        "type_error"
+    } else if e.is_syntax() {
+        "syntax_error"
+    } else if e.is_eof() {
+        "eof_error"
+    } else {
+        "unknown_error"
+    };
     let msg_content = format!("{}", e);
     let snippet = args_str.unwrap_or("null");
 
@@ -238,7 +269,10 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
     } else if e.is_syntax() {
         format!("JSON syntax error: {}", msg_content)
     } else if e.is_eof() {
-        format!("Incomplete JSON structure (unexpected EOF): {}", msg_content)
+        format!(
+            "Incomplete JSON structure (unexpected EOF): {}",
+            msg_content
+        )
     } else {
         msg_content.clone()
     };
@@ -246,7 +280,10 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
     // Inject exact line and column data to provide the LLM with pinpoint error location
     let line = e.line();
     let column = e.column();
-    let precise_msg = format!("{} at line {}, column {}", extended_msg_content, line, column);
+    let precise_msg = format!(
+        "{} at line {}, column {}",
+        extended_msg_content, line, column
+    );
 
     let mut pydantic_json_obj = serde_json::json!({
         "type": error_type,
@@ -255,9 +292,15 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
     });
 
     if args_str.is_some() {
-        pydantic_json_obj.as_object_mut().unwrap().insert("input".to_string(), serde_json::Value::String(snippet.to_string()));
+        pydantic_json_obj.as_object_mut().unwrap().insert(
+            "input".to_string(),
+            serde_json::Value::String(snippet.to_string()),
+        );
     } else {
-        pydantic_json_obj.as_object_mut().unwrap().insert("input".to_string(), serde_json::Value::String("null".to_string()));
+        pydantic_json_obj.as_object_mut().unwrap().insert(
+            "input".to_string(),
+            serde_json::Value::String("null".to_string()),
+        );
     }
 
     let pydantic_json = serde_json::json!([pydantic_json_obj]);
@@ -277,7 +320,11 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, cust
 
 /// A version of format_pydantic_error that takes a string message instead of a serde_json::Error.
 /// Used when validation fails via manual checks rather than serde deserialization.
-pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
+pub fn format_pydantic_error_string(
+    error_msg: &str,
+    args_str: Option<&str>,
+    custom_instruction: Option<&str>,
+) -> String {
     let snippet = args_str.unwrap_or("null");
     let pydantic_json = serde_json::json!([{
         "type": "value_error",
@@ -328,8 +375,13 @@ mod tests {
         assert!(!msg_eof.contains("Provided arguments snippet"));
 
         // Test semantic/data error
-        let err_semantic = serde_json::from_str::<Dummy>("{\"_field\": \"string instead of int\"}").unwrap_err();
-        let msg_semantic = format_pydantic_error(&err_semantic, Some("{\"_field\": \"string instead of int\"}"), None);
+        let err_semantic =
+            serde_json::from_str::<Dummy>("{\"_field\": \"string instead of int\"}").unwrap_err();
+        let msg_semantic = format_pydantic_error(
+            &err_semantic,
+            Some("{\"_field\": \"string instead of int\"}"),
+            None,
+        );
         assert!(msg_semantic.contains("Semantic validation failed"));
         assert!(msg_semantic.contains("line 1, column"));
         assert!(msg_semantic.contains("line_1"));
@@ -403,7 +455,11 @@ mod tests {
 
     #[test]
     fn test_format_pydantic_error_string() {
-        let msg = format_pydantic_error_string("manual check failed", Some("{\"arg\": 1}"), Some("custom string"));
+        let msg = format_pydantic_error_string(
+            "manual check failed",
+            Some("{\"arg\": 1}"),
+            Some("custom string"),
+        );
         assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
         assert!(msg.contains("manual check failed"));
         assert!(msg.contains("custom string"));
@@ -415,16 +471,28 @@ mod tests {
     #[test]
     fn test_human_in_loop_spectrum_display() {
         assert_eq!(HumanInLoopSpectrum::Autonomous.to_string(), "Autonomous");
-        assert_eq!(HumanInLoopSpectrum::ApprovalOnMutate.to_string(), "ApprovalOnMutate");
-        assert_eq!(HumanInLoopSpectrum::ApprovalOnAll.to_string(), "ApprovalOnAll");
-        assert_eq!(HumanInLoopSpectrum::CollaborativeEdit.to_string(), "CollaborativeEdit");
+        assert_eq!(
+            HumanInLoopSpectrum::ApprovalOnMutate.to_string(),
+            "ApprovalOnMutate"
+        );
+        assert_eq!(
+            HumanInLoopSpectrum::ApprovalOnAll.to_string(),
+            "ApprovalOnAll"
+        );
+        assert_eq!(
+            HumanInLoopSpectrum::CollaborativeEdit.to_string(),
+            "CollaborativeEdit"
+        );
         assert_eq!(HumanInLoopSpectrum::Supervisory.to_string(), "Supervisory");
     }
 
     #[test]
     fn test_permission_architecture_display() {
         assert_eq!(PermissionArchitecture::Permissive.to_string(), "Permissive");
-        assert_eq!(PermissionArchitecture::Restrictive.to_string(), "Restrictive");
+        assert_eq!(
+            PermissionArchitecture::Restrictive.to_string(),
+            "Restrictive"
+        );
     }
 
     #[test]
@@ -432,7 +500,9 @@ mod tests {
         let tr = ToolResult::new_llm_recoverable("call_1".to_string(), "my_tool", "my_error");
         assert_eq!(tr.tool_call_id, "call_1");
         assert_eq!(tr.content, "");
-        assert!(tr.error.contains("LLM-Recoverable Tool Error (my_tool): my_error"));
+        assert!(tr
+            .error
+            .contains("LLM-Recoverable Tool Error (my_tool): my_error"));
     }
 }
 
@@ -449,11 +519,18 @@ mod tests_custom {
             _field: u32,
         }
 
-        let err_semantic = serde_json::from_str::<Dummy>("{\"_field\": \"string instead of int\"}").unwrap_err();
-        let msg_semantic = format_pydantic_error(&err_semantic, Some("{\"_field\": \"string instead of int\"}"), Some("Please provide an integer value for _field."));
+        let err_semantic =
+            serde_json::from_str::<Dummy>("{\"_field\": \"string instead of int\"}").unwrap_err();
+        let msg_semantic = format_pydantic_error(
+            &err_semantic,
+            Some("{\"_field\": \"string instead of int\"}"),
+            Some("Please provide an integer value for _field."),
+        );
 
         assert!(msg_semantic.contains("Semantic validation failed"));
         assert!(msg_semantic.contains("Please provide an integer value for _field."));
-        assert!(!msg_semantic.contains("Please strictly follow the tool's JSON schema and try again."));
+        assert!(
+            !msg_semantic.contains("Please strictly follow the tool's JSON schema and try again.")
+        );
     }
 }
