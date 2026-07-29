@@ -1,14 +1,21 @@
+use std::sync::Arc;
 use sqlx::PgPool;
 use uuid::Uuid;
 use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage};
+use super::repository::ChatRepository;
+use crate::integrations::nats::client::NatsClientWrapper;
 
 pub struct ChatService {
-    pool: PgPool,
+    repository: ChatRepository,
+    nats_client: Arc<dyn NatsClientWrapper>,
 }
 
 impl ChatService {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, nats_client: Arc<dyn NatsClientWrapper>) -> Self {
+        Self {
+            repository: ChatRepository::new(pool),
+            nats_client,
+        }
     }
 
     pub async fn create_inbox(
@@ -16,18 +23,7 @@ impl ChatService {
         tenant_id: Uuid,
         name: String,
     ) -> Result<ChatInbox, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_inboxes (id, tenant_id, name)
-            VALUES ($1, $2, $3)
-            RETURNING id, tenant_id, name, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(name)
-        .fetch_one(&self.pool)
-        .await
+        self.repository.create_inbox(tenant_id, name).await
     }
 
     pub async fn create_channel(
@@ -37,20 +33,7 @@ impl ChatService {
         channel_type: String,
         config: serde_json::Value,
     ) -> Result<ChatChannel, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_channels (id, tenant_id, inbox_id, channel_type, config)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, tenant_id, inbox_id, channel_type, config, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(inbox_id)
-        .bind(channel_type)
-        .bind(config)
-        .fetch_one(&self.pool)
-        .await
+        self.repository.create_channel(tenant_id, inbox_id, channel_type, config).await
     }
 
     pub async fn create_contact(
@@ -60,20 +43,7 @@ impl ChatService {
         email: Option<String>,
         phone: Option<String>,
     ) -> Result<ChatContact, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_contacts (id, tenant_id, name, email, phone)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, tenant_id, name, email, phone, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(name)
-        .bind(email)
-        .bind(phone)
-        .fetch_one(&self.pool)
-        .await
+        self.repository.create_contact(tenant_id, name, email, phone).await
     }
 
     pub async fn start_conversation(
@@ -83,20 +53,7 @@ impl ChatService {
         contact_id: Uuid,
         assignee_id: Option<Uuid>,
     ) -> Result<ChatConversation, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status)
-            VALUES ($1, $2, $3, $4, $5, 'open')
-            RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(inbox_id)
-        .bind(contact_id)
-        .bind(assignee_id)
-        .fetch_one(&self.pool)
-        .await
+        self.repository.start_conversation(tenant_id, inbox_id, contact_id, assignee_id).await
     }
 
     pub async fn send_message(
@@ -107,20 +64,73 @@ impl ChatService {
         sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(conversation_id)
-        .bind(sender_type)
-        .bind(sender_id)
-        .bind(content)
-        .fetch_one(&self.pool)
-        .await
+        let message = self.repository.send_message(tenant_id, conversation_id, sender_type, sender_id, content).await?;
+
+        let subject = format!("tenant.{}.chat.message_created", tenant_id);
+        let payload = serde_json::to_vec(&message).unwrap_or_default();
+
+        // Publish event for real-time clients. We log the error but don't fail the message creation.
+        if let Err(e) = self.nats_client.publish(&subject, payload).await {
+            tracing::error!("Failed to publish chat message event: {}", e);
+        }
+
+        Ok(message)
+    }
+
+    pub async fn get_conversations(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Vec<ChatConversation>, sqlx::Error> {
+        self.repository.get_conversations(tenant_id).await
+    }
+
+    pub async fn get_messages(
+        &self,
+        tenant_id: Uuid,
+        conversation_id: Uuid,
+    ) -> Result<Vec<ChatMessage>, sqlx::Error> {
+        self.repository.get_messages(tenant_id, conversation_id).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use std::sync::Mutex;
+
+    struct MockNatsClient {
+        published_subjects: Mutex<Vec<String>>,
+    }
+
+    impl MockNatsClient {
+        fn new() -> Self {
+            Self {
+                published_subjects: Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl NatsClientWrapper for MockNatsClient {
+        async fn publish(&self, subject: &str, _data: Vec<u8>) -> Result<(), String> {
+            let mut subjects = self.published_subjects.lock().unwrap();
+            subjects.push(subject.to_string());
+            Ok(())
+        }
+
+        async fn subscribe(
+            &self,
+            _subject: &str,
+            _handler: Box<dyn Fn(Vec<u8>) + Send + Sync>,
+        ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            Ok(Box::new(|| {}))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_service_dummy() {
+        // Just checking that we can compile and write tests here
+        assert_eq!(1, 1);
     }
 }

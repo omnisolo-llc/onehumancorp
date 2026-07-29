@@ -6,6 +6,7 @@ load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 SERVER_RS_SRCS = [
     "//src/server/services:chat/mod.rs",
     "//src/server/services:chat/models.rs",
+    "//src/server/services:chat/repository.rs",
     "//src/server/services:chat/service.rs",
     "health_test.rs",
     "analytics.rs",
@@ -82,6 +83,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:invoice.rs",
     "//src/server/api:cart.rs",
     "//src/server/api:checkout_api.rs",
+    "//src/server/api:chat_api.rs",
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
