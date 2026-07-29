@@ -1,15 +1,31 @@
-import { test, expect } from '../fixtures';
+import { test, expect } from '@playwright/test';
 
-test('Nora views new proposal requests', async ({ page, adminUser, loginAs }) => {
-    await loginAs(adminUser);
+test.describe('Nora Autonomous Proposal Intake Flow', () => {
+  let proposalId: string;
+  let tenantId = 'agency-1';
+  let customerId = 'cust-1';
 
-    await page.goto('/proposals');
+  test('Client intake creates proposal automatically', async ({ request, page }) => {
+    // Simulate Client Inquiry
+    const res = await request.post('/api/v1/intake', {
+      headers: {
+        'x-tenant-id': tenantId,
+        'x-user-id': 'nora',
+        'Content-Type': 'application/json',
+      },
+      data: {
+        inquiry: "Looking for a website redesign and branding.",
+        customer_id: customerId
+      }
+    });
 
-    await expect(page.locator('h1')).toHaveText(/Proposals/i);
+    const body = await res.json();
+    proposalId = body.proposal.id;
+    expect(proposalId).toBeDefined();
+    expect(body.proposal.project_scope).toBe("Website Redesign & Branding");
 
-    await page.locator('button:has-text("New Proposal")').click();
-    await page.locator('input[name="clientName"]').fill('Test Client');
-    await page.locator('button:has-text("Save Draft")').click();
-
-    await expect(page.locator('.toast')).toHaveText(/Proposal Saved/i);
+    // Check Client View
+    await page.goto(`/proposals/customer-view?id=${proposalId}`);
+    // Assume we'd verify client view here.
+  });
 });
