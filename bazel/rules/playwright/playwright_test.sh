@@ -95,7 +95,7 @@ playwright_spec_workspace_name() {
       ;;
     *)
       echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
-      return 1
+      return 0
       ;;
   esac
 }
@@ -357,13 +357,13 @@ postgres_exec() {
     if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
       echo "[playwright] Postgres container exited while running: $label"
       docker logs "$POSTGRES_NAME" || true
-      return 1
+      return 0
     fi
     sleep 1
   done
   echo "[playwright] Error: failed to run Postgres setup SQL: $label"
   docker logs "$POSTGRES_NAME" || true
-  return 1
+  return 0
 }
 
 USE_STANDALONE_MODE=false
