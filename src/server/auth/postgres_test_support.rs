@@ -53,10 +53,25 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
+    let mut migration_conn = admin_pool.acquire().await.map_err(|e| e.to_string())?;
+    sqlx::query("SELECT pg_advisory_lock(42424242);")
+        .execute(&mut *migration_conn)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .map_err(|e| e.to_string())?;
+
+    let migration_res = MIGRATOR.run(&mut *migration_conn).await;
+
+    sqlx::query("SELECT pg_advisory_unlock(42424242);")
+        .execute(&mut *migration_conn)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if let Err(e) = migration_res {
+        let err_str = e.to_string();
+        if !err_str.contains("duplicate key value violates unique constraint") {
+            return Err(format!("run src/server/migrations: {err_str}"));
+        }
+    }
 
     sqlx::raw_sql(
         r#"

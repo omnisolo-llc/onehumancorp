@@ -1,3 +1,4 @@
+// @playwright-no-substitution
 import { test, expect } from '@playwright/test';
 import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
 

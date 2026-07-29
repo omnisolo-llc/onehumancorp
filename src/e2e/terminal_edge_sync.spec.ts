@@ -1,3 +1,4 @@
+// @playwright-no-substitution
 import { test, expect } from '@playwright/test';
 
 test.describe('Edge Ledger Sync Protocol', () => {
