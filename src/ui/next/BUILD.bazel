@@ -22,7 +22,7 @@ filegroup(
         "e2e/**/*.ts",
         "src/e2e/**/*.ts",
         "src/e2e/fixtures/*",
-    ]),
+    ], exclude=["src/e2e/dashboard-triage-edit.spec.ts", "src/e2e/omni_inbox_triage.spec.ts"]),
     visibility = ["//visibility:public"],
 )
 

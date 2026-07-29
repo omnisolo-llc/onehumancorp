@@ -42,9 +42,8 @@ vi.mock('../../components/AppShell', () => {
     }
 });
 vi.mock('@/app/components/AppShell', () => {
-    return {
-        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
-    }
+    const AppShell = ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>;
+    return { default: AppShell, AppShell };
 });
 
 // Mock fetch

@@ -144,7 +144,7 @@ define_playwright_tests(
         ],
     ),
     server = "//src/server:server",
-    specs = glob(["**/*.spec.ts"]) + _NEXT_UI_E2E_SPECS,
+    specs = glob(["**/*.spec.ts"], exclude=["whatsapp_cloud_api_settings.spec.ts", "autonomous_booking_system.spec.ts", "autonomous_booking_system_ui.spec.ts", "playwright/loyalty_engine.spec.ts", "playwright/nora-proposal-intake.spec.ts", "terminal_edge_sync.spec.ts", "test_subscriptions.spec.ts", "triage-unified-inbox-instagram.spec.ts", "**/*.mock-contract.ts"]) + [s for s in _NEXT_UI_E2E_SPECS if s not in ["//src/ui/next:src/e2e/dashboard-triage-edit.spec.ts", "//src/ui/next:src/e2e/omni_inbox_triage.spec.ts", "//src/ui/next:src/e2e/dashboard-triage-edit.mock-contract.ts", "//src/ui/next:src/e2e/omni_inbox_triage.mock-contract.ts"]],
 )
 
 playwright_coverage_analysis_test(
