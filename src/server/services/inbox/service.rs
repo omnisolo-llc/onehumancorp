@@ -120,20 +120,22 @@ impl InboxService {
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         tenant_id: &str,
         thread_id: &str,
-        _message_content: &str,
+        message_content: &str,
     ) -> Result<(), sqlx::Error> {
-        let action_id = Uuid::new_v4().to_string();
-        let payload = r#"{"draft_reply": "Thank you for reaching out! Let me check on that for you."}"#;
+        let job_id = Uuid::new_v4().to_string();
+        let payload = serde_json::json!({
+            "message_id": thread_id, // Map message_id to thread_id for unified queue consumption
+            "source": "unified_inbox",
+            "content": message_content,
+            "sender_id": "customer"
+        });
 
-        sqlx::query(
-            r#"INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'DraftReply', $4, 'pending')"#
-        )
-        .bind(action_id)
-        .bind(tenant_id)
-        .bind(thread_id)
-        .bind(payload)
-        .execute(&mut **tx)
-        .await?;
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+            .bind(&job_id)
+            .bind(tenant_id)
+            .bind(payload.to_string())
+            .execute(&mut **tx)
+            .await?;
 
         info!("Triggered AI triage for thread {}", thread_id);
         Ok(())
