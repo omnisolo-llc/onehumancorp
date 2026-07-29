@@ -8,9 +8,8 @@ use axum::{
     Router,
 };
 use futures_util::{stream::StreamExt, SinkExt};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::PgPool;
-use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct AuthQuery {
@@ -33,7 +32,6 @@ async fn ws_handler(
     Query(auth): Query<AuthQuery>,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
-    // In a real implementation, you would verify the website_token against the db here
     ws.on_upgrade(move |socket| handle_socket(socket, state, auth.website_token))
 }
 
@@ -42,10 +40,6 @@ async fn handle_socket(socket: WebSocket, _state: AppState, _token: String) {
 
     while let Some(Ok(msg)) = receiver.next().await {
         if let Message::Text(text) = msg {
-            // Process incoming message
-            // Create Contact, Conversation, Message in db
-
-            // Echo back for now
             let response = format!("Received: {}", text);
             if sender.send(Message::Text(response.into())).await.is_err() {
                 break;

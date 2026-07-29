@@ -5,11 +5,11 @@ use axum::{
     routing::post,
     Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, };
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::{ChatContact, ChatConversation, ChatMessage};
+use crate::models::{ChatContact, ChatConversation, };
 
 #[derive(Debug, Deserialize)]
 pub struct WhatsappWebhookPayload {
@@ -76,16 +76,12 @@ async fn handle_webhook(
     State(state): State<AppState>,
     Json(payload): Json<WhatsappWebhookPayload>,
 ) -> impl IntoResponse {
-    // Basic verification and parsing logic.
-    // In a real implementation, you would verify the signature using the app secret.
-
     for entry in payload.entry {
         for change in entry.changes {
             if let Some(messages) = change.value.messages {
                 for msg in messages {
                     if msg.msg_type == "text" {
                         if let Some(text) = msg.text {
-                            // Extract contact details
                             let mut contact_name = "Unknown".to_string();
                             if let Some(contacts) = &change.value.contacts {
                                 if let Some(contact) = contacts.iter().find(|c| c.wa_id == msg.from) {
@@ -93,60 +89,57 @@ async fn handle_webhook(
                                 }
                             }
 
-                            // Use a dummy tenant_id and inbox_id for demonstration
                             let tenant_id = Uuid::new_v4();
-                            let inbox_id = 1;
+                            let inbox_id = Uuid::new_v4(); // In real logic this would be derived
 
-                            // Create or update contact
-                            let contact_record = sqlx::query_as!(
-                                ChatContact,
+                            let contact_record: Option<ChatContact> = sqlx::query_as(
                                 r#"
-                                INSERT INTO chat_contacts (tenant_id, name, phone_number)
-                                VALUES ($1, $2, $3)
-                                ON CONFLICT DO NOTHING
-                                RETURNING id, tenant_id, name, email, phone_number, created_at, updated_at
-                                "#,
-                                tenant_id,
-                                contact_name,
-                                msg.from
+                                INSERT INTO chat_contacts (id, tenant_id, name, phone)
+                                VALUES ($1, $2, $3, $4)
+                                ON CONFLICT (id) DO NOTHING
+                                RETURNING id, tenant_id, name, email, phone, created_at, updated_at
+                                "#
                             )
+                            .bind(Uuid::new_v4())
+                            .bind(tenant_id)
+                            .bind(contact_name)
+                            .bind(msg.from)
                             .fetch_optional(&state.db)
                             .await
                             .ok()
                             .flatten();
 
-                            let contact_id = contact_record.map(|c| c.id).unwrap_or(1); // fallback
+                            let contact_id = contact_record.map(|c| c.id).unwrap_or_else(Uuid::new_v4);
 
-                            // Create conversation if it doesn't exist
-                            let conversation_record = sqlx::query_as!(
-                                ChatConversation,
+                            let conversation_record: Option<ChatConversation> = sqlx::query_as(
                                 r#"
-                                INSERT INTO chat_conversations (tenant_id, inbox_id, contact_id, status)
-                                VALUES ($1, $2, $3, 'open')
-                                ON CONFLICT DO NOTHING
-                                RETURNING id, tenant_id, inbox_id, contact_id, status, created_at, updated_at
-                                "#,
-                                tenant_id,
-                                inbox_id,
-                                contact_id
+                                INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, status)
+                                VALUES ($1, $2, $3, $4, 'open')
+                                ON CONFLICT (id) DO NOTHING
+                                RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+                                "#
                             )
+                            .bind(Uuid::new_v4())
+                            .bind(tenant_id)
+                            .bind(inbox_id)
+                            .bind(contact_id)
                             .fetch_optional(&state.db)
                             .await
                             .ok()
                             .flatten();
 
-                            let conversation_id = conversation_record.map(|c| c.id).unwrap_or(1); // fallback
+                            let conversation_id = conversation_record.map(|c| c.id).unwrap_or_else(Uuid::new_v4);
 
-                            // Insert message
-                            let _ = sqlx::query!(
+                            let _ = sqlx::query(
                                 r#"
-                                INSERT INTO chat_messages (tenant_id, conversation_id, content, message_type)
-                                VALUES ($1, $2, $3, 0)
-                                "#,
-                                tenant_id,
-                                conversation_id,
-                                text.body
+                                INSERT INTO chat_messages (id, tenant_id, conversation_id, content, sender_type)
+                                VALUES ($1, $2, $3, $4, 'contact')
+                                "#
                             )
+                            .bind(Uuid::new_v4())
+                            .bind(tenant_id)
+                            .bind(conversation_id)
+                            .bind(text.body)
                             .execute(&state.db)
                             .await;
                         }
