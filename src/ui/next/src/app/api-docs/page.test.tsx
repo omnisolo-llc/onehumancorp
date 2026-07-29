@@ -38,7 +38,8 @@ describe('ApiDocsPage', () => {
     );
 
     expect(screen.getByText('Advanced:')).toBeInTheDocument();
-    expect(screen.getByText('This section is for developers directly integrating with our APIs. Not required for normal use.')).toBeInTheDocument();
+    expect(screen.getByText(/This section is for developers directly integrating with our APIs\. Not required for normal use\./)).toBeInTheDocument();
+    expect(screen.getByText('Learn more about API authentication.')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByTestId('swagger-ui-mock')).toBeInTheDocument();

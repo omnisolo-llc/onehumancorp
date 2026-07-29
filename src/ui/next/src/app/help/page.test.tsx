@@ -153,4 +153,25 @@ describe('HelpCenterPage', () => {
       expect(screen.queryByText('Video Tutorials')).not.toBeInTheDocument();
     });
   });
+
+  it('clears the search query when the clear button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+
+    await waitFor(() => {
+      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
+    await user.type(searchInput, 'products');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
+    });
+
+    const clearButton = screen.getByLabelText('Clear search');
+    await user.click(clearButton);
+
+    expect(searchInput).toHaveValue('');
+  });
 });

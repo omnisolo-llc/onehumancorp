@@ -57,6 +57,7 @@ export default function ApiDocsPage() {
           <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
             <span className="font-outfit cursor-help font-bold">Advanced:</span>
           </WithTooltip>{" "}This section is for developers directly integrating with our APIs. Not required for normal use.
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Learn more about API authentication.</p>
         </div>
       </div>
       {mounted && error && (

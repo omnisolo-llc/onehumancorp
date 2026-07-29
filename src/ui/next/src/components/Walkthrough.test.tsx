@@ -225,6 +225,7 @@ describe('Walkthrough Component', () => {
       expect(screen.getByText('Top Step')).toBeInTheDocument();
     });
     let bubble = screen.getByRole('dialog');
+    expect(bubble).toHaveAttribute('aria-labelledby', 'walkthrough-step-title');
 
     // Test Left
     rerender(
