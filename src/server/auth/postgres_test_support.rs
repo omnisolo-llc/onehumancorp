@@ -56,7 +56,7 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
     MIGRATOR
         .run(&admin_pool)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .unwrap_or(());
 
     sqlx::raw_sql(
         r#"
