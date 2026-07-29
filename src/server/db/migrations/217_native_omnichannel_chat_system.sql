@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS contacts (
     name TEXT,
     phone_number TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (tenant_id, phone_number)
 );
 
 CREATE TABLE IF NOT EXISTS conversations (
