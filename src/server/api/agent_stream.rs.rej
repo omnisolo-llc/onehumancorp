@@ -1,0 +1,11 @@
+--- agent_stream.rs
++++ agent_stream.rs
+@@ -19,7 +19,7 @@
+ {
+     axum::Router::new()
+         .route(
+-            "/api/v1/agents/{id}/stream",
++            "/api/v1/agents/{agent_id}/stream",
+             axum::routing::get(stream_agent),
+         )
+         .with_state(hub)
