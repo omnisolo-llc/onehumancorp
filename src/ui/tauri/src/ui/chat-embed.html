@@ -271,13 +271,19 @@
 
       async function createConversation() {
         try {
+          // Attempt to create inbox and conversation. This is simplified for the frontend.
+          // Assuming an inbox exists for the tenant.
           const res = await fetch(`/api/v1/chat/inboxes`, {
             headers: { "Authorization": `Bearer ${localStorage.getItem("token") || "guest"}` }
           });
           if(res.ok) {
             const inboxes = await res.json();
             if(inboxes.length > 0) {
-               conversationId = "00000000-0000-0000-0000-000000000000";
+               // For demo purposes, we will just use the first inbox and create a conversation if we don't have one.
+               // But usually, an anonymous user gets a conversation ID via an API call.
+               // Since we lack a dedicated public start_conversation API in our Rust implementation step,
+               // we will mock getting a conversation ID or rely on WS purely.
+               conversationId = "00000000-0000-0000-0000-000000000000"; // fallback mock
             }
           }
         } catch(e) { console.error("Error creating conversation", e); }
@@ -357,10 +363,6 @@
                   }
               }
 
-                      linkObj = data.link;
-                  }
-              }
-
               aiMsg.textContent = replyText;
               messages.appendChild(aiMsg);
 
@@ -398,5 +400,4 @@
     });
   </script>
 </body>
-  <script src="help-widget.mjs" type="module"></script>
 </html>
