@@ -218,10 +218,9 @@ impl PromptCache {
 
         if truncated {
             // Try to truncate at a word boundary to keep it "intelligent"
-            if let Some(space_idx) = last_space_byte_index {
-                if last_space_char_count > max_chars / 2 {
-                    result.truncate(space_idx);
-                }
+            if let Some(space_idx) = last_space_byte_index
+                && last_space_char_count > max_chars / 2 {
+                result.truncate(space_idx);
             }
 
             // Clean up trailing whitespace and punctuation before appending ellipsis
@@ -501,11 +500,11 @@ mod tests {
         // Truncate based on 4 chars per token. 10 tokens = 40 chars.
         let res = PromptCache::truncate_context(text, 10);
         // The function shouldn't panic, it should just truncate normally or strip part of the URL.
-        assert!(res.len() > 0);
+        assert!(!res.is_empty());
 
         let text2 = "Check out this [link](http";
         let res2 = PromptCache::truncate_context(text2, 10);
-        assert!(res2.len() > 0);
+        assert!(!res2.is_empty());
     }
 }
 

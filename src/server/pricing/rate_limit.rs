@@ -826,8 +826,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_tier_cache_hit() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-cache-hit";
 
@@ -847,13 +847,12 @@ mod tests {
                 let tier2 = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(tier2, PlanTier::Free);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_tier_cache_expiration() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-cache-exp";
 
@@ -872,13 +871,12 @@ mod tests {
                 let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(tier, PlanTier::Free);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_tier_cache_invalidation_on_set() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-cache-inv";
 
@@ -894,13 +892,12 @@ mod tests {
                 let new_tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(new_tier, PlanTier::Pro);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_get_tenant_tier_db_fallback_cached() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-cache-db";
 
@@ -915,13 +912,12 @@ mod tests {
                 // Assert it's cached now
                 assert!(limiter.tier_cache.contains_key(tenant_id));
             }
-        }
     }
 
     #[tokio::test]
     async fn test_tier_cache_concurrency_safe() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
                 let tenant_id = "test-tenant-cache-conc";
 
@@ -942,13 +938,12 @@ mod tests {
                 assert!(entry.is_some());
                 assert_eq!(entry.unwrap().0, PlanTier::Free);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_get_tenant_storage_used_negative() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-storage-negative";
 
@@ -962,13 +957,12 @@ mod tests {
                 let used = limiter.get_tenant_storage_used(tenant_id).await.unwrap();
                 assert_eq!(used, 0);
             }
-        }
     }
 
     #[tokio::test]
     async fn test_record_token_usage_negative_or_zero() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(client) = redis::Client::open(redis_url) {
+        if let Ok(redis_url) = std::env::var("REDIS_URL")
+            && let Ok(client) = redis::Client::open(redis_url) {
                 let limiter = RedisRateLimiter::new(client.clone());
                 let tenant_id = "test-tenant-tokens-neg";
 
@@ -983,6 +977,5 @@ mod tests {
                 let usage = limiter.get_token_usage(tenant_id).await.unwrap();
                 assert_eq!(usage, 0);
             }
-        }
     }
 }
