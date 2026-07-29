@@ -6670,6 +6670,12 @@ async fn create_ui_bom_item_handler(
             dynamic_workflow_state_dir,
         ),
     );
+    let chat_webhook_state = crate::integrations::chat::webhook::AppState {
+        pool: db.pool.clone(),
+        webhook_secret: std::env::var("CHAT_WEBHOOK_SECRET").unwrap_or_default(),
+    };
+    let native_chat_webhook_router = crate::integrations::chat::webhook::webhook_router(chat_webhook_state);
+
     let setup_router: axum::Router =
         axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
     let oauth_callback_router: axum::Router = axum::Router::new()
@@ -7831,6 +7837,7 @@ async fn create_ui_bom_item_handler(
         .merge(health_router)
         .merge(http_auth_router)
         .merge(setup_router)
+        .merge(native_chat_webhook_router)
         .merge(oauth_callback_router)
         .fallback(api_not_found_handler);
 
@@ -8054,6 +8061,9 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .add_service(::server_ohc::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))
+        .add_service(crate::integrations::chat::pb::chat_service_server::ChatServiceServer::with_interceptor(
+            crate::integrations::chat::service::ChatServiceImpl::new(db.pool.clone()), spiffe_interceptor
+        ))
 
         .serve(addr)
         .await?;

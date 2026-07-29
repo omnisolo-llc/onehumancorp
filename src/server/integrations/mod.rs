@@ -21,6 +21,7 @@ pub use ::server_integrations_calendly as calendly;
 pub use ::server_integrations_mailchimp as mailchimp;
 
 pub use ::server_integrations_ayrshare as ayrshare;
+pub use ::server_integrations_chat as chat;
 pub use ::server_integrations_listmonk as listmonk;
 pub use ::server_integrations_doordash as doordash;
 pub use ::server_integrations_easypost as easypost;

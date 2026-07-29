@@ -1,0 +1,24 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "mod.rs"
+
+
+
+[dependencies]
+server_auth = { path = "../../auth" }
+server_common = { path = "../../common" }
+prost = { workspace = true }
+serde = { workspace = true }
+tonic = { workspace = true }
+sqlx = { version = "0.8", features = ["postgres", "uuid", "chrono"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+tokio = { workspace = true }
+chrono = { workspace = true }
+axum = "0.8"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ohc_bazel)', 'cfg(ohc_bazel_package)', 'cfg(ohc_bazel_tauri_context)'] }
