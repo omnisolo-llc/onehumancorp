@@ -141,17 +141,12 @@ impl JetBrainsObservationMasker {
                 }
             }
             Value::Object(obj) => {
-                let original_len = obj.len();
-                let mut truncated = false;
-                let mut removed_count = 0;
-
-                // Adaptive element limit based on depth
-                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
-
-                if original_len > current_limit {
-                    // Master Catalog B.4: Context Management: JetBrains Observation Masking.
-                    // We identify priority keys first so they are less likely to be removed.
-                    let priority_keys = [
+                // Adaptive size limit for strings inside deeply nested objects.
+                // We keep all keys, but severely truncate long string values.
+                for (k, value) in obj.iter_mut() {
+                    let k_lower = k.to_lowercase();
+                    // Some keys like "error" or "stack_trace" are important, others might contain huge blobs
+                    let is_priority = [
                         "error",
                         "stack_trace",
                         "message",
@@ -165,49 +160,14 @@ impl JetBrainsObservationMasker {
                         "timestamp",
                         "version",
                         "metadata",
-                        "details", // Important for tracking errors
-                    ];
-                    let mut priority_to_keep = Vec::new();
-                    let mut regular_to_keep = Vec::new();
-                    for (k, _) in obj.iter() {
-                        let k_lower = k.to_lowercase();
-                        if priority_keys.iter().any(|&p| p == k_lower.as_str()) {
-                            priority_to_keep.push(k.clone());
-                        } else {
-                            regular_to_keep.push(k.clone());
-                        }
-                    }
-                    regular_to_keep.sort();
-                    let num_priority = priority_to_keep.len();
-                    let mut keys_to_remove = Vec::new();
-                    if num_priority >= current_limit {
-                        keys_to_remove = regular_to_keep;
-                    } else {
-                        let slots_left = current_limit - num_priority;
-                        if regular_to_keep.len() > slots_left {
-                            keys_to_remove = regular_to_keep.split_off(slots_left);
-                        }
-                    }
+                        "details",
+                    ].contains(&k_lower.as_str());
 
-                    removed_count = keys_to_remove.len();
-                    for k in &keys_to_remove {
-                        obj.remove(k);
-                    }
-                    if removed_count > 0 {
-                        truncated = true;
+                    let child_size_limit = if is_priority { size_limit } else { std::cmp::min(size_limit, 200) };
+
+                    if Self::mask_json_value(value, child_size_limit, element_limit, depth + 1) {
                         modified = true;
                     }
-                }
-                for (_, value) in obj.iter_mut() {
-                    if Self::mask_json_value(value, size_limit, element_limit, depth + 1) {
-                        modified = true;
-                    }
-                }
-                if truncated {
-                    obj.insert(
-                        "_masked_keys".to_string(),
-                        Value::String(format!("[Masked object: {} keys truncated]", removed_count)),
-                    );
                 }
             }
 
