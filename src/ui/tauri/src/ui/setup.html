@@ -95,6 +95,7 @@
       <div id="step-context" class="step">
         <h2>Context</h2>
         <label class="context-card" data-testid="context-storefront"><input type="radio" name="context" value="Storefront"> Storefront</label>
+        <label class="context-card" data-testid="context-agency"><input type="radio" name="context" value="Agency or Studio"> Agency or Studio</label>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
       </div>
 
@@ -103,6 +104,7 @@
         <select data-testid="business-categories" id="business-categories">
           <option value="">Select...</option>
           <option value="Home Baker">Home Baker</option>
+          <option value="Design">Design</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
       </div>
@@ -117,8 +119,10 @@
       <div id="step-assistant" class="step">
         <h2>Assistant</h2>
         <label class="team-support-card toggle-row"><input type="checkbox" id="cap-inventory" name="cap-inventory" data-testid="team-support" value="Team Support"> Cap Inventory</label>
-        <select data-testid="assistant-tone">
+        <label class="team-support-card toggle-row"><input type="checkbox" id="team-operations" name="team-operations" data-testid="team-operations" value="Team Operations"> Team Operations</label>
+        <select data-testid="assistant-tone" id="assistant-tone">
           <option value="Friendly">Friendly</option>
+          <option value="Professional">Professional</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
       </div>
@@ -197,6 +201,16 @@
         const getVal = (selector) => { const el = document.querySelector(selector); return el ? el.value : ''; };
         state.businessName = getVal('#business-name');
         state.categories = getVal('#business-categories');
+
+        const contextRadio = document.querySelector('input[name="context"]:checked');
+        if (contextRadio) {
+            state.context = contextRadio.value;
+        }
+
+        const operationsCheckbox = document.getElementById('team-operations');
+        if (operationsCheckbox && operationsCheckbox.checked) {
+            state.teamOperations = true;
+        }
         state.adminName = getVal('[data-testid="admin-name"]');
         state.adminEmail = getVal('[data-testid="admin-email"]');
         state.adminPassword = getVal('[data-testid="admin-password"]');
@@ -367,7 +381,7 @@
         saveState(); // Ensure latest password state is captured right before submit
         try {
           const payload = {
-            business_type: state.categories || "Online Store",
+            business_type: state.context === "Agency or Studio" ? "Agency" : (state.categories || "Online Store"),
             company_name: state.businessName || "My Business",
             company_description: state.instantBio || state.businessName,
             selling_categories: state.categories ? [state.categories] : ["physical"],
