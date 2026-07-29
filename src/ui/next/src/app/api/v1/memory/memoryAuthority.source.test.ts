@@ -8,9 +8,11 @@ const sensitivePages = [
   "src/app/inbox/page.tsx",
 ];
 
+const WORKSPACE_ROOT = resolve(__dirname, "../../../../../");
+
 describe("memory page authority source contract", () => {
   test.each(sensitivePages)("%s does not source identity from browser storage", (file) => {
-    const source = readFileSync(resolve(process.cwd(), file), "utf8");
+    const source = readFileSync(resolve(WORKSPACE_ROOT, file), "utf8");
     expect(source).not.toMatch(/localStorage\s*\.\s*getItem\s*\(\s*["'](?:auth_token|token|tenant_id|tenant|user_id)["']/);
     expect(source).not.toMatch(/["']Authorization["']\s*:/);
     expect(source).not.toMatch(/["']X-(?:Tenant|User)-ID["']\s*:/i);

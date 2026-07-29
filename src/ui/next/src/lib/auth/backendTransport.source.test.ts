@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const API_ROOT = join(process.cwd(), "src/app/api");
+const WORKSPACE_ROOT = join(__dirname, "../../..");
+const API_ROOT = join(WORKSPACE_ROOT, "src/app/api");
 const BACKEND_CONFIGURATION =
   /process\.env\.[A-Z0-9_]*(?:URL|ORIGIN)|https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/;
 const BROWSER_IDENTITY =
@@ -29,7 +30,7 @@ describe("protected backend transport source contract", () => {
           : []),
       ];
       return reasons.map(
-        (reason) => `${relative(process.cwd(), file)}: ${reason}`,
+        (reason) => `${relative(WORKSPACE_ROOT, file)}: ${reason}`,
       );
     });
 
@@ -37,7 +38,7 @@ describe("protected backend transport source contract", () => {
   });
 
   it("does not reintroduce backend rewrites that bypass the server transport", () => {
-    const config = readFileSync(join(process.cwd(), "next.config.mjs"), "utf8");
+    const config = readFileSync(join(WORKSPACE_ROOT, "next.config.mjs"), "utf8");
     expect(config).not.toMatch(/\brewrites\s*\(/);
     expect(config).not.toMatch(/destination\s*:.*BACKEND_URL/);
   });

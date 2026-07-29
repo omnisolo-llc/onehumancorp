@@ -2,8 +2,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+const WORKSPACE_ROOT = join(__dirname, "../..");
+
 function source(relativePath: string): string {
-  return readFileSync(join(process.cwd(), relativePath), "utf8");
+  return readFileSync(join(WORKSPACE_ROOT, relativePath), "utf8");
 }
 
 describe("product-shell overlay authority", () => {

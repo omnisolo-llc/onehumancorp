@@ -108,6 +108,9 @@ describe('CustomerReferralProgramPage', () => {
 
     render(<CustomerReferralProgramPage />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
 

@@ -2,15 +2,17 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
+const WORKSPACE_ROOT = join(__dirname, "../../..");
+
 const ROOTS = [
-  join(process.cwd(), "src/app"),
-  join(process.cwd(), "src/components"),
-  join(process.cwd(), "src/hooks"),
-  join(process.cwd(), "src/lib"),
+  join(WORKSPACE_ROOT, "src/app"),
+  join(WORKSPACE_ROOT, "src/components"),
+  join(WORKSPACE_ROOT, "src/hooks"),
+  join(WORKSPACE_ROOT, "src/lib"),
 ];
 const SERVER_ONLY_FILES = new Set([
-  join(process.cwd(), "src/lib/auth/backendTransport.ts"),
-  join(process.cwd(), "src/lib/auth/serverSession.ts"),
+  join(WORKSPACE_ROOT, "src/lib/auth/backendTransport.ts"),
+  join(WORKSPACE_ROOT, "src/lib/auth/serverSession.ts"),
 ]);
 const BROWSER_IDENTITY =
   /localStorage\s*\.\s*getItem\s*\(\s*["'](?:auth_token|ohc_token|organization_id|roles|spiffe_id|tenant|tenant_id|token|user_id)["']\s*\)/;
@@ -21,7 +23,7 @@ function productionBrowserFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
-      if (path === join(process.cwd(), "src/app/api")) return [];
+      if (path === join(WORKSPACE_ROOT, "src/app/api")) return [];
       return productionBrowserFiles(path);
     }
     if (!/\.(?:ts|tsx)$/.test(entry.name)) return [];
@@ -41,7 +43,7 @@ describe("browser authentication authority", () => {
           : []),
       ];
       return reasons.map(
-        (reason) => `${relative(process.cwd(), file)}: ${reason}`,
+        (reason) => `${relative(WORKSPACE_ROOT, file)}: ${reason}`,
       );
     });
 

@@ -18,6 +18,7 @@
     "glob": "^13.0.6",
     "google-protobuf": "^3.21.4",
     "isomorphic-dompurify": "^3.18.0",
+    "jose": "6.2.3",
     "marked": "^18.0.5",
     "next": "^16.2.11",
     "pg": "8.21.0",
