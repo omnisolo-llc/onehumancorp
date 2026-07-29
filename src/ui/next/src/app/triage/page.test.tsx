@@ -39,18 +39,12 @@ Object.defineProperty(window, 'matchMedia', {
 vi.mock('../../components/AppShell', () => {
     return {
         default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
-        AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
-        AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
-        AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
         AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
     }
 });
 vi.mock('@/app/components/AppShell', () => {
     return {
         default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
-        AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
-        AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
-        AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
         AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
     }
 });
