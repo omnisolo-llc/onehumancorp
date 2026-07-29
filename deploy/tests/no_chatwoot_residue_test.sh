@@ -21,13 +21,11 @@ fi
 
 guard_path="deploy/tests/no_chatwoot_residue_test.sh"
 historical=(
-  .agent-task/report/task_output.md
   docs/research/ohc_tool_integration_research_report.md
   docs/reports/tool_integration_research_report_q3.md
   docs/research/triage_report_bazel.md
 )
 allowed_reference_paths=(
-  .agent-task/report/task_output.md
   .github/workflows/ci.yml
   "$guard_path"
   .agent/task.tmp
