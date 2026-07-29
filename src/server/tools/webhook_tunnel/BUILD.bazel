@@ -1,0 +1,51 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(
+    [
+        "mod.rs",
+        "server.rs",
+        "tests.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "server_tools_webhook_tunnel",
+    srcs = [
+        "mod.rs",
+        "server.rs",
+        "tests.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "//src/proto:agent_prost",
+        "//src/proto:agent_service_tonic",
+        "//src/proto:app_tonic",
+        "//src/proto:common_prost",
+        "//src/proto:hub_tonic",
+        "//src/proto:mcp_proxy_prost",
+        "//src/proto:mcp_proxy_tonic",
+        "//src/server/auth:server_auth",
+        "//src/server/ohc:server_ohc",
+        "//src/server/telemetry:server_telemetry",
+        "@crates//:axum",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "server_tools_webhook_tunnel_test",
+    crate = ":server_tools_webhook_tunnel",
+)

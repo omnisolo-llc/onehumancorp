@@ -348,6 +348,9 @@ SERVER_RS_SRCS = [
     "//src/server/tools/config_sync:mod.rs",
     "//src/server/tools/config_sync:server.rs",
     "//src/server/tools/config_sync:tests.rs",
+    "//src/server/tools/webhook_tunnel:mod.rs",
+    "//src/server/tools/webhook_tunnel:server.rs",
+    "//src/server/tools/webhook_tunnel:tests.rs",
     "//src/server/tools/fsmcp:mod.rs",
     "//src/server/tools/hybridfsmcp:factory.rs",
     "//src/server/tools/hybridfsmcp:mod.rs",
@@ -706,7 +709,10 @@ SERVER_LIB_SUBCRATE_TESTS = [
 SERVER_LIB_SPLIT_TESTS = [
     "server_lib_%s_unit_test" % group
     for group in SERVER_LIB_TEST_GROUPS
-] + SERVER_LIB_SUBCRATE_TESTS
+] + SERVER_LIB_SUBCRATE_TESTS + [
+    ":config_sync_unit_test",
+    ":webhook_tunnel_unit_test",
+]
 
 [
     rust_test(
@@ -783,6 +789,23 @@ rust_sharded_test(
     binary = ":server_lib_core_unit_test_bin",
     filters = SERVER_LIB_TEST_GROUPS["core"],
     shard_count = 6,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+rust_test(
+    name = "webhook_tunnel_unit_test",
+    size = "large",
+    args = [
+        "--test",
+        "tools::webhook_tunnel",
+    ],
+    crate = ":server_lib",
+    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    edition = "2021",
+    rustc_flags = ["--cfg=ohc_bazel"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

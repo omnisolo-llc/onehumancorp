@@ -38,4 +38,14 @@ async fn test_proxy_tunnel() {
     let _ = client.start().await;
 
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+    // We can't easily test `forward_webhook` from the server here directly
+    // since the server is running in a spawned task and we moved it.
+    // So we'll test it by creating another instance just for test.
+    let server2 = ReverseTunnelServer::new(Arc::new(sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect_lazy("postgres://invalid:invalid@localhost:1/test")
+        .unwrap()));
+    let res = server2.forward_webhook("test", b"{}".to_vec()).await;
+    assert!(res.is_err()); // not connected to this server instance
 }

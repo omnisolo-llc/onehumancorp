@@ -6,6 +6,7 @@ use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
 use crate::tools::config_sync::server::ConfigSyncServer;
+use crate::tools::webhook_tunnel::server::WebhookTunnelMcpServer;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
@@ -13,6 +14,7 @@ pub struct MyMcpService {
     hub: Arc<crate::hub::Hub>,
     hybrid_fs_server: Arc<HybridFSMcpServer>,
     config_sync_server: Arc<ConfigSyncServer>,
+    webhook_tunnel_server: Arc<WebhookTunnelMcpServer>,
 }
 
 impl MyMcpService {
@@ -23,6 +25,7 @@ impl MyMcpService {
             hub: hub.clone(),
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
             config_sync_server: Arc::new(ConfigSyncServer::new(hub.pool.clone())),
+            webhook_tunnel_server: Arc::new(WebhookTunnelMcpServer::new(Arc::new(hub.pool.clone()))),
         }
     }
 }
@@ -68,6 +71,8 @@ impl McpService for MyMcpService {
         tools.extend(hybrid_fs_tools);
         let config_sync_tools = self.config_sync_server.get_tools();
         tools.extend(config_sync_tools);
+        let webhook_tunnel_tools = self.webhook_tunnel_server.get_tools();
+        tools.extend(webhook_tunnel_tools);
         Ok(Response::new(McpToolsResponse {
             tools,
         }))
@@ -94,6 +99,11 @@ impl McpService for MyMcpService {
         
         if req.tool_id.is_empty() {
             return Err(Status::invalid_argument("toolId is required"));
+        }
+
+        if req.tool_id == "webhook_forward" {
+            let res = self.webhook_tunnel_server.invoke_tool(&req).await?;
+            return Ok(Response::new(res));
         }
 
         return match req.tool_id.as_str() {
