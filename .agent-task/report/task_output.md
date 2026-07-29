@@ -1,4 +1,6 @@
 issue_title: "Implement Native Rust Omnichannel Chat System (Replace Chatwoot)"
+> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
+
 issue_description: |
   # Problem Statement
   Small business owners like Carlos (handyman) and Maya (baker) receive customer inquiries across unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages and slow response times. Traditional unified inboxes (Shopify Inbox, Wix Inbox) aggregate messages but lack context and require manual typing. OHC currently relies on Chatwoot (a 3rd party Ruby on Rails service), which limits our ability to seamlessly integrate our AI Agent Workflows ("The Ambassador") and enforce strict multi-tenant Data Modeling. We need to retire Chatwoot and build a native, high-performance omnichannel chat system in Rust within `onehumancorp/mono`.
