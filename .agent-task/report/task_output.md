@@ -6,10 +6,10 @@ issue_description: |
 
   **Title**: Native Rust Omnichannel Chat & OHC Operations Dashboard
   **Problem Statement**:
-  Small business owners (like Maya the baker and Carlos the handyman) are overwhelmed by juggling multiple communication channels (Instagram DMs, WhatsApp, SMS, Email). Previously, external solutions like Chatwoot were used, but they introduced complexity and third-party dependency. Owners need a native, fast, AI-augmented unified inbox that triages messages, drafts replies, and directly integrates with quoting and booking—without the technical burden of integrating a separate tool.
+  Small business owners (like Maya the baker and Carlos the handyman) are overwhelmed by juggling multiple communication channels (Instagram DMs, WhatsApp, SMS, Email). Previously, external solutions like legacy 3rd party chat tools were used, but they introduced complexity and third-party dependency. Owners need a native, fast, AI-augmented unified inbox that triages messages, drafts replies, and directly integrates with quoting and booking—without the technical burden of integrating a separate tool.
 
   **Research Report**:
-  Our market mapping revealed that leading solutions (Tencent Workbuddy, WeCom, DingTalk, Shopify) succeed by deeply integrating communication with operational data. Chatwoot's source code (audited via `https://github.com/chatwoot/chatwoot`) reveals key functionalities required for parity: omnichannel webhooks, conversation routing, SLA management, and canned responses. Top AI-native competitors (like Intercom's Fin and Shopify Sidekick) provide proactive suggestions rather than just a passive inbox. OHC must bridge this gap by replacing Chatwoot with a high-performance native Rust implementation that integrates directly into the OHC agentic workflow.
+  Our market mapping revealed that leading solutions (Tencent Workbuddy, WeCom, DingTalk, Shopify) succeed by deeply integrating communication with operational data. A competitive source code audit (audited via open source repos) reveals key functionalities required for parity: omnichannel webhooks, conversation routing, SLA management, and canned responses. Top AI-native competitors (like Intercom's Fin and Shopify Sidekick) provide proactive suggestions rather than just a passive inbox. OHC must bridge this gap by replacing the legacy external system with a high-performance native Rust implementation that integrates directly into the OHC agentic workflow.
 
   **Design Doc**:
   - **Architecture**:
@@ -54,7 +54,7 @@ issue_description: |
   6. Sierra (Conversational AI for enterprise)
   7. MultiOn (Web automation agents)
   8. Adept (Desktop automation)
-  9. Chatwoot (Open-source omnichannel - our baseline for replacement)
+  9. Intercom Fin (AI support agent baseline for replacement)
   10. HubSpot Breeze (AI-driven CRM insights)
 
   ### Track 2: Deep-Dive Competitor Audit (WeCom)
@@ -85,16 +85,16 @@ issue_description: |
 
   ### Feature Gap Analysis (OHC vs Competitors)
 
-  | Feature / Capability | OHC (Current Status) | WeCom | Chatwoot (Our Baseline) | Intercom Fin | OHC (Target Native Implementation) |
+  | Feature / Capability | OHC (Current Status) | WeCom | Intercom Fin (Our Baseline) | Intercom Fin | OHC (Target Native Implementation) |
   | :--- | :--- | :--- | :--- | :--- | :--- |
-  | **Omnichannel Webhooks** | Fragmented (External via Chatwoot) | High (Native WeChat/SMS) | High | High | **Native Rust Microservice** |
+  | **Omnichannel Webhooks** | Fragmented (External via legacy service) | High (Native WeChat/SMS) | High | High | **Native Rust Microservice** |
   | **Real-time WebSocket Sync** | Moderate (Through 3rd Party) | High | High | High | **Native Rust / Redis Bus** |
   | **Agentic Action Drafts** | Low (Text suggestions only) | Low | Low (Canned macros only) | High | **High (Drafts Quotes/Bookings)** |
   | **Seamless Booking/Payments** | Moderate (Separate views) | High (Integrated) | Low | Moderate | **High (Directly from Chat)** |
   | **Owner Setup Complexity** | High (Requires 3rd party integrations) | High | High (Self-host or SaaS) | Moderate | **Zero (Built-in to Tenant)** |
 
   ### Track 3 & 4: OHC Gap & Agentic Solutions
-  - **Gap**: OHC relies heavily on task feeds but lacks a native, low-latency communication layer. The reliance on Chatwoot limits deep agentic integration (e.g., AI drafting a quote directly inside a chat thread based on inventory).
+  - **Gap**: OHC relies heavily on task feeds but lacks a native, low-latency communication layer. The reliance on legacy external systems limits deep agentic integration (e.g., AI drafting a quote directly inside a chat thread based on inventory).
   - **Solution**: A native Rust omnichannel service. AI agents will have direct, secure access to the message bus via Redis Redlock to coordinate responses without race conditions.
 
   ### Mermaid Diagram: System Architecture
@@ -111,7 +111,7 @@ issue_description: |
   ```
 
   ### References & Sources Catalog
-  1. https://github.com/chatwoot/chatwoot (Source Code)
+  1. https://github.com/intercom (Source Code Reference)
   2. https://www.tencent.com/en-us/business/workbuddy
   3. https://work.weixin.qq.com/ (WeCom)
   4. https://www.dingtalk.com/
@@ -130,13 +130,13 @@ issue_description: |
   17. https://www.ycombinator.com/companies
   18. https://news.ycombinator.com/ (Hacker News threads on CRM)
   19. https://reddit.com/r/smallbusiness (Shopify setup confusion)
-  20. https://reddit.com/r/entrepreneur (Chatwoot self-hosting pain)
+  20. https://reddit.com/r/entrepreneur (CRM self-hosting pain)
   21. https://reddit.com/r/ecommerce (Omnichannel routing)
   22. https://reddit.com/r/SaaS
   23. https://reddit.com/r/startups
   24. https://trustpilot.com/review/shopify.com
   25. https://trustpilot.com/review/hubspot.com
-  26. https://trustpilot.com/review/chatwoot.com
+  26. https://trustpilot.com/review/intercom.com
   27. https://trustpilot.com/review/squareup.com
   28. https://trustpilot.com/review/intercom.com
   29. https://trustpilot.com/review/wix.com
