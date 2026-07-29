@@ -1,26 +1,26 @@
-issue_title: "Native Rust WhatsApp Channel Integration (Chatwoot Parity)"
+issue_title: "Native Rust WhatsApp Channel Integration (Omnichannel Parity)"
 issue_description: |
   ### Problem Statement
   Small-business owners (like Carlos, the Field Service Owner, and Maya, the Home Baker) rely heavily on WhatsApp to capture demand, provide customer service, and close sales. Currently, OHC lacks a native omni-channel integration for WhatsApp. Relying on an external third-party inbox tool introduces latency, data fragmentation, and breaks the "one assistant" experience for the owner. We need a native WhatsApp channel directly within OHC's unified inbox to triage messages and coordinate actions automatically.
 
-  ### Research Report (Chatwoot Benchmarking)
-  **Target Evaluated**: WhatsApp Cloud API Channel Connector (based on Chatwoot source code benchmarking).
+  ### Research Report (External Source Benchmarking)
+  **Target Evaluated**: WhatsApp Cloud API Channel Connector (based on external open-source omnichannel inbox benchmarking).
 
-  *Context*: As per the Chatwoot Retirement standard, we are replacing external Chatwoot integrations by natively building its core capabilities in Rust for OHC.
+  *Context*: As per the architecture standard, we are building core native omnichannel capabilities in Rust for OHC.
 
-  *Findings from Chatwoot Source (`app/models/channel/whatsapp.rb` & related)*:
-  - **Provider Strategy**: Chatwoot supports Meta's WhatsApp Cloud API (`whatsapp_cloud`) and 360dialog. Meta's Cloud API provides the best long-term stability and cost structure (free tiers available for Meta developers).
+  *Findings from Benchmarking*:
+  - **Provider Strategy**: Support for Meta's WhatsApp Cloud API (`whatsapp_cloud`) and 360dialog is standard in the industry. Meta's Cloud API provides the best long-term stability and cost structure (free tiers available for Meta developers).
   - **Core Capabilities observed**:
     - **Message Templates**: Syncing and managing pre-approved WhatsApp templates used for proactive outreach and 24h-window recovery.
-    - **WhatsApp Calling**: Meta's calling API allows voice interactions natively, a feature Chatwoot enables via a specific `calling_enabled` configuration and webhook setup.
-    - **Webhook Management**: Chatwoot dynamically registers and tears down webhooks during channel creation/destruction, passing verify tokens securely.
+    - **WhatsApp Calling**: Meta's calling API allows voice interactions natively.
+    - **Webhook Management**: Dynamic registration and teardown of webhooks during channel creation/destruction, passing verify tokens securely.
   - **Relevance to OHC Personas**:
     - *Maya*: Needs to receive cake inquiries via WhatsApp and have OHC draft replies natively.
     - *Carlos*: Can use the WhatsApp channel to send automated ETA updates via message templates when on route.
 
   ### Design Doc
   **Integration Strategy**:
-  - We will implement a `WhatsApp Channel` directly in OHC's backend (using Rust instead of Ruby).
+  - We will implement a `WhatsApp Channel` directly in OHC's backend (using Rust).
   - **Triggers**:
     - The owner can connect their Meta Business Account (WhatsApp Cloud) from the OHC settings via an OAuth or token-entry flow.
     - Incoming WhatsApp messages via Webhook trigger OHC's "Work Triage" agent.
