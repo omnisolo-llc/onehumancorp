@@ -1,0 +1,26 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_chat",
+    srcs = [
+        "engine.rs",
+        "models.rs",
+        "lib.rs",
+        "tests.rs",
+    ],
+    crate_root = "lib.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:sqlx",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_chat_test",
+    crate = ":server_integrations_chat",
+    edition = "2024",
+)
