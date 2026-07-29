@@ -80,6 +80,7 @@ pub mod sona_patterns;
 pub mod swarm_topology;
 pub mod visual_workflow;
 pub mod visual_workflow_client;
+pub mod omnichannel_chat;
 
 pub mod agentic_seek;
 pub mod pi;

@@ -59,6 +59,7 @@ rust_library(
         "auth.rs",
         "autogen.rs",
         "checkpointer.rs",
+        "omnichannel_chat.rs",
         "claude_subagents.rs",
         "codex_runner.rs",
         "compaction.rs",
