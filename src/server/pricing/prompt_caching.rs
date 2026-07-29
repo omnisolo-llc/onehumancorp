@@ -507,6 +507,29 @@ mod tests {
         let res2 = PromptCache::truncate_context(text2, 10);
         assert!(res2.len() > 0);
     }
+
+    #[test]
+    fn test_prompt_cache_boundary_overflow_values() {
+        // Zero capacity edge case
+        let cache = PromptCache::with_capacity(Duration::from_secs(10), 0);
+        cache.set("key1", "val1", 1_000_000_000);
+        assert_eq!(cache.max_capacity, 0);
+
+        // Huge token count bounds check
+        let cache_huge = PromptCache::new(Duration::from_secs(10));
+        cache_huge.set("key_huge", "val_huge", usize::MAX);
+        let res = cache_huge.get("key_huge");
+        assert!(res.is_some());
+        assert_eq!(res.unwrap().token_count, usize::MAX);
+
+        // Zero TTL edge case
+        let cache_zero_ttl = PromptCache::new(Duration::from_secs(0));
+        cache_zero_ttl.set("key_zero", "val_zero", 100);
+        let res_zero = cache_zero_ttl.get("key_zero");
+        if let Some(r) = res_zero {
+            assert_eq!(r.text, "val_zero");
+        }
+    }
 }
 
 #[cfg(test)]

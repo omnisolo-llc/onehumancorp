@@ -1,9 +1,21 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 function page(relativePath: string): string {
-  return readFileSync(join(process.cwd(), "src/app", relativePath), "utf8");
+  let filePath = join(process.cwd(), "src/app", relativePath);
+  if (!existsSync(filePath)) {
+    filePath = join(process.cwd(), "src/ui/next/src/app", relativePath);
+  }
+  return readFileSync(filePath, "utf8");
+}
+
+function resolveComponent(relativePath: string): string {
+  let filePath = join(process.cwd(), relativePath);
+  if (!existsSync(filePath)) {
+    filePath = join(process.cwd(), "src/ui/next", relativePath);
+  }
+  return readFileSync(filePath, "utf8");
 }
 
 describe("page rendering resilience", () => {
@@ -38,13 +50,13 @@ describe("page rendering resilience", () => {
 
   it("keeps handled optional-help failures out of the error console", () => {
     expect(page("help/page.tsx")).not.toContain("console.error(err)");
-    expect(readFileSync(join(process.cwd(), "src/components/TooltipRegistry.tsx"), "utf8"))
+    expect(resolveComponent("src/components/TooltipRegistry.tsx"))
       .not.toContain("console.error('Failed to load tooltips'");
   });
 
   it("uses App Router metadata primitives and deterministic render values", () => {
     expect(page("crewai/page.tsx")).not.toContain("next/head");
-    expect(readFileSync(join(process.cwd(), "src/components/VoiceAssistant.tsx"), "utf8"))
+    expect(resolveComponent("src/components/VoiceAssistant.tsx"))
       .not.toContain("Math.random()");
 
     const countdown = page("viral-countdown-widget/page.tsx");

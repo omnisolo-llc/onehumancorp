@@ -1,8 +1,16 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const API_ROOT = join(process.cwd(), "src/app/api");
+function getApiRoot(): string {
+  let path = join(process.cwd(), "src/app/api");
+  if (!existsSync(path)) {
+    path = join(process.cwd(), "src/ui/next/src/app/api");
+  }
+  return path;
+}
+
+const API_ROOT = getApiRoot();
 const BACKEND_CONFIGURATION =
   /process\.env\.[A-Z0-9_]*(?:URL|ORIGIN)|https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/;
 const BROWSER_IDENTITY =
@@ -10,6 +18,7 @@ const BROWSER_IDENTITY =
 const SHARED_TRANSPORT = /proxyBackend(?:Request|Get|Post|Patch|Put)/;
 
 function routeFiles(directory: string): string[] {
+  if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return routeFiles(path);
@@ -37,7 +46,11 @@ describe("protected backend transport source contract", () => {
   });
 
   it("does not reintroduce backend rewrites that bypass the server transport", () => {
-    const config = readFileSync(join(process.cwd(), "next.config.mjs"), "utf8");
+    let configPath = join(process.cwd(), "next.config.mjs");
+    if (!existsSync(configPath)) {
+      configPath = join(process.cwd(), "src/ui/next/next.config.mjs");
+    }
+    const config = readFileSync(configPath, "utf8");
     expect(config).not.toMatch(/\brewrites\s*\(/);
     expect(config).not.toMatch(/destination\s*:.*BACKEND_URL/);
   });

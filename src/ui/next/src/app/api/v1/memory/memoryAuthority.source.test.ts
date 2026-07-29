@@ -10,7 +10,11 @@ const sensitivePages = [
 
 describe("memory page authority source contract", () => {
   test.each(sensitivePages)("%s does not source identity from browser storage", (file) => {
-    const source = readFileSync(resolve(process.cwd(), file), "utf8");
+    let filePath = resolve(process.cwd(), file);
+    if (!require("node:fs").existsSync(filePath)) {
+      filePath = resolve(process.cwd(), "src/ui/next", file);
+    }
+    const source = readFileSync(filePath, "utf8");
     expect(source).not.toMatch(/localStorage\s*\.\s*getItem\s*\(\s*["'](?:auth_token|token|tenant_id|tenant|user_id)["']/);
     expect(source).not.toMatch(/["']Authorization["']\s*:/);
     expect(source).not.toMatch(/["']X-(?:Tenant|User)-ID["']\s*:/i);

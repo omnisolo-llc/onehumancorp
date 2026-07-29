@@ -1,10 +1,12 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    setupFiles: ['./setupTests.ts', './src/ui/next/vitest.setup.ts'],
     globals: true,
     include: [
       'src/ui/next/src/**/*.test.{ts,tsx}',
@@ -22,5 +24,11 @@ export default defineConfig({
       '**/.cache/**',
     ],
     cache: false,
+  },
+  resolve: {
+    preserveSymlinks: true,
+    alias: {
+      '@': path.resolve(__dirname, './src/ui/next/src'),
+    },
   },
 })
