@@ -54,6 +54,9 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
     // Compile visual blocks into a DAG/JSON structure
     const nodeMap: NodeMap = {};
 
+
+
+
     for (let i = 0; i < workflowBlocks.length; i++) {
       const b = workflowBlocks[i];
 
@@ -78,6 +81,9 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
         next: nextTargets
       };
     }
+
+
+
 
 
     const payloadString = JSON.stringify({

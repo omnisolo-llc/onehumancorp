@@ -4156,7 +4156,7 @@ mod tests {
 
         temp_env::with_vars(
             vec![
-                ("OHC_DATABASE_URL", Some(&*database_url)),
+                ("OHC_DATABASE_URL", Some(database_url.as_str())),
                 ("OHC_SQLITE_KEY", Some("dummy_key")),
             ],
             || {
@@ -4454,7 +4454,7 @@ mod security_tests_final {
 
         temp_env::with_vars(
             vec![
-                ("OHC_DATABASE_URL", Some(&*database_url)),
+                ("OHC_DATABASE_URL", Some(database_url.as_str())),
                 ("OHC_SQLITE_KEY", Some("dummy_key")),
             ],
             || {
