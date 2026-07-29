@@ -354,7 +354,6 @@ pub async fn handle_omnichannel_webhook(
     });
 
     let enqueue_result = match &state.db.store {
-    let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             let res = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
                 .bind(&job_id)

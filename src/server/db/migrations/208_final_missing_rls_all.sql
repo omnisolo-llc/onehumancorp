@@ -826,3 +826,12 @@ ALTER TABLE IF EXISTS work_item DISABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS tenant_isolation_work_tasks ON work_tasks;
 ALTER TABLE IF EXISTS work_tasks DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_isolation_conversations ON conversations;
+ALTER TABLE IF EXISTS conversations DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_isolation_messages ON messages;
+ALTER TABLE IF EXISTS messages DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_isolation_ai_drafts ON ai_drafts;
+ALTER TABLE IF EXISTS ai_drafts DISABLE ROW LEVEL SECURITY;
