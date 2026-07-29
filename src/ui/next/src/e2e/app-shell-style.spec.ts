@@ -296,7 +296,7 @@ test.describe('App shell visual consistency', () => {
         }
 
         if (route === '/agents') {
-          const utilitySample = await page.locator('.rounded-2xl').evaluateAll((elements) => elements
+          const utilityTest = await page.locator('.rounded-2xl').evaluateAll((elements) => elements
             .map((element) => {
               const rect = element.getBoundingClientRect();
               const styles = window.getComputedStyle(element);
@@ -314,11 +314,11 @@ test.describe('App shell visual consistency', () => {
                 ].map((value) => parseFloat(value || '0')),
               };
             })
-            .find((sample) => sample.visible && sample.padding.some((value) => value > 0)));
+            .find((test) => test.visible && test.padding.some((value) => value > 0)));
 
-          expect.soft(utilitySample, 'expected a visible padded .rounded-2xl utility sample').toBeDefined();
-          expect.soft(utilitySample?.radius).toBeGreaterThan(0);
-          expect.soft(utilitySample?.padding.some((value) => value > 0)).toBe(true);
+          expect.soft(utilityTest, 'expected a visible padded .rounded-2xl utility test').toBeDefined();
+          expect.soft(utilityTest?.radius).toBeGreaterThan(0);
+          expect.soft(utilityTest?.padding.some((value) => value > 0)).toBe(true);
         }
 
         if (route === '/inbox') {

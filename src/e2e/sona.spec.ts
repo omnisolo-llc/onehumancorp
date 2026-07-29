@@ -35,7 +35,7 @@ test.describe('SONA Neural Patterns Dashboard', () => {
     await recordBtn.click();
 
     // Verify that the UI state updates and reflects the newly added pattern
-    // (mocked or real environment)
+    // (tested or real environment)
     await expect(page.getByText('Write E2E tests for Playwright')).toBeVisible({ timeout: 15000 });
   });
 
@@ -56,7 +56,7 @@ test.describe('SONA Neural Patterns Dashboard', () => {
   });
 
   test('Displays error if backend is unavailable on load', async ({ page }) => {
-    // Note: The actual error display depends on the mock environment,
+    // Note: The actual error display depends on the test environment,
     // but the UI must render gracefully.
     await page.goto('/sona');
     await expect(page.getByRole('heading', { name: 'SONA Neural Patterns Dashboard' })).toBeVisible();

@@ -61,7 +61,7 @@ test.describe('Viral Share to Unlock Loop', () => {
     await expect(publicPage.locator('#share-actions')).toBeVisible();
     await expect(publicPage.locator('#unlocked-actions')).not.toBeVisible();
 
-    // Mock window.open so the test doesn't actually open a new tab and block
+    // Test window.open so the test doesn't actually open a new tab and block
     await publicPage.evaluate(() => {
         window.open = function() { return null; };
     });

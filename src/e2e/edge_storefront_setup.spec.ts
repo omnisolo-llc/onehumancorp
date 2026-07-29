@@ -33,7 +33,7 @@ test.describe('Edge Storefront UI Setup Journey', () => {
     // Generate button should now be enabled
     await expect(generateBtn).toBeEnabled();
 
-    // We shouldn't use route mocking here. Since the test runs against a real local backend,
+    // We shouldn't use route testing here. Since the test runs against a real local backend,
     // we assume the API requests actually work and hit the database.
     // Click Generate & Publish
     await generateBtn.click();

@@ -29,7 +29,7 @@ test.describe('Scalable multi-agent deployment', () => {
     await page.fill('input[placeholder="e.g. Analyze dataset"]', 'Test Scalable Task');
 
     // Run deployment
-    // We mock the API call in E2E since 1000 requests to rust backend might overwhelm test env? No, Playwright shouldn't mock backend.
+    // We test the API call in E2E since 1000 requests to rust backend might overwhelm test env? No, Playwright shouldn't test backend.
     // The rust backend uses a semaphore and handles 1000 tasks instantly in test mode.
     await page.locator('#deploy-agents-btn').click();
 

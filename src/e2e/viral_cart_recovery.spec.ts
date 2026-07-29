@@ -2,7 +2,7 @@ import { test, expect, adminPage } from './fixtures';
 
 
 test.describe('Cart Recovery Feature', () => {
-  test('should verify abandoned cart recovery flow without mock data', async ({ page, context }) => {
+  test('should verify abandoned cart recovery flow without test data', async ({ page, context }) => {
     page = await adminPage(page, context);
 
     // Navigate to cart recovery
@@ -11,7 +11,7 @@ test.describe('Cart Recovery Feature', () => {
     // Assert heading is visible
     await expect(page.locator('h1:has-text("Abandoned Cart Recovery")')).toBeVisible();
 
-    // With true unmocked API and no seed data, cart count should be 0
+    // With true untested API and no seed data, cart count should be 0
     await expect(page.locator('#cart-count')).toHaveText('0');
 
     // Send button should be disabled when there are 0 carts

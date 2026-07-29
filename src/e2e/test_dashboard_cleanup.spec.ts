@@ -58,8 +58,8 @@ test.describe('Dashboard Cleanup Audit', () => {
     expect(tooltipLoaded).toBe(false);
   });
 
-  test('Verify gracefully hiding AI savings widget without network mocking', async ({ page, loginAs, unlimitedAdminUser }) => {
-    // Tests must not mock the network. We simply load the page.
+  test('Verify gracefully hiding AI savings widget without network testing', async ({ page, loginAs, unlimitedAdminUser }) => {
+    // Tests must not test the network. We simply load the page.
     // If the widget is missing data, the frontend should naturally hide it as patched.
     await loginAs(page, unlimitedAdminUser);
 

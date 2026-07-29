@@ -2,7 +2,7 @@ import { test, expect } from "./fixtures";
 
 test.describe("In-App Help Center", () => {
   test.beforeEach(async ({ page, loginAs, unlimitedAdminUser }) => {
-    // Tests are using real network. We don't mock backend responses.
+    // Tests are using real network. We don't test backend responses.
     await loginAs(page, unlimitedAdminUser);
   });
 

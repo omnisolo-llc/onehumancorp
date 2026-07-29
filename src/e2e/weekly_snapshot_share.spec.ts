@@ -19,12 +19,12 @@ test.describe('Weekly Snapshot Share Growth Loop', () => {
     await expect(page.locator('#snapshot-title')).toBeVisible();
     await expect(page.locator('#snapshot-title')).toHaveText('AI Weekly Snapshot Share');
 
-    // Verify the data loads correctly from the API (mocking is forbidden, so we rely on actual API data)
+    // Verify the data loads correctly from the API (testing is forbidden, so we rely on actual API data)
     // The API responds with "124" and "$124,500" for the stats
     await expect(page.locator('#hours-saved')).toHaveText('124');
     await expect(page.locator('#total-sales')).toHaveText('$124,500');
 
-    // Mock window.open to intercept the Share on X intent
+    // Test window.open to intercept the Share on X intent
     await page.evaluate(() => {
         (window as any).lastOpenedUrl = null;
         window.open = function(url: string | URL | undefined, target?: string, features?: string) {

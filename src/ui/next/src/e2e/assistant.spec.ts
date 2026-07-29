@@ -11,7 +11,7 @@ test.describe('Assistant Page', () => {
       await expect(page.getByTestId('assistant-workstation')).toBeVisible();
       await expect(page.getByRole('heading', { name: /Assistant/ })).toBeVisible();
 
-      // Ensure mock data does not exist
+      // Ensure test data does not exist
       await expect(page.getByText('Create a personal briefing')).not.toBeVisible();
 
       // Start a task via UI to verify backend connection

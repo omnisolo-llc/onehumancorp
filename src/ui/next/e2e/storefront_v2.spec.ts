@@ -24,7 +24,7 @@ test('Maya the baker journey storefront v2', async ({ page }) => {
   await page.getByPlaceholder('e.g. I run a mobile dog grooming service in Portland').fill('I bake custom cakes for weddings and parties.');
   await page.click('id=generate-btn');
 
-  // Screen 2: Selection. The mocked API can resolve before the transient
+  // Screen 2: Selection. The tested API can resolve before the transient
   // generating screen is observable, so assert the stable next state.
   await expect(page.getByText('Pick your draft')).toBeVisible();
   await page.click('text=Customize Selected Draft');

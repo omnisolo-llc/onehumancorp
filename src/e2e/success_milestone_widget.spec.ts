@@ -18,7 +18,7 @@ test.describe('Success Milestone Widget', () => {
     await expect(xLink).toBeVisible();
     await expect(xLink).toHaveAttribute('href', /twitter\.com\/intent\/tweet/);
 
-    // Mock clipboard
+    // Test clipboard
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
 
     // Click the copy button

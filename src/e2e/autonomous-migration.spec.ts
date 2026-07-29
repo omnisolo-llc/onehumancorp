@@ -23,7 +23,7 @@ test.describe('Autonomous Competitor Migration', () => {
         await expect(page.locator('text=Our AI is carefully moving your')).toBeVisible();
 
         // 6. Wait for migration to complete
-        // In E2E, we might mock this or use a test fixture where the backend quickly resolves the job.
+        // In E2E, we might test this or use a test fixture where the backend quickly resolves the job.
         await expect(page.locator('text=Migration Complete')).toBeVisible({ timeout: 15000 });
 
         // 7. Review imported products
@@ -32,7 +32,7 @@ test.describe('Autonomous Competitor Migration', () => {
         // Should navigate to products catalog
         await expect(page).toHaveURL(/.*\/products/);
 
-        // And we should see at least one imported cake in the list (mocked by Minimax locally or by the E2E seed script)
+        // And we should see at least one imported cake in the list (tested by Minimax locally or by the E2E seed script)
         await expect(page.getByText('Chocolate Cake')).toBeVisible();
     });
 });

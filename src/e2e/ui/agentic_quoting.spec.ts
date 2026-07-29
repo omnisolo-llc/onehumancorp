@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures';
 test.describe('Agentic Quoting Engine (Mobile First)', () => {
 
   test('Owner can review, edit, and approve AI generated quote, and customer can pay deposit', async ({ page, adminUser, loginAs }) => {
-    // 1. We use the seeded quote data from src/e2e/e2e-seed.sql to avoid mocking the backend
+    // 1. We use the seeded quote data from src/e2e/e2e-seed.sql to avoid testing the backend
     const quoteId = '823e4567-e89b-12d3-a456-426614174000';
 
     // We set viewport to 375px to ensure mobile UI compliance

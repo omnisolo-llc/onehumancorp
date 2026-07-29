@@ -9,15 +9,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
-                transactions: [
-                    {
-                        transaction_id: txId,
-                        amount_cents: 1000,
-                        currency: 'USD',
-                        status: 'PENDING',
-                        device_signature: 'sig_123',
-                        payload: '{"items": [{"id": "item_1", "qty": 1}]}',
+            ]}',
                     }
                 ]
             }
@@ -34,15 +26,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
-                transactions: [
-                    {
-                        transaction_id: txId,
-                        amount_cents: 1000,
-                        currency: 'USD',
-                        status: 'PENDING',
-                        device_signature: 'sig_123',
-                        payload: '{"items": [{"id": "item_1", "qty": 1}]}',
+            ]}',
                     }
                 ]
             }

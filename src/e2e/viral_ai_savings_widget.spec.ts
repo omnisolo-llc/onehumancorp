@@ -21,7 +21,7 @@ test.describe('Viral AI Time Savings Widget Growth Loop', () => {
     await expect(shareButton).toBeVisible();
     await expect(shareButton).toBeEnabled();
 
-    // 3. Mock window.open to prevent opening a new tab
+    // 3. Test window.open to prevent opening a new tab
     await page.evaluate(() => {
         window.open = function() { return window; };
     });

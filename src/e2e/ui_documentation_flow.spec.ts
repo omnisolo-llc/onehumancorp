@@ -4,7 +4,7 @@ test.describe("Documentation Features Flow", () => {
   test("User can navigate the Help Center and view an article", async ({
     page,
   }) => {
-    // Navigate directly without mocking, allowing the real backend / fallback APIs to respond.
+    // Navigate directly without testing, allowing the real backend / fallback APIs to respond.
     await page.goto("/help");
 
     // Help Center Index
@@ -18,7 +18,7 @@ test.describe("Documentation Features Flow", () => {
       page.locator('[data-testid="help-center-title"]'),
     ).toBeVisible();
 
-    // Since mock dummy data is removed, the link might not exist if the backend is empty.
+    // Since test test data is removed, the link might not exist if the backend is empty.
     // If there is an article, we click it. Otherwise, we just verify the empty state.
     const articleLink = page
       .locator('a[href="/help/getting-started-1"]')

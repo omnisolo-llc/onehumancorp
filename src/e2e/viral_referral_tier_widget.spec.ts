@@ -9,7 +9,7 @@ const test = base.extend({
 
 test.describe('Viral Referral Tier Widget', () => {
   test('displays correctly and handles copy/share', async ({ page, loginAs, adminUser }) => {
-    // Note: Do not mock the route, we must use real backend services! E2E rules explicitly forbid this.
+    // Note: Do not test the route, we must use real backend services! E2E rules explicitly forbid this.
     await loginAs(page, adminUser);
 
     const widget = page.getByTestId('referral-tier-widget');

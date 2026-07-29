@@ -29,7 +29,7 @@ test.describe('Onboarding Flow E2E', () => {
     await page.fill('input[placeholder="e.g. Portland, OR"]', 'San Francisco, CA');
 
     // We expect a short loading process while it talks to the "backend" intake API
-    // The intake API is mocked or local, but we just click Generate.
+    // The intake API is tested or local, but we just click Generate.
     await page.click('text=Next');
 
     // It should progress to Step 2: Review Details

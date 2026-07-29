@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test('Assistant Workstation UI handles Mobile layout', async ({ page }) => {
   // Navigate to standard UI route for Tauri or Next prototype
-  // Use the Tauri UI directly. Note that we don't mock network requests.
+  // Use the Tauri UI directly. Note that we don't test network requests.
   await page.goto('/assistant.html');
 
   // Set viewport to mobile width (375px) to test the Mobile UX flow

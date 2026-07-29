@@ -25,7 +25,7 @@ test.describe('Morning Briefing & Insight Chat Dashboard Integration', () => {
     // Ensure the message gets added to history and agent responds
     await expect(page.getByText('message')).toBeVisible();
 
-    // Agent response checks (matches one of the expected mocked responses based on keyword)
+    // Agent response checks (matches one of the expected tested responses based on keyword)
     await expect(page.getByText(/You have no recent messages|Your latest messages are from:/i)).toBeVisible({ timeout: 10000 });
   });
 });

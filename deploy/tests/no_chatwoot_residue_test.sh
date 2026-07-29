@@ -32,8 +32,6 @@ allowed_reference_paths=(
   docs/superpowers/plans/2026-07-13-chatwoot-removal.md
   docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md
   docs/reports/production_agent_optimization_report.md
-  .agent-task/report/task_output.md
-  .agent-task/report/task_output.md
   "${historical[@]}"
 )
 

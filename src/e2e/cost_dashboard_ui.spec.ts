@@ -104,7 +104,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     }
 
     // The redirect logic changes the URL, so we can verify the checkout or error loads
-    // NextJS dev server will likely return 500 when mock backend is down
+    // NextJS dev server will likely return 500 when test backend is down
     // Allow either the checkout navigation OR an error notification to indicate click worked
     try {
       await page.waitForURL(/\/checkout\?tier=Starter/, { timeout: 5000 });

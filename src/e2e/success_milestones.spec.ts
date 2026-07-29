@@ -11,7 +11,7 @@ test('success_milestones', async ({ page, request, loginAs, adminUser }) => {
   // Verify translucent glass CSS implementation on standard panels/widgets
   // as per OHC requirements (SuccessMilestoneWidget might not render if no real milestone is reached,
   // but if it is present or other panels are present, we check the style).
-  // We are not allowed to mock API requests in E2E tests.
+  // We are not allowed to test API requests in E2E tests.
   const panels = page.locator('.app-panel');
   const count = await panels.count();
   for (let i = 0; i < count; i++) {

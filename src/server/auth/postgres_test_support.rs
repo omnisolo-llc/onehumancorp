@@ -53,10 +53,27 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
+let mut admin_conn = admin_pool.acquire().await.map_err(|error| format!("acquire connection: {error}"))?;
+
+    sqlx::query("SELECT pg_advisory_lock($1);")
+        .bind(0x4f48_435f_4d49_4752_i64)
+        .execute(&mut *admin_conn)
+        .await
+        .map_err(|error| format!("acquire advisory lock: {error}"))?;
+
+    let migration_result = MIGRATOR
         .run(&admin_pool)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .map_err(|error| format!("run src/server/migrations: {error}"));
+
+    let unlock_result = sqlx::query("SELECT pg_advisory_unlock($1);")
+        .bind(0x4f48_435f_4d49_4752_i64)
+        .execute(&mut *admin_conn)
+        .await
+        .map_err(|error| format!("release advisory lock: {error}"));
+
+    migration_result?;
+    unlock_result?;
 
     sqlx::raw_sql(
         r#"

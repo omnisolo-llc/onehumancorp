@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Kitchen Command Center Flow', () => {
-  test('loads orders and menu from backend without mock data', async ({ page }) => {
+  test('loads orders and menu from backend without test data', async ({ page }) => {
     // 1. Visit the Kitchen Command Center
     await page.goto('/kitchen');
 
@@ -15,8 +15,8 @@ test.describe('Kitchen Command Center Flow', () => {
     // 4. Verify Daily Menu section exists
     await expect(page.locator('h2:has-text("Daily Menu")')).toBeVisible();
 
-    // 5. Ensure the mock seed event is gone and we are relying on real backend data
-    // The "Seed mock" listener was removed, so any data shown must be real.
+    // 5. Ensure the test seed event is gone and we are relying on real backend data
+    // The "Seed test" listener was removed, so any data shown must be real.
     // Check if there are either orders or the empty state "No active orders"
     const activeOrders = page.locator('text="No active orders"');
     const orderCards = page.locator('text="Mark Ready & Notify"');

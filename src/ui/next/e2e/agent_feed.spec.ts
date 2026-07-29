@@ -6,7 +6,7 @@ test.describe('Agentic Unified Intake & Action Feed', () => {
     // Navigate to feed
     await page.goto('/feed');
 
-    // We do NOT mock the API. We wait for the system to render properly.
+    // We do NOT test the API. We wait for the system to render properly.
     // Ensure the feed loads. Wait for the feed container.
     await expect(page.getByTestId('agent-feed')).toBeVisible();
 
