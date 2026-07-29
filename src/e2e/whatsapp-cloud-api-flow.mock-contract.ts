@@ -44,10 +44,99 @@ test.describe('WhatsApp Cloud API Flow CUJ', () => {
       expect(response.ok()).toBeTruthy();
 
       await page.reload();
-      const updatedBtn = whatsappCard.getByRole('button');
     } else {
       expect(btnText).toContain('Manage');
     }
+  });
+
+  test('Owner retrieves WhatsApp Message Templates', async ({ page }) => {
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+
+    // Before making the request, let's link the account first to ensure credentials exist
+    await page.request.post(`${apiBase}/api/v1/settings/integrations/whatsapp_cloud_api`, {
+      data: {
+        api_token: 'test_meta_token_health_templates',
+        phone_number_id: 'test_phone_id_health_templates',
+        display_phone_number: 'tenant-whatsapp-id'
+      },
+      headers: {
+          "x-tenant-id": "e2e-tenant",
+          "Content-Type": "application/json"
+      }
+    });
+
+    const response = await page.request.get(`${apiBase}/api/v1/settings/integrations/whatsapp_cloud_api/templates`, {
+      headers: {
+        "x-tenant-id": "e2e-tenant",
+        "Content-Type": "application/json"
+      }
+    });
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.length).toBeGreaterThan(0);
+    expect(data[0].name).toBe('order_ready');
+  });
+
+  test('Owner retrieves WhatsApp Phone Health Status', async ({ page }) => {
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+
+    // Before making the request, let's link the account first to ensure credentials exist
+    await page.request.post(`${apiBase}/api/v1/settings/integrations/whatsapp_cloud_api`, {
+      data: {
+        api_token: 'test_meta_token_health_templates',
+        phone_number_id: 'test_phone_id_health_templates',
+        display_phone_number: 'tenant-whatsapp-id'
+      },
+      headers: {
+          "x-tenant-id": "e2e-tenant",
+          "Content-Type": "application/json"
+      }
+    });
+
+    const response = await page.request.get(`${apiBase}/api/v1/settings/integrations/whatsapp_cloud_api/health`, {
+      headers: {
+        "x-tenant-id": "e2e-tenant",
+        "Content-Type": "application/json"
+      }
+    });
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.quality_rating).toBe('GREEN');
+    expect(data.code_verification_status).toBe('VERIFIED');
+  });
+
+  test('Owner sends a Meta-approved WhatsApp Message Template', async ({ page }) => {
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+
+    // Before making the request, let's link the account first to ensure credentials exist
+    await page.request.post(`${apiBase}/api/v1/settings/integrations/whatsapp_cloud_api`, {
+      data: {
+        api_token: 'test_meta_token_health_templates',
+        phone_number_id: 'test_phone_id_health_templates',
+        display_phone_number: 'tenant-whatsapp-id'
+      },
+      headers: {
+          "x-tenant-id": "e2e-tenant",
+          "Content-Type": "application/json"
+      }
+    });
+
+    const response = await page.request.post(`${apiBase}/api/v1/settings/integrations/whatsapp_cloud_api/send_template`, {
+      data: {
+        to: '+1234567890',
+        template_name: 'order_ready',
+        language_code: 'en_US',
+        components: []
+      },
+      headers: {
+        "x-tenant-id": "e2e-tenant",
+        "Content-Type": "application/json"
+      }
+    });
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json();
+    expect(data.success).toBeTruthy();
+    expect(data.message_id).toBe('mock_message_id_12345');
   });
 
   test('Owner receives a WhatsApp Cloud API text message and it appears in inbox', async ({ page, request }) => {
