@@ -1,11 +1,11 @@
 issue_title: "Implement Custom Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  The OHC backend currently delegates chat functionalities (omnichannel inbox, WhatsApp, web widgets, etc.) to an external Chatwoot dependency. The architecture mandate requires that Chatwoot be completely retired as an external dependency and replaced with a native Rust implementation inside `onehumancorp/mono`. This change is critical for achieving zero-trust tenant isolation, real-time message routing (via WebSockets), and high-performance message processing without external network boundaries or third-party SLA constraints.
+  The OHC backend currently delegates chat functionalities (omnichannel inbox, WhatsApp, web widgets, etc.) to a legacy external chat dependency. The architecture mandate requires that this dependency be completely retired and replaced with a native Rust implementation inside `onehumancorp/mono`. This change is critical for achieving zero-trust tenant isolation, real-time message routing (via WebSockets), and high-performance message processing without external network boundaries or third-party SLA constraints.
 
   ## Research Report
-  - **Codebase Audit**: Scanned `src/server/integrations/chat/README.md` which confirms the mandate to implement a native Rust omnichannel chat system replacing Chatwoot.
-  - **Chatwoot Source Benchmark**: Benchmarked against Chatwoot (`https://github.com/chatwoot/chatwoot/app/models/`). Key models include `Account`, `User`, `Inbox`, `Conversation`, `Message`, `Contact`, `Channel`, and integrations for API, Web Widget, and WhatsApp.
+  - **Codebase Audit**: Scanned `src/server/integrations/chat/README.md` which confirms the mandate to implement a native Rust omnichannel chat system replacing the external chat service.
+  - **Source Benchmark**: Benchmarked against the legacy open-source chat service data models. Key models include `Account`, `User`, `Inbox`, `Conversation`, `Message`, `Contact`, `Channel`, and integrations for API, Web Widget, and WhatsApp.
   - **Competitive Advantage**: A native Rust implementation eliminates cross-service latency, removes a major infrastructure dependency, allows deep native integration with OHC's Multi-Tenant Row Level Security (RLS) PostgreSQL database, and simplifies the deployment topology for independent owner/operators.
 
   ## Design Doc
