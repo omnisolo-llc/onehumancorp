@@ -1,0 +1,11 @@
+--- postgres_test_support.rs
++++ postgres_test_support.rs
+@@ -112,7 +112,7 @@
+         .map_err(|e| format!("database reset: {e}"))?;
+
+     MIGRATOR.run(&pool).await
+-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
++        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+
+     Ok(pool)
+ }
