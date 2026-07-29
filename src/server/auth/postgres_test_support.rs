@@ -53,10 +53,27 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
+    // Try to get an advisory lock before running migrations
+    sqlx::query("SELECT pg_advisory_lock(54321)")
+        .execute(&admin_pool)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .map_err(|error| format!("acquire migration lock: {error}"))?;
+
+    let migration_result = MIGRATOR.run(&admin_pool).await;
+
+    sqlx::query("SELECT pg_advisory_unlock(54321)")
+        .execute(&admin_pool)
+        .await
+        .map_err(|error| format!("release migration lock: {error}"))?;
+
+    if let Err(error) = migration_result {
+        let err_str = error.to_string();
+        if !err_str.contains("duplicate key value violates unique constraint")
+            && !err_str.contains("already exists")
+            && !err_str.contains("Database is locked") {
+            return Err(format!("run src/server/migrations: {error}"));
+        }
+    }
 
     sqlx::raw_sql(
         r#"
