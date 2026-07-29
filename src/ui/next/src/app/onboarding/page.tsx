@@ -872,7 +872,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 0 && (
-            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full glassmorphism  p-4">
+            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full glassmorphism p-4 rounded-[16px]">
               <button
                 onClick={() => {
                   updateState({ step: -2 });
@@ -2017,7 +2017,7 @@ export default function OnboardingWizard() {
           {step === 4 && (
             <div
               aria-live="polite"
-              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism  shadow-2xl p-4 sm:p-8"
+              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism shadow-2xl rounded-[16px] p-4 sm:p-8"
             >
               <div className="w-24 h-24 relative mb-8">
                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -2123,7 +2123,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 5 && startResult && (
-            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism rounded-[16px] p-4">
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg
                   className="w-10 h-10 text-[#34C759]"
@@ -2148,7 +2148,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 glassmorphism  flex flex-col items-center mb-6">
+                <div className="p-3 glassmorphism rounded-[16px] flex flex-col items-center mb-6">
                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">
                     Your Shareable Link
                   </p>
