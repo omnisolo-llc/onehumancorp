@@ -90,6 +90,9 @@ playwright_spec_workspace_name() {
     src/e2e/playwright/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
+    src/e2e/playwright/*.spec.ts)
+      printf '%s\n' "$rel"
+      ;;
     src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
