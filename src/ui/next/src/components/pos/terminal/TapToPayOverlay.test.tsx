@@ -55,6 +55,8 @@ describe('TapToPayOverlay Component', () => {
   });
 
   it('handles API errors gracefully', async () => {
+    const originalError = console.error;
+    console.error = vi.fn();
     // Mock the connection-token call to fail
     (global.fetch as any).mockResolvedValueOnce({ ok: false });
 
@@ -67,5 +69,6 @@ describe('TapToPayOverlay Component', () => {
       expect(screen.getByText('Failed to initialize terminal.')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
     });
+    console.error = originalError;
   });
 });

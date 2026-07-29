@@ -449,3 +449,9 @@ sh_binary(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+sh_test(
+    name = "no_chatwoot_residue_test",
+    srcs = ["tests/no_chatwoot_residue_test.sh"],
+    tags = ["lint"],
+)
