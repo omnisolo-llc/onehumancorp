@@ -989,6 +989,42 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
+                        "/api/v1/help/{article_id}": {
+                "get": {
+                    "summary": "Get Help Article",
+                    "description": "Retrieves a specific help article by its ID.",
+                    "tags": ["Documentation"],
+                    "parameters": [
+                        {
+                            "name": "article_id",
+                            "in": "path",
+                            "description": "The ID of the article to retrieve",
+                            "required": true,
+                            "schema": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "title": { "type": "string" },
+                                            "desc": { "type": "string" },
+                                            "link": { "type": "string" },
+                                            "content": { "type": "string" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "/api/v1/help/search": {
                 "get": {
                     "summary": "Search Help Articles",

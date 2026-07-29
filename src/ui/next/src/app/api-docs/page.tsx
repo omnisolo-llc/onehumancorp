@@ -36,22 +36,6 @@ export default function ApiDocsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F5F5F7] to-[#E8E8ED] dark:from-[#16161a] dark:to-[#0f0f13] p-2 sm:p-8 backdrop-blur-[30px] saturate-[210%] font-inter flex flex-col items-center overflow-x-hidden w-full max-w-[100vw]">
-      <style dangerouslySetInnerHTML={{__html: `
-        .swagger-ui { background: transparent; border-radius: 12px; padding: 12px; width: 100%; box-sizing: border-box; max-width: 100vw; overflow-x: hidden; }
-        @media (min-width: 640px) { .swagger-ui { padding: 24px; } }
-        .swagger-ui .wrapper { width: 100%; max-width: 100vw; overflow-x: hidden; padding: 0 10px; box-sizing: border-box; }
-        .swagger-ui .opblock-body pre { white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
-        .swagger-ui table { display: block; overflow-x: auto; max-width: 100%; box-sizing: border-box; }
-        .swagger-ui .markdown p { word-break: break-word; box-sizing: border-box; }
-        .swagger-ui .info { margin: 20px 0; box-sizing: border-box; }
-        .swagger-ui .scheme-container { background: transparent; padding: 10px 0; margin-bottom: 20px; border-radius: 12px; box-shadow: none; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.3); box-sizing: border-box; width: 100%; }
-        .swagger-ui .responses-inner { overflow-x: auto; max-width: 100%; box-sizing: border-box; }
-        .swagger-ui .model-box { overflow-x: auto; max-width: 100%; box-sizing: border-box; }
-        .swagger-ui .opblock-tag { font-size: 20px; padding: 10px; box-sizing: border-box; }
-        .swagger-ui .opblock .opblock-summary { padding: 5px; box-sizing: border-box; }
-        .swagger-ui .opblock .opblock-summary-method { min-width: 60px; font-size: 12px; }
-        .swagger-ui .opblock .opblock-summary-path { font-size: 14px; max-width: calc(100vw - 120px); overflow-wrap: break-word; word-break: break-all; }
-      `}} />
       <div data-testid="api-docs-title" className="w-full max-w-6xl bg-[#FFCC00]/10 border border-[#FFCC00]/30 backdrop-blur-[30px] saturate-[210%] border-l-4 border-l-[#FFCC00] p-4 mb-8 rounded-r-xl shadow-sm font-inter">
         <div className="text-yellow-800 dark:text-yellow-400 text-sm font-medium">
           <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">

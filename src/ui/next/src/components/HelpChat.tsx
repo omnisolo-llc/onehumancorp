@@ -360,23 +360,6 @@ export function HelpChat() {
         </div>
       )}
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        @keyframes slide-up-chat {
-          0% { opacity: 0; transform: translateY(20px) scale(0.95); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        .animate-slide-up-chat { animation: slide-up-chat 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: bottom right; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
-        @media (prefers-color-scheme: dark) {
-          .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
-        }
-      `,
-        }}
-      />
     </div>
   );
 }
