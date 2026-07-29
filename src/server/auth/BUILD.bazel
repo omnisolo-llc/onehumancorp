@@ -61,6 +61,7 @@ rust_test(
     env = {
         "RUST_TEST_THREADS": "1",
     },
+    tags = ["no-cache"],
     deps = [
         "@crates//:rcgen",
         "@crates//:tempfile",
