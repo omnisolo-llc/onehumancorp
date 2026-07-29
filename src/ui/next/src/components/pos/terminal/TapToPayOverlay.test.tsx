@@ -11,9 +11,9 @@ describe('TapToPayOverlay Component', () => {
 
   it('renders correctly when open', () => {
     render(<TapToPayOverlay isOpen={true} onClose={() => {}} amount={1500} currency="usd" onSuccess={() => {}} />);
-    expect(screen.getByTestId('tap-to-pay-overlay')).toBeInTheDocument();
-    expect(screen.getByText('Total: $15.00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /accept payment/i })).toBeInTheDocument();
+    expect(screen.getByTestId('tap-to-pay-overlay')).toBeTruthy();
+    expect(screen.getByText('Total: $15.00')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /accept payment/i })).toBeTruthy();
   });
 
   it('does not render when closed', () => {
@@ -37,13 +37,13 @@ describe('TapToPayOverlay Component', () => {
 
     // Initializing state
     await waitFor(() => {
-      expect(screen.getByText('Hold card or phone near reader')).toBeInTheDocument();
-      expect(screen.getByText('$20.50')).toBeInTheDocument();
+      expect(screen.getByText('Hold card or phone near reader')).toBeTruthy();
+      expect(screen.getByText('$20.50')).toBeTruthy();
     });
 
     // We simulated a 2s delay in the component. Let's wait for success state.
     await waitFor(() => {
-      expect(screen.getByText('Payment Successful!')).toBeInTheDocument();
+      expect(screen.getByText('Payment Successful!')).toBeTruthy();
     }, { timeout: 3000 });
 
     // Verify it called onSuccess after delay
@@ -63,9 +63,9 @@ describe('TapToPayOverlay Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /accept payment/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Payment Failed')).toBeInTheDocument();
-      expect(screen.getByText('Failed to initialize terminal.')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+      expect(screen.getByText('Payment Failed')).toBeTruthy();
+      expect(screen.getByText('Failed to initialize terminal.')).toBeTruthy();
+      expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy();
     });
   });
 });
