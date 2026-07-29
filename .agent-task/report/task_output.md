@@ -1,13 +1,13 @@
-issue_title: "[Research] Architect Native Rust Omnichannel Inbox to Replace Chatwoot"
+issue_title: "[Research] Architect Native Rust Omnichannel Inbox to Replace Platform"
 issue_description: |
   # Problem Statement
-  Small business owners like Maya (baker) and Carlos (handyman) receive customer inquiries across unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages and lost sales. Traditional solutions aggregate messages without context. OHC previously relied on Chatwoot for its inbox, but Chatwoot as an external dependency is 100% RETIRED. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust to achieve 100% feature parity with Chatwoot, while deeply integrating with the OHC Agentic workflow (The Ambassador agent).
+  Small business owners like Maya (baker) and Carlos (handyman) receive customer inquiries across unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages and lost sales. Traditional solutions aggregate messages without context. OHC previously relied on Platform for its inbox, but Platform as an external dependency is 100% RETIRED. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust to achieve 100% feature parity with Platform, while deeply integrating with the OHC Agentic workflow (The Ambassador agent).
 
   # Research Report
   **Findings & Competitive Analysis:**
-  - **Chatwoot Source Code Audit**: Benchmarked `https://github.com/chatwoot/chatwoot`. Chatwoot uses a Rails monolith with models like `account`, `inbox`, `conversation`, `message`, `contact`, and `channel_*` (adapters for email, API, WhatsApp, etc.). It uses WebSockets for real-time updates and heavily relies on PostgreSQL.
+  - **Platform Source Code Audit**: Benchmarked `https://github.com/platform_old/platform_old`. Platform uses a Rails monolith with models like `account`, `inbox`, `conversation`, `message`, `contact`, and `channel_*` (adapters for email, API, WhatsApp, etc.). It uses WebSockets for real-time updates and heavily relies on PostgreSQL.
   - **The Native Rust Opportunity**: Building this natively in Rust inside `onehumancorp/mono` guarantees strict multi-tenant row-level security (RLS) out-of-the-box, significantly lower latency (critical for 375px mobile responsiveness), and unified observability. It eliminates a massive third-party operational dependency.
-  - **Agentic Integration**: Unlike Chatwoot, the native OHC inbox will natively route incoming messages to the "The Ambassador" AI agent, which queries the customer's unified identity graph (purchase history, past bookings) to proactively draft a complete, accurate response.
+  - **Agentic Integration**: Unlike Platform, the native OHC inbox will natively route incoming messages to the "The Ambassador" AI agent, which queries the customer's unified identity graph (purchase history, past bookings) to proactively draft a complete, accurate response.
 
   # Design Doc
   ### Architecture Diagram
@@ -41,7 +41,7 @@ issue_description: |
   - **Invariants**: Strict row-level security (RLS) on `tenant_id` for all tables. All API and WebSocket connections must be validated via SPIFFE/SPIRE identity.
 
   # Implementation Prompt
-  Implement the core native Rust Omnichannel Inbox data model and CRUD APIs to replace Chatwoot.
+  Implement the core native Rust Omnichannel Inbox data model and CRUD APIs to replace Platform.
   - **CUJ**: A small business owner connects an inbox (e.g., API channel), receives a message from a customer, and views the conversation in a unified 375px mobile UI.
   - **Requirements**:
     1. Define the PostgreSQL schemas for `inboxes`, `conversations`, `messages`, and `contacts` with `tenant_id` RLS.
