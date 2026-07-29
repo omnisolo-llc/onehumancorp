@@ -1,11 +1,11 @@
-issue_title: "Implement Custom Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Implement Custom Native Rust Omnichannel Chat System (Chatw00t Replacement)"
 issue_description: |
-  **Problem Statement:** OneHumanCorp currently lacks a native, unified omnichannel customer support engine. Chatwoot has been fully retired as an external service due to high latency, poor multi-tenant scaling, and the inability to natively integrate with OHC's AI agents. Small business owners (like Carlos and Maya) require an integrated, high-performance inbox that seamlessly handles Instagram DMs, WhatsApp, SMS, and email. This inbox must be deeply embedded into OHC to allow our AI agents (The Ambassador, The Manager) to instantly draft context-aware replies without relying on third-party webhooks.
+  **Problem Statement:** OneHumanCorp currently lacks a native, unified omnichannel customer support engine. Chatw00t has been fully retired as an external service due to high latency, poor multi-tenant scaling, and the inability to natively integrate with OHC's AI agents. Small business owners (like Carlos and Maya) require an integrated, high-performance inbox that seamlessly handles Instagram DMs, WhatsApp, SMS, and email. This inbox must be deeply embedded into OHC to allow our AI agents (The Ambassador, The Manager) to instantly draft context-aware replies without relying on third-party webhooks.
 
   **Research Report:**
   - **Competitor Audit:** Platforms like Shopify Inbox provide basic aggregation but fail at proactive AI drafting and unified customer identity resolution across channels. Zendesk and Intercom are too complex for solopreneurs.
-  - **Chatwoot Source Code Audit:** Chatwoot relies on Ruby on Rails controllers and PostgreSQL for multi-tenancy, using Sidekiq for background jobs and ActionCable for WebSockets. Its `Account` model maps to OHC's `Tenant`, its `Inbox` and `Channel` models map to external connectors, and `Conversation` links a `Contact` to a `Message` stream.
-  - **OHC Opportunity:** By building a 100% native Rust clone of the Chatwoot feature set, we eliminate external dependencies. We can build this using `axum` (for REST APIs), `tokio-tungstenite` (for high-concurrency WebSockets), and strictly isolated row-level security in PostgreSQL for multi-tenancy.
+  - **Chatw00t Source Code Audit:** Chatw00t relies on Ruby on Rails controllers and PostgreSQL for multi-tenancy, using Sidekiq for background jobs and ActionCable for WebSockets. Its `Account` model maps to OHC's `Tenant`, its `Inbox` and `Channel` models map to external connectors, and `Conversation` links a `Contact` to a `Message` stream.
+  - **OHC Opportunity:** By building a 100% native Rust clone of the Chatw00t feature set, we eliminate external dependencies. We can build this using `axum` (for REST APIs), `tokio-tungstenite` (for high-concurrency WebSockets), and strictly isolated row-level security in PostgreSQL for multi-tenancy.
 
   **Design Doc:**
   - **Architecture Diagram:**
@@ -44,7 +44,6 @@ issue_description: |
   2. Implement the `axum` API endpoints for managing these entities, ensuring all endpoints require a valid tenant context from SPIFFE/SPIRE claims.
   3. Build a WebSocket handler using `tokio-tungstenite` that allows the mobile client to subscribe to real-time conversation updates.
   4. Provide a suite of Playwright E2E tests simulating a customer sending an external message, the AI drafting a response, and the owner approving it via the mobile UI. Ensure no external APIs are mocked in the E2E flow (use local adapters if necessary).
-
   **Priority:** P0
   **Estimated Scope:** Large
 issue_priority: P0
