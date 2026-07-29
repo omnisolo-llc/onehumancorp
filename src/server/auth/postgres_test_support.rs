@@ -53,10 +53,20 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+    let mut retries = 10;
+    while retries > 0 {
+        match MIGRATOR.run(&admin_pool).await {
+            Ok(_) => break,
+            Err(error) => {
+                if error.to_string().contains("_sqlx_migrations_pkey") || error.to_string().contains("duplicate key") {
+                    tokio::time::sleep(Duration::from_millis(500)).await;
+                    retries -= 1;
+                } else {
+                    return Err(format!("run src/server/migrations: {error}"));
+                }
+            }
+        }
+    }
 
     sqlx::raw_sql(
         r#"
