@@ -264,12 +264,21 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
     // Name step
     const businessName = page.getByTestId('business-name');
     await expect(businessName).toHaveAttribute('autocomplete', 'organization');
+    await expect(businessName).toHaveAttribute('autocapitalize', 'words');
+    await expect(businessName).toHaveAttribute('enterkeyhint', 'next');
     // Admin step
+    const adminName = page.getByTestId('admin-name');
+    await expect(adminName).toHaveAttribute('autocomplete', 'name');
+    await expect(adminName).toHaveAttribute('autocapitalize', 'words');
+    await expect(adminName).toHaveAttribute('enterkeyhint', 'next');
+
     const adminEmail = page.getByTestId('admin-email');
     await expect(adminEmail).toHaveAttribute('autocomplete', 'email');
     await expect(adminEmail).toHaveAttribute('inputmode', 'email');
+    await expect(adminEmail).toHaveAttribute('enterkeyhint', 'next');
     const adminPassword = page.getByTestId('admin-password');
     await expect(adminPassword).toHaveAttribute('autocomplete', 'new-password');
+    await expect(adminPassword).toHaveAttribute('enterkeyhint', 'next');
     });
   test('should have border-radius of 16px for .glassmorphism styling', async ({ page }) => {
     // This tests the CSS inline in setup.html and imported globals.css

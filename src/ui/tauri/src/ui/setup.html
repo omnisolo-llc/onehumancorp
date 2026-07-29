@@ -109,7 +109,7 @@
 
       <div id="step-name" class="step">
         <h2>Name</h2>
-        <input type="text" data-testid="business-name" id="business-name" autocomplete="organization" class="glassmorphism glass-control" />
+        <input type="text" data-testid="business-name" id="business-name" autocomplete="organization" class="glassmorphism glass-control" autocapitalize="words" enterkeyhint="next" />
         <div id="name-error" class="error" style="display: none; margin-bottom: 12px;">Name is required</div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
       </div>
@@ -125,9 +125,9 @@
 
       <div id="step-admin" class="step">
         <h2>Admin</h2>
-        <input type="text" data-testid="admin-name" placeholder="Admin Name" />
-        <input type="email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" />
-        <input type="password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" />
+        <input type="text" data-testid="admin-name" placeholder="Admin Name" autocomplete="name" autocapitalize="words" enterkeyhint="next" />
+        <input type="email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" enterkeyhint="next" />
+        <input type="password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" enterkeyhint="next" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
       </div>
 
