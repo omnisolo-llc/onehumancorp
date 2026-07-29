@@ -37,7 +37,13 @@ CREATE POLICY agent_draft_tenant_isolation_policy ON agent_draft FOR ALL USING (
     )
 );
 
+
 -- +goose Down
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS chat_conversations CASCADE;
+DROP TABLE IF EXISTS chat_contacts CASCADE;
+DROP TABLE IF EXISTS chat_channels CASCADE;
+DROP TABLE IF EXISTS chat_inboxes CASCADE;
 DROP TABLE IF EXISTS agent_draft CASCADE;
 DROP TABLE IF EXISTS work_item CASCADE;
 DROP TABLE IF EXISTS customer_profile CASCADE;
