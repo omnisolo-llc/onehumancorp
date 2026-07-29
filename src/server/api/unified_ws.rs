@@ -55,7 +55,7 @@ static GLOBAL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::
 
 static GLOBAL_BROADCAST: std::sync::OnceLock<broadcast::Sender<String>> = std::sync::OnceLock::new();
 
-fn get_broadcast_tx() -> &'static broadcast::Sender<String> {
+pub fn get_broadcast_tx() -> &'static broadcast::Sender<String> {
     GLOBAL_BROADCAST.get_or_init(|| {
         let (tx, _) = broadcast::channel(4096);
         tx
@@ -89,7 +89,7 @@ fn channel_topic_prefix(channel: &str, tenant_id: &str) -> String {
     format!("unified:{}:{}", channel, tenant_id)
 }
 
-fn build_envelope(channel: &str, topic: &str, data: serde_json::Value, seq: u64) -> String {
+pub fn build_envelope(channel: &str, topic: &str, data: serde_json::Value, seq: u64) -> String {
     let msg = EnvelopeMessage {
         channel: channel.to_string(),
         topic: topic.to_string(),

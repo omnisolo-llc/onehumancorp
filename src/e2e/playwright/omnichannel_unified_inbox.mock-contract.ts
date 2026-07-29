@@ -4,6 +4,8 @@ test.describe('Unified Inbox & Agentic Triage', () => {
   const tenantId = 'test-unified-inbox-tenant';
 
   test('should display actionable cards for incoming messages and allow approval', async ({ request, page }) => {
+    // Mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
     // 1. Simulate incoming message via webhook
     const identifier = 'maya_insta';
     const messageContent = 'Do you have vegan cupcakes for this Saturday?';
