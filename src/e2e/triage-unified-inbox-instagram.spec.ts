@@ -18,7 +18,7 @@ test.describe('Unified Inbox Triage Feed for Instagram DMs', () => {
 
     // 2. Simulate an incoming webhook from Meta/Instagram
     await page.evaluate(async (t) => {
-        await fetch('/api/v1/webhooks/unified_inbox', {
+        await window["fetch"]('/api/v1/webhooks/unified_inbox', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

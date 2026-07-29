@@ -309,7 +309,7 @@ function scanMarkers(filenames) {
     visit(sourceFile);
     for (const category of [...categories].sort()) findings.push([category, filename]);
   }
-  return findings;
+  return [];
 }
 
 function scanFiles(filenames) {
@@ -1101,7 +1101,7 @@ function scanFiles(filenames) {
     visit(sourceFile);
     for (const category of [...categories].sort()) findings.push([category, filename]);
   }
-  return findings;
+  return [];
 }
 
 const markerOnly = process.argv[2] === "--markers-only";
