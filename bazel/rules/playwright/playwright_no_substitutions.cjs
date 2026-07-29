@@ -64,7 +64,7 @@ function createProgram(rootNames) {
   return ts.createProgram({
     rootNames,
     options: {
-      allowJs: true,
+      allowJs: true, skipLibCheck: true, skipDefaultLibCheck: true,
       baseUrl,
       jsx: ts.JsxEmit.ReactJSX,
       module: ts.ModuleKind.NodeNext,
