@@ -218,10 +218,8 @@ impl PromptCache {
 
         if truncated {
             // Try to truncate at a word boundary to keep it "intelligent"
-            if let Some(space_idx) = last_space_byte_index {
-                if last_space_char_count > max_chars / 2 {
+            if let Some(space_idx) = last_space_byte_index && last_space_char_count > max_chars / 2 {
                     result.truncate(space_idx);
-                }
             }
 
             // Clean up trailing whitespace and punctuation before appending ellipsis

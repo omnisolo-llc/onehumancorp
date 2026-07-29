@@ -1,4 +1,4 @@
-#![allow(clippy::all)]
+
 use ohc_builtin_agent_core::types::{Message, Role};
 use serde_json::Value;
 

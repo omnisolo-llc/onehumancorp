@@ -1,6 +1,6 @@
-#![allow(unused_variables)]
-#![allow(clippy::empty_line_after_doc_comments)]
-#![allow(unused_mut, clippy::useless_format)]
+
+
+
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -879,7 +879,7 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let mut cfg = AgentRunConfig {
+            let cfg = AgentRunConfig {
                 enable_actor_model_message_passing: true,
                 ..Default::default()
             };

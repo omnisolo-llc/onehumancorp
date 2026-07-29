@@ -1,5 +1,5 @@
 #![allow(unused_mut)]
-#![allow(clippy::all)]
+
 use crate::agent::AgentRunConfig;
 use crate::human_in_loop::HumanInLoopManager;
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
