@@ -163,5 +163,16 @@ ALTER TABLE products FORCE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
 ALTER TABLE customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE orders FORCE ROW LEVEL SECURITY;
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
+VALUES (
+  'e2e-feed-ops-daily-routine',
+  'e2e-tenant',
+  'Operations Agent',
+  '{"feature_type":"daily_prep_checklist","description":"Daily Prep Checklist"}'::jsonb,
+  '{"action_type":"Daily Prep Checklist","message":"Review Daily Prep Checklist"}'::jsonb,
+  'PENDING_APPROVAL'
+)
+ON CONFLICT (id) DO UPDATE
+SET lifecycle_state = 'PENDING_APPROVAL';
 
 COMMIT;

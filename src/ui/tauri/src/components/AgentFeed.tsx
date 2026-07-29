@@ -152,6 +152,45 @@ export const AgentFeed: React.FC = () => {
                     );
                 }
 
+                if (actionType === 'operations_task' || actionType === 'Daily Prep Checklist') {
+                    const parsedPayload = draft.proposed_action || draft.context_payload || {};
+                    return (
+                        <div key={draft.draft_id} className="w-full max-w-[375px] mx-auto rounded-[16px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] p-4 mb-4 flex flex-col gap-3 shadow-sm">
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
+                                    Operations Task
+                                </div>
+                                <div className="text-xs text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60 uppercase">
+                                    {draft.source || 'operations'}
+                                </div>
+                            </div>
+                            <div className="text-sm text-[#1D1D1F]/80 dark:text-[#F5F5F7]/80 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-3 rounded-[8px]">
+                                {parsedPayload.message || draft.response || 'Review Daily Prep Checklist'}
+                            </div>
+                            <div className="flex flex-col gap-2 mt-2">
+                                <button
+                                    onClick={() => handleApprove(draft.draft_id)} data-testid="feed-approve-btn"
+                                    className="w-full min-h-[44px] bg-[#0066FF] hover:bg-blue-600 text-white rounded-[8px] font-medium transition-colors"
+                                >
+                                    Approve & Send
+                                </button>
+                                <button
+                                    onClick={() => handleEdit(draft.draft_id, "Assigned to staff")} data-testid="feed-assign-btn"
+                                    className="w-full min-h-[44px] bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/50 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] font-medium transition-colors"
+                                >
+                                    Assign
+                                </button>
+                                <button
+                                    onClick={() => handleEdit(draft.draft_id, draft.response)} data-testid="feed-dismiss-btn"
+                                    className="w-full min-h-[44px] bg-white/50 dark:bg-gray-800/50 hover:bg-white/80 dark:hover:bg-gray-700/50 text-[#1D1D1F] dark:text-[#F5F5F7] rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] font-medium transition-colors"
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
                 return (
                     <AgentFeedCard
                         key={draft.draft_id}
