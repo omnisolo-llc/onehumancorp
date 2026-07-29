@@ -98,6 +98,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:fulfillment.rs",
     "//src/server/api:shipping.rs",
     "//src/server/api:setup.rs",
+    "//src/server/api:chat.rs",
+    "//src/server/api:chat_ws.rs",
     "//src/server/api/booking:mod.rs",
 
 

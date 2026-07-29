@@ -3,8 +3,6 @@
 import { Fragment, useEffect, useMemo, useState, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
-import { useQuery } from "@powersync/react";
-import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
 
 type Message = {
   id: string;
@@ -17,6 +15,7 @@ type Message = {
   sender_id?: string;
   customer_id?: string;
   created_at?: string;
+  conversation_id?: string;
 };
 
 function badgeTone(status?: string) {
@@ -151,9 +150,11 @@ function CustomerContextCard({ customerId }: { customerId: string }) {
 
 function InboxWorkspace({
   messages,
+  sendMessage,
   sourceLabel,
 }: {
   messages: Message[];
+  sendMessage: (msg: string, conversation_id: string) => void;
   sourceLabel: string;
 }) {
   const router = useRouter();
@@ -227,55 +228,15 @@ function InboxWorkspace({
 
 
   async function handleSendManualReply(inboxMessageId: string) {
-    if (!manualReply.trim()) return;
-    try {
-      setActionStatus("Sending reply...");
-      const res = await fetch(`/api/v1/ui/omni_inbox/action`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message_id: inboxMessageId,
-          approved: true,
-          edited_reply: manualReply
-        })
-      });
-      if (res.ok) {
-        setActionStatus("Manual reply sent.");
-        setManualReply("");
-      } else {
-        setActionStatus("Failed to send manual reply.");
-      }
-    } catch (e) {
-      console.error(e);
-      setActionStatus("Error sending manual reply.");
-    }
-  }
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  function handleAttachPhoto() {
-    fileInputRef.current?.click();
-  }
-
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64String = event.target?.result as string;
-      setManualReply(prev => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + `![Image](${base64String})`);
-    };
-    reader.readAsDataURL(file);
-
-    // reset input
-    if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-    }
+    if (!manualReply.trim() || !selected?.conversation_id) return;
+    sendMessage(manualReply, selected.conversation_id);
+    setManualReply("");
   }
 
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
+      setActionStatus("Approving and sending...");
+
       const approval = pendingApprovals.find((a: any) => {
         try {
           const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
@@ -297,8 +258,6 @@ function InboxWorkspace({
       });
 
       if (approveRes.ok) {
-        // Optimistic UI updates are handled by PowerSync once backend completes sync,
-        // but we show the status to the user.
         setActionStatus("Draft approved and sent.");
       } else {
         setActionStatus("Failed to approve and send message.");
@@ -312,157 +271,157 @@ function InboxWorkspace({
   return (
     <AppShell
       title="Unified Inbox"
-      subtitle="Local-first offline unified customer conversations and drafts."
-      statusItems={[
+      subtitle="Native Rust omnichannel chat engine unified conversations."
+      metrics={[
         { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
-        { label: "Open", value: String(openCount), tone: openCount > 0 ? "warn" : "good" },
+        { label: "Unread Leads", value: String(unreadLeadsCount), tone: unreadLeadsCount > 0 ? "warn" : "neutral" },
       ]}
-      actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
-      {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
-      <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
-        <div className="app-grid two gap-4">
-          <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
-            <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
-              <div>
-                <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
-                <div className="app-list-subtitle text-xs text-gray-500">{sourceLabel}</div>
-              </div>
-            </div>
-            <div id="messages-list" className="app-list p-2">
-              {unreadLeadsCount > 0 && (
-                <div className="app-card daily-summary mb-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 p-4 rounded-xl">
-                  <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    ✨ You have {unreadLeadsCount} unread {unreadLeadsCount === 1 ? 'lead' : 'leads'}.
-                  </div>
-                </div>
-              )}
-              {messages.length === 0 ? (
-                <div className="app-empty">No inbox messages found for this tenant.</div>
-              ) : messages.map((message) => (
-                <button
-                  key={message.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedId(message.id);
-                    setShowOriginal(false);
-                  }}
-                  className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-[8px] transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
-                >
-                  <div className="min-w-0">
-                    <div className="app-list-title">{message.source || "Unknown source"}</div>
-                    <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
-                  </div>
-                  <span className={`app-badge ${badgeTone(message.status)}`}>{formatStatus(message.status)}</span>
-                </button>
-              ))}
-            </div>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-gray-500">{sourceLabel}</p>
+        </div>
 
-                {/* Manual Reply Box */}
-                {selected && selected.status !== "resolved" && selected.status !== "dismissed" && (
-                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="app-metric-label mb-2">Manual Reply</div>
-                    <textarea
-                      className="w-full min-h-[100px] p-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 mb-3"
-                      placeholder="Type your reply here..."
-                      value={manualReply}
-                      onChange={(e) => setManualReply(e.target.value)}
-                    />
-                    <div className="flex gap-3 mt-4 flex-wrap">
+        {actionStatus && (
+          <div className="rounded border-l-4 border-blue-500 bg-blue-50 p-4 text-blue-700 shadow-sm transition-all">
+            <p>{actionStatus}</p>
+          </div>
+        )}
+
+        <div className="flex h-[700px] gap-6" data-testid="inbox-settled">
+          <section className="app-panel flex w-[40%] min-w-[300px] flex-col overflow-hidden">
+            <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
+              <div className="app-panel-title font-bold text-gray-900 dark:text-white">Message Queue</div>
+            </div>
+            {messages.length === 0 ? (
+              <div className="app-empty p-8 text-center text-gray-500">Inbox is empty.</div>
+            ) : (
+              <ul className="flex-1 overflow-y-auto divide-y divide-[rgba(255,255,255,0.1)] dark:divide-[rgba(255,255,255,0.05)] bg-[rgba(255,255,255,0.1)] dark:bg-[rgba(0,0,0,0.1)]">
+                {messages.map((message) => {
+                  const isSelected = selected?.id === message.id;
+                  const isUnread = (message.status || "").toLowerCase() === "unread";
+                  const messagePreview = (message.content || "").substring(0, 60);
+
+                  return (
+                    <li key={message.id}>
                       <button
-                        onClick={() => handleSendManualReply(selected.id)}
-                        className="app-btn-primary min-h-[44px] min-w-[44px] rounded-[8px]"
-                        disabled={!manualReply.trim()}
+                        type="button"
+                        onClick={() => setSelectedId(message.id)}
+                        className={`w-full text-left p-4 hover:bg-[rgba(255,255,255,0.3)] dark:hover:bg-[rgba(255,255,255,0.05)] transition-colors ${
+                          isSelected ? "bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(255,255,255,0.1)] border-l-4 border-blue-500" : ""
+                        }`}
                       >
-                        Send Reply
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={`font-semibold text-sm ${isUnread ? "text-gray-900 dark:text-white font-bold" : "text-gray-700 dark:text-gray-300"}`}>
+                            {message.sender_id || "Unknown Sender"}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {message.source}
+                          </span>
+                        </div>
+                        <div className={`text-sm mb-2 ${isUnread ? "text-gray-800 dark:text-gray-200 font-medium" : "text-gray-600 dark:text-gray-400"}`}>
+                          {messagePreview} {message.content && message.content.length > 60 && "..."}
+                        </div>
+                        <div className="flex justify-between items-center mt-2">
+                           <span className={`app-badge ${badgeTone(message.status)} text-xs px-2 py-0.5 rounded-full font-medium`}>{formatStatus(message.status)}</span>
+                        </div>
                       </button>
-                      <button
-                        onClick={handleAttachPhoto}
-                        className="app-btn-secondary flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-[8px]"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                        Attach Photo
-                      </button>
-                      <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileSelected} />
-                    </div>
-                  </div>
-                )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
 
-          <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
+          <section className="app-panel flex flex-1 flex-col overflow-hidden">
             <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
               <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
             </div>
             {!selected ? (
-              <div className="app-empty p-8 text-center text-gray-500">Select a database-backed message to inspect it.</div>
+              <div className="app-empty p-8 text-center text-gray-500">Select a message to inspect it.</div>
             ) : (
-              <div className="app-panel-body p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <div className="app-metric-label">Source</div>
-                    <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
-                  </div>
-                  {selected.sender_id && (
-                    <div className="text-right">
-                      <div className="app-metric-label">Sender</div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">{selected.sender_id}</span>
-                        {selected.customer_id && (
-                          <span className="app-badge good">Known Customer</span>
+              <div className="app-panel-body p-5 flex-1 flex flex-col">
+                <div className="flex-1 overflow-y-auto">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <div className="app-metric-label">Source</div>
+                        <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
+                      </div>
+                      {selected.sender_id && (
+                        <div className="text-right">
+                          <div className="app-metric-label">Sender</div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-sm font-semibold text-gray-900">{selected.sender_id}</span>
+                            {selected.customer_id && (
+                              <span className="app-badge good">Known Customer</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {selected.customer_id && (
+                      <CustomerContextCard customerId={selected.customer_id} />
+                    )}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="app-metric-label">Customer Message</div>
+                        {selected.original_content && selected.original_content !== selected.content && (
+                          <button
+                            type="button"
+                            className="app-badge"
+                            onClick={() => setShowOriginal((value) => !value)}
+                          >
+                            {showOriginal ? "Translated" : `Original ${selected.translated_from_language || ""}`.trim()}
+                          </button>
                         )}
                       </div>
-                    </div>
-                  )}
-                </div>
-                {selected.customer_id && (
-                  <CustomerContextCard customerId={selected.customer_id} />
-                )}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="app-metric-label">Customer Message</div>
-                    {selected.original_content && selected.original_content !== selected.content && (
-                      <button
-                        type="button"
-                        className="app-badge"
-                        onClick={() => setShowOriginal((value) => !value)}
-                      >
-                        {showOriginal ? "Translated" : `Original ${selected.translated_from_language || ""}`.trim()}
-                      </button>
-                    )}
-                  </div>
-                  <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
-                    <div>{renderMessageContent((showOriginal ? selected.original_content : selected.content) || "Empty message")}</div>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <div className="app-metric-label">Draft Reply</div>
-                  <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
-                    <div>{renderMessageContent(selected.draft_reply || "No draft reply stored for this message.")}</div>
-                  </div>
-                  {selected.checkout_link && (
-                    <div className="mt-3 flex items-center bg-white/60 dark:bg-black/20 border border-black/5 dark:border-white/5 rounded-lg p-3 backdrop-filter backdrop-blur-md">
-                      <div className="bg-blue-600 text-white rounded w-8 h-8 flex items-center justify-center font-bold mr-3">🛍️</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white m-0">Product: {selected.proposed_product_id || "Checkout Link"}</p>
-                        <a href={selected.checkout_link} target="_blank" rel="noreferrer" className="text-xs text-blue-600 dark:text-blue-400 truncate block">{selected.checkout_link}</a>
+                      <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
+                        <div>{renderMessageContent((showOriginal ? selected.original_content : selected.content) || "Empty message")}</div>
                       </div>
                     </div>
-                  )}
+
+                    <div className="mb-4">
+                      <div className="app-metric-label">Draft Reply</div>
+                      <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
+                        <div>{renderMessageContent(selected.draft_reply || "No draft reply stored for this message.")}</div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      <div className="app-card">
+                        <div className="app-metric-label">Status</div>
+                        <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{formatStatus(selected.status)}</span></div>
+                      </div>
+                      <div className="app-card">
+                        <div className="app-metric-label">Created</div>
+                        <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
+                      </div>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="app-card">
-                    <div className="app-metric-label">Status</div>
-                    <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{formatStatus(selected.status)}</span></div>
-                  </div>
-                  <div className="app-card">
-                    <div className="app-metric-label">Created</div>
-                    <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
+                <div className="mt-4 border-t pt-4">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="flex-1 app-input px-3 py-2 text-black bg-white rounded-md border"
+                      placeholder="Type a manual reply..."
+                      value={manualReply}
+                      onChange={(e) => setManualReply(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSendManualReply(selected.id);
+                      }}
+                    />
+                    <button
+                      className="app-button primary px-4 py-2 bg-blue-600 text-white rounded-md min-h-[44px] min-w-[44px]"
+                      onClick={() => handleSendManualReply(selected.id)}
+                    >
+                      Send
+                    </button>
                   </div>
                 </div>
+
                 {badgeTone(selected.status) === "warn" && (
-                  <div className="mt-6">
+                  <div className="mt-4">
                     {(() => {
                       let buttonText = "✨ Approve & Send Draft";
                       let parsedPayload = null;
@@ -527,14 +486,9 @@ function InboxWorkspace({
   );
 }
 
-function PowerSyncInboxContent() {
-  const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
-  return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
-}
-
 function InboxLoadingState() {
   return (
-    <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+    <AppShell title="Unified Inbox" subtitle="Native Rust omnichannel chat engine unified conversations.">
       <div className="app-panel">
         <div className="app-empty">Loading inbox messages...</div>
       </div>
@@ -542,12 +496,15 @@ function InboxLoadingState() {
   );
 }
 
-function ApiInboxFallback() {
+export default function InboxPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
+    // Initial fetch from REST API if we wanted to get history
+    // Since we are moving to native chat, let's load initial from WS replay or rest API
     async function loadMessages() {
       setLoading(true);
       setError("");
@@ -563,11 +520,64 @@ function ApiInboxFallback() {
       }
     }
     loadMessages();
+
+    // Connect to WebSocket
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat`;
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('Connected to Chat WS');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.action === "new_message" && data.message) {
+          // Normalize incoming native chat message to UI Message type
+          const newMsg: Message = {
+            id: data.message.id,
+            content: data.message.content,
+            source: data.message.sender_type,
+            status: 'open',
+            sender_id: data.message.sender_id,
+            conversation_id: data.message.conversation_id,
+            created_at: data.message.created_at,
+          };
+          setMessages(prev => [newMsg, ...prev]);
+        }
+      } catch (e) {
+        console.error("Failed to parse WS message", e);
+      }
+    };
+
+    ws.onerror = (e) => {
+      console.error('Chat WS error', e);
+    };
+
+    ws.onclose = () => {
+      console.log('Chat WS closed');
+    };
+
+    return () => {
+      ws.close();
+    };
   }, []);
+
+  const sendMessage = (content: string, conversation_id: string) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        action: "send_message",
+        conversation_id,
+        content
+      }));
+    }
+  };
 
   if (error) {
     return (
-      <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+      <AppShell title="Unified Inbox" subtitle="Native Rust omnichannel chat engine unified conversations.">
         <div className="app-panel" data-testid="inbox-settled">
           <div className="app-empty">{error}</div>
         </div>
@@ -579,16 +589,5 @@ function ApiInboxFallback() {
     return <InboxLoadingState />;
   }
 
-  return <InboxWorkspace messages={messages} sourceLabel="Live inbox messages for the current tenant." />;
-}
-
-export default function InboxPage() {
-  return (
-    <PowerSyncProvider
-      fallback={<InboxLoadingState />}
-      unsupportedFallback={<ApiInboxFallback />}
-    >
-      <PowerSyncInboxContent />
-    </PowerSyncProvider>
-  );
+  return <InboxWorkspace messages={messages} sendMessage={sendMessage} sourceLabel="Live inbox messages for the current tenant." />;
 }

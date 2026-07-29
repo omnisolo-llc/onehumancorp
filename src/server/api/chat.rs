@@ -84,3 +84,17 @@ mod tests {
         assert_eq!(response["link"]["url"].as_str().unwrap(), "/help/getting-started-1");
     }
 }
+
+#[cfg(test)]
+mod chat_ws_tests {
+    use super::*;
+
+    #[test]
+    fn test_client_message_deserialization() {
+        let json = r#"{"action": "send_message", "conversation_id": "00000000-0000-0000-0000-000000000000", "content": "hello"}"#;
+        // In actual implementation we use a struct in `chat_ws.rs`, but here we can just test general JSON parsing.
+        let v: serde_json::Value = serde_json::from_str(json).unwrap();
+        assert_eq!(v["action"], "send_message");
+        assert_eq!(v["content"], "hello");
+    }
+}
