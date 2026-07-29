@@ -1,3 +1,48 @@
+
+            <div className="bg-white/70 dark:bg-black/50 backdrop-blur-md rounded-2xl p-6 border border-gray-100 dark:border-gray-800/50 shadow-sm">
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">WhatsApp Cloud API</h3>
+              <p className="text-xs text-gray-500 mb-4">Connect your Meta WhatsApp Cloud API directly for native, low-latency messaging via Work Triage.</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Permanent Access Token</label>
+                  <input
+                    type="password"
+                    value={waCloudToken}
+                    onChange={(e) => setWaCloudToken(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    placeholder="Meta Graph API Token"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number ID</label>
+                  <input
+                    type="text"
+                    value={waCloudPhoneId}
+                    onChange={(e) => setWaCloudPhoneId(e.target.value)}
+                    className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    placeholder="e.g. 102345678901234"
+                  />
+                </div>
+
+                <button
+                  onClick={handleConnectWhatsAppCloud}
+                  disabled={waCloudStatus === 'loading'}
+                  className="w-full py-2.5 px-4 bg-gradient-to-b from-[#2d2d2d] to-[#1a1a1a] dark:from-white dark:to-gray-100 text-white dark:text-black font-medium text-sm rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.1)] hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {waCloudStatus === 'loading' ? 'Connecting...' : 'Connect WhatsApp'}
+                </button>
+
+                {waCloudStatus === 'success' && (
+                  <p className="text-xs text-green-600 dark:text-green-400">Successfully connected to Meta WhatsApp Cloud API.</p>
+                )}
+                {waCloudStatus === 'error' && (
+                  <p className="text-xs text-red-600 dark:text-red-400">Failed to connect. Check your credentials.</p>
+                )}
+              </div>
+            </div>
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -44,6 +89,28 @@ export default function SettingsPage() {
   const [twilioStatus, setTwilioStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [usageLogs, setUsageLogs] = useState<any[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+
+
+  const handleConnectWhatsAppCloud = async () => {
+    setWaCloudStatus('loading');
+    try {
+      const res = await fetch("/api/v1/integrations/whatsapp_cloud_api/connect", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_token: waCloudToken,
+          from_phone: waCloudPhoneId
+        })
+      });
+      if (res.ok) {
+        setWaCloudStatus('success');
+      } else {
+        setWaCloudStatus('error');
+      }
+    } catch (e) {
+      setWaCloudStatus('error');
+    }
+  };
 
   const handleConnectWhatsApp = async () => {
     try {
