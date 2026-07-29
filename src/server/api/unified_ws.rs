@@ -32,6 +32,11 @@ enum ClientMessage {
         #[serde(default)]
         topic: Option<String>,
     },
+    #[serde(rename = "widget_message")]
+    WidgetMessage {
+        text: String,
+        sender_id: String,
+    }
 }
 
 #[derive(Serialize)]
@@ -66,6 +71,7 @@ pub async fn unified_ws_handler(
     ws: WebSocketUpgrade,
     Extension(claims): Extension<server_common::Claims>,
     Query(query): Query<UnifiedWsQuery>,
+    axum::extract::State((db, orchestrator)): axum::extract::State<(std::sync::Arc<crate::db::DB>, std::sync::Arc<crate::orchestration::departments::DepartmentOrchestrator>)>,
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) if !org_id.is_empty() => org_id.to_string(),
@@ -77,7 +83,7 @@ pub async fn unified_ws_handler(
         .map(|c| c.split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_default();
 
-    ws.on_upgrade(move |socket| handle_unified_socket(socket, tenant_id, initial_channels))
+    ws.on_upgrade(move |socket| handle_unified_socket(socket, tenant_id, initial_channels, db, orchestrator))
 }
 
 #[allow(dead_code)]
@@ -170,7 +176,13 @@ async fn replay_from_redis(
     messages
 }
 
-async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_channels: Vec<String>) {
+async fn handle_unified_socket(
+    socket: WebSocket,
+    tenant_id: String,
+    initial_channels: Vec<String>,
+    db: std::sync::Arc<crate::db::DB>,
+    orchestrator: std::sync::Arc<crate::orchestration::departments::DepartmentOrchestrator>
+) {
     let (mut sender, mut receiver) = socket.split();
 
     let mut state = ChannelState {
@@ -311,6 +323,98 @@ async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_cha
                                             "channel": channel,
                                             "from_seq": from_seq,
                                             "count": count
+                                        });
+                                        let _ = ws_tx_rt.send(ack.to_string()).await;
+                                    }
+                                }
+                                ClientMessage::WidgetMessage { text, sender_id } => {
+                                    if let Ok(tid) = uuid::Uuid::parse_str(&tenant_id_recv) {
+                                        let chat_service = crate::services::chat::service::ChatService::new(db.pool.clone());
+                                        let source = "widget".to_string();
+
+                                        // Resolve identity if possible, though for a web widget it might just be the sender_id initially
+                                        let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(db.clone());
+                                        let customer_id_result = resolver.resolve_or_create_customer(&tenant_id_recv, &sender_id, &source).await;
+
+                                        let contact_id = if let Ok(cid) = customer_id_result.clone() {
+                                            if let Ok(c_uuid) = uuid::Uuid::parse_str(&cid) {
+                                                if let Ok(c) = sqlx::query_as::<_, crate::services::chat::models::ChatContact>("SELECT * FROM chat_contacts WHERE id = $1 AND tenant_id = $2").bind(&c_uuid).bind(&tid).fetch_one(&db.pool).await {
+                                                    c.id
+                                                } else {
+                                                    let c = chat_service.create_contact(tid, Some(sender_id.clone()), None, None).await.unwrap_or_else(|_| crate::services::chat::models::ChatContact {
+                                                         id: c_uuid, tenant_id: tid, name: Some(sender_id.clone()), email: None, phone: None, created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                                                    });
+                                                    c.id
+                                                }
+                                            } else {
+                                                let c = chat_service.create_contact(tid, Some(sender_id.clone()), None, None).await.unwrap_or_else(|_| crate::services::chat::models::ChatContact {
+                                                     id: uuid::Uuid::new_v4(), tenant_id: tid, name: Some(sender_id.clone()), email: None, phone: None, created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                                                });
+                                                c.id
+                                            }
+                                        } else {
+                                            let c = chat_service.create_contact(tid, Some(sender_id.clone()), None, None).await.unwrap_or_else(|_| crate::services::chat::models::ChatContact {
+                                                 id: uuid::Uuid::new_v4(), tenant_id: tid, name: Some(sender_id.clone()), email: None, phone: None, created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                                            });
+                                            c.id
+                                        };
+
+                                        // Find or create inbox
+                                        let inbox = if let Ok(inbox) = sqlx::query_as::<_, crate::services::chat::models::ChatInbox>("SELECT * FROM chat_inboxes WHERE tenant_id = $1 LIMIT 1").bind(&tid).fetch_one(&db.pool).await {
+                                            inbox
+                                        } else {
+                                            chat_service.create_inbox(tid, "Web Widget Inbox".to_string()).await.unwrap_or_else(|_| crate::services::chat::models::ChatInbox {
+                                                id: uuid::Uuid::new_v4(), tenant_id: tid, name: "Fallback".into(), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                                            })
+                                        };
+
+                                        // Find or create channel
+                                        let _ = if let Ok(chan) = sqlx::query_as::<_, crate::services::chat::models::ChatChannel>("SELECT * FROM chat_channels WHERE tenant_id = $1 AND channel_type = 'widget' LIMIT 1").bind(&tid).fetch_one(&db.pool).await {
+                                            chan
+                                        } else {
+                                            chat_service.create_channel(tid, inbox.id, "widget".to_string(), serde_json::json!({})).await.unwrap_or_else(|_| crate::services::chat::models::ChatChannel {
+                                                id: uuid::Uuid::new_v4(), tenant_id: tid, inbox_id: inbox.id, channel_type: "widget".into(), config: serde_json::json!({}), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                                            })
+                                        };
+
+                                        // Find or create conversation
+                                        let conversation = if let Ok(conv) = sqlx::query_as::<_, crate::services::chat::models::ChatConversation>("SELECT * FROM chat_conversations WHERE tenant_id = $1 AND contact_id = $2 LIMIT 1").bind(&tid).bind(&contact_id).fetch_one(&db.pool).await {
+                                            conv
+                                        } else {
+                                            chat_service.start_conversation(tid, inbox.id, contact_id, None).await.unwrap_or_else(|_| crate::services::chat::models::ChatConversation {
+                                                id: uuid::Uuid::new_v4(), tenant_id: tid, inbox_id: inbox.id, contact_id: contact_id, assignee_id: None, status: "open".into(), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                                            })
+                                        };
+
+                                        // Insert message
+                                        let _ = chat_service.send_message(tid, conversation.id, "contact".to_string(), Some(contact_id), text.clone()).await;
+
+                                        let inbox_message_id = uuid::Uuid::new_v4().to_string();
+
+                                        // Dispatch event to Orchestrator
+                                        let mut payload = serde_json::json!({
+                                            "message_id": inbox_message_id, // we use a dummy id here for backwards compatibility if needed
+                                            "inbox_message_id": inbox_message_id,
+                                            "source": "widget",
+                                            "content": text.clone(),
+                                            "sender_id": sender_id.clone()
+                                        });
+                                        if let Ok(c_id) = customer_id_result {
+                                            payload["customer_id"] = serde_json::json!(c_id);
+                                        }
+
+                                        let event = crate::orchestration::departments::types::DepartmentEvent {
+                                            id: uuid::Uuid::new_v4().to_string(),
+                                            tenant_id: tenant_id_recv.clone(),
+                                            event_type: "tenant.omnichannel.message.received".to_string(),
+                                            payload,
+                                        };
+
+                                        let _ = orchestrator.dispatch_event(event).await;
+
+                                        let ack = serde_json::json!({
+                                            "action": "widget_message_received",
+                                            "status": "ok"
                                         });
                                         let _ = ws_tx_rt.send(ack.to_string()).await;
                                     }

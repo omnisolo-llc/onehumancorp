@@ -301,6 +301,64 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         tracing::error!("Failed to insert omni_inbox_messages: {}", e);
     }
 
+    // Insert into native chat_inboxes, chat_channels, chat_contacts, chat_conversations, chat_messages
+    if let Ok(tid) = Uuid::parse_str(&tenant_id) {
+        let chat_service = crate::services::chat::service::ChatService::new(state.db.pool.clone());
+        let _ = async {
+            // Find or create inbox
+            let inbox = if let Ok(inbox) = sqlx::query_as::<_, crate::services::chat::models::ChatInbox>("SELECT * FROM chat_inboxes WHERE tenant_id = $1 LIMIT 1").bind(&tid).fetch_one(&state.db.pool).await {
+                inbox
+            } else {
+                chat_service.create_inbox(tid, "WhatsApp Inbox".to_string()).await.unwrap_or_else(|_| crate::services::chat::models::ChatInbox {
+                    id: Uuid::new_v4(), tenant_id: tid, name: "Fallback".into(), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                })
+            };
+
+            // Find or create channel
+            let _ = if let Ok(chan) = sqlx::query_as::<_, crate::services::chat::models::ChatChannel>("SELECT * FROM chat_channels WHERE tenant_id = $1 AND channel_type = 'whatsapp' LIMIT 1").bind(&tid).fetch_one(&state.db.pool).await {
+                chan
+            } else {
+                chat_service.create_channel(tid, inbox.id, "whatsapp".to_string(), serde_json::json!({})).await.unwrap_or_else(|_| crate::services::chat::models::ChatChannel {
+                    id: Uuid::new_v4(), tenant_id: tid, inbox_id: inbox.id, channel_type: "whatsapp".into(), config: serde_json::json!({}), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                })
+            };
+
+            // Find or create contact
+            let contact = if let Some(cid) = customer_id {
+                if let Ok(c_uuid) = Uuid::parse_str(cid) {
+                    if let Ok(c) = sqlx::query_as::<_, crate::services::chat::models::ChatContact>("SELECT * FROM chat_contacts WHERE id = $1 AND tenant_id = $2").bind(&c_uuid).bind(&tid).fetch_one(&state.db.pool).await {
+                        c
+                    } else {
+                        chat_service.create_contact(tid, Some(sender_id.clone()), None, Some(sender_id.clone())).await.unwrap_or_else(|_| crate::services::chat::models::ChatContact {
+                             id: c_uuid, tenant_id: tid, name: Some(sender_id.clone()), email: None, phone: Some(sender_id.clone()), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                        })
+                    }
+                } else {
+                    chat_service.create_contact(tid, Some(sender_id.clone()), None, Some(sender_id.clone())).await.unwrap_or_else(|_| crate::services::chat::models::ChatContact {
+                         id: Uuid::new_v4(), tenant_id: tid, name: Some(sender_id.clone()), email: None, phone: Some(sender_id.clone()), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                    })
+                }
+            } else {
+                chat_service.create_contact(tid, Some(sender_id.clone()), None, Some(sender_id.clone())).await.unwrap_or_else(|_| crate::services::chat::models::ChatContact {
+                     id: Uuid::new_v4(), tenant_id: tid, name: Some(sender_id.clone()), email: None, phone: Some(sender_id.clone()), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                })
+            };
+
+            // Find or create conversation
+            let conversation = if let Ok(conv) = sqlx::query_as::<_, crate::services::chat::models::ChatConversation>("SELECT * FROM chat_conversations WHERE tenant_id = $1 AND contact_id = $2 LIMIT 1").bind(&tid).bind(&contact.id).fetch_one(&state.db.pool).await {
+                conv
+            } else {
+                chat_service.start_conversation(tid, inbox.id, contact.id, None).await.unwrap_or_else(|_| crate::services::chat::models::ChatConversation {
+                    id: Uuid::new_v4(), tenant_id: tid, inbox_id: inbox.id, contact_id: contact.id, assignee_id: None, status: "open".into(), created_at: chrono::Utc::now(), updated_at: chrono::Utc::now()
+                })
+            };
+
+            // Insert message
+            let _ = chat_service.send_message(tid, conversation.id, "contact".to_string(), Some(contact.id), text.clone()).await;
+
+        }.await;
+    }
+
     let job_id = Uuid::new_v4().to_string();
     let mut payload = serde_json::json!({
         "message_id": inbox_id,
