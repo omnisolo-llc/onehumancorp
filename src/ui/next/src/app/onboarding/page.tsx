@@ -750,7 +750,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
-        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] glassmorphism translucent-glass-light dark:translucent-glass-dark"
+        className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] translucent-glass-light dark:translucent-glass-dark"
       >
         <div className="px-6 pt-5 text-center">
           <div className="setup-header-main">
@@ -791,7 +791,7 @@ export default function OnboardingWizard() {
         </div>
 
         {error && (
-          <div className="absolute top-4 left-4 right-4 z-[9999] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake glass-control">
+          <div className="absolute top-4 left-4 right-4 z-[9999] border border-[#FF3B30]/50 text-[#FF3B30] p-3 rounded-[8px] text-sm font-semibold shadow-lg flex items-center gap-2 animate-shake translucent-glass-light dark:translucent-glass-dark">
             <svg
               className="w-5 h-5 flex-shrink-0"
               fill="none"
@@ -847,7 +847,7 @@ export default function OnboardingWizard() {
                 </button>
                 <button
                   type="button"
-                  className="flex items-center justify-center w-full glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
+                  className="flex items-center justify-center w-full translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
                   onClick={() => {
                     updateState({ step: -1 });
                     syncStateToBackend({ step: -1 });
@@ -859,7 +859,7 @@ export default function OnboardingWizard() {
                 </button>
                 <button
                   type="button"
-                  className="w-full glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
+                  className="w-full translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-semibold hover:border-gray-400 dark:hover:border-gray-500 transition-all min-h-[44px]"
                   onClick={() => {
                     updateState({ step: 0 });
                     syncStateToBackend({ step: 0 });
@@ -872,7 +872,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 0 && (
-            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full glassmorphism  p-4">
+            <div className="flex flex-col flex-1 animate-fade-in w-full h-full max-h-full translucent-glass-light dark:translucent-glass-dark  p-4">
               <button
                 onClick={() => {
                   updateState({ step: -2 });
@@ -905,7 +905,7 @@ export default function OnboardingWizard() {
               <div className="flex flex-col flex-1 gap-4 overflow-hidden w-full max-w-full">
                 <div
                   id="chat-messages"
-                  className="glass-control translucent-glass-light dark:translucent-glass-dark flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4"
+                  className="translucent-glass-light dark:translucent-glass-dark flex-1 overflow-y-auto p-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-left space-y-4"
                 >
                   {chatMessages.length === 0 && (
                     <div className="mb-2">
@@ -966,7 +966,7 @@ export default function OnboardingWizard() {
                     id="chat-image-url"
                     value={chatImageUrl}
                     onChange={(e) => setChatImageUrl(e.target.value)}
-                    className="glass-control rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
+                    className="translucent-glass-light dark:translucent-glass-dark rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
                     placeholder="Image URL (Optional)"
                     inputMode="url"
                     autoComplete="url"
@@ -975,7 +975,7 @@ export default function OnboardingWizard() {
                   <div className="flex gap-2 w-full">
                     <button
                       id="chat-upload-btn"
-                      className="glass-control rounded-[8px] min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
+                      className="translucent-glass-light dark:translucent-glass-dark rounded-[8px] min-w-[44px] min-h-[44px] flex items-center justify-center text-[#1D1D1F] dark:text-[#F5F5F7] hover:border-gray-400 dark:hover:border-gray-500 transition-all duration-[250ms] active:scale-[0.98]"
                       onClick={() => {
                         const url = prompt("Enter image URL");
                         if (url) setChatImageUrl(url);
@@ -1013,7 +1013,7 @@ export default function OnboardingWizard() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSendChatMessage();
                       }}
-                      className="glass-control rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none flex-1 transition-all duration-[250ms] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
+                      className="translucent-glass-light dark:translucent-glass-dark rounded-[8px] w-full p-3 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none flex-1 transition-all duration-[250ms] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 min-h-[44px]"
                       placeholder="Type a message..."
                       enterKeyHint="send"
                     />
@@ -1066,7 +1066,7 @@ export default function OnboardingWizard() {
                 <textarea
                   id="instant-bio"
                   data-testid="instant-bio"
-                  className={`glass-control rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"}`}
+                  className={`translucent-glass-light dark:translucent-glass-dark rounded-[8px] w-full p-4 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none transition-all duration-[250ms] ${error === "Please tell us about your business." || error ? "border border-[#FF3B30]" : "border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"}`}
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                   style={{ resize: "none" }}
@@ -1081,7 +1081,7 @@ export default function OnboardingWizard() {
                   id="instant-image-url"
                   data-testid="instant-image-url"
                   type="url"
-                  className="glass-control rounded-[8px] min-h-[44px]"
+                  className="translucent-glass-light dark:translucent-glass-dark rounded-[8px] min-h-[44px]"
                   placeholder="Image URL (Optional)"
                   value={instantImageUrl}
                   onChange={(e) =>
@@ -1206,7 +1206,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Business Name must be at least 3 characters." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Business Name must be at least 3 characters." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
                         inputMode="text"
                         enterKeyHint="next"
                       />
@@ -1316,7 +1316,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us what you sell." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 focus:ring-2 focus:ring-[#0066FF]/30"}`}
+                        className={`w-full p-3 sm:p-4 border outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us what you sell." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 focus:ring-2 focus:ring-[#0066FF]/30"}`}
                       />
                     </div>
                   </div>
@@ -1418,7 +1418,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us your location." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us your location." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
                       />
                     </div>
                   </div>
@@ -1520,7 +1520,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className={`w-full p-3 sm:p-4 border outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us your target audience." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
+                        className={`w-full p-3 sm:p-4 border outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === "Please tell us your target audience." ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} min-h-[44px]`}
                       />
                     </div>
                   </div>
@@ -1646,7 +1646,7 @@ export default function OnboardingWizard() {
                         return rest;
                       });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                   {validationErrors.businessName && (
                     <p className="text-[#FF3B30] text-xs mt-1">
@@ -1669,7 +1669,7 @@ export default function OnboardingWizard() {
                         return rest;
                       });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                   />
                   {validationErrors.businessType && (
                     <p className="text-[#FF3B30] text-xs mt-1">
@@ -1692,7 +1692,7 @@ export default function OnboardingWizard() {
                           .map((c) => c.trim()),
                       })
                     }
-                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -1707,7 +1707,7 @@ export default function OnboardingWizard() {
                       onChange={(e) =>
                         updateState({ firstProductName: e.target.value })
                       }
-                      className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                      className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                     />
                   </div>
                   <div>
@@ -1735,7 +1735,7 @@ export default function OnboardingWizard() {
                           });
                         }
                       }}
-                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
                     />
                     {validationErrors.firstProductPrice && (
                       <p className="text-[#FF3B30] text-xs mt-1">
@@ -1853,7 +1853,7 @@ export default function OnboardingWizard() {
                           onClick={() =>
                             updateState({ websiteTemplate: template })
                           }
-                          className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] ${websiteTemplate === template ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white"}`}
+                          className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] ${websiteTemplate === template ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] translucent-glass-light dark:translucent-glass-dark hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white"}`}
                         >
                           <div className="font-semibold text-sm">
                             {template}
@@ -1871,7 +1871,7 @@ export default function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => updateState({ domainChoice: "subdomain" })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] flex flex-col items-center justify-center text-center ${domainChoice === "subdomain" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
+                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] flex flex-col items-center justify-center text-center ${domainChoice === "subdomain" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] translucent-glass-light dark:translucent-glass-dark text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
                     >
                       <span className="font-semibold text-sm mb-1">
                         Free Subdomain
@@ -1882,7 +1882,7 @@ export default function OnboardingWizard() {
                     </div>
                     <div
                       onClick={() => updateState({ domainChoice: "custom" })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] flex flex-col items-center justify-center text-center ${domainChoice === "custom" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
+                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] flex flex-col items-center justify-center text-center ${domainChoice === "custom" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] translucent-glass-light dark:translucent-glass-dark text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
                     >
                       <span className="font-semibold text-sm mb-1">
                         Custom Domain
@@ -1909,7 +1909,7 @@ export default function OnboardingWizard() {
                         <div
                           key={agent.id}
                           onClick={() => handleAgentToggle(agent.id)}
-                          className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]  border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "glass-control rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500"}`}
+                          className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]  border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "translucent-glass-light dark:translucent-glass-dark rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500"}`}
                         >
                           <div
                             className={`flex items-center justify-center w-10 h-10 rounded-full text-lg ${isActive ? "bg-[#0066FF]/20" : "bg-black/10 dark:bg-white/10"}`}
@@ -1954,13 +1954,13 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 glass-control rounded-[8px] text-[#1D1D1F] dark:text-white">
+                  <label className="flex items-center justify-between cursor-pointer p-3 translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-white">
                     <span className="font-semibold text-sm">
                       Allow AI to Auto-Respond
                     </span>
                     <input
                       type="checkbox"
-                      className="glass-control sr-only"
+                      className="translucent-glass-light dark:translucent-glass-dark sr-only"
                       checked={aiAutoRespond}
                       onChange={(e) =>
                         updateState({ aiAutoRespond: e.target.checked })
@@ -2017,7 +2017,7 @@ export default function OnboardingWizard() {
           {step === 4 && (
             <div
               aria-live="polite"
-              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism  shadow-2xl p-4 sm:p-8"
+              className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in translucent-glass-light dark:translucent-glass-dark  shadow-2xl p-4 sm:p-8"
             >
               <div className="w-24 h-24 relative mb-8">
                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -2148,7 +2148,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 glassmorphism  flex flex-col items-center mb-6">
+                <div className="p-3 translucent-glass-light dark:translucent-glass-dark  flex flex-col items-center mb-6">
                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">
                     Your Shareable Link
                   </p>
@@ -2161,13 +2161,13 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/assistant"
-                  className="flex w-full items-center justify-center glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="sparkles">Open Assistant</IconLabel>
                 </a>
                 <a
                   href="/builder"
-                  className="flex w-full items-center justify-center glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="flex w-full items-center justify-center translucent-glass-light dark:translucent-glass-dark rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-sm active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   <IconLabel icon="eye">Preview Storefront</IconLabel>
                 </a>
