@@ -3436,6 +3436,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .with_state(twilio_webhook_state);
 
+
+    let omnichannel_chat_state = api::omnichannel_chat::OmnichannelChatState {
+        hub: hub.clone(),
+    };
+    let omnichannel_chat_router = api::omnichannel_chat::router(omnichannel_chat_state);
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
