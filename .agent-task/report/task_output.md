@@ -1,13 +1,13 @@
-issue_title: "Architect & Build Native Rust Omnichannel Chat (Chatwoot Replacement)"
+issue_title: "Architect & Build Native Rust Omnichannel Chat (legacy external dependency Replacement)"
 issue_description: |
-  **Title**: Architect & Build Native Rust Omnichannel Chat (Chatwoot Replacement)
+  **Title**: Architect & Build Native Rust Omnichannel Chat (legacy external dependency Replacement)
 
   **Problem Statement**:
-  Currently, Maya the home baker and Carlos the handyman struggle to manage their customer inquiries coming from multiple channels (WhatsApp, Web Widgets, Instagram DMs, etc.) because they either have to switch between apps or rely on third-party integrations that are disjointed from their core business workflows (inventory, bookings, payments). They need a unified inbox embedded directly within OHC where their AI assistant automatically triages messages, drafts replies, and contextually connects conversations to bookings and payments. Relying on an external Chatwoot deployment introduces latency, disjointed data models, and breaches our tenant-isolation architecture.
+  Currently, Maya the home baker and Carlos the handyman struggle to manage their customer inquiries coming from multiple channels (WhatsApp, Web Widgets, Instagram DMs, etc.) because they either have to switch between apps or rely on third-party integrations that are disjointed from their core business workflows (inventory, bookings, payments). They need a unified inbox embedded directly within OHC where their AI assistant automatically triages messages, drafts replies, and contextually connects conversations to bookings and payments. Relying on an external legacy external dependency deployment introduces latency, disjointed data models, and breaches our tenant-isolation architecture.
 
   **Research Report**:
-  - **Codebase & Docs Audit**: OHC currently lacks a unified inbox. The `src/server/integrations/chat/` directory only contains a README. External Chatwoot usage has been completely retired by mandate.
-  - **Chatwoot Architecture Benchmarking**: Inspection of Chatwoot (`app/models/conversation.rb`, `app/models/message.rb`, `app/models/inbox.rb`, etc.) reveals core entities:
+  - **Codebase & Docs Audit**: OHC currently lacks a unified inbox. The `src/server/integrations/chat/` directory only contains a README. External legacy external dependency usage has been completely retired by mandate.
+  - **legacy external dependency Architecture Benchmarking**: Inspection of legacy external dependency (`app/models/conversation.rb`, `app/models/message.rb`, `app/models/inbox.rb`, etc.) reveals core entities:
     - **Inboxes**: Channels configured per tenant (e.g., WhatsApp, Website Widget, Facebook Page).
     - **Conversations**: Threads tied to a specific `contact_id`, `inbox_id`, and `account_id` (tenant). Maintains SLA, status (`open`, `resolved`), priority, and assignee.
     - **Messages**: Individual pieces of communication within a conversation. Can be inbound/outbound, private (internal notes), text/attachments.
@@ -65,7 +65,7 @@ issue_description: |
   *Key Design Decisions & Why*:
   - **Unified Rust Core**: Implement the messaging engine entirely in Rust (`ohc-mono`) for low-latency WebSocket broadcasting to the UI and fast webhook ingestion from Meta/Twilio.
   - **Strict Tenant Isolation**: Every chat entity (Inbox, Conversation, Message, Contact) MUST have a `tenant_id` enforced by PostgreSQL Row Level Security (RLS).
-  - **AI-First Abstraction**: Instead of routing to human agents like classic Chatwoot, conversations default to routing to the "AI Assistant". Human owners only intervene when the AI escalates or proposes a high-stakes draft.
+  - **AI-First Abstraction**: Instead of routing to human agents like classic legacy external dependency, conversations default to routing to the "AI Assistant". Human owners only intervene when the AI escalates or proposes a high-stakes draft.
 
   **Implementation Prompt**:
   *Objective*: Implement the core data models and service layer for the native Rust Omnichannel Chat system.
