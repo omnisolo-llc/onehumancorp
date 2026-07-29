@@ -323,7 +323,25 @@ oci.pull(
         "linux/arm64/v8",
     ],
 )
-use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux_arm64_v8", "distroless_static", "distroless_static_linux_amd64", "distroless_static_linux_arm64_v8", "nginx_alpine", "nginx_alpine_linux_amd64", "nginx_alpine_linux_arm64_v8")
+oci.pull(
+    name = "pgvector",
+    digest = "sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee",
+    image = "mirror.gcr.io/pgvector/pgvector",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+    ],
+)
+oci.pull(
+    name = "valkey",
+    digest = "sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885",
+    image = "mirror.gcr.io/valkey/valkey",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+    ],
+)
+use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux_arm64_v8", "distroless_static", "distroless_static_linux_amd64", "distroless_static_linux_arm64_v8", "nginx_alpine", "nginx_alpine_linux_amd64", "nginx_alpine_linux_arm64_v8", "pgvector", "valkey")
 
 archive_override(
     module_name = "xds",

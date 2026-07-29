@@ -204,6 +204,28 @@ oci_load(
     visibility = ["//visibility:public"],
 )
 
+oci_load(
+    name = "pgvector_load",
+    image = "@pgvector",
+    repo_tags = ["pgvector/pgvector:pg15"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+oci_load(
+    name = "valkey_load",
+    image = "@valkey",
+    repo_tags = ["valkey/valkey:8-alpine"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
+)
+
 oci_push(
     name = "agent_push_ghcr",
     image = ":agent_image",
@@ -441,6 +463,8 @@ sh_binary(
         ":mono_core_load",
         ":agent_load",
         ":default_agent_load",
+        ":pgvector_load",
+        ":valkey_load",
     ],
     deps = ["@bazel_tools//tools/bash/runfiles"],
     tags = ["manual"],

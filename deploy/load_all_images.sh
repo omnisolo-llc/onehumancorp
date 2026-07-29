@@ -61,6 +61,8 @@ load_image "server_load"
 load_image "mono_core_load"
 load_image "agent_load"
 load_image "default_agent_load"
+load_image "pgvector_load"
+load_image "valkey_load"
 
 echo "--- Checking for local base image tarballs ---"
 # Fallback mechanism to load base images from a cached artifact if available
