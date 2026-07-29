@@ -44,6 +44,11 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("connect to OHC_POSTGRES_ADMIN_URL: {error}"))?;
 
+    sqlx::query("SELECT pg_advisory_lock(20240728)")
+        .execute(&admin_pool)
+        .await
+        .map_err(|error| format!("acquire migration lock: {error}"))?;
+
     sqlx::query("CREATE EXTENSION IF NOT EXISTS vector")
         .execute(&admin_pool)
         .await
@@ -85,6 +90,11 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
     .execute(&admin_pool)
     .await
     .map_err(|error| format!("provision non-superuser test role: {error}"))?;
+
+    sqlx::query("SELECT pg_advisory_unlock(20240728)")
+        .execute(&admin_pool)
+        .await
+        .map_err(|error| format!("release migration lock: {error}"))?;
 
     admin_pool.close().await;
     Ok(())
