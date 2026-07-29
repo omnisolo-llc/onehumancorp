@@ -59,12 +59,13 @@ impl ChatService {
         name: Option<String>,
         email: Option<String>,
         phone: Option<String>,
+        omnichannel_ids: serde_json::Value,
     ) -> Result<ChatContact, sqlx::Error> {
         sqlx::query_as(
             r#"
-            INSERT INTO chat_contacts (id, tenant_id, name, email, phone)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, tenant_id, name, email, phone, created_at, updated_at
+            INSERT INTO chat_contacts (id, tenant_id, name, email, phone, omnichannel_ids)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, tenant_id, name, email, phone, omnichannel_ids, created_at, updated_at
             "#
         )
         .bind(Uuid::new_v4())
@@ -72,6 +73,7 @@ impl ChatService {
         .bind(name)
         .bind(email)
         .bind(phone)
+        .bind(omnichannel_ids)
         .fetch_one(&self.pool)
         .await
     }
@@ -106,12 +108,13 @@ impl ChatService {
         sender_type: String,
         sender_id: Option<Uuid>,
         content: String,
+        status: String,
     ) -> Result<ChatMessage, sqlx::Error> {
         sqlx::query_as(
             r#"
-            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, status, created_at, updated_at
             "#
         )
         .bind(Uuid::new_v4())
@@ -120,6 +123,25 @@ impl ChatService {
         .bind(sender_type)
         .bind(sender_id)
         .bind(content)
+        .bind(status)
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn approve_message(
+        &self,
+        tenant_id: Uuid,
+        message_id: Uuid,
+    ) -> Result<ChatMessage, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            UPDATE chat_messages SET status = 'sent', updated_at = NOW()
+            WHERE id = $1 AND tenant_id = $2
+            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, status, created_at, updated_at
+            "#
+        )
+        .bind(message_id)
+        .bind(tenant_id)
         .fetch_one(&self.pool)
         .await
     }

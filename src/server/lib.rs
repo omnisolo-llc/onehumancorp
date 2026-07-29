@@ -2993,6 +2993,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     message_triage_worker.start();
 
+    crate::workers::omnichannel_ai_draft_worker::start_omnichannel_ai_draft_worker(db.pool.clone(), orchestrator.clone());
+
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
     deposit_follow_up_worker.start();
@@ -6675,7 +6677,9 @@ async fn create_ui_bom_item_handler(
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
+    let (tx, _) = tokio::sync::broadcast::channel(100);
     let app = axum::Router::new()
+        .nest("/api/v1/chat", crate::api::chat::native_chat_router(std::sync::Arc::new(crate::services::chat::service::ChatService::new(db.pool.clone())), tx.clone()))
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
