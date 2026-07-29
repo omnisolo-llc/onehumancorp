@@ -1,0 +1,16 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = "0.1.77"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.7.0", features = ["v4", "serde"] }
+chrono = { version = "0.4.34", features = ["serde"] }
+server_integrations_core = { path = "../core" }
+
+[lib]
+path = "src/lib.rs"

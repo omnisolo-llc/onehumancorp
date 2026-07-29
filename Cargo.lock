@@ -8632,6 +8632,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "server_integrations_chat"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "server_integrations_chromadb"
 version = "0.1.0"
 dependencies = [
