@@ -583,6 +583,7 @@ function ApiInboxFallback() {
 }
 
 export default function InboxPage() {
+  // Note: The native Omnichannel chat widget has been removed in favor of the new Web/Tauri implementation.
   return (
     <PowerSyncProvider
       fallback={<InboxLoadingState />}
