@@ -127,11 +127,10 @@ export const AgentFeed: React.FC = () => {
                     return (
                         <div key={draft.draft_id} className="w-full mb-4">
                             <PayoutSummaryCard
-                                amount={parsedPayload.amount || 0}
-                                periodStart={parsedPayload.period_start || ''}
-                                periodEnd={parsedPayload.period_end || ''}
-                                transactionCount={parsedPayload.transaction_count || 0}
-                                onAcknowledge={() => handleApprove(draft.draft_id)}
+                                totalUsdEarned={parsedPayload.totalUsdEarned || 0}
+                                totalEurEarned={parsedPayload.totalEurEarned || 0}
+                                totalUsdPayout={parsedPayload.totalUsdPayout || 0}
+                                onViewDetails={() => handleApprove(draft.draft_id)}
                             />
                         </div>
                     );

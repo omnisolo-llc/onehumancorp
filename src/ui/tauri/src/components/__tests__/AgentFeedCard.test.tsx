@@ -56,7 +56,7 @@ describe('AgentFeedCard', () => {
         expect(mockApprove).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onEdit with draft_id when Edit button is clicked', () => {
+    it('opens edit mode when Edit button is clicked', () => {
         const mockApprove = vi.fn();
         const mockEdit = vi.fn();
 
@@ -71,8 +71,7 @@ describe('AgentFeedCard', () => {
         const editButton = screen.getByRole('button', { name: 'Edit Draft' });
         fireEvent.click(editButton);
 
-        expect(mockEdit).toHaveBeenCalledWith('draft-123');
-        expect(mockEdit).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId('feed-edit-textarea')).toBeDefined();
     });
 
     it('renders "Unknown User" if customer_name is not provided', () => {
