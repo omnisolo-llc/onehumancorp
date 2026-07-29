@@ -23,16 +23,6 @@ test.describe('Autonomous Booking System UI', () => {
 
     // 4. Submit
     // Route mock to avoid actual backend errors if not fully seeded
-    await page.route('/api/v1/booking/public/checkout', async (route) => {
-        await route.fulfill({
-            status: 200,
-            json: {
-                booking_id: 'mock-booking',
-                stripe_url: 'https://checkout.stripe.com/pay/mock_session',
-                status: 'pending_payment'
-            }
-        });
-    });
 
     await page.click('button:has-text("Confirm Booking")');
 
@@ -47,27 +37,7 @@ test.describe('Autonomous Booking System UI', () => {
     await expect(page.getByRole('heading', { name: 'Booking Management' })).toBeVisible();
 
     // Route mocks
-    await page.route('/api/v1/booking/admin/resources', async (route) => {
-        if (route.request().method() === 'GET') {
-            await route.fulfill({
-                status: 200,
-                json: [{ id: 'res-1', name: 'Studio A', description: 'Main Studio', type: 'space' }]
-            });
-        } else {
-            await route.fulfill({ status: 201, json: { id: 'new-res-1' } });
-        }
-    });
 
-    await page.route('/api/v1/booking/admin/availability', async (route) => {
-        if (route.request().method() === 'GET') {
-            await route.fulfill({
-                status: 200,
-                json: [{ id: 'avail-1', resource_id: 'res-1', start_time: '2025-01-01T09:00:00Z', end_time: '2025-01-01T17:00:00Z' }]
-            });
-        } else {
-            await route.fulfill({ status: 201, json: { id: 'new-avail-1' } });
-        }
-    });
 
     await page.reload();
 
