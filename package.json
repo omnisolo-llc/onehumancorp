@@ -80,5 +80,17 @@
     },
     "undici": "7.28.0",
     "ws@6.2.3": "6.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "8.5.19",
+      "brace-expansion": "5.0.8",
+      "@modelcontextprotocol/sdk": "1.26.0",
+      "ws": "6.2.4",
+      "js-yaml": "4.3.0",
+      "immutable": "4.3.9",
+      "sharp": "0.35.0",
+      "@hono/node-server": "2.0.10"
+    }
   }
 }
