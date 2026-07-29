@@ -1,4 +1,4 @@
-/// Master Catalog C. Chatwoot Retirement & Custom Rust Omnichannel Chat System Standard
+/// Master Catalog C. Chat system Retirement & Custom Rust Omnichannel Chat System Standard
 ///
 /// Native Rust Implementation: OHC implements its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside onehumancorp/mono.
 
