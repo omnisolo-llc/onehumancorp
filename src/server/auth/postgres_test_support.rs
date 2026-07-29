@@ -36,9 +36,13 @@ pub(crate) fn decide_postgres_test(
     Ok(PostgresTestDecision::Run(database_url.unwrap().to_string()))
 }
 
+use tokio::sync::Mutex;
+
+static MIGRATION_MUTEX: Mutex<()> = Mutex::const_new(());
+
 async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
     let admin_pool = PgPoolOptions::new()
-        .max_connections(1)
+        .max_connections(2)
         .acquire_timeout(Duration::from_secs(10))
         .connect(admin_url)
         .await
@@ -53,10 +57,12 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
+    let _lock = MIGRATION_MUTEX.lock().await;
     MIGRATOR
         .run(&admin_pool)
         .await
         .map_err(|error| format!("run src/server/migrations: {error}"))?;
+    drop(_lock);
 
     sqlx::raw_sql(
         r#"
