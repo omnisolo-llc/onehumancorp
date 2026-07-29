@@ -1,5 +1,5 @@
 -- +goose Up
--- Migration 217: Native Omnichannel Chat System
+-- Migration 218: Native Omnichannel Chat System
 
 CREATE TABLE IF NOT EXISTS omnichannel_inboxes (
     id UUID PRIMARY KEY,
