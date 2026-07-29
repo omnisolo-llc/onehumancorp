@@ -1,14 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
+
 
 test.describe('WhatsApp Cloud API Integrations Setting', () => {
-  test.beforeAll(async () => {
-    await setupTestEnv();
-  });
+  // Setup handled implicitly
 
-  test.afterAll(async () => {
-    await teardownTestEnv();
-  });
+  // Teardown handled implicitly
 
   test.beforeEach(async ({ page }) => {
     await loginAsE2eTenant(page);
