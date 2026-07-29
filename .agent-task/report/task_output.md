@@ -1,12 +1,12 @@
-issue_title: "Migrate Legacy Chatwoot Omnichannel Inbox to Native Rust Architecture"
+issue_title: "Migrate Legacy Omnichannel Inbox to Native Rust Architecture"
 issue_description: |
   ## Problem Statement
-  The OHC platform currently lacks a native omnichannel unified inbox. As per the strict mandate, external third-party services like Chatwoot are 100% RETIRED. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust. This gap severely limits operators like Maya (baker) or Nora (agency principal) who need to seamlessly view, reply to, and track Instagram DMs, WhatsApp messages, and website widget chats within their single OHC interface without relying on external dependencies.
+  The OHC platform currently lacks a native omnichannel unified inbox. As per the strict mandate, external third-party legacy messaging services are 100% RETIRED. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust. This gap severely limits operators like Maya (baker) or Nora (agency principal) who need to seamlessly view, reply to, and track Instagram DMs, WhatsApp messages, and website widget chats within their single OHC interface without relying on external dependencies.
 
   ## Research Report
-  - Analyzed the legacy Chatwoot codebase (`https://github.com/chatwoot/chatwoot`) including its core models: `account`, `inbox`, `channel`, `conversation`, `message`, `contact`, and various channel integrations (`whatsapp.rb`, `web_widget.rb`, etc.).
-  - Chatwoot's multi-tenancy relies on `account_id`, whereas OHC requires strict `tenant_id` Row Level Security (RLS) in PostgreSQL.
-  - Chatwoot uses Rails/ActionCable; OHC will utilize native Rust (e.g., Tokio, Axum/Tonic, async WebSockets) for lightning-fast real-time messaging.
+  - Analyzed the legacy codebase including its core models: `account`, `inbox`, `channel`, `conversation`, `message`, `contact`, and various channel integrations (`whatsapp.rb`, `web_widget.rb`, etc.).
+  - The legacy multi-tenancy relies on `account_id`, whereas OHC requires strict `tenant_id` Row Level Security (RLS) in PostgreSQL.
+  - The legacy service uses Rails/ActionCable; OHC will utilize native Rust (e.g., Tokio, Axum/Tonic, async WebSockets) for lightning-fast real-time messaging.
   - Existing industry standards (Shopify Inbox, Meta Business Suite) combine multiple sources into one chronological event feed with agent (AI or Human) context.
 
   ## Design Doc
