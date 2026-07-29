@@ -20,63 +20,201 @@
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
       }
-      .old-glassmorphism {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+      /* New Native Chat Styles */
+      .layout-wrapper {
+        display: flex;
+        gap: 20px;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        height: calc(100vh - 100px);
       }
-      .glassmorphism-btn {
-        border-radius: 8px;
+      .sidebar {
+        width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        overflow-y: auto;
       }
-      .glassmorphism-input {
-        border-radius: 8px;
+      .main-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
 
-      .product-card {
+      .inbox-list {
         display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        border-radius: 8px;
-        padding: 8px;
-        margin-top: 10px;
-        margin-bottom: 10px;
+        flex-direction: column;
+        gap: 8px;
       }
-      .product-card-icon {
+
+      .inbox-item {
+        padding: 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.2s;
+        border: 1px solid transparent;
+      }
+      .inbox-item:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+      .inbox-item.active {
+        background: rgba(0, 102, 255, 0.1);
+        border-color: rgba(0, 102, 255, 0.3);
+      }
+
+      .conv-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .conv-item {
+        padding: 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.2s;
+        border: 1px solid rgba(0,0,0,0.05);
+        background: rgba(255,255,255,0.5);
+      }
+      .conv-item:hover {
+        background: rgba(255,255,255,0.8);
+      }
+      .conv-item.active {
+        background: white;
+        border-color: #0066FF;
+      }
+
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .chat-bubble {
+        max-width: 75%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 15px;
+        line-height: 1.4;
+      }
+
+      .chat-bubble.agent {
+        align-self: flex-end;
         background: #0066FF;
         color: white;
-        border-radius: 4px;
-        width: 32px;
-        height: 32px;
+        border-bottom-right-radius: 4px;
+      }
+
+      .chat-bubble.contact {
+        align-self: flex-start;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0,0,0,0.1);
+        color: #1d1d1f;
+        border-bottom-left-radius: 4px;
+      }
+
+      /* AI Draft Styling */
+      .draft-reply {
+        background: #f8fafc;
+        border-left: 3px solid #0066FF;
+        padding: 12px;
+        border-radius: 4px 8px 8px 4px;
+        margin-top: 8px;
+        font-size: 14px;
+      }
+      .draft-reply-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #0066FF;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        display: block;
+      }
+      .draft-reply-content {
+        color: #334155;
+        margin-bottom: 12px;
+      }
+      .approve-btn {
+        background-color: #0066FF;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.1s, background-color 0.2s;
+        min-width: 44px;
+        min-height: 44px;
+      }
+      .approve-btn:active {
+        transform: scale(0.98);
+      }
+      .approve-btn.approved {
+        background-color: #34C759;
+        cursor: default;
+      }
+
+      .chat-input-area {
+        padding: 16px;
+        border-top: 1px solid rgba(0,0,0,0.1);
+        display: flex;
+        gap: 12px;
+      }
+
+      .chat-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid rgba(0,0,0,0.2);
+        border-radius: 24px;
+        font-size: 15px;
+        outline: none;
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .chat-input:focus {
+        border-color: #0066FF;
+      }
+
+      .chat-send-btn {
+        background: #0066FF;
+        color: white;
+        border: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 22px;
+        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
+        transition: transform 0.1s;
       }
-      .product-card-details {
-        flex: 1;
+      .chat-send-btn:active {
+        transform: scale(0.95);
       }
-      .product-card-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #1d1d1f;
-        margin: 0;
+      .chat-send-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
       }
-      .product-card-link {
-        font-size: 12px;
-        color: #0066FF;
-        text-decoration: none;
-        word-break: break-all;
+
+      @media (max-width: 768px) {
+        .layout-wrapper {
+          flex-direction: column;
+          height: auto;
+        }
+        .sidebar {
+          width: 100%;
+          max-height: 300px;
+        }
+        .main-panel {
+          height: 600px;
+        }
       }
-    </style>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Agentic Unified Inbox</title>
-    <style>
+
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: #f5f5f7;
@@ -89,8 +227,8 @@
         padding: 20px;
       }
       .container {
-        max-width: 600px;
         width: 100%;
+        max-width: 1200px;
         padding: 24px;
         box-sizing: border-box;
         background: rgba(255, 255, 255, 0.65);
@@ -118,72 +256,6 @@
         font-size: 14px;
         margin-bottom: 16px;
       }
-      .message-card {
-        background: white;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid #e5e5ea;
-      }
-      .message-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-        font-size: 12px;
-        color: #86868b;
-        font-weight: 600;
-      }
-      .message-source {
-        background: #f1f5f9;
-        padding: 4px 8px;
-        border-radius: 6px;
-        color: #0f172a;
-      }
-      .message-content {
-        font-size: 15px;
-        color: #1d1d1f;
-        margin-bottom: 12px;
-        line-height: 1.4;
-      }
-      .draft-reply {
-        background: #f8fafc;
-        border-left: 3px solid #0066FF;
-        padding: 12px;
-        border-radius: 4px 8px 8px 4px;
-        margin-bottom: 16px;
-      }
-      .draft-reply-label {
-        font-size: 11px;
-        font-weight: 700;
-        color: #0066FF;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-        display: block;
-      }
-      .draft-reply-content {
-        font-size: 14px;
-        color: #334155;
-      }
-      .approve-btn {
-        background-color: #0066FF;
-        color: white;
-        border: none;
-        padding: 10px 16px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: transform 0.1s, background-color 0.2s;
-      }
-      .approve-btn:active {
-        transform: scale(0.98);
-      }
-      .approve-btn.approved {
-        background-color: #34C759;
-        cursor: default;
-      }
       .empty-state {
         text-align: center;
         padding: 40px 20px;
@@ -198,44 +270,6 @@
         font-weight: 600;
         font-size: 14px;
       }
-
-      .product-card {
-        display: flex;
-        align-items: center;
-        background: rgba(255, 255, 255, 0.6);
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        border-radius: 8px;
-        padding: 8px;
-        margin-top: 10px;
-        margin-bottom: 10px;
-      }
-      .product-card-icon {
-        background: #0066FF;
-        color: white;
-        border-radius: 4px;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-weight: bold;
-      }
-      .product-card-details {
-        flex: 1;
-      }
-      .product-card-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #1d1d1f;
-        margin: 0;
-      }
-      .product-card-link {
-        font-size: 12px;
-        color: #0066FF;
-        text-decoration: none;
-        word-break: break-all;
-      }
     </style>
   </head>
   <body>
@@ -243,73 +277,171 @@
       <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
       <div class="header-section">
         <div>
-          <h1>Agentic Inbox</h1>
-          <div class="subtitle">Unified messages with AI-drafted replies</div>
+          <h1>Native Omnichannel Inbox</h1>
+          <div class="subtitle">Unified real-time conversations across all channels</div>
         </div>
       </div>
 
-      <div id="inbox-queue">
-        <div class="empty-state">Loading messages...</div>
+      <div class="layout-wrapper">
+        <div class="sidebar glassmorphism">
+          <div style="padding: 16px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1);">Inboxes</div>
+          <div id="inbox-list" class="inbox-list" style="padding: 12px;">
+            <div class="empty-state" style="padding: 10px;">Loading inboxes...</div>
+          </div>
+
+          <div style="padding: 16px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1); border-top: 1px solid rgba(0,0,0,0.1);">Conversations</div>
+          <div id="conv-list" class="conv-list" style="padding: 12px; flex: 1; overflow-y: auto;">
+            <div class="empty-state" style="padding: 10px;">Select an inbox</div>
+          </div>
+        </div>
+
+        <div class="main-panel glassmorphism">
+          <div id="chat-header" style="padding: 16px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1);">
+            Select a conversation
+          </div>
+          <div id="chat-messages" class="chat-messages">
+            <div class="empty-state">No conversation selected.</div>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." disabled />
+            <button id="chat-send-btn" class="chat-send-btn" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-
     <script>
-      async function loadInbox() {
-        const queueEl = document.getElementById('inbox-queue');
-        try {
-          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/v1/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=false`);
-          if (!res.ok) throw new Error("Failed to load inbox");
+      let currentInboxId = null;
+      let currentConversationId = null;
+      let socket = null;
 
-          const messages = await res.json();
-          renderMessages(messages, queueEl, tenantId);
+      async function loadInboxes() {
+        const tenantId = localStorage.getItem("tenant_id") || "default";
+        try {
+          const res = await fetch(`/api/v1/chat/inboxes`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+          });
+          if (!res.ok) throw new Error("Failed to load inboxes");
+          const inboxes = await res.json();
+          renderInboxes(inboxes);
         } catch (err) {
           console.error(err);
-          queueEl.innerHTML = `<div class="empty-state" style="color:#FF3B30;">Failed to load inbox. ${err.message}</div>`;
+          document.getElementById("inbox-list").innerHTML = `<div class="empty-state" style="color:red">Error: ${err.message}</div>`;
         }
       }
 
-      function renderMessages(messages, container, tenantId) {
-        if (!messages || messages.length === 0) {
-          container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
+      function renderInboxes(inboxes) {
+        const list = document.getElementById("inbox-list");
+        if (!inboxes || inboxes.length === 0) {
+          list.innerHTML = `<div class="empty-state" style="padding: 10px;">No inboxes found.</div>`;
           return;
         }
+        list.innerHTML = "";
+        inboxes.forEach(inbox => {
+          const el = document.createElement("div");
+          el.className = "inbox-item";
+          el.textContent = inbox.name;
+          el.onclick = () => {
+            document.querySelectorAll(".inbox-item").forEach(n => n.classList.remove("active"));
+            el.classList.add("active");
+            loadConversations(inbox.id);
+          };
+          list.appendChild(el);
+        });
+      }
 
-        // Filter out sent/resolved messages to keep it an action-oriented queue
-        const actionItems = messages.filter(m => m.status !== 'sent' && m.status !== 'resolved');
+      async function loadConversations(inboxId) {
+        currentInboxId = inboxId;
+        const tenantId = localStorage.getItem("tenant_id") || "default";
+        try {
+          const res = await fetch(`/api/v1/chat/conversations/${inboxId}`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+          });
+          if (!res.ok) throw new Error("Failed to load conversations");
+          const convs = await res.json();
+          renderConversations(convs);
+        } catch (err) {
+          console.error(err);
+          document.getElementById("conv-list").innerHTML = `<div class="empty-state" style="color:red">Error: ${err.message}</div>`;
+        }
+      }
 
-        if (actionItems.length === 0) {
-          container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
+      function renderConversations(convs) {
+        const list = document.getElementById("conv-list");
+        if (!convs || convs.length === 0) {
+          list.innerHTML = `<div class="empty-state" style="padding: 10px;">No conversations found.</div>`;
           return;
         }
+        list.innerHTML = "";
+        convs.forEach(conv => {
+          const el = document.createElement("div");
+          el.className = "conv-item";
+          el.innerHTML = `<strong>Contact:</strong> ${conv.contact_id.substring(0,8)}...<br><span style="font-size:12px;color:#666">${new Date(conv.created_at).toLocaleDateString()}</span>`;
+          el.onclick = () => {
+            document.querySelectorAll(".conv-item").forEach(n => n.classList.remove("active"));
+            el.classList.add("active");
+            loadMessages(conv.id);
+          };
+          list.appendChild(el);
+        });
+      }
 
-        container.innerHTML = '';
+      async function loadMessages(conversationId) {
+        currentConversationId = conversationId;
+        document.getElementById("chat-header").textContent = `Conversation: ${conversationId.substring(0,8)}...`;
+        document.getElementById("chat-input").disabled = false;
+        document.getElementById("chat-send-btn").disabled = false;
 
-        actionItems.forEach(msg => {
-          const card = document.createElement('div');
-          card.className = 'message-card';
+        try {
+          const res = await fetch(`/api/v1/chat/messages/${conversationId}`, {
+            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+          });
+          if (!res.ok) throw new Error("Failed to load messages");
+          const msgs = await res.json();
+          renderMessages(msgs);
+        } catch (err) {
+          console.error(err);
+          document.getElementById("chat-messages").innerHTML = `<div class="empty-state" style="color:red">Error: ${err.message}</div>`;
+        }
+      }
 
-          const header = document.createElement('div');
-          header.className = 'message-header';
+      function renderMessages(msgs) {
+        const list = document.getElementById("chat-messages");
+        if (!msgs || msgs.length === 0) {
+          list.innerHTML = `<div class="empty-state">No messages yet.</div>`;
+          return;
+        }
+        list.innerHTML = "";
+        msgs.forEach(msg => {
+          appendMessage(msg);
+        });
+        list.scrollTop = list.scrollHeight;
+      }
 
-          const sourceSpan = document.createElement('span');
-          sourceSpan.className = 'message-source';
-          sourceSpan.textContent = msg.source || 'Unknown';
+      function appendMessage(msg) {
+        const list = document.getElementById("chat-messages");
+        if (list.querySelector(".empty-state")) list.innerHTML = "";
 
-          const senderSpan = document.createElement('span');
-          senderSpan.textContent = msg.sender_id || '';
+        const bubbleWrap = document.createElement("div");
+        bubbleWrap.style.display = "flex";
+        bubbleWrap.style.flexDirection = "column";
+        if (msg.sender_type === "agent") {
+            bubbleWrap.style.alignItems = "flex-end";
+        } else {
+            bubbleWrap.style.alignItems = "flex-start";
+        }
 
-          header.appendChild(sourceSpan);
-          header.appendChild(senderSpan);
+        const el = document.createElement("div");
+        el.className = `chat-bubble ${msg.sender_type === "agent" ? "agent" : "contact"}`;
+        el.textContent = msg.content;
+        bubbleWrap.appendChild(el);
 
-          const contentDiv = document.createElement('div');
-          contentDiv.className = 'message-content';
-          contentDiv.textContent = msg.original_message || msg.content || '';
-
-          card.appendChild(header);
-          card.appendChild(contentDiv);
-
-          if (msg.generated_response && msg.generated_response.trim() !== '') {
+        // If it's a contact message and has a simulated AI draft
+        if (msg.sender_type === "contact" && msg.draft_reply) {
             const draftDiv = document.createElement('div');
             draftDiv.className = 'draft-reply';
 
@@ -319,96 +451,120 @@
 
             const draftContent = document.createElement('div');
             draftContent.className = 'draft-reply-content';
-            draftContent.textContent = msg.generated_response;
+            draftContent.textContent = msg.draft_reply;
 
             draftDiv.appendChild(draftLabel);
             draftDiv.appendChild(draftContent);
 
-            if (msg.checkout_link) {
-              const productCard = document.createElement('div');
-              productCard.className = 'product-card glassmorphism';
-
-              const productIcon = document.createElement('div');
-              productIcon.className = 'product-card-icon';
-              productIcon.textContent = '🛍️';
-
-              const productDetails = document.createElement('div');
-              productDetails.className = 'product-card-details';
-
-              const productTitle = document.createElement('p');
-              productTitle.className = 'product-card-title';
-              productTitle.textContent = msg.proposed_product_id ? `Product: ${msg.proposed_product_id}` : 'Checkout Link';
-
-              const productLink = document.createElement('a');
-              productLink.className = 'product-card-link';
-              productLink.href = msg.checkout_link;
-              productLink.target = '_blank';
-              productLink.textContent = msg.checkout_link;
-
-              productDetails.appendChild(productTitle);
-              productDetails.appendChild(productLink);
-              productCard.appendChild(productIcon);
-              productCard.appendChild(productDetails);
-
-              draftDiv.appendChild(productCard);
-            }
-
+            const btnText = msg.draft_reply.includes('[Send & Deduct Inventory]') ?
+                            '✨ Approve & Send (Deduct Inventory)' : 'Approve & Send';
 
             const approveBtn = document.createElement('button');
             approveBtn.className = 'approve-btn';
-            approveBtn.textContent = 'Approve & Send';
-            approveBtn.onclick = () => approveAndSend(msg.id, approveBtn, tenantId);
+            approveBtn.textContent = btnText;
+            approveBtn.onclick = async () => {
+                approveBtn.textContent = 'Sending...';
+                approveBtn.disabled = true;
+                try {
+                  // Simulate an approval API call. In reality this calls the backend approval route.
+                  const res = await fetch(`/api/v1/chat/messages/${currentConversationId}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${localStorage.getItem("token")}`
+                    },
+                    body: JSON.stringify({ content: msg.draft_reply.replace('[Send & Deduct Inventory]', '').trim(), sender_type: "agent" })
+                  });
+                  if (res.ok) {
+                    approveBtn.textContent = 'Draft approved and sent. ✅';
+                    approveBtn.classList.add('approved');
+                  }
+                } catch(e) {
+                   approveBtn.textContent = 'Failed to send';
+                   console.error(e);
+                }
+            };
 
-            card.appendChild(draftDiv);
-            card.appendChild(approveBtn);
-          } else {
-            const draftLabel = document.createElement('div');
-            draftLabel.className = 'draft-reply-label';
-            draftLabel.style.color = '#86868b';
-            draftLabel.textContent = 'No AI draft available';
-            card.appendChild(draftLabel);
-          }
-
-          container.appendChild(card);
-        });
-      }
-
-      async function approveAndSend(messageId, btnElement, tenantId) {
-        const originalText = btnElement.textContent;
-        btnElement.textContent = 'Sending...';
-        btnElement.disabled = true;
-
-        try {
-          const res = await fetch(`/api/v1/ui/inbox/messages/${messageId}/approve?tenant_id=${encodeURIComponent(tenantId)}`, {
-            method: 'POST'
-          });
-
-          if (!res.ok) throw new Error("Approval failed");
-
-          btnElement.textContent = 'Sent! ✅';
-          btnElement.classList.add('approved');
-
-          // Hide the card after a short delay
-          setTimeout(() => {
-            const card = btnElement.closest('.message-card');
-            if (card) {
-              card.style.opacity = '0';
-              card.style.transform = 'scale(0.95)';
-              card.style.transition = 'all 0.3s ease';
-              setTimeout(() => card.remove(), 300);
-            }
-          }, 1500);
-
-        } catch (err) {
-          console.error(err);
-          alert("Failed to send message: " + err.message);
-          btnElement.textContent = originalText;
-          btnElement.disabled = false;
+            draftDiv.appendChild(approveBtn);
+            bubbleWrap.appendChild(draftDiv);
         }
+
+        list.appendChild(bubbleWrap);
+        list.scrollTop = list.scrollHeight;
       }
 
-      // Initialize
-      document.addEventListener('DOMContentLoaded', loadInbox);
+      function initWebSocket() {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        socket = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
+        socket.onopen = () => console.log("Chat WebSocket connected");
+        socket.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.conversation_id === currentConversationId) {
+              appendMessage(msg);
+            }
+          } catch (e) {
+            console.error("Error parsing WS message:", e);
+          }
+        };
+        socket.onclose = () => {
+          console.log("Chat WebSocket closed. Reconnecting...");
+          setTimeout(initWebSocket, 2000);
+        };
+      }
+
+      document.getElementById("chat-send-btn").onclick = async () => {
+        const input = document.getElementById("chat-input");
+        const text = input.value.trim();
+        if (!text || !currentConversationId) return;
+
+        input.value = "";
+        input.disabled = true;
+        document.getElementById("chat-send-btn").disabled = true;
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({
+            action: "send_message",
+            conversation_id: currentConversationId,
+            content: text
+          }));
+          input.disabled = false;
+          document.getElementById("chat-send-btn").disabled = false;
+          input.focus();
+        } else {
+          try {
+            const res = await fetch(`/api/v1/chat/messages/${currentConversationId}`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${localStorage.getItem("token")}`
+              },
+              body: JSON.stringify({ content: text, sender_type: "agent" })
+            });
+            if (res.ok) {
+              const msg = await res.json();
+              appendMessage(msg);
+            }
+          } catch (err) {
+            console.error(err);
+          } finally {
+            input.disabled = false;
+            document.getElementById("chat-send-btn").disabled = false;
+            input.focus();
+          }
+        }
+      };
+
+      document.getElementById("chat-input").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          document.getElementById("chat-send-btn").click();
+        }
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        loadInboxes();
+        initWebSocket();
+      });
     </script>
     <script src="help-widget.mjs" type="module"></script>
   </body>

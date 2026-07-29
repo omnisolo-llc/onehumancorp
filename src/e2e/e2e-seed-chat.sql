@@ -1,0 +1,3 @@
+-- We'll assume this runs or is run during tests, or we just trust the E2E test to use existing data.
+-- Actually the Playwright test uses a real API if we create the inbox there,
+-- but our modified test uses `request.post` to create an inbox.
