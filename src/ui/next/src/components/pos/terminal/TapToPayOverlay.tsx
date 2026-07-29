@@ -63,9 +63,9 @@ export function TapToPayOverlay({ isOpen, onClose, amount, currency, orderId, on
       }, 1500);
 
     } catch (err: any) {
-      console.error(err);
+      console.error('Terminal Error:', err);
       setStatus('error');
-      setErrorMessage(err.message || 'An unexpected error occurred.');
+      setErrorMessage(err.message || 'Payment failed. Please try again.');
     }
   };
 

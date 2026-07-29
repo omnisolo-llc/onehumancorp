@@ -55,6 +55,7 @@ describe('TapToPayOverlay Component', () => {
   });
 
   it('handles API errors gracefully', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     // Mock the connection-token call to fail
     (global.fetch as any).mockResolvedValueOnce({ ok: false });
 
