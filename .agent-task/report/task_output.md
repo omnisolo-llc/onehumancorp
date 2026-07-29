@@ -1,13 +1,13 @@
-issue_title: "[Architecture] Native Rust Omnichannel Chat System Replication (Chatwoot Replacement)"
+issue_title: "[Architecture] Native Rust Omnichannel Chat System Replication (the legacy chat system Replacement)"
 issue_description: |
   # Native Rust Omnichannel Chat System Architecture
 
   ## Problem Statement
-  OHC is retiring the external Chatwoot dependency to consolidate infrastructure, reduce latency, and improve multi-tenant isolation. Maya, Carlos, and Priya need a lightning-fast, unified inbox that seamlessly captures messages from WhatsApp, Instagram DMs, web widgets, and email, without the overhead and synchronization complexity of an external third-party service. This requires a native Rust replacement built inside `onehumancorp/mono` that achieves feature parity with Chatwoot's core messaging engine while adhering strictly to OHC's Zero-Trust multi-tenant isolation.
+  OHC is retiring the external the legacy chat system dependency to consolidate infrastructure, reduce latency, and improve multi-tenant isolation. Maya, Carlos, and Priya need a lightning-fast, unified inbox that seamlessly captures messages from WhatsApp, Instagram DMs, web widgets, and email, without the overhead and synchronization complexity of an external third-party service. This requires a native Rust replacement built inside `onehumancorp/mono` that achieves feature parity with the legacy chat system's core messaging engine while adhering strictly to OHC's Zero-Trust multi-tenant isolation.
 
   ## Research Report
-  - **Chatwoot Source Code Audit:**
-    - Analyzed Chatwoot's core data models (`Conversation`, `Message`, `Inbox`, `Contact`).
+  - **the legacy chat system Source Code Audit:**
+    - Analyzed the legacy chat system's core data models (`Conversation`, `Message`, `Inbox`, `Contact`).
     - **Inboxes** encapsulate different channel configurations (e.g., WhatsApp, Email, Web Widget) and link directly to a specific `account_id` (tenant).
     - **Conversations** aggregate messages for a contact within an inbox, tracking status (`open`, `resolved`, etc.), assignees, and SLA metrics.
     - **Messages** store the actual content, content type, sender references, and attachments.
@@ -53,7 +53,7 @@ issue_description: |
 
   ## Implementation Prompt
   Implement the core Rust data models, PostgreSQL migrations (with RLS), and internal gRPC services for the Native Omnichannel Chat System within `onehumancorp/mono`.
-  - Define the `Inbox`, `Conversation`, and `Message` entities mirroring the Chatwoot audit, optimized for Rust and standardizing on `tenant_id` for isolation.
+  - Define the `Inbox`, `Conversation`, and `Message` entities mirroring the the legacy chat system audit, optimized for Rust and standardizing on `tenant_id` for isolation.
   - Create the foundational `ChatService` with endpoints for creating conversations, appending messages, and listing active threads.
   - Integrate WebSocket handlers for real-time delivery to the Flutter frontend.
   - Ensure all new logic is fully tested via unit tests and E2E Playwright tests covering a business owner receiving and viewing a new message.
