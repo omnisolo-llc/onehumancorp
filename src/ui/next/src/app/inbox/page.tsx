@@ -535,7 +535,7 @@ function PowerSyncInboxContent() {
 function InboxLoadingState() {
   return (
     <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-      <div className="app-panel">
+      <div className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
         <div className="app-empty">Loading inbox messages...</div>
       </div>
     </AppShell>
@@ -563,12 +563,41 @@ function ApiInboxFallback() {
       }
     }
     loadMessages();
+
+    // Connect WebSocket
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
+
+    ws.onopen = () => {
+      console.log("WebSocket connected for inbox.");
+      // optionally subscribe
+      ws.send(JSON.stringify({ action: "subscribe", channel: "chat", topic: "chat:messages" }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.channel === "chat" && payload.data && payload.data.message) {
+          setMessages((prev) => [payload.data.message, ...prev]);
+        }
+      } catch (e) {
+        console.error("Failed to parse websocket message", e);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+
+    return () => {
+      ws.close();
+    };
   }, []);
 
   if (error) {
     return (
       <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-        <div className="app-panel" data-testid="inbox-settled">
+        <div className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden" data-testid="inbox-settled">
           <div className="app-empty">{error}</div>
         </div>
       </AppShell>

@@ -62,6 +62,20 @@ fn get_broadcast_tx() -> &'static broadcast::Sender<String> {
     })
 }
 
+pub async fn ws_chat_handler(
+    ws: WebSocketUpgrade,
+    Extension(claims): Extension<server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) if !org_id.is_empty() => org_id.to_string(),
+        _ => "default".to_string(),
+    };
+
+    let initial_channels: Vec<String> = vec!["chat".to_string()];
+
+    ws.on_upgrade(move |socket| handle_unified_socket(socket, tenant_id, initial_channels))
+}
+
 pub async fn unified_ws_handler(
     ws: WebSocketUpgrade,
     Extension(claims): Extension<server_common::Claims>,
