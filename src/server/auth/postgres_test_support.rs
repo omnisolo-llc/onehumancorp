@@ -53,12 +53,6 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-<<<<<<< HEAD
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
-=======
     if let Err(error) = MIGRATOR.run(&admin_pool).await {
         // Fallback to avoid panic on expected test concurrency condition.
         let msg = error.to_string();
@@ -68,7 +62,6 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
             return Err(format!("run src/server/migrations: {}", msg));
         }
     }
->>>>>>> 0db34b020 (fix: implement dynamic domain validation and visual optimization in setup wizard (#35674))
 
     sqlx::raw_sql(
         r#"

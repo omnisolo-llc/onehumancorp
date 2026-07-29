@@ -111,10 +111,15 @@ describe('CustomerReferralProgramPage', () => {
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
 
+    await waitFor(() => {
+        expect(toggle).not.toBeDisabled();
+    });
+
     await act(async () => {
         fireEvent.click(toggle);
     });
 
+    // The modal should NOT show up
     expect(screen.queryByText('Pro Feature')).toBeNull();
     // The exact text "⚡ Powered by OHC" in the preview should be removed
     expect(screen.queryByText('⚡ Powered by OHC')).toBeNull();

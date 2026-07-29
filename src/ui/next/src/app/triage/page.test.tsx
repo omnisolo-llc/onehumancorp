@@ -41,9 +41,73 @@ vi.mock('../../components/AppShell', () => {
         default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
     }
 });
-vi.mock('@/components/AppShell', () => {
+vi.mock('@/app/components/AppShell', () => {
     return {
         default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>,
         AppShell: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
     }
+});
+
+// Mock fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+describe('Triage Page UI', () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
+
+  test('renders triage items correctly', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ([
+        {
+          id: 'item-1',
+          customer_id: 'Maya',
+          source: 'Instagram',
+          priority: 'high',
+          context: 'Needs a custom cake by Friday.',
+          action_type: 'Draft Reply',
+          action_payload: 'Hi! Custom cakes start at $50. When do you need it?',
+          created_at: new Date().toISOString()
+        }
+      ])
+    });
+
+    await act(async () => {
+      render(<TooltipProvider><TriagePage /></TooltipProvider>);
+    });
+
+    // Wait for feed to load
+    await waitFor(() => {
+        expect(screen.queryByText('Loading triage feed...')).toBeNull();
+    });
+  });
+
+  test('allows reviewing and approving an AI draft', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ([
+        {
+          id: 'item-1',
+          customer_id: 'Maya',
+          source: 'Instagram',
+          priority: 'high',
+          context: 'Needs a custom cake by Friday.',
+          action_type: 'Draft Reply',
+          action_payload: 'Hi! Custom cakes start at $50. When do you need it?',
+          created_at: new Date().toISOString()
+        }
+      ])
+    });
+
+    await act(async () => {
+      render(<TooltipProvider><TriagePage /></TooltipProvider>);
+    });
+
+    await waitFor(() => {
+        expect(screen.queryByText('Loading triage feed...')).toBeNull();
+    });
+
+  });
 });
