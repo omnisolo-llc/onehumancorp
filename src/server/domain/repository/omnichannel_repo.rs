@@ -29,6 +29,7 @@ pub struct WorkItem {
 pub struct Conversation {
     pub id: Uuid,
     pub tenant_id: Uuid,
+    pub customer_id: Option<Uuid>,
     pub channel: String,
     pub status: String,
     pub created_at: Option<DateTime<Utc>>,
@@ -117,13 +118,14 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_conversation(&self, tenant_id: Uuid, channel: String, status: String) -> Result<Conversation, sqlx::Error> {
+    pub async fn create_conversation(&self, tenant_id: Uuid, customer_id: Option<Uuid>, channel: String, status: String) -> Result<Conversation, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, Conversation>(
-            "INSERT INTO conversations (id, tenant_id, channel, status) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, channel, status, created_at, updated_at",
+            "INSERT INTO conversations (id, tenant_id, customer_id, channel, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, customer_id, channel, status, created_at, updated_at",
         )
         .bind(id)
         .bind(tenant_id)
+        .bind(customer_id)
         .bind(channel)
         .bind(status)
         .fetch_one(&self.db.pool)
@@ -163,7 +165,7 @@ impl OmniChannelRepo {
 
     pub async fn get_conversation(&self, id: Uuid) -> Result<Option<Conversation>, sqlx::Error> {
         let record = sqlx::query_as::<_, Conversation>(
-            "SELECT id, tenant_id, channel, status, created_at, updated_at FROM conversations WHERE id = $1",
+            "SELECT id, tenant_id, customer_id, channel, status, created_at, updated_at FROM conversations WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.db.pool)
@@ -223,12 +225,14 @@ mod tests {
         let conv = Conversation {
             id: Uuid::new_v4(),
             tenant_id: Uuid::new_v4(),
+            customer_id: None,
             channel: "Instagram".to_string(),
             status: "OPEN".to_string(),
             created_at: None,
             updated_at: None,
         };
         assert_eq!(conv.channel, "Instagram");
+        assert_eq!(conv.customer_id, None);
     }
 
     #[test]

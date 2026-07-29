@@ -227,7 +227,6 @@ pub async fn handle_omnichannel_webhook(
             .bind(sender_id)
             .execute(&state.db.pool)
             .await;
-
             if res.is_ok() {
                 if let Err(e) = sqlx::query(
                     "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
@@ -243,7 +242,39 @@ pub async fn handle_omnichannel_webhook(
                 .await {
                     tracing::error!("Failed to insert omni_inbox_messages: {}", e);
                 }
+
+                // New Omnichannel Tables Insert (conversations and messages)
+                let conv_id = Uuid::new_v4();
+                let customer_uuid = uuid::Uuid::parse_str(&customer_id).ok();
+                let tenant_uuid = uuid::Uuid::parse_str(tenant_id).unwrap_or_default();
+
+                // For simplicity, just insert a new conversation. A proper impl would find existing open conversation.
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO conversations (id, tenant_id, customer_id, channel, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'open', NOW(), NOW())"
+                )
+                .bind(conv_id)
+                .bind(tenant_uuid)
+                .bind(customer_uuid)
+                .bind(channel)
+                .execute(&state.db.pool)
+                .await {
+                    tracing::error!("Failed to insert conversations: {}", e);
+                }
+
+                let message_uuid = uuid::Uuid::parse_str(&inbox_id).unwrap_or_default();
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO messages (id, tenant_id, conversation_id, direction, content, created_at, updated_at) VALUES ($1, $2, $3, 'inbound', $4, NOW(), NOW())"
+                )
+                .bind(message_uuid)
+                .bind(tenant_uuid)
+                .bind(conv_id)
+                .bind(message)
+                .execute(&state.db.pool)
+                .await {
+                    tracing::error!("Failed to insert messages: {}", e);
+                }
             }
+
             res.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
@@ -258,7 +289,6 @@ pub async fn handle_omnichannel_webhook(
             .bind(sender_id)
             .execute(sqlite_pool)
             .await;
-
             if res.is_ok() {
                 if let Err(e) = sqlx::query(
                     "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
@@ -274,7 +304,34 @@ pub async fn handle_omnichannel_webhook(
                 .await {
                     tracing::error!("Failed to insert omni_inbox_messages (SQLite): {}", e);
                 }
+
+                // New Omnichannel Tables Insert (conversations and messages) for Sqlite tests
+                let conv_id = Uuid::new_v4().to_string();
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO conversations (id, tenant_id, customer_id, channel, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'open', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                )
+                .bind(&conv_id)
+                .bind(tenant_id)
+                .bind(&customer_id)
+                .bind(channel)
+                .execute(sqlite_pool)
+                .await {
+                    tracing::error!("Failed to insert conversations (SQLite): {}", e);
+                }
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO messages (id, tenant_id, conversation_id, direction, content, created_at, updated_at) VALUES (?, ?, ?, 'inbound', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                )
+                .bind(&inbox_id)
+                .bind(tenant_id)
+                .bind(&conv_id)
+                .bind(message)
+                .execute(sqlite_pool)
+                .await {
+                    tracing::error!("Failed to insert messages (SQLite): {}", e);
+                }
             }
+
             res.map(|_| ())
         }
     };
@@ -297,24 +354,44 @@ pub async fn handle_omnichannel_webhook(
     });
 
     let enqueue_result = match &state.db.store {
+    let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+            let res = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
                 .bind(&job_id)
                 .bind(tenant_id)
                 .bind(payload_json.to_string())
                 .execute(&state.db.pool)
                 .await
-                .map(|_| ())
+                .map(|_| ());
+
+            let task_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content) VALUES ($1, $2, 'Omnichannel Triage', 'New incoming customer message requires triage.', 'PENDING', 'P2', 'LOW', 'PENDING', $3)")
+                .bind(task_id)
+                .bind(tenant_id)
+                .bind(message)
+                .execute(&state.db.pool)
+                .await;
+            res
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
+            let res = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
                 .bind(&job_id)
                 .bind(tenant_id)
                 .bind(payload_json.to_string())
                 .execute(sqlite_pool)
                 .await
-                .map(|_| ())
+                .map(|_| ());
+
+            let task_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, description, status, priority, action_risk, approval_status, proposed_content) VALUES (?, ?, 'Omnichannel Triage', 'New incoming customer message requires triage.', 'PENDING', 'P2', 'LOW', 'PENDING', ?)")
+                .bind(task_id)
+                .bind(tenant_id)
+                .bind(message)
+                .execute(sqlite_pool)
+                .await;
+            res
         }
+
     };
 
     if let Err(e) = enqueue_result {
@@ -410,8 +487,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_omnichannel_webhook() {
-        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        let schema = "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT); CREATE TABLE customer_identities (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, channel TEXT NOT NULL, channel_identity TEXT NOT NULL, UNIQUE(tenant_id, channel, channel_identity)); CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, created_at TEXT); CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT); CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, job_type TEXT, payload TEXT, status TEXT);";
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();        let schema = "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT); CREATE TABLE customer_identities (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, channel TEXT NOT NULL, channel_identity TEXT NOT NULL, UNIQUE(tenant_id, channel, channel_identity)); CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, created_at TEXT); CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT); CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, job_type TEXT, payload TEXT, status TEXT); CREATE TABLE conversations (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, channel TEXT, status TEXT, created_at TEXT, updated_at TEXT); CREATE TABLE messages (id TEXT PRIMARY KEY, tenant_id TEXT, conversation_id TEXT, direction TEXT, content TEXT, created_at TEXT, updated_at TEXT); CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);";
         sqlx::query(schema).execute(&pool).await.unwrap();
         let db = DB {
             pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(),

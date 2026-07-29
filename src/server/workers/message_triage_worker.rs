@@ -540,6 +540,48 @@ Output JSON format:
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
 
+                    let ai_draft_id = Uuid::new_v4();
+                    let message_uuid = uuid::Uuid::parse_str(&message_id).unwrap_or_default();
+                    let tenant_uuid = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
+
+                    if let Err(e) = sqlx::query("INSERT INTO ai_drafts (id, tenant_id, message_id, proposed_response, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW())")
+                        .bind(ai_draft_id)
+                        .bind(tenant_uuid)
+                        .bind(message_uuid)
+                        .bind(&action_payload)
+                        .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert ai_drafts: {}", e);
+                    }
+
+
+                    let ai_draft_id = Uuid::new_v4();
+                    let message_uuid = uuid::Uuid::parse_str(&message_id).unwrap_or_default();
+                    let tenant_uuid = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
+
+                    if let Err(e) = sqlx::query("INSERT INTO ai_drafts (id, tenant_id, message_id, proposed_response, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW())")
+                        .bind(ai_draft_id)
+                        .bind(tenant_uuid)
+                        .bind(message_uuid)
+                        .bind(&action_payload)
+                        .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert ai_drafts: {}", e);
+                    }
+
+
+                    let ai_draft_id = Uuid::new_v4();
+                    let message_uuid = uuid::Uuid::parse_str(&message_id).unwrap_or_default();
+                    let tenant_uuid = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
+
+                    if let Err(e) = sqlx::query("INSERT INTO ai_drafts (id, tenant_id, message_id, proposed_response, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW())")
+                        .bind(ai_draft_id)
+                        .bind(tenant_uuid)
+                        .bind(message_uuid)
+                        .bind(&action_payload)
+                        .execute(&self.db.pool).await {
+                        tracing::error!("Failed to insert ai_drafts: {}", e);
+                    }
+
+
 
 
                     // Implement proper Redis locking to prevent race conditions during thread/triage updates
@@ -669,6 +711,39 @@ Output JSON format:
                         .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
+
+                    let ai_draft_id = Uuid::new_v4().to_string();
+                    if let Err(e) = sqlx::query("INSERT INTO ai_drafts (id, tenant_id, message_id, proposed_response, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(ai_draft_id)
+                        .bind(&tenant_id)
+                        .bind(&message_id)
+                        .bind(&action_payload)
+                        .execute(&*sqlite_pool).await {
+                        tracing::error!("Failed to insert ai_drafts (SQLite): {}", e);
+                    }
+
+
+                    let ai_draft_id = Uuid::new_v4().to_string();
+                    if let Err(e) = sqlx::query("INSERT INTO ai_drafts (id, tenant_id, message_id, proposed_response, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(ai_draft_id)
+                        .bind(&tenant_id)
+                        .bind(&message_id)
+                        .bind(&action_payload)
+                        .execute(&*sqlite_pool).await {
+                        tracing::error!("Failed to insert ai_drafts (SQLite): {}", e);
+                    }
+
+
+                    let ai_draft_id = Uuid::new_v4().to_string();
+                    if let Err(e) = sqlx::query("INSERT INTO ai_drafts (id, tenant_id, message_id, proposed_response, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(ai_draft_id)
+                        .bind(&tenant_id)
+                        .bind(&message_id)
+                        .bind(&action_payload)
+                        .execute(&*sqlite_pool).await {
+                        tracing::error!("Failed to insert ai_drafts (SQLite): {}", e);
+                    }
+
 
 
 
