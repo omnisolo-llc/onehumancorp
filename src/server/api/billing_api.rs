@@ -122,6 +122,12 @@ pub async fn report_cost_handler(
                 cache_clone.invalidate(&tenant_id_clone).await;
             });
         }
+        if let Some(cache) = crate::pricing::cost_aggregator::DAILY_COST_CACHE.get() {
+            if let Ok(mut map) = cache.lock() { let _ = map.remove(&tenant_id); }
+        }
+        if let Some(cache) = crate::pricing::cost_aggregator::AGENT_COST_CACHE.get() {
+            if let Ok(mut map) = cache.lock() { let _ = map.remove(&tenant_id); }
+        }
     }
 
     let pool = crate::db::get_pool();
@@ -693,7 +699,7 @@ pub async fn cost_dashboard_handler(
     let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
 
     let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
-    let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
+    let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents) || budget_manager.is_current_cost_over_threshold((total_costs_f64 * 100.0).round() as i64);
 
 
     let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());

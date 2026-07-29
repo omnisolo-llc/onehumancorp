@@ -95,7 +95,12 @@ impl BudgetManager {
             return projected_cost_cents > 0 || self.current.load(Ordering::SeqCst) > 0;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
-        projected_cost_cents >= limit_threshold_cents || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
+        projected_cost_cents >= limit_threshold_cents
+    }
+
+    pub fn is_current_cost_over_threshold(&self, current_cost_cents: i64) -> bool {
+        let limit_threshold_cents = ((self.total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
+        current_cost_cents >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {

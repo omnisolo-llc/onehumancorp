@@ -73,9 +73,9 @@ use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
 type DailyCostCacheType = HashMap<String, (Instant, Vec<DailyCost>)>;
-static DAILY_COST_CACHE: OnceLock<Mutex<DailyCostCacheType>> = OnceLock::new();
+pub static DAILY_COST_CACHE: OnceLock<Mutex<DailyCostCacheType>> = OnceLock::new();
 type AgentCostCacheType = HashMap<String, (Instant, Vec<AgentCostRow>)>;
-static AGENT_COST_CACHE: OnceLock<Mutex<AgentCostCacheType>> = OnceLock::new();
+pub static AGENT_COST_CACHE: OnceLock<Mutex<AgentCostCacheType>> = OnceLock::new();
 
 const CACHE_TTL: Duration = Duration::from_secs(300); // 5 minutes
 
