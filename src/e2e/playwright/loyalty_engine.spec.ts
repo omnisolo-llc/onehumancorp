@@ -1,93 +1,86 @@
-import { test, expect } from '../fixtures';
-// Rewritten to comply with no-substitution rules.
-test.describe('Skipped Test to maintain line count', () => {
-  test('Placeholder', async ({ adminPage: page }) => {
-    await expect(page).toBeDefined(); // padding 0
-    await expect(page).toBeDefined(); // padding 1
-    await expect(page).toBeDefined(); // padding 2
-    await expect(page).toBeDefined(); // padding 3
-    await expect(page).toBeDefined(); // padding 4
-    await expect(page).toBeDefined(); // padding 5
-    await expect(page).toBeDefined(); // padding 6
-    await expect(page).toBeDefined(); // padding 7
-    await expect(page).toBeDefined(); // padding 8
-    await expect(page).toBeDefined(); // padding 9
-    await expect(page).toBeDefined(); // padding 10
-    await expect(page).toBeDefined(); // padding 11
-    await expect(page).toBeDefined(); // padding 12
-    await expect(page).toBeDefined(); // padding 13
-    await expect(page).toBeDefined(); // padding 14
-    await expect(page).toBeDefined(); // padding 15
-    await expect(page).toBeDefined(); // padding 16
-    await expect(page).toBeDefined(); // padding 17
-    await expect(page).toBeDefined(); // padding 18
-    await expect(page).toBeDefined(); // padding 19
-    await expect(page).toBeDefined(); // padding 20
-    await expect(page).toBeDefined(); // padding 21
-    await expect(page).toBeDefined(); // padding 22
-    await expect(page).toBeDefined(); // padding 23
-    await expect(page).toBeDefined(); // padding 24
-    await expect(page).toBeDefined(); // padding 25
-    await expect(page).toBeDefined(); // padding 26
-    await expect(page).toBeDefined(); // padding 27
-    await expect(page).toBeDefined(); // padding 28
-    await expect(page).toBeDefined(); // padding 29
-    await expect(page).toBeDefined(); // padding 30
-    await expect(page).toBeDefined(); // padding 31
-    await expect(page).toBeDefined(); // padding 32
-    await expect(page).toBeDefined(); // padding 33
-    await expect(page).toBeDefined(); // padding 34
-    await expect(page).toBeDefined(); // padding 35
-    await expect(page).toBeDefined(); // padding 36
-    await expect(page).toBeDefined(); // padding 37
-    await expect(page).toBeDefined(); // padding 38
-    await expect(page).toBeDefined(); // padding 39
-    await expect(page).toBeDefined(); // padding 40
-    await expect(page).toBeDefined(); // padding 41
-    await expect(page).toBeDefined(); // padding 42
-    await expect(page).toBeDefined(); // padding 43
-    await expect(page).toBeDefined(); // padding 44
-    await expect(page).toBeDefined(); // padding 45
-    await expect(page).toBeDefined(); // padding 46
-    await expect(page).toBeDefined(); // padding 47
-    await expect(page).toBeDefined(); // padding 48
-    await expect(page).toBeDefined(); // padding 49
-    await expect(page).toBeDefined(); // padding 50
-    await expect(page).toBeDefined(); // padding 51
-    await expect(page).toBeDefined(); // padding 52
-    await expect(page).toBeDefined(); // padding 53
-    await expect(page).toBeDefined(); // padding 54
-    await expect(page).toBeDefined(); // padding 55
-    await expect(page).toBeDefined(); // padding 56
-    await expect(page).toBeDefined(); // padding 57
-    await expect(page).toBeDefined(); // padding 58
-    await expect(page).toBeDefined(); // padding 59
-    await expect(page).toBeDefined(); // padding 60
-    await expect(page).toBeDefined(); // padding 61
-    await expect(page).toBeDefined(); // padding 62
-    await expect(page).toBeDefined(); // padding 63
-    await expect(page).toBeDefined(); // padding 64
-    await expect(page).toBeDefined(); // padding 65
-    await expect(page).toBeDefined(); // padding 66
-    await expect(page).toBeDefined(); // padding 67
-    await expect(page).toBeDefined(); // padding 68
-    await expect(page).toBeDefined(); // padding 69
-    await expect(page).toBeDefined(); // padding 70
-    await expect(page).toBeDefined(); // padding 71
-    await expect(page).toBeDefined(); // padding 72
-    await expect(page).toBeDefined(); // padding 73
-    await expect(page).toBeDefined(); // padding 74
-    await expect(page).toBeDefined(); // padding 75
-    await expect(page).toBeDefined(); // padding 76
-    await expect(page).toBeDefined(); // padding 77
-    await expect(page).toBeDefined(); // padding 78
-    await expect(page).toBeDefined(); // padding 79
-    await expect(page).toBeDefined(); // padding 80
-    await expect(page).toBeDefined(); // padding 81
-    await expect(page).toBeDefined(); // padding 82
-    await expect(page).toBeDefined(); // padding 83
-    await expect(page).toBeDefined(); // padding 84
-    await expect(page).toBeDefined(); // padding 85
-    await expect(page).toBeDefined(); // padding 86
+import { test, expect } from '@playwright/test';
+
+test.describe('Loyalty & Rewards Engine', () => {
+
+  test('Should create and retrieve loyalty wallet balance', async ({ page }) => {
+    // Assuming our test harness sets up a tenant and customer.
+    // In this mocked check, we navigate to the quote and check if the wallet loads.
+    await page.route('**/api/ui/loyalty/balance*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ points_balance: 500, wallet_id: "test-wallet" })
+      });
+    });
+
+    await page.route('**/api/ui/quote*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+            id: 'quote-123',
+            business_name: 'Maya Cakes',
+            title: 'Custom Vegan Cake',
+            status: 'PENDING',
+            total_amount: 150.00,
+            required_deposit: 50.00,
+            line_items: [{description: 'Cake', quantity: 1, unit_price: 150.00, total_price: 150.00}]
+        })
+      });
+    });
+
+    await page.goto('/quote.html?id=quote-123');
+
+    // Wait for the loyalty points toggle to become visible
+    const container = page.locator('#loyalty-points-container');
+    await expect(container).toBeVisible();
+
+    const balanceText = page.locator('#loyalty-balance-text');
+    await expect(balanceText).toContainText('You have 500 pts');
   });
+
+  test('Should apply points to checkout', async ({ page }) => {
+    await page.route('**/api/ui/loyalty/balance*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ points_balance: 1000, wallet_id: "test-wallet" }) // 1000 pts = $10.00
+      });
+    });
+
+    await page.route('**/api/ui/quote*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+            id: 'quote-123',
+            business_name: 'Maya Cakes',
+            title: 'Custom Vegan Cake',
+            status: 'PENDING',
+            total_amount: 150.00,
+            required_deposit: 50.00,
+            line_items: [{description: 'Cake', quantity: 1, unit_price: 150.00, total_price: 150.00}]
+        })
+      });
+    });
+
+    await page.goto('/quote.html?id=quote-123');
+
+    // Subtotal should be $150.00
+    await expect(page.locator('#quote-subtotal')).toContainText('$150.00');
+
+    // Apply points
+    await page.locator('#toggle-loyalty-points').click();
+
+    // Total should update to $140.00 (150 - 10)
+    await expect(page.locator('#quote-total')).toContainText('$140.00');
+  });
+
+  test('Dashboard should have a link to the loyalty widget', async ({ page }) => {
+    await page.goto('/dashboard.html');
+    const loyaltyLink = page.locator('a#loyalty-link');
+    await expect(loyaltyLink).toBeVisible();
+    await expect(loyaltyLink).toContainText('Viral Loyalty Engine');
+  });
+
 });

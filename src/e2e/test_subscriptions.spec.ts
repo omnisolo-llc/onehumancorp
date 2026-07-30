@@ -1,52 +1,47 @@
 import { test, expect } from './fixtures';
-// Rewritten to comply with no-substitution rules.
-test.describe('Skipped Test to maintain line count', () => {
-  test('Placeholder', async ({ adminPage: page }) => {
-    await expect(page).toBeDefined(); // padding 0
-    await expect(page).toBeDefined(); // padding 1
-    await expect(page).toBeDefined(); // padding 2
-    await expect(page).toBeDefined(); // padding 3
-    await expect(page).toBeDefined(); // padding 4
-    await expect(page).toBeDefined(); // padding 5
-    await expect(page).toBeDefined(); // padding 6
-    await expect(page).toBeDefined(); // padding 7
-    await expect(page).toBeDefined(); // padding 8
-    await expect(page).toBeDefined(); // padding 9
-    await expect(page).toBeDefined(); // padding 10
-    await expect(page).toBeDefined(); // padding 11
-    await expect(page).toBeDefined(); // padding 12
-    await expect(page).toBeDefined(); // padding 13
-    await expect(page).toBeDefined(); // padding 14
-    await expect(page).toBeDefined(); // padding 15
-    await expect(page).toBeDefined(); // padding 16
-    await expect(page).toBeDefined(); // padding 17
-    await expect(page).toBeDefined(); // padding 18
-    await expect(page).toBeDefined(); // padding 19
-    await expect(page).toBeDefined(); // padding 20
-    await expect(page).toBeDefined(); // padding 21
-    await expect(page).toBeDefined(); // padding 22
-    await expect(page).toBeDefined(); // padding 23
-    await expect(page).toBeDefined(); // padding 24
-    await expect(page).toBeDefined(); // padding 25
-    await expect(page).toBeDefined(); // padding 26
-    await expect(page).toBeDefined(); // padding 27
-    await expect(page).toBeDefined(); // padding 28
-    await expect(page).toBeDefined(); // padding 29
-    await expect(page).toBeDefined(); // padding 30
-    await expect(page).toBeDefined(); // padding 31
-    await expect(page).toBeDefined(); // padding 32
-    await expect(page).toBeDefined(); // padding 33
-    await expect(page).toBeDefined(); // padding 34
-    await expect(page).toBeDefined(); // padding 35
-    await expect(page).toBeDefined(); // padding 36
-    await expect(page).toBeDefined(); // padding 37
-    await expect(page).toBeDefined(); // padding 38
-    await expect(page).toBeDefined(); // padding 39
-    await expect(page).toBeDefined(); // padding 40
-    await expect(page).toBeDefined(); // padding 41
-    await expect(page).toBeDefined(); // padding 42
-    await expect(page).toBeDefined(); // padding 43
-    await expect(page).toBeDefined(); // padding 44
-    await expect(page).toBeDefined(); // padding 45
+
+test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => {
+  test('Subscription offer generation UI handles natural language parsing via mock', async ({ page, adminUser, loginAs }) => {
+    // We are testing the UI logic directly for the new mobile-first HTML file
+    await page.goto('/ui/subscription-offer-generator.html');
+
+    // Ensure we are testing the mobile viewport layout
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    // Verify container width doesn't cause horizontal scroll
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(375);
+
+    await expect(page.locator('h1')).toHaveText('Recurring Membership');
+
+    const textarea = page.locator('textarea#offerDescription');
+    await expect(textarea).toBeVisible();
+    await textarea.fill('4 guitar lessons a month for $200');
+
+    // Route the API call to return a mocked response since we don't have the LLM running consistently in E2E
+    await page.route('**/api/v1/subscription/parse', async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                plan_name: "Guitar Lessons Monthly",
+                amount: 20000,
+                currency: "USD",
+                interval: "month",
+                feature_name: "guitar lessons",
+                max_uses: 4
+            })
+        });
+    });
+
+    await page.locator('button#generateBtn').click();
+
+    // Verify the parsed structured data shows up in the UI
+    await expect(page.locator('#result')).toBeVisible();
+    await expect(page.locator('#resName')).toHaveText('Guitar Lessons Monthly');
+    await expect(page.locator('#resPrice')).toHaveText('$200.00');
+    await expect(page.locator('#resInterval')).toHaveText('month');
+    await expect(page.locator('#resFeature')).toHaveText('guitar lessons');
+    await expect(page.locator('#resUses')).toHaveText('4 uses / month');
   });
 });

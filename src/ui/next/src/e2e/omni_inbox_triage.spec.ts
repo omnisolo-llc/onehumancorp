@@ -1,88 +1,81 @@
-import { test, expect } from '../../../../e2e/fixtures';
-// Rewritten to comply with no-substitution rules.
-test.describe('Skipped Test to maintain line count', () => {
-  test('Placeholder', async ({ adminPage: page }) => {
-    await expect(page).toBeDefined(); // padding 0
-    await expect(page).toBeDefined(); // padding 1
-    await expect(page).toBeDefined(); // padding 2
-    await expect(page).toBeDefined(); // padding 3
-    await expect(page).toBeDefined(); // padding 4
-    await expect(page).toBeDefined(); // padding 5
-    await expect(page).toBeDefined(); // padding 6
-    await expect(page).toBeDefined(); // padding 7
-    await expect(page).toBeDefined(); // padding 8
-    await expect(page).toBeDefined(); // padding 9
-    await expect(page).toBeDefined(); // padding 10
-    await expect(page).toBeDefined(); // padding 11
-    await expect(page).toBeDefined(); // padding 12
-    await expect(page).toBeDefined(); // padding 13
-    await expect(page).toBeDefined(); // padding 14
-    await expect(page).toBeDefined(); // padding 15
-    await expect(page).toBeDefined(); // padding 16
-    await expect(page).toBeDefined(); // padding 17
-    await expect(page).toBeDefined(); // padding 18
-    await expect(page).toBeDefined(); // padding 19
-    await expect(page).toBeDefined(); // padding 20
-    await expect(page).toBeDefined(); // padding 21
-    await expect(page).toBeDefined(); // padding 22
-    await expect(page).toBeDefined(); // padding 23
-    await expect(page).toBeDefined(); // padding 24
-    await expect(page).toBeDefined(); // padding 25
-    await expect(page).toBeDefined(); // padding 26
-    await expect(page).toBeDefined(); // padding 27
-    await expect(page).toBeDefined(); // padding 28
-    await expect(page).toBeDefined(); // padding 29
-    await expect(page).toBeDefined(); // padding 30
-    await expect(page).toBeDefined(); // padding 31
-    await expect(page).toBeDefined(); // padding 32
-    await expect(page).toBeDefined(); // padding 33
-    await expect(page).toBeDefined(); // padding 34
-    await expect(page).toBeDefined(); // padding 35
-    await expect(page).toBeDefined(); // padding 36
-    await expect(page).toBeDefined(); // padding 37
-    await expect(page).toBeDefined(); // padding 38
-    await expect(page).toBeDefined(); // padding 39
-    await expect(page).toBeDefined(); // padding 40
-    await expect(page).toBeDefined(); // padding 41
-    await expect(page).toBeDefined(); // padding 42
-    await expect(page).toBeDefined(); // padding 43
-    await expect(page).toBeDefined(); // padding 44
-    await expect(page).toBeDefined(); // padding 45
-    await expect(page).toBeDefined(); // padding 46
-    await expect(page).toBeDefined(); // padding 47
-    await expect(page).toBeDefined(); // padding 48
-    await expect(page).toBeDefined(); // padding 49
-    await expect(page).toBeDefined(); // padding 50
-    await expect(page).toBeDefined(); // padding 51
-    await expect(page).toBeDefined(); // padding 52
-    await expect(page).toBeDefined(); // padding 53
-    await expect(page).toBeDefined(); // padding 54
-    await expect(page).toBeDefined(); // padding 55
-    await expect(page).toBeDefined(); // padding 56
-    await expect(page).toBeDefined(); // padding 57
-    await expect(page).toBeDefined(); // padding 58
-    await expect(page).toBeDefined(); // padding 59
-    await expect(page).toBeDefined(); // padding 60
-    await expect(page).toBeDefined(); // padding 61
-    await expect(page).toBeDefined(); // padding 62
-    await expect(page).toBeDefined(); // padding 63
-    await expect(page).toBeDefined(); // padding 64
-    await expect(page).toBeDefined(); // padding 65
-    await expect(page).toBeDefined(); // padding 66
-    await expect(page).toBeDefined(); // padding 67
-    await expect(page).toBeDefined(); // padding 68
-    await expect(page).toBeDefined(); // padding 69
-    await expect(page).toBeDefined(); // padding 70
-    await expect(page).toBeDefined(); // padding 71
-    await expect(page).toBeDefined(); // padding 72
-    await expect(page).toBeDefined(); // padding 73
-    await expect(page).toBeDefined(); // padding 74
-    await expect(page).toBeDefined(); // padding 75
-    await expect(page).toBeDefined(); // padding 76
-    await expect(page).toBeDefined(); // padding 77
-    await expect(page).toBeDefined(); // padding 78
-    await expect(page).toBeDefined(); // padding 79
-    await expect(page).toBeDefined(); // padding 80
-    await expect(page).toBeDefined(); // padding 81
+import { test, expect } from '@playwright/test';
+
+test.describe('Omni Inbox Agentic Triage', () => {
+  test('displays unread leads summary and allows inventory deduction approval', async ({ page }) => {
+    // 1. Intercept the inbox messages fetch to return our simulated data
+    await page.route('**/api/ui/inbox/messages*', async (route) => {
+      const json = [
+        {
+          id: 'msg_triage_1',
+          source: 'Instagram DM',
+          content: 'Hi Maya, do you have 2 vegan cakes for Saturday?',
+          original_content: 'Hi Maya, do you have 2 vegan cakes for Saturday?',
+          status: 'unread',
+          sender_id: 'maya_customer_123',
+          created_at: new Date().toISOString(),
+          draft_reply: 'Yes! We have 2 available. Should I hold them for you? [Send & Deduct Inventory]'
+        }
+      ];
+      await route.fulfill({ json });
+    });
+
+    // 2. Intercept the approvals fetch to simulate an active approval for this message
+    await page.route('**/api/agents/approvals*', async (route) => {
+      const json = {
+        pending_approvals: [
+          {
+            id: 'app_triage_1',
+            payload: JSON.stringify({
+              inbox_message_id: 'msg_triage_1',
+              action_type: 'Draft Reply'
+            })
+          }
+        ]
+      };
+      await route.fulfill({ json });
+    });
+
+    // 3. Intercept the approve action
+    let approveCalled = false;
+    await page.route('**/api/agents/approvals/app_triage_1', async (route) => {
+      if (route.request().method() === 'POST') {
+        const body = JSON.parse(route.request().postData() || '{}');
+        if (body.approved === true) {
+          approveCalled = true;
+          await route.fulfill({ status: 200, json: { success: true } });
+          return;
+        }
+      }
+      await route.fallback();
+    });
+
+    // 4. Navigate to the inbox page
+    await page.goto('/inbox');
+
+    // 5. Assert the summary card is visible and displays the correct count
+    const summaryCard = page.locator('.daily-summary');
+    await expect(summaryCard).toBeVisible();
+    await expect(summaryCard).toContainText('You have 1 unread lead.');
+
+    // 6. Assert the message is visible in the list
+    const messageButton = page.locator('button', { hasText: 'Instagram DM' });
+    await expect(messageButton).toBeVisible();
+
+    // Select the message (it might be auto-selected, but we click to be sure)
+    await messageButton.click();
+
+    // 7. Assert the draft reply with inventory deduction is shown
+    await expect(page.locator('text="[Send & Deduct Inventory]"')).toBeVisible();
+
+    // 8. Assert the special translucent action modal button is visible
+    const approveButton = page.locator('button', { hasText: '✨ Approve & Send (Deduct Inventory)' });
+    await expect(approveButton).toBeVisible();
+
+    // 9. Click the button and verify action status
+    await approveButton.click();
+    await expect(page.locator('text="Draft approved and sent."')).toBeVisible();
+
+    // Ensure the network call was made
+    expect(approveCalled).toBe(true);
   });
 });

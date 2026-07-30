@@ -1,62 +1,57 @@
-import { test, expect } from './fixtures';
-// Rewritten to comply with no-substitution rules.
-test.describe('Skipped Test to maintain line count', () => {
-  test('Placeholder', async ({ adminPage: page }) => {
-    await expect(page).toBeDefined(); // padding 0
-    await expect(page).toBeDefined(); // padding 1
-    await expect(page).toBeDefined(); // padding 2
-    await expect(page).toBeDefined(); // padding 3
-    await expect(page).toBeDefined(); // padding 4
-    await expect(page).toBeDefined(); // padding 5
-    await expect(page).toBeDefined(); // padding 6
-    await expect(page).toBeDefined(); // padding 7
-    await expect(page).toBeDefined(); // padding 8
-    await expect(page).toBeDefined(); // padding 9
-    await expect(page).toBeDefined(); // padding 10
-    await expect(page).toBeDefined(); // padding 11
-    await expect(page).toBeDefined(); // padding 12
-    await expect(page).toBeDefined(); // padding 13
-    await expect(page).toBeDefined(); // padding 14
-    await expect(page).toBeDefined(); // padding 15
-    await expect(page).toBeDefined(); // padding 16
-    await expect(page).toBeDefined(); // padding 17
-    await expect(page).toBeDefined(); // padding 18
-    await expect(page).toBeDefined(); // padding 19
-    await expect(page).toBeDefined(); // padding 20
-    await expect(page).toBeDefined(); // padding 21
-    await expect(page).toBeDefined(); // padding 22
-    await expect(page).toBeDefined(); // padding 23
-    await expect(page).toBeDefined(); // padding 24
-    await expect(page).toBeDefined(); // padding 25
-    await expect(page).toBeDefined(); // padding 26
-    await expect(page).toBeDefined(); // padding 27
-    await expect(page).toBeDefined(); // padding 28
-    await expect(page).toBeDefined(); // padding 29
-    await expect(page).toBeDefined(); // padding 30
-    await expect(page).toBeDefined(); // padding 31
-    await expect(page).toBeDefined(); // padding 32
-    await expect(page).toBeDefined(); // padding 33
-    await expect(page).toBeDefined(); // padding 34
-    await expect(page).toBeDefined(); // padding 35
-    await expect(page).toBeDefined(); // padding 36
-    await expect(page).toBeDefined(); // padding 37
-    await expect(page).toBeDefined(); // padding 38
-    await expect(page).toBeDefined(); // padding 39
-    await expect(page).toBeDefined(); // padding 40
-    await expect(page).toBeDefined(); // padding 41
-    await expect(page).toBeDefined(); // padding 42
-    await expect(page).toBeDefined(); // padding 43
-    await expect(page).toBeDefined(); // padding 44
-    await expect(page).toBeDefined(); // padding 45
-    await expect(page).toBeDefined(); // padding 46
-    await expect(page).toBeDefined(); // padding 47
-    await expect(page).toBeDefined(); // padding 48
-    await expect(page).toBeDefined(); // padding 49
-    await expect(page).toBeDefined(); // padding 50
-    await expect(page).toBeDefined(); // padding 51
-    await expect(page).toBeDefined(); // padding 52
-    await expect(page).toBeDefined(); // padding 53
-    await expect(page).toBeDefined(); // padding 54
-    await expect(page).toBeDefined(); // padding 55
+import { expect, test } from '@playwright/test';
+
+test.describe('Unified Inbox Triage Feed for Instagram DMs', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test('should triage incoming Instagram DM and allow owner to approve response', async ({ page }) => {
+    test.setTimeout(180000);
+
+    const testTenant = 'e2e-triage-unified-tenant-' + Date.now();
+
+    // 1. Log in with specific tenant in UI FIRST to avoid cookie issues
+    await page.goto('/login');
+    await page.evaluate((t) => { localStorage.setItem('tenant_id', t); localStorage.setItem('tenant', t); }, testTenant);
+    await page.getByPlaceholder('Email or Username').fill('test@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: 'Log In' }).click();
+    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+
+    // 2. Simulate an incoming webhook from Meta/Instagram
+    await page.evaluate(async (t) => {
+        await fetch('/api/v1/webhooks/unified_inbox', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tenant_id: t,
+                source: 'instagram',
+                identifier: 'ig_user_123',
+                message: 'Can you fix my sink tomorrow?'
+            })
+        });
+    }, testTenant);
+
+    // Give it a moment to parse job queue and generate triage action, then reload
+    await page.waitForTimeout(5000);
+    await page.reload();
+    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+
+    // Wait for the Dashboard unified feed to show the Instagram DM card
+    // We expect the backend to have processed the webhook and generated an action draft
+    const instagramCard = page.locator('[data-testid="instagram-dm-card"]');
+    await expect(instagramCard).toBeVisible({ timeout: 25000 });
+
+    // Validate the original message is displayed
+    await expect(instagramCard).toContainText('Can you fix my sink tomorrow?');
+
+    // Validate a drafted reply is visible
+    await expect(instagramCard).toContainText('Draft Reply:');
+
+    // 4. Click 'Send Draft' (Approval)
+    const approveBtn = instagramCard.locator('[data-testid="approve-instagram-dm"]');
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    // 5. Verify it disappears from the feed
+    await expect(instagramCard).not.toBeVisible({ timeout: 10000 });
   });
 });
