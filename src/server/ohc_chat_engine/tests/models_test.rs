@@ -6,47 +6,45 @@ use uuid::Uuid;
 fn test_models_creation() {
     let inbox = Inbox {
         id: Uuid::new_v4(),
-        tenant_id: "t1".to_string(),
+        tenant_id: Uuid::new_v4(),
         name: "test".to_string(),
         channel_type: "web".to_string(),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: Some(Utc::now()),
+        updated_at: Some(Utc::now()),
     };
     assert_eq!(inbox.name, "test");
     assert_eq!(inbox.channel_type, "web");
 
     let contact = Contact {
         id: Uuid::new_v4(),
-        tenant_id: "t1".to_string(),
-        name: "Bob".to_string(),
+        tenant_id: Uuid::new_v4(),
+        name: Some("Bob".to_string()),
         email: Some("bob@example.com".to_string()),
-        phone_number: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        phone: None,
+        created_at: Some(Utc::now()),
+        updated_at: Some(Utc::now()),
     };
-    assert_eq!(contact.name, "Bob");
+    assert_eq!(contact.name, Some("Bob".to_string()));
 
     let conv = Conversation {
         id: Uuid::new_v4(),
-        tenant_id: "t1".to_string(),
+        tenant_id: Uuid::new_v4(),
         inbox_id: inbox.id,
         contact_id: contact.id,
         status: "open".to_string(),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: Some(Utc::now()),
+        updated_at: Some(Utc::now()),
     };
     assert_eq!(conv.status, "open");
 
     let msg = Message {
         id: Uuid::new_v4(),
-        tenant_id: "t1".to_string(),
+        tenant_id: Uuid::new_v4(),
         conversation_id: conv.id,
         content: "hey".to_string(),
-        message_type: "incoming".to_string(),
-        content_attributes: None,
-        external_source_ids: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        sender_type: "contact".to_string(),
+        created_at: Some(Utc::now()),
+        updated_at: Some(Utc::now()),
     };
     assert_eq!(msg.content, "hey");
 }

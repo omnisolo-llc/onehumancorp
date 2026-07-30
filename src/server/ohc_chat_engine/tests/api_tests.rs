@@ -1,8 +1,6 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-
-
 };
 use ohc_chat_engine::api;
 use tower::ServiceExt; // for `oneshot` and `ready`
@@ -18,7 +16,7 @@ async fn test_api_routes() {
         let request = Request::builder()
             .method("GET")
             .uri("/api/v1/chat/inboxes")
-            .header("x-tenant-id", "test_tenant_api")
+            .header("x-tenant-id", uuid::Uuid::new_v4().to_string())
             .body(Body::empty())
             .unwrap();
 
