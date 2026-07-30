@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const overlay = document.createElement('div');
     overlay.id = 'voice-overlay';
     overlay.className = 'glassmorphism';
-    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1001; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(40px) saturate(220%); padding: 24px; transition: opacity 0.3s ease; opacity: 0; pointer-events: auto;';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1001; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px) saturate(210%); padding: 24px; transition: opacity 0.3s ease; opacity: 0; pointer-events: auto;';
 
     const overlayContent = document.createElement('div');
     overlayContent.id = 'voice-overlay-content';
