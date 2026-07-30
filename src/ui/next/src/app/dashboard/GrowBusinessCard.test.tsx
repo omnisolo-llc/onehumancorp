@@ -32,6 +32,9 @@ describe('GrowBusinessCard', () => {
     const giveGetLink = screen.getByRole('link', { name: /Give\/Get Widget/i });
     expect(giveGetLink).toHaveAttribute('href', '/viral-give-get-widget');
 
+    const socialProofLink = screen.getByRole('link', { name: /Social Proof Nudge/i });
+    expect(socialProofLink).toHaveAttribute('href', '/social-proof-nudge');
+
     const widgetLink = screen.getByRole('link', { name: /Viral Widget/i });
     expect(widgetLink).toHaveAttribute('href', '/viral-powered-by-ohc-widget');
 

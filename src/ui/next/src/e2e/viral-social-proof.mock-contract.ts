@@ -13,8 +13,8 @@ test.describe('Viral Social Proof Nudge', () => {
 
         // 2. Go to the Social Proof Nudge page
         // Wait for dashboard to load then click link
-        await page.goto('/dashboard.html');
-        const link = page.locator('a[href="social-proof-nudge.html"]');
+        await page.goto('/dashboard');
+        const link = page.locator('a[href="/social-proof-nudge"]');
         await expect(link).toBeVisible();
         await link.click();
 
@@ -46,7 +46,7 @@ test.describe('Viral Social Proof Nudge', () => {
 
     test('should show soft paywall when attempting to remove branding without pro', async ({ page, adminUser, loginAs }) => {
         await loginAs(page, adminUser);
-        await page.goto('/social-proof-nudge.html');
+        await page.goto('/social-proof-nudge');
         await page.evaluate(() => {
             localStorage.setItem('tenant', 'e2e-test-store');
             localStorage.setItem('has_pro', 'false');
@@ -64,7 +64,7 @@ test.describe('Viral Social Proof Nudge', () => {
 
     test('should hide branding when pro is enabled and toggle is clicked', async ({ page, adminUser, loginAs }) => {
         await loginAs(page, adminUser);
-        await page.goto('/social-proof-nudge.html');
+        await page.goto('/social-proof-nudge');
         await page.evaluate(() => {
             localStorage.setItem('tenant', 'e2e-test-store');
             localStorage.setItem('has_pro', 'true');

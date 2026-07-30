@@ -70,6 +70,13 @@ export function GrowBusinessCard() {
               Give/Get Widget
             </Link>
             <Link
+              id="social-proof-nudge-btn"
+              href="/social-proof-nudge"
+              className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Social Proof Nudge
+            </Link>
+            <Link
               id="viral-widget-btn"
               href="/viral-powered-by-ohc-widget"
               className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
