@@ -16,6 +16,8 @@ rust_library(
         "@crates//:tracing",
         "@crates//:axum",
         "@crates//:futures",
+    ],
+    proc_macro_deps = [
         "@crates//:async-trait",
     ],
 )
