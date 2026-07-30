@@ -6,6 +6,7 @@ import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
 import { CFOAgentCard } from "./CFOAgentCard";
+import { AssistantInsightsWidget } from "./AssistantInsightsWidget";
 
 
 import { useEffect, useMemo, useState } from "react";
@@ -382,6 +383,7 @@ export default function Dashboard() {
       </div>
 
       <div className="hidden md:block">
+      <AssistantInsightsWidget />
       <AIUsageLimitWidget />
 
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
