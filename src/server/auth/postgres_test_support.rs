@@ -53,10 +53,12 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+    if let Err(error) = MIGRATOR.run(&admin_pool).await {
+        let err_msg = error.to_string();
+        if !err_msg.contains("duplicate key") {
+            return Err(format!("run src/server/migrations: {err_msg}"));
+        }
+    }
 
     sqlx::raw_sql(
         r#"
