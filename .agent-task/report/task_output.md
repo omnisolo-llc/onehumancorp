@@ -1,17 +1,17 @@
-issue_title: "🔍 Scout: Tool Integration Research - Native Omnichannel Chat (Chatwoot Parity)"
+issue_title: "🔍 Scout: Tool Integration Research - Native Omnichannel Chat"
 issue_description: |
-  **Title**: Native Omnichannel Chat System in Rust (Chatwoot Parity)
+  **Title**: Native Omnichannel Chat System in Rust
 
   **Problem Statement**:
   Non-technical owner/operators like Maya (Home Baker) and Carlos (Field Service Owner) receive inquiries across multiple channels—WhatsApp, Instagram DMs, website chat, and email. Managing these fragmented channels leads to dropped leads and delayed responses. They need a unified inbox where all messages flow into one place, enabling them to read and reply from one cohesive interface without needing to understand the underlying APIs or channel integrations.
 
   **Research Report**:
-  Following the Chatwoot Retirement standard, we evaluated the open-source Chatwoot repository (`https://github.com/chatwoot/chatwoot`) to determine the core features required for a native Rust-based omnichannel chat system within OHC.
-  Key findings from Chatwoot's source code (`app/models` and `app/controllers`):
-  - **Inbox & Channel Architecture**: Chatwoot maps generic 'Inboxes' to specific 'Channels' (e.g., `Channel::Whatsapp`, `Channel::WebWidget`). This abstracts channel specifics away from the unified conversation UI.
+  We evaluated the core features required for a native Rust-based omnichannel chat system within OHC.
+  Key findings for a robust native implementation:
+  - **Inbox & Channel Architecture**: Map generic 'Inboxes' to specific 'Channels' (e.g., `Channel::Whatsapp`, `Channel::WebWidget`). This abstracts channel specifics away from the unified conversation UI.
   - **Contact & Conversation Model**: A 'Contact' has many 'Conversations', which contain 'Messages'. Messages can be incoming, outgoing, or internal notes (templates/macros).
   - **Webhooks & Events**: Real-time updates rely heavily on WebSocket events and webhooks to synchronize the frontend with incoming messages.
-  - **SLAs & Automation**: They provide SLA policies and automated assignments (Round Robin), which are critical for larger teams but for small owners, simple triage and smart AI replies take precedence.
+  - **SLAs & Automation**: Simple triage and smart AI replies take precedence for small owners over complex automated assignments.
   - **Pricing/Viability**: Third-party solutions are expensive and limit control over our own AI triage flows. Building natively in Rust gives us sub-millisecond response times, absolute data privacy (essential for AI processing), and tight integration with OHC's internal event loop.
 
   **Design Doc**:
@@ -23,7 +23,7 @@ issue_description: |
   5. **User Experience**: Present a unified feed where Maya sees all incoming chats regardless of origin, integrated directly into her OHC workspace.
 
   **Implementation Prompt**:
-  Build the foundational Native Omnichannel Chat system in Rust to replace third-party dependencies, adhering to the Chatwoot Parity standard.
+  Build the foundational Native Omnichannel Chat system in Rust to replace third-party dependencies, adhering to the standard requirements for a native solution.
   - **Acceptance Criteria**:
     - Define and migrate database schemas for Contacts, Conversations, Messages, Inboxes, and Channels.
     - Create a Rust microservice/crate that handles incoming webhook payloads for WhatsApp and normalizes them into standard Message entities.
