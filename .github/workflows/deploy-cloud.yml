@@ -59,7 +59,8 @@ jobs:
           set -euo pipefail
           for image in server server-web; do
             reference="ghcr.io/onehumancorp/${image}:${GITHUB_SHA}"
-            docker buildx imagetools inspect "$reference" | grep -q 'linux/arm64'
+            docker pull --platform linux/arm64 "$reference"
+            test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$reference")" = "linux/arm64"
             digest="$(docker buildx imagetools inspect "$reference" --format '{{json .Manifest.Digest}}' | tr -d '"')"
             printf '%s=ghcr.io/onehumancorp/%s@%s\n' "$image" "$image" "$digest" >> "$GITHUB_STEP_SUMMARY"
           done
