@@ -395,6 +395,12 @@ SERVER_RS_SRCS = [
     "//src/server/voice:router.rs",
 ]
 
+filegroup(
+    name = "server_sources",
+    srcs = SERVER_RS_SRCS,
+    visibility = ["//visibility:public"],
+)
+
 # build_script removed as protos are now built with Bazel rules
 
 rust_library(
