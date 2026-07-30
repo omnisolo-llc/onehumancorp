@@ -1,7 +1,8 @@
 {
-  "key_learnings": [
-    "The codebase has a comprehensive set of implementations for the 'Agent Harness' mechanisms requested in the task.",
-    "When randomly selecting a mechanic, it's common for it to already be partially or fully implemented in the current Rust microservice.",
-    "Ensure the tests cover edge cases (e.g., recursive condensation in ClaudeSubagentSpawner)."
+  "task": "Build native Chatwoot replacement backend",
+  "learnings": [
+    "Bazel Rust builds will fail if a `mod` is declared twice, even if one is conditional.",
+    "When adding API routes in Axum, ensure parenthesis mapping when chaining `.nest()` and `.route_layer()` is exact.",
+    "Playwright API tests must assert specific HTTP status codes rather than numeric inequalities like `toBeGreaterThanOrEqual(200)` to accurately capture 4xx or 5xx failures."
   ]
 }

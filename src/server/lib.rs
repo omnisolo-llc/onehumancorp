@@ -7889,6 +7889,7 @@ async fn create_ui_bom_item_handler(
             "/api/v1/inbox/action_required",
             api::inbox::action_required::router(db.clone(), http_auth_store.clone()),
         )
+        .nest("/api/v1/chat", crate::api::chat_api::chat_router(db.pool.clone()).route_layer(axum::middleware::from_fn(::server_utils::tenant_middleware::tenant_middleware)))
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(protect_internal_ingress(

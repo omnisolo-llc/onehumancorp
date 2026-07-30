@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 use uuid::Uuid;
-use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage};
+use super::models::{ChatInbox, ChatChannel, ChatContact, ChatContactInbox, ChatConversation, ChatMessage, ChatCannedResponse};
 
 pub struct ChatService {
     pool: PgPool,
@@ -76,6 +76,29 @@ impl ChatService {
         .await
     }
 
+    pub async fn link_contact_to_inbox(
+        &self,
+        tenant_id: Uuid,
+        contact_id: Uuid,
+        inbox_id: Uuid,
+        source_id: String,
+    ) -> Result<ChatContactInbox, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            INSERT INTO chat_contact_inboxes (id, tenant_id, contact_id, inbox_id, source_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, tenant_id, contact_id, inbox_id, source_id, created_at, updated_at
+            "#
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(contact_id)
+        .bind(inbox_id)
+        .bind(source_id)
+        .fetch_one(&self.pool)
+        .await
+    }
+
     pub async fn start_conversation(
         &self,
         tenant_id: Uuid,
@@ -119,6 +142,27 @@ impl ChatService {
         .bind(conversation_id)
         .bind(sender_type)
         .bind(sender_id)
+        .bind(content)
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn create_canned_response(
+        &self,
+        tenant_id: Uuid,
+        short_code: String,
+        content: String,
+    ) -> Result<ChatCannedResponse, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            INSERT INTO chat_canned_responses (id, tenant_id, short_code, content)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, tenant_id, short_code, content, created_at, updated_at
+            "#
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(short_code)
         .bind(content)
         .fetch_one(&self.pool)
         .await
