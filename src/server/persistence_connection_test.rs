@@ -1,4 +1,10 @@
-use server_lib::persistence::{AppDatabase, DatabaseBackend, DatabaseUrl};
+#[path = "persistence/capabilities.rs"]
+mod capabilities;
+#[path = "persistence/connection.rs"]
+mod connection;
+
+use capabilities::DatabaseBackend;
+use connection::{AppDatabase, DatabaseUrl};
 
 #[tokio::test]
 async fn backend_is_derived_from_the_real_connection() {

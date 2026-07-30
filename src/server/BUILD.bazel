@@ -610,7 +610,6 @@ rust_test(
     srcs = ["persistence_connection_test.rs"],
     edition = "2024",
     deps = [
-        ":server_lib",
         "@crates//:tokio",
     ],
 )
