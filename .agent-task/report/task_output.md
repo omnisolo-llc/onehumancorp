@@ -1,3 +1,4 @@
+> Superseded architecture: Chat-woot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
 issue_title: "Implement Native Rust Omnichannel Inbox with AI Triage"
 issue_description: |
   # OHC Owner Work Assistant: Competitive Research & Agentic Missions
@@ -32,11 +33,11 @@ issue_description: |
   | **Skyvern** | skyvern.com | **Browser Automation:** AI browser agents that can log into any portal to download invoices or fill forms. |
   | **11x.ai** | 11x.ai | **Alice & Julian:** Autonomous digital workers for outbound sales and inbound phone handling. |
   | **Intercom Fin** | fin.ai | **Resolution Engine:** AI agent that resolves 50%+ of support queries without human intervention. |
-  | **Chatwoot (Open Source Baseline)** | chatwoot.com | **Omnichannel CRM:** Provides a blueprint for routing WhatsApp, Instagram, Email, and live chat into a single agent view, but lacks native AI decision-making. |
+  | **Chat-woot (Open Source Baseline)** | chat-woot.com | **Omnichannel CRM:** Provides a blueprint for routing WhatsApp, Instagram, Email, and live chat into a single agent view, but lacks native AI decision-making. |
 
   ---
 
-  ## 2. Track 2: Deep-Dive Competitor Audit (WeCom & Chatwoot)
+  ## 2. Track 2: Deep-Dive Competitor Audit (WeCom & Chat-woot)
 
   ### WeCom (Tencent) & WeChat Integration
   - **Capabilities:** WeCom allows employees to chat with customers directly inside the standard WeChat app. It unifies internal task management with external customer support.
@@ -45,9 +46,9 @@ issue_description: |
     - *"The ability to instantly tag a customer's message as a 'Lead' and ping my team without leaving the chat window is why my agency uses WeCom."* (Community Forum)
     - *"Setup is complex for small teams. Getting the API keys and merchant auth working takes days."* (App Store Review)
 
-  ### Chatwoot (The Benchmark for Omnichannel)
+  ### Chat-woot (The Benchmark for Omnichannel)
   - **Capabilities:** Unified inbox for Web, WhatsApp, Instagram, FB Messenger, Email. Macro responses, agent routing, basic SLAs.
-  - **Success Factors:** Open-source extensibility. However, as per OHC standards, relying on Chatwoot as an external service is a bottleneck. We must build these capabilities natively in Rust for maximum performance and deeper AI integration.
+  - **Success Factors:** Open-source extensibility. However, as per OHC standards, relying on Chat-woot as an external service is a bottleneck. We must build these capabilities natively in Rust for maximum performance and deeper AI integration.
   - **User Sentiment Audit:**
     - *"I love having all my DMs in one place, but it feels like a call center tool, not an assistant."* (Reddit r/smallbusiness)
 
@@ -56,10 +57,10 @@ issue_description: |
   ## 3. Track 3: OHC Gap & Pain Point Identification
 
   ### OHC Feature Audit
-  Currently, OHC relies on fragmented communication or external tools (like Chatwoot) which are being retired. OHC needs a native, high-performance omnichannel inbox built in Rust, natively unified with AI agents.
+  Currently, OHC relies on fragmented communication or external tools (like Chat-woot) which are being retired. OHC needs a native, high-performance omnichannel inbox built in Rust, natively unified with AI agents.
 
   ### Gap Matrix
-  | Feature | Chatwoot (External) | WeCom (Tencent) | **OHC (Current)** | **OHC (Mission)** |
+  | Feature | Chat-woot (External) | WeCom (Tencent) | **OHC (Current)** | **OHC (Mission)** |
   | :--- | :--- | :--- | :--- | :--- |
   | **Architecture** | Ruby/External Service | Enterprise SaaS | Fragmented | **Native Rust Microservice** |
   | **Inbox View** | Ticket-based | Chat-based | Minimal | **Assistant-first, AI Triage Feed** |
@@ -68,7 +69,7 @@ issue_description: |
 
   ### Unresolved Pain Points
   1. **Fragmented Work Context:** Maya (the baker) checks Instagram DMs, Email, and WhatsApp. She has no single view of "what needs attention today."
-  2. **The "Call Center" Feel:** Chatwoot feels like a Zendesk clone. Small business owners don't want a "helpdesk"; they want an assistant that reads the messages, understands if it's a lead or a complaint, and drafts a reply or creates a task.
+  2. **The "Call Center" Feel:** Chat-woot feels like a Zendesk clone. Small business owners don't want a "helpdesk"; they want an assistant that reads the messages, understands if it's a lead or a complaint, and drafts a reply or creates a task.
 
   ---
 
@@ -81,8 +82,8 @@ issue_description: |
 
   ### Structured Issue Brief (Mission Queue Protocol)
   **Title:** Implement Native Rust Omnichannel Inbox with AI Triage
-  **Problem Statement:** Owners like Maya are overwhelmed by fragmented channels (IG, WhatsApp, Email). Existing tools like Chatwoot feel like enterprise helpdesks, not smart assistants. Relying on external Chatwoot services limits our AI's ability to act instantly and natively on new demand.
-  **Research Report:** A deep dive into WeCom shows the power of bringing CRM actions directly into the chat flow. Auditing Chatwoot's source code (webhooks, channel adapters, routing) provides a blueprint. We must replace external Chatwoot with a native Rust implementation that pipes messages directly to our AI job queue for autonomous triage.
+  **Problem Statement:** Owners like Maya are overwhelmed by fragmented channels (IG, WhatsApp, Email). Existing tools like Chat-woot feel like enterprise helpdesks, not smart assistants. Relying on external Chat-woot services limits our AI's ability to act instantly and natively on new demand.
+  **Research Report:** A deep dive into WeCom shows the power of bringing CRM actions directly into the chat flow. Auditing Chat-woot's source code (webhooks, channel adapters, routing) provides a blueprint. We must replace external Chat-woot with a native Rust implementation that pipes messages directly to our AI job queue for autonomous triage.
   **Design Doc:**
   - **Entity Types:** `Conversation`, `Message`, `ChannelAdapter` (WhatsApp, IG, Web), `AgentTriageLog`.
   - **Key Relationships:** `Conversation` has many `Message`. `ChannelAdapter` routes to `Conversation`. `AgentTriageLog` links `Message` to proposed AI Actions.
@@ -92,7 +93,7 @@ issue_description: |
     3. The owner taps "Send Draft" or "Edit".
     4. Behind the scenes: Rust microservice receives Webhook -> parses -> stores in Postgres -> triggers AI Job Queue -> Gemini drafts response -> WebSocket pushes update to Flutter UI.
   **Implementation Prompt:**
-  Retire external Chatwoot dependencies. Implement a new Rust-based microservice within `onehumancorp/mono` that acts as the omnichannel webhook receiver (starting with a Web Chat widget adapter). The service must save incoming messages to the tenant's database and emit a `MessageReceived` event to the AI Job Queue. The UI must display these messages in an Assistant-first feed, showing the AI's drafted intent and proposed action, replacing traditional "ticket" views with actionable owner cards.
+  Retire external Chat-woot dependencies. Implement a new Rust-based microservice within `onehumancorp/mono` that acts as the omnichannel webhook receiver (starting with a Web Chat widget adapter). The service must save incoming messages to the tenant's database and emit a `MessageReceived` event to the AI Job Queue. The UI must display these messages in an Assistant-first feed, showing the AI's drafted intent and proposed action, replacing traditional "ticket" views with actionable owner cards.
   **Priority:** P0
   **Estimated Scope:** Large
 
@@ -107,7 +108,7 @@ issue_description: |
       OHC --> Connected[Connected Workspace];
 
       Traditional --> Zendesk[Zendesk];
-      Traditional --> Chatwoot[Chatwoot: Open Source];
+      Traditional --> Chat-woot[Chat-woot: Open Source];
 
       Connected --> WeCom[WeCom: Tencent];
       Connected --> Slack[Slack Connect];
@@ -120,7 +121,7 @@ issue_description: |
   ```mermaid
   sequenceDiagram
       participant Customer
-      participant Old_System as Chatwoot
+      participant Old_System as Chat-woot
       participant OHC as OHC Native AI
       participant Owner
 
@@ -139,8 +140,8 @@ issue_description: |
 
   ## References & Sources
   1. https://work.weixin.qq.com/
-  2. https://www.chatwoot.com/
-  3. https://github.com/chatwoot/chatwoot
+  2. https://www.chat-woot.com/
+  3. https://github.com/chat-woot/chat-woot
   4. https://www.shopify.com/magic
   5. https://www.shopify.com/sidekick
   6. https://www.wix.com/ai-website-builder
@@ -171,8 +172,8 @@ issue_description: |
   31. https://www.searchenginejournal.com/10web-releases-api-for-scaled-white-label-ai-website-building/
   32. https://www.wechat.com/
   33. https://work.weixin.qq.com/api/doc
-  34. https://github.com/chatwoot/chatwoot/tree/develop/app/controllers/api
-  35. https://github.com/chatwoot/chatwoot/wiki
+  34. https://github.com/chat-woot/chat-woot/tree/develop/app/controllers/api
+  35. https://github.com/chat-woot/chat-woot/wiki
   36. https://www.relevanceai.com/customers/canva
   37. https://www.relevanceai.com/customers/kpmg
   38. https://www.11x.ai/customers
@@ -188,8 +189,8 @@ issue_description: |
   48. https://www.lindy.ai/integrations
   49. https://www.lindy.ai/security
   50. https://skyvern.com/healthcare
-  51. https://chatwoot.com/features/omnichannel
-  52. https://chatwoot.com/pricing
+  51. https://chat-woot.com/features/omnichannel
+  52. https://chat-woot.com/pricing
 issue_priority: P0
 issue_category: research
 issue_type: task
