@@ -3395,6 +3395,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
         .with_state(meta_webhook_state);
 
+    let chat_app_state = std::sync::Arc::new(crate::integrations::chat::routes::AppState {
+        db: db.pool.clone(),
+    });
+
+    let chat_router = crate::integrations::chat::routes::create_router(chat_app_state.clone());
+    let chat_webhook_router = crate::integrations::chat::webhook::create_webhook_router(chat_app_state.clone());
+    let chat_ws_router = crate::integrations::chat::websocket::create_ws_router();
+
     let omnichannel_webhook_state = api::omnichannel_webhook::AppState {
         orchestrator: dept_orchestrator.clone(),
         db: db.clone(),
@@ -7873,6 +7881,9 @@ async fn create_ui_bom_item_handler(
             ::server_auth::strict_bearer_auth_middleware,
         )))
         .merge(meta_webhook_router)
+        .merge(chat_router)
+        .merge(chat_webhook_router)
+        .merge(chat_ws_router)
         .merge(protect_internal_ingress(
             omnichannel_webhook_router,
             http_auth_store.clone(),

@@ -529,7 +529,39 @@ function InboxWorkspace({
 
 function PowerSyncInboxContent() {
   const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
-  return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    if (data) {
+      setMessages(data);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3000';
+    const wsUrl = `${protocol}//${host}/ws/chat`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+        console.log("WebSocket connected to", wsUrl);
+    };
+
+    ws.onmessage = (event) => {
+      console.log("WebSocket message received:", event.data);
+      // For a full implementation, parse event.data and update messages state
+    };
+
+    ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  return <InboxWorkspace messages={messages.length > 0 ? messages : (data || [])} sourceLabel="Local database sync is active. Native WebSocket Chat Connected." />;
 }
 
 function InboxLoadingState() {

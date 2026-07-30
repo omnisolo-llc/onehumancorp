@@ -32,6 +32,7 @@ pub mod salesforce;
 #[cfg(not(ohc_bazel))]
 pub mod slack;
 #[cfg(not(ohc_bazel))]
+pub mod chat;
 pub use ::server_integrations_hubspot as hubspot;
 #[cfg(not(ohc_bazel))]
 pub mod zendesk;
