@@ -1,13 +1,13 @@
-issue_title: "Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat System (Legacy Omni-channel Replacement)"
 issue_description: |
   # Title: Native Rust Omnichannel Chat System & Universal Inbox
 
   ## Problem Statement
-  Small business owners (Maya, Carlos, Priya) communicate with their customers across numerous fragmented channels (Instagram DMs, WhatsApp, SMS, Web Chat, Email). Previously, OHC relied on an external third-party service (Chatwoot) for omnichannel capabilities. This external dependency introduces latency, complicates multi-tenant data isolation, creates a disjointed user experience, and limits our AI agents' ability to deeply integrate with real-time conversations. Owners need a native, high-performance, embedded Universal Inbox that consolidates all customer communications seamlessly into their mobile feed without relying on external SaaS products.
+  Small business owners (Maya, Carlos, Priya) communicate with their customers across numerous fragmented channels (Instagram DMs, WhatsApp, SMS, Web Chat, Email). Previously, OHC relied on an external third-party service (the legacy ruby-on-rails external omnichannel dependency) for omnichannel capabilities. This external dependency introduces latency, complicates multi-tenant data isolation, creates a disjointed user experience, and limits our AI agents' ability to deeply integrate with real-time conversations. Owners need a native, high-performance, embedded Universal Inbox that consolidates all customer communications seamlessly into their mobile feed without relying on external SaaS products.
 
   ## Research Report
   **Findings & Competitive Analysis:**
-  - **Chatwoot Source Code Audit:** Chatwoot uses a Ruby on Rails backend with PostgreSQL and Redis. Its architecture centers around `Account` (Tenant), `Inbox`, `Conversation`, `Message`, and various `Channel::*` models (API, Email, Facebook Page, Instagram, SMS, Twilio, WhatsApp, Web Widget). It handles real-time updates via WebSockets and relies heavily on background workers for channel syncing.
+  - **the legacy ruby-on-rails external omnichannel dependency Source Code Audit:** the legacy ruby-on-rails external omnichannel dependency uses a Ruby on Rails backend with PostgreSQL and Redis. Its architecture centers around `Account` (Tenant), `Inbox`, `Conversation`, `Message`, and various `Channel::*` models (API, Email, Facebook Page, Instagram, SMS, Twilio, WhatsApp, Web Widget). It handles real-time updates via WebSockets and relies heavily on background workers for channel syncing.
   - **Shopify Inbox:** Provides a unified inbox but is tightly coupled with Shopify's ecosystem. It supports Apple Business Chat and Instagram but lacks open, extensible channel adapters.
   - **OHC Opportunity:** By building a native Rust omnichannel engine, we can achieve significantly higher performance (lower memory footprint, faster WebSocket broadcasting via Tokio/Tungstenite or Axum), deeper integration with OHC's Zero-Trust multi-tenancy model (SPIFFE/SPIRE, row-level security), and seamless native integration with OHC's "Ambassador" AI Agent for autonomous drafting.
 
@@ -63,13 +63,13 @@ issue_description: |
   - **The Manager Agent:** Monitors conversations for keywords implying booking or purchasing (e.g., "Can I book for Tuesday?") and silently annotates the conversation context with available slots or inventory, visible only to the owner.
 
   ### Key Design Decisions
-  - **Native Rust Implementation:** Replacing Ruby on Rails (Chatwoot) with Rust (Axum/Tokio) for the core service ensures maximum concurrency for WebSocket connections and minimizes latency.
+  - **Native Rust Implementation:** Replacing Ruby on Rails (the legacy ruby-on-rails external omnichannel dependency) with Rust (Axum/Tokio) for the core service ensures maximum concurrency for WebSocket connections and minimizes latency.
   - **Strict Multi-Tenancy:** PostgreSQL schemas must implement Row-Level Security (RLS) keyed by `tenant_id` for every table (`inboxes`, `conversations`, `messages`, `contacts`).
   - **Adapter Pattern for Channels:** Each external channel (Instagram, WhatsApp) will implement a strict Rust Trait (`ChannelProvider`) to normalize incoming/outgoing payloads into a unified `Message` struct.
   - **Proactive AI Drafting:** The system is optimized for an "Approve to Send" workflow rather than just "Read and Type", deeply embedding the AI into the message lifecycle.
 
   ## Implementation Prompt
-  **Objective:** Implement the core Native Rust Omnichannel Chat Service backend and corresponding Flutter mobile UI components to replace Chatwoot.
+  **Objective:** Implement the core Native Rust Omnichannel Chat Service backend and corresponding Flutter mobile UI components to replace the legacy ruby-on-rails external omnichannel dependency.
   **Target User:** Maya (Baker), who needs to see her Instagram DMs and WhatsApp messages in one feed and approve AI-drafted replies on her iPhone.
   **Acceptance Criteria:**
   1. Initialize a new Rust crate/service within the monorepo for the omnichannel engine.
