@@ -1173,7 +1173,7 @@ impl AgentService for AgentServiceImpl {
                 );
                 tokio::select! {
                     biased;
-                    _ = tx.closed() => return,
+                    _ = tx.closed() => (),
                     _ = store.upsert(&record) => {}
                 }
             }

@@ -70,7 +70,7 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    return Ok(AuthMode::Disabled);
+    Ok(AuthMode::Disabled)
 }
 
 /// Check a bearer token against an expected HMAC hash.
