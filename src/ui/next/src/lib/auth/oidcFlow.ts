@@ -46,6 +46,16 @@ function privateJson(status: number, message: string): Response {
   );
 }
 
+function privateRedirect(location: URL, cookies: readonly string[] = []): Response {
+  const headers = new Headers({
+    location: location.href,
+    "cache-control": "private, no-store",
+    pragma: "no-cache",
+  });
+  for (const cookie of cookies) headers.append("set-cookie", cookie);
+  return new Response(null, { status: 302, headers });
+}
+
 function base64url(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64url");
 }
@@ -373,9 +383,10 @@ export async function finishOidc(request: Request): Promise<Response> {
         : backendResponse.status === 409
           ? "/login?error=link-required"
           : "/login?error=oidc-denied";
-      const response = Response.redirect(new URL(location, dependencies.config.canonicalOrigin), 302);
-      response.headers.append("set-cookie", deleteStateCookie(cookieName, dependencies.config.secureCookie));
-      return response;
+      return privateRedirect(
+        new URL(location, dependencies.config.canonicalOrigin),
+        [deleteStateCookie(cookieName, dependencies.config.secureCookie)],
+      );
     }
     const backend = parseBackendLogin(await boundedJson(backendResponse), dependencies.now());
     if (backend === null) throw new Error("invalid backend session");
@@ -398,20 +409,19 @@ export async function finishOidc(request: Request): Promise<Response> {
       sessionCodecContext(dependencies.config),
       { now: dependencies.now(), backendExpiresAt: backend.expires_at },
     );
-    const response = Response.redirect(
+    return privateRedirect(
       new URL(safeReturnPath(state.returnTo), dependencies.config.canonicalOrigin),
-      302,
+      [
+        serializeSessionCookie(cookieForSession(dependencies.config, sealed, dependencies.now(), expiresAt)),
+        deleteStateCookie(cookieName, dependencies.config.secureCookie),
+      ],
     );
-    response.headers.append(
-      "set-cookie",
-      serializeSessionCookie(cookieForSession(dependencies.config, sealed, dependencies.now(), expiresAt)),
-    );
-    response.headers.append("set-cookie", deleteStateCookie(cookieName, dependencies.config.secureCookie));
-    response.headers.set("cache-control", "private, no-store");
-    return response;
   } catch {
     console.error("auth.oidc.callback_denied");
     const origin = dependencies?.config.canonicalOrigin ?? "https://cloud.omnisolo.co";
-    return Response.redirect(new URL("/login?error=oidc-denied", origin), 302);
+    const cookies = dependencies === undefined
+      ? []
+      : [deleteStateCookie(stateCookieName(dependencies), dependencies.config.secureCookie)];
+    return privateRedirect(new URL("/login?error=oidc-denied", origin), cookies);
   }
 }
