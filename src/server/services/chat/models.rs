@@ -57,3 +57,37 @@ pub struct ChatMessage {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatSlaPolicy {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub first_response_time_seconds: i32,
+    pub resolution_time_seconds: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatAutomationRule {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub trigger_event: String,
+    pub conditions: serde_json::Value,
+    pub actions: serde_json::Value,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatCannedResponse {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub short_code: String,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
