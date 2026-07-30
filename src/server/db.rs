@@ -1091,7 +1091,11 @@ impl DB {
                     .execute(&mut *migration_conn)
                     .await;
 
-                migration_result?;
+                if let Err(error) = migration_result {
+                    if !error.to_string().contains("_sqlx_migrations_pkey") {
+                        return Err(error.into());
+                    }
+                }
                 unlock_result?;
             }
             (DbStore::Sqlite(sqlite_pool), None) => {
