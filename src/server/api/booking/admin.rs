@@ -36,9 +36,9 @@ pub fn router<S>(db: Arc<DB>) -> Router<S> where S: Clone + Send + Sync + 'stati
     let state = AppState { db };
     Router::new()
         .route("/resources", get(list_resources).post(create_resource))
-        .route("/resources/:id", put(update_resource).delete(delete_resource))
+        .route("/resources/{id}", put(update_resource).delete(delete_resource))
         .route("/availability", get(list_availability).post(create_availability))
-        .route("/availability/:id", delete(delete_availability))
+        .route("/availability/{id}", delete(delete_availability))
         .with_state(state)
 }
 

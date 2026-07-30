@@ -115,7 +115,17 @@ features = ["bundled-sqlcipher"]
 
 [dependencies.sqlx]
 version = "0.8"
-features = [ "postgres", "sqlite", "mysql", "runtime-tokio-rustls", "chrono", "uuid", "macros",]
+features = [ "postgres", "sqlite", "mysql", "runtime-tokio-native-tls", "chrono", "uuid", "macros",]
+
+[dependencies.sea-orm]
+version = "=1.1.19"
+default-features = false
+features = [ "macros", "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid",]
+
+[dependencies.sea-orm-migration]
+version = "=1.1.19"
+default-features = false
+features = [ "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite",]
 
 [dependencies.opentelemetry]
 version = "0.32"

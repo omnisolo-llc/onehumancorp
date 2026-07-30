@@ -28,6 +28,13 @@ SERVER_RS_SRCS = [
     "minimax.rs",
     "msgbus.rs",
     "pipeline.rs",
+    "//src/server/persistence:capabilities.rs",
+    "//src/server/persistence:catalog.rs",
+    "//src/server/persistence:commands.rs",
+    "//src/server/persistence:connection.rs",
+    "//src/server/persistence:entities.rs",
+    "//src/server/persistence:migration.rs",
+    "//src/server/persistence:mod.rs",
     "powersync.rs",
     "queue.rs",
     "rag_sync.rs",
@@ -396,6 +403,12 @@ SERVER_RS_SRCS = [
     "//src/server/voice:router.rs",
 ]
 
+filegroup(
+    name = "server_sources",
+    srcs = SERVER_RS_SRCS,
+    visibility = ["//visibility:public"],
+)
+
 # build_script removed as protos are now built with Bazel rules
 
 rust_library(
@@ -506,6 +519,7 @@ rust_library(
         "@crates//:redis",
         "@crates//:regex",
         "@crates//:reqwest",
+        "@crates//:sea-orm",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:serde_yaml",
@@ -597,6 +611,73 @@ rust_test(
         "@crates//:tempfile",
         "@crates//:uuid",
     ],
+)
+
+rust_test(
+    name = "persistence_connection_test",
+    size = "small",
+    srcs = [
+        "persistence_connection_test.rs",
+        "//src/server/persistence:capabilities.rs",
+        "//src/server/persistence:connection.rs",
+    ],
+    edition = "2024",
+    deps = [
+        "@crates//:sea-orm",
+        "@crates//:serde",
+        "@crates//:tokio",
+    ],
+)
+
+rust_test(
+    name = "persistence_commands_test",
+    size = "small",
+    srcs = [
+        "persistence_commands_test.rs",
+        "//src/server/persistence:capabilities.rs",
+        "//src/server/persistence:commands.rs",
+        "//src/server/persistence:connection.rs",
+        "//src/server/persistence:entities.rs",
+        "//src/server/persistence:migration.rs",
+    ],
+    edition = "2024",
+    deps = [
+        "@crates//:bcrypt",
+        "@crates//:chrono",
+        "@crates//:sea-orm",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "persistence_catalog_test",
+    size = "small",
+    srcs = [
+        "persistence_catalog_test.rs",
+        "//src/server/persistence:capabilities.rs",
+        "//src/server/persistence:catalog.rs",
+        "//src/server/persistence:connection.rs",
+        "//src/server/persistence:entities.rs",
+        "//src/server/persistence:migration.rs",
+    ],
+    edition = "2024",
+    deps = [
+        "@crates//:chrono",
+        "@crates//:sea-orm",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:uuid",
+    ],
+)
+
+sh_test(
+    name = "catalog_auth_contract_test",
+    srcs = ["catalog_auth_contract_test.sh"],
+    data = ["lib.rs"],
 )
 
 rust_binary(
