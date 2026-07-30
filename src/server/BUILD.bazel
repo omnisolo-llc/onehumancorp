@@ -29,6 +29,7 @@ SERVER_RS_SRCS = [
     "msgbus.rs",
     "pipeline.rs",
     "//src/server/persistence:capabilities.rs",
+    "//src/server/persistence:catalog.rs",
     "//src/server/persistence:commands.rs",
     "//src/server/persistence:connection.rs",
     "//src/server/persistence:entities.rs",
