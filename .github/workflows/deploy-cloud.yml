@@ -66,4 +66,5 @@ jobs:
           done
           docker run --rm --platform linux/arm64 --entrypoint /usr/bin/test \
             "ghcr.io/onehumancorp/server:${GITHUB_SHA}" \
-            -e /usr/lib/aarch64-linux-gnu/libcrypto.so.3
+            -e /usr/lib/aarch64-linux-gnu/libcrypto.so.3 \
+            -a -e /usr/lib/aarch64-linux-gnu/libssl.so.3
