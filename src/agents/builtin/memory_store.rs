@@ -1057,11 +1057,11 @@ impl VectorRepository {
                             if skip_set.contains(&i) {
                                 continue;
                             }
+                            let a = &records[i];
                             for j in (i + 1)..records.len() {
                                 if skip_set.contains(&j) {
                                     continue;
                                 }
-                                let a = &records[i];
                                 let b = &records[j];
 
                                 // Both vectors are already L2-normalized, so dot product is the cosine similarity
