@@ -53,10 +53,16 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+    let mut migrator = MIGRATOR.clone();
+    migrator.set_locking(true);
+    let result = migrator.run(&admin_pool).await;
+    if let Err(e) = result {
+        // If multiple test binaries run against the same DB concurrently, they might race on migration insertions
+        let err_str = e.to_string();
+        if !err_str.contains("duplicate key value violates unique constraint") {
+            return Err(format!("run src/server/migrations: {err_str}"));
+        }
+    }
 
     sqlx::raw_sql(
         r#"
