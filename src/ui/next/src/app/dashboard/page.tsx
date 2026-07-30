@@ -22,6 +22,7 @@ import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { ReviewFeedCard } from './ReviewFeedCard';
+import { AssistantInsightsWidget } from "./AssistantInsightsWidget";
 
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
@@ -377,6 +378,9 @@ export default function Dashboard() {
       )}
 
       <div className="mb-6 w-full overflow-hidden">
+        {/* Assistant Insights: Top priority on mobile */}
+        <AssistantInsightsWidget tenant={tenantId()} />
+
         {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
         <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />
       </div>
