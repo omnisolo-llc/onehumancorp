@@ -158,13 +158,47 @@
 
       if (instantBuildBtn) {
         instantBuildBtn.addEventListener('click', () => {
-          window.location.href = "setup.html?mode=instant-build";
+          mainView.style.display = 'none';
+          instantBuildView.style.display = 'block';
         });
       }
 
       if (generateStorefrontBtn) {
-        generateStorefrontBtn.addEventListener('click', () => {
-          window.location.href = "setup.html?mode=instant-build";
+        generateStorefrontBtn.addEventListener('click', async () => {
+          const bio = document.getElementById('instant-bio').value;
+          if (!bio) return;
+          instantBuildView.style.display = 'none';
+          loadingView.style.display = 'block';
+          stepProvisioning.style.opacity = '1';
+
+          if (window.__TAURI__) {
+            try {
+              const res = await window.__TAURI__.core.invoke('process_intake', { input: bio });
+              window.location.href = "dashboard.html";
+            } catch (e) {
+              alert("Error generating storefront");
+              instantBuildView.style.display = 'block';
+              loadingView.style.display = 'none';
+            }
+          } else {
+            try {
+              const res = await fetch('/api/v1/onboarding/start_zero_click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: bio, image_url: null })
+              });
+
+              if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || data.message || 'Network request failed');
+              }
+              window.location.href = "dashboard.html";
+            } catch (e) {
+              alert(e.message || "Error generating storefront");
+              instantBuildView.style.display = 'block';
+              loadingView.style.display = 'none';
+            }
+          }
         });
       }
     </script>
