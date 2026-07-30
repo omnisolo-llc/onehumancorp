@@ -64,7 +64,7 @@ pkg_tar(
 # Serves both the API and the Flutter web UI (static assets).
 oci_image(
     name = "server_image",
-    base = "@distroless_cc",
+    base = "@ubuntu_runtime",
     entrypoint = ["/usr/local/bin/server"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
