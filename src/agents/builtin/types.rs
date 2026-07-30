@@ -91,10 +91,26 @@ pub struct ToolResult {
 }
 
 /// Formats an LLM-Recoverable error string according to the LangGraph 4-tier error handling mechanic.
+/// Upgraded with dynamic error analysis and custom recovery suggestions to boost self-correction.
 pub fn format_llm_recoverable_error(tool_name: &str, msg: &str) -> String {
-    format!("LLM-Recoverable Tool Error ({}): {}
+    let lower = msg.to_lowercase();
+    let dynamic_hint = if lower.contains("missing field") || lower.contains("missing") {
+        "\n\nDynamic Context: This appears to be a missing required field. Please double check the JSON schema's 'required' array to ensure all mandatory keys are provided."
+    } else if lower.contains("invalid type") || lower.contains("expected") || lower.contains("found") {
+        "\n\nDynamic Context: This appears to be a field type mismatch (e.g. string instead of integer). Please verify the schema types and ensure values are formatted exactly as defined."
+    } else if lower.contains("syntax error") || lower.contains("eof") || lower.contains("parse") || lower.contains("invalid character") {
+        "\n\nDynamic Context: This appears to be a JSON syntax/structure error. Please verify the JSON document is properly closed, all keys and strings are enclosed in double quotes, and commas are positioned correctly."
+    } else if lower.contains("database") || lower.contains("db") || lower.contains("sql") || lower.contains("postgres") || lower.contains("foreign key") || lower.contains("unique") {
+        "\n\nDynamic Context: This appears to be a database or persistence constraint violation. Please verify that any referenced parent IDs exist and you are not violating unique constraints."
+    } else if lower.contains("permission") || lower.contains("denied") || lower.contains("auth") || lower.contains("unauthorized") {
+        "\n\nDynamic Context: This appears to be an authorization or access control restriction. Please verify you have the necessary privileges, active token, or correct scopes before retrying."
+    } else {
+        ""
+    };
 
-SOTA Recovery Protocol: Please deeply analyze this validation/execution error, verify your previous arguments against the tool's strict Pydantic JSON schema, correct the arguments, and call the tool again.", tool_name, msg)
+    format!("LLM-Recoverable Tool Error ({}): {}{}
+
+SOTA Recovery Protocol: Please deeply analyze this validation/execution error, verify your previous arguments against the tool's strict Pydantic JSON schema, correct the arguments, and call the tool again.", tool_name, msg, dynamic_hint)
 }
 
 impl ToolResult {
@@ -433,6 +449,27 @@ mod tests {
         assert_eq!(tr.tool_call_id, "call_1");
         assert_eq!(tr.content, "");
         assert!(tr.error.contains("LLM-Recoverable Tool Error (my_tool): my_error"));
+    }
+
+    #[test]
+    fn test_format_llm_recoverable_error_dynamic_context() {
+        let err_missing = format_llm_recoverable_error("test_tool", "missing field 'user_id'");
+        assert!(err_missing.contains("missing required field"));
+
+        let err_type = format_llm_recoverable_error("test_tool", "invalid type: expected string, found integer");
+        assert!(err_type.contains("field type mismatch"));
+
+        let err_syntax = format_llm_recoverable_error("test_tool", "JSON syntax error at line 1");
+        assert!(err_syntax.contains("JSON syntax/structure error"));
+
+        let err_db = format_llm_recoverable_error("test_tool", "Postgres unique constraint violation");
+        assert!(err_db.contains("database or persistence constraint violation"));
+
+        let err_auth = format_llm_recoverable_error("test_tool", "unauthorized access denied");
+        assert!(err_auth.contains("authorization or access control restriction"));
+
+        let err_other = format_llm_recoverable_error("test_tool", "generic execution error");
+        assert!(!err_other.contains("Dynamic Context"));
     }
 }
 
