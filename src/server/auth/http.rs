@@ -1774,6 +1774,8 @@ mod tests {
     use std::net::{Ipv4Addr, SocketAddr};
     use tower::ServiceExt;
 
+    static REG_ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     fn with_peer(mut request: Request<Body>, peer: IpAddr) -> Request<Body> {
         request
             .extensions_mut()
