@@ -6,7 +6,7 @@ test.describe('Autonomous Booking System CUJ', () => {
 
   test('Owner sets up a new service and availability', async ({ request }) => {
     // 1. Create a resource
-    const resResource = await request['po' + 'st'](`/api/v1/booking/admin/resources`, {
+    const resResource = await request.post(`/api/v1/booking/admin/resources`, {
       headers: { 'x-tenant-id': tenantId },
       data: {
         name: 'Leo',
@@ -29,7 +29,7 @@ test.describe('Autonomous Booking System CUJ', () => {
     const end = new Date(tomorrow);
     end.setHours(17, 0, 0, 0);
 
-    const resAvail = await request['po' + 'st'](`/api/v1/booking/admin/availability`, {
+    const resAvail = await request.post(`/api/v1/booking/admin/availability`, {
       headers: { 'x-tenant-id': tenantId },
       data: {
         resource_id: resourceId,
@@ -56,7 +56,7 @@ test.describe('Autonomous Booking System CUJ', () => {
     const selectedSlot = slotsData.slots[0];
 
     // 2. Create the booking
-    const resBooking = await request['po' + 'st'](`/api/v1/booking/public/checkout`, {
+    const resBooking = await request.post(`/api/v1/booking/public/checkout`, {
       headers: { 'x-tenant-id': tenantId },
       data: {
         service_id: serviceId,

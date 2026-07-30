@@ -53,10 +53,21 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+
+    let mut retry_count = 0;
+    loop {
+        match MIGRATOR.run(&admin_pool).await {
+            Ok(_) => break,
+            Err(e) => {
+                if retry_count >= 5 {
+                    return Err(format!("run src/server/migrations: {}", e));
+                }
+                retry_count += 1;
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            }
+        }
+    }
+
 
     sqlx::raw_sql(
         r#"
