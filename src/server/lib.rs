@@ -7583,7 +7583,12 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
         .nest(
             "/api/v1/catalog",
-            api::catalog::router(hub.clone(), catalog_repository.clone()),
+            api::catalog::router(hub.clone(), catalog_repository.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
         )
         .nest("/api/v1/shipping", api::shipping::router(db.clone()))
         .nest("/api/v1/checkout", api::checkout_api::router(hub.clone()).with_state(mesh_transport.clone()))
