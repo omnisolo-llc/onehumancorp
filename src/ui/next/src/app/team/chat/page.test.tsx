@@ -1,6 +1,6 @@
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, test, vi } from 'vitest';
 import TeamChatPage from './page';
 
 const mockFetch = vi.fn();
