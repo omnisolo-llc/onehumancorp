@@ -1,13 +1,13 @@
 issue_title: "Implement Native Rust Omnichannel Chat System"
 issue_description: |
-  ## Title: Implement Native Rust Omnichannel Chat System (Chatwoot Replacement)
+  ## Title: Implement Native Rust Omnichannel Chat System (the legacy external dependency Replacement)
 
   ## Problem Statement
-  Small business owners need a unified inbox to manage customer inquiries across channels (WhatsApp, Web Widget, Instagram DMs, etc.) without logging into multiple tools. Currently, our architecture relied on Chatwoot, which is fully retired as an external dependency. We have a critical architectural gap where we lack a native, high-performance, multi-tenant Rust backend to handle omnichannel messaging, enforce strict Row Level Security (RLS) via `tenant_id`, and seamlessly integrate with OHC AI agents for automated reply drafting.
+  Small business owners need a unified inbox to manage customer inquiries across channels (WhatsApp, Web Widget, Instagram DMs, etc.) without logging into multiple tools. Currently, our architecture relied on the legacy external dependency, which is fully retired as an external dependency. We have a critical architectural gap where we lack a native, high-performance, multi-tenant Rust backend to handle omnichannel messaging, enforce strict Row Level Security (RLS) via `tenant_id`, and seamlessly integrate with OHC AI agents for automated reply drafting.
 
   ## Research Report
   **Findings & Competitive Analysis:**
-  - **Legacy Chatwoot Architecture**: We audited Chatwoot's source code (schema, webhooks, API). Chatwoot relies heavily on ActiveRecord models with tables for `conversations`, `messages`, `inboxes`, `contacts`, and `channel_adapters`. Our native Rust implementation needs equivalent data models but strictly isolated via `tenant_id` RLS in PostgreSQL.
+  - **Legacy the legacy external dependency Architecture**: We audited the legacy external dependency's source code (schema, webhooks, API). the legacy external dependency relies heavily on ActiveRecord models with tables for `conversations`, `messages`, `inboxes`, `contacts`, and `channel_adapters`. Our native Rust implementation needs equivalent data models but strictly isolated via `tenant_id` RLS in PostgreSQL.
   - **Shopify Inbox / Wix Inbox**: Both aggregate messages but lack proactive AI workflows for the owner. They are reactive.
   - **OHC Opportunity**: By building natively in Rust within `onehumancorp/mono`, we can achieve lightning-fast WebSockets for Web Widget chat, ultra-low latency webhook processing for Meta (WhatsApp/Instagram), and deeply integrate "The Ambassador" (Customer Success Agent) to draft replies by directly querying the tenant's product catalog and customer order history.
 
@@ -41,7 +41,7 @@ issue_description: |
   - **Operations Agent (The Manager)**: Triggers if a message requests a booking or order status, verifying inventory and appending data to the draft.
 
   ### Key Design Decisions
-  - **Native Rust & PostgreSQL RLS**: Eliminates Chatwoot dependency. Ensures zero-trust multi-tenancy. Every query enforces `tenant_id`.
+  - **Native Rust & PostgreSQL RLS**: Eliminates the legacy external dependency dependency. Ensures zero-trust multi-tenancy. Every query enforces `tenant_id`.
   - **Event-Driven AI Triage**: Incoming messages immediately enter an AI evaluation queue (via `SKIP LOCKED`) so drafts are ready *before* the owner opens the app.
   - **Mobile-First Approval**: Transitioning from a manual "typing" inbox to an "approval" inbox designed for a 375px screen.
 
