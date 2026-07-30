@@ -111,7 +111,7 @@ default-features = false
 
 [dependencies.libsqlite3-sys]
 version = "0.30.1"
-features = ["bundled-sqlcipher"]
+features = ["bundled-sqlcipher-vendored-openssl"]
 
 [dependencies.sqlx]
 version = "0.8"
