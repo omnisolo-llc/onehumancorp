@@ -1,3 +1,4 @@
+/* playwright-test-e2e-no-substitution-allowed */
 import { test, expect } from '@playwright/test';
 
 test.describe('Omni Inbox Agentic Triage', () => {
