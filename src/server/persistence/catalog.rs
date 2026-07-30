@@ -1,7 +1,7 @@
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set};
 
-use super::{connection::AppDatabase, entities};
+use super::{DatabaseBackend, connection::AppDatabase, entities};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CatalogProduct {
@@ -31,6 +31,10 @@ pub struct CatalogRepository {
 impl CatalogRepository {
     pub const fn new(database: AppDatabase) -> Self {
         Self { database }
+    }
+
+    pub const fn backend(&self) -> DatabaseBackend {
+        self.database.backend()
     }
 
     pub async fn list_products(

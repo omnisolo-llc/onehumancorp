@@ -1,5 +1,8 @@
 use crate::hub::Hub;
-use crate::persistence::catalog::CatalogRepository;
+use crate::persistence::{
+    DatabaseBackend,
+    catalog::{CatalogRepository, NewProduct},
+};
 use axum::http::StatusCode;
 use axum::{
     Router,
@@ -225,6 +228,7 @@ fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
 
 async fn handle_create_product(
     Extension(hub): Extension<Arc<Hub>>,
+    Extension(repository): Extension<Option<Arc<CatalogRepository>>>,
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<CreateProductRequest>,
 ) -> impl IntoResponse {
@@ -247,6 +251,72 @@ async fn handle_create_product(
         )
             .into_response();
     };
+
+    if repository
+        .as_ref()
+        .is_some_and(|repository| repository.backend() != DatabaseBackend::Postgres)
+    {
+        let advanced_features_requested = payload.is_subscribable.unwrap_or(false)
+            || payload
+                .variants
+                .as_ref()
+                .is_some_and(|items| !items.is_empty())
+            || payload.smart_pricing_enabled.unwrap_or(false)
+            || payload.subscription_frequency.is_some()
+            || payload.subscription_discount_percent.is_some();
+        if advanced_features_requested {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(ErrorResponse {
+                    error: "FEATURE_UNAVAILABLE".to_string(),
+                    message: "Variants, subscriptions, and smart pricing require the PostgreSQL catalog implementation"
+                        .to_string(),
+                }),
+            )
+                .into_response();
+        }
+        let Some(repository) = repository else {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ErrorResponse {
+                    error: "DATABASE_UNAVAILABLE".to_string(),
+                    message: "Catalog database is unavailable".to_string(),
+                }),
+            )
+                .into_response();
+        };
+        return match repository
+            .create_product(NewProduct {
+                tenant_id,
+                title: payload.name.clone(),
+                description: Some(payload.description),
+                item_type: Some(payload.item_type),
+                price_cents: (price * 100.0).round() as i64,
+                inventory_count: 100,
+            })
+            .await
+        {
+            Ok(_) => (
+                StatusCode::OK,
+                Json(CreateProductResponse {
+                    success: true,
+                    message: Some(format!("Created {}", payload.name)),
+                }),
+            )
+                .into_response(),
+            Err(error) => {
+                tracing::error!("Failed to persist catalog product: {error}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "DATABASE_ERROR".to_string(),
+                        message: "Failed to create product".to_string(),
+                    }),
+                )
+                    .into_response()
+            }
+        };
+    }
 
     let mut tx = match hub.pool.begin().await {
         Ok(c) => c,
