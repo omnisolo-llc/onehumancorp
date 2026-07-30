@@ -1,5 +1,6 @@
 "use client";
 import { MorningBriefingCard } from "./MorningBriefingCard";
+import { AssistantInsightsWidget } from "./AssistantInsightsWidget";
 import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
@@ -386,6 +387,7 @@ export default function Dashboard() {
 
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
       <NeighborhoodPulseCard tenant={tenantId()} />
+      <AssistantInsightsWidget />
 
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />

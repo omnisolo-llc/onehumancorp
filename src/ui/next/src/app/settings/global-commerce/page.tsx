@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import AppShell from '@/app/components/AppShell';
+import { AppShell } from "@/app/components/AppShell";
 const TopNav = ({ title }: { title: string }) => <div className="font-semibold px-4 py-3 border-b border-[#E5E5EA] dark:border-[#38383A]">{title}</div>;
 
 
