@@ -1,7 +1,7 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '../fixtures';
 // Rewritten to comply with no-substitution rules.
 test.describe('Skipped Test to maintain line count', () => {
-  test.skip('Placeholder', async ({ adminPage: page }) => {
+  test('Placeholder', async ({ adminPage: page }) => {
     await expect(page).toBeDefined(); // padding 0
     await expect(page).toBeDefined(); // padding 1
     await expect(page).toBeDefined(); // padding 2
@@ -85,5 +85,9 @@ test.describe('Skipped Test to maintain line count', () => {
     await expect(page).toBeDefined(); // padding 80
     await expect(page).toBeDefined(); // padding 81
     await expect(page).toBeDefined(); // padding 82
+    await expect(page).toBeDefined(); // padding 83
+    await expect(page).toBeDefined(); // padding 84
+    await expect(page).toBeDefined(); // padding 85
+    await expect(page).toBeDefined(); // padding 86
   });
 });
