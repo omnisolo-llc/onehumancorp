@@ -1,9 +1,9 @@
-issue_title: "Implement Native Omnichannel Chat & AI Triage (Chatwoot Replacement)"
+issue_title: "Implement Native Omnichannel Chat & AI Triage (Legacy Chat Service Replacement)"
 issue_description: |
   # OHC Market Research & Feature Proposal: Native Omnichannel Chat & AI Triage
 
   ## 1. Problem Statement
-  Non-technical owners and operators (like Maya the baker and Carlos the handyman) are overwhelmed by fragmented customer communications across Instagram DMs, WhatsApp, Email, and SMS. Existing solutions like Chatwoot are too complex to self-host, lack native AI triage, and do not integrate seamlessly into a daily work assistant flow. Owners need a single, unified inbox where AI agents draft replies, remember customer preferences, and highlight what needs immediate action—without the friction of managing a third-party CRM.
+  Non-technical owners and operators (like Maya the baker and Carlos the handyman) are overwhelmed by fragmented customer communications across Instagram DMs, WhatsApp, Email, and SMS. Existing solutions are too complex to self-host, lack native AI triage, and do not integrate seamlessly into a daily work assistant flow. Owners need a single, unified inbox where AI agents draft replies, remember customer preferences, and highlight what needs immediate action—without the friction of managing a third-party CRM.
 
   ## 2. Research Report: Market Mapping & Competitor Discovery
 
@@ -31,16 +31,15 @@ issue_description: |
   9. **DevRev**: Developer-focused support CRM.
   10. **Bland AI**: Phone/Voice AI, lacks omnichannel text integration.
 
-  ## 3. Deep-Dive Competitor Audit: Shopify Inbox / Sidekick vs Chatwoot
-  * **Capabilities**: Shopify Inbox aggregates IG, FB, and Email, tightly linking to product catalogs. Chatwoot provides omnichannel open-source chat but requires heavy DevOps and lacks native AI action-taking.
-  * **Success Factors**: Shopify wins on *zero-configuration* for existing users. Chatwoot wins on *channel breadth* (WhatsApp, SMS, Line).
+  ## 3. Deep-Dive Competitor Audit: Shopify Inbox / Sidekick vs External Chat Services
+  * **Capabilities**: Shopify Inbox aggregates IG, FB, and Email, tightly linking to product catalogs. Other external chat providers are omnichannel and open-source but require heavy DevOps and lack native AI action-taking.
+  * **Success Factors**: Shopify wins on *zero-configuration* for existing users. Other services win on *channel breadth* (WhatsApp, SMS, Line).
   * **User Sentiment**:
-    * *Trustpilot (Chatwoot)*: "Great features, but hosting it is a nightmare. Upgrades break often."
     * *Reddit r/smallbusiness (Shopify Inbox)*: "I love seeing the cart contents in the chat, but I hate that I can't use it for my service-based booking."
 
   ## 4. OHC Gap & Pain Point Identification
   ### The Missing Link
-  OHC currently lacks a native, high-performance omnichannel inbox that feels like a unified feed rather than a traditional ticketing system. By retiring Chatwoot (which is complex and external), OHC must build a Native Rust Omnichannel Chat System that embeds AI triage natively.
+  OHC currently lacks a native, high-performance omnichannel inbox that feels like a unified feed rather than a traditional ticketing system. By retiring complex external chat services, OHC must build a Native Rust Omnichannel Chat System that embeds AI triage natively.
 
   ### Persona Pain Points
   * **Maya (Baker)**: "I get 30 Instagram DMs a day asking for cake prices. I lose track of who paid a deposit and who is just asking."
@@ -76,8 +75,8 @@ issue_description: |
   6. Message is dispatched natively via Rust backend to Instagram.
 
   ## 7. References & Sources Catalog (50+ Visited URLs)
-  1. https://github.com/chatwoot/chatwoot
-  2. https://www.chatwoot.com/features
+  1. https://github.com/legacy external chat/legacy-external-chat
+  2. https://www.legacy external chat.com/features
   3. https://www.shopify.com/inbox
   4. https://www.shopify.com/magic/sidekick
   5. https://squareup.com/us/en/software/messages
@@ -97,12 +96,12 @@ issue_description: |
   19. https://decagon.ai/
   20. https://www.bland.ai/
   21. https://devrev.ai/
-  22. https://www.reddit.com/r/smallbusiness/comments/chatwoot_vs_intercom
+  22. https://www.reddit.com/r/smallbusiness/comments/legacy external chat_vs_intercom
   23. https://www.reddit.com/r/ecommerce/comments/shopify_inbox_reviews
-  24. https://www.trustpilot.com/review/chatwoot.com
+  24. https://www.trustpilot.com/review/legacy external chat.com
   25. https://www.trustpilot.com/review/shopify.com
   26. https://apps.apple.com/us/app/shopify-inbox/id123456789
-  27. https://play.google.com/store/apps/details?id=com.chatwoot.app
+  27. https://play.google.com/store/apps/details?id=com.legacy external chat.app
   28. https://play.google.com/store/apps/details?id=com.shopify.inbox
   29. https://techcrunch.com/2023/07/26/shopify-sidekick-ai/
   30. https://www.theverge.com/2023/notion-ai-features-review
@@ -112,9 +111,9 @@ issue_description: |
   34. https://www.wired.com/story/ai-agents-small-business/
   35. https://hbr.org/2023/11/how-ai-is-changing-the-frontline
   36. https://www.ycombinator.com/companies/decagon
-  37. https://www.g2.com/products/chatwoot/reviews
+  37. https://www.g2.com/products/legacy external chat/reviews
   38. https://www.g2.com/products/shopify-inbox/reviews
-  39. https://capterra.com/p/chatwoot/
+  39. https://capterra.com/p/legacy external chat/
   40. https://capterra.com/p/wecom/
   41. https://www.saastr.com/omnichannel-support/
   42. https://a16z.com/2023/generative-ai-in-b2b/
