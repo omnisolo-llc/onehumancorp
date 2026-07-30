@@ -11,7 +11,7 @@ static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Booking>>> = 
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> = OnceLock::new();
-static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
+static COST_CACHE: OnceLock<HybridCache<(f64, i64, f64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
 pub static DASHBOARD_SNAPSHOT_CACHE: OnceLock<HybridCache<DashboardSnapshot>> = OnceLock::new();
 pub static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<::server_ohc::app::GetOnboardingStateResponse>> = OnceLock::new();
 
@@ -93,8 +93,9 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_cost_summary_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+    async fn fetch_cost_summary_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, f64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
         let hub_clone = self.hub.clone();
+        let org_id_clone = org_id.to_string();
         let cost_data = tokio::task::spawn_blocking(move || {
             let cost_auditor = hub_clone.get_cost_auditor();
             let mut snapshot = cost_auditor.get_agent_costs_snapshot();
@@ -107,14 +108,15 @@ impl MyDashboardService {
             (
                 cost_auditor.get_total_cost(),
                 cost_auditor.get_total_tokens(),
+                cost_auditor.predict_burn_rate(&org_id_clone),
                 snapshot,
             )
-        }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
+        }).await.unwrap_or_else(|_| (0.0, 0, 0.0, vec![]));
         Ok(cost_data)
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+    async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, f64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
         let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
         let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
@@ -457,7 +459,7 @@ impl DashboardService for MyDashboardService {
             },
             {
                 if mobile_optimized {
-                    tokio::spawn(async move { Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, vec![])) })
+                    tokio::spawn(async move { Ok::<(f64, i64, f64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, 0.0, vec![])) })
                 } else {
                     let s = self.clone();
                     let o = org_id.clone();
@@ -488,7 +490,7 @@ impl DashboardService for MyDashboardService {
 
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, projected_burn_rate, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
@@ -608,7 +610,7 @@ impl DashboardService for MyDashboardService {
                 organization_id: (*org_id).clone(),
                 total_cost_usd: total_cost,
                 total_tokens: optimized_total_tokens,
-                projected_monthly_usd: 0.0,
+                projected_monthly_usd: projected_burn_rate,
                 agents: agent_summaries,
             });
 

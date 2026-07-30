@@ -544,6 +544,17 @@ impl CostAuditor {
             false
         }
     }
+
+    pub fn predict_burn_rate(&self, tenant_id: &str) -> f64 {
+        let cost_history = self.tenant_cost_history.lock().unwrap();
+        if let Some(history) = cost_history.get(tenant_id) {
+            if !history.is_empty() {
+                let avg_cost = history.iter().sum::<f64>() / history.len() as f64;
+                return avg_cost * 1000.0;
+            }
+        }
+        0.0
+    }
 }
 
 #[cfg(test)]
@@ -781,5 +792,34 @@ mod additional_tests {
         let anomalies = auditor.get_tenant_anomalies("tenant_anomaly");
         assert_eq!(anomalies.len(), 1);
         assert!(anomalies[0].contains("Anomaly detected"));
+    }
+
+    #[test]
+    fn test_predict_burn_rate() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        // Empty history
+        assert_eq!(auditor.predict_burn_rate("tenant_burn"), 0.0);
+
+        let event = AuditEvent {
+            agent_id: "agent1".to_string(),
+            tenant_id: "tenant_burn".to_string(),
+            input_tokens: 1000,
+            output_tokens: 500,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+
+        auditor.record_event(event.clone()); // cost: 1.0 + 1.0 = 2.0
+        auditor.record_event(event); // cost: 2.0
+
+        // Average cost per event is 2.0
+        // predict_burn_rate should return 2.0 * 1000.0 = 2000.0
+        assert_eq!(auditor.predict_burn_rate("tenant_burn"), 2000.0);
     }
 }
