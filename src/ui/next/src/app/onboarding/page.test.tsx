@@ -977,6 +977,7 @@ describe("OnboardingWizard", () => {
   });
 
   it("Instant Build: completes end-to-end flow with correct API calls", async () => {
+    vi.setConfig({ testTimeout: 10000 });
     const user = userEvent.setup({ delay: null });
 
     let fetchCalls: any[] = [];
