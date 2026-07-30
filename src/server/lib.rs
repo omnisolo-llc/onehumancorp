@@ -1,4 +1,5 @@
 use sqlx::Row;
+pub mod persistence;
 pub mod rag_sync;
 pub mod redis_pool;
 pub mod cart_recovery;
@@ -2911,6 +2912,22 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let standalone = crate::is_standalone_runtime();
+    let portable_database = match crate::persistence::commands::connect_from_environment().await {
+        Ok(database) => {
+            crate::persistence::migration::migrate(&database).await?;
+            Some(std::sync::Arc::new(database))
+        }
+        Err(error) if standalone => {
+            tracing::warn!("portable database is unavailable in standalone mode: {error}");
+            None
+        }
+        Err(error) => return Err(error),
+    };
+    let catalog_repository = portable_database.as_ref().map(|database| {
+        std::sync::Arc::new(crate::persistence::catalog::CatalogRepository::new(
+            database.as_ref().clone(),
+        ))
+    });
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
     if std::env::var("OHC_AGENT_TOKEN").is_err() && std::env::var("OHC_AGENT_SPIFFE_ID").is_err() {
         unsafe {
@@ -7014,7 +7031,49 @@ async fn create_ui_bom_item_handler(
             )
         }))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
-        .route("/readyz", axum::routing::get(|| async { "ok" }))
+        .route(
+            "/readyz",
+            axum::routing::get({
+                let database = portable_database.clone();
+                move || {
+                    let database = database.clone();
+                    async move {
+                        use axum::response::IntoResponse;
+                        let Some(database) = database else {
+                            return (
+                                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                                axum::Json(serde_json::json!({
+                                    "status": "not_ready",
+                                    "database": "unavailable"
+                                })),
+                            )
+                                .into_response();
+                        };
+                        match crate::persistence::commands::verify(database.as_ref()).await {
+                            Ok(verification) => (
+                                axum::http::StatusCode::OK,
+                                axum::Json(serde_json::json!({
+                                    "status": "ready",
+                                    "database": verification
+                                })),
+                            )
+                                .into_response(),
+                            Err(error) => {
+                                tracing::error!("database readiness check failed: {error}");
+                                (
+                                    axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                                    axum::Json(serde_json::json!({
+                                        "status": "not_ready",
+                                        "database": "query_failed"
+                                    })),
+                                )
+                                    .into_response()
+                            }
+                        }
+                    }
+                }
+            }),
+        )
         .route(
             "/api/v1/dev/seed",
             axum::routing::post({
@@ -7522,7 +7581,15 @@ async fn create_ui_bom_item_handler(
             http_auth_store.clone(),
         ).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone(), std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new())))
-        .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
+        .nest(
+            "/api/v1/catalog",
+            api::catalog::router(hub.clone(), catalog_repository.clone()).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
         .nest("/api/v1/shipping", api::shipping::router(db.clone()))
         .nest("/api/v1/checkout", api::checkout_api::router(hub.clone()).with_state(mesh_transport.clone()))
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))

@@ -1,4 +1,8 @@
 use crate::hub::Hub;
+use crate::persistence::{
+    DatabaseBackend,
+    catalog::{CatalogRepository, NewProduct},
+};
 use axum::http::StatusCode;
 use axum::{
     Router,
@@ -69,10 +73,12 @@ pub struct ErrorResponse {
 #[derive(Serialize)]
 pub struct Product {
     pub id: String,
+    pub name: String,
     pub title: String,
     pub description: Option<String>,
     pub item_type: Option<String>,
     pub price_cents: Option<i64>,
+    pub price: f64,
     pub inventory_count: Option<i32>,
     pub image_url: Option<String>,
     pub variants: Option<Vec<ProductVariantRequest>>,
@@ -84,13 +90,15 @@ fn bounded_product_image_url(metadata: Option<&serde_json::Value>) -> Option<Str
         && !image_url.starts_with("//")
         && image_url.len() <= 2_048
         && !image_url.contains(['\\', '\r', '\n', '\0'])
-        && !image_url.split('/').any(|segment| matches!(segment, "." | ".."));
+        && !image_url
+            .split('/')
+            .any(|segment| matches!(segment, "." | ".."));
 
     is_safe_path.then(|| image_url.to_string())
 }
 
 async fn handle_get_products(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(repository): Extension<Option<Arc<CatalogRepository>>>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
     let Some(tenant_id) = claims
@@ -102,81 +110,30 @@ async fn handle_get_products(
     else {
         return StatusCode::UNAUTHORIZED.into_response();
     };
-    let mut conn = match hub.pool.begin().await {
-        Ok(c) => c,
-        Err(e) => {
-            tracing::error!("Failed to acquire DB connection: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(vec![] as Vec<Product>),
-            )
-                .into_response();
-        }
-    };
-    if let Err(error) = ::server_common::auth_utils::set_org_context(&mut *conn, &tenant_id).await {
-        tracing::error!("Failed to bind catalog tenant context: {error:?}"); // pii-safe
+    let Some(repository) = repository else {
         return (
-            StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::SERVICE_UNAVAILABLE,
             Json(vec![] as Vec<Product>),
         )
             .into_response();
-    }
-
-    let rows = sqlx::query(
-        "SELECT id, title, description, type as item_type, price_cents, inventory_count, metadata FROM products WHERE tenant_id = $1"
-    )
-    .bind(&tenant_id)
-    .fetch_all(&mut *conn)
-    .await;
-
-    match rows {
+    };
+    match repository.list_products(&tenant_id).await {
         Ok(rows) => {
-            let mut products = Vec::new();
-            for row in rows {
-                let p_id: String = row.try_get("id").unwrap_or_default();
-                let metadata: Option<serde_json::Value> = row.try_get("metadata").ok();
-
-                let v_rows = sqlx::query(
-                    "SELECT name, price_modifier FROM product_variants WHERE product_id = $1",
-                )
-                .bind(&p_id)
-                .fetch_all(&mut *conn)
-                .await
-                .unwrap_or_default();
-
-                let mut variants = Vec::new();
-                for vr in v_rows {
-                    let modifier: i64 = vr.try_get("price_modifier").unwrap_or(0);
-                    let modifier_str = format!("{:.2}", (modifier as f64) / 100.0);
-                    variants.push(ProductVariantRequest {
-                        name: vr.try_get("name").unwrap_or_default(),
-                        price_modifier: modifier_str,
-                    });
-                }
-
-                products.push(Product {
-                    id: p_id,
-                    title: row.try_get("title").unwrap_or_default(),
-                    description: row.try_get("description").ok(),
-                    item_type: row.try_get("item_type").ok(),
-                    price_cents: row.try_get("price_cents").ok(),
-                    inventory_count: row.try_get("inventory_count").ok(),
-                    image_url: bounded_product_image_url(metadata.as_ref()),
-                    variants: if variants.is_empty() {
-                        None
-                    } else {
-                        Some(variants)
-                    },
-                });
-            }
-            if let Err(error) = conn.commit().await {
-                tracing::error!("Failed to commit catalog read transaction: {error:?}");
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(vec![] as Vec<Product>),
-                )
-                    .into_response();
-            }
+            let products: Vec<Product> = rows
+                .into_iter()
+                .map(|row| Product {
+                    id: row.id,
+                    name: row.title.clone(),
+                    title: row.title,
+                    description: row.description,
+                    item_type: row.item_type,
+                    price_cents: Some(row.price_cents),
+                    price: row.price_cents as f64 / 100.0,
+                    inventory_count: Some(row.inventory_count),
+                    image_url: None,
+                    variants: None,
+                })
+                .collect();
             (StatusCode::OK, Json(products)).into_response()
         }
         Err(e) => {
@@ -271,6 +228,7 @@ fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
 
 async fn handle_create_product(
     Extension(hub): Extension<Arc<Hub>>,
+    Extension(repository): Extension<Option<Arc<CatalogRepository>>>,
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<CreateProductRequest>,
 ) -> impl IntoResponse {
@@ -293,6 +251,72 @@ async fn handle_create_product(
         )
             .into_response();
     };
+
+    if repository
+        .as_ref()
+        .is_some_and(|repository| repository.backend() != DatabaseBackend::Postgres)
+    {
+        let advanced_features_requested = payload.is_subscribable.unwrap_or(false)
+            || payload
+                .variants
+                .as_ref()
+                .is_some_and(|items| !items.is_empty())
+            || payload.smart_pricing_enabled.unwrap_or(false)
+            || payload.subscription_frequency.is_some()
+            || payload.subscription_discount_percent.is_some();
+        if advanced_features_requested {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(ErrorResponse {
+                    error: "FEATURE_UNAVAILABLE".to_string(),
+                    message: "Variants, subscriptions, and smart pricing require the PostgreSQL catalog implementation"
+                        .to_string(),
+                }),
+            )
+                .into_response();
+        }
+        let Some(repository) = repository else {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ErrorResponse {
+                    error: "DATABASE_UNAVAILABLE".to_string(),
+                    message: "Catalog database is unavailable".to_string(),
+                }),
+            )
+                .into_response();
+        };
+        return match repository
+            .create_product(NewProduct {
+                tenant_id,
+                title: payload.name.clone(),
+                description: Some(payload.description),
+                item_type: Some(payload.item_type),
+                price_cents: (price * 100.0).round() as i64,
+                inventory_count: 100,
+            })
+            .await
+        {
+            Ok(_) => (
+                StatusCode::OK,
+                Json(CreateProductResponse {
+                    success: true,
+                    message: Some(format!("Created {}", payload.name)),
+                }),
+            )
+                .into_response(),
+            Err(error) => {
+                tracing::error!("Failed to persist catalog product: {error}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        error: "DATABASE_ERROR".to_string(),
+                        message: "Failed to create product".to_string(),
+                    }),
+                )
+                    .into_response()
+            }
+        };
+    }
 
     let mut tx = match hub.pool.begin().await {
         Ok(c) => c,
@@ -579,7 +603,9 @@ async fn handle_create_product(
         msg_id: uuid::Uuid::new_v4().to_string(),
     };
 
-    let _ = hub.publish_teammate_event("products_inbox".to_string(), event).await;
+    let _ = hub
+        .publish_teammate_event("products_inbox".to_string(), event)
+        .await;
 
     (
         StatusCode::OK,
@@ -668,11 +694,18 @@ async fn handle_generate_offering(
     (axum::http::StatusCode::OK, Json(response_json)).into_response()
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
+pub fn router<S: Clone + Send + Sync + 'static>(
+    hub: Arc<Hub>,
+    repository: Option<Arc<CatalogRepository>>,
+) -> Router<S> {
     Router::new()
         .route("/products", get(handle_get_products))
-        .route("/product", post(handle_create_product))
+        .route(
+            "/product",
+            get(handle_get_products).post(handle_create_product),
+        )
         .route("/generate", post(handle_generate_offering))
+        .layer(Extension(repository))
         .layer(Extension(hub))
 }
 

@@ -61,6 +61,7 @@ go.work.sum
 .claude-code/
 .kilo/
 .superpowers/
+.worktrees/
 
 # Editor/IDE
 # .idea/
