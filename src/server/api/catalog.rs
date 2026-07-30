@@ -119,7 +119,7 @@ async fn handle_get_products(
     };
     match repository.list_products(&tenant_id).await {
         Ok(rows) => {
-            let products = rows
+            let products: Vec<Product> = rows
                 .into_iter()
                 .map(|row| Product {
                     id: row.id,
