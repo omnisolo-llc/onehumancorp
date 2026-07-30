@@ -57,3 +57,15 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_messages_tenant_isolation_policy ON chat_messages FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+CREATE TABLE IF NOT EXISTS chat_contact_inboxes (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    contact_id UUID NOT NULL REFERENCES chat_contacts(id) ON DELETE CASCADE,
+    inbox_id UUID NOT NULL REFERENCES chat_inboxes(id) ON DELETE CASCADE,
+    source_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE chat_contact_inboxes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_contact_inboxes_tenant_isolation_policy ON chat_contact_inboxes FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
