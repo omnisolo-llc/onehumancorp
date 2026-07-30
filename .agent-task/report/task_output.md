@@ -2,11 +2,11 @@ issue_title: "Implement Custom Rust Omnichannel Chat System Core Models"
 issue_description: |
   **Title**: Implement Custom Rust Omnichannel Chat System Core Models
 
-  **Problem Statement**: OHC currently does not have a native messaging/omnichannel capability and historically relied on third-party services like Chatwoot. As per OHC requirements, Chatwoot integration is 100% RETIRED, and OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `onehumancorp/mono`. We need to design and implement the core Rust data models and DB schemas (using SQLx/PostgreSQL) for the native chat system, mirroring Chatwoot's omnichannel concepts but optimized for OHC's multi-tenant SaaS architecture. This includes Inboxes, Channels, Conversations, Messages, and Contacts.
+  **Problem Statement**: OHC currently does not have a native messaging/omnichannel capability and historically relied on third-party services. As per OHC requirements, the legacy external chat integration is 100% RETIRED, and OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `onehumancorp/mono`. We need to design and implement the core Rust data models and DB schemas (using SQLx/PostgreSQL) for the native chat system, mirroring the legacy system's omnichannel concepts but optimized for OHC's multi-tenant SaaS architecture. This includes Inboxes, Channels, Conversations, Messages, and Contacts.
 
   **Research Report**:
-  - We audited the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) to understand its data model.
-  - Chatwoot uses an `Account` as the tenant (equivalent to OHC's `tenant_id`).
+  - We audited the legacy open-source chat system's source code to understand its data model.
+  - The legacy system uses an `Account` as the tenant (equivalent to OHC's `tenant_id`).
   - Core entities:
     - `Inbox`: A routing destination for messages.
     - `Channel`: The specific integration (e.g., `Channel::WebWidget`, `Channel::Email`, `Channel::Whatsapp`, etc.).
@@ -69,7 +69,7 @@ issue_description: |
   - **Data Isolation**: All tables will include a `tenant_id` column. We will leverage PostgreSQL RLS (Row-Level Security) to ensure queries are automatically scoped to the active tenant context.
   - **AI Agent Integration**: The `Message` and `Conversation` models will have hooks (via Redis/Postgres SKIP LOCKED queue) so that AI Agents can process `incoming` messages, draft responses, and auto-reply based on OHC configuration.
   - **Mobile UX Flow (Conceptual for future UI)**: The UI will display a unified Inbox where Maya or Carlos can see DMs and emails in one 375px-optimized feed.
-  - **Key Design Decisions**: We separate `Inbox` (the logical grouping) from `Channel` (the physical provider configuration), matching Chatwoot's flexible architecture but using strong UUIDs and explicit OHC multi-tenancy.
+  - **Key Design Decisions**: We separate `Inbox` (the logical grouping) from `Channel` (the physical provider configuration), matching the legacy system's flexible architecture but using strong UUIDs and explicit OHC multi-tenancy.
 
   **Implementation Prompt**:
   As an Implementer agent:
