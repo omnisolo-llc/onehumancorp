@@ -1,8 +1,8 @@
 use chrono::Utc;
 use sea_orm::sea_query::Index;
-use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, Schema, Set};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, Schema, Set, Statement};
 
-use super::{connection::AppDatabase, entities};
+use super::{capabilities::DatabaseBackend as AppBackend, connection::AppDatabase, entities};
 use server_auth::seaorm_store::entities as auth_entities;
 
 pub const CORE_SCHEMA_VERSION: &str = "20260730_000001_portable_core";
@@ -57,47 +57,72 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     connection.execute(backend.build(&revoked_tokens)).await?;
 
     let indexes = [
-        Index::create()
-            .name("ux_users_tenant_username")
-            .table(auth_entities::user::Entity)
-            .col(auth_entities::user::Column::TenantId)
-            .col(auth_entities::user::Column::Username)
-            .unique()
-            .if_not_exists()
-            .to_owned(),
-        Index::create()
-            .name("ux_users_tenant_email")
-            .table(auth_entities::user::Entity)
-            .col(auth_entities::user::Column::TenantId)
-            .col(auth_entities::user::Column::Email)
-            .unique()
-            .if_not_exists()
-            .to_owned(),
-        Index::create()
-            .name("ux_registration_tickets_token_hash")
-            .table(auth_entities::registration_ticket::Entity)
-            .col(auth_entities::registration_ticket::Column::TokenHash)
-            .unique()
-            .if_not_exists()
-            .to_owned(),
-        Index::create()
-            .name("ux_registration_invitations_token_hash")
-            .table(auth_entities::invitation::Entity)
-            .col(auth_entities::invitation::Column::TokenHash)
-            .unique()
-            .if_not_exists()
-            .to_owned(),
-        Index::create()
-            .name("ux_external_identities_provider_subject")
-            .table(auth_entities::external_identity::Entity)
-            .col(auth_entities::external_identity::Column::ProviderKey)
-            .col(auth_entities::external_identity::Column::Issuer)
-            .col(auth_entities::external_identity::Column::Subject)
-            .unique()
-            .if_not_exists()
-            .to_owned(),
+        (
+            "users",
+            "ux_users_tenant_username",
+            Index::create()
+                .name("ux_users_tenant_username")
+                .table(auth_entities::user::Entity)
+                .col(auth_entities::user::Column::TenantId)
+                .col(auth_entities::user::Column::Username)
+                .unique()
+                .if_not_exists()
+                .to_owned(),
+        ),
+        (
+            "users",
+            "ux_users_tenant_email",
+            Index::create()
+                .name("ux_users_tenant_email")
+                .table(auth_entities::user::Entity)
+                .col(auth_entities::user::Column::TenantId)
+                .col(auth_entities::user::Column::Email)
+                .unique()
+                .if_not_exists()
+                .to_owned(),
+        ),
+        (
+            "registration_tickets",
+            "ux_registration_tickets_token_hash",
+            Index::create()
+                .name("ux_registration_tickets_token_hash")
+                .table(auth_entities::registration_ticket::Entity)
+                .col(auth_entities::registration_ticket::Column::TokenHash)
+                .unique()
+                .if_not_exists()
+                .to_owned(),
+        ),
+        (
+            "registration_invitations",
+            "ux_registration_invitations_token_hash",
+            Index::create()
+                .name("ux_registration_invitations_token_hash")
+                .table(auth_entities::invitation::Entity)
+                .col(auth_entities::invitation::Column::TokenHash)
+                .unique()
+                .if_not_exists()
+                .to_owned(),
+        ),
+        (
+            "external_identities",
+            "ux_external_identities_provider_subject",
+            Index::create()
+                .name("ux_external_identities_provider_subject")
+                .table(auth_entities::external_identity::Entity)
+                .col(auth_entities::external_identity::Column::ProviderKey)
+                .col(auth_entities::external_identity::Column::Issuer)
+                .col(auth_entities::external_identity::Column::Subject)
+                .unique()
+                .if_not_exists()
+                .to_owned(),
+        ),
     ];
-    for index in indexes {
+    for (table_name, index_name, index) in indexes {
+        if database.backend() == AppBackend::MySql
+            && mysql_index_exists(connection, table_name, index_name).await?
+        {
+            continue;
+        }
         connection.execute(backend.build(&index)).await?;
     }
 
@@ -142,4 +167,19 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
         .await?;
     }
     Ok(())
+}
+
+async fn mysql_index_exists(
+    connection: &sea_orm::DatabaseConnection,
+    table_name: &str,
+    index_name: &str,
+) -> Result<bool, sea_orm::DbErr> {
+    connection
+        .query_one(Statement::from_sql_and_values(
+            sea_orm::DatabaseBackend::MySql,
+            "SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ? LIMIT 1",
+            [table_name.into(), index_name.into()],
+        ))
+        .await
+        .map(|row| row.is_some())
 }
