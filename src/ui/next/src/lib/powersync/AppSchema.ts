@@ -93,11 +93,34 @@ const posTerminalSessions = new Table({
   pending_reconciliation: column.text
 });
 
+
+const chatConversations = new Table({
+  tenant_id: column.text,
+  inbox_id: column.text,
+  contact_id: column.text,
+  assignee_id: column.text,
+  status: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
+const chatMessages = new Table({
+  tenant_id: column.text,
+  conversation_id: column.text,
+  sender_type: column.text,
+  sender_id: column.text,
+  content: column.text,
+  created_at: column.text,
+  updated_at: column.text
+});
+
 export const AppSchema = new Schema({
   appointments: appointments,
   service_routes: serviceRoutes,
   agent_feed_items: agentFeedItems,
   omni_inbox_messages: omniInboxMessages,
+  chat_conversations: chatConversations,
+  chat_messages: chatMessages,
   pending_actions: pendingActions,
   pos_offline_transactions: posOfflineTransactions,
   pos_terminal_sessions: posTerminalSessions

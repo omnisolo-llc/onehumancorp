@@ -3402,7 +3402,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let omnichannel_webhook_router = axum::Router::new()
         .route("/api/v1/omnichannel/webhook", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
-
+        .route("/api/v1/webhooks/whatsapp_cloud", axum::routing::post(crate::integrations::whatsapp_cloud::webhook::handle_webhook).with_state(crate::integrations::whatsapp_cloud::webhook::WhatsAppCloudWebhookState { db_pool: db.pool.clone() }))
         .with_state(omnichannel_webhook_state);
 
     let inbox_webhook_state = api::inbox::webhook::OmnichannelWebhookState {
@@ -7547,6 +7547,7 @@ async fn create_ui_bom_item_handler(
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/v1/sync/ws", axum::routing::get(api::sync_gateway::ws_sync_handler))
+        .route("/api/v1/chat/ws", axum::routing::get(crate::services::chat::ws::chat_ws_handler))
         .route("/api/v1/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/api/v1/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
         .route("/api/v1/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
