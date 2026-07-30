@@ -52,6 +52,7 @@ pub mod product {
         pub id: String,
         pub tenant_id: String,
         pub title: String,
+        #[sea_orm(column_type = "Text", nullable)]
         pub description: Option<String>,
         #[sea_orm(column_name = "type")]
         pub item_type: Option<String>,
