@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS chat_channels (
     inbox_id UUID NOT NULL REFERENCES chat_inboxes(id) ON DELETE CASCADE,
     channel_type TEXT NOT NULL,
     config JSONB DEFAULT '{}'::jsonb,
+    sla_frt_seconds INTEGER,
+    sla_nrt_seconds INTEGER,
+    sla_rt_seconds INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -39,6 +42,10 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
     contact_id UUID NOT NULL REFERENCES chat_contacts(id) ON DELETE CASCADE,
     assignee_id UUID,
     status TEXT NOT NULL DEFAULT 'open',
+    frt_deadline TIMESTAMPTZ,
+    nrt_deadline TIMESTAMPTZ,
+    rt_deadline TIMESTAMPTZ,
+    sla_breached BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
