@@ -21,7 +21,7 @@ where
 {
     axum::Router::new()
         .route(
-            "/api/v1/agents/:id/stream",
+            "/api/v1/agents/{id}/stream",
             axum::routing::get(stream_agent),
         )
         .with_state(hub)
@@ -152,6 +152,11 @@ mod tests {
             .unwrap();
         let (tx, _) = mpsc::channel(100);
         Arc::new(Hub::new(tx, pool))
+    }
+
+    #[test]
+    fn router_uses_axum_v08_capture_syntax() {
+        let _: axum::Router<()> = router(make_hub());
     }
 
     #[tokio::test]

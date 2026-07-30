@@ -25,8 +25,8 @@ pub fn router(pool: PgPool) -> Router {
     };
 
     Router::new()
-        .route("/api/v1/inbox/:tenant_id/actions", get(get_pending_actions))
-        .route("/api/v1/inbox/:tenant_id/actions/:action_id/resolve", post(resolve_action))
+        .route("/api/v1/inbox/{tenant_id}/actions", get(get_pending_actions))
+        .route("/api/v1/inbox/{tenant_id}/actions/{action_id}/resolve", post(resolve_action))
         .with_state(state)
 }
 
