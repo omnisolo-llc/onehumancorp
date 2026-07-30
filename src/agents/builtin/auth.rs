@@ -54,27 +54,27 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         );
     }
 
-    if let Ok(token) = env::var("OHC_AGENT_TOKEN")
-        && !token.trim().is_empty()
-    {
-        let key = env::var("OHC_AGENT_AUTH_KEY")
-            .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
-        if key.trim().is_empty() || key.len() < 32 {
-            return Err("OHC_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
+    if let Ok(token) = env::var("OHC_AGENT_TOKEN") {
+        if !token.trim().is_empty() {
+            let key = env::var("OHC_AGENT_AUTH_KEY")
+                .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
+            if key.trim().is_empty() || key.len() < 32 {
+                return Err("OHC_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
+            }
+            let verification_key = key.into_bytes();
+            let token_hash = hmac_token(&token, &verification_key);
+            return Ok(AuthMode::Token {
+                token_hash,
+                verification_key,
+            });
         }
-        let verification_key = key.into_bytes();
-        let token_hash = hmac_token(&token, &verification_key);
-        return Ok(AuthMode::Token {
-            token_hash,
-            verification_key,
-        });
     }
 
-    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID")
-        && !spiffe_id.trim().is_empty()
-    {
-        validate_spiffe_id(&spiffe_id)?;
-        return Err("mTLS peer certificate authentication is not fully wired".to_string());
+    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID") {
+        if !spiffe_id.trim().is_empty() {
+            validate_spiffe_id(&spiffe_id)?;
+            return Err("mTLS peer certificate authentication is not fully wired".to_string());
+        }
     }
 
     let env_val = std::env::var("OHC_ENV").unwrap_or_default();
