@@ -54,6 +54,8 @@ pub struct ChatMessage {
     pub sender_type: String,
     pub sender_id: Option<Uuid>,
     pub content: String,
+    pub content_attributes: Option<serde_json::Value>,
+    pub external_source_ids: Option<serde_json::Value>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

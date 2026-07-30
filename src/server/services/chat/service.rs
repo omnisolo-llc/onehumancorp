@@ -106,12 +106,14 @@ impl ChatService {
         sender_type: String,
         sender_id: Option<Uuid>,
         content: String,
+        content_attributes: Option<serde_json::Value>,
+        external_source_ids: Option<serde_json::Value>,
     ) -> Result<ChatMessage, sqlx::Error> {
         sqlx::query_as(
             r#"
-            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, content_attributes, external_source_ids)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, content_attributes, external_source_ids, created_at, updated_at
             "#
         )
         .bind(Uuid::new_v4())
@@ -120,6 +122,8 @@ impl ChatService {
         .bind(sender_type)
         .bind(sender_id)
         .bind(content)
+        .bind(content_attributes)
+        .bind(external_source_ids)
         .fetch_one(&self.pool)
         .await
     }

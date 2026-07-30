@@ -4,6 +4,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
+    "//src/server/api:ohc_chat_engine.rs",
     "//src/server/services:chat/mod.rs",
     "//src/server/services:chat/models.rs",
     "//src/server/services:chat/service.rs",
