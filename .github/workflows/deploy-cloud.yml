@@ -52,7 +52,7 @@ jobs:
 
       - name: Build and push backend image
         run: |
-          bazelisk run --config=release --config=linux_arm64 //deploy:server_push_ghcr -- --tag "${GITHUB_SHA}"
+          bazelisk run --config=release //deploy:server_push_ghcr -- --tag "${GITHUB_SHA}"
 
       - name: Verify immutable image architectures and digests
         run: |
