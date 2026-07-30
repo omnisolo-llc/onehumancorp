@@ -1,5 +1,4 @@
-use crate::domain::repository::omnichannel_repo::{OmniChannelRepo, WorkItem};
-use serde_json::Value;
+use crate::domain::repository::omnichannel_repo::{OmniChannelRepo, ChatConversation, ChatMessage};
 use std::sync::Arc;
 use uuid::Uuid;
 use crate::db::DB;
@@ -15,38 +14,30 @@ impl OmniChannelService {
         }
     }
 
-    pub async fn ingest_signal(&self, tenant_id_str: &str, customer_name: Option<String>, source: String, payload: Value) -> Result<WorkItem, String> {
+    pub async fn ingest_signal(&self, tenant_id_str: &str, customer_name: Option<String>, source: String, payload: serde_json::Value) -> Result<ChatConversation, String> {
         let tenant_id = Uuid::parse_str(tenant_id_str).map_err(|e| e.to_string())?;
 
-        let profile = self.repo.create_customer_profile(tenant_id, customer_name)
+        let inbox = self.repo.create_inbox(tenant_id, "Default Inbox".to_string())
             .await
             .map_err(|e| e.to_string())?;
 
-        let work_item = self.repo.create_work_item(tenant_id, profile.id, source.clone(), payload.clone())
+        let _channel = self.repo.create_channel(tenant_id, inbox.id, source.clone(), serde_json::json!({}))
             .await
             .map_err(|e| e.to_string())?;
 
-        let prompt = format!(
-            "Analyze the following event and provide a concise draft response. Tenant: {}. Source: {}. Payload: {}",
-            tenant_id, source, payload
-        );
+        let contact = self.repo.create_contact(tenant_id, customer_name, None, None)
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let prompt = crate::pricing::compression::reduce_tokens(&prompt);
+        let conversation = self.repo.create_conversation(tenant_id, inbox.id, contact.id, None, "open".to_string())
+            .await
+            .map_err(|e| e.to_string())?;
 
-        let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-            Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
-            Ok("minimax") => {
-                let api_key = std::env::var("MINIMAX_API_KEY").map_err(|_| "MINIMAX_API_KEY required".to_string())?;
-                crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
-            }
-            _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
-        };
+        let _message = self.repo.create_message(tenant_id, conversation.id, "contact".to_string(), None, payload.to_string())
+            .await
+            .map_err(|e| e.to_string())?;
 
-        if let Ok(draft_text) = llm_res {
-            let _ = self.repo.create_agent_draft(work_item.id, draft_text).await;
-        }
-
-        Ok(work_item)
+        Ok(conversation)
     }
 }
 
@@ -69,24 +60,18 @@ mod tests {
         let service = OmniChannelService::new(db.clone());
         let tenant_id = Uuid::new_v4().to_string();
 
-        // Ensure tables exist for test
         let _ = sqlx::query("
-            CREATE TABLE IF NOT EXISTS customer_profile (
-                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, name TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS work_item (
-                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, customer_id UUID NOT NULL, source TEXT NOT NULL, payload JSONB, status TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS agent_draft (
-                id UUID PRIMARY KEY, work_item_id UUID NOT NULL, response TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
-            );
+            CREATE TABLE IF NOT EXISTS chat_inboxes (id UUID PRIMARY KEY, tenant_id UUID NOT NULL, name TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+            CREATE TABLE IF NOT EXISTS chat_channels (id UUID PRIMARY KEY, tenant_id UUID NOT NULL, inbox_id UUID NOT NULL, channel_type TEXT NOT NULL, config JSONB, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+            CREATE TABLE IF NOT EXISTS chat_contacts (id UUID PRIMARY KEY, tenant_id UUID NOT NULL, name TEXT, email TEXT, phone TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+            CREATE TABLE IF NOT EXISTS chat_conversations (id UUID PRIMARY KEY, tenant_id UUID NOT NULL, inbox_id UUID NOT NULL, contact_id UUID NOT NULL, assignee_id UUID, status TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+            CREATE TABLE IF NOT EXISTS chat_messages (id UUID PRIMARY KEY, tenant_id UUID NOT NULL, conversation_id UUID NOT NULL, sender_type TEXT NOT NULL, sender_id UUID, content TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
         ").execute(&db.pool).await;
 
         let result = service.ingest_signal(&tenant_id, Some("Test User".to_string()), "instagram".to_string(), serde_json::json!({"msg": "hello"})).await;
 
         assert!(result.is_ok());
-        let item = result.unwrap();
-        assert_eq!(item.source, "instagram");
-        assert_eq!(item.status, "PENDING");
+        let conv = result.unwrap();
+        assert_eq!(conv.status, "open");
     }
 }
