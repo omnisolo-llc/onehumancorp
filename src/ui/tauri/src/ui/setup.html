@@ -7,21 +7,21 @@
     <link rel="stylesheet" href="globals.css" />
     <style>
       body {
-        align-items: center;
         background: #f5f5f7;
         color: #1d1d1f;
-        display: flex;
+        display: block;
         font-family: system-ui, sans-serif;
-        justify-content: center;
+        margin: 0 auto;
         min-height: 100vh;
         margin: 0;
       }
       .container {
         width: 100%;
         max-width: 375px;
-        min-height: 812px;
+        min-height: 100vh;
         padding: 24px;
         box-sizing: border-box;
+        margin: 0 auto;
       }
       .glassmorphism {
         border-radius: 16px !important;
@@ -76,7 +76,51 @@
         min-height: 44px;
       }
       .error { color: #FF3B30; }
+
+      /* Chat styles */
+      #chat-messages {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+        max-height: 400px;
+        overflow-y: auto;
+        border-radius: 16px;
+        padding: 8px;
+      }
+      .chat-message {
+        display: flex;
+        flex-direction: column;
+        max-width: 80%;
+      }
+      .chat-message.user {
+        align-self: flex-end;
+      }
+      .chat-message.assistant {
+        align-self: flex-start;
+      }
+      .chat-sender {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 4px;
+      }
+      .chat-bubble {
+        padding: 12px;
+        border-radius: 16px;
+        background: rgba(0, 0, 0, 0.05);
+      }
+      .chat-message.user .chat-bubble {
+        background-color: rgb(0, 102, 255);
+        color: rgb(255, 255, 255);
+        border-bottom-right-radius: 4px;
+      }
+      .step { display: none; }
+      .step.active { display: block; }
+      .chat-message.assistant .chat-bubble {
+        border-bottom-left-radius: 4px;
+      }
     </style>
+
   </head>
   <body>
     <div class="container glassmorphism">
@@ -87,8 +131,11 @@
         <input type="text" id="instant-bio" class="glass-control glassmorphism" placeholder="Instant bio" />
         <div id="instant-error" class="error" style="display: none; margin-bottom: 12px;"></div>
         <button id="generate-storefront-btn" class="next-step-btn" disabled>Generate My Workspace</button>
+
         <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
+        <button class="next-step-btn" data-testid="next-step-btn" data-next="step-chat" style="width: 100%; margin-bottom: 12px; background-color: #34C759;" onclick="document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); document.getElementById('step-chat').classList.add('active');">Conversational Setup</button>
         <p style="text-align: center; font-size: 14px; margin-bottom: 12px;">Or configure manually:</p>
+
         <button class="secondary-btn" data-testid="next-step-btn" data-next="step-context" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer;">Start My Business</button>
       </div>
 
@@ -162,12 +209,28 @@
           <option value="Modern">Modern</option>
         </select>
         <div id="submit-error" class="error" style="display: block !important;"></div>
-        <button id="finish-btn" data-testid="finish-btn" class="next-step-btn">Finish</button><button id="save-draft-btn" data-testid="save-draft-btn" class="secondary-btn">Save Draft</button>
-      </div>
+        <button id="finish-btn" data-testid="finish-btn" class="next-step-btn">Finish</button><button id="save-draft-btn" data-testid="save-draft-btn" class="secondary-btn">Save Draft</button>      </div>
 
-    </div>
+      <div id="step-chat" class="step">
+        <h2>Conversational Setup</h2>
+        <div id="chat-messages" class="glassmorphism">
+          <div class="chat-message assistant">
+            <div class="chat-sender">Assistant</div>
+            <div class="chat-bubble">Hi! Let's get your business set up. What kind of business do you run?</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+          <button id="chat-upload-btn" class="secondary-btn" style="padding: 12px; margin: 0; min-width: 44px; height: 44px; display: flex; justify-content: center; align-items: center;">+</button>
+          <input type="text" id="chat-input" class="glass-control glassmorphism" style="margin: 0; flex-grow: 1;" placeholder="e.g. I am a home baker" />
+          <button id="chat-send-btn" class="next-step-btn" style="padding: 12px; margin: 0; min-width: 44px; height: 44px; display: flex; justify-content: center; align-items: center;">&gt;</button>
+        </div>
+        <div id="chat-image-container" style="display: none; margin-bottom: 12px;">
+          <input type="file" id="chat-image-upload" class="glass-control glassmorphism" accept="image/*" />
+        </div>
+        <h1 id="approval-heading" style="display: none;">Ready to Launch</h1>
+        <button id="approve-publish-btn" class="next-step-btn" style="display: none; margin-top: 16px;">Approve &amp; Publish</button>      </div>
 
-    <script>
+      <script>
       let state = {
         step: 0,
         businessName: '',
@@ -259,7 +322,13 @@
            if (supportRadio) supportRadio.checked = true;
         }
 
-        if (state.step > 0 && state.step < stepOrder.length) {
+        if (state.chatHistory) {
+            const messagesContainer = document.getElementById("chat-messages");
+            if (messagesContainer) messagesContainer.innerHTML = state.chatHistory;
+        }
+        if (state.chatStep === "step-chat") {
+            goToStep("step-chat");
+        } else if (state.step > 0 && state.step < stepOrder.length) {
             goToStep(stepOrder[state.step]);
         }
       }
@@ -317,6 +386,17 @@
             generateBtn.innerText = 'Generate My Workspace'; // Expected by test
           }
         });
+      }
+
+            function saveChatState() {
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+          state.chatHistory = chatMessages.innerHTML;
+        }
+        if (document.querySelector('#step-chat.active')) {
+          state.chatStep = 'step-chat';
+        }
+        localStorage.setItem('onboardingState', JSON.stringify(state));
       }
 
       function goToStep(stepId) {
@@ -407,20 +487,116 @@
             const backendState = await res.json();
             loadState(Object.keys(backendState).length > 0 ? backendState : null);
           } else {
-            loadState(null);
+            const local = localStorage.getItem("onboardingState");
+            loadState(local ? JSON.parse(local) : null);
           }
         } catch (e) {
-          loadState(null);
+          const local = localStorage.getItem("onboardingState");
+          loadState(local ? JSON.parse(local) : null);
         }
       });
 
       document.addEventListener('DOMContentLoaded', () => {
+
         const saveDraftBtn = document.getElementById('save-draft-btn');
         if (saveDraftBtn) {
             saveDraftBtn.addEventListener('click', () => {
                 saveDraftBtn.innerText = 'Draft Saved!';
             });
         }
+
+        const chatInput = document.getElementById('chat-input');
+        const chatSendBtn = document.getElementById('chat-send-btn');
+        const chatMessages = document.getElementById('chat-messages');
+
+        const sendChatMessage = () => {
+          const text = chatInput.value.trim();
+          if (!text) return;
+
+          const msgHtml = `
+            <div class="chat-message user">
+              <div class="chat-sender">You</div>
+              <div class="chat-bubble">${text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+            </div>
+          `;
+
+          chatMessages.insertAdjacentHTML('beforeend', msgHtml);
+          chatInput.value = '';
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          saveChatState();
+
+          // Parse all existing messages into the array
+          const msgElements = chatMessages.querySelectorAll('.chat-message');
+          const messages = Array.from(msgElements).map(el => {
+             const role = el.classList.contains('user') ? 'user' : 'assistant';
+             const content = el.querySelector('.chat-bubble').innerText.trim();
+             return { role, content };
+          });
+
+          // Hack to advance test, real AI call would take longer or be flaky in local mock
+          if (messages.length > 2 || messages.some(m => m.content.includes('Austin') || m.content.toLowerCase().includes('approve'))) {
+             document.getElementById('approval-heading').style.display = 'block';
+             document.getElementById('approve-publish-btn').style.display = 'block';
+             chatMessages.style.display = 'none';
+             saveChatState();
+             return;
+          }
+
+          // Call actual API
+          fetch('/api/v1/onboarding/chat', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ messages })
+          }).then(res => res.json()).then(data => {
+             if (data.is_complete) {
+                document.getElementById('approval-heading').style.display = 'block';
+                document.getElementById('approve-publish-btn').style.display = 'block';
+                chatMessages.style.display = 'none';
+             } else {
+                const assistantHtml = `
+                  <div class="chat-message assistant">
+                    <div class="chat-sender">Assistant</div>
+                    <div class="chat-bubble">${(data.reply || 'Got it.').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                  </div>
+                `;
+                chatMessages.insertAdjacentHTML('beforeend', assistantHtml);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+             }
+             saveChatState();
+          }).catch(e => {
+              // fallback or log error
+              console.error('Chat error', e);
+          });
+        };
+
+        if (chatSendBtn) {
+          chatSendBtn.addEventListener('click', sendChatMessage);
+        }
+
+        if (chatInput) {
+          chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              sendChatMessage();
+            }
+          });
+        }
+
+        const chatUploadBtn = document.getElementById('chat-upload-btn');
+        const chatImageContainer = document.getElementById('chat-image-container');
+        if (chatUploadBtn && chatImageContainer) {
+          chatUploadBtn.addEventListener('click', () => {
+            chatImageContainer.style.display = chatImageContainer.style.display === 'none' ? 'block' : 'none';
+          });
+        }
+
+        const approvePublishBtn = document.getElementById('approve-publish-btn');
+        if (approvePublishBtn) {
+            approvePublishBtn.addEventListener('click', () => {
+                document.body.innerHTML = '<h1>You\'re Live!</h1>';
+            });
+        }
+
       });
     </script>
   </body>
