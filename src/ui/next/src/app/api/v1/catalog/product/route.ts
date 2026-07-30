@@ -3,6 +3,10 @@ import {
   validateJsonRequestBody,
 } from "@/lib/auth/backendTransport";
 
+export function GET(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/v1/catalog/product");
+}
+
 export function POST(request: Request): Promise<Response> {
   return proxyBackendRequest(request, "/api/v1/catalog/product", {
     forwardQuery: false,
