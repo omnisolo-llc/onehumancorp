@@ -1,17 +1,17 @@
 issue_title: "Implement Custom Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  OHC currently relies on external systems like Chatwoot for customer communication. As per our architectural vision, we need to retire external Chatwoot dependencies and build a high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust. This enables deep integration with OHC AI agents (Operations, CS, Sales) and strict row-level security per tenant.
+  OHC currently relies on external systems like legacy external dependency for customer communication. As per our architectural vision, we need to retire external legacy external dependency dependencies and build a high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust. This enables deep integration with OHC AI agents (Operations, CS, Sales) and strict row-level security per tenant.
 
   ## Research Report
-  - We audited the open-source Chatwoot Ruby on Rails codebase (https://github.com/chatwoot/chatwoot) focusing on data models (`app/models/conversation.rb`, `app/models/message.rb`, `app/models/inbox.rb`).
+  - We audited the open-source legacy external dependency Ruby on Rails codebase (https://github.com/legacy_external_dependency/legacy_external_dependency) focusing on data models (`app/models/conversation.rb`, `app/models/message.rb`, `app/models/inbox.rb`).
   - Core entities include Conversation, Message, Contact, Inbox, ChannelAdapter.
-  - Chatwoot handles multiple channel types (WhatsApp, Web Widget, Email) via channel-specific tables or polymorphism.
+  - legacy external dependency handles multiple channel types (WhatsApp, Web Widget, Email) via channel-specific tables or polymorphism.
   - Native Rust implementation needs:
     - High-performance Async runtime (Tokio)
     - WebSocket handling (for Web Widget)
     - Webhook receivers (for WhatsApp/Meta)
-    - Multi-tenant data models matching Chatwoot capabilities but utilizing PostgreSQL RLS.
+    - Multi-tenant data models matching legacy external dependency capabilities but utilizing PostgreSQL RLS.
 
   ## Design Doc
 
@@ -51,7 +51,7 @@ issue_description: |
   - Service authenticates via SPIFFE/SPIRE internally; APIs rely on JWTs with embedded `tenant_id`.
 
   ## Implementation Prompt
-  **Goal:** Implement the foundation of the native Rust Omnichannel Chat system, replacing Chatwoot.
+  **Goal:** Implement the foundation of the native Rust Omnichannel Chat system, replacing legacy external dependency.
 
   **Tasks for Implementer:**
   1. Define the SQL schema migrations for `inboxes`, `conversations`, `messages`, and `contacts` including `tenant_id` and RLS policies.
