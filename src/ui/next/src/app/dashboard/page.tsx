@@ -1,4 +1,5 @@
 "use client";
+import { AssistantInsightsWidget } from "./AssistantInsightsWidget";
 import { MorningBriefingCard } from "./MorningBriefingCard";
 import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
@@ -514,6 +515,7 @@ export default function Dashboard() {
       )}
 
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+        <AssistantInsightsWidget />
         {activeDepartments.length > 0 && (
           <section className="mb-6 w-full col-span-full">
             <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active AI Departments</h2>
