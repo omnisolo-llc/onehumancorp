@@ -1,7 +1,7 @@
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, Set};
 
-use super::{DatabaseBackend, connection::AppDatabase, entities};
+use super::{capabilities::DatabaseBackend, connection::AppDatabase, entities};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CatalogProduct {
