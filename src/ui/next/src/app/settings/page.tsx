@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "../components/AppShell";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import {
+  AuthenticationSettingsPanel,
+  type AdminOidcProvider,
+  type RegistrationMode,
+} from "./AuthenticationSettingsPanel";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -44,6 +49,10 @@ export default function SettingsPage() {
   const [twilioStatus, setTwilioStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [usageLogs, setUsageLogs] = useState<any[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [registrationMode, setRegistrationMode] = useState<RegistrationMode>("closed");
+  const [registrationStatus, setRegistrationStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [oidcProviders, setOidcProviders] = useState<AdminOidcProvider[]>([]);
+  const [providerStatus, setProviderStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const handleConnectWhatsApp = async () => {
     try {
@@ -145,7 +154,62 @@ export default function SettingsPage() {
         }
       })
       .catch(e => console.error("Failed to load usage logs", e));
+
+    fetch("/api/v1/settings/authentication", { cache: "no-store" })
+      .then(async res => {
+        if (!res.ok) throw new Error("not authorized");
+        const data = await res.json();
+        if (["closed", "open", "invite_only"].includes(data.registration_mode)) {
+          setRegistrationMode(data.registration_mode);
+          if (Array.isArray(data.providers)) {
+            setOidcProviders(data.providers.filter((provider: unknown): provider is AdminOidcProvider => {
+              if (provider === null || typeof provider !== "object") return false;
+              const candidate = provider as Record<string, unknown>;
+              return typeof candidate.key === "string"
+                && typeof candidate.display_name === "string"
+                && typeof candidate.provider_kind === "string"
+                && typeof candidate.issuer === "string"
+                && typeof candidate.configured === "boolean"
+                && typeof candidate.enabled === "boolean";
+            }));
+          }
+          setIsAdmin(true);
+        }
+      })
+      .catch(() => undefined);
   }, []);
+
+  const handleRegistrationModeChange = async (mode: RegistrationMode) => {
+    setRegistrationStatus("saving");
+    try {
+      const response = await fetch("/api/v1/settings/authentication", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ registration_mode: mode }),
+      });
+      if (!response.ok) throw new Error("setting rejected");
+      setRegistrationMode(mode);
+      setRegistrationStatus("saved");
+    } catch {
+      setRegistrationStatus("error");
+    }
+  };
+
+  const handleProviderChange = async (provider: string, enabled: boolean) => {
+    setProviderStatus("saving");
+    try {
+      const response = await fetch(`/api/v1/settings/authentication/providers/${encodeURIComponent(provider)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      if (!response.ok) throw new Error("setting rejected");
+      setOidcProviders((current) => current.map((item) => item.key === provider ? { ...item, enabled } : item));
+      setProviderStatus("saved");
+    } catch {
+      setProviderStatus("error");
+    }
+  };
 
   const handleDeliverySettingChange = async (key: string, value: any) => {
     const newSettings = { ...deliverySettings, [key]: value };
@@ -671,6 +735,17 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
+
+        {isAdmin && (
+          <AuthenticationSettingsPanel
+            onProviderChange={(provider, enabled) => void handleProviderChange(provider, enabled)}
+            onRegistrationModeChange={(mode) => void handleRegistrationModeChange(mode)}
+            providers={oidcProviders}
+            providerStatus={providerStatus}
+            registrationMode={registrationMode}
+            registrationStatus={registrationStatus}
+          />
+        )}
 
         {/* Member Analytics Section */}
         {isAdmin && (

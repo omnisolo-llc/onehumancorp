@@ -3457,24 +3457,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
-    let auth_repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> =
-        if db.is_mysql() {
-            if let Some(mysql_pool) = crate::db::get_mysql_pool_if_exists() {
-                std::sync::Arc::new(crate::auth::mysql_store::MySqlUserRepository::new(mysql_pool))
-            } else {
-                panic!("MySQL connection enabled but pool is missing");
-            }
-        } else {
-            match &db.store {
-                crate::db::DbStore::Postgres => std::sync::Arc::new(
-                    crate::auth::postgres_store::PgUserRepository::new(db.pool.clone()),
-                ),
-                crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(
-                    crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone()),
-                ),
-            }
-        };
-    let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_repo(auth_repo));
+    let auth_database = portable_database
+        .as_ref()
+        .ok_or_else(|| std::io::Error::other("portable authentication database unavailable"))?;
+    let auth_repo = std::sync::Arc::new(crate::auth::seaorm_store::SeaOrmAuthRepository::new(
+        auth_database.connection().clone(),
+    ));
+    auth_repo.sync_configured_oidc_providers_from_environment().await
+        .map_err(std::io::Error::other)?;
+    let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_portable_repo(auth_repo));
     let http_auth_router = crate::auth::http::router(http_auth_store.clone()).map_err(|error| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, error)
     })?;

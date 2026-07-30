@@ -10,6 +10,22 @@ const TEST_API_CONTRACT = {
   cachePolicy: "private-no-store",
 } as const;
 
+const REGISTRATION_API_CONTRACT = {
+  bodyLimitBytes: 4096,
+  rateLimitPolicy: "backend-registration",
+  tenantSource: "none",
+  replayPolicy: "one-time-registration",
+  cachePolicy: "private-no-store",
+} as const;
+
+const OIDC_API_CONTRACT = {
+  bodyLimitBytes: 4096,
+  rateLimitPolicy: "backend-oidc",
+  tenantSource: "none",
+  replayPolicy: "oidc-state",
+  cachePolicy: "private-no-store",
+} as const;
+
 // @ts-expect-error route-handler entries require API contract metadata
 const routeHandlerWithoutApi = { method: "POST", invocation: "route-handler", matcher: { kind: "exact", path: "/api/v1/auth/login" }, reason: "invalid missing API contract", owner: "authentication" } as const satisfies PublicRouteEntry;
 
@@ -33,6 +49,20 @@ describe("bootstrap public contracts", () => {
         owner: "authentication",
       },
       {
+        method: "GET",
+        invocation: "page",
+        matcher: { kind: "exact", path: "/register" },
+        reason: "render the closed-by-default registration entry page",
+        owner: "authentication",
+      },
+      {
+        method: "GET",
+        invocation: "page",
+        matcher: { kind: "exact", path: "/verify-email" },
+        reason: "render the email verification page",
+        owner: "authentication",
+      },
+      {
         method: "POST",
         invocation: "route-handler",
         matcher: { kind: "exact", path: "/api/v1/auth/login" },
@@ -48,6 +78,62 @@ describe("bootstrap public contracts", () => {
       },
       {
         method: "GET",
+        invocation: "route-handler",
+        matcher: { kind: "exact", path: "/api/v1/auth/public-settings" },
+        reason: "render closed-by-default registration and configured identity-provider choices",
+        owner: "authentication",
+        api: { ...REGISTRATION_API_CONTRACT, replayPolicy: "read-only" },
+      },
+      {
+        method: "POST",
+        invocation: "route-handler",
+        matcher: { kind: "exact", path: "/api/v1/auth/registration/email/start" },
+        reason: "start bounded mandatory email verification",
+        owner: "authentication",
+        api: REGISTRATION_API_CONTRACT,
+      },
+      {
+        method: "POST",
+        invocation: "route-handler",
+        matcher: { kind: "exact", path: "/api/v1/auth/registration/email/verify" },
+        reason: "exchange a one-time email code for a registration ticket",
+        owner: "authentication",
+        api: REGISTRATION_API_CONTRACT,
+      },
+      {
+        method: "POST",
+        invocation: "route-handler",
+        matcher: { kind: "exact", path: "/api/v1/auth/register" },
+        reason: "consume a verified registration ticket and establish a sealed session",
+        owner: "authentication",
+        api: REGISTRATION_API_CONTRACT,
+      },
+      {
+        method: "GET",
+        invocation: "route-handler",
+        matcher: { kind: "exact", path: "/api/v1/auth/oidc/google" },
+        reason: "start the reviewed google OIDC authorization flow",
+        owner: "authentication",
+        api: OIDC_API_CONTRACT,
+      },
+      {
+        method: "GET",
+        invocation: "route-handler",
+        matcher: { kind: "exact", path: "/api/v1/auth/oidc/keycloak" },
+        reason: "start the reviewed keycloak OIDC authorization flow",
+        owner: "authentication",
+        api: OIDC_API_CONTRACT,
+      },
+      {
+        method: "GET",
+        invocation: "route-handler",
+        matcher: { kind: "exact", path: "/api/v1/auth/oidc/callback" },
+        reason: "validate OIDC state, PKCE, nonce, issuer, and the provider callback",
+        owner: "authentication",
+        api: OIDC_API_CONTRACT,
+      },
+      {
+        method: "GET",
         invocation: "asset",
         matcher: { kind: "framework-prefix", path: "/_next/static/" },
         reason: "load immutable framework assets needed by the login page",
@@ -58,7 +144,16 @@ describe("bootstrap public contracts", () => {
 
   it.each([
     ["GET", "/login", "page", "public"],
+    ["GET", "/register", "page", "public"],
+    ["GET", "/verify-email", "page", "public"],
     ["POST", "/api/v1/auth/login", "route-handler", "public"],
+    ["GET", "/api/v1/auth/public-settings", "route-handler", "public"],
+    ["POST", "/api/v1/auth/registration/email/start", "route-handler", "public"],
+    ["POST", "/api/v1/auth/registration/email/verify", "route-handler", "public"],
+    ["POST", "/api/v1/auth/register", "route-handler", "public"],
+    ["GET", "/api/v1/auth/oidc/google", "route-handler", "public"],
+    ["GET", "/api/v1/auth/oidc/keycloak", "route-handler", "public"],
+    ["GET", "/api/v1/auth/oidc/callback", "route-handler", "public"],
     ["post", "/api/v1/auth/login", "route-handler", "public"],
     ["GET", "/_next/static/chunks/app.js", "asset", "public"],
     ["POST", "/login", "server-action", "protected"],

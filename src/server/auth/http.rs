@@ -4,18 +4,17 @@ use crate::{
     MAX_AUTH_USERNAME_BYTES, Store,
 };
 use axum::{
-    Router,
+    Extension, Router,
     body::{Body, to_bytes},
-    extract::{ConnectInfo, State},
+    extract::{ConnectInfo, Path, State},
     http::{HeaderMap, StatusCode, header},
     response::Response,
-    routing::post,
-    Extension,
+    routing::{get, post},
 };
 use base64::Engine as _;
 use hmac::{Hmac, Mac};
-use rand::RngCore;
-use serde::{Deserialize, Serialize};
+use rand::{Rng, RngCore};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
@@ -95,6 +94,8 @@ struct HttpAuthState {
     trusted_proxies: Arc<HashSet<IpAddr>>,
     now: Arc<Clock>,
     cloud: bool,
+    mailer: Arc<dyn crate::email::VerificationMailer>,
+    registration_hash_key: [u8; 32],
 }
 
 #[derive(Clone, Copy)]
@@ -305,26 +306,61 @@ pub fn router(store: Arc<Store>) -> Result<Router, String> {
         tracing::error!(event = "auth.config.invalid_trusted_proxy");
         "invalid trusted proxy configuration".to_string()
     })?;
-    tracing::info!(event = "auth.config.ready", deployment = ?deployment);
-    Ok(router_with_state(HttpAuthState::new(
+    let mailer: Arc<dyn crate::email::VerificationMailer> =
+        match crate::email::SmtpVerificationMailer::from_environment(
+            ::server_config::get().multitenant,
+        )? {
+            Some(mailer) => Arc::new(mailer),
+            None => Arc::new(crate::email::UnconfiguredMailer),
+        };
+    tracing::info!(event = "auth.config.ready", deployment = ?deployment, smtp_configured = mailer.configured());
+    Ok(router_with_state(HttpAuthState::with_mailer(
         store,
         trusted_proxies,
+        mailer,
     )))
 }
 
 fn router_with_state(state: HttpAuthState) -> Router {
     let settings_router = Router::new()
-        .route("/keys", axum::routing::post(generate_api_key).get(list_api_keys))
+        .route(
+            "/keys",
+            axum::routing::post(generate_api_key).get(list_api_keys),
+        )
         .route("/keys/{id}", axum::routing::delete(revoke_api_key))
-        .layer(axum::middleware::from_fn_with_state(state.store.clone(), super::strict_bearer_auth_middleware));
+        .route(
+            "/authentication",
+            get(get_authentication_settings).put(update_authentication_settings),
+        )
+        .route(
+            "/authentication/providers/{provider}",
+            axum::routing::put(update_oidc_provider),
+        )
+        .layer(axum::middleware::from_fn_with_state(
+            state.store.clone(),
+            super::strict_bearer_auth_middleware,
+        ));
 
     let admin_router = Router::new()
         .route("/usage", axum::routing::get(list_member_usage_analytics))
-        .layer(axum::middleware::from_fn_with_state(state.store.clone(), super::strict_bearer_auth_middleware));
+        .layer(axum::middleware::from_fn_with_state(
+            state.store.clone(),
+            super::strict_bearer_auth_middleware,
+        ));
 
     Router::new()
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/logout", post(logout))
+        .route(
+            "/api/v1/auth/public-settings",
+            get(public_authentication_settings),
+        )
+        .route(
+            "/api/v1/auth/registration/email/start",
+            post(start_email_verification),
+        )
+        .route("/api/v1/auth/registration/email/verify", post(verify_email))
+        .route("/api/v1/auth/oidc/session", post(oidc_session))
         .route("/api/v1/auth/register", post(register))
         .nest("/api/v1/settings", settings_router)
         .nest("/api/v1/ui/admin", admin_router)
@@ -433,9 +469,7 @@ async fn generate_api_key(
     no_store_json(StatusCode::CREATED, &resp)
 }
 
-async fn list_api_keys(
-    Extension(claims): Extension<::server_common::Claims>,
-) -> Response {
+async fn list_api_keys(Extension(claims): Extension<::server_common::Claims>) -> Response {
     let mut api_keys = Vec::new();
     let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
 
@@ -515,7 +549,7 @@ async fn revoke_api_key(
         let organization_id = claims.organization_id.clone().unwrap_or_default();
 
         let delete_res = sqlx::query(
-            "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND organization_id = $3"
+            "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND organization_id = $3",
         )
         .bind(key_uuid)
         .bind(member_id)
@@ -563,7 +597,11 @@ fn get_in_memory_usage_logs() -> &'static Mutex<Vec<InMemoryUsageLog>> {
 async fn list_member_usage_analytics(
     Extension(claims): Extension<::server_common::Claims>,
 ) -> Response {
-    if !claims.roles.iter().any(|role| role.eq_ignore_ascii_case("admin")) {
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("admin"))
+    {
         return error(StatusCode::FORBIDDEN, "admin access required");
     }
 
@@ -627,8 +665,21 @@ async fn list_member_usage_analytics(
 
 impl HttpAuthState {
     fn new(store: Arc<Store>, trusted_proxies: HashSet<IpAddr>) -> Self {
+        Self::with_mailer(
+            store,
+            trusted_proxies,
+            Arc::new(crate::email::UnconfiguredMailer),
+        )
+    }
+
+    fn with_mailer(
+        store: Arc<Store>,
+        trusted_proxies: HashSet<IpAddr>,
+        mailer: Arc<dyn crate::email::VerificationMailer>,
+    ) -> Self {
         let mut hash_key = [0_u8; 32];
         rand::thread_rng().fill_bytes(&mut hash_key);
+        let registration_hash_key = store.registration_hash_key();
         Self {
             store,
             limiter: Arc::new(Mutex::new(LoginLimiter::new(LimitConfig {
@@ -646,26 +697,531 @@ impl HttpAuthState {
                     .as_secs()
             }),
             cloud: ::server_config::get().multitenant,
+            mailer,
+            registration_hash_key,
         }
     }
-}
-
-fn is_registration_enabled() -> bool {
-    #[cfg(test)]
-    {
-        if let Ok(val) = std::env::var("OHC_REGISTRATION_ENABLED") {
-            return val == "true";
-        }
-    }
-    ::server_config::get().registration_enabled
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RegisterRequest {
+    registration_ticket: String,
+    organization_id: String,
     username: String,
-    email: String,
     password: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StartEmailVerificationRequest {
+    email: String,
+    invitation_token: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct VerifyEmailRequest {
+    challenge_id: String,
+    code: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct OidcSessionRequest {
+    provider: String,
+    id_token: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UpdateAuthenticationSettingsRequest {
+    registration_mode: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UpdateOidcProviderRequest {
+    enabled: bool,
+}
+
+#[derive(Serialize)]
+struct PublicAuthenticationSettingsResponse {
+    registration_mode: &'static str,
+    registration_available: bool,
+    email_verification_required: bool,
+    providers: Vec<crate::seaorm_store::PublicOidcProvider>,
+}
+
+#[derive(Serialize)]
+struct AdminAuthenticationSettingsResponse {
+    registration_mode: &'static str,
+    registration_available: bool,
+    email_verification_required: bool,
+    providers: Vec<crate::seaorm_store::AdminOidcProvider>,
+}
+
+#[derive(Serialize)]
+struct StartEmailVerificationResponse {
+    challenge_id: String,
+    expires_in_seconds: u64,
+}
+
+#[derive(Serialize)]
+struct VerifyEmailResponse {
+    registration_ticket: String,
+    expires_in_seconds: u64,
+}
+
+async fn public_authentication_settings(State(state): State<HttpAuthState>) -> Response {
+    let Some(repository) = state.store.portable_repo() else {
+        return no_store_json(
+            StatusCode::OK,
+            &PublicAuthenticationSettingsResponse {
+                registration_mode: "closed",
+                registration_available: false,
+                email_verification_required: true,
+                providers: Vec::new(),
+            },
+        );
+    };
+    let mode = match repository.registration_mode().await {
+        Ok(mode) => mode,
+        Err(_) => {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "authentication settings unavailable",
+            );
+        }
+    };
+    let providers = match repository.public_oidc_providers().await {
+        Ok(providers) => providers,
+        Err(_) => {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "authentication settings unavailable",
+            );
+        }
+    };
+    no_store_json(
+        StatusCode::OK,
+        &PublicAuthenticationSettingsResponse {
+            registration_mode: mode.as_str(),
+            registration_available: mode != crate::seaorm_store::RegistrationMode::Closed
+                && state.mailer.configured(),
+            email_verification_required: true,
+            providers,
+        },
+    )
+}
+
+async fn get_authentication_settings(
+    State(state): State<HttpAuthState>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> Response {
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("admin"))
+    {
+        return error(StatusCode::FORBIDDEN, "admin access required");
+    }
+    let Some(repository) = state.store.portable_repo() else {
+        return error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "authentication settings unavailable",
+        );
+    };
+    let mode = match repository.registration_mode().await {
+        Ok(mode) => mode,
+        Err(_) => {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "authentication settings unavailable",
+            );
+        }
+    };
+    let providers = match repository.admin_oidc_providers().await {
+        Ok(providers) => providers,
+        Err(_) => {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "authentication settings unavailable",
+            );
+        }
+    };
+    no_store_json(
+        StatusCode::OK,
+        &AdminAuthenticationSettingsResponse {
+            registration_mode: mode.as_str(),
+            registration_available: mode != crate::seaorm_store::RegistrationMode::Closed
+                && state.mailer.configured(),
+            email_verification_required: true,
+            providers,
+        },
+    )
+}
+
+async fn update_authentication_settings(
+    State(state): State<HttpAuthState>,
+    Extension(claims): Extension<::server_common::Claims>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+) -> Response {
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("admin"))
+    {
+        return error(StatusCode::FORBIDDEN, "admin access required");
+    }
+    let payload: UpdateAuthenticationSettingsRequest = match decode_json(&headers, request).await {
+        Ok(payload) => payload,
+        Err(response) => return response,
+    };
+    let mode = match crate::seaorm_store::RegistrationMode::parse(&payload.registration_mode) {
+        Ok(mode) => mode,
+        Err(_) => return error(StatusCode::BAD_REQUEST, "invalid registration mode"),
+    };
+    let Some(repository) = state.store.portable_repo() else {
+        return error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "authentication settings unavailable",
+        );
+    };
+    if repository
+        .set_registration_mode(mode, &claims.sub, Utc::now())
+        .await
+        .is_err()
+    {
+        return error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "authentication settings unavailable",
+        );
+    }
+    tracing::info!(event = "auth.settings.registration_mode_changed", actor = %claims.sub, mode = mode.as_str());
+    no_store_json(
+        StatusCode::OK,
+        &serde_json::json!({ "registration_mode": mode.as_str() }),
+    )
+}
+
+async fn update_oidc_provider(
+    State(state): State<HttpAuthState>,
+    Path(provider): Path<String>,
+    Extension(claims): Extension<::server_common::Claims>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+) -> Response {
+    if !claims
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("admin"))
+    {
+        return error(StatusCode::FORBIDDEN, "admin access required");
+    }
+    if provider.is_empty()
+        || provider.len() > 32
+        || !provider
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+    {
+        return error(StatusCode::BAD_REQUEST, "invalid OIDC provider");
+    }
+    let payload: UpdateOidcProviderRequest = match decode_json(&headers, request).await {
+        Ok(payload) => payload,
+        Err(response) => return response,
+    };
+    let Some(repository) = state.store.portable_repo() else {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC settings unavailable");
+    };
+    let configured = match repository.oidc_provider(&provider).await {
+        Ok(Some(config)) => !config.client_id.trim().is_empty()
+            && !config.secret_ref.trim().is_empty(),
+        Ok(None) => return error(StatusCode::NOT_FOUND, "OIDC provider unavailable"),
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC settings unavailable"),
+    };
+    if payload.enabled && !configured {
+        return error(StatusCode::CONFLICT, "OIDC provider is not configured");
+    }
+    match repository
+        .set_oidc_provider_enabled(&provider, payload.enabled, Utc::now())
+        .await
+    {
+        Ok(true) => {}
+        Ok(false) => return error(StatusCode::NOT_FOUND, "OIDC provider unavailable"),
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC settings unavailable"),
+    }
+    tracing::info!(event = "auth.settings.oidc_provider_changed", actor = %claims.sub, provider = %provider, enabled = payload.enabled);
+    no_store_json(
+        StatusCode::OK,
+        &serde_json::json!({ "provider": provider, "enabled": payload.enabled }),
+    )
+}
+
+async fn start_email_verification(
+    State(state): State<HttpAuthState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+) -> Response {
+    let payload: StartEmailVerificationRequest = match decode_json(&headers, request).await {
+        Ok(payload) => payload,
+        Err(response) => return response,
+    };
+    let email = match crate::validation::normalize_email(&payload.email) {
+        Ok(email) => email,
+        Err(message) => {
+            return no_store_json(
+                StatusCode::BAD_REQUEST,
+                &serde_json::json!({ "error": message }),
+            );
+        }
+    };
+    let Some(repository) = state.store.portable_repo() else {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable");
+    };
+    let mode = match repository.registration_mode().await {
+        Ok(mode) => mode,
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable"),
+    };
+    if mode == crate::seaorm_store::RegistrationMode::Closed {
+        return error(StatusCode::FORBIDDEN, "registration closed");
+    }
+    if !state.mailer.configured() {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable");
+    }
+
+    let now = Utc::now();
+    let invitation_id = if mode == crate::seaorm_store::RegistrationMode::InviteOnly {
+        let raw_token = payload.invitation_token.as_deref().unwrap_or_default();
+        if raw_token.len() < 16 || raw_token.len() > 256 || raw_token.bytes().any(|byte| byte.is_ascii_whitespace()) {
+            return error(StatusCode::FORBIDDEN, "invitation required");
+        }
+        let token_hash = registration_hash_hex(
+            &state.registration_hash_key,
+            b"registration-invitation",
+            &[raw_token.as_bytes()],
+        );
+        match repository
+            .active_invitation_id_by_token(&email, &token_hash, now)
+            .await
+        {
+            Ok(Some(invitation_id)) => Some(invitation_id),
+            Ok(None) => return error(StatusCode::FORBIDDEN, "invitation required"),
+            Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable"),
+        }
+    } else {
+        None
+    };
+    if let Ok(Some(previous)) = repository.latest_email_challenge(&email).await {
+        if previous.resend_after > now {
+            let retry = (previous.resend_after - now).num_seconds().max(1) as u64;
+            return error_with_retry(
+                StatusCode::TOO_MANY_REQUESTS,
+                "verification recently sent",
+                retry,
+            );
+        }
+    }
+
+    let challenge_id = uuid::Uuid::new_v4().to_string();
+    let code = format!("{:06}", rand::thread_rng().gen_range(0_u32..1_000_000));
+    let code_hash = registration_hash_hex(
+        &state.registration_hash_key,
+        b"email-code",
+        &[challenge_id.as_bytes(), code.as_bytes()],
+    );
+    let source = resolve_request_source(peer.ip(), &headers, &state.trusted_proxies);
+    let source_hash = hex::encode(keyed_hash(
+        &state.registration_hash_key,
+        source.ip.to_string().as_bytes(),
+    ));
+    let challenge = crate::seaorm_store::NewEmailChallenge {
+        id: challenge_id.clone(),
+        email: email.clone(),
+        code_hash,
+        source_hash,
+        created_at: now,
+        expires_at: now + chrono::Duration::minutes(15),
+        resend_after: now + chrono::Duration::seconds(60),
+        invitation_id,
+    };
+    if repository.create_email_challenge(challenge).await.is_err() {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable");
+    }
+    if state
+        .mailer
+        .send_verification_code(&email, &code)
+        .await
+        .is_err()
+    {
+        let _ = repository.delete_email_challenge(&challenge_id).await;
+        return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable");
+    }
+    tracing::info!(event = "auth.registration.verification_sent", challenge_id = %challenge_id, source = ?source.class);
+    no_store_json(
+        StatusCode::ACCEPTED,
+        &StartEmailVerificationResponse {
+            challenge_id,
+            expires_in_seconds: 15 * 60,
+        },
+    )
+}
+
+async fn verify_email(
+    State(state): State<HttpAuthState>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+) -> Response {
+    let payload: VerifyEmailRequest = match decode_json(&headers, request).await {
+        Ok(payload) => payload,
+        Err(response) => return response,
+    };
+    if payload.challenge_id.len() > 64
+        || payload.code.len() != 6
+        || !payload.code.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return error(StatusCode::BAD_REQUEST, "invalid verification code");
+    }
+    let Some(repository) = state.store.portable_repo() else {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable");
+    };
+    let challenge = match repository.email_challenge(&payload.challenge_id).await {
+        Ok(Some(challenge)) => challenge,
+        Ok(None) => return error(StatusCode::BAD_REQUEST, "invalid verification code"),
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable"),
+    };
+    let now = Utc::now();
+    if challenge.expires_at <= now || challenge.attempts >= 5 || challenge.verified_at.is_some() {
+        return error(StatusCode::BAD_REQUEST, "invalid verification code");
+    }
+    let expected_hash = registration_hash_hex(
+        &state.registration_hash_key,
+        b"email-code",
+        &[payload.challenge_id.as_bytes(), payload.code.as_bytes()],
+    );
+    if expected_hash != challenge.code_hash {
+        let _ = repository
+            .record_challenge_failure(&payload.challenge_id, challenge.attempts)
+            .await;
+        return error(StatusCode::BAD_REQUEST, "invalid verification code");
+    }
+
+    let mut ticket_bytes = [0_u8; 32];
+    rand::thread_rng().fill_bytes(&mut ticket_bytes);
+    let raw_ticket = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(ticket_bytes);
+    let ticket_hash = registration_hash_hex(
+        &state.registration_hash_key,
+        b"registration-ticket",
+        &[raw_ticket.as_bytes()],
+    );
+    let ticket = crate::seaorm_store::NewRegistrationTicket {
+        id: uuid::Uuid::new_v4().to_string(),
+        email: challenge.email,
+        token_hash: ticket_hash,
+        issued_at: now,
+        expires_at: now + chrono::Duration::minutes(20),
+        invitation_id: challenge.invitation_id,
+    };
+    if repository
+        .verify_challenge_and_issue_ticket(&payload.challenge_id, &expected_hash, ticket)
+        .await
+        .is_err()
+    {
+        return error(StatusCode::BAD_REQUEST, "invalid verification code");
+    }
+    tracing::info!(event = "auth.registration.email_verified", challenge_id = %payload.challenge_id);
+    no_store_json(
+        StatusCode::OK,
+        &VerifyEmailResponse {
+            registration_ticket: raw_ticket,
+            expires_in_seconds: 20 * 60,
+        },
+    )
+}
+
+async fn oidc_session(
+    State(state): State<HttpAuthState>,
+    headers: HeaderMap,
+    request: axum::extract::Request,
+) -> Response {
+    let payload: OidcSessionRequest = match decode_json(&headers, request).await {
+        Ok(payload) => payload,
+        Err(response) => return response,
+    };
+    if payload.provider.is_empty()
+        || payload.provider.len() > 32
+        || !payload
+            .provider
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+        || payload.id_token.is_empty()
+        || payload.id_token.len() > 16_384
+    {
+        return error(StatusCode::BAD_REQUEST, "invalid OIDC request");
+    }
+    let Some(repository) = state.store.portable_repo() else {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC unavailable");
+    };
+    let provider = match repository.oidc_provider(&payload.provider).await {
+        Ok(Some(provider)) if provider.enabled => provider,
+        Ok(_) => return error(StatusCode::NOT_FOUND, "OIDC provider unavailable"),
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC unavailable"),
+    };
+    let identity = match ::server_oidc::validate_oidc_token(
+        &payload.id_token,
+        &::server_oidc::OIDCConfig {
+            issuer_url: provider.issuer.clone(),
+            client_id: provider.client_id,
+            enabled: true,
+        },
+    )
+    .await
+    {
+        Ok(identity) => identity,
+        Err(::server_oidc::OidcValidationError::InvalidToken) => {
+            return error(StatusCode::UNAUTHORIZED, "OIDC login denied");
+        }
+        Err(::server_oidc::OidcValidationError::Unavailable) => {
+            return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC unavailable");
+        }
+    };
+    let user = match state
+        .store
+        .authenticate_oidc_identity(&payload.provider, &provider.issuer, &identity)
+        .await
+    {
+        Ok(user) => user,
+        Err(message) if message == "registration closed" => {
+            return error(StatusCode::FORBIDDEN, "registration closed");
+        }
+        Err(message) if message.contains("explicitly link") => {
+            return error(
+                StatusCode::CONFLICT,
+                "sign in locally to link this provider",
+            );
+        }
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC unavailable"),
+    };
+    let (token, expires_at) = match state.store.issue_token_with_expiry(&user) {
+        Ok(result) => result,
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC unavailable"),
+    };
+    no_store_json(
+        StatusCode::OK,
+        &LoginResponse {
+            token,
+            expires_at,
+            user: LoginUser {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                roles: user.roles,
+                organization_id: user.organization_id.unwrap_or_default(),
+            },
+        },
+    )
 }
 
 async fn register(
@@ -673,47 +1229,86 @@ async fn register(
     headers: HeaderMap,
     request: axum::extract::Request,
 ) -> Response {
-    if !is_registration_enabled() {
+    let payload: RegisterRequest = match decode_json(&headers, request).await {
+        Ok(payload) => payload,
+        Err(response) => return response,
+    };
+    if payload.registration_ticket.is_empty() || payload.registration_ticket.len() > 128 {
+        return error(StatusCode::BAD_REQUEST, "invalid registration");
+    }
+    let username = match crate::validation::normalize_username(&payload.username) {
+        Ok(username) => username,
+        Err(message) => {
+            return no_store_json(
+                StatusCode::BAD_REQUEST,
+                &serde_json::json!({ "error": message }),
+            );
+        }
+    };
+    let organization_id = match crate::validation::normalize_organization(&payload.organization_id) {
+        Ok(organization_id) => organization_id,
+        Err(message) => {
+            return no_store_json(
+                StatusCode::BAD_REQUEST,
+                &serde_json::json!({ "error": message }),
+            );
+        }
+    };
+    let Some(repository) = state.store.portable_repo() else {
+        return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable");
+    };
+    let mode = match repository.registration_mode().await {
+        Ok(mode) => mode,
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable"),
+    };
+    if mode == crate::seaorm_store::RegistrationMode::Closed {
         return error(StatusCode::FORBIDDEN, "registration closed");
     }
-    if !has_exact_json_content_type(&headers) {
-        return error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "invalid request");
-    }
-    let bytes = match to_bytes(request.into_body(), MAX_BODY_BYTES).await {
-        Ok(bytes) => bytes,
-        Err(_) => {
-            return error(StatusCode::PAYLOAD_TOO_LARGE, "invalid request");
+    let ticket_hash = registration_hash_hex(
+        &state.registration_hash_key,
+        b"registration-ticket",
+        &[payload.registration_ticket.as_bytes()],
+    );
+    let ticket = match repository.registration_ticket_by_hash(&ticket_hash).await {
+        Ok(Some(ticket)) if ticket.consumed_at.is_none() && ticket.expires_at > Utc::now() => {
+            ticket
         }
+        Ok(_) => return error(StatusCode::BAD_REQUEST, "invalid registration"),
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable"),
     };
-    let payload: RegisterRequest = match serde_json::from_slice(&bytes) {
-        Ok(payload) => payload,
-        Err(_) => {
-            return error(StatusCode::BAD_REQUEST, "invalid request");
-        }
-    };
-    let username = payload.username.trim();
-    let email = payload.email.trim();
-    if username.is_empty() || email.is_empty() || payload.password.is_empty() {
-        return error(StatusCode::BAD_REQUEST, "invalid request");
+    if mode == crate::seaorm_store::RegistrationMode::InviteOnly
+        && ticket.invitation_id.is_none()
+    {
+        return error(StatusCode::FORBIDDEN, "invitation required");
     }
-
-    let organization_id = uuid::Uuid::new_v4().to_string();
+    if let Err(message) =
+        crate::validation::validate_password(&payload.password, &username, &ticket.email)
+    {
+        return no_store_json(
+            StatusCode::BAD_REQUEST,
+            &serde_json::json!({ "error": message }),
+        );
+    }
 
     let create_result = state
         .store
-        .create_user(
-            username.to_string(),
-            email.to_string(),
+        .create_verified_user(
+            username,
+            ticket.email,
             payload.password,
             vec![super::ROLE_ADMIN.to_string()],
             organization_id,
+            &ticket_hash,
         )
         .await;
 
     let user = match create_result {
         Ok(user) => user,
         Err(err) => {
-            return no_store_json(StatusCode::BAD_REQUEST, &serde_json::json!({ "error": err }));
+            return no_store_json(
+                StatusCode::BAD_REQUEST,
+                &serde_json::json!({ "error": err }),
+            );
         }
     };
 
@@ -1104,6 +1699,30 @@ fn keyed_hash(key: &[u8; 32], value: &[u8]) -> [u8; 32] {
     let mut mac = HmacSha256::new_from_slice(key).expect("HMAC accepts 32-byte keys");
     mac.update(value);
     mac.finalize().into_bytes().into()
+}
+
+fn registration_hash_hex(key: &[u8; 32], purpose: &[u8], values: &[&[u8]]) -> String {
+    let mut mac = HmacSha256::new_from_slice(key).expect("HMAC accepts 32-byte keys");
+    mac.update(&(purpose.len() as u64).to_be_bytes());
+    mac.update(purpose);
+    for value in values {
+        mac.update(&(value.len() as u64).to_be_bytes());
+        mac.update(value);
+    }
+    hex::encode(mac.finalize().into_bytes())
+}
+
+async fn decode_json<T: DeserializeOwned>(
+    headers: &HeaderMap,
+    request: axum::extract::Request,
+) -> Result<T, Response> {
+    if !has_exact_json_content_type(headers) {
+        return Err(error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "invalid request"));
+    }
+    let bytes = to_bytes(request.into_body(), MAX_BODY_BYTES)
+        .await
+        .map_err(|_| error(StatusCode::PAYLOAD_TOO_LARGE, "invalid request"))?;
+    serde_json::from_slice(&bytes).map_err(|_| error(StatusCode::BAD_REQUEST, "invalid request"))
 }
 
 fn no_store_json<T: Serialize>(status: StatusCode, value: &T) -> Response {
@@ -1731,103 +2350,30 @@ mod tests {
         assert!(store.validate_token(&token).await.is_err());
     }
 
-    static REG_ENV_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
     #[tokio::test]
-    async fn test_register_rejected_when_disabled() {
-        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
-        
-        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("false"))], async {
-            let app = router_for_test();
-            let request = json_request(
+    async fn register_rejects_legacy_unverified_payloads() {
+        let response = router_for_test()
+            .oneshot(json_request(
                 "/api/v1/auth/register",
-                r#"{"username":"testuser","email":"test@example.com","password":"mypassword"}"#,
-            );
-            let response = app.oneshot(request).await.unwrap();
-            assert_eq!(response.status(), StatusCode::FORBIDDEN);
-            let body = to_bytes(response.into_body(), 1024).await.unwrap();
-            assert_eq!(body.as_ref(), br#"{"error":"registration closed"}"#);
-        })
-        .await;
+                r#"{"username":"testuser","email":"test@example.com","password":"long-enough-password"}"#,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]
-    async fn test_register_succeeds_when_enabled() {
-        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
-
-        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("true"))], async {
-            let store = Arc::new(Store::new());
-            let app = router_with_state(HttpAuthState::new(store.clone(), HashSet::new()));
-            
-            let request = json_request(
+    async fn register_fails_closed_without_portable_persistence() {
+        let response = router_for_test()
+            .oneshot(json_request(
                 "/api/v1/auth/register",
-                r#"{"username":"newuser","email":"newuser@example.com","password":"newpassword"}"#,
-            );
-            
-            let response = app.oneshot(request).await.unwrap();
-            assert_eq!(response.status(), StatusCode::CREATED);
-            
-            let body: serde_json::Value = serde_json::from_slice(
-                &to_bytes(response.into_body(), MAX_BODY_BYTES)
-                    .await
-                    .unwrap(),
-            )
+                r#"{"registration_ticket":"not-a-real-ticket","organization_id":"test-workspace","username":"testuser","password":"long-enough-password"}"#,
+            ))
+            .await
             .unwrap();
-            
-            assert!(
-                body["token"]
-                    .as_str()
-                    .is_some_and(|token| !token.is_empty())
-            );
-            assert_eq!(body["user"]["username"], "newuser");
-            assert_eq!(body["user"]["email"], "newuser@example.com");
-            assert_eq!(body["user"]["roles"], serde_json::json!(["ADMIN"]));
-            assert!(!body["user"]["organization_id"].as_str().unwrap().is_empty());
-        })
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_register_validation_and_duplicate() {
-        let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
-
-        temp_env::async_with_vars([("OHC_REGISTRATION_ENABLED", Some("true"))], async {
-            let store = Arc::new(Store::new());
-            let app = router_with_state(HttpAuthState::new(store.clone(), HashSet::new()));
-
-            // 1. Validation error: empty fields
-            let bad_request = json_request(
-                "/api/v1/auth/register",
-                r#"{"username":"","email":"test@example.com","password":"password"}"#,
-            );
-            let response = app.clone().oneshot(bad_request).await.unwrap();
-            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-
-            // 2. Successful first registration
-            let request = json_request(
-                "/api/v1/auth/register",
-                r#"{"username":"user1","email":"user1@example.com","password":"password"}"#,
-            );
-            let response = app.clone().oneshot(request).await.unwrap();
-            assert_eq!(response.status(), StatusCode::CREATED);
-
-            // 3. Since we generated a new UUID for organization_id, we can register the same username again.
-            // But let's check password length requirement!
-            let short_pw = json_request(
-                "/api/v1/auth/register",
-                r#"{"username":"user2","email":"user2@example.com","password":"123"}"#,
-            );
-            let response = app.clone().oneshot(short_pw).await.unwrap();
-            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-            let body: serde_json::Value = serde_json::from_slice(
-                &to_bytes(response.into_body(), MAX_BODY_BYTES)
-                    .await
-                    .unwrap(),
-            )
-            .unwrap();
-            assert_eq!(body["error"], "password must be at least 6 characters");
-        })
-        .await;
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let body = to_bytes(response.into_body(), 1024).await.unwrap();
+        assert_eq!(body.as_ref(), br#"{"error":"registration unavailable"}"#);
     }
 
     struct FailingRepo {
@@ -1997,7 +2543,10 @@ mod tests {
 
         let list_array = list_body.as_array().unwrap();
         assert!(!list_array.is_empty());
-        let created_key_meta = list_array.iter().find(|k| k["name"] == "My Test Key").unwrap();
+        let created_key_meta = list_array
+            .iter()
+            .find(|k| k["name"] == "My Test Key")
+            .unwrap();
         let key_id = created_key_meta["id"].as_str().unwrap().to_string();
 
         // 4. Revoking a key deletes it
@@ -2044,7 +2593,7 @@ mod tests {
     async fn test_member_usage_analytics_auth_and_restriction() {
         let _lock = REG_ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
         let (app, store, user) = app_with_user().await;
-        
+
         // 1. Unauthenticated request returns 401
         let unauthorized_request = with_peer(
             Request::get("/api/v1/ui/admin/usage")
@@ -2082,7 +2631,7 @@ mod tests {
 
         // 3. Authenticated admin user returns 200 and listed analytics
         let admin_token = store.issue_token(&user).unwrap();
-        
+
         // Populate a mock log
         {
             let mut logs = get_in_memory_usage_logs().lock().unwrap();
@@ -2104,14 +2653,14 @@ mod tests {
         );
         let response = app.clone().oneshot(success_request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
-        
+
         let body: serde_json::Value = serde_json::from_slice(
             &to_bytes(response.into_body(), MAX_BODY_BYTES)
                 .await
                 .unwrap(),
         )
         .unwrap();
-        
+
         let array = body.as_array().unwrap();
         assert!(!array.is_empty());
         assert_eq!(array[0]["username"], "Alice");

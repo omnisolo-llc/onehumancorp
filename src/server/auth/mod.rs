@@ -3,14 +3,17 @@ pub use ::server_common as common;
 pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
 
+pub mod email;
 pub mod orchestration;
 pub mod peer_identity;
 pub mod postgres_store;
 pub mod sqlite_store;
 pub mod mysql_store;
+pub mod seaorm_store;
 pub mod user_repository;
 pub mod grpc;
 pub mod http;
+pub mod validation;
 
 pub mod db {
     use sqlx::postgres::PgPool;
@@ -308,6 +311,7 @@ use ::server_common::Claims;
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::auth_service_server::AuthService;
 use ::server_ohc::orchestration::*;
+use base64::Engine as _;
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -356,11 +360,20 @@ pub struct Store {
     redis_configuration_error: Option<String>,
     secret: Vec<u8>,
     password_slots: Arc<tokio::sync::Semaphore>,
+    user_creation_lock: tokio::sync::Mutex<()>,
     oidc_cfg: RwLock<OIDCConfig>,
     repo: Option<std::sync::Arc<dyn crate::user_repository::UserRepository>>,
+    portable_repo: Option<std::sync::Arc<crate::seaorm_store::SeaOrmAuthRepository>>,
 }
 
 impl Store {
+    pub fn registration_hash_key(&self) -> [u8; 32] {
+        let mut mac = HmacSha256::new_from_slice(&self.secret)
+            .expect("HMAC accepts authentication secret lengths");
+        mac.update(b"onehumancorp-registration-v1");
+        mac.finalize().into_bytes().into()
+    }
+
     fn access_token_claims(user: &User, issued_at: i64, expires_at: i64, jti: String) -> Claims {
         Claims {
             sub: user.id.clone(),
@@ -596,12 +609,14 @@ impl Store {
             password_slots: Arc::new(tokio::sync::Semaphore::new(
                 MAX_PASSWORD_HASH_CONCURRENCY,
             )),
+            user_creation_lock: tokio::sync::Mutex::new(()),
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url,
                 client_id,
                 enabled,
             }),
             repo: None,
+            portable_repo: None,
         };
 
         store.seed_default_admin(now);
@@ -643,6 +658,21 @@ impl Store {
         store
     }
 
+    pub fn with_portable_repo(
+        repo: std::sync::Arc<crate::seaorm_store::SeaOrmAuthRepository>,
+    ) -> Self {
+        let mut store = Store::new();
+        store.repo = Some(repo.clone());
+        store.portable_repo = Some(repo);
+        store
+    }
+
+    pub fn portable_repo(
+        &self,
+    ) -> Option<std::sync::Arc<crate::seaorm_store::SeaOrmAuthRepository>> {
+        self.portable_repo.clone()
+    }
+
     pub async fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
         self.validate_org_id(&org_id)?;
         if username.is_empty() {
@@ -652,17 +682,15 @@ impl Store {
             return Err("password must be at least 6 characters".to_string());
         }
 
-        let mut users = self.users.write().expect("Failed to acquire lock");
-        let mut by_name = self.by_name.write().expect("Failed to acquire lock");
-        let mut by_email = self.by_email.write().expect("Failed to acquire lock");
+        let _creation_guard = self.user_creation_lock.lock().await;
 
         let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
-        if by_name.contains_key(&name_key) {
+        if self.by_name.read().expect("Failed to acquire lock").contains_key(&name_key) {
             return Err("username already taken".to_string());
         }
 
         let email_key = TenantKey { org_id: org_id.clone(), key: email.clone() };
-        if by_email.contains_key(&email_key) {
+        if self.by_email.read().expect("Failed to acquire lock").contains_key(&email_key) {
             return Err("email already registered".to_string());
         }
 
@@ -678,7 +706,7 @@ impl Store {
             password_hash: hash,
             roles,
             active: true,
-            organization_id: Some(org_id),
+            organization_id: Some(org_id.clone()),
             created_at: now,
             updated_at: now,
             oidc_subject: None,
@@ -688,10 +716,145 @@ impl Store {
             return Err("user claims exceed the access token size limit".to_string());
         }
 
-        users.insert(id.clone(), user.clone());
-        by_name.insert(name_key, id.clone());
-        by_email.insert(email_key, id);
+        if let Some(repo) = &self.repo {
+            repo.create_user(user.clone(), &org_id).await?;
+        }
 
+        self.users.write().expect("Failed to acquire lock").insert(id.clone(), user.clone());
+        self.by_name.write().expect("Failed to acquire lock").insert(name_key, id.clone());
+        self.by_email.write().expect("Failed to acquire lock").insert(email_key, id);
+
+        Ok(user)
+    }
+
+    pub async fn create_verified_user(
+        &self,
+        username: String,
+        email: String,
+        password: String,
+        roles: Vec<String>,
+        org_id: String,
+        ticket_hash: &str,
+    ) -> Result<User, String> {
+        self.validate_org_id(&org_id)?;
+        let repository = self
+            .portable_repo
+            .as_ref()
+            .ok_or_else(|| "registration persistence unavailable".to_string())?;
+        let _creation_guard = self.user_creation_lock.lock().await;
+
+        let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
+        let email_key = TenantKey { org_id: org_id.clone(), key: email.clone() };
+        if self.by_name.read().expect("Failed to acquire lock").contains_key(&name_key)
+            || self.by_email.read().expect("Failed to acquire lock").contains_key(&email_key)
+        {
+            return Err("account already exists".to_string());
+        }
+
+        let password_hash = hash(password, if cfg!(test) { 4 } else { DEFAULT_COST })?;
+        let id = hex::encode(random_bytes(8));
+        let now = Utc::now();
+        let user = User {
+            id: id.clone(),
+            username,
+            email,
+            password_hash,
+            roles,
+            active: true,
+            organization_id: Some(org_id),
+            created_at: now,
+            updated_at: now,
+            oidc_subject: None,
+        };
+        if !Self::user_access_token_fits(&user) {
+            return Err("user claims exceed the access token size limit".to_string());
+        }
+
+        repository
+            .consume_ticket_and_create_user(ticket_hash, now, user.clone())
+            .await?;
+        self.users.write().expect("Failed to acquire lock").insert(id.clone(), user.clone());
+        self.by_name.write().expect("Failed to acquire lock").insert(name_key, id.clone());
+        self.by_email.write().expect("Failed to acquire lock").insert(email_key, id);
+        Ok(user)
+    }
+
+    pub async fn authenticate_oidc_identity(
+        &self,
+        provider_key: &str,
+        issuer: &str,
+        identity: &::server_common::Claims,
+    ) -> Result<User, String> {
+        let repository = self
+            .portable_repo
+            .as_ref()
+            .ok_or_else(|| "OIDC persistence unavailable".to_string())?;
+        if let Some(user) = repository
+            .user_for_external_identity(provider_key, issuer, &identity.sub)
+            .await?
+        {
+            if !user.active || !Self::user_access_token_fits(&user) {
+                return Err("OIDC login denied".to_string());
+            }
+            return Ok(user);
+        }
+
+        let email = crate::validation::normalize_email(&identity.email)
+            .map_err(|_| "OIDC login denied".to_string())?;
+        if repository.any_user_with_email(&email).await? {
+            return Err("existing account must explicitly link this provider".to_string());
+        }
+        let now = Utc::now();
+        let invitation_id = repository.active_invitation_id(&email, now).await?;
+        match repository.registration_mode().await? {
+            crate::seaorm_store::RegistrationMode::Open => {}
+            crate::seaorm_store::RegistrationMode::Closed
+            | crate::seaorm_store::RegistrationMode::InviteOnly
+                if invitation_id.is_some() => {}
+            _ => return Err("registration closed".to_string()),
+        }
+
+        let base_username = if identity.username.trim().is_empty() {
+            email.split('@').next().unwrap_or_default()
+        } else {
+            identity.username.as_str()
+        };
+        let username = crate::validation::normalize_username(base_username).unwrap_or_else(|_| {
+            let suffix = hex::encode(random_bytes(3));
+            format!("user-{suffix}")
+        });
+        let organization_id = uuid::Uuid::new_v4().to_string();
+        let random_password = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(random_bytes(32));
+        let user = User {
+            id: hex::encode(random_bytes(8)),
+            username: username.clone(),
+            email: email.clone(),
+            password_hash: hash(random_password, if cfg!(test) { 4 } else { DEFAULT_COST })?,
+            roles: vec![ROLE_ADMIN.to_string()],
+            active: true,
+            organization_id: Some(organization_id.clone()),
+            created_at: now,
+            updated_at: now,
+            oidc_subject: Some(format!("{issuer}|{}", identity.sub)),
+        };
+        repository
+            .create_oidc_user(
+                user.clone(),
+                provider_key,
+                issuer,
+                &identity.sub,
+                invitation_id.as_deref(),
+            )
+            .await?;
+        self.users.write().expect("Failed to acquire lock").insert(user.id.clone(), user.clone());
+        self.by_name.write().expect("Failed to acquire lock").insert(
+            TenantKey { org_id: organization_id.clone(), key: username },
+            user.id.clone(),
+        );
+        self.by_email.write().expect("Failed to acquire lock").insert(
+            TenantKey { org_id: organization_id, key: email },
+            user.id.clone(),
+        );
         Ok(user)
     }
 
@@ -1822,12 +1985,14 @@ mod store_tests {
             password_slots: Arc::new(tokio::sync::Semaphore::new(
                 MAX_PASSWORD_HASH_CONCURRENCY,
             )),
+            user_creation_lock: tokio::sync::Mutex::new(()),
             oidc_cfg: RwLock::new(OIDCConfig {
                 issuer_url: String::new(),
                 client_id: String::new(),
                 enabled: false,
             }),
             repo: Some(repo),
+            portable_repo: None,
         }
     }
 
@@ -2032,6 +2197,25 @@ mod store_tests {
             store.authenticate("alice", "secret", "").await,
             Err(AuthenticationError::Unavailable(_))
         ));
+    }
+
+    #[tokio::test]
+    async fn user_creation_fails_closed_when_persistence_is_unavailable() {
+        let store = test_store_with_repo(Arc::new(FailingRepository));
+        let result = store
+            .create_user(
+                "new-user".to_string(),
+                "new-user@example.test".to_string(),
+                "a sufficiently long password".to_string(),
+                vec![ROLE_ADMIN.to_string()],
+                "tenant-new".to_string(),
+            )
+            .await;
+
+        assert_eq!(result.unwrap_err(), "repository unavailable");
+        assert!(store.users.read().unwrap().is_empty());
+        assert!(store.by_name.read().unwrap().is_empty());
+        assert!(store.by_email.read().unwrap().is_empty());
     }
 
     #[tokio::test]
