@@ -86,7 +86,7 @@ export default function PricingPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden max-w-[100vw]">
-      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 app-panel-header shadow-sm w-full">
+      <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 app-panel-header w-full backdrop-blur-[40px] bg-white/60 border-b border-white/60 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
         <WithTooltip id="pricing-tier-tooltip" defaultText="Select the plan that best fits your business needs.">
           <h1 className="text-xl md:text-2xl font-bold font-outfit text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Pricing Plans</h1>
         </WithTooltip>
@@ -113,7 +113,7 @@ export default function PricingPage() {
         </div>
 
         {/* My Plan Section */}
-        <div className="mb-8 p-6 app-card ohc-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-xl rounded-2xl w-full">
+        <div className="mb-8 p-6 app-card ohc-growth-card glass-card backdrop-blur-[40px] bg-white/60 border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.08)] rounded-2xl w-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900">My Plan: {currentPlan || 'Free'}</h2>
@@ -201,7 +201,7 @@ export default function PricingPage() {
             <p className="text-xs md:text-sm text-gray-500 px-2">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
         </div>
 
-        <div className="p-6 app-card ohc-growth-card glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 w-full mt-2 rounded-2xl">
+        <div className="p-6 app-card ohc-growth-card glass-panel backdrop-blur-[40px] bg-white/60 border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.08)] w-full mt-2 rounded-2xl">
             <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900">Frequently Asked Questions</h2>
             <div className="space-y-4">
               <div>
