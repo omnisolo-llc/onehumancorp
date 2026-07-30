@@ -12,6 +12,7 @@ use axum::{
     routing::{get, post},
 };
 use base64::Engine as _;
+use chrono::Utc;
 use hmac::{Hmac, Mac};
 use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
@@ -1032,7 +1033,10 @@ async fn start_email_verification(
         b"email-code",
         &[challenge_id.as_bytes(), code.as_bytes()],
     );
-    let source = resolve_request_source(peer.ip(), &headers, &state.trusted_proxies);
+    let source = match request_source(&headers, peer.ip(), &state.trusted_proxies) {
+        Ok(source) => source,
+        Err(()) => return error(StatusCode::BAD_REQUEST, "invalid request"),
+    };
     let source_hash = hex::encode(keyed_hash(
         &state.registration_hash_key,
         source.ip.to_string().as_bytes(),
