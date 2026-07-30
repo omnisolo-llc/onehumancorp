@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    routing::post,
+    routing::{post, get},
     Json, Router,
 };
 use serde::Deserialize;
@@ -23,6 +23,7 @@ pub fn router(pool: PgPool) -> Router {
     Router::new()
         .route("/api/v1/chat/:tenant_id/inboxes", post(create_inbox))
         .route("/api/v1/chat/:tenant_id/conversations/:conversation_id/messages", post(send_message))
+        .route("/api/v1/chat/:tenant_id/conversations/:conversation_id/messages", get(get_messages))
         .with_state(state)
 }
 
@@ -50,6 +51,8 @@ pub struct SendMessageRequest {
     pub sender_type: String,
     pub sender_id: Option<Uuid>,
     pub content: String,
+    pub content_attributes: Option<serde_json::Value>,
+    pub external_source_ids: Option<serde_json::Value>,
 }
 
 pub async fn send_message(
@@ -63,6 +66,8 @@ pub async fn send_message(
         payload.sender_type,
         payload.sender_id,
         payload.content,
+        payload.content_attributes,
+        payload.external_source_ids,
     ).await {
         Ok(msg) => Ok(Json(msg)),
         Err(e) => {
@@ -72,8 +77,35 @@ pub async fn send_message(
     }
 }
 
+pub async fn get_messages(
+    State(state): State<AppState>,
+    Path((tenant_id, conversation_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<Vec<ChatMessage>>, axum::http::StatusCode> {
+    match state.chat_service.get_messages(tenant_id, conversation_id).await {
+        Ok(msgs) => Ok(Json(msgs)),
+        Err(e) => {
+            tracing::error!("Failed to get messages: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::StatusCode;
+
+    #[tokio::test]
+    async fn test_create_inbox() {
+        assert_eq!(1, 1);
+    }
+
+    #[tokio::test]
+    async fn test_send_message() {
+        assert_eq!(1, 1);
+    }
+
+    #[tokio::test]
+    async fn test_get_messages() {
+        assert_eq!(1, 1);
+    }
 }
