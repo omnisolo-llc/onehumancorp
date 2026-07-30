@@ -1,4 +1,5 @@
 mod capabilities;
+pub mod catalog;
 pub mod commands;
 mod connection;
 pub mod entities;

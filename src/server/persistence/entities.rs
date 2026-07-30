@@ -51,15 +51,14 @@ pub mod product {
         #[sea_orm(primary_key, auto_increment = false)]
         pub id: String,
         pub tenant_id: String,
-        pub name: Option<String>,
+        pub title: String,
         pub description: Option<String>,
-        pub price_cents: i64,
-        pub currency: String,
-        pub product_type: Option<String>,
-        pub title: Option<String>,
-        pub inventory_count: i32,
-        pub created_at: DateTimeUtc,
-        pub updated_at: DateTimeUtc,
+        #[sea_orm(column_name = "type")]
+        pub item_type: Option<String>,
+        pub price_cents: Option<i64>,
+        pub inventory_count: Option<i32>,
+        pub created_at: Option<DateTimeUtc>,
+        pub updated_at: Option<DateTimeUtc>,
     }
 
     #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

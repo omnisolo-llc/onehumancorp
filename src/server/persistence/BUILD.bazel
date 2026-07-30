@@ -3,6 +3,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 exports_files(
     [
         "capabilities.rs",
+        "catalog.rs",
         "commands.rs",
         "connection.rs",
         "entities.rs",
