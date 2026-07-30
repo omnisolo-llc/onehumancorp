@@ -127,4 +127,8 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await page.goto('/ui/viral-pwyw-generator.html');
     await page.waitForTimeout(1000);
     await expect(page.locator('h1', { hasText: 'Viral PWYW Drop Generator' })).toBeVisible();
+
+    await page.goto('/ui/viral-tier-list-generator.html');
+    await page.waitForTimeout(1000);
+    await expect(page.locator('h1', { hasText: 'Viral Tier List Generator' })).toBeVisible();
 }

@@ -86,6 +86,7 @@ _NEXT_UI_E2E_SPECS = [
 # database, or upload behavior by playwright_spec_coverage.
 _CI_REAL_STACK_E2E_SPECS = [
     "//src/e2e:login_auth.spec.ts",
+    "//src/e2e:viral_tier_list_generator.spec.ts",
     "//src/e2e:real_data_contract.spec.ts",
     "//src/ui/next:src/e2e/app-shell-style.spec.ts",
 ]

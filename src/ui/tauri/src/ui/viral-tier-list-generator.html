@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Viral Tier List Generator - OHC</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0066FF;
+      --primary-hover: #0052cc;
+      --bg: #F5F5F7;
+      --text: #1d1d1f;
+      --text-secondary: #86868b;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --border: rgba(255, 255, 255, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    .glassmorphism {
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(40px) saturate(220%);
+        -webkit-backdrop-filter: blur(40px) saturate(220%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      @media (prefers-color-scheme: dark) {
+        .glassmorphism {
+          border-radius: 16px;
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(40px) saturate(220%);
+          -webkit-backdrop-filter: blur(40px) saturate(220%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+      }
+
+    .sidebar {
+      width: 280px;
+      background: var(--card-bg);
+      backdrop-filter: blur(40px) saturate(220%);
+      -webkit-backdrop-filter: blur(40px) saturate(220%);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      height: 100vh;
+      z-index: 10;
+    }
+
+    .main-content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      max-width: 1200px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+
+    h1 {
+      font-family: "Outfit", sans-serif;
+      font-size: 32px;
+      margin: 0 0 10px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 16px;
+      margin: 0 0 40px;
+      line-height: 1.5;
+    }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 1024px) {
+      .grid-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      padding: 32px;
+    }
+
+    .card h2 {
+      font-family: "Outfit", sans-serif;
+      font-size: 20px;
+      margin: 0 0 24px;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: rgba(255, 255, 255, 0.8);
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--text);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .checkbox-container input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      accent-color: var(--primary);
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-content h3 {
+      margin: 0 0 16px;
+      font-family: "Outfit", sans-serif;
+      font-size: 24px;
+    }
+
+    .code-block {
+      background: #1d1d1f;
+      color: #fff;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 13px;
+      width: 100%;
+      min-height: 100px;
+      border: none;
+      resize: vertical;
+      margin-bottom: 24px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .theme-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .theme-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background: rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .theme-btn.active {
+      border-color: var(--primary);
+      background: rgba(0, 102, 255, 0.05);
+      color: var(--primary);
+    }
+
+    /* Tier List Preview Styles */
+    .preview-container {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.02);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+
+    .widget-preview {
+      width: 100%;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      position: relative;
+    }
+
+    .widget-preview.dark {
+      background: #1c1c1e;
+      color: white;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .preview-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .preview-header h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      font-family: "Outfit", sans-serif;
+    }
+
+    .preview-header p {
+      margin: 0;
+      color: #86868b;
+      font-size: 14px;
+    }
+
+    .tier-row {
+      display: flex;
+      min-height: 80px;
+      margin-bottom: 8px;
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .widget-preview.dark .tier-row {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tier-label {
+      width: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 24px;
+      color: rgba(0, 0, 0, 0.6);
+      text-shadow: 1px 1px 0px rgba(255,255,255,0.3);
+    }
+
+    .widget-preview.dark .tier-label {
+        color: rgba(0,0,0,0.8);
+    }
+
+    .tier-content {
+      flex: 1;
+      padding: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tier-item {
+      background: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .widget-preview.dark .tier-item {
+        background: #2c2c2e;
+        border-color: rgba(255,255,255,0.1);
+    }
+
+    .preview-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-top: 24px;
+      cursor: pointer;
+    }
+
+    .preview-branding {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 12px;
+      color: #86868b;
+      font-weight: 600;
+    }
+
+    .tier-input-group {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div style="padding: 24px; border-bottom: 1px solid var(--border);">
+      <div style="font-weight: 800; font-size: 20px; letter-spacing: -1px; display: flex; align-items: center; gap: 8px;">
+        <div style="width: 24px; height: 24px; background: var(--primary); border-radius: 6px;"></div>
+        OHC
+      </div>
+    </div>
+    <div style="padding: 20px;">
+      <a href="/dashboard" style="text-decoration: none; color: var(--text); display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; font-weight: 500;">
+        ← Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div style="max-width: 1000px; margin: 0 auto; width: 100%;">
+      <h1>Viral Tier List Generator</h1>
+      <p class="subtitle">Create an embeddable tier list widget to engage your community and drive viral shares. The "Powered by OHC" watermark helps you earn referral credits.</p>
+
+      <div class="grid-layout">
+        <div class="card glassmorphism">
+          <h2>Configuration</h2>
+
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="tier-title" class="form-control" value="My Ultimate Tier List">
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            <input type="text" id="tier-desc" class="form-control" value="Ranked by community votes!">
+          </div>
+
+          <div class="form-group">
+            <label>Theme</label>
+            <div class="theme-selector">
+              <button class="theme-btn active" id="theme-light">Light</button>
+              <button class="theme-btn" id="theme-dark">Dark</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Tiers & Items</label>
+            <div id="tiers-container">
+                <!-- Dynamically populated -->
+            </div>
+            <button class="btn-secondary" id="add-tier-btn" style="margin-top: 12px; padding: 8px;">+ Add Tier</button>
+          </div>
+
+          <div class="checkbox-container" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(0,0,0,0.1);">
+            <input type="checkbox" id="remove-branding">
+            <label for="remove-branding" style="margin-bottom: 0;">Remove OHC Branding (Pro)</label>
+          </div>
+
+          <button class="btn-primary" id="get-code-btn" style="margin-top: 20px;">Generate Embed Code</button>
+        </div>
+
+        <div class="card glassmorphism">
+          <h2>Live Preview</h2>
+          <div class="preview-container">
+            <div class="widget-preview" id="widget-preview">
+              <div class="preview-header">
+                <h3 id="preview-title">My Ultimate Tier List</h3>
+                <p id="preview-desc">Ranked by community votes!</p>
+              </div>
+
+              <div id="preview-tiers">
+                  <!-- Generated rows -->
+              </div>
+
+              <button class="preview-btn">Share My Tier List</button>
+
+              <div class="preview-branding" id="preview-branding">⚡ Powered by OHC</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Embed Modal -->
+  <div class="modal" id="embed-modal">
+    <div class="modal-content">
+      <h3>Your Embed Code</h3>
+      <p style="color: #666; margin-bottom: 16px; font-size: 14px;">Copy and paste this HTML into your website or community post.</p>
+
+      <textarea id="embed-code" class="code-block" readonly></textarea>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" id="close-embed-btn">Close</button>
+        <button class="btn-primary" id="copy-code-btn" style="width: auto;">Copy Code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paywall Modal -->
+  <div class="modal" id="paywall-modal">
+    <div class="modal-content">
+      <h3 style="margin-top: 0;">Pro Feature Locked</h3>
+      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "Powered by OHC" branding is a Pro feature. Upgrade your account or share OHC on social media to unlock a 7-day Pro trial.</p>
+
+      <div class="modal-actions" style="justify-content: space-between; align-items: center;">
+        <button class="btn-secondary" id="close-paywall">Cancel</button>
+        <div style="display: flex; gap: 12px;">
+          <button class="btn-secondary" id="share-to-unlock-btn" style="border-color: #1DA1F2; color: #1DA1F2;">Share on X to Unlock</button>
+          <div id="soft-paywall-status" style="display: none; color: #1DA1F2; font-weight: 500; font-size: 14px; align-items: center;">Verifying...</div>
+          <button class="btn-primary" id="upgrade-btn" style="width: auto;">Upgrade to Pro</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // State
+      let state = {
+        tenant: (() => { try { return localStorage.getItem('tenant') || 'my-store'; } catch(e) { return 'my-store'; } })(),
+        hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
+        title: 'My Ultimate Tier List',
+        description: 'Ranked by community votes!',
+        theme: 'light',
+        removeBranding: false,
+        tiers: [
+            { label: 'S', color: '#ff7f7f', items: 'Item 1, Item 2' },
+            { label: 'A', color: '#ffbf7f', items: 'Item 3' },
+            { label: 'B', color: '#ffff7f', items: 'Item 4, Item 5' },
+            { label: 'C', color: '#7fff7f', items: '' }
+        ]
+      };
+
+      // DOM Elements
+      const titleInput = document.getElementById('tier-title');
+      const descInput = document.getElementById('tier-desc');
+      const themeLightBtn = document.getElementById('theme-light');
+      const themeDarkBtn = document.getElementById('theme-dark');
+      const removeBrandingCheckbox = document.getElementById('remove-branding');
+      const getCodeBtn = document.getElementById('get-code-btn');
+      const tiersContainer = document.getElementById('tiers-container');
+      const addTierBtn = document.getElementById('add-tier-btn');
+
+      const previewCard = document.getElementById('widget-preview');
+      const previewTitle = document.getElementById('preview-title');
+      const previewDesc = document.getElementById('preview-desc');
+      const previewTiers = document.getElementById('preview-tiers');
+      const previewBranding = document.getElementById('preview-branding');
+
+      const embedModal = document.getElementById('embed-modal');
+      const embedCodeTextarea = document.getElementById('embed-code');
+      const closeEmbedBtn = document.getElementById('close-embed-btn');
+      const copyCodeBtn = document.getElementById('copy-code-btn');
+
+      const paywallModal = document.getElementById('paywall-modal');
+      const closePaywallBtn = document.getElementById('close-paywall');
+      const upgradeBtn = document.getElementById('upgrade-btn');
+      const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
+      const softPaywallStatus = document.getElementById('soft-paywall-status');
+
+      // Initialize
+      renderTierInputs();
+      updatePreview();
+
+      // Event Listeners
+      titleInput.addEventListener('input', (e) => {
+        state.title = e.target.value || 'Tier List';
+        updatePreview();
+      });
+
+      descInput.addEventListener('input', (e) => {
+        state.description = e.target.value;
+        updatePreview();
+      });
+
+      themeLightBtn.addEventListener('click', () => {
+        state.theme = 'light';
+        themeLightBtn.classList.add('active');
+        themeDarkBtn.classList.remove('active');
+        previewCard.classList.remove('dark');
+        updatePreview();
+      });
+
+      themeDarkBtn.addEventListener('click', () => {
+        state.theme = 'dark';
+        themeDarkBtn.classList.add('active');
+        themeLightBtn.classList.remove('active');
+        previewCard.classList.add('dark');
+        updatePreview();
+      });
+
+      removeBrandingCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked && !state.hasPro) {
+          e.target.checked = false;
+          paywallModal.classList.add('active');
+          return;
+        }
+        state.removeBranding = e.target.checked;
+        updatePreview();
+      });
+
+      addTierBtn.addEventListener('click', () => {
+          const defaultColors = ['#7fbfff', '#7f7fff', '#bf7fff', '#ff7fff', '#d3d3d3'];
+          state.tiers.push({
+              label: 'D',
+              color: defaultColors[state.tiers.length % defaultColors.length],
+              items: ''
+          });
+          renderTierInputs();
+          updatePreview();
+      });
+
+      getCodeBtn.addEventListener('click', () => {
+        generateEmbedCode();
+        embedModal.classList.add('active');
+      });
+
+      closeEmbedBtn.addEventListener('click', () => {
+        embedModal.classList.remove('active');
+        copyCodeBtn.textContent = 'Copy Code';
+      });
+
+      copyCodeBtn.addEventListener('click', () => {
+        embedCodeTextarea.select();
+        document.execCommand('copy');
+        copyCodeBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyCodeBtn.textContent = 'Copy Code';
+        }, 2000);
+      });
+
+      closePaywallBtn.addEventListener('click', () => {
+        paywallModal.classList.remove('active');
+      });
+
+      upgradeBtn.addEventListener('click', () => {
+        window.location.href = '/pricing';
+      });
+
+      function renderTierInputs() {
+          tiersContainer.innerHTML = '';
+          state.tiers.forEach((tier, index) => {
+              const row = document.createElement('div');
+              row.className = 'tier-input-group';
+
+              const labelInput = document.createElement('input');
+              labelInput.type = 'text';
+              labelInput.className = 'form-control';
+              labelInput.style.width = '60px';
+              labelInput.value = tier.label;
+              labelInput.oninput = (e) => { state.tiers[index].label = e.target.value; updatePreview(); };
+
+              const colorInput = document.createElement('input');
+              colorInput.type = 'color';
+              colorInput.style.height = '42px';
+              colorInput.style.width = '42px';
+              colorInput.style.padding = '2px';
+              colorInput.style.border = '1px solid rgba(0,0,0,0.1)';
+              colorInput.style.borderRadius = '8px';
+              colorInput.value = tier.color;
+              colorInput.oninput = (e) => { state.tiers[index].color = e.target.value; updatePreview(); };
+
+              const itemsInput = document.createElement('input');
+              itemsInput.type = 'text';
+              itemsInput.className = 'form-control';
+              itemsInput.placeholder = 'Comma separated items';
+              itemsInput.value = tier.items;
+              itemsInput.oninput = (e) => { state.tiers[index].items = e.target.value; updatePreview(); };
+
+              const removeBtn = document.createElement('button');
+              removeBtn.textContent = '×';
+              removeBtn.className = 'btn-secondary';
+              removeBtn.style.width = '40px';
+              removeBtn.style.padding = '0';
+              removeBtn.onclick = () => {
+                  state.tiers.splice(index, 1);
+                  renderTierInputs();
+                  updatePreview();
+              };
+
+              row.appendChild(colorInput);
+              row.appendChild(labelInput);
+              row.appendChild(itemsInput);
+              row.appendChild(removeBtn);
+
+              tiersContainer.appendChild(row);
+          });
+      }
+
+      if (shareToUnlockBtn) {
+        shareToUnlockBtn.addEventListener('click', async () => {
+          const tenantId = state.tenant;
+          const message = `Check out my new Tier List built with OneHumanCorp! 🚀 #OneHumanCorp #TierList https://ohc.app/invite/${tenantId}`;
+          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+
+          window.open(shareUrl, '_blank');
+
+          shareToUnlockBtn.style.display = 'none';
+          softPaywallStatus.style.display = 'flex';
+          softPaywallStatus.innerText = 'Verifying Share...';
+
+          try {
+            let url = '/api/v1/growth/trial-extension/claim';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+            }
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+              softPaywallStatus.innerText = 'Unlocked!';
+              state.hasPro = true;
+              localStorage.setItem('has_pro', 'true');
+
+              setTimeout(() => {
+                paywallModal.classList.remove('active');
+                removeBrandingCheckbox.checked = true;
+                state.removeBranding = true;
+                updatePreview();
+
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 1500);
+            } else {
+              softPaywallStatus.innerText = 'Failed to claim trial extension.';
+              setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+              }, 3000);
+            }
+          } catch (e) {
+            console.error(e);
+            softPaywallStatus.innerText = 'Error claiming trial extension.';
+            setTimeout(() => {
+                shareToUnlockBtn.style.display = 'block';
+                softPaywallStatus.style.display = 'none';
+            }, 3000);
+          }
+        });
+      }
+
+      function updatePreview() {
+        previewTitle.textContent = state.title;
+        previewDesc.textContent = state.description;
+        previewDesc.style.display = state.description ? 'block' : 'none';
+
+        previewTiers.innerHTML = '';
+        state.tiers.forEach(tier => {
+            const row = document.createElement('div');
+            row.className = 'tier-row';
+
+            const label = document.createElement('div');
+            label.className = 'tier-label';
+            label.style.backgroundColor = tier.color;
+            label.textContent = tier.label;
+
+            const content = document.createElement('div');
+            content.className = 'tier-content';
+
+            const items = tier.items.split(',').map(i => i.trim()).filter(i => i);
+            items.forEach(itemText => {
+                const item = document.createElement('div');
+                item.className = 'tier-item';
+                item.textContent = itemText;
+                content.appendChild(item);
+            });
+
+            row.appendChild(label);
+            row.appendChild(content);
+            previewTiers.appendChild(row);
+        });
+
+        previewBranding.style.display = state.removeBranding ? 'none' : 'block';
+      }
+
+      function generateEmbedCode() {
+        const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
+
+        // Serialize state to base64 to pass easily in URL
+        const tiersData = btoa(JSON.stringify(state.tiers));
+        const titleEncoded = encodeURIComponent(state.title);
+        const descEncoded = encodeURIComponent(state.description);
+
+        const code = `<iframe src="${origin}/api/v1/growth/viral-tier-list?tenant=${state.tenant}&theme=${state.theme}&title=${titleEncoded}&desc=${descEncoded}&data=${tiersData}&hideBranding=${state.removeBranding}" width="100%" height="600" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Viral Tier List"></iframe>`;
+
+        embedCodeTextarea.value = code;
+      }
+    });
+  </script>
+  <script src="help-widget.mjs" type="module"></script>
+  </body>
+</html>
