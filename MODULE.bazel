@@ -315,6 +315,15 @@ oci.pull(
     ],
 )
 oci.pull(
+    name = "ubuntu_runtime",
+    digest = "sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90",
+    image = "index.docker.io/library/ubuntu",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64/v8",
+    ],
+)
+oci.pull(
     name = "nginx_alpine",
     digest = "sha256:3bcf852aed06467cf075c6105892e4d5a6ebbbafa0ce22d35062db9e90ddef4c",
     image = "mirror.gcr.io/library/nginx",
@@ -323,7 +332,7 @@ oci.pull(
         "linux/arm64/v8",
     ],
 )
-use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux_arm64_v8", "distroless_static", "distroless_static_linux_amd64", "distroless_static_linux_arm64_v8", "nginx_alpine", "nginx_alpine_linux_amd64", "nginx_alpine_linux_arm64_v8")
+use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux_arm64_v8", "distroless_static", "distroless_static_linux_amd64", "distroless_static_linux_arm64_v8", "nginx_alpine", "nginx_alpine_linux_amd64", "nginx_alpine_linux_arm64_v8", "ubuntu_runtime", "ubuntu_runtime_linux_amd64", "ubuntu_runtime_linux_arm64_v8")
 
 archive_override(
     module_name = "xds",
