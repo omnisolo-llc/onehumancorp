@@ -309,7 +309,7 @@ sh_test(
         "tests/kind_e2e_test.sh",
         "tests/docker_compose_e2e_test.sh",
     ],
-    tags = ["lint"],
+    tags = ["lint", "no-sandbox"],
 )
 
 sh_test(
@@ -323,7 +323,7 @@ sh_test(
         "//deploy/scripts:ohc-agent-wizard.sh",
         "//deploy/scripts:ohc-seed-data.sh",
     ],
-    tags = ["lint"],
+    tags = ["lint", "no-sandbox"],
 )
 
 sh_test(

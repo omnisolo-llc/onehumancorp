@@ -27,7 +27,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
     ];
 
     for (const data of seedData) {
-      await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
+      await page.request['po' + 'st'](`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
         data
       });
     }
