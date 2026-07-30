@@ -604,6 +604,17 @@ rust_test(
     ],
 )
 
+rust_test(
+    name = "persistence_connection_test",
+    size = "small",
+    srcs = ["persistence_connection_test.rs"],
+    edition = "2024",
+    deps = [
+        ":server_lib",
+        "@crates//:tokio",
+    ],
+)
+
 rust_binary(
     name = "server",
     srcs = ["main.rs"],
