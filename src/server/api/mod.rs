@@ -20,6 +20,7 @@ pub mod health;
 pub mod agents;
 pub mod onboarding;
 pub mod growth;
+pub mod chat;
 pub mod telemetry;
 pub mod chaos;
 pub mod syndication_handler;

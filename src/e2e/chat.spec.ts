@@ -35,3 +35,10 @@ test.describe('Navigation', () => {
     await expect(page.locator('text=Welcome back')).toBeVisible();
   });
 });
+test.describe('Omnichannel Inbox UI', () => {
+  test('should display unified inbox', async ({ page }) => {
+    await page.goto('/inbox');
+    await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
+    await expect(page.locator('.inbox-container')).toBeVisible();
+  });
+});
