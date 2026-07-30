@@ -1201,6 +1201,7 @@ pub async fn bench_hybrid_latency() {
 
     tracing::info!("7. Unified Feed Parallel Latency");
     bench_dashboard_unified_feed_parallel_latency().await;
+    bench_ui_dashboard_unified_feed_mobile_payload().await;
 
     tracing::info!("8. Analytics Chat Latency");
     bench_dashboard_analytics_chat_latency().await;
@@ -1395,14 +1396,41 @@ pub async fn bench_ui_dashboard_unified_agent_feed_mobile_payload() {
             .await
             .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
-        let start_sim = std::time::Instant::now();
-        let pool1 = pg_pool.clone();
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT, tenant_id TEXT, department TEXT, description TEXT, status TEXT, action_risk TEXT, payload TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, created_at TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT, tenant_id TEXT, event_source TEXT, lifecycle_state TEXT, created_at TEXT, updated_at TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_action_requests (id TEXT, tenant_id TEXT, agent_type TEXT, status TEXT, action_type TEXT, payload TEXT, created_at TEXT, updated_at TEXT)").execute(&pg_pool).await;
 
-        let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = $1 UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20";
-            let _ = sqlx::query(query_str).bind("test_tenant").fetch_all(&pool1).await;
-        }).await;
+        let start_sim = std::time::Instant::now();
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: pg_pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
+
+        let tenant_id = "test_tenant";
+        let final_result = crate::fetch_unified_agent_feed_data(&db, tenant_id, true, None).await;
+        let _shaped = crate::server_utils::payload_shaper::shape_payload(final_result.clone(), None);
+
         let duration = start_sim.elapsed();
+
+        // Assertions for Agent Feed
+        if let Some(approvals) = final_result.get("pending_approvals").and_then(|a| a.as_array()) {
+            for item in approvals {
+                assert!(item.get("payload").is_none(), "Payload should be trimmed");
+            }
+        }
+        if let Some(entries) = final_result.get("entries").and_then(|e| e.as_array()) {
+            for item in entries {
+                assert!(item.get("payload").is_none(), "Payload should be trimmed");
+            }
+        }
+        if let Some(feed) = final_result.get("agent_feed").and_then(|f| f.as_array()) {
+            for item in feed {
+                assert!(item.get("context_payload").is_none(), "context_payload should be trimmed");
+                assert!(item.get("proposed_action").is_none(), "proposed_action should be trimmed");
+            }
+        }
 
         tracing::info!(
             "  - Unified Agent Feed Mobile Payload Optimization (Postgres): {:?}",
@@ -1421,14 +1449,41 @@ pub async fn bench_ui_dashboard_unified_agent_feed_mobile_payload() {
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT, tenant_id TEXT, event_source TEXT, lifecycle_state TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_action_requests (id TEXT, tenant_id TEXT, agent_type TEXT, status TEXT, action_type TEXT, payload TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
 
-        let start_sim = std::time::Instant::now();
-        let pool1 = sqlite_pool.clone();
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT, tenant_id TEXT, department TEXT, description TEXT, status TEXT, action_risk TEXT, payload TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, created_at TEXT)").execute(&sqlite_pool).await;
 
-        let _ = tokio::spawn(async move {
-            let query_str = "SELECT id, event_source, lifecycle_state, created_at FROM agent_feed_items WHERE tenant_id = ? UNION ALL SELECT id, COALESCE(agent_type, 'operations') as event_source, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at FROM agent_action_requests WHERE tenant_id = ? AND status IN ('Pending', 'Approved', 'Rejected') ORDER BY created_at DESC LIMIT 20";
-            let _ = sqlx::query(query_str).bind("test_tenant").bind("test_tenant").fetch_all(&pool1).await;
-        }).await;
+        let start_sim = std::time::Instant::now();
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: sqlite_pool.clone(),
+            store: crate::db::DbStore::Sqlite(sqlite_pool.clone()),
+        });
+
+        let tenant_id = "test_tenant";
+
+        let final_result = crate::fetch_unified_agent_feed_data(&db, tenant_id, true, None).await;
+        let _shaped = crate::server_utils::payload_shaper::shape_payload(final_result.clone(), None);
+
         let duration = start_sim.elapsed();
+
+        // Assertions for Agent Feed
+        if let Some(approvals) = final_result.get("pending_approvals").and_then(|a| a.as_array()) {
+            for item in approvals {
+                assert!(item.get("payload").is_none(), "Payload should be trimmed");
+            }
+        }
+        if let Some(entries) = final_result.get("entries").and_then(|e| e.as_array()) {
+            for item in entries {
+                assert!(item.get("payload").is_none(), "Payload should be trimmed");
+            }
+        }
+        if let Some(feed) = final_result.get("agent_feed").and_then(|f| f.as_array()) {
+            for item in feed {
+                assert!(item.get("context_payload").is_none(), "context_payload should be trimmed");
+                assert!(item.get("proposed_action").is_none(), "proposed_action should be trimmed");
+            }
+        }
+
         tracing::info!(
             "  - Unified Agent Feed Mobile Payload Optimization (SQLite): {:?}",
             duration
@@ -1881,6 +1936,96 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         tracing::info!("    (Parallel Execution Optimization verified: Unified feed fetches parallelized, ~3x faster)");
     } else {
         tracing::info!("  - ui_dashboard_unified_feed_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+    }
+}
+
+pub async fn bench_ui_dashboard_unified_feed_mobile_payload() {
+    tracing::info!("Benchmarking Unified Feed Mobile Payload Optimization...");
+    let database_url = std::env::var("OHC_DATABASE_URL")
+        .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
+
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS triage_items (id TEXT, tenant_id TEXT, title TEXT, status TEXT, priority TEXT, created_at TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT, tenant_id TEXT, department TEXT, description TEXT, status TEXT, action_risk TEXT, payload TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, created_at TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT, tenant_id TEXT, event_source TEXT, lifecycle_state TEXT, created_at TEXT, updated_at TEXT)").execute(&pg_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_action_requests (id TEXT, tenant_id TEXT, agent_type TEXT, status TEXT, action_type TEXT, payload TEXT, created_at TEXT, updated_at TEXT)").execute(&pg_pool).await;
+
+        let start_sim = std::time::Instant::now();
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: pg_pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
+
+        let tenant_id = "test_tenant";
+        let final_result = crate::fetch_unified_feed_data(&db, tenant_id, true).await;
+        let _shaped = crate::server_utils::payload_shaper::shape_payload(final_result.clone(), None);
+
+        let duration = start_sim.elapsed();
+
+        if let Some(inbox) = final_result.get("inbox").and_then(|i| i.as_array()) {
+            for msg in inbox {
+                assert!(msg.get("original_message").is_none(), "original_message should be trimmed");
+                assert!(msg.get("draft_reply").is_none(), "draft_reply should be trimmed");
+                assert!(msg.get("translated_from_language").is_none(), "translated_from_language should be trimmed");
+            }
+        }
+
+        tracing::info!(
+            "  - Unified Feed Mobile Payload Optimization (Postgres): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: unified feed returned trimmed payload)"
+        );
+    } else {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url)
+            .await
+            .unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS triage_items (id TEXT, tenant_id TEXT, title TEXT, status TEXT, priority TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT, tenant_id TEXT, department TEXT, description TEXT, status TEXT, action_risk TEXT, payload TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT, tenant_id TEXT, event_type TEXT, department TEXT, payload TEXT, created_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT, tenant_id TEXT, event_source TEXT, lifecycle_state TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agent_action_requests (id TEXT, tenant_id TEXT, agent_type TEXT, status TEXT, action_type TEXT, payload TEXT, created_at TEXT, updated_at TEXT)").execute(&sqlite_pool).await;
+
+        let start_sim = std::time::Instant::now();
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: sqlite_pool.clone(),
+            store: crate::db::DbStore::Sqlite(sqlite_pool.clone()),
+        });
+
+        let tenant_id = "test_tenant";
+
+        let final_result = crate::fetch_unified_feed_data(&db, tenant_id, true).await;
+        let _shaped = crate::server_utils::payload_shaper::shape_payload(final_result.clone(), None);
+
+        let duration = start_sim.elapsed();
+
+        if let Some(inbox) = final_result.get("inbox").and_then(|i| i.as_array()) {
+            for msg in inbox {
+                assert!(msg.get("original_message").is_none(), "original_message should be trimmed");
+                assert!(msg.get("draft_reply").is_none(), "draft_reply should be trimmed");
+                assert!(msg.get("translated_from_language").is_none(), "translated_from_language should be trimmed");
+            }
+        }
+
+        tracing::info!(
+            "  - Unified Feed Mobile Payload Optimization (SQLite): {:?}",
+            duration
+        );
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: unified feed returned trimmed payload)"
+        );
     }
 }
 

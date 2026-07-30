@@ -5869,7 +5869,7 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_
 }
 
 
-async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool) -> serde_json::Value {
+pub async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool) -> serde_json::Value {
     let m_key = format!("ui_dashboard_metrics:{}:mobile:{}", tenant_id, mobile_optimized);
     let o_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
     let i_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
@@ -5980,10 +5980,24 @@ async fn fetch_unified_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: 
         })
     );
 
+    let mut inbox_data = inbox_res.unwrap_or_default();
+
+    if mobile_optimized {
+        if let Some(arr) = inbox_data.as_array_mut() {
+            for item in arr.iter_mut() {
+                if let Some(msg) = item.as_object_mut() {
+                    msg.remove("original_message");
+                    msg.remove("draft_reply");
+                    msg.remove("translated_from_language");
+                }
+            }
+        }
+    }
+
     serde_json::json!({
         "metrics": metrics_res.unwrap_or_default(),
         "orders": orders_res.unwrap_or_default(),
-        "inbox": inbox_res.unwrap_or_default(),
+        "inbox": inbox_data,
         "triage": triage_res.unwrap_or_default(),
         "pending_approvals": approvals_res.unwrap_or_default(),
         "agent_feed": agent_feed_res.unwrap_or_default(),
@@ -6021,8 +6035,11 @@ async fn ui_dashboard_unified_feed_handler(
     // Supply should not be cached because it changes continuously (inventory counts),
     // so we fetch supply and merge it on cache hit or miss.
     let supply_val = supply_future.await.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_else(|_| serde_json::json!({}));
-    if let Some(obj) = final_result.as_object_mut() {
-        obj.insert("supply".to_string(), supply_val.clone());
+
+    if !mobile_optimized {
+        if let Some(obj) = final_result.as_object_mut() {
+            obj.insert("supply".to_string(), supply_val.clone());
+        }
     }
 
     let shaped = ::server_utils::payload_shaper::shape_payload(final_result, fields);
@@ -6030,7 +6047,7 @@ async fn ui_dashboard_unified_feed_handler(
 }
 
 
-async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool, fields: Option<&str>) -> serde_json::Value {
+pub async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenant_id: &str, mobile_optimized: bool, fields: Option<&str>) -> serde_json::Value {
     let a_key = format!("ui_approvals:{}:mobile:{}", tenant_id, mobile_optimized);
     let f_key = format!("ui_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
 
@@ -6090,9 +6107,34 @@ async fn fetch_unified_agent_feed_data(db: &std::sync::Arc<crate::db::DB>, tenan
         })
     );
 
-    let pending_approvals = approvals_res.unwrap_or_default();
-    let entries = ledger_res.unwrap_or_default();
-    let agent_feed = agent_feed_res.unwrap_or_default();
+    let mut pending_approvals = approvals_res.unwrap_or_default();
+    let mut entries = ledger_res.unwrap_or_default();
+    let mut agent_feed = agent_feed_res.unwrap_or_default();
+
+    if mobile_optimized {
+        if let Some(arr) = pending_approvals.as_array_mut() {
+            for item in arr.iter_mut() {
+                if let Some(obj) = item.as_object_mut() {
+                    obj.remove("payload");
+                }
+            }
+        }
+        if let Some(arr) = entries.as_array_mut() {
+            for item in arr.iter_mut() {
+                if let Some(obj) = item.as_object_mut() {
+                    obj.remove("payload");
+                }
+            }
+        }
+        if let Some(arr) = agent_feed.as_array_mut() {
+            for item in arr.iter_mut() {
+                if let Some(obj) = item.as_object_mut() {
+                    obj.remove("context_payload");
+                    obj.remove("proposed_action");
+                }
+            }
+        }
+    }
 
     serde_json::json!({
         "pending_approvals": pending_approvals,
