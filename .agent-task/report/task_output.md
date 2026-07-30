@@ -3,11 +3,11 @@ issue_description: |
   # Native Rust Omnichannel Chat System Research Report
 
   ## Problem Statement
-  OHC previously relied on Chatwoot as an external third-party service for omnichannel customer support (WhatsApp, Web Chat, Instagram, Email, SMS). This external dependency is now 100% RETIRED as per the OHC Engineering Standards. We need to implement a native, high-performance, multi-tenant omnichannel chat engine in Rust directly inside `onehumancorp/mono` to achieve feature parity with Chatwoot, ensuring tight integration with our AI assistants and avoiding external service dependencies. This is critical for our owner/operator personas like Maya (home baker using IG DMs) and Carlos (field service using SMS/WhatsApp) to manage customer interactions directly within their unified OHC workspace.
+  OHC previously relied on an external third-party service for omnichannel customer support (WhatsApp, Web Chat, Instagram, Email, SMS). This external dependency is now 100% RETIRED as per the OHC Engineering Standards. We need to implement a native, high-performance, multi-tenant omnichannel chat engine in Rust directly inside `onehumancorp/mono` to achieve feature parity with the retired Ruby-based legacy system, ensuring tight integration with our AI assistants and avoiding external service dependencies. This is critical for our owner/operator personas like Maya (home baker using IG DMs) and Carlos (field service using SMS/WhatsApp) to manage customer interactions directly within their unified OHC workspace.
 
   ## Research Report
-  - **Goal**: Build a native Rust replacement for Chatwoot's omnichannel capabilities.
-  - **Source Analysed**: Checked out the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) to understand its architecture.
+  - **Goal**: Build a native Rust replacement for the legacy omnichannel capabilities.
+  - **Source Analysed**: Checked out the source code of the retired open-source Ruby on Rails helpdesk repository to understand its architecture and data models.
   - **Key Features to Replicate**:
     - Multi-channel support (Web widget, Email, API-based channels like Twilio SMS/WhatsApp, Meta Instagram/Messenger).
     - Unified Inbox/Conversations view.
@@ -15,7 +15,7 @@ issue_description: |
     - Canned responses / Macros.
     - Webhook event system for integrations.
     - Real-time updates via WebSockets.
-  - **Architecture Alignment**: The native solution will fit into the OHC multi-tenant SaaS architecture (Rust/gRPC/PostgreSQL/Redis), providing better performance and deeper integration with OHC's AI triage capabilities than an external Ruby-on-Rails application (Chatwoot).
+  - **Architecture Alignment**: The native solution will fit into the OHC multi-tenant SaaS architecture (Rust/gRPC/PostgreSQL/Redis), providing better performance and deeper integration with OHC's AI triage capabilities than an external Ruby-on-Rails application.
 
   ## Design Doc
   - **Backend (Rust)**:
