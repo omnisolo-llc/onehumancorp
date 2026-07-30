@@ -3,16 +3,16 @@ issue_description: |
   # Native Rust Omnichannel Chat: Core Models & Multi-tenant Inbox Architecture
 
   ## Problem Statement
-  OneHumanCorp currently relies on an external system (Chatwoot) for omnichannel messaging. We are completely retiring Chatwoot in favor of a high-performance, native Rust omnichannel chat system within `onehumancorp/mono`. We need a scalable, strict multi-tenant architecture designed to support small business owners (Maya the baker, Carlos the handyman) tracking customer inquiries across multiple channels (Instagram, SMS, Web Widget, Email) in a unified inbox without any complex technical overhead.
+  OneHumanCorp currently relies on an external system for omnichannel messaging. We are completely retiring that external system in favor of a high-performance, native Rust omnichannel chat system within `onehumancorp/mono`. We need a scalable, strict multi-tenant architecture designed to support small business owners (Maya the baker, Carlos the handyman) tracking customer inquiries across multiple channels (Instagram, SMS, Web Widget, Email) in a unified inbox without any complex technical overhead.
 
   ## Research Report
   - **Market:** Platforms like Shopify Inbox and Wix Chat consolidate messages but often lock you into their ecosystem. We are building a unified, fast, API-first inbox core.
-  - **Source Code Audit (Chatwoot):** An audit of `chatwoot/app/models` shows a robust, though traditional Rails implementation:
+  - **Source Code Audit (External Chat Repo):** An audit of the external Rails-based application's `app/models` shows a robust implementation:
     - `Inbox`: Aggregates conversations. Belongs to an `Account` (tenant).
     - `Conversation`: The core thread of messages. Links a `Contact`, an `Inbox`, and an `Assignee`.
     - `Message`: The individual chat item, linked to a `Conversation`.
     - `Channel::*` (e.g. `api`, `web_widget`, `facebook_page`, `sms`): Adapters that define how incoming webhooks/messages are parsed.
-  - **Gaps:** Chatwoot uses global tables with a scoped `account_id`. We need to use row-level security (RLS) and strict `tenant_id` constraints in Postgres, paired with high-performance Rust to handle webhook ingestion efficiently and coordinate with AI assistants (Operations/Sales/Support agents).
+  - **Gaps:** The external system uses global tables with a scoped `account_id`. We need to use row-level security (RLS) and strict `tenant_id` constraints in Postgres, paired with high-performance Rust to handle webhook ingestion efficiently and coordinate with AI assistants (Operations/Sales/Support agents).
 
   ## Design Doc
   - **Architecture Diagram (Mental Model / Mermaid):**
