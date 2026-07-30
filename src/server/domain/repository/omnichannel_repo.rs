@@ -89,6 +89,17 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
+    pub async fn update_conversation_status(&self, id: Uuid, status: String) -> Result<Conversation, sqlx::Error> {
+        let record = sqlx::query_as::<_, Conversation>(
+            "UPDATE conversations SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, tenant_id, channel, status, created_at, updated_at",
+        )
+        .bind(status)
+        .bind(id)
+        .fetch_one(&self.db.pool)
+        .await?;
+        Ok(record)
+    }
+
     pub async fn create_work_item(&self, tenant_id: Uuid, customer_id: Uuid, source: String, payload: serde_json::Value) -> Result<WorkItem, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, WorkItem>(
