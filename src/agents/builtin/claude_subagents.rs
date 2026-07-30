@@ -299,11 +299,9 @@ impl ClaudeSubagentSpawner {
             // If condensation didn't reduce size (e.g. LLM ignored instructions or hit a limit),
             // prevent infinite loop by breaking and returning the current best effort.
             if next_text.len() >= current_text.len() {
-                if next_text_parts.len() <= 1 {
-                    tracing::warn!("Condensation loop failed to reduce text size. Stopping early.");
-                    current_text = next_text;
-                    break;
-                }
+                tracing::warn!("Condensation loop failed to reduce text size. Stopping early.");
+                current_text = next_text;
+                break;
             }
 
             current_text = next_text;
@@ -381,6 +379,57 @@ mod tests {
                 stop_reason: "stop".to_string(),
             })
         }
+    }
+
+    #[tokio::test]
+    async fn test_claude_subagent_summarize_condensation_infinite_loop() {
+        struct ExpandingLlmClient;
+
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for ExpandingLlmClient {
+            async fn chat(
+                &self,
+                _req: ohc_builtin_agent_core::types::ChatRequest,
+            ) -> Result<
+                ohc_builtin_agent_core::types::ChatResponse,
+                Box<dyn std::error::Error + Send + Sync>,
+            > {
+                let message = ohc_builtin_agent_core::types::Message {
+                    role: ohc_builtin_agent_core::types::Role::Assistant,
+                    content: "A".repeat(15000), // always returns > chunk size partially or just expands
+                    tool_calls: vec![],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                };
+
+                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                    message,
+                    usage: Default::default(),
+                    response_id: None,
+                    stop_reason: "stop".to_string(),
+                })
+            }
+        }
+
+        let parent_client = std::sync::Arc::new(ExpandingLlmClient);
+        let sub_client = std::sync::Arc::new(MockLlmClient {
+            responses: std::sync::Mutex::new(vec![]),
+        });
+        let subagent = std::sync::Arc::new(Agent::new(sub_client, vec![]));
+
+        let spawner =
+            ClaudeSubagentSpawner::new(parent_client.clone(), subagent, ClaudeSubagentMode::Fork);
+
+        let large_input = "A".repeat(25000);
+        let config = AgentRunConfig::default();
+
+        let timeout_res = tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            spawner.summarize_output(&large_input, &config)
+        ).await;
+
+        assert!(timeout_res.is_ok(), "Infinite loop detected in summarize_output");
     }
 
     #[tokio::test]
