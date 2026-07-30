@@ -6,4 +6,4 @@ if [[ ! -f "$server_source" ]]; then
   server_source="$(git rev-parse --show-toplevel)/src/server/lib.rs"
 fi
 
-rg -U -q '"/api/v1/catalog",\s*api::catalog::router\([\s\S]*?strict_bearer_auth_middleware' "$server_source"
+grep -q -Pzo '"/api/v1/catalog",\s*api::catalog::router\([\s\S]*?strict_bearer_auth_middleware' "$server_source"
