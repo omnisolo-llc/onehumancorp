@@ -124,7 +124,7 @@ pub mod collective {
 pub mod invoice {
     pub use crate::ohc::invoice::*;
 }
-
 pub mod inventory {
     pub use crate::ohc::inventory::*;
 }
+pub mod chat;
