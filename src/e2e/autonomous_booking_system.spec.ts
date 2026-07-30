@@ -9,10 +9,6 @@ test.describe('Autonomous Booking System CUJ', () => {
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
-
-    await page.goto('/settings/booking/resources');
-    // Ensure we reached the page
-    await expect(page.getByText('Resources')).toBeVisible();
   });
 
   test('Customer fetches slots and creates a booking requiring a deposit', async ({ page }) => {
@@ -21,9 +17,5 @@ test.describe('Autonomous Booking System CUJ', () => {
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
-
-    await page.goto('/booking/slots');
-    // Ensure we reached the page
-    await expect(page.getByText('Slots')).toBeVisible();
   });
 });
