@@ -1,17 +1,17 @@
-issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Legacy Service"
 issue_description: |
-  # Title: Implement Custom Rust Omnichannel Chat System to Replace Chatwoot
+  # Title: Implement Custom Rust Omnichannel Chat System to Replace Legacy Service
 
   # Problem Statement
-  Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" (e.g., Shopify Inbox, Wix Inbox) simply aggregate messages without context. They require the owner to manually type responses, often lacking the customer's purchase history or past interactions across other channels. This creates a reactive, labor-intensive process that doesn't scale for a solopreneur. Furthermore, OHC previously relied on Chatwoot as an external third-party service, which has been 100% retired and is no longer an acceptable dependency.
+  Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" (e.g., Shopify Inbox, Wix Inbox) simply aggregate messages without context. They require the owner to manually type responses, often lacking the customer's purchase history or past interactions across other channels. This creates a reactive, labor-intensive process that doesn't scale for a solopreneur. Furthermore, OHC previously relied on a legacy external third-party chat service, which has been 100% retired and is no longer an acceptable dependency.
 
   # Research Report
   **Findings & Competitive Analysis:**
   - **Shopify Inbox:** Aggregates chat and email but relies heavily on manual responses or basic, rigid auto-replies. It does not proactively draft contextual responses based on full customer history across all channels.
   - **Wix Inbox:** Good aggregation, but AI features are mostly limited to "improving tone" or generating generic replies, not acting as an autonomous customer success agent.
   - **Zendesk/Intercom:** Enterprise-grade and far too complex/expensive for a single-person SMB.
-  - **Chatwoot Source Code Audit:** Chatwoot's source code (`https://github.com/chatwoot/chatwoot`) reveals a mature omnichannel architecture with dedicated models for `Account` (Tenant), `Contact`, `Conversation`, `Message`, and various `Channel` adapters (e.g., WhatsApp, Web Widget, API). It uses ActionCable (WebSockets) for real-time updates and webhook endpoints for channel ingestion.
-  - **OHC Opportunity:** Implement our own high-performance, native Rust omnichannel chat system inside `onehumancorp/mono` that achieves feature parity with Chatwoot's core data model and webhook/websocket architecture, but supercharged with our "Teammate" AI philosophy. The Customer Success Agent (The Ambassador) doesn't just aggregate messages; it reads them, queries the customer's omnichannel identity graph, and proactively drafts a complete, accurate response.
+  - **Legacy Service Source Code Audit:** An audit of the legacy open-source chat system reveals a mature omnichannel architecture with dedicated models for `Account` (Tenant), `Contact`, `Conversation`, `Message`, and various `Channel` adapters (e.g., WhatsApp, Web Widget, API). It uses WebSockets for real-time updates and webhook endpoints for channel ingestion.
+  - **OHC Opportunity:** Implement our own high-performance, native Rust omnichannel chat system inside `onehumancorp/mono` that achieves feature parity with the legacy service's core data model and webhook/websocket architecture, but supercharged with our "Teammate" AI philosophy. The Customer Success Agent (The Ambassador) doesn't just aggregate messages; it reads them, queries the customer's omnichannel identity graph, and proactively drafts a complete, accurate response.
 
   # Design Doc
   ### Architecture Diagram
@@ -48,7 +48,7 @@ issue_description: |
   - **The Ambassador (Customer Success Agent):** Triggered by incoming messages. Uses RAG against tenant catalog and customer history to draft personalized replies.
 
   ### Key Design Decisions
-  - **Native Rust Implementation:** Replacing Chatwoot entirely with internal Rust modules (e.g., in `src/server/integrations/chat`).
+  - **Native Rust Implementation:** Replacing the legacy dependency entirely with internal Rust modules (e.g., in `src/server/integrations/chat`).
   - **Proactive Drafting:** Move from read-reply to read-approve.
   - **Zero-Touch Fallback:** Human-only reply with suggested data points if AI confidence is low.
 
