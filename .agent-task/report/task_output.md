@@ -1,12 +1,12 @@
 issue_title: "Native Rust Omnichannel Chat System Architecture"
 issue_description: |
-  ## Native Rust Omnichannel Chat System Architecture (Replacing Chatwoot)
+  ## Native Rust Omnichannel Chat System Architecture
 
   **Problem Statement:**
-  OneHumanCorp (OHC) currently relies on external systems or lacks a deeply integrated native omnichannel customer support and chat engine. Relying on an external service like Chatwoot breaks the unified multi-tenant architecture, introduces latency, complicates Zero-Trust SPIFFE/SPIRE identity management, and makes it harder for our AI agents to seamlessly participate in real-time conversations. Our target non-technical owners (like Maya the baker, Carlos the handyman) need a unified inbox where Instagram DMs, WhatsApp messages, website live chat, and email all flow into one place, allowing them—or their AI assistant—to reply instantly without managing multiple tools or understanding complex routing.
+  OneHumanCorp (OHC) currently relies on external systems or lacks a deeply integrated native omnichannel customer support and chat engine. Relying on an external service breaks the unified multi-tenant architecture, introduces latency, complicates Zero-Trust SPIFFE/SPIRE identity management, and makes it harder for our AI agents to seamlessly participate in real-time conversations. Our target non-technical owners (like Maya the baker, Carlos the handyman) need a unified inbox where Instagram DMs, WhatsApp messages, website live chat, and email all flow into one place, allowing them—or their AI assistant—to reply instantly without managing multiple tools or understanding complex routing.
 
   **Research Report:**
-  As mandated, Chatwoot is being 100% retired. A detailed audit of the `chatwoot/chatwoot` source code reveals its core architectural strengths:
+  As mandated, the legacy external chat dependency is being 100% retired. A detailed audit of similar open-source omnichannel platforms reveals their core architectural strengths:
   - **Data Models:** `Account` (Tenant), `User` (Agent/Owner), `Inbox` (Channel grouping), `Channel` (Specific adapter like WhatsApp, Twitter, WebWidget), `Contact`, `Conversation`, and `Message`.
   - **Real-time Messaging:** WebSockets pushing updates to connected clients.
   - **Extensibility:** Webhooks and Agent Bot integrations.
@@ -69,7 +69,7 @@ issue_description: |
   ```
 
   **Implementation Prompt for Implementer Agent:**
-  "Implement the core Native Rust Omnichannel Chat backend and database schema to replace Chatwoot.
+  "Implement the core Native Rust Omnichannel Chat backend and database schema to replace the legacy chat dependency.
   1. Create the PostgreSQL migration for `inboxes`, `channels`, `contacts`, `conversations`, and `messages`, ensuring `tenant_id` and RLS are strictly enforced.
   2. Implement the Rust data models and generic repository layer for these entities.
   3. Create a unified REST API endpoint `/api/v1/conversations` for the frontend to fetch the unified inbox feed.
