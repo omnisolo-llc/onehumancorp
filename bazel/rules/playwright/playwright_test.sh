@@ -76,7 +76,7 @@ done
 playwright_spec_workspace_name() {
   local spec_file="$1"
   local rel="$spec_file"
-  for root in "$SOURCE_REPO_ROOT" "$workspace_root" "$RUNFILES_ROOT"; do
+  for root in "$SOURCE_REPO_ROOT" "/app" "$workspace_root" "$RUNFILES_ROOT"; do
     if [[ -n "$root" && "$rel" == "$root/"* ]]; then
       rel="${rel#$root/}"
       break
@@ -369,7 +369,7 @@ postgres_exec() {
 USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull mirror.gcr.io/pgvector/pgvector:pg15 >/dev/null 2>&1; then
+  if docker pull postgres:15-alpine >/dev/null 2>&1; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -387,7 +387,7 @@ if [ "$PULL_PG_SUCCESS" = true ]; then
   done
 
   if [ "$PULL_VK_SUCCESS" = true ]; then
-    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc mirror.gcr.io/pgvector/pgvector:pg15; then
+    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1:0:5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc postgres:15-alpine; then
       docker run -d --name "$VALKEY_NAME" -p 127.0.0.1:0:6379 mirror.gcr.io/valkey/valkey:8-alpine
       PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
