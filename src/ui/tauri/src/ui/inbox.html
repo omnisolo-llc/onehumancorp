@@ -1,406 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omnichannel Inbox - OneHumanCorp</title>
     <style>
-      .glassmorphism {
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      :root {
+        --mac-light: rgba(255, 255, 255, 0.7);
+        --mac-border: rgba(255, 255, 255, 0.2);
+        --mac-blur: 20px;
+        --accent: #007aff;
+        --bg-color: #f5f5f7;
+        --text-primary: #1d1d1f;
+        --text-secondary: #86868b;
       }
-      @media (prefers-color-scheme: dark) {
-        .glassmorphism {
-          border-radius: 16px;
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(40px) saturate(220%);
-          -webkit-backdrop-filter: blur(40px) saturate(220%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-      }
-
-      /* New Native Chat Styles */
-      .layout-wrapper {
-        display: flex;
-        gap: 20px;
-        width: 100%;
-        max-width: 1200px;
-        margin: 0 auto;
-        height: calc(100vh - 100px);
-      }
-      .sidebar {
-        width: 320px;
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+        margin: 0;
+        padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 16px;
-        overflow-y: auto;
+        height: 100vh;
       }
-      .main-panel {
+      .glassmorphism {
+        background: var(--mac-light);
+        backdrop-filter: blur(var(--mac-blur));
+        -webkit-backdrop-filter: blur(var(--mac-blur));
+        border: 1px solid var(--mac-border);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+      header {
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid var(--mac-border);
+      }
+      h1 { margin: 0; font-size: 24px; font-weight: 600; }
+      .container {
+        display: flex;
         flex: 1;
+        overflow: hidden;
+        padding: 20px;
+        gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .inbox-list {
+        flex: 1;
+        min-width: 250px;
+        max-width: 350px;
+        border-radius: 12px;
         display: flex;
         flex-direction: column;
         overflow: hidden;
       }
-
-      .inbox-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+      .inbox-list h2 {
+        padding: 15px;
+        margin: 0;
+        font-size: 16px;
+        border-bottom: 1px solid var(--mac-border);
+        background: rgba(255, 255, 255, 0.5);
       }
-
       .inbox-item {
-        padding: 12px;
-        border-radius: 8px;
+        padding: 15px;
+        border-bottom: 1px solid var(--mac-border);
         cursor: pointer;
         transition: background 0.2s;
-        border: 1px solid transparent;
       }
-      .inbox-item:hover {
-        background: rgba(0, 0, 0, 0.05);
-      }
+      .inbox-item:hover { background: rgba(255, 255, 255, 0.9); }
       .inbox-item.active {
-        background: rgba(0, 102, 255, 0.1);
-        border-color: rgba(0, 102, 255, 0.3);
+        background: var(--accent);
+        color: white;
       }
+      .inbox-item.active .inbox-meta { color: rgba(255, 255, 255, 0.8); }
+      .inbox-name { font-weight: 600; margin-bottom: 5px; }
+      .inbox-meta { font-size: 12px; color: var(--text-secondary); }
 
-      .conv-list {
+      .chat-area {
+        flex: 2;
+        border-radius: 12px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        overflow: hidden;
       }
-      .conv-item {
-        padding: 12px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background 0.2s;
-        border: 1px solid rgba(0,0,0,0.05);
-        background: rgba(255,255,255,0.5);
+      .chat-header {
+        padding: 15px;
+        border-bottom: 1px solid var(--mac-border);
+        background: rgba(255, 255, 255, 0.5);
+        font-weight: 600;
       }
-      .conv-item:hover {
-        background: rgba(255,255,255,0.8);
-      }
-      .conv-item.active {
-        background: white;
-        border-color: #0066FF;
-      }
-
       .chat-messages {
         flex: 1;
+        padding: 15px;
         overflow-y: auto;
-        padding: 20px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 15px;
       }
-
       .chat-bubble {
-        max-width: 75%;
         padding: 12px 16px;
         border-radius: 18px;
-        font-size: 15px;
+        max-width: 75%;
         line-height: 1.4;
       }
-
-      .chat-bubble.agent {
-        align-self: flex-end;
-        background: #0066FF;
-        color: white;
-        border-bottom-right-radius: 4px;
-      }
-
       .chat-bubble.contact {
+        background: white;
+        border: 1px solid var(--mac-border);
         align-self: flex-start;
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px solid rgba(0,0,0,0.1);
-        color: #1d1d1f;
         border-bottom-left-radius: 4px;
       }
-
-      /* AI Draft Styling */
-      .draft-reply {
-        background: #f8fafc;
-        border-left: 3px solid #0066FF;
-        padding: 12px;
-        border-radius: 4px 8px 8px 4px;
-        margin-top: 8px;
-        font-size: 14px;
-      }
-      .draft-reply-label {
-        font-size: 11px;
-        font-weight: 700;
-        color: #0066FF;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-        display: block;
-      }
-      .draft-reply-content {
-        color: #334155;
-        margin-bottom: 12px;
-      }
-      .approve-btn {
-        background-color: #0066FF;
+      .chat-bubble.agent {
+        background: var(--accent);
         color: white;
-        border: none;
-        padding: 10px 16px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: transform 0.1s, background-color 0.2s;
-        min-width: 44px;
-        min-height: 44px;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
       }
-      .approve-btn:active {
-        transform: scale(0.98);
-      }
-      .approve-btn.approved {
-        background-color: #34C759;
-        cursor: default;
-      }
-
       .chat-input-area {
-        padding: 16px;
-        border-top: 1px solid rgba(0,0,0,0.1);
+        padding: 15px;
+        border-top: 1px solid var(--mac-border);
+        background: rgba(255, 255, 255, 0.5);
         display: flex;
-        gap: 12px;
+        gap: 10px;
       }
-
-      .chat-input {
+      .chat-input-area input {
         flex: 1;
         padding: 12px 16px;
-        border: 1px solid rgba(0,0,0,0.2);
-        border-radius: 24px;
-        font-size: 15px;
+        border-radius: 20px;
+        border: 1px solid var(--mac-border);
+        background: white;
         outline: none;
-        background: rgba(255, 255, 255, 0.8);
       }
-      .chat-input:focus {
-        border-color: #0066FF;
-      }
-
-      .chat-send-btn {
-        background: #0066FF;
+      .chat-input-area button {
+        padding: 10px 20px;
+        border-radius: 20px;
+        background: var(--accent);
         color: white;
         border: none;
-        width: 44px;
-        height: 44px;
-        border-radius: 22px;
         cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.1s;
+        font-weight: 600;
+        transition: background 0.2s;
       }
-      .chat-send-btn:active {
-        transform: scale(0.95);
-      }
-      .chat-send-btn:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-      }
+      .chat-input-area button:hover { background: #005bb5; }
 
-      @media (max-width: 768px) {
-        .layout-wrapper {
-          flex-direction: column;
-          height: auto;
-        }
-        .sidebar {
-          width: 100%;
-          max-height: 300px;
-        }
-        .main-panel {
-          height: 600px;
-        }
+      .draft-reply {
+        margin-top: 5px;
+        padding: 10px;
+        background: rgba(0, 122, 255, 0.1);
+        border: 1px dashed var(--accent);
+        border-radius: 8px;
+        font-size: 13px;
+        align-self: flex-start;
+        max-width: 75%;
       }
+      .draft-reply-label {
+        font-weight: 600;
+        color: var(--accent);
+        margin-bottom: 5px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .approve-btn {
+        margin-top: 8px;
+        padding: 6px 12px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .approve-btn:hover { background: #005bb5; }
+      .approve-btn.approved { background: #34c759; cursor: default; }
 
-      body {
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: #f5f5f7;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-height: 100vh;
-        box-sizing: border-box;
-        padding: 20px;
-      }
-      .container {
-        width: 100%;
-        max-width: 1200px;
-        padding: 24px;
-        box-sizing: border-box;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-      }
-      .header-section {
-        margin-bottom: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      h1 {
-        color: #1d1d1f;
-        font-size: 28px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        margin-top: 0;
-      }
-      .subtitle {
-        color: #86868b;
-        font-size: 14px;
-        margin-bottom: 16px;
-      }
       .empty-state {
         text-align: center;
-        padding: 40px 20px;
-        color: #86868b;
-        font-size: 15px;
+        color: var(--text-secondary);
+        margin-top: 50px;
       }
-      .back-link {
-        display: inline-block;
-        margin-bottom: 16px;
-        color: #0066FF;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 14px;
+
+      /* Mobile layout adjustments */
+      @media (max-width: 768px) {
+        .container { flex-direction: column; padding: 10px; }
+        .inbox-list, .chat-area { flex: none; height: 50vh; }
       }
     </style>
   </head>
   <body>
-    <div class="container glassmorphism">
-      <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
-      <div class="header-section">
-        <div>
-          <h1>Native Omnichannel Inbox</h1>
-          <div class="subtitle">Unified real-time conversations across all channels</div>
+    <header class="glassmorphism">
+      <h1>Native Omnichannel Inbox</h1>
+      <div id="status-indicator">Connecting...</div>
+    </header>
+
+    <div class="container">
+      <div class="inbox-list glassmorphism" id="inbox-list-container">
+        <h2>Inboxes & Conversations</h2>
+        <div id="inbox-list" style="overflow-y:auto; flex:1;">
+          <div class="empty-state">Loading inboxes...</div>
         </div>
       </div>
 
-      <div class="layout-wrapper">
-        <div class="sidebar glassmorphism">
-          <div style="padding: 16px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1);">Inboxes</div>
-          <div id="inbox-list" class="inbox-list" style="padding: 12px;">
-            <div class="empty-state" style="padding: 10px;">Loading inboxes...</div>
-          </div>
-
-          <div style="padding: 16px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1); border-top: 1px solid rgba(0,0,0,0.1);">Conversations</div>
-          <div id="conv-list" class="conv-list" style="padding: 12px; flex: 1; overflow-y: auto;">
-            <div class="empty-state" style="padding: 10px;">Select an inbox</div>
-          </div>
+      <div class="chat-area glassmorphism">
+        <div class="chat-header" id="chat-header">Select a conversation</div>
+        <div class="chat-messages" id="chat-messages">
+           <div class="empty-state">Select a conversation to view messages.</div>
         </div>
-
-        <div class="main-panel glassmorphism">
-          <div id="chat-header" style="padding: 16px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1);">
-            Select a conversation
-          </div>
-          <div id="chat-messages" class="chat-messages">
-            <div class="empty-state">No conversation selected.</div>
-          </div>
-          <div class="chat-input-area">
-            <input type="text" id="chat-input" class="chat-input" placeholder="Type a message..." disabled />
-            <button id="chat-send-btn" class="chat-send-btn" disabled>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
-          </div>
+        <div class="chat-input-area">
+          <input type="text" id="chat-input" placeholder="Type a message..." disabled />
+          <button id="chat-send-btn" disabled>Send</button>
         </div>
       </div>
     </div>
+
     <script>
-      let currentInboxId = null;
       let currentConversationId = null;
       let socket = null;
+      let allConversations = [];
 
       async function loadInboxes() {
-        const tenantId = localStorage.getItem("tenant_id") || "default";
         try {
-          const res = await fetch(`/api/v1/chat/inboxes`, {
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+          const res = await fetch("/api/v1/chat/inboxes", {
+             headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
           });
-          if (!res.ok) throw new Error("Failed to load inboxes");
+          if (!res.ok) throw new Error("Failed to fetch inboxes");
           const inboxes = await res.json();
           renderInboxes(inboxes);
         } catch (err) {
           console.error(err);
-          document.getElementById("inbox-list").innerHTML = `<div class="empty-state" style="color:red">Error: ${err.message}</div>`;
+          document.getElementById("inbox-list").innerHTML = `<div class="empty-state" style="color:red">Error loading inboxes</div>`;
         }
       }
 
       function renderInboxes(inboxes) {
         const list = document.getElementById("inbox-list");
-        if (!inboxes || inboxes.length === 0) {
-          list.innerHTML = `<div class="empty-state" style="padding: 10px;">No inboxes found.</div>`;
+        if (inboxes.length === 0) {
+          list.innerHTML = `<div class="empty-state">No inboxes found.</div>`;
           return;
         }
+
         list.innerHTML = "";
         inboxes.forEach(inbox => {
-          const el = document.createElement("div");
-          el.className = "inbox-item";
-          el.textContent = inbox.name;
-          el.onclick = () => {
-            document.querySelectorAll(".inbox-item").forEach(n => n.classList.remove("active"));
-            el.classList.add("active");
-            loadConversations(inbox.id);
-          };
-          list.appendChild(el);
+            // For MVP, we treat an inbox as selectable,
+            // but normally we'd list conversations within inboxes.
+            // We simulate fetching a default conversation for an inbox here to keep the UI simple.
+            const el = document.createElement("div");
+            el.className = "inbox-item";
+            el.innerHTML = `
+                <div class="inbox-name">${inbox.name}</div>
+                <div class="inbox-meta">Inbox ID: ${inbox.id.substring(0,8)}...</div>
+            `;
+            el.onclick = async () => {
+                document.querySelectorAll(".inbox-item").forEach(n => n.classList.remove("active"));
+                el.classList.add("active");
+
+                // Fetch conversations for this inbox
+                try {
+                  const cRes = await fetch(`/api/v1/chat/conversations?inbox_id=${inbox.id}`, {
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+                  });
+                  const convs = await cRes.json();
+                  if(convs.length > 0) {
+                     loadConversation(convs[0].id);
+                  } else {
+                     // Create one for demo purposes if empty
+                     const cRes2 = await fetch(`/api/v1/chat/inboxes/${inbox.id}/conversations`, {
+                         method: "POST",
+                         headers: {
+                           "Content-Type": "application/json",
+                           "Authorization": `Bearer ${localStorage.getItem("token")}`
+                         },
+                         body: JSON.stringify({ contact_id: "00000000-0000-0000-0000-000000000000" })
+                     });
+                     if (cRes2.ok) {
+                         const newC = await cRes2.json();
+                         loadConversation(newC.id);
+                     }
+                  }
+                } catch(e) { console.error(e); }
+            };
+            list.appendChild(el);
         });
       }
 
-      async function loadConversations(inboxId) {
-        currentInboxId = inboxId;
-        const tenantId = localStorage.getItem("tenant_id") || "default";
-        try {
-          const res = await fetch(`/api/v1/chat/conversations/${inboxId}`, {
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-          });
-          if (!res.ok) throw new Error("Failed to load conversations");
-          const convs = await res.json();
-          renderConversations(convs);
-        } catch (err) {
-          console.error(err);
-          document.getElementById("conv-list").innerHTML = `<div class="empty-state" style="color:red">Error: ${err.message}</div>`;
-        }
-      }
-
-      function renderConversations(convs) {
-        const list = document.getElementById("conv-list");
-        if (!convs || convs.length === 0) {
-          list.innerHTML = `<div class="empty-state" style="padding: 10px;">No conversations found.</div>`;
-          return;
-        }
-        list.innerHTML = "";
-        convs.forEach(conv => {
-          const el = document.createElement("div");
-          el.className = "conv-item";
-          el.innerHTML = `<strong>Contact:</strong> ${conv.contact_id.substring(0,8)}...<br><span style="font-size:12px;color:#666">${new Date(conv.created_at).toLocaleDateString()}</span>`;
-          el.onclick = () => {
-            document.querySelectorAll(".conv-item").forEach(n => n.classList.remove("active"));
-            el.classList.add("active");
-            loadMessages(conv.id);
-          };
-          list.appendChild(el);
-        });
-      }
-
-      async function loadMessages(conversationId) {
-        currentConversationId = conversationId;
-        document.getElementById("chat-header").textContent = `Conversation: ${conversationId.substring(0,8)}...`;
+      async function loadConversation(id) {
+        currentConversationId = id;
+        document.getElementById("chat-header").textContent = `Conversation: ${id.substring(0,8)}...`;
         document.getElementById("chat-input").disabled = false;
         document.getElementById("chat-send-btn").disabled = false;
+        document.getElementById("chat-messages").innerHTML = `<div class="empty-state">Loading messages...</div>`;
 
         try {
-          const res = await fetch(`/api/v1/chat/messages/${conversationId}`, {
-            headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+          const res = await fetch(`/api/v1/chat/messages/${id}`, {
+             headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
           });
-          if (!res.ok) throw new Error("Failed to load messages");
+          if (!res.ok) throw new Error("Failed to fetch messages");
           const msgs = await res.json();
           renderMessages(msgs);
         } catch (err) {
@@ -445,9 +347,9 @@
             const draftDiv = document.createElement('div');
             draftDiv.className = 'draft-reply';
 
-            const draftLabel = document.createElement('span');
+            const draftLabel = document.createElement('div');
             draftLabel.className = 'draft-reply-label';
-            draftLabel.textContent = '✨ AI Drafted Reply';
+            draftLabel.textContent = '✨ AI Draft Proposal';
 
             const draftContent = document.createElement('div');
             draftContent.className = 'draft-reply-content';
@@ -496,7 +398,11 @@
       function initWebSocket() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         socket = new WebSocket(`${protocol}//${window.location.host}/ws/chat`);
-        socket.onopen = () => console.log("Chat WebSocket connected");
+        socket.onopen = () => {
+            console.log("Chat WebSocket connected");
+            document.getElementById("status-indicator").textContent = "Live";
+            document.getElementById("status-indicator").style.color = "#34c759";
+        };
         socket.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);
@@ -509,6 +415,8 @@
         };
         socket.onclose = () => {
           console.log("Chat WebSocket closed. Reconnecting...");
+          document.getElementById("status-indicator").textContent = "Reconnecting...";
+          document.getElementById("status-indicator").style.color = "#ff9500";
           setTimeout(initWebSocket, 2000);
         };
       }
@@ -566,6 +474,5 @@
         initWebSocket();
       });
     </script>
-    <script src="help-widget.mjs" type="module"></script>
   </body>
 </html>
