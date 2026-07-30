@@ -396,3 +396,23 @@ The exact Bazel matrix `bazel test //src/agents/builtin:all //src/agents/builtin
 The corrected local auth command `cargo test -p server_auth --lib multitenancy_isolation -- --nocapture` passed 6/6 while printing six explicit optional-local skips because `OHC_DATABASE_URL` was unset. This does not replace the F-10 required-mode evidence: the fresh disposable pgvector run above executed all six bodies through the non-superuser application role and passed 6/6. Repository hygiene behavior/static checks, PostgreSQL CI contract behavior/static checks, and Python compilation passed. Root/UI pnpm production audits reported no known vulnerabilities, and root/UI npm production audits reported zero vulnerabilities. `cargo-audit` remains unavailable; `cargo tree -d` completed and its duplicate dependency families remain maintenance debt.
 
 Two repository-wide quality gates remain nonzero for pre-existing code outside these changes. `cargo fmt --all -- --check` emitted the existing broad formatting diff; the benchmark file passes focused Rustfmt, while the pre-existing `output_parser.rs` formatting backlog prevents a whole-file focused pass even though the parser fix itself is narrowly scoped. The requested all-target Clippy command stopped on six unchanged `server_pricing::cost_aggregator` warnings (`type_complexity` and `collapsible_if`) before it could lint every requested target; earlier focused runs also exposed unrelated existing warnings in prompt construction and stores. These are recorded as remaining cleanup rather than misreported as a green lint gate.
+
+### CHAT-00 — Chatwoot removal
+**Date:** 2026-07-30
+- Confirmation that no production/customer Chatwoot data existed and no data migration was performed.
+- Removed application and deployment surfaces:
+  - `src/server/integrations/chatwoot`
+  - `deploy/helm/ohc/templates/chatwoot.yaml`
+  - `deploy/helm/ohc/templates/chatwoot-service.yaml`
+  - `chatwoot`, `chatwoot-migrate`, and `chatwoot-worker` from `deploy/docker-compose.yml`
+  - Prometheus scrape targets from `deploy/docker/prometheus/prometheus.yml` and `deploy/docker/prometheus/prometheus-agent.yml`
+- Exact commands and tests counts verified:
+  - `cargo metadata --locked --format-version=1 --no-deps >/tmp/ohc-cargo-metadata-final.json` (Exited 0)
+  - `cargo check -p ohc-mono` (Exited 0, warnings only)
+  - `bazelisk test //src/ui/next:next_vitest //deploy:deploy_artifacts_test //deploy:no_chatwoot_residue_test` (All 3 passed)
+  - `docker compose config` (Exited 0)
+  - `helm template` and `helm lint` (Exited 0)
+  - `bazelisk query //...` (Exited 0)
+  - All ripgrep commands found no matches of Chatwoot in the generated artifacts.
+- The native inbox remains in place; feature expansion belongs to later native-chat projects.
+- `cargo check` and `bazelisk test` verified. Unverified external tests include full AWS deployment environments, which were simulated with docker-compose.
