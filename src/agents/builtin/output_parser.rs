@@ -65,48 +65,6 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for AdvancedPydanticOutp
     }
 }
 
-
-pub struct StructuredOutputParser<T: Send + Sync> {
-    _marker: std::marker::PhantomData<T>,
-}
-
-impl<T: Send + Sync> Default for StructuredOutputParser<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T: Send + Sync> StructuredOutputParser<T> {
-    pub fn new() -> Self {
-        Self {
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputParser<T> {
-    fn parse_message(&self, msg: &Message) -> Result<T, String> {
-        // Output Parsing: Primary mechanic is extracting from native tool_calls
-        if !msg.tool_calls.is_empty()
-            && let Some(call) = msg
-                .tool_calls
-                .iter()
-                .find(|t| t.name == "structured_output")
-        {
-            if let Some(data) = call.arguments.get("data") {
-                return self.validate_schema(data);
-            } else {
-                return Err(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
-                    );
-            }
-        }
-
-        // Strict enforcement: Rely entirely on native tool_calls API objects.
-        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
-    }
-}
-
 pub struct RetryWithErrorOutputParser<'a, T> {
     parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
     llm: Arc<dyn LlmClientForParser>,
@@ -510,8 +468,8 @@ mod tests {
     }
 
     #[test]
-    fn test_structured_output_parser_rejects_markdown_wrapper() {
-        let parser = StructuredOutputParser::<TestOutput>::new();
+    fn test_advanced_pydantic_output_parser_rejects_markdown_wrapper() {
+        let parser = AdvancedPydanticOutputParser::<TestOutput>::new();
         let message = Message::assistant(FENCED_MARKDOWN_COMPLETION);
 
         let error = parser
@@ -1169,12 +1127,6 @@ fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(data: &serde_json::V
 }
 
 impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
-    fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
-        validate_pydantic_schema(data)
-    }
-}
-
-impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
         validate_pydantic_schema(data)
     }
