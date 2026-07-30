@@ -6,7 +6,13 @@ vi.mock("@/lib/auth/backendTransport", () => ({
   validateJsonRequestBody: vi.fn(),
 }));
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
+
+test("proxies catalog reads through authenticated transport", async () => {
+  const request = new Request("http://localhost/api/v1/catalog/product?limit=10");
+  await GET(request);
+  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/catalog/product");
+});
 
 test("uses authenticated transport for catalog products", async () => {
   const request = new Request("http://localhost/api/v1/catalog/product", {
