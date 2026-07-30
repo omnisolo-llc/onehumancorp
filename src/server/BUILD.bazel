@@ -622,6 +622,7 @@ rust_test(
     edition = "2024",
     deps = [
         "@crates//:sea-orm",
+        "@crates//:serde",
         "@crates//:tokio",
     ],
 )
@@ -642,6 +643,7 @@ rust_test(
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:sea-orm",
+        "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:uuid",
@@ -663,6 +665,7 @@ rust_test(
     deps = [
         "@crates//:chrono",
         "@crates//:sea-orm",
+        "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:uuid",

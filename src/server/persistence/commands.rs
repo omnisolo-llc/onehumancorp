@@ -23,9 +23,39 @@ pub fn database_url_from_environment() -> CommandResult<DatabaseUrl> {
         .ok_or_else(|| "DATABASE_URL is required".into())
 }
 
-async fn connect_from_environment() -> CommandResult<AppDatabase> {
+pub async fn connect_from_environment() -> CommandResult<AppDatabase> {
     let url = database_url_from_environment()?;
     Ok(AppDatabase::connect(url.expose_for_connection()).await?)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+pub struct DatabaseVerification {
+    pub backend: super::capabilities::DatabaseBackend,
+    pub migrations: u64,
+    pub users: u64,
+    pub products: u64,
+}
+
+pub async fn verify(database: &AppDatabase) -> CommandResult<DatabaseVerification> {
+    database
+        .connection()
+        .execute(sea_orm::Statement::from_string(
+            database.connection().get_database_backend(),
+            "SELECT 1".to_owned(),
+        ))
+        .await?;
+    Ok(DatabaseVerification {
+        backend: database.backend(),
+        migrations: entities::schema_version::Entity::find()
+            .count(database.connection())
+            .await?,
+        users: entities::user::Entity::find()
+            .count(database.connection())
+            .await?,
+        products: entities::product::Entity::find()
+            .count(database.connection())
+            .await?,
+    })
 }
 
 pub async fn migrate_from_environment() -> CommandResult {
@@ -81,28 +111,10 @@ pub async fn bootstrap_admin_from_environment() -> CommandResult {
 
 pub async fn verify_from_environment() -> CommandResult {
     let database = connect_from_environment().await?;
-    database
-        .connection()
-        .execute(sea_orm::Statement::from_string(
-            database.connection().get_database_backend(),
-            "SELECT 1".to_owned(),
-        ))
-        .await?;
-    let migrations = entities::schema_version::Entity::find()
-        .count(database.connection())
-        .await?;
-    let users = entities::user::Entity::find()
-        .count(database.connection())
-        .await?;
-    let products = entities::product::Entity::find()
-        .count(database.connection())
-        .await?;
+    let verification = verify(&database).await?;
     println!(
         "backend={:?} migrations={} users={} products={}",
-        database.backend(),
-        migrations,
-        users,
-        products
+        verification.backend, verification.migrations, verification.users, verification.products
     );
     Ok(())
 }
