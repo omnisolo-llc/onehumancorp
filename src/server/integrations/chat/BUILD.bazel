@@ -1,0 +1,19 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_chat",
+    srcs = [
+        "hub.rs",
+        "ws.rs",
+        "mod.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:axum",
+        "@crates//:futures",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)
