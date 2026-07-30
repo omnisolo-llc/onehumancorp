@@ -9,7 +9,7 @@ mod entities;
 #[path = "persistence/migration.rs"]
 mod migration;
 
-use sea_orm::EntityTrait;
+use sea_orm::{EntityTrait, PaginatorTrait};
 
 use connection::AppDatabase;
 
