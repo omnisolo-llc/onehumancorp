@@ -1,5 +1,6 @@
 use super::*;
-use axum::{body::Body, http::{Request, StatusCode}, Router};
+use axum::{body::Body, http::{Request, StatusCode}};
+use axum::Router;
 use tower::ServiceExt; // for `oneshot`
 
 #[tokio::test]
