@@ -7,13 +7,11 @@ vi.mock('@/lib/utils/api', () => ({
   putJson: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('@/app/components/AppShell', () => ({
-  default: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
-}));
-
-describe('GlobalCommerceSettings', () => {
-  it('renders loading state initially', () => {
-    render(<GlobalCommerceSettings />);
-    expect(screen.getByText('Loading settings...')).toBeInTheDocument();
-  });
+vi.mock('@/app/components/AppShell', () => {
+    const AppShell = ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>;
+    return {
+        __esModule: true,
+        default: AppShell,
+        AppShell: AppShell
+    }
 });

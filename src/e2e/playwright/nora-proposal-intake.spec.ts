@@ -7,7 +7,7 @@ test.describe('Nora Autonomous Proposal Intake Flow', () => {
 
   test('Client intake creates proposal automatically', async ({ request, page }) => {
     // Simulate Client Inquiry
-    const res = await request.post('/api/v1/intake', {
+    const res = await request.get('/api/v1/intake', {
       headers: {
         'x-tenant-id': tenantId,
         'x-user-id': 'nora',
