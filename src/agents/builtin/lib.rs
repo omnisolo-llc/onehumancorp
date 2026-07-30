@@ -1,3 +1,4 @@
+pub mod omnichannel_chat;
 pub mod claude_subagents;
 pub mod compaction;
 pub mod durable_execution;
@@ -471,3 +472,5 @@ pub mod deerflow;
 pub mod deerflow_subagents;
 pub mod jit_retrieval;
 pub mod microagent;
+pub use omnichannel_chat::{IntentClassifier, CopilotDrafter, AutoResponder, HandoffManager, Intent, ChatMessage};
+pub mod omnichannel_chat_api;
