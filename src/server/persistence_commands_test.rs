@@ -40,4 +40,9 @@ async fn migration_and_admin_bootstrap_are_idempotent_without_demo_rows() {
             .unwrap(),
         0
     );
+
+    let verification = commands::verify(&database).await.unwrap();
+    assert_eq!(verification.migrations, 1);
+    assert_eq!(verification.users, 1);
+    assert_eq!(verification.products, 0);
 }
