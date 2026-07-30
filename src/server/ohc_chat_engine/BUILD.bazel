@@ -1,0 +1,35 @@
+exports_files(["Cargo.toml"])
+
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_ohc_chat_engine",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:tokio",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:chrono",
+        "@crates//:uuid",
+        "@crates//:axum",
+        "@crates//:futures",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "server_ohc_chat_engine_test",
+    size = "small",
+    crate = ":server_ohc_chat_engine",
+    edition = "2024",
+    deps = [
+        "@crates//:temp-env",
+        "@crates//:tokio",
+    ],
+)
