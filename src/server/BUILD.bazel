@@ -25,6 +25,9 @@ SERVER_RS_SRCS = [
     "minimax.rs",
     "msgbus.rs",
     "pipeline.rs",
+    "//src/server/persistence:capabilities.rs",
+    "//src/server/persistence:connection.rs",
+    "//src/server/persistence:mod.rs",
     "powersync.rs",
     "queue.rs",
     "rag_sync.rs",
@@ -511,6 +514,7 @@ rust_library(
         "@crates//:redis",
         "@crates//:regex",
         "@crates//:reqwest",
+        "@crates//:sea-orm",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:serde_yaml",
@@ -607,9 +611,14 @@ rust_test(
 rust_test(
     name = "persistence_connection_test",
     size = "small",
-    srcs = ["persistence_connection_test.rs"],
+    srcs = [
+        "persistence_connection_test.rs",
+        "//src/server/persistence:capabilities.rs",
+        "//src/server/persistence:connection.rs",
+    ],
     edition = "2024",
     deps = [
+        "@crates//:sea-orm",
         "@crates//:tokio",
     ],
 )

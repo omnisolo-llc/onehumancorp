@@ -1,5 +1,14 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
+exports_files(
+    [
+        "capabilities.rs",
+        "connection.rs",
+        "mod.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 sh_test(
     name = "backend_neutrality_test",
     srcs = ["backend_neutrality_test.sh"],
