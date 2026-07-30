@@ -546,17 +546,17 @@ struct MemberUsageAggregate {
 }
 
 #[derive(Clone)]
-struct InMemoryUsageLog {
-    username: String,
-    feature: String,
-    tokens_used: i32,
-    computed_cost: f64,
-    organization_id: String,
+pub struct InMemoryUsageLog {
+    pub username: String,
+    pub feature: String,
+    pub tokens_used: i32,
+    pub computed_cost: f64,
+    pub organization_id: String,
 }
 
 static IN_MEMORY_USAGE_LOGS: OnceLock<Mutex<Vec<InMemoryUsageLog>>> = OnceLock::new();
 
-fn get_in_memory_usage_logs() -> &'static Mutex<Vec<InMemoryUsageLog>> {
+pub fn get_in_memory_usage_logs() -> &'static Mutex<Vec<InMemoryUsageLog>> {
     IN_MEMORY_USAGE_LOGS.get_or_init(|| Mutex::new(Vec::new()))
 }
 
@@ -666,6 +666,7 @@ struct RegisterRequest {
     username: String,
     email: String,
     password: String,
+    invite_token: Option<String>,
 }
 
 async fn register(
@@ -673,9 +674,6 @@ async fn register(
     headers: HeaderMap,
     request: axum::extract::Request,
 ) -> Response {
-    if !is_registration_enabled() {
-        return error(StatusCode::FORBIDDEN, "registration closed");
-    }
     if !has_exact_json_content_type(&headers) {
         return error(StatusCode::UNSUPPORTED_MEDIA_TYPE, "invalid request");
     }
@@ -697,7 +695,33 @@ async fn register(
         return error(StatusCode::BAD_REQUEST, "invalid request");
     }
 
-    let organization_id = uuid::Uuid::new_v4().to_string();
+    let mut target_organization_id = uuid::Uuid::new_v4().to_string();
+    let mut roles = vec![super::ROLE_ADMIN.to_string()];
+
+    if let Some(ref invite_id) = payload.invite_token {
+        let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+        if has_db {
+            let pool = crate::db::get_pool();
+            let invite_id_clean = invite_id.strip_prefix("inv-").unwrap_or(invite_id);
+            if let Ok(Some(row)) = sqlx::query("SELECT tenant_id FROM team_invites WHERE id = $1 AND status = 'PENDING'")
+                .bind(invite_id_clean)
+                .fetch_optional(&pool)
+                .await
+            {
+                use sqlx::Row;
+                target_organization_id = row.get(0);
+                roles = vec!["member".to_string()];
+            } else {
+                return error(StatusCode::BAD_REQUEST, "invalid or expired invite token");
+            }
+        } else {
+            return error(StatusCode::BAD_REQUEST, "invalid or expired invite token");
+        }
+    } else {
+        if !is_registration_enabled() {
+            return error(StatusCode::FORBIDDEN, "registration closed");
+        }
+    }
 
     let create_result = state
         .store
@@ -705,10 +729,24 @@ async fn register(
             username.to_string(),
             email.to_string(),
             payload.password,
-            vec![super::ROLE_ADMIN.to_string()],
-            organization_id,
+            roles,
+            target_organization_id.clone(),
         )
         .await;
+
+    if create_result.is_ok() {
+        if let Some(ref invite_id) = payload.invite_token {
+            let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+            if has_db {
+                let pool = crate::db::get_pool();
+                let invite_id_clean = invite_id.strip_prefix("inv-").unwrap_or(invite_id);
+                let _ = sqlx::query("UPDATE team_invites SET status = 'ACCEPTED' WHERE id = $1")
+                    .bind(invite_id_clean)
+                    .execute(&pool)
+                    .await;
+            }
+        }
+    }
 
     let user = match create_result {
         Ok(user) => user,

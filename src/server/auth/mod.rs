@@ -12,6 +12,43 @@ pub mod user_repository;
 pub mod grpc;
 pub mod http;
 
+pub async fn record_usage(
+    user_id: &str,
+    organization_id: &str,
+    feature: &str,
+    tokens: i32,
+    cost: f64,
+) {
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+    if has_db {
+        let pool = db::get_pool();
+        let user_id_uuid = uuid::Uuid::parse_str(user_id).unwrap_or_default();
+        let query = sqlx::query(
+            "INSERT INTO user_usage_logs (user_id, organization_id, feature, tokens_used, computed_cost) VALUES ($1, $2, $3, $4, $5)"
+        )
+        .bind(user_id_uuid)
+        .bind(organization_id.to_string())
+        .bind(feature.to_string())
+        .bind(tokens)
+        .bind(cost);
+
+        // Non-blocking log
+        tokio::spawn(async move {
+            let _ = query.execute(&pool).await;
+        });
+    } else {
+        // Log to memory
+        let mut logs = http::get_in_memory_usage_logs().lock().unwrap();
+        logs.push(http::InMemoryUsageLog {
+            username: "InMemoryUser".to_string(), // mock username
+            feature: feature.to_string(),
+            tokens_used: tokens,
+            computed_cost: cost,
+            organization_id: organization_id.to_string(),
+        });
+    }
+}
+
 pub mod db {
     use sqlx::postgres::PgPool;
     use std::sync::OnceLock;

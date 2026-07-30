@@ -465,6 +465,18 @@ pub async fn gateway_run_handler(
     extension: Extension<::server_auth::orchestration::AuthInfo>,
     json: Json<ZeroClickGenerateRequest>,
 ) -> Result<Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+    // Record usage for gateway execution (simulating token usage and cost for zero-click generation)
+    // Values are hardcoded or estimated for now
+    let auth_info = &extension.0;
+    ::server_auth::record_usage(
+        &auth_info.agent_id,
+        &auth_info.org_id,
+        "gateway_run",
+        15200,
+        0.0304,
+    )
+    .await;
+
     start_zero_click(state, extension, json).await
 }
 
