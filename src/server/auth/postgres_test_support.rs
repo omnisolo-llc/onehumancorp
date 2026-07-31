@@ -53,10 +53,20 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
-        .run(&admin_pool)
-        .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+    let mut retries = 5;
+    while retries > 0 {
+        match MIGRATOR.run(&admin_pool).await {
+            Ok(_) => break,
+            Err(e) if e.to_string().contains("_sqlx_migrations_pkey") || e.to_string().contains("tuple concurrently updated") || e.to_string().contains("database is locked") => {
+                retries -= 1;
+                if retries == 0 {
+                    return Err(format!("run src/server/migrations: {e}"));
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+            }
+            Err(e) => return Err(format!("run src/server/migrations: {e}")),
+        }
+    }
 
     sqlx::raw_sql(
         r#"
