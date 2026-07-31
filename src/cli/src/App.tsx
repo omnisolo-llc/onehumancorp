@@ -9,6 +9,7 @@ import { ErrorState } from './components/ErrorState.js';
 import { MasterMenu } from './components/MasterMenu.js';
 import { Marketplace } from './components/Marketplace.js';
 import { VisualWorkflowBuilder } from './components/VisualWorkflowBuilder.js';
+import { OmnichannelChat } from './components/OmnichannelChat.js';
 
 import { useOrchestrator } from './hooks/useOrchestrator.js';
 
@@ -17,6 +18,7 @@ export const App = () => {
   const [inputs, setInputs] = useState<string[]>([]);
   const [showMarketplace, setShowMarketplace] = useState(false);
   const [showVisualBuilder, setShowVisualBuilder] = useState(false);
+  const [showOmnichannelChat, setShowOmnichannelChat] = useState(false);
   const markdown = `# OHC Interactive Harness\n\n- Powered by Ink\n- React in the CLI`;
 
   const handleSubmit = async (val: string) => {
@@ -43,12 +45,16 @@ export const App = () => {
             <Marketplace onBack={() => setShowMarketplace(false)} />
           ) : showVisualBuilder ? (
             <VisualWorkflowBuilder onBack={() => setShowVisualBuilder(false)} />
+          ) : showOmnichannelChat ? (
+            <OmnichannelChat onBack={() => setShowOmnichannelChat(false)} />
           ) : (
             <MasterMenu onSelect={(option) => {
               if (option === 'Browse Agent Marketplace') {
                 setShowMarketplace(true);
               } else if (option === 'Visual Workflow Builder') {
                 setShowVisualBuilder(true);
+              } else if (option === 'Omnichannel Chat') {
+                setShowOmnichannelChat(true);
               }
             }} />
           )}

@@ -4,6 +4,8 @@ use std::sync::Arc;
 
 use crate::agent::AgentRunConfig;
 use crate::codex_runner::Runner;
+use crate::omnichannel_chat::OmnichannelChatEngine;
+
 
 /// JSON-RPC 2.0 Request
 #[derive(Debug, Deserialize, Serialize)]
@@ -46,6 +48,36 @@ async fn handle_rpc(
     axum::extract::State(state): axum::extract::State<Arc<AppState>>,
     Json(payload): Json<JsonRpcRequest>,
 ) -> Json<JsonRpcResponse> {
+    if payload.method == "omnichannel_chat_process" {
+        if let Some(params) = payload.params {
+            let message = params.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let is_copilot_mode = params.get("is_copilot_mode").and_then(|v| v.as_bool()).unwrap_or(false);
+
+            let engine = OmnichannelChatEngine::new(state.runner.core.agent.llm.clone());
+            match engine.process_message(message, is_copilot_mode).await {
+                Ok(resp) => {
+                    return Json(JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: Some(serde_json::to_value(resp).unwrap()),
+                        error: None,
+                        id: payload.id.clone(),
+                    });
+                }
+                Err(e) => {
+                    return Json(JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32000,
+                            message: e,
+                            data: None,
+                        }),
+                        id: payload.id.clone(),
+                    });
+                }
+            }
+        }
+
     if payload.jsonrpc != "2.0" {
         return Json(JsonRpcResponse {
             jsonrpc: "2.0".to_string(),

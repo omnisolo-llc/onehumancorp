@@ -13,6 +13,7 @@ const options = [
   "Check Swarm Status",
   "Browse Agent Marketplace",
   "Visual Workflow Builder",
+  "Omnichannel Chat",
   "Verify Setup",
   "Exit"
 ];

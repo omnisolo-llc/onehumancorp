@@ -37,7 +37,7 @@ describe('MasterMenu', () => {
     const output = lastFrame();
     expect(output).toBeDefined();
     expect(output?.length).toBeGreaterThan(0);
-    expect(output).toContain('12) Verify Setup');
+    expect(output).toContain('13) Verify Setup');
     expect(output).toContain('5) Provision AI Agent');
   });
 
