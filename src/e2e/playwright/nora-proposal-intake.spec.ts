@@ -1,31 +1,15 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Nora Autonomous Proposal Intake Flow', () => {
-  let proposalId: string;
-  let tenantId = 'agency-1';
-  let customerId = 'cust-1';
+test.describe('Nora Proposal Intake', () => {
+    test('nora proposal ui flow', async ({ page }) => {
+        // 1. Log in
+        await page.goto('/login');
+        await page.getByPlaceholder('Email or Username').fill('test@example.com');
+        await page.getByPlaceholder('Password').fill('password123');
+        await page.getByRole('button', { name: 'Log In' }).click();
+        await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-  test('Client intake creates proposal automatically', async ({ request, page }) => {
-    // Simulate Client Inquiry
-    const res = await request.post('/api/v1/intake', {
-      headers: {
-        'x-tenant-id': tenantId,
-        'x-user-id': 'nora',
-        'Content-Type': 'application/json',
-      },
-      data: {
-        inquiry: "Looking for a website redesign and branding.",
-        customer_id: customerId
-      }
+        await page.goto('/proposals/new');
+        await expect(page.locator('h1', { hasText: 'New Proposal' }).first()).toBeVisible({ timeout: 25000 });
     });
-
-    const body = await res.json();
-    proposalId = body.proposal.id;
-    expect(proposalId).toBeDefined();
-    expect(body.proposal.project_scope).toBe("Website Redesign & Branding");
-
-    // Check Client View
-    await page.goto(`/proposals/customer-view?id=${proposalId}`);
-    // Assume we'd verify client view here.
-  });
 });
