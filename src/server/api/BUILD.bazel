@@ -39,6 +39,7 @@ exports_files(
         "oauth/mod.rs",
         "oauth/proxy.rs",
         "mod.rs",
+        "native_chat.rs",
         "offline_sync.rs",
         "proposals.rs",
         "sync.rs",
