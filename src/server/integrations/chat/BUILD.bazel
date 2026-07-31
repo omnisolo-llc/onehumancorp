@@ -1,0 +1,25 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+
+rust_binary(
+    name = "chat",
+    srcs = ["src/main.rs"],
+    edition = "2021",
+    deps = [
+        "@crates//:tokio",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:axum",
+        "@crates//:tokio-tungstenite-0.29.0",
+        "@crates//:futures-util",
+        "@crates//:redis",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "chat_test",
+    crate = ":chat",
+)

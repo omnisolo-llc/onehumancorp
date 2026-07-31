@@ -140,3 +140,4 @@ dummy_*
 /*.patch
 *.pid
 *.tsbuildinfo
+src/server/integrations/chat/target/
