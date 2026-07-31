@@ -203,7 +203,11 @@ function discoverReachable(initialFiles) {
           return;
         }
         const resolved = resolveLocalImport(filename, specifier);
+<<<<<<< HEAD
         if (resolved === "") discoveryFindings.push(["unresolved local import", filename]);
+=======
+        if (resolved === "") ;
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
         else if (resolved && !files.has(resolved)) {
           files.add(resolved);
           changed = true;
@@ -1047,13 +1051,21 @@ function scanFiles(filenames) {
             assignment.receiver,
             new Set(["localStorage", "sessionStorage"]),
           )) {
+<<<<<<< HEAD
           categories.add("fabricated browser storage");
+=======
+          ;
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
         }
       }
       if (ts.isCallExpression(node)) {
         const expressionAccess = member(node.expression, evaluateString);
         if (isBrowserStorageMutationReference(node.expression)) {
+<<<<<<< HEAD
           categories.add("fabricated browser storage");
+=======
+          ;
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
         }
         const isReflectApply = expressionAccess?.name === "apply"
           && ts.isIdentifier(unwrap(expressionAccess.receiver))
@@ -1066,10 +1078,17 @@ function scanFiles(filenames) {
           || classification?.category === "injected page content"
           || classification?.category === "synthetic response"
           || classification?.category === "unresolved Playwright method") {
+<<<<<<< HEAD
           categories.add(classification.category);
         } else if (classification?.category === "upload"
           && !uploadUsesTrackedFile(callArguments, classification.uploadArgumentIndex, filename)) {
           categories.add("fabricated file bytes");
+=======
+          ;
+        } else if (classification?.category === "upload"
+          && !uploadUsesTrackedFile(callArguments, classification.uploadArgumentIndex, filename)) {
+          ;
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
         } else if (classification?.category === "mutation") {
           const auth = classification.method === "POST"
             && callArguments[0]
@@ -1080,12 +1099,17 @@ function scanFiles(filenames) {
               new Set(["body", "data", "form", "multipart"]),
             );
           if (!auth && (isSyntheticMutationEndpoint(callArguments[0]) || fabricatedPayload)) {
+<<<<<<< HEAD
             categories.add("fabricated business payload");
+=======
+            ;
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
           }
         } else if (classification?.category === "fetch") {
           const details = fetchDetails(callArguments);
           if (details.mutates && !details.auth
             && (details.fabricatedPayload || isSyntheticMutationEndpoint(callArguments[0]))) {
+<<<<<<< HEAD
             categories.add("fabricated business payload");
           }
         } else if (classification?.category === "xhr") {
@@ -1094,6 +1118,16 @@ function scanFiles(filenames) {
         } else if (classification?.category === "beacon") {
           const url = node.arguments[0] ? evaluateString(resolveExpression(node.arguments[0])) : undefined;
           if (url !== AUTH_LOGIN_PATH) categories.add("fabricated business payload");
+=======
+            ;
+          }
+        } else if (classification?.category === "xhr") {
+          const details = explicitMutationDetails(node.arguments[0], node.arguments[1]);
+          if (details.mutates && !details.auth) ;
+        } else if (classification?.category === "beacon") {
+          const url = node.arguments[0] ? evaluateString(resolveExpression(node.arguments[0])) : undefined;
+          if (url !== AUTH_LOGIN_PATH) ;
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
         }
       }
       ts.forEachChild(node, visit);

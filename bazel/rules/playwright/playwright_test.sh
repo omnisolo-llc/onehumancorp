@@ -84,10 +84,17 @@ playwright_spec_workspace_name() {
   done
   rel="${rel#./}"
   case "$rel" in
+<<<<<<< HEAD
     src/e2e/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
     src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
+=======
+    src/e2e/*.spec.ts|/app/src/e2e/*.spec.ts|/app/src/e2e/**/*.spec.ts|**/*.spec.ts|*.spec.ts|src/e2e/**/*.spec.ts|src/e2e/*/*.spec.ts)
+      printf '%s\n' "$rel"
+      ;;
+    src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts|/app/src/e2e/*.spec.ts|/app/src/e2e/**/*.spec.ts|**/*.spec.ts|*.spec.ts|src/e2e/**/*.spec.ts|src/e2e/*/*.spec.ts)
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
       # Playwright runtime that cannot coexist with the Bazel CLI runtime.

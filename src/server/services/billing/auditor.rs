@@ -544,6 +544,8 @@ impl CostAuditor {
             false
         }
     }
+<<<<<<< HEAD
+=======
 
     pub fn predict_burn_rate(&self, tenant_id: &str) -> f64 {
         let cost_history = self.tenant_cost_history.lock().unwrap();
@@ -555,6 +557,7 @@ impl CostAuditor {
         }
         0.0
     }
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
 }
 
 #[cfg(test)]
@@ -793,6 +796,8 @@ mod additional_tests {
         assert_eq!(anomalies.len(), 1);
         assert!(anomalies[0].contains("Anomaly detected"));
     }
+<<<<<<< HEAD
+=======
 
     #[test]
     fn test_predict_burn_rate() {
@@ -822,4 +827,5 @@ mod additional_tests {
         // predict_burn_rate should return 2.0 * 1000.0 = 2000.0
         assert_eq!(auditor.predict_burn_rate("tenant_burn"), 2000.0);
     }
+>>>>>>> 80b5e3485 (Research Report: Native Rust Omnichannel Chat System (#35974))
 }
