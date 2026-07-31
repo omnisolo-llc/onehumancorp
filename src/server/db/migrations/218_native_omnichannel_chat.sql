@@ -1,5 +1,5 @@
 -- +goose Up
--- Migration 217: Add native omnichannel chat tables
+-- Migration 218: Add native omnichannel chat tables
 
 CREATE TABLE IF NOT EXISTS inboxes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
