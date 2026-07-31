@@ -3404,6 +3404,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .with_state(omnichannel_webhook_state);
 
+    let omnichannel_core_router = axum::Router::new()
+        .route("/api/v1/omnichannel_core/webhook", axum::routing::post(api::omnichannel_core_webhook::handle_webhook))
+        .route("/api/v1/omnichannel_core/ws", axum::routing::get(api::omnichannel_ws::handle_ws_upgrade))
+        .with_state(db.clone());
+
     let inbox_webhook_state = api::inbox::webhook::OmnichannelWebhookState {
         orchestrator: dept_orchestrator.clone(),
         db: db.clone(),
@@ -7875,6 +7880,10 @@ async fn create_ui_bom_item_handler(
         .merge(meta_webhook_router)
         .merge(protect_internal_ingress(
             omnichannel_webhook_router,
+            http_auth_store.clone(),
+        ))
+        .merge(protect_internal_ingress(
+            omnichannel_core_router,
             http_auth_store.clone(),
         ))
         .nest(

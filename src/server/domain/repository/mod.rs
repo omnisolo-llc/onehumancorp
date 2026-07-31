@@ -6,3 +6,4 @@ pub mod agent_feed_repo;
 pub mod omnichannel_repo;
 pub mod social_post_proposal_repo;
 pub use social_post_proposal_repo::SocialPostProposalRepository;
+pub mod omnichannel_core_repo;

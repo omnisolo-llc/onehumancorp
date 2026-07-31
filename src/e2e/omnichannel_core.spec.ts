@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-// @ts-ignore
 
 test.describe('Native Rust Omnichannel Chat System Core API', () => {
   let webhookUrl = '';

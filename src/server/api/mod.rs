@@ -59,3 +59,5 @@ pub mod ohc_job_queue;
 pub mod checkout_api;
 pub mod agent_stream;
 pub mod unified_ws;
+pub mod omnichannel_core_webhook;
+pub mod omnichannel_ws;
