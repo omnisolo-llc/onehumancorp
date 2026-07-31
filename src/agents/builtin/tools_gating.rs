@@ -30,13 +30,14 @@ impl ToolGater {
         }
 
         // Stage 1: Trust establishment at project load
-        if !cfg.project_trusted && !is_read_only {
+        if !cfg.is_project_trusted && !is_read_only {
             return Err(ToolError::Fatal(
                 "Project not trusted. Mutating tools are disabled.".to_string(),
             ));
         }
 
         // Stage 2: Permission check before each tool call
+        // 2a. Global allowed list check if present
         if let Some(allowed) = &cfg.allowed_tools
             && !allowed.contains(&tc.name)
         {
@@ -46,10 +47,31 @@ impl ToolGater {
             )));
         }
 
-        // Stage 3: Explicit user confirmation for high-risk operations
-        // Handled via the 5-point HumanInLoopSpectrum
-        let is_high_risk = cfg.high_risk_tools.contains(&tc.name);
+        // 2b. Restrictive permission architecture block for mutating tools
+        if cfg.permission_architecture == ohc_builtin_agent_core::types::PermissionArchitecture::Restrictive
+            && !is_read_only
+            && !cfg.approved_tool_calls.contains(&tc.id)
+            && !cfg.manually_approved_tool_calls.contains(&tc.id)
+        {
+            return Err(ToolError::UserFixable(
+                "Stage 2 (Permission): Mutating tool requires explicit approval under Restrictive architecture.".to_string(),
+            ));
+        }
 
+        // Stage 3: Explicit user confirmation for high-risk operations
+        let default_high_risk: &[&str] = &["bash", "python", "execute_query", "delete_file"];
+        let is_high_risk = cfg.high_risk_tools.contains(&tc.name) || default_high_risk.contains(&tc.name.as_str());
+
+        if is_high_risk
+            && !cfg.approved_tool_calls.contains(&tc.id)
+            && !cfg.manually_approved_tool_calls.contains(&tc.id)
+        {
+            return Err(ToolError::UserFixable(
+                "Stage 3 (Confirmation): High-risk tool requires explicit user confirmation.".to_string(),
+            ));
+        }
+
+        // Additional Handled via the 5-point HumanInLoopSpectrum
         HumanInLoopManager::evaluate_escalation_tier(
             tc,
             is_read_only,
@@ -83,7 +105,7 @@ mod tests {
     #[test]
     fn test_stage_1_trust() {
         let mut cfg = AgentRunConfig {
-            project_trusted: false,
+            is_project_trusted: false,
             ..Default::default()
         };
 
@@ -101,7 +123,7 @@ mod tests {
         assert!(res.is_ok());
 
         // Trusted + Mutating -> OK
-        cfg.project_trusted = true;
+        cfg.is_project_trusted = true;
         let res = ToolGater::check_gating(&tc, false, &cfg);
         assert!(res.is_ok());
     }
@@ -109,7 +131,7 @@ mod tests {
     #[test]
     fn test_stage_1_trust_with_no_allowed_tools() {
         let mut cfg = AgentRunConfig {
-            project_trusted: true,
+            is_project_trusted: true,
             ..Default::default()
         };
         /*cfg.allowed_tools = None;*/
@@ -145,7 +167,7 @@ mod tests {
 
         let mut cfg = AgentRunConfig {
             guardrails: Some(registry),
-            project_trusted: true,
+            is_project_trusted: true,
             ..Default::default()
         };
 
@@ -161,7 +183,7 @@ mod tests {
     #[test]
     fn test_stage_2_permission() {
         let mut cfg = AgentRunConfig {
-            project_trusted: true,
+            is_project_trusted: true,
             ..Default::default()
         };
         cfg.allowed_tools = Some(vec!["allowed_tool".to_string()]);
@@ -179,9 +201,55 @@ mod tests {
     }
 
     #[test]
+    fn test_stage_2_restrictive_architecture() {
+        let mut cfg = AgentRunConfig {
+            is_project_trusted: true,
+            permission_architecture: ohc_builtin_agent_core::types::PermissionArchitecture::Restrictive,
+            ..Default::default()
+        };
+
+        let tc_mutating = create_tool_call("1", "any_mutating_tool");
+
+        // Mutating tool under restrictive architecture should require explicit approval
+        let res = ToolGater::check_gating(&tc_mutating, false, &cfg);
+        assert!(matches!(res, Err(ToolError::UserFixable(_))));
+        if let Err(ToolError::UserFixable(msg)) = res {
+            assert!(msg.contains("Stage 2 (Permission): Mutating tool requires explicit approval"));
+        }
+
+        // Read-only tool should pass
+        assert!(ToolGater::check_gating(&tc_mutating, true, &cfg).is_ok());
+
+        // Approved mutating tool should pass
+        cfg.approved_tool_calls.push("1".to_string());
+        assert!(ToolGater::check_gating(&tc_mutating, false, &cfg).is_ok());
+    }
+
+    #[test]
+    fn test_stage_3_high_risk_tools() {
+        let mut cfg = AgentRunConfig {
+            is_project_trusted: true,
+            ..Default::default()
+        };
+
+        // Bash is in the default high-risk list
+        let tc_bash = create_tool_call("1", "bash");
+
+        let res = ToolGater::check_gating(&tc_bash, false, &cfg);
+        assert!(matches!(res, Err(ToolError::UserFixable(_))));
+        if let Err(ToolError::UserFixable(msg)) = res {
+            assert!(msg.contains("Stage 3 (Confirmation): High-risk tool requires explicit user confirmation"));
+        }
+
+        // Approval clears the high-risk check
+        cfg.approved_tool_calls.push("1".to_string());
+        assert!(ToolGater::check_gating(&tc_bash, false, &cfg).is_ok());
+    }
+
+    #[test]
     fn test_stage_3_confirmation_wiring() {
         let mut cfg = AgentRunConfig {
-            project_trusted: true,
+            is_project_trusted: true,
             ..Default::default()
         };
         cfg.high_risk_tools = vec!["nuclear_launch".to_string()];
@@ -206,7 +274,7 @@ mod tests {
     #[test]
     fn test_stage_3_supervisory_wiring() {
         let mut cfg = AgentRunConfig {
-            project_trusted: true,
+            is_project_trusted: true,
             ..Default::default()
         };
 
@@ -230,7 +298,7 @@ mod tests {
     #[test]
     fn test_stage_3_approval_on_all_wiring() {
         let mut cfg = AgentRunConfig {
-            project_trusted: true,
+            is_project_trusted: true,
             ..Default::default()
         };
         cfg.hil_spectrum = HumanInLoopSpectrum::ApprovalOnAll;
@@ -266,7 +334,7 @@ mod tests {
 
         let mut cfg = AgentRunConfig {
             guardrails: Some(registry),
-            project_trusted: true,
+            is_project_trusted: true,
             ..Default::default()
         };
 
