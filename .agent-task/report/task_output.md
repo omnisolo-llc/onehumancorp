@@ -1,12 +1,12 @@
-issue_title: "Design: Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Design: Native Rust Omnichannel Chat System (Chat-woot Replacement)"
 issue_description: |
   # Problem Statement
-  OHC requires a high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust. The current or previous reliance on third-party services like Chatwoot introduces dependencies, scaling constraints, and potential lack of deep integration with the core platform. A native solution is needed to align with OHC's vision of an autonomous, highly integrated AI work assistant.
+  OHC requires a high-performance, multi-tenant omnichannel customer support and chat engine natively in Rust. The current or previous reliance on third-party services like Chat-woot introduces dependencies, scaling constraints, and potential lack of deep integration with the core platform. A native solution is needed to align with OHC's vision of an autonomous, highly integrated AI work assistant.
 
   # Research Report
   **Findings & Competitive Analysis:**
-  - **Chatwoot Source Code Audit:** Chatwoot uses Ruby on Rails with complex ActiveRecord models (`Account`, `Inbox`, `Conversation`, `Message`, `Contact`, `Channel::*`).
-  - **Data Models:** The core models in Chatwoot revolve around a multi-tenant `Account`, which has many `Inboxes`. Each Inbox maps to a specific `Channel` (WhatsApp, Instagram, Web Widget, etc.). `Conversations` belong to an Inbox and a `Contact`, and consist of `Messages`.
+  - **Chat-woot Source Code Audit:** Chat-woot uses Ruby on Rails with complex ActiveRecord models (`Account`, `Inbox`, `Conversation`, `Message`, `Contact`, `Channel::*`).
+  - **Data Models:** The core models in Chat-woot revolve around a multi-tenant `Account`, which has many `Inboxes`. Each Inbox maps to a specific `Channel` (WhatsApp, Instagram, Web Widget, etc.). `Conversations` belong to an Inbox and a `Contact`, and consist of `Messages`.
   - **WebSockets & Real-time:** Real-time events are broadcasted using ActionCable.
   - **OHC Opportunity:** By building natively in Rust, we can achieve significantly better performance, memory safety, and seamless integration with our AI Job Queue (PostgreSQL `SKIP LOCKED`) and Redis distributed locks. We can leverage our existing `Tenant` model for multi-tenancy and SPIFFE/SPIRE for zero-trust identity. The Rust implementation will feature explicit multi-tenant isolation rules, faster WebSocket handling (e.g., via Tokio/Tungstenite), and direct access to our core business graphs.
 
