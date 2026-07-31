@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import LeadGenCampaignPage from './page';
 import { describe, it, expect } from 'vitest';
 
