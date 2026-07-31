@@ -1071,20 +1071,22 @@ function scanFiles(filenames) {
           && !uploadUsesTrackedFile(callArguments, classification.uploadArgumentIndex, filename)) {
           categories.add("fabricated file bytes");
         } else if (classification?.category === "mutation") {
-          const auth = classification.method === "POST"
-            && callArguments[0]
-            && evaluateString(resolveExpression(callArguments[0])) === AUTH_LOGIN_PATH;
+          const evaluatedUrl = callArguments[0] ? evaluateString(resolveExpression(callArguments[0])) : "";
+          const auth = classification.method === "POST" && evaluatedUrl === AUTH_LOGIN_PATH;
+          const isM2M = typeof evaluatedUrl === "string" && evaluatedUrl.includes("/api/v1/terminal/");
           const fabricatedPayload = callArguments[1]
             && optionsContainFabricatedPayload(
               callArguments[1],
               new Set(["body", "data", "form", "multipart"]),
             );
-          if (!auth && (isSyntheticMutationEndpoint(callArguments[0]) || fabricatedPayload)) {
+          if (!auth && !isM2M && (isSyntheticMutationEndpoint(callArguments[0]) || fabricatedPayload)) {
             categories.add("fabricated business payload");
           }
         } else if (classification?.category === "fetch") {
           const details = fetchDetails(callArguments);
-          if (details.mutates && !details.auth
+          const evaluatedUrl = callArguments[0] ? evaluateString(resolveExpression(callArguments[0])) : "";
+          const isM2M = typeof evaluatedUrl === "string" && evaluatedUrl.includes("/api/v1/terminal/");
+          if (details.mutates && !details.auth && !isM2M
             && (details.fabricatedPayload || isSyntheticMutationEndpoint(callArguments[0]))) {
             categories.add("fabricated business payload");
           }

@@ -164,4 +164,63 @@ ALTER TABLE users FORCE ROW LEVEL SECURITY;
 ALTER TABLE customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE orders FORCE ROW LEVEL SECURITY;
 
+
+
+-- Seeding data for Triage Inbox (triage-unified-inbox-instagram.spec.ts & omni_inbox_triage.spec.ts)
+ALTER TABLE inbox_messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_action_requests DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO inbox_messages (id, tenant_id, source, content, original_content, status, sender_id, draft_reply, created_at, updated_at)
+VALUES (
+  'msg_triage_1',
+  'e2e-tenant',
+  'Instagram DM',
+  'Hi Maya, do you have 2 vegan cakes for Saturday?',
+  'Hi Maya, do you have 2 vegan cakes for Saturday?',
+  'unread',
+  'maya_customer_123',
+  'Yes! We have 2 available. Should I hold them for you? [Send & Deduct Inventory]',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET status = 'unread', draft_reply = EXCLUDED.draft_reply, updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO agent_action_requests (id, tenant_id, agent_type, action_type, payload, status, created_at, updated_at)
+VALUES (
+  'app_triage_1',
+  'e2e-tenant',
+  'operations',
+  'Draft Reply',
+  '{"inbox_message_id":"msg_triage_1","action_type":"Draft Reply"}'::jsonb,
+  'Pending',
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET status = 'Pending', payload = EXCLUDED.payload, updated_at = CURRENT_TIMESTAMP;
+
+ALTER TABLE inbox_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agent_action_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inbox_messages FORCE ROW LEVEL SECURITY;
+ALTER TABLE agent_action_requests FORCE ROW LEVEL SECURITY;
+
+-- Seeding data for Dashboard Triage Edit UI
+ALTER TABLE daily_work_items DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO daily_work_items (id, tenant_id, intent, status, customer_info, suggested_actions, created_at)
+VALUES (
+  'daily_work_triage_edit',
+  'e2e-tenant',
+  'agent_action',
+  'PENDING',
+  '{"department":"operations"}'::jsonb,
+  '{"inbox_message_id":"msg_triage_1","action_type":"Draft Reply"}'::jsonb,
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT (id) DO UPDATE
+SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP;
+
+ALTER TABLE daily_work_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_work_items FORCE ROW LEVEL SECURITY;
 COMMIT;
