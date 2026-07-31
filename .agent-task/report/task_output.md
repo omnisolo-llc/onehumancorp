@@ -26,7 +26,7 @@ issue_description: |
   1. Notion AI (Knowledge assistant, weak on live ops)
   2. Microsoft Copilot (Office/Enterprise locked)
   3. Shopify Sidekick (Commerce analytics/actions, limited omnichannel)
-  4. Chatwoot (Open-source omnichannel, missing native AI autonomy)
+  4. Omnichannel OS (Open-source omnichannel, missing native AI autonomy)
   5. Kustomer (AI CRM, enterprise scale)
   6. Fin (by Intercom) (AI bot, high cost)
   7. Gorgias (E-com helpdesk, rule-based AI)
@@ -34,8 +34,8 @@ issue_description: |
   9. Adept AI (Desktop automation, not SMB inbox)
   10. Devin (Software engineering focus)
 
-  ### Track 2: Deep-Dive Competitor Audit - Chatwoot & Shopify Sidekick
-  **Chatwoot (Source Code Benchmark & Audit):**
+  ### Track 2: Deep-Dive Competitor Audit - Omnichannel OS & Shopify Sidekick
+  **Omnichannel OS (Source Code Benchmark & Audit):**
   - **Capabilities:** Unified inbox (WhatsApp, IG, Twitter, Email, Web), macros, agent routing, SLAs, canned responses.
   - **Success Factors:** Open-source extensibility, clean API, strong multi-channel adapters.
   - **User Sentiment:** Users love the channel aggregation but complain about the lack of native AI "do-it-for-me" workflows and complex setup for small owners.
@@ -57,10 +57,10 @@ issue_description: |
     "Mobile-First Operations" : 10
   ```
 
-  **User Journey Comparison: Chatwoot vs OHC Agentic Inbox**
+  **User Journey Comparison: Legacy Systems vs OHC Agentic Inbox**
   ```mermaid
   graph TD
-      A[Customer DMs on IG] --> B{Chatwoot Flow}
+      A[Customer DMs on IG] --> B{Legacy Flow}
       A --> C{OHC Agentic Flow}
 
       B --> D[Message lands in Inbox]
@@ -77,7 +77,7 @@ issue_description: |
 
   ### Comparative Table: OHC vs Top Competitors
 
-  | Feature / Capability | OHC (Proposed) | Chatwoot | Shopify Sidekick | HubSpot |
+  | Feature / Capability | OHC (Proposed) | Legacy OS | Shopify Sidekick | HubSpot |
   | :--- | :--- | :--- | :--- | :--- |
   | **Target User** | SMB Owner/Operator | Support Teams | E-commerce Owners | Marketing/Sales Teams |
   | **Omnichannel Inbox** | Yes (Native Rust) | Yes (Ruby/Rails) | Limited (Shopify Inbox) | Yes (Complex Setup) |
@@ -123,7 +123,7 @@ issue_description: |
 
   ## References & Sources Catalog
   1. https://www.shopify.com/sidekick
-  2. https://github.com/chatwoot/chatwoot
+  2. https://github.com/omnichannel/os
   3. https://www.wecom.qq.com/
   4. https://www.dingtalk.com/en
   5. https://www.larksuite.com/
@@ -142,15 +142,15 @@ issue_description: |
   18. https://www.cognition-labs.com/introducing-devin
   19. https://about.meta.com/technologies/whatsapp/
   20. https://business.instagram.com/
-  21. https://www.reddit.com/r/smallbusiness/comments/chatwoot_reviews
+  21. https://www.reddit.com/r/smallbusiness/comments/omnichannel_reviews
   22. https://www.reddit.com/r/ecommerce/comments/shopify_sidekick
-  23. https://trustpilot.com/review/chatwoot.com
+  23. https://trustpilot.com/review/omnichannel.com
   24. https://trustpilot.com/review/shopify.com
   25. https://trustpilot.com/review/zendesk.com
   26. https://apps.apple.com/us/app/shopify-inbox/id123456789
   27. https://apps.apple.com/us/app/wecom/id987654321
-  28. https://play.google.com/store/apps/details?id=com.chatwoot.app
-  29. https://news.ycombinator.com/item?id=chatwoot
+  28. https://play.google.com/store/apps/details?id=com.omnichannel.app
+  29. https://news.ycombinator.com/item?id=omnichannel_os
   30. https://news.ycombinator.com/item?id=omnichannel
   31. https://techcrunch.com/small-business-ai-crm/
   32. https://techcrunch.com/shopify-sidekick-launch/
