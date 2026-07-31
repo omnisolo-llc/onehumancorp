@@ -64,16 +64,3 @@ CREATE POLICY conversations_tenant_isolation ON conversations FOR ALL USING (ten
 
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY messages_tenant_isolation ON messages FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
-
--- +goose Down
-DROP POLICY IF EXISTS messages_tenant_isolation ON messages;
-DROP TABLE IF EXISTS messages;
-
-DROP POLICY IF EXISTS conversations_tenant_isolation ON conversations;
-DROP TABLE IF EXISTS conversations;
-
-DROP POLICY IF EXISTS contacts_tenant_isolation ON contacts;
-DROP TABLE IF EXISTS contacts;
-
-DROP POLICY IF EXISTS inboxes_tenant_isolation ON inboxes;
-DROP TABLE IF EXISTS inboxes;
