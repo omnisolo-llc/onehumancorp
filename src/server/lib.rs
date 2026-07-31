@@ -3404,6 +3404,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .with_state(omnichannel_webhook_state);
 
+    let native_chat_router = api::native_chat::router(db.clone(), hub.redis_client().expect("redis client is required for native chat"));
+
     let inbox_webhook_state = api::inbox::webhook::OmnichannelWebhookState {
         orchestrator: dept_orchestrator.clone(),
         db: db.clone(),
@@ -7877,6 +7879,7 @@ async fn create_ui_bom_item_handler(
             omnichannel_webhook_router,
             http_auth_store.clone(),
         ))
+        .nest("/api/v1/native_chat", native_chat_router)
         .nest(
             "/api/v1/inbox",
             protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),

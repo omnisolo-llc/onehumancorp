@@ -10,6 +10,7 @@ exports_files(
     [
         "work_triage.rs",
         "walkup.rs",
+        "native_chat.rs",
         "perplexity.rs",
         "assistant.rs",
         "autodream.rs",
@@ -71,6 +72,7 @@ rust_library(
     srcs = [
         "work_triage.rs",
         "walkup.rs",
+        "native_chat.rs",
         "perplexity.rs",
         "assistant.rs",
         "terminal_api.rs",

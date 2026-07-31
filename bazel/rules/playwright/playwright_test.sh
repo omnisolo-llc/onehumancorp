@@ -87,6 +87,9 @@ playwright_spec_workspace_name() {
     src/e2e/*.spec.ts)
       printf '%s\n' "$rel"
       ;;
+    */native_chat.spec.ts|native_chat.spec.ts)
+      printf 'src/e2e/native_chat.spec.ts\n'
+      ;;
     src/ui/next/e2e/*.spec.ts|src/ui/next/src/e2e/*.spec.ts)
       # Preserve the original directory depth so relative imports continue to
       # resolve, but avoid src/ui/next/node_modules: it contains a second
