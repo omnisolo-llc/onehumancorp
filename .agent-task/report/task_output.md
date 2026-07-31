@@ -3,10 +3,10 @@ issue_description: |
   # Native Rust Omnichannel Chat System for OHC
 
   **Problem Statement:**
-  OHC relies on a legacy, unmaintained external dependency (Chatwoot) for omnichannel communication, which creates scaling bottlenecks, operational complexity, and disjointed user experiences. We need to replace it with a high-performance, natively integrated Rust-based chat system that strictly enforces multi-tenant isolation, supports real-time WebSocket communication, integrates seamlessly with OHC's AI triage, and provides a beautiful mobile-first UI for small-business owners.
+  OHC relies on a legacy, unmaintained external dependency (the legacy external dependency) for omnichannel communication, which creates scaling bottlenecks, operational complexity, and disjointed user experiences. We need to replace it with a high-performance, natively integrated Rust-based chat system that strictly enforces multi-tenant isolation, supports real-time WebSocket communication, integrates seamlessly with OHC's AI triage, and provides a beautiful mobile-first UI for small-business owners.
 
   **Research & Discovery:**
-  - Audited Chatwoot's source code, specifically `app/models/conversation.rb`, `app/models/message.rb`, `app/models/channel/web_widget.rb`, and `app/models/contact.rb`.
+  - Audited the legacy external dependency's source code, specifically `app/models/conversation.rb`, `app/models/message.rb`, `app/models/channel/web_widget.rb`, and `app/models/contact.rb`.
   - Identified core data models needed: Inbox, Channel, Contact, Conversation, Message.
   - Verified current OHC scaffolding in `src/server/services/chat` and `src/server/integrations/chat`.
 
