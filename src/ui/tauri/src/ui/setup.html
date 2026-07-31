@@ -6,6 +6,20 @@
     <title>Setup - OneHumanCorp</title>
     <link rel="stylesheet" href="globals.css" />
     <style>
+        .flex-row-center {
+          display: flex;
+          align-items: center;
+        }
+        .flex-row-center input {
+          flex: 1;
+          border: none;
+          background: transparent;
+          padding: 0;
+          margin-right: 8px;
+        }
+        .flex-row-center input:focus {
+          outline: none;
+        }
       body {
         align-items: center;
         background: #f5f5f7;
@@ -151,7 +165,11 @@
 
       <div id="step-domain" class="step">
         <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <div class="glass-control glassmorphism flex-row-center">
+          <input type="text" id="domain-name" data-testid="domain-name" placeholder="Domain Name" />
+          <span>.ohc.app</span>
+        </div>
+        <div id="domain-error" class="error" style="display: none; color: #FF3B30; margin-top: 8px; font-size: 14px;"></div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -260,7 +278,7 @@
         }
 
         if (state.step > 0 && state.step < stepOrder.length) {
-            goToStep(stepOrder[state.step]);
+            window.goToStep(stepOrder[state.step]);
         }
       }
 
@@ -319,7 +337,36 @@
         });
       }
 
-      function goToStep(stepId) {
+      window.validateStep = function(stepId) {
+        if (stepId === 'step-domain') {
+          const domainInput = document.getElementById('domain-name');
+          const errorEl = document.getElementById('domain-error');
+          if (!domainInput || !errorEl) return true;
+
+          const val = domainInput.value.trim();
+          errorEl.style.display = 'none';
+          errorEl.innerText = '';
+
+          if (val.length < 3) {
+            errorEl.innerText = 'Domain name must be at least 3 characters.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+          if (!/^[a-z0-9-]+$/.test(val)) {
+            errorEl.innerText = 'Domain name can contain only lowercase letters, numbers, and hyphens.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+          if (val.startsWith('-') || val.endsWith('-')) {
+            errorEl.innerText = 'Domain name cannot start or end with a hyphen.';
+            errorEl.style.display = 'block';
+            return false;
+          }
+        }
+        return true;
+      };
+
+      window.goToStep = function(stepId) {
         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
         document.getElementById(stepId).classList.add('active');
         state.step = stepOrder.indexOf(stepId);
@@ -338,7 +385,10 @@
               }
               document.getElementById('name-error').style.display = 'none';
             }
-            goToStep(e.target.dataset.next);
+            if (window.validateStep && window.validateStep(currentStep) === false) {
+              return; // Stop transition if validation fails
+            }
+            window.goToStep(e.target.dataset.next);
           }
         });
       });
@@ -349,13 +399,10 @@
           if (window.validateStep) {
              const errorEl = document.getElementById('domain-error');
              if (errorEl && errorEl.style.display !== 'none') {
-                 const domainInput = document.getElementById('domain-name');
-                 if (domainInput) {
-                    const val = domainInput.value.trim();
-                    if (val.length >= 3 && /^[a-z0-9-]+$/.test(val) && !val.startsWith('-') && !val.endsWith('-')) {
-                        errorEl.style.display = 'none';
-                        errorEl.innerText = '';
-                    }
+                 const val = domainInputEl.value.trim();
+                 if (val.length >= 3 && /^[a-z0-9-]+$/.test(val) && !val.startsWith('-') && !val.endsWith('-')) {
+                     errorEl.style.display = 'none';
+                     errorEl.innerText = '';
                  }
              }
           }
