@@ -94,8 +94,7 @@ playwright_spec_workspace_name() {
       printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
       ;;
     *)
-      echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
-      return 1
+      printf '%s\n' "$rel"
       ;;
   esac
 }

@@ -87,40 +87,44 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
     const margin = 16;
     const position = currentStep.position || 'bottom';
 
-    switch (position) {
-      case 'bottom':
-        bubbleStyle = {
+    const positionMap: Record<NonNullable<Step['position']>, () => { bubbleStyle: React.CSSProperties; arrowClass: string }> = {
+      bottom: () => ({
+        bubbleStyle: {
           top: targetRect.bottom + margin,
           left: targetRect.left + (targetRect.width / 2),
-          transform: 'translateX(-50%)'
-        };
-        arrowClass = "bottom-full left-1/2 -translate-x-1/2 border-b-white/90 border-x-transparent border-t-0 border-8";
-        break;
-      case 'top':
-        bubbleStyle = {
+          transform: 'translateX(-50%)',
+        },
+        arrowClass: "bottom-full left-1/2 -translate-x-1/2 border-b-white/90 border-x-transparent border-t-0 border-8",
+      }),
+      top: () => ({
+        bubbleStyle: {
           top: targetRect.top - margin,
           left: targetRect.left + (targetRect.width / 2),
-          transform: 'translate(-50%, -100%)'
-        };
-        arrowClass = "top-full left-1/2 -translate-x-1/2 border-t-white/90 border-x-transparent border-b-0 border-8";
-        break;
-      case 'right':
-         bubbleStyle = {
+          transform: 'translate(-50%, -100%)',
+        },
+        arrowClass: "top-full left-1/2 -translate-x-1/2 border-t-white/90 border-x-transparent border-b-0 border-8",
+      }),
+      right: () => ({
+        bubbleStyle: {
           top: targetRect.top + (targetRect.height / 2),
           left: targetRect.right + margin,
-          transform: 'translateY(-50%)'
-        };
-        arrowClass = "right-full top-1/2 -translate-y-1/2 border-r-white/90 border-y-transparent border-l-0 border-8";
-        break;
-      case 'left':
-         bubbleStyle = {
+          transform: 'translateY(-50%)',
+        },
+        arrowClass: "right-full top-1/2 -translate-y-1/2 border-r-white/90 border-y-transparent border-l-0 border-8",
+      }),
+      left: () => ({
+        bubbleStyle: {
           top: targetRect.top + (targetRect.height / 2),
           left: targetRect.left - margin,
-          transform: 'translate(-100%, -50%)'
-        };
-        arrowClass = "left-full top-1/2 -translate-y-1/2 border-l-white/90 border-y-transparent border-r-0 border-8";
-        break;
-    }
+          transform: 'translate(-100%, -50%)',
+        },
+        arrowClass: "left-full top-1/2 -translate-y-1/2 border-l-white/90 border-y-transparent border-r-0 border-8",
+      }),
+    };
+
+    const config = positionMap[position]();
+    bubbleStyle = config.bubbleStyle;
+    arrowClass = config.arrowClass;
   }
 
   return (
