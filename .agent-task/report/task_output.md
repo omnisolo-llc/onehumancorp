@@ -1,18 +1,18 @@
-issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Implement Custom Rust Omnichannel Chat System"
 issue_description: |
   # Research Report: Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  OHC currently relies on external Chatwoot services for omnichannel customer support, which violates our core mandate of a single cohesive platform without external dependencies for core capabilities. Relying on Chatwoot limits our control over the multi-tenant database, forces non-native integration paths, and impacts performance due to language mismatch (Ruby vs. Rust) and the complexity of maintaining two separate systems. The user needs a seamlessly integrated messaging inbox natively within OHC.
+  OHC currently relies on external services for omnichannel customer support, which violates our core mandate of a single cohesive platform without external dependencies for core capabilities. Relying on an external system limits our control over the multi-tenant database, forces non-native integration paths, and impacts performance due to language mismatch (Ruby vs. Rust) and the complexity of maintaining two separate systems. The user needs a seamlessly integrated messaging inbox natively within OHC.
 
   ## Research Report
-  - We performed a codebase audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`), specifically focusing on `app/models/` to understand their domain logic:
+  - We performed a codebase audit of the external chat system's source code, specifically focusing on its data models to understand their domain logic:
     - **Conversations**: Represent threads of communication, associated with accounts, contacts, and inboxes. Contains `additional_attributes` (JSONB).
     - **Messages**: Individual pieces of communication within a conversation. Types (incoming, outgoing, activity, template). `content_attributes` (JSON) and `additional_attributes`.
     - **Contacts**: Represents customers with custom attributes.
     - **Inboxes**: Define channels (web widget, API, email, etc.) and assignment policies.
 
-  - The existing `src/proto/inbox.proto` has basic definitions (`OmniMessage`, `Conversation`) but lacks the depth to replicate Chatwoot's extensive feature set like assigning agents, snoozing, channel types, custom attributes, and SLA policies. We need to bridge this gap with robust Rust structures.
+  - The existing `src/proto/inbox.proto` has basic definitions (`OmniMessage`, `Conversation`) but lacks the depth to replicate extensive feature sets like assigning agents, snoozing, channel types, custom attributes, and SLA policies. We need to bridge this gap with robust Rust structures.
 
   ## Design Doc
   - **Architecture Diagram**:
@@ -31,7 +31,7 @@ issue_description: |
     - AI acts as the first responder or "Customer Assistant" drafting replies (`draft_reply` already in proto) based on context, reducing the manual burden on the owner.
 
   ## Implementation Prompt
-  - Create the foundational Rust API endpoints and PostgreSQL database schemas to fully replace Chatwoot's core messaging flow.
+  - Create the foundational Rust API endpoints and PostgreSQL database schemas to fully replace the core messaging flow.
   - Implement the `Conversation` and `Message` entities ensuring strict `tenant_id` based multi-tenancy.
   - Define gRPC/REST endpoints for creating and fetching conversations and messages.
   - *Acceptance Criteria*:
