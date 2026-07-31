@@ -1,15 +1,15 @@
-issue_title: "Implement Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Implement Native Rust Omnichannel Chat System (ExternalChat Replacement)"
 issue_description: |
   ## Problem Statement
-  OHC currently relies on external systems (like Chatwoot) for omnichannel customer communication, which introduces latency, multi-tenancy risks, and fragments the unified owner experience. Non-technical owners (like Maya the baker and Carlos the handyman) need a seamless, instantaneous inbox where DMs, emails, and SMS messages appear in a single unified thread inside OHC. The reliance on third-party integrations violates the "One Human Corp" promise of a fully integrated, lightning-fast work assistant and limits our ability to inject AI agents directly into the chat stream with full tenant context.
+  OHC currently relies on external systems (like ExternalChat) for omnichannel customer communication, which introduces latency, multi-tenancy risks, and fragments the unified owner experience. Non-technical owners (like Maya the baker and Carlos the handyman) need a seamless, instantaneous inbox where DMs, emails, and SMS messages appear in a single unified thread inside OHC. The reliance on third-party integrations violates the "One Human Corp" promise of a fully integrated, lightning-fast work assistant and limits our ability to inject AI agents directly into the chat stream with full tenant context.
 
   ## Research Report
-  - **Chatwoot Source Code Audit**: An analysis of the Chatwoot `db/schema.rb` reveals core entities necessary for an omnichannel inbox:
+  - **ExternalChat Source Code Audit**: An analysis of the ExternalChat `db/schema.rb` reveals core entities necessary for an omnichannel inbox:
     - `conversations`: Tracks the thread lifecycle across channels, bounded by `account_id` and `inbox_id`.
     - `messages`: Stores individual chat payloads, maintaining sender context, content type, and metadata, scoped to `conversation_id`.
     - `inboxes` & `channel_*` tables (e.g., WhatsApp, Email, Web Widget): Act as adapters parsing incoming external payloads into normalized messages.
   - **Competitive Analysis**: Shopify Inbox and WeCom excel because their chat infrastructure is native to the platform, meaning order data, inventory, and chat context share the exact same database transaction space.
-  - **Identified Gap**: OHC requires a native Rust implementation of the Chatwoot data model and WebSocket delivery system to guarantee multi-tenant row-level security (RLS) in PostgreSQL, sub-10ms message delivery, and real-time AI agent interjection.
+  - **Identified Gap**: OHC requires a native Rust implementation of the ExternalChat data model and WebSocket delivery system to guarantee multi-tenant row-level security (RLS) in PostgreSQL, sub-10ms message delivery, and real-time AI agent interjection.
 
   ## Design Doc
   ### Architecture Diagram
