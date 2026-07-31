@@ -1,0 +1,30 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_integrations_chat",
+    srcs = [
+        "src/lib.rs",
+        "src/models.rs",
+        "src/service.rs",
+        "src/websocket.rs",
+        "src/channels.rs",
+        "src/ai_agent.rs",
+    ],
+    crate_root = "src/lib.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/integrations/core:server_integrations_core",
+        "@crates//:async-trait",
+        "@crates//:axum",
+        "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)

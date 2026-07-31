@@ -1,5 +1,8 @@
 pub mod catalog;
 pub mod registry;
+pub use ::server_integrations_chat as chat;
+
+
 pub use ::server_integrations_pubsub as pubsub;
 pub use ::server_integrations_nats as nats;
 pub mod stripe;
