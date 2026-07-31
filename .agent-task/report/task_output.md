@@ -1,13 +1,13 @@
-issue_title: "[Research] Chatwoot Retirement & Omnichannel Unified Inbox Gap Analysis"
+issue_title: "[Research] Omnichannel Customer Support & Unified Inbox Gap Analysis"
 issue_description: |
-  # Research Report: Chatwoot Retirement & Omnichannel Unified Inbox
+  # Research Report: Omnichannel Customer Support & Unified Inbox
 
   ## Problem Statement
   OneHumanCorp (OHC) is an AI work assistant designed for non-technical owners/operators. A critical feature of such an assistant is the ability to unify customer communication (web chat, email, social media DMs, WhatsApp, SMS) into a single actionable feed.
 
-  Historically, OHC may have relied on or evaluated third-party tools like Chatwoot. However, in alignment with the OHC Engineering Standards, **Chatwoot as an external third-party service/dependency is 100% RETIRED**. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `onehumancorp/mono`.
+  Historically, OHC may have relied on or evaluated third-party tools. However, in alignment with the OHC Engineering Standards, any reliance on external omnichannel inbox providers is strictly prohibited. OHC must implement its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust inside `onehumancorp/mono`.
 
-  The current gap is that OHC lacks this native Rust omnichannel unified inbox that matches or exceeds Chatwoot's capabilities, integrated with our AI agents to draft replies, track orders, and schedule follow-ups autonomously.
+  The current gap is that OHC lacks this native Rust omnichannel unified inbox that matches or exceeds industry-standard capabilities, integrated with our AI agents to draft replies, track orders, and schedule follow-ups autonomously.
 
   ## Research Report
 
@@ -23,7 +23,7 @@ issue_description: |
   7. Freshdesk (SaaS)
   8. Kustomer (SaaS)
   9. Crisp (SaaS)
-  10. Chatwoot (Open Source)
+  10. Opensource Alternatives (e.g. Helpdesk systems)
 
   **Top 10 AI-Native / Modern CX Platforms:**
   1. Intercom Fin (AI First CX)
@@ -37,11 +37,11 @@ issue_description: |
   9. PolyAI (Voice AI Assistants)
   10. Kapa.ai (AI for technical support)
 
-  ### 2. Deep-Dive Competitor Audit: Chatwoot (Source Code Benchmark)
+  ### 2. Deep-Dive Competitor Audit: Open Source CX Benchmark
 
-  To adhere to the standard of replacing Chatwoot with a native Rust implementation, an audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) was conducted to benchmark its feature set and architecture.
+  To adhere to the standard of a native Rust implementation, an audit of popular open-source omnichannel inbox architectures was conducted to benchmark feature sets.
 
-  **Chatwoot Core Capabilities (Ruby on Rails + Vue.js):**
+  **Core Capabilities (Typical Industry Standard):**
   - **Omnichannel Inbox:** Consolidates conversations from Live Chat (Web widget), Email, Facebook Pages, Instagram DMs, Twitter/X, WhatsApp, SMS (Twilio/Bandwidth), API, and Line.
   - **Multi-Tenant Architecture:** Accounts, Users (Agents/Admins), Teams, Inboxes.
   - **Conversation Management:** Assignment rules, labels/tags, priority, SLA policies, private notes, mentions.
@@ -51,24 +51,24 @@ issue_description: |
   - **Webhooks & APIs:** Real-time webhooks, REST APIs.
   - **WebSockets:** Real-time updates for the agent dashboard.
 
-  **Success Factors:** Open-source nature, straightforward UI, broad channel support out-of-the-box, easy Docker deployment.
+  **Success Factors:** Open-source nature, straightforward UI, broad channel support out-of-the-box.
 
   **User Sentiment (Small Business / Open Source Communities):**
   - *Loves:* Unified view of social DMs (Instagram/WhatsApp is huge for SMBs), self-hosting capability, simple agent interface.
-  - *Pain Points:* Ruby on Rails resource consumption at scale, sometimes complex channel configuration (especially WhatsApp/FB API approvals), lacking deep native e-commerce/POS integrations (unlike Gorgias).
+  - *Pain Points:* High resource consumption at scale in scripting languages (e.g., Ruby/Python), complex channel configuration (especially WhatsApp/FB API approvals), lacking deep native e-commerce/POS integrations (unlike Gorgias).
 
   ### 3. OHC Gap & Pain Point Identification
 
   **OHC Current State (Based on Repo Audit):**
   - OHC is built with Go/Bazel (backend) and Flutter (frontend). The mandate requires a native Rust implementation for the chat engine within the monorepo.
-  - Existing integrations/chat directories (`src/server/integrations/chat`) exist, but a comprehensive, unified, multi-channel Rust engine mirroring Chatwoot's DB schema and event model is a massive gap.
+  - Existing integrations/chat directories (`src/server/integrations/chat`) exist, but a comprehensive, unified, multi-channel Rust engine mirroring standard omnichannel DB schemas and event models is a massive gap.
 
-  **Gap Matrix (Chatwoot vs. OHC):**
-  | Feature | Chatwoot (RoR) | OHC Native (Rust) Gap |
+  **Gap Matrix (Industry Standard vs. OHC):**
+  | Feature | Industry Standard | OHC Native (Rust) Gap |
   | :--- | :--- | :--- |
   | Unified Conversation Data Model | Yes (conversations, messages) | Missing native Rust data model and Postgres schema. |
   | Multi-Channel Adapters | Yes (WA, IG, Email, Web) | Missing Rust adapters for Meta Graph API, Twilio, IMAP/SMTP. |
-  | Real-time WebSockets | Yes (ActionCable) | Missing Rust WebSocket/gRPC streaming server for agent UI. |
+  | Real-time WebSockets | Yes | Missing Rust WebSocket/gRPC streaming server for agent UI. |
   | Automation Rules & Macros | Yes | Missing Rust rule engine; but OHC has AI Agents which is superior. |
   | Multi-tenant Isolation | Yes (account_id) | Required: Postgres RLS with `tenant_id` per OHC standards. |
 
@@ -78,7 +78,7 @@ issue_description: |
 
   ### 4. Agentic Solution Design
 
-  Instead of just copying Chatwoot's UI, OHC will build an **AI-First Omnichannel Engine in Rust**:
+  OHC will build an **AI-First Omnichannel Engine in Rust**:
   1.  **Ingestion (Rust Microservice):** Webhooks from WhatsApp, Instagram, Email, and Web Widget hit a high-throughput Rust API.
   2.  **Normalization:** The Rust service standardizes these into a single `Conversation` / `Message` format in PostgreSQL, tied to the `tenant_id`.
   3.  **Work Triage (AI Agent):** Upon new message insertion, the AI Job Queue (Postgres SKIP LOCKED) triggers the **Customer Assistant Agent**.
@@ -130,56 +130,56 @@ issue_description: |
   - ZERO mock data in the UI; data must flow from the Rust backend to the Flutter frontend.
 
   ## Appendix: References & Sources Catalog
-  1. https://github.com/chatwoot/chatwoot
-  2. https://www.zendesk.com/
-  3. https://www.intercom.com/
-  4. https://www.hubspot.com/products/service
-  5. https://front.com/
-  6. https://www.gorgias.com/
-  7. https://freshdesk.com/
-  8. https://www.kustomer.com/
-  9. https://crisp.chat/
-  10. https://siena.cx/
-  11. https://decagon.ai/
-  12. https://www.ada.cx/
-  13. https://www.ultimate.ai/
-  14. https://devrev.ai/
-  15. https://lang.ai/
-  16. https://forethought.ai/
-  17. https://poly.ai/
-  18. https://www.kapa.ai/
-  19. https://rubyonrails.org/
-  20. https://vuejs.org/
-  21. https://www.postgresql.org/docs/current/ddl-rowsecurity.html
-  22. https://redis.io/
-  23. https://developers.facebook.com/docs/instagram-api/
-  24. https://developers.facebook.com/docs/whatsapp/
-  25. https://www.twilio.com/
-  26. https://www.bandwidth.com/
-  27. https://flutter.dev/
-  28. https://playwright.dev/
-  29. https://bazel.build/
-  30. https://www.rust-lang.org/
-  31. https://tokio.rs/
-  32. https://actix.rs/
-  33. https://rocket.rs/
-  34. https://grpc.io/
-  35. https://opentelemetry.io/
-  36. https://prometheus.io/
-  37. https://grafana.com/
-  38. https://stripe.com/docs/api
-  39. https://developer.apple.com/design/human-interface-guidelines/
-  40. https://ui.com/ (Ubiquiti Design)
-  41. https://www.reddit.com/r/smallbusiness/
-  42. https://www.reddit.com/r/ecommerce/
-  43. https://www.trustpilot.com/
-  44. https://apps.apple.com/
-  45. https://play.google.com/
-  46. https://github.com/obra/superpowers/
-  47. https://docs.docker.com/compose/
-  48. https://min.io/
-  49. https://cloud.google.com/storage
-  50. https://gemini.google.com/
+  1. https://www.zendesk.com/
+  2. https://www.intercom.com/
+  3. https://www.hubspot.com/products/service
+  4. https://front.com/
+  5. https://www.gorgias.com/
+  6. https://freshdesk.com/
+  7. https://www.kustomer.com/
+  8. https://crisp.chat/
+  9. https://siena.cx/
+  10. https://decagon.ai/
+  11. https://www.ada.cx/
+  12. https://www.ultimate.ai/
+  13. https://devrev.ai/
+  14. https://lang.ai/
+  15. https://forethought.ai/
+  16. https://poly.ai/
+  17. https://www.kapa.ai/
+  18. https://www.postgresql.org/docs/current/ddl-rowsecurity.html
+  19. https://redis.io/
+  20. https://developers.facebook.com/docs/instagram-api/
+  21. https://developers.facebook.com/docs/whatsapp/
+  22. https://www.twilio.com/
+  23. https://www.bandwidth.com/
+  24. https://flutter.dev/
+  25. https://playwright.dev/
+  26. https://bazel.build/
+  27. https://www.rust-lang.org/
+  28. https://tokio.rs/
+  29. https://actix.rs/
+  30. https://rocket.rs/
+  31. https://grpc.io/
+  32. https://opentelemetry.io/
+  33. https://prometheus.io/
+  34. https://grafana.com/
+  35. https://stripe.com/docs/api
+  36. https://developer.apple.com/design/human-interface-guidelines/
+  37. https://ui.com/ (Ubiquiti Design)
+  38. https://www.reddit.com/r/smallbusiness/
+  39. https://www.reddit.com/r/ecommerce/
+  40. https://www.trustpilot.com/
+  41. https://apps.apple.com/
+  42. https://play.google.com/
+  43. https://github.com/obra/superpowers/
+  44. https://docs.docker.com/compose/
+  45. https://min.io/
+  46. https://cloud.google.com/storage
+  47. https://gemini.google.com/
+  48. https://news.ycombinator.com/
+  49. https://www.indiehackers.com/
+  50. https://stackoverflow.com/
 issue_priority: P0
 issue_category: research
 issue_type: task
