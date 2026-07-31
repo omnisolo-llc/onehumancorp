@@ -1,12 +1,12 @@
 issue_title: "Architecture Design: Native Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) requires an integrated, high-performance omnichannel chat system. Historically, businesses stitch together multiple tools to handle WhatsApp, web widget, Instagram DMs, etc., leading to fragmentation. Our goal is to build a native Rust chat system within OHC, completely replacing any external dependencies like Chatwoot, while providing AI triage and agent capabilities directly over these channels. This is essential for non-technical operators (like Maya and Carlos) who need a unified inbox that requires zero configuration.
+  OneHumanCorp (OHC) requires an integrated, high-performance omnichannel chat system. Historically, businesses stitch together multiple tools to handle WhatsApp, web widget, Instagram DMs, etc., leading to fragmentation. Our goal is to build a native Rust chat system within OHC, completely replacing any external dependencies like legacy chat engines, while providing AI triage and agent capabilities directly over these channels. This is essential for non-technical operators (like Maya and Carlos) who need a unified inbox that requires zero configuration.
 
   ## Research Report
-  We conducted an architectural audit of Chatwoot's Ruby on Rails source code, specifically reviewing its models, channels, controllers, and real-time infrastructure. Chatwoot centers around a deeply relational model: `Account`, `Inbox`, `Channel` (WhatsApp, WebWidget, etc.), `Contact`, `Conversation`, and `Message`.
+  We conducted an architectural audit of the legacy Ruby on Rails source code, specifically reviewing its models, channels, controllers, and real-time infrastructure. The legacy system centers around a deeply relational model: `Account`, `Inbox`, `Channel` (WhatsApp, WebWidget, etc.), `Contact`, `Conversation`, and `Message`.
 
-  Key Insights from the Chatwoot Audit:
+  Key Insights from the Legacy Audit:
   - **Inboxes and Channels:** Accounts have multiple Inboxes, each tied to a specific Channel type. This abstraction allows the core `Conversation` and `Message` models to remain channel-agnostic.
   - **Conversations:** Link a `Contact` with an `Inbox`.
   - **Messages:** Handle various types (incoming, outgoing, template) and content types.
