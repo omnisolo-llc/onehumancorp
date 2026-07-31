@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// Represents the status of a conversation, mirroring Chatwoot's conversation.status.
+/// Represents the status of a conversation, mirroring the legacy system's conversation.status.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum ConversationStatus {
@@ -11,7 +11,7 @@ pub enum ConversationStatus {
     Snoozed,
 }
 
-/// Represents the contact (visitor, lead, etc.), mirroring Chatwoot's contact.
+/// Represents the contact (visitor, lead, etc.), mirroring the legacy system's contact.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Contact {
     pub id: i64,
@@ -26,7 +26,7 @@ pub struct Contact {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Represents an inbox (channel), mirroring Chatwoot's inbox.
+/// Represents an inbox (channel), mirroring the legacy system's inbox.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Inbox {
     pub id: i64,
@@ -40,7 +40,7 @@ pub struct Inbox {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Represents a conversation, mirroring Chatwoot's conversation.
+/// Represents a conversation, mirroring the legacy system's conversation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Conversation {
     pub id: i64,
@@ -55,7 +55,7 @@ pub struct Conversation {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Represents the type of a message, mirroring Chatwoot's message.message_type.
+/// Represents the type of a message, mirroring the legacy system's message.message_type.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum MessageType {
     Incoming = 0,
@@ -64,7 +64,7 @@ pub enum MessageType {
     Template = 3,
 }
 
-/// Represents a message, mirroring Chatwoot's message.
+/// Represents a message, mirroring the legacy system's message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
     pub id: i64,

@@ -39,8 +39,8 @@ impl PydanticToolExecutor<DraftResponseArgs> for DraftResponseExecutor {
 
 pub fn draft_response_tool() -> Tool {
     Tool {
-        name: "OmnichannelDraftResponse".to_string(),
-        description: "Drafts a copilot response for a conversation, allowing a human agent to review and send it later. (Omnichannel Chat)".to_string(),
+        name: "OmniDraftResponse".to_string(),
+        description: "Drafts a copilot response for a conversation, allowing a human agent to review and send it later. (Omni Chat)".to_string(),
         is_read_only: false,
         parameters: serde_json::json!({
             "type": "object",
@@ -84,8 +84,8 @@ impl PydanticToolExecutor<ClassifyIntentArgs> for ClassifyIntentExecutor {
 
 pub fn classify_intent_tool() -> Tool {
     Tool {
-        name: "OmnichannelClassifyIntent".to_string(),
-        description: "Classifies the user intent of a conversation to route it appropriately. (Omnichannel Chat)".to_string(),
+        name: "OmniClassifyIntent".to_string(),
+        description: "Classifies the user intent of a conversation to route it appropriately. (Omni Chat)".to_string(),
         is_read_only: false,
         parameters: serde_json::json!({
             "type": "object",
@@ -129,8 +129,8 @@ impl PydanticToolExecutor<HandoffToHumanArgs> for HandoffToHumanExecutor {
 
 pub fn handoff_to_human_tool() -> Tool {
     Tool {
-        name: "OmnichannelHandoffToHuman".to_string(),
-        description: "Hands off a conversation from the AI agent to a human agent. (Omnichannel Chat)".to_string(),
+        name: "OmniHandoffToHuman".to_string(),
+        description: "Hands off a conversation from the AI agent to a human agent. (Omni Chat)".to_string(),
         is_read_only: false,
         parameters: serde_json::json!({
             "type": "object",
@@ -173,8 +173,8 @@ impl PydanticToolExecutor<AutoRespondArgs> for AutoRespondExecutor {
 
 pub fn auto_respond_tool() -> Tool {
     Tool {
-        name: "OmnichannelAutoRespond".to_string(),
-        description: "Sends an automated reply directly to the customer in the conversation. (Omnichannel Chat)".to_string(),
+        name: "OmniAutoRespond".to_string(),
+        description: "Sends an automated reply directly to the customer in the conversation. (Omni Chat)".to_string(),
         is_read_only: false,
         parameters: serde_json::json!({
             "type": "object",
