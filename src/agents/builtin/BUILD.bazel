@@ -87,6 +87,7 @@ rust_library(
         "mesh/mod.rs",
         "mesh/transport.rs",
         "observability.rs",
+        "omnichannel_chat.rs",
         "perplexity.rs",
         "observation_masking.rs",
         "omni_context.rs",
