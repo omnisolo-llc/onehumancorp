@@ -247,13 +247,27 @@ impl VerificationManager {
     /// Run sensors *after* an action is taken to observe its result.
     pub async fn run_sensors_after_action(&self, output: &str, task: &str, ui_state_path: Option<&str>) -> Result<(), String> {
         let mut errors = Vec::new();
-        if let Some(path) = ui_state_path
-            && let Err(e) = self.run_visual_verifiers(path).await {
-                errors.push(e);
+
+        // Run both visual and inferential sensors concurrently
+        let visual_fut = async {
+            if let Some(path) = ui_state_path {
+                self.run_visual_verifiers(path).await
+            } else {
+                Ok(())
             }
-        if let Err(e) = self.run_inferential_sensors(output, task).await {
+        };
+
+        let inferential_fut = self.run_inferential_sensors(output, task);
+
+        let (visual_result, inferential_result) = tokio::join!(visual_fut, inferential_fut);
+
+        if let Err(e) = visual_result {
             errors.push(e);
         }
+        if let Err(e) = inferential_result {
+            errors.push(e);
+        }
+
         if !errors.is_empty() {
             return Err(errors.join("\n---\n"));
         }
@@ -847,5 +861,44 @@ mod c4_architectural_mechanics_tests {
         assert!(manager.run_sensors_after_action("output", "task", None).await.is_ok());
         assert!(!*guide_called.lock().await, "Guides must NOT be called after action");
         assert!(*sensor_called.lock().await, "Sensors must be called after action to observe result");
+    }
+
+    struct MockFailingVisualVerifier;
+
+    #[async_trait::async_trait]
+    impl VisualVerifier for MockFailingVisualVerifier {
+        async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            Err("Visual check failed".to_string())
+        }
+    }
+
+    struct MockFailingInferentialSensor;
+
+    #[async_trait::async_trait]
+    impl InferentialSensor for MockFailingInferentialSensor {
+        async fn verify_inferential(&self, _output: &str, _task: &str) -> Result<(), String> {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            Err("Inferential check failed".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_run_sensors_after_action_concurrent_error_aggregation() {
+        let mut manager = VerificationManager::new();
+        manager.add_visual(Arc::new(MockFailingVisualVerifier));
+        manager.add_inferential(Arc::new(MockFailingInferentialSensor));
+
+        let start = tokio::time::Instant::now();
+        let res = manager.run_sensors_after_action("output", "task", Some("path")).await;
+        let elapsed = start.elapsed();
+
+        // Both tests take 50ms. If they run concurrently, it should take ~50ms total, not 100ms.
+        assert!(elapsed < std::time::Duration::from_millis(90), "Sensors should run concurrently");
+
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(err.contains("Visual check failed"));
+        assert!(err.contains("Inferential check failed"));
     }
 }
