@@ -51,10 +51,9 @@
     "ink-testing-library": "^4.0.0",
     "ink-text-input": "^6.0.0",
     "jsdom": "^29.1.1",
-    "minimatch": "^10.2.6",
     "next-router-mock": "^1.0.5",
     "playwright": "^1.61.1",
-    "postcss": "8.5.25",
+    "postcss": "8.5.19",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "tailwindcss": "^4.3.0",
@@ -74,7 +73,7 @@
     "form-data": "4.0.6",
     "immutable": "4.3.9",
     "js-yaml": "4.3.0",
-    "postcss": "8.5.25",
+    "postcss": "8.5.19",
     "sharp": "0.35.0",
     "tsx": {
       "esbuild": "0.28.1"
