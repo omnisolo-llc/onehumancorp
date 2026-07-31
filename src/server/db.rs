@@ -92,7 +92,7 @@ pub fn secure_pg_pool_options() -> sqlx::postgres::PgPoolOptions {
         .after_release(|conn, _meta| {
             Box::pin(async move {
                 use sqlx::Executor;
-                conn.execute("RESET ROLE; RESET ALL;").await?;
+                conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                 Ok(true)
             })
         })
@@ -363,7 +363,7 @@ impl DB {
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("RESET ROLE; RESET ALL;").await?;
+                        conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                         Ok(true)
                     })
                 })
@@ -652,7 +652,7 @@ impl DB {
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("RESET ROLE; RESET ALL;").await?;
+                        conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                         Ok(true)
                     })
                 })
@@ -4204,7 +4204,7 @@ mod autodream_db_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -4239,7 +4239,7 @@ mod autodream_db_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -4357,7 +4357,7 @@ mod autodream_db_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -4583,7 +4583,7 @@ mod e2e_tenant_isolation_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -4608,7 +4608,7 @@ mod e2e_tenant_isolation_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -4696,7 +4696,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -4722,7 +4722,7 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -4800,7 +4800,7 @@ mod e2e_search_workspace_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })

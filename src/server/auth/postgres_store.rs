@@ -482,7 +482,7 @@ mod auth_utils_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -537,7 +537,7 @@ mod security_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -588,7 +588,7 @@ mod security_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -636,7 +636,7 @@ mod security_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
@@ -693,7 +693,7 @@ mod security_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("RESET ROLE; RESET ALL;").await?;
+                    conn.execute("SET SESSION AUTHORIZATION DEFAULT; RESET ALL; CLOSE ALL; UNLISTEN *; SELECT pg_advisory_unlock_all(); DISCARD SEQUENCES; DISCARD TEMP;").await?;
                     Ok(true)
                 })
             })
