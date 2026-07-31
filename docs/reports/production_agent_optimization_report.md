@@ -404,6 +404,20 @@ Two repository-wide quality gates remain nonzero for pre-existing code outside t
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### CHAT-00 — Chatwoot removal
 - Confirmation that no production/customer Chatwoot data existed and no data migration was performed.
 - Exact removed application/deployment surfaces: Removed src/server/integrations/chatwoot, removed deploy/helm/ohc/templates/chatwoot*.yaml, and updated values.yaml, deploy scripts to exclude Chatwoot.
