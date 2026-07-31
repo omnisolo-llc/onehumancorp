@@ -5,6 +5,7 @@ use sea_orm::{ConnectOptions, ConnectionTrait, Database, DatabaseConnection};
 use super::capabilities::{DatabaseBackend, DatabaseCapabilities};
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct AppDatabase {
     connection: DatabaseConnection,
     backend: DatabaseBackend,
@@ -43,6 +44,7 @@ impl AppDatabase {
 }
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct DatabaseUrl(String);
 
 impl DatabaseUrl {

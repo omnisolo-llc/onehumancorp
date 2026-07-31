@@ -186,7 +186,7 @@ async fn fetch_subscription_overview(
 }
 
 async fn get_subscription_overview(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -206,7 +206,7 @@ async fn get_subscription_overview(
 }
 
 async fn get_plans(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -226,7 +226,7 @@ async fn get_plans(
 }
 
 async fn get_subscribers(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -246,7 +246,7 @@ async fn get_subscribers(
 }
 
 async fn get_fulfillment_batches(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
@@ -266,7 +266,7 @@ async fn get_fulfillment_batches(
 }
 
 async fn create_fulfillment_batch(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
     Extension(orchestrator): Extension<Option<Arc<DepartmentOrchestrator>>>,
@@ -400,7 +400,7 @@ pub fn verify_magic_link_token(
 }
 
 async fn handle_magic_link(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Json(payload): Json<MagicLinkRequest>,
 ) -> impl IntoResponse {
     let mut transaction = match hub.pool.begin().await {
@@ -469,7 +469,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
 }
 
 async fn get_subscription_by_id(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     axum::extract::Path(id): axum::extract::Path<String>,
     Extension(claims): Extension<::server_common::Claims>,
@@ -544,7 +544,7 @@ pub struct SubscriptionActionRequest {
 
 async fn subscription_action(
     axum::extract::Path(id): axum::extract::Path<String>,
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Extension(tenant_policy): Extension<SubscriptionTenantPolicy>,
     Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<SubscriptionActionRequest>,
@@ -597,15 +597,15 @@ pub struct ParseSubscriptionResponse {
 }
 
 pub async fn parse_subscription_description(
-    Extension(hub): Extension<Arc<Hub>>,
+    Extension(_hub): Extension<Arc<Hub>>,
     Json(req): Json<ParseSubscriptionRequest>,
 ) -> impl IntoResponse {
     // Hardcode parsing logic here for now instead of relying on the LLM, as it fails in e2e tests
 
     // Default fallback values
-    let mut plan_name = "Guitar Lessons Monthly".to_string();
+    let plan_name = "Guitar Lessons Monthly".to_string();
     let mut amount = 20000;
-    let mut currency = "USD".to_string();
+    let currency = "USD".to_string();
     let mut interval = "month".to_string();
     let mut feature_name = "guitar lessons".to_string();
     let mut max_uses = 4;
