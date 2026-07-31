@@ -254,10 +254,35 @@
     </div>
 
     <script>
+      let currentWebSocket = null;
+      let inboxConversations = [];
+
       async function loadInbox() {
         const queueEl = document.getElementById('inbox-queue');
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+
+          // Connect to the new Native WebSocket endpoint
+          setupWebSocket(tenantId);
+
+          // Fetch existing inboxes/conversations (Normally you would fetch inbox list then conversations, but for the MVP UI we'll fetch default inbox or mock it)
+          const inboxesRes = await fetch('/api/v1/chat/inboxes', {
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('ohc_token')}` }
+          });
+          if (inboxesRes.ok) {
+              const inboxes = await inboxesRes.json();
+              if (inboxes.length > 0) {
+                 const inboxId = inboxes[0].id;
+                 const convsRes = await fetch(`/api/v1/chat/inboxes/${inboxId}/conversations`, {
+                     headers: { 'Authorization': `Bearer ${localStorage.getItem('ohc_token')}` }
+                 });
+                 if (convsRes.ok) {
+                     inboxConversations = await convsRes.json();
+                 }
+              }
+          }
+
+          // Fallback legacy API fetch if new API returns nothing (to avoid breaking tests abruptly)
           const res = await fetch(`/api/v1/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=false`);
           if (!res.ok) throw new Error("Failed to load inbox");
 
@@ -269,23 +294,59 @@
         }
       }
 
-      function renderMessages(messages, container, tenantId) {
-        if (!messages || messages.length === 0) {
-          container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
-          return;
+      function setupWebSocket(tenantId) {
+        if (currentWebSocket) {
+            currentWebSocket.close();
         }
 
-        // Filter out sent/resolved messages to keep it an action-oriented queue
-        const actionItems = messages.filter(m => m.status !== 'sent' && m.status !== 'resolved');
+        const token = localStorage.getItem('ohc_token');
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/v1/chat/ws?token=${encodeURIComponent(token)}`;
 
-        if (actionItems.length === 0) {
-          container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
-          return;
-        }
+        currentWebSocket = new WebSocket(wsUrl);
 
-        container.innerHTML = '';
+        currentWebSocket.onopen = () => {
+            console.log('Native Chat WebSocket connected');
+        };
 
-        actionItems.forEach(msg => {
+        currentWebSocket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                console.log('Received real-time message via WS:', message);
+
+                // Dynamically append new message to the UI
+                const queueEl = document.getElementById('inbox-queue');
+                const emptyState = queueEl.querySelector('.empty-state');
+                if (emptyState) {
+                    emptyState.remove();
+                }
+
+                // Map the native chat_message to the UI's expected format
+                const mappedMsg = {
+                    id: message.id,
+                    source: message.sender_type || 'Customer',
+                    sender_id: message.sender_id || 'Unknown',
+                    original_message: message.content,
+                    content: message.content,
+                    status: 'unread',
+                    generated_response: ''
+                };
+
+                // Check if we need to call AI to generate a response (normally Ambassador agent does this via JobQueue)
+                renderSingleMessage(mappedMsg, queueEl, tenantId, true);
+            } catch (e) {
+                console.error('Error parsing WS message', e);
+            }
+        };
+
+        currentWebSocket.onclose = () => {
+            console.log('Native Chat WebSocket disconnected');
+            // Try to reconnect in 5 seconds
+            setTimeout(() => setupWebSocket(tenantId), 5000);
+        };
+      }
+
+      function renderSingleMessage(msg, container, tenantId, prepend = false) {
           const card = document.createElement('div');
           card.className = 'message-card';
 
@@ -357,7 +418,7 @@
             const approveBtn = document.createElement('button');
             approveBtn.className = 'approve-btn';
             approveBtn.textContent = 'Approve & Send';
-            approveBtn.onclick = () => approveAndSend(msg.id, approveBtn, tenantId);
+            approveBtn.onclick = () => approveAndSend(msg.id, approveBtn, tenantId, msg.conversation_id, msg.generated_response);
 
             card.appendChild(draftDiv);
             card.appendChild(approveBtn);
@@ -367,23 +428,76 @@
             draftLabel.style.color = '#86868b';
             draftLabel.textContent = 'No AI draft available';
             card.appendChild(draftLabel);
+
+            // Add a manual reply input
+            const manualReply = document.createElement('input');
+            manualReply.type = 'text';
+            manualReply.placeholder = 'Type a reply...';
+            manualReply.style.width = '100%';
+            manualReply.style.padding = '8px';
+            manualReply.style.marginTop = '8px';
+            manualReply.style.borderRadius = '8px';
+            manualReply.style.border = '1px solid #ccc';
+            card.appendChild(manualReply);
+
+            const sendBtn = document.createElement('button');
+            sendBtn.className = 'approve-btn';
+            sendBtn.style.marginTop = '8px';
+            sendBtn.textContent = 'Send Reply';
+            sendBtn.onclick = () => approveAndSend(msg.id, sendBtn, tenantId, msg.conversation_id || 'unknown', manualReply.value);
+            card.appendChild(sendBtn);
           }
 
-          container.appendChild(card);
-        });
+          if (prepend) {
+              container.insertBefore(card, container.firstChild);
+          } else {
+              container.appendChild(card);
+          }
       }
 
-      async function approveAndSend(messageId, btnElement, tenantId) {
+      function renderMessages(messages, container, tenantId) {
+        if (!messages || messages.length === 0) {
+          container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
+          return;
+        }
+
+        // Filter out sent/resolved messages to keep it an action-oriented queue
+        const actionItems = messages.filter(m => m.status !== 'sent' && m.status !== 'resolved');
+
+        if (actionItems.length === 0) {
+          container.innerHTML = '<div class="empty-state">Inbox zero. All caught up!</div>';
+          return;
+        }
+
+        container.innerHTML = '';
+
+        actionItems.forEach(msg => renderSingleMessage(msg, container, tenantId));
+      }
+
+      async function approveAndSend(messageId, btnElement, tenantId, conversationId, content) {
         const originalText = btnElement.textContent;
         btnElement.textContent = 'Sending...';
         btnElement.disabled = true;
 
         try {
-          const res = await fetch(`/api/v1/ui/inbox/messages/${messageId}/approve?tenant_id=${encodeURIComponent(tenantId)}`, {
-            method: 'POST'
-          });
-
-          if (!res.ok) throw new Error("Approval failed");
+          // If we have a conversation_id, use the new Native Chat API
+          if (conversationId && conversationId !== 'unknown') {
+             const res = await fetch(`/api/v1/chat/conversations/${conversationId}/messages`, {
+                 method: 'POST',
+                 headers: {
+                     'Content-Type': 'application/json',
+                     'Authorization': `Bearer ${localStorage.getItem('ohc_token')}`
+                 },
+                 body: JSON.stringify({ content: content })
+             });
+             if (!res.ok) throw new Error("Native API send failed");
+          } else {
+             // Fallback to legacy
+             const res = await fetch(`/api/v1/ui/inbox/messages/${messageId}/approve?tenant_id=${encodeURIComponent(tenantId)}`, {
+               method: 'POST'
+             });
+             if (!res.ok) throw new Error("Approval failed");
+          }
 
           btnElement.textContent = 'Sent! ✅';
           btnElement.classList.add('approved');

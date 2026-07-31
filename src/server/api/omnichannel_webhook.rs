@@ -284,6 +284,28 @@ pub async fn handle_omnichannel_webhook(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
     }
 
+    // New Native Rust Chat implementation
+    if let Ok(tenant_uuid) = Uuid::parse_str(tenant_id) {
+        let chat_service = crate::services::chat::service::ChatService::new(state.db.pool.clone());
+
+        // Use a deterministic inbox id for the tenant to avoid FK violations
+        let inbox_id_uuid = Uuid::new_v5(&Uuid::NAMESPACE_DNS, tenant_id.as_bytes());
+
+        // Ensure a default inbox exists for webhooks (Ignore error if it already exists)
+        let _ = chat_service.create_inbox(tenant_uuid, "Main Inbox".to_string()).await;
+
+        // Resolve contact logic handles saving the contact
+        if let Ok(contact) = chat_service.resolve_or_create_contact(tenant_uuid, &channel, &sender_id).await {
+            let conv = chat_service.resolve_or_create_conversation(tenant_uuid, inbox_id_uuid, contact.id).await;
+            if let Ok(c) = conv {
+                let _ = chat_service.send_message(tenant_uuid, c.id, "customer".to_string(), Some(contact.id), message.to_string()).await;
+                // Note: WebSocket broadcasting across nodes would normally happen here via Redis PubSub.
+                // The current tokio channel is local-only within chat_api.rs, so for this task we rely on the
+                // frontend pulling or the legacy fallback triggering a refresh if needed.
+            }
+        }
+    }
+
     // 3. Enqueue message_triage job
     let job_id = Uuid::new_v4().to_string();
     let payload_json = serde_json::json!({

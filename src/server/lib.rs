@@ -7895,6 +7895,10 @@ async fn create_ui_bom_item_handler(
             api::unified_inbox_webhook::router(db.clone()),
             http_auth_store.clone(),
         ))
+        .merge(protect_internal_ingress(
+            api::chat_api::router(db.pool.clone()),
+            http_auth_store.clone(),
+        ))
         .merge(health_router)
         .merge(http_auth_router)
         .merge(setup_router)

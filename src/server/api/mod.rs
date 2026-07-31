@@ -56,6 +56,7 @@ pub mod work_triage;
 mod walkup;
 pub mod tool_integrations;
 pub mod ohc_job_queue;
+pub mod chat_api;
 pub mod checkout_api;
 pub mod agent_stream;
 pub mod unified_ws;

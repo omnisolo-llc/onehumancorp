@@ -52,6 +52,7 @@ exports_files(
         "local_seo.rs",
         "recovery.rs",
         "cart.rs",
+        "chat_api.rs",
         "checkout_api.rs",
         "pos.rs",
         "agent_feed.rs",
