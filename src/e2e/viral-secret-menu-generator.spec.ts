@@ -5,7 +5,7 @@ test.describe('Viral Secret Menu Generator Loop', () => {
   test('should generate a viral secret menu link', async ({ page }) => {
     // Navigate to dashboard
     await adminPage(page, async () => {
-      await page.goto('/dashboard.html');
+      await page.goto('/dashboard');
 
       // Click the new Viral Secret Menu Generator link
       await page.click('a#viral-secret-menu-link');
