@@ -1,14 +1,14 @@
-issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Third-Party Dependency"
 issue_description: |
   # Research Report: Custom Rust Omnichannel Chat System
 
   ## Problem Statement
-  OneHumanCorp currently has a dependency on external third-party services like Chatwoot for omnichannel customer support and chat functionality. Relying on external services breaks our multi-tenant isolation, Zero-Trust security guarantees, and adds external operational complexity. Maya (the baker), Carlos (the handyman), and Nora (the agency principal) need to manage all customer communications (Instagram DMs, website chat, SMS) directly within OHC's unified inbox without external vendor complexity.
+  OneHumanCorp currently has a dependency on external third-party services like external conversational tools for omnichannel customer support and chat functionality. Relying on external services breaks our multi-tenant isolation, Zero-Trust security guarantees, and adds external operational complexity. Maya (the baker), Carlos (the handyman), and Nora (the agency principal) need to manage all customer communications (Instagram DMs, website chat, SMS) directly within OHC's unified inbox without external vendor complexity.
 
   ## Research Report
-  Based on auditing the Chatwoot source code (`https://github.com/chatwoot/chatwoot`), a complete native Rust implementation is required to replace it. Chatwoot's architecture relies heavily on a Ruby on Rails backend, PostgreSQL for data, Redis for background jobs (Sidekiq) and pub/sub.
+  Based on auditing the legacy third-party chat repository, a complete native Rust implementation is required to replace it. The legacy architecture relies heavily on a Ruby on Rails backend, PostgreSQL for data, Redis for background jobs (Sidekiq) and pub/sub.
 
-  ### Chatwoot Key Concepts to Replicate
+  ### Legacy Chat Key Concepts to Replicate
   1.  **Inboxes**: Core organizational unit holding conversations. Tied to a specific channel.
   2.  **Channels**: Adapters for different platforms (Web Widget, API, Email, Facebook, Twitter, WhatsApp, SMS, Line, Telegram, etc.).
   3.  **Conversations**: A thread of messages between a contact and an agent (or bot) within an inbox.
@@ -19,7 +19,7 @@ issue_description: |
   8.  **Automations/Macros**: Pre-defined actions based on triggers.
 
   ### Competitor Analysis
-  - **Chatwoot**: Powerful but monolithic Rails app. Not designed for our specific multi-tenant Rust architecture.
+  - **Legacy External Tool**: Powerful but monolithic Rails app. Not designed for our specific multi-tenant Rust architecture.
   - **Shopify Inbox**: Deeply integrated into the Shopify ecosystem. Excellent for commerce but closed.
   - **Zendesk/Intercom**: Enterprise-focused, high cost, overly complex for our SMB personas.
 
@@ -64,7 +64,7 @@ issue_description: |
   - **Decoupled Ingestion**: Using Redis Pub/Sub for incoming messages ensures the core engine isn't blocked by slow channel APIs.
 
   ## Implementation Prompt
-  Implement the foundation for the Custom Rust Omnichannel Chat System, replacing external Chatwoot dependencies.
+  Implement the foundation for the Custom Rust Omnichannel Chat System, replacing external legacy dependencies.
 
   **Acceptance Criteria:**
   1.  Create the database schema (PostgreSQL) for `inboxes`, `channels`, `conversations`, `messages`, and `contacts`. Ensure strict Row-Level Security (`tenant_id`) is applied to all tables.
