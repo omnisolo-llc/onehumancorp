@@ -17,6 +17,8 @@ type Message = {
   sender_id?: string;
   customer_id?: string;
   created_at?: string;
+  checkout_link?: string;
+  proposed_product_id?: string;
 };
 
 function badgeTone(status?: string) {
@@ -528,7 +530,7 @@ function InboxWorkspace({
 }
 
 function PowerSyncInboxContent() {
-  const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
+  const { data } = useQuery<Message>("SELECT * FROM chat_messages ORDER BY created_at DESC");
   return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
 }
 

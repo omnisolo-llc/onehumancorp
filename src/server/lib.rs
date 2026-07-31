@@ -3408,7 +3408,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         orchestrator: dept_orchestrator.clone(),
         db: db.clone(),
     };
-    let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
+    let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state)
+        .route("/api/v1/inbox/chat/webhook/dummy", axum::routing::post(api::inbox::chat::handle_dummy_webhook).with_state(api::inbox::chat::ChatAppState { db: db.clone() }));
 
         // Create Twilio Voice engines
     let twilio_voice_engine = std::sync::Arc::new(crate::voice::VoiceAIEdgeEngine::new());

@@ -239,7 +239,7 @@ async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_cha
                 .iter()
                 .flat_map(|ch| {
                     let t = tenant_id_ps.clone();
-                    ["inventory", "orders", "tenant_events", "agent_feed"]
+                    ["inventory", "orders", "tenant_events", "agent_feed", "chat_messages"]
                         .iter()
                         .map(move |topic| {
                             format!("unified:{}:{}:{}", ch, t, topic)

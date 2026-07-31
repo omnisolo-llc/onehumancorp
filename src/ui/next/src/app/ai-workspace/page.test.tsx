@@ -196,7 +196,7 @@ describe('AIWorkspacePage', () => {
     expect(docLibraryHeader).toBeDefined();
 
     // Edit the existing note content
-    const textarea = screen.getByPlaceholderText(/Start typing note details here.../i);
+    const textarea = screen.getByPlaceholderText(/Start typing note details here.../i) as HTMLTextAreaElement;
     await act(async () => {
       fireEvent.change(textarea, { target: { value: 'Updated note technical design specification.' } });
     });
