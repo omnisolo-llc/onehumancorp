@@ -117,7 +117,7 @@ mod tests {
             return;
         };
 
-        let schema_sql = std::fs::read_to_string("src/server/migrations/217_native_omnichannel_chat.sql").unwrap();
+        let schema_sql = std::fs::read_to_string("src/server/migrations/218_native_omnichannel_chat.sql").unwrap();
 
         let mut tx = pool.begin().await.unwrap();
         for statement in schema_sql.split(';') {
