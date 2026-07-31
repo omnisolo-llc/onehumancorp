@@ -154,8 +154,8 @@ mod tests {
         Arc::new(Hub::new(tx, pool))
     }
 
-    #[test]
-    fn router_uses_axum_v08_capture_syntax() {
+    #[tokio::test]
+    async fn router_uses_axum_v08_capture_syntax() {
         let _: axum::Router<()> = router(make_hub());
     }
 
