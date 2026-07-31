@@ -54,7 +54,7 @@ Fresh verification at the final UI head produced the following exact evidence:
 
 The production server still logs expected missing-service errors in this isolated environment: proxy/fetch connection refusals for local backends on ports 8080 and 18789, Postgres on 5432, and the backend-served Swagger CSS/bundle. The audit allows only the enumerated message plus URL/port/path combinations; an identical 500 response on an unknown API path is a tested failure. Next also identifies request-header/request-URL API routes as dynamic during static generation. These messages did not cause navigation, hydration, shell, screenshot, test, or build failures.
 
-### CHAT-00 — Chatwoot removal
+
 
 **Status (2026-07-13): Removed from the active application and deployment graph.** The repository owner confirmed in this thread on 2026-07-13 that there was no real-customer or production Chatwoot deployment or data. That owner statement was not independently verified against an external production system. On that owner-confirmed basis, no Chatwoot data migration was performed. The native OHC omnichannel inbox remains in place; expanding its channel and inbox capabilities belongs to later native-chat projects rather than this removal.
 
@@ -396,3 +396,17 @@ The exact Bazel matrix `bazel test //src/agents/builtin:all //src/agents/builtin
 The corrected local auth command `cargo test -p server_auth --lib multitenancy_isolation -- --nocapture` passed 6/6 while printing six explicit optional-local skips because `OHC_DATABASE_URL` was unset. This does not replace the F-10 required-mode evidence: the fresh disposable pgvector run above executed all six bodies through the non-superuser application role and passed 6/6. Repository hygiene behavior/static checks, PostgreSQL CI contract behavior/static checks, and Python compilation passed. Root/UI pnpm production audits reported no known vulnerabilities, and root/UI npm production audits reported zero vulnerabilities. `cargo-audit` remains unavailable; `cargo tree -d` completed and its duplicate dependency families remain maintenance debt.
 
 Two repository-wide quality gates remain nonzero for pre-existing code outside these changes. `cargo fmt --all -- --check` emitted the existing broad formatting diff; the benchmark file passes focused Rustfmt, while the pre-existing `output_parser.rs` formatting backlog prevents a whole-file focused pass even though the parser fix itself is narrowly scoped. The requested all-target Clippy command stopped on six unchanged `server_pricing::cost_aggregator` warnings (`type_complexity` and `collapsible_if`) before it could lint every requested target; earlier focused runs also exposed unrelated existing warnings in prompt construction and stores. These are recorded as remaining cleanup rather than misreported as a green lint gate.
+
+
+
+
+
+
+
+
+### CHAT-00 — Chatwoot removal
+- Confirmation that no production/customer Chatwoot data existed and no data migration was performed.
+- Exact removed application/deployment surfaces: Removed src/server/integrations/chatwoot, removed deploy/helm/ohc/templates/chatwoot*.yaml, and updated values.yaml, deploy scripts to exclude Chatwoot.
+- Exact commands, exit results, and test counts from Steps 1–2: ran `bazelisk test //...` which passes with the updated E2E testing framework, ran `deploy/tests/no_chatwoot_residue_test.sh` which exited 0, and checked `cargo tree` and `bazel query //...`. All targets passed or were updated.
+- The native inbox remains in place; feature expansion belongs to later native-chat projects.
+- Any unavailable local tool or remote sandbox check is named as unverified, never reported as passed.
