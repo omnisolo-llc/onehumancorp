@@ -1032,17 +1032,8 @@ impl VectorRepository {
                                         String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
                                             .unwrap_or_default()
                                     });
-                                let mut embedding: Vec<f32> =
+                                let embedding: Vec<f32> =
                                     serde_json::from_str(&emb_str).unwrap_or_default();
-
-                                // Precompute L2 normalization to speed up the O(N^2) loop
-                                let norm: f32 =
-                                    embedding.iter().map(|&x| x * x).sum::<f32>().sqrt();
-                                if norm > 0.0 {
-                                    for v in embedding.iter_mut() {
-                                        *v /= norm;
-                                    }
-                                }
 
                                 MinimalRecord {
                                     id: row.get("id"),
@@ -1052,26 +1043,19 @@ impl VectorRepository {
                             })
                             .collect();
 
-                        let mut skip_set = std::collections::HashSet::new();
+                        let mut skip_array = vec![false; records.len()];
                         for i in 0..records.len() {
-                            if skip_set.contains(&i) {
+                            if skip_array[i] {
                                 continue;
                             }
                             for j in (i + 1)..records.len() {
-                                if skip_set.contains(&j) {
+                                if skip_array[j] {
                                     continue;
                                 }
                                 let a = &records[i];
                                 let b = &records[j];
 
-                                // Both vectors are already L2-normalized, so dot product is the cosine similarity
-                                let similarity: f32 = a
-                                    .embedding
-                                    .iter()
-                                    .zip(b.embedding.iter())
-                                    .map(|(x, y)| x * y)
-                                    .sum();
-                                let distance = 1.0 - similarity;
+                                let distance = cosine_distance(&a.embedding, &b.embedding);
 
                                 if distance < 0.05 {
                                     let (id_a, id_b) = if a.id < b.id {
@@ -1080,7 +1064,7 @@ impl VectorRepository {
                                         (b.id.clone(), a.id.clone())
                                     };
                                     conflicting_pairs_ids.push((id_a, id_b));
-                                    skip_set.insert(j);
+                                    skip_array[j] = true;
                                     match_count += 1;
                                     if match_count >= 100 {
                                         break 'outer;
