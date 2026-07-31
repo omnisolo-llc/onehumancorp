@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Viral Receipt Lottery Generator', () => {
   test('should load the generator and generate a lottery link', async ({ page }) => {
     // 2. Navigate to dashboard and click the new link
-    await page.goto('/ui/dashboard.html');
+    await page.goto('/dashboard');
     const link = page.locator('#viral-receipt-lottery-link');
     await expect(link).toBeVisible();
     await link.click();
