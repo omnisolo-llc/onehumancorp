@@ -1,7 +1,6 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 use super::db::{ChatDb, ChatMessage, ChatConversation};
-use redis::AsyncCommands;
 
 pub struct ChatService {
     db: ChatDb,
@@ -60,7 +59,10 @@ impl ChatService {
         if let Ok(mut con) = self.redis.get_multiplexed_async_connection().await {
             let channel = format!("chat:tenant:{}", tenant_id);
             let payload = serde_json::to_string(&saved_message).unwrap_or_default();
-            let _ : Result<(), _> = con.publish(channel, payload).await;
+            let _ : Result<(), _> = redis::cmd("PUBLISH")
+                .arg(channel)
+                .arg(payload)
+                .query_async(&mut con).await;
         }
 
         Ok(saved_message)

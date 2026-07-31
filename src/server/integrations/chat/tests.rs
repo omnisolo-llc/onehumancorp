@@ -1,5 +1,5 @@
 use uuid::Uuid;
-use super::db::{ChatDb, ChatMessage, ChatConversation, ChatContact};
+use super::db::ChatMessage;
 use super::webhook::{IncomingWebhookPayload, WebhookResponse};
 
 #[tokio::test]
