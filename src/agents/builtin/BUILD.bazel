@@ -121,6 +121,7 @@ rust_library(
         "tool_executor_engine.rs",
         "verification_loops.rs",
         "visual_workflow.rs",
+        "omnichannel_chat.rs",
         "visual_workflow_client.rs",
     ],
     crate_name = "ohc_builtin_agent",
@@ -279,6 +280,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "local_provider",
     "sona_patterns",
     "visual_workflow",
+    "omnichannel_chat",
     "visual_workflow_client",
 ]
 
