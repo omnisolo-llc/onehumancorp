@@ -7,8 +7,10 @@ vi.mock('@/lib/utils/api', () => ({
   putJson: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('@/app/components/AppShell', () => ({
+vi.mock("@/app/components/AppShell", () => ({
+  __esModule: true,
   default: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
+  AppShell: ({ children }: any) => <div data-testid="app-shell">{children}</div>
 }));
 
 describe('GlobalCommerceSettings', () => {
