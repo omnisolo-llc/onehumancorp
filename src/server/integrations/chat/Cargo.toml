@@ -1,0 +1,22 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = "0.1.77"
+axum = { version = "0.8.1", features = ["ws", "macros"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+sqlx = { version = "0.8", features = ["postgres", "uuid", "chrono", "macros", "runtime-tokio-native-tls"] }
+tracing = "0.1"
+server_integrations_core = { path = "../core" }
+redis = { version = "0.27.6", features = ["tokio-comp"] }
+futures = "0.3"
+futures-util = "0.3.32"
+chrono = { workspace = true }
+
+[lib]
+path = "mod.rs"

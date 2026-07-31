@@ -9,6 +9,7 @@ pub mod mcp_gateway;
 pub mod mercadopago;
 pub use ::server_integrations_chromadb as chromadb;
 pub mod meta;
+pub use ::server_integrations_chat as chat;
 pub mod google_calendar;
 #[cfg(not(ohc_bazel))]
 pub mod google_workspace;

@@ -1,0 +1,31 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "chat",
+    srcs = glob(["*.rs"]),
+    crate_root = "mod.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/integrations/core:server_integrations_core",
+        "@crates//:axum",
+        "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:futures-util",
+        "@crates//:redis",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "chat_test",
+    crate = ":chat",
+    deps = [],
+)
