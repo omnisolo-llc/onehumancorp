@@ -49,7 +49,7 @@ async fn handle_rpc(
     Json(payload): Json<JsonRpcRequest>,
 ) -> Json<JsonRpcResponse> {
     if payload.method == "omnichannel_chat_process" {
-        if let Some(params) = payload.params {
+        if let Some(params) = payload.params.as_ref() {
             let message = params.get("message").and_then(|v| v.as_str()).unwrap_or("");
             let is_copilot_mode = params.get("is_copilot_mode").and_then(|v| v.as_bool()).unwrap_or(false);
 
@@ -77,6 +77,7 @@ async fn handle_rpc(
                 }
             }
         }
+    }
 
     if payload.jsonrpc != "2.0" {
         return Json(JsonRpcResponse {
