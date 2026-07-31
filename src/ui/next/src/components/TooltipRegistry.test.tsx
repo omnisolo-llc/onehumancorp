@@ -153,6 +153,43 @@ describe('TooltipRegistry', () => {
 });
 
 describe('useTooltip Hook sync', () => {
+  it('provides addTooltip and updateTooltip that persist to the backend', async () => {
+    let contextAddTooltip: any;
+    let contextUpdateTooltip: any;
+    const TestComponent = () => {
+      const { addTooltip, updateTooltip } = useTooltip();
+      contextAddTooltip = addTooltip;
+      contextUpdateTooltip = updateTooltip;
+      return <div />;
+    };
+
+    render(
+      <TooltipProvider>
+        <TestComponent />
+      </TooltipProvider>
+    );
+
+    await act(async () => {
+      await contextAddTooltip('new-id', 'New Tooltip');
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/tooltips', expect.objectContaining({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'new-id', text: 'New Tooltip' })
+    }));
+
+    await act(async () => {
+      await contextUpdateTooltip('new-id', 'Updated Tooltip');
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/tooltips', expect.objectContaining({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'new-id', text: 'Updated Tooltip' })
+    }));
+  });
+
   it('throws an error if used outside TooltipProvider', () => {
     const originalError = console.error;
     console.error = vi.fn(); // Suppress the expected React error boundary log

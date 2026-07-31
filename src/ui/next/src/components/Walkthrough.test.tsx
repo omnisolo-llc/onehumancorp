@@ -1,8 +1,59 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { InteractiveWalkthrough } from './Walkthrough';
+import { InteractiveWalkthrough, useDynamicWalkthrough } from './Walkthrough';
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { renderHook } from '@testing-library/react';
+
+describe('useDynamicWalkthrough Hook', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('fetches walkthrough steps from the API successfully', async () => {
+    const mockSteps = [
+      { targetId: 'target-1', title: 'Step 1', content: 'First step content' }
+    ];
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => mockSteps
+    });
+
+    const { result } = renderHook(() => useDynamicWalkthrough('test-page'));
+
+    expect(result.current.loading).toBe(true);
+    expect(result.current.steps).toEqual([]);
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/v1/walkthrough/test-page');
+    expect(result.current.steps).toEqual(mockSteps);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('handles API failure gracefully', async () => {
+    (global.fetch as any).mockResolvedValue({
+      ok: false,
+      json: async () => ({})
+    });
+
+    const { result } = renderHook(() => useDynamicWalkthrough('error-page'));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toBe('Failed to load walkthrough');
+    expect(result.current.steps).toEqual([]);
+  });
+});
 
 describe('Walkthrough Component', () => {
   let originalEnv: string | undefined;

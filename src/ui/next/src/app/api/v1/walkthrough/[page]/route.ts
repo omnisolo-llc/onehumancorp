@@ -22,3 +22,31 @@ export async function GET(
   }
   return proxyBackendRequest(request, `/api/v1/walkthrough/${page}`);
 }
+
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ page: string }> },
+): Promise<Response> {
+  const page = (await context.params).page;
+  if (!WALKTHROUGH_PAGE.test(page)) {
+    return Response.json(
+      { error: "invalid walkthrough page" },
+      { status: 400 },
+    );
+  }
+  return proxyBackendRequest(request, `/api/v1/walkthrough/${page}`);
+}
+
+export async function PUT(
+  request: Request,
+  context: { params: Promise<{ page: string }> },
+): Promise<Response> {
+  const page = (await context.params).page;
+  if (!WALKTHROUGH_PAGE.test(page)) {
+    return Response.json(
+      { error: "invalid walkthrough page" },
+      { status: 400 },
+    );
+  }
+  return proxyBackendRequest(request, `/api/v1/walkthrough/${page}`);
+}

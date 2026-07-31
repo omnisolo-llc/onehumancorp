@@ -17,6 +17,36 @@ type WalkthroughProps = {
   onComplete?: () => void;
 };
 
+export function useDynamicWalkthrough(page: string) {
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchSteps = async () => {
+      try {
+        const res = await fetch(`/api/v1/walkthrough/${page}`);
+        if (!res.ok) throw new Error("Failed to load walkthrough");
+        const data = await res.json();
+        if (active) {
+          setSteps(Array.isArray(data) ? data : []);
+          setLoading(false);
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err : new Error("Unknown error"));
+          setLoading(false);
+        }
+      }
+    };
+    fetchSteps();
+    return () => { active = false; };
+  }, [page]);
+
+  return { steps, loading, error };
+}
+
 export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: WalkthroughProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);

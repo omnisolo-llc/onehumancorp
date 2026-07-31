@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
 import { useWalkthrough } from "../../components/help";
-import { WalkthroughTarget, InteractiveWalkthrough } from "../../components/Walkthrough";
+import { WalkthroughTarget, InteractiveWalkthrough, useDynamicWalkthrough } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useBuilderStore } from "./store";
 
@@ -29,7 +29,7 @@ export default function BuilderPage() {
   const [startY, setStartY] = useState(0);
   const [saveMessage, setSaveMessage] = useState("");
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState<any[]>([]);
+  const { steps: walkthroughSteps } = useDynamicWalkthrough("builder");
   const { startWalkthrough } = useWalkthrough();
 
   const [wizardStep1Error, setWizardStep1Error] = useState("");
@@ -58,15 +58,6 @@ export default function BuilderPage() {
   const [tenantId, setTenantId] = useState("storefront");
 
   useEffect(() => {
-    fetch("/api/v1/walkthrough/store-setup")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setWalkthroughSteps(data);
-        }
-      })
-      .catch((err) => console.error("Walkthrough fetch failed:", err));
-
     const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
     setTenantId(savedTenantId);
     setIsLoaded(true);

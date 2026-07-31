@@ -11,6 +11,8 @@ type TooltipContextType = {
   tooltipText: string;
   setTooltipText: (text: string) => void;
   getTooltip: (id: string) => string | undefined;
+  addTooltip: (id: string, text: string) => Promise<void>;
+  updateTooltip: (id: string, text: string) => Promise<void>;
 };
 
 const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
@@ -89,8 +91,30 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const addTooltip = async (id: string, text: string) => {
+    setTooltips(prev => {
+      const newTooltips = { ...prev, [id]: text };
+      window.OHC_TOOLTIPS = { ...(window.OHC_TOOLTIPS || {}), ...newTooltips };
+      return newTooltips;
+    });
+
+    try {
+      await fetch("/api/v1/tooltips", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, text }),
+      });
+    } catch (e) {
+      console.error("Failed to persist tooltip:", e);
+    }
+  };
+
+  const updateTooltip = addTooltip; // same logic for both
+
   return (
-    <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
+    <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id], addTooltip, updateTooltip }}>
       {children}
 
       <AnimatePresence>
