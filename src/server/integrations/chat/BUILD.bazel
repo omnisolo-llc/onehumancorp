@@ -1,0 +1,56 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_chat",
+    srcs = [
+        "mod.rs",
+        "entities/mod.rs",
+        "entities/inboxes.rs",
+        "entities/contacts.rs",
+        "entities/conversations.rs",
+        "entities/messages.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "//src/server/common:server_common",
+        "//src/server/db:server_db",
+        "@crates//:chrono",
+        "@crates//:sea-orm",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "chat_tests",
+    srcs = [
+        "mod.rs",
+        "tests.rs",
+        "entities/mod.rs",
+        "entities/inboxes.rs",
+        "entities/contacts.rs",
+        "entities/conversations.rs",
+        "entities/messages.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    deps = [
+        ":server_integrations_chat",
+        "//src/server:server_lib",
+        "//src/server/common:server_common",
+        "//src/server/db:server_db",
+        "@crates//:chrono",
+        "@crates//:sea-orm",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:uuid",
+    ],
+)
