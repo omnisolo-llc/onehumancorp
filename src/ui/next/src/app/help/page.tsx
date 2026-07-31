@@ -63,14 +63,14 @@ export default function HelpCenterPage() {
 
         <div className="mb-8 sm:mb-10 w-full max-w-2xl mx-auto block">
           <div className="w-full relative block">
-            <WithTooltip id="help-search-tooltip">
+            <WithTooltip id="help-search-tooltip" defaultText="Search for articles, guides, and tutorial videos to help you run your business.">
               <input
                 data-testid="help-search-input"
                 type="text"
                 placeholder="Search for help articles and videos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
+                className="w-full pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 backdrop-blur-[30px] saturate-[210%] backdrop-saturate-[2.1] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
               />
               <svg className="w-6 h-6 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -129,7 +129,7 @@ export default function HelpCenterPage() {
             {advancedArticles.length > 0 && (
               <div className="pt-8">
                 <div className="border-t border-gray-200/50 pt-8 mt-4">
-                  <WithTooltip id="help-advanced-toggle-tooltip" defaultText="Show advanced developer options">
+                  <WithTooltip id="help-advanced-toggle-tooltip" defaultText="Show advanced developer options and API references.">
                     <button onClick={() => setIsAdvancedOpen(!isAdvancedOpen)} className="flex items-center text-gray-500 hover:text-gray-900 transition-colors duration-200"><span className="text-lg font-bold font-outfit mr-2">Advanced</span><svg className={`w-5 h-5 transform transition-transform duration-200 ${isAdvancedOpen ? 'rotate-180' : ' '}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button>
                   </WithTooltip>
                   {isAdvancedOpen && (<motion.div className="pt-6" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}><ArticleSections articles={advancedArticles} hoverBg="hover:bg-white/80" /></motion.div>)}
