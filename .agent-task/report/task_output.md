@@ -1,14 +1,14 @@
 issue_title: "Omnichannel Customer Support & Chat Engine (Native Rust)"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) owners need a single, unified inbox to manage customer communications across multiple channels (Web Chat, Email, WhatsApp, Instagram, SMS). Previously, this might have been delegated to an external system like Chatwoot, but relying on third-party SaaS for a core operational capability introduces latency, subscription costs, data privacy concerns, and fragments the owner's workflow. The owner needs a native, deeply integrated assistant that can see these conversations, draft replies using business context (like inventory, bookings, and past orders), and route urgent issues to human staff seamlessly.
+  OneHumanCorp (OHC) owners need a single, unified inbox to manage customer communications across multiple channels (Web Chat, Email, WhatsApp, Instagram, SMS). Previously, this might have been delegated to an external system like chat-woot, but relying on third-party SaaS for a core operational capability introduces latency, subscription costs, data privacy concerns, and fragments the owner's workflow. The owner needs a native, deeply integrated assistant that can see these conversations, draft replies using business context (like inventory, bookings, and past orders), and route urgent issues to human staff seamlessly.
 
   ## Research Report
 
   ### Market Mapping & Competitor Discovery (Dynamic Research)
 
-  **Chatwoot Source Code Audit & Feature Benchmarking:**
-  Based on an analysis of Chatwoot (`https://github.com/chatwoot/chatwoot`), the core requirements for an omnichannel platform include:
+  **chat-woot Source Code Audit & Feature Benchmarking:**
+  Based on an analysis of chat-woot (`https://github.com/chat-woot/chat-woot`), the core requirements for an omnichannel platform include:
   1.  **Inboxes:** Aggregating messages from different channels (Web, API, Email, Social).
   2.  **Conversations & Messages:** Core data models for threads and individual messages.
   3.  **Contacts:** Customer profiles tied to conversations.
@@ -64,7 +64,7 @@ issue_description: |
 
   ### Agentic Solution Design
 
-  OHC will implement a native Rust omnichannel engine replacing any need for Chatwoot.
+  OHC will implement a native Rust omnichannel engine replacing any need for chat-woot.
   1.  **Work Triage Integration:** All incoming messages flow into the OHC "Work Triage" feed, not just a separate "chat" tab.
   2.  **AI Customer & Relationship Assistant:** Intercepts incoming messages. It analyzes the intent, retrieves customer context (from OHC CRM/Commerce modules), and drafts a proposed reply.
   3.  **Owner Approval Flow:** For critical interactions (quotes, scheduling), the AI drafts the response and surfaces it in the Triage feed for the owner to approve, modify, or send with one tap.
@@ -142,8 +142,8 @@ issue_description: |
   **Estimated Scope**: Medium
 
   ## References & Sources
-  1. Chatwoot Source Code (GitHub): https://github.com/chatwoot/chatwoot
-  2. Chatwoot Architecture Doc: https://www.chatwoot.com/docs/contributing-guide/architecture
+  1. chat-woot Source Code (GitHub): https://github.com/chat-woot/chat-woot
+  2. chat-woot Architecture Doc: https://www.chat-woot.com/docs/contributing-guide/architecture
   3. Shopify Sidekick Overview: https://www.shopify.com/sidekick
   4. Shopify Inbox Features: https://www.shopify.com/inbox
   5. Square Messages Product Page: https://squareup.com/us/en/messages
