@@ -785,7 +785,7 @@
           <h2 id="agent-success-title" style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Action Completed!</h2>
           <p id="agent-success-desc" style="color: #86868b; margin-bottom: 24px;">The agent has successfully executed your request.</p>
           <div id="agent-success-upsell-container">
-            <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+            <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 16px; margin-bottom: 24px;">
                 <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 16px; color: #0066FF;">Want 7 Days of Pro for Free?</h3>
                 <p style="margin: 0; font-size: 13px; color: #1D1D1F;">Share your AI success on X to unlock advanced analytics and cross-selling features instantly.</p>
             </div>
@@ -955,7 +955,7 @@
         <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s; display: block; text-align: center; text-decoration: none;">
           Generate Cloud Invite Link
         </button>
-        <div id="dashboard-invite-container" style="display: none; margin-top: 15px; padding: 16px; border-radius: 12px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%);">
+        <div id="dashboard-invite-container" style="display: none; margin-top: 15px; padding: 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.65); border: 1px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%);">
           <p style="font-size: 14px; margin-bottom: 8px; font-weight: 600; color: #1D1D1F;">Your Invite Link:</p>
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
             <input type="text" id="dashboard-invite-link" readonly style="min-height: 44px; min-width: 44px; flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(0, 0, 0, 0.1); background: rgba(255, 255, 255, 0.9); color: #1D1D1F; font-family: Outfit, sans-serif; font-size: 13px;" />
@@ -1045,9 +1045,9 @@
           <h2 style="font-size: 24px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.5px;">Command Center</h2>
           <p style="color: #555; margin-bottom: 20px; font-size: 14px; font-weight: 500;">AI-prepared actions and drafts that need your approval.</p>
           <div class="triage-tab-container" style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 16px;">
-            <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Proposals</button>
-            <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Activity</button>
-            <button class="triage-tab" id="tab-financials" onclick="switchTriageTab('financials')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 12px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Financials</button>
+            <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 16px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Proposals</button>
+            <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 16px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Activity</button>
+            <button class="triage-tab" id="tab-financials" onclick="switchTriageTab('financials')" style="min-height: 44px; min-width: 44px; flex: 1; border-radius: 16px; font-size: 13px; font-weight: 600; padding: 8px; border: none; cursor: pointer; transition: all 0.2s; min-height: 44px; min-width: 44px;">Financials</button>
           </div>
           <div id="triage-queue" style="display: flex; flex-direction: column; gap: 12px; width: 100%; box-sizing: border-box;">
             <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1); width: 100%; box-sizing: border-box;">

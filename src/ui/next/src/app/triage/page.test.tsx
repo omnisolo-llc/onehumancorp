@@ -37,14 +37,20 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock AppShell to avoid complex routing/layout rendering
 vi.mock('../../components/AppShell', () => {
+    const AppShell = ({ children }: any) => <div data-testid="app-shell">{children}</div>;
     return {
-        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
-    }
+        __esModule: true,
+        AppShell: AppShell,
+        default: AppShell
+    };
 });
 vi.mock('@/app/components/AppShell', () => {
+    const AppShell = ({ children }: any) => <div data-testid="app-shell">{children}</div>;
     return {
-        default: ({ children }: { children: React.ReactNode }) => <div data-testid="app-shell-mock">{children}</div>
-    }
+        __esModule: true,
+        AppShell: AppShell,
+        default: AppShell
+    };
 });
 
 // Mock fetch
