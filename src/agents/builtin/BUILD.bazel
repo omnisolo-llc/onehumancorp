@@ -89,6 +89,7 @@ rust_library(
         "observability.rs",
         "perplexity.rs",
         "observation_masking.rs",
+        "omnichannel.rs",
         "omni_context.rs",
         "output_parser.rs",
         "human_in_loop.rs",
@@ -444,5 +445,24 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "omnichannel_tests",
+    size = "small",
+    srcs = ["omnichannel_tests.rs"],
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "@crates//:serde_json",
+        "@crates//:tokio",
     ],
 )
