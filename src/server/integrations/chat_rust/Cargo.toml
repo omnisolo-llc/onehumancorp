@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "ohc_chat_core",
+    "ohc_chat_api",
+    "ohc_chat_ws",
+    "ohc_chat_adapters"
+]
