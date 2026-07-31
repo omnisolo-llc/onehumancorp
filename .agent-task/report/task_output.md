@@ -3,11 +3,11 @@ issue_description: |
   # Problem Statement
   Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" simply aggregate messages without context and require the owner to manually type responses. We need an integrated, native omnichannel unified inbox within OHC.
 
-  As mandated by OHC Engineering Standards, we are **100% RETIRING** external Chatwoot dependencies. We need a native Rust implementation of Chatwoot's core omnichannel architecture within `onehumancorp/mono`.
+  As mandated by OHC Engineering Standards, we are **100% RETIRING** external legacy external dependency dependencies. We need a native Rust implementation of legacy external dependency's core omnichannel architecture within `onehumancorp/mono`.
 
   # Research Report
   **Findings & Competitive Analysis:**
-  - **Chatwoot Source Code Audit:** Chatwoot uses a robust schema with entities like `Contact`, `Inbox`, `Conversation`, and `Message` built on Ruby on Rails. Our implementation will replicate this conceptual model in Rust, leveraging high-performance, multi-tenant row-level security (RLS).
+  - **legacy external dependency Source Code Audit:** legacy external dependency uses a robust schema with entities like `Contact`, `Inbox`, `Conversation`, and `Message` built on Ruby on Rails. Our implementation will replicate this conceptual model in Rust, leveraging high-performance, multi-tenant row-level security (RLS).
   - **Shopify/Wix Inbox:** Aggregates chat but lacks deep proactive AI contextual replies.
   - **OHC Opportunity:** A native Rust implementation integrated with OHC's "Teammate" AI (The Ambassador) allows seamless real-time WebSocket communication and background AI processing.
 
@@ -29,7 +29,7 @@ issue_description: |
   ```
 
   ### Core Data Model (Rust/PostgreSQL)
-  Replicating Chatwoot's core concepts with OHC's multi-tenant architecture:
+  Replicating legacy external dependency's core concepts with OHC's multi-tenant architecture:
   - `Contact`: Represents the end-customer.
   - `Inbox`: Represents a specific channel connection (e.g., WhatsApp Business Account, Instagram Page).
   - `Conversation`: A thread linking a `Contact` to an `Inbox`.
@@ -60,7 +60,7 @@ issue_description: |
   4. Implement a basic REST or WebSocket API for the frontend to fetch unified conversations and messages.
   5. Provide unit tests ensuring tenant isolation (user A cannot see user B's conversations).
 
-  **Priority:** P0 (Critical Infrastructure & Chatwoot Replacement)
+  **Priority:** P0 (Critical Infrastructure & legacy external dependency Replacement)
   **Estimated Scope:** Large
 issue_priority: P0
 issue_category: research
