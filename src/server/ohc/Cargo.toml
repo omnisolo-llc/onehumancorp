@@ -11,6 +11,14 @@ path = "mod.rs"
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
+chrono = { workspace = true }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+tokio = { workspace = true, features = ["full"] }
+tokio-stream = { version = "0.1", features = ["full"] }
+axum = { version = "0.8.1", features = ["ws"] }
+sea-orm = { version = "=1.1.19", default-features = false, features = [ "macros", "runtime-tokio-native-tls", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid"] }
+futures = "0.3"
+serde_json = "1.0"
 
 [build-dependencies]
 tonic-build = "0.12"
