@@ -7497,6 +7497,10 @@ async fn create_ui_bom_item_handler(
                 axum::Json(serde_json::json!({ "id": "approval-e2e", "status": "approved" }))
             }),
         )
+        .nest(
+            "/api/v1/omni-chat",
+            api::omni_chat::router().layer(axum::extract::Extension(std::sync::Arc::new(crate::services::chat::service::ChatService::new(db.pool.clone()))))
+        )
         .route(
             "/api/v1/handoffs",
             axum::routing::post(|| async {

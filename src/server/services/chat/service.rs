@@ -123,4 +123,104 @@ impl ChatService {
         .fetch_one(&self.pool)
         .await
     }
+
+    pub async fn list_conversations(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Vec<ChatConversation>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+            FROM chat_conversations
+            WHERE tenant_id = $1
+            ORDER BY updated_at DESC
+            "#
+        )
+        .bind(tenant_id)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    pub async fn get_messages(
+        &self,
+        tenant_id: Uuid,
+        conversation_id: Uuid,
+    ) -> Result<Vec<ChatMessage>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            FROM chat_messages
+            WHERE tenant_id = $1 AND conversation_id = $2
+            ORDER BY created_at ASC
+            "#
+        )
+        .bind(tenant_id)
+        .bind(conversation_id)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    pub async fn handle_incoming_widget_message(
+        &self,
+        _tenant_id: Uuid,
+        _content: String,
+    ) -> Result<(), sqlx::Error> {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::isolated_omni_postgres_pool;
+
+    #[tokio::test]
+    async fn test_chat_service_crud() {
+        let Some((admin, pool, schema, role)) = isolated_omni_postgres_pool().await else {
+            return;
+        };
+
+        let schema_sql = std::fs::read_to_string("src/server/migrations/217_native_omnichannel_chat.sql").unwrap();
+
+        let mut tx = pool.begin().await.unwrap();
+        for statement in schema_sql.split(';') {
+            let trimmed = statement.trim();
+            if !trimmed.is_empty() {
+                sqlx::query(trimmed).execute(&mut *tx).await.unwrap();
+            }
+        }
+        tx.commit().await.unwrap();
+
+        let service = ChatService::new(pool.clone());
+        let tenant_id = Uuid::new_v4();
+
+        let inbox = service.create_inbox(tenant_id, "Test Inbox".to_string()).await.unwrap();
+        assert_eq!(inbox.name, "Test Inbox");
+
+        let contact = service.create_contact(tenant_id, Some("John".to_string()), None, None).await.unwrap();
+        assert_eq!(contact.name, Some("John".to_string()));
+
+        let convo = service.start_conversation(tenant_id, inbox.id, contact.id, None).await.unwrap();
+        assert_eq!(convo.status, "open");
+
+        let msg = service.send_message(tenant_id, convo.id, "contact".to_string(), Some(contact.id), "Hello".to_string()).await.unwrap();
+        assert_eq!(msg.content, "Hello");
+
+        let convos = service.list_conversations(tenant_id).await.unwrap();
+        assert_eq!(convos.len(), 1);
+
+        let msgs = service.get_messages(tenant_id, convo.id).await.unwrap();
+        assert_eq!(msgs.len(), 1);
+
+        pool.close().await;
+        sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
+            .execute(&admin)
+            .await
+            .unwrap();
+        sqlx::query(&format!("DROP ROLE {role}"))
+            .execute(&admin)
+            .await
+            .unwrap();
+        admin.close().await;
+    }
 }
