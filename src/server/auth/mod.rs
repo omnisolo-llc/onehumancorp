@@ -26,6 +26,20 @@ pub mod db {
                     .or_else(|| std::env::var("OHC_DATABASE_URL").ok())
                     .unwrap_or_else(|| "postgres://postgres:postgres@localhost:5432/test".to_string());
                 sqlx::postgres::PgPoolOptions::new()
+                    .before_acquire(|conn, _meta| {
+                        Box::pin(async move {
+                            use sqlx::Executor;
+                            conn.execute("SET app.current_tenant = ''").await?;
+                            Ok(true)
+                        })
+                    })
+                    .after_release(|conn, _meta| {
+                        Box::pin(async move {
+                            use sqlx::Executor;
+                            conn.execute("RESET ROLE; RESET ALL;").await?;
+                            Ok(true)
+                        })
+                    })
                     .max_connections(100)
                     .acquire_timeout(std::time::Duration::from_millis(15000))
                     .connect_lazy(&database_url)

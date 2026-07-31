@@ -79,6 +79,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-ohc-core
     - to:
         - namespaceSelector:
             matchLabels:
@@ -164,6 +167,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
     - to:
         - namespaceSelector:
             matchLabels:
@@ -231,6 +237,9 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-backend
     - to:
         - namespaceSelector:
             matchLabels:

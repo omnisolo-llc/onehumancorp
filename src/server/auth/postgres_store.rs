@@ -482,7 +482,7 @@ mod auth_utils_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -537,7 +537,7 @@ mod security_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -588,7 +588,7 @@ mod security_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -636,7 +636,7 @@ mod security_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -693,7 +693,7 @@ mod security_tests {
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })

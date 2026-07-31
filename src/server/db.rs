@@ -363,7 +363,7 @@ impl DB {
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
+                        conn.execute("RESET ROLE; RESET ALL;").await?;
                         Ok(true)
                     })
                 })
@@ -652,7 +652,7 @@ impl DB {
                 .after_release(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
-                        conn.execute("DISCARD ALL").await?;
+                        conn.execute("RESET ROLE; RESET ALL;").await?;
                         Ok(true)
                     })
                 })
@@ -4194,10 +4194,17 @@ mod autodream_db_tests {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -4222,10 +4229,17 @@ mod autodream_db_tests {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -4333,10 +4347,17 @@ mod autodream_db_tests {
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -4552,10 +4573,17 @@ mod e2e_tenant_isolation_tests {
         let database_url =
             std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -4570,10 +4598,17 @@ mod e2e_tenant_isolation_tests {
             .expect("Database URL or operation failed in test");
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -4651,10 +4686,17 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
         let database_url =
             std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -4670,10 +4712,17 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .expect("Database URL or operation failed in test");
 
         let _pool2 = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
@@ -4741,10 +4790,17 @@ mod e2e_search_workspace_tests {
 
         // Set up Postgres Pool
         let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
             .after_release(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
+                    conn.execute("RESET ROLE; RESET ALL;").await?;
                     Ok(true)
                 })
             })
