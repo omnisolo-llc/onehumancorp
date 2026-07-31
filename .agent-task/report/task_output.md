@@ -1,13 +1,13 @@
-issue_title: "Architecture Design: Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Architecture Design: Native Rust Omnichannel Chat System (omnichannel chat platform Replacement)"
 issue_description: |
   ### Title
-  Native Rust Omnichannel Chat System Architecture (Chatwoot Replacement)
+  Native Rust Omnichannel Chat System Architecture (omnichannel chat platform Replacement)
 
   ### Problem Statement
-  OneHumanCorp (OHC) currently relies on Chatwoot as an external dependency for its omnichannel chat and customer support functionality. Relying on an external service breaks the OHC promise of "advanced setup, integrations, and technical details hidden." It forces multi-tenant data outside our security boundary and prevents deep AI integration across tasks, bookings, and customer contexts. Maya (the baker) and Carlos (the handyman) need to respond to Instagram DMs and SMS respectively directly from OHC's mobile-first interface, without managing an external Chatwoot configuration. We must build a high-performance, native Rust omnichannel chat system within OHC's mono repo to fully replace Chatwoot, providing a unified, multi-tenant inbox for all owner interactions.
+  OneHumanCorp (OHC) currently relies on omnichannel chat platform as an external dependency for its omnichannel chat and customer support functionality. Relying on an external service breaks the OHC promise of "advanced setup, integrations, and technical details hidden." It forces multi-tenant data outside our security boundary and prevents deep AI integration across tasks, bookings, and customer contexts. Maya (the baker) and Carlos (the handyman) need to respond to Instagram DMs and SMS respectively directly from OHC's mobile-first interface, without managing an external omnichannel chat platform configuration. We must build a high-performance, native Rust omnichannel chat system within OHC's mono repo to fully replace omnichannel chat platform, providing a unified, multi-tenant inbox for all owner interactions.
 
   ### Research Report
-  An audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) reveals its core architecture:
+  An audit of the omnichannel chat platform source code (`https://github.com/omnichannel_chat_platform/omnichannel_chat_platform`) reveals its core architecture:
   - **Models**: `Account` (tenant), `User`, `Inbox`, `Conversation`, `Message`, `Contact`.
   - **Channels**: Adapters for API, Email, Facebook Page, Instagram, Line, SMS, Telegram, TikTok, Twilio, Twitter, Web Widget, WhatsApp.
   - **Real-time**: ActionCable (WebSockets) for pushing events to the UI.
@@ -58,7 +58,7 @@ issue_description: |
   - **AI-First**: The system is designed to have the AI as a first-class participant in the thread, capable of drafting and taking actions before the owner intervenes.
 
   ### Implementation Prompt
-  **Goal**: Implement the core data models, REST API, and WebSocket infrastructure for the Native Rust Omnichannel Chat System, completely replacing Chatwoot.
+  **Goal**: Implement the core data models, REST API, and WebSocket infrastructure for the Native Rust Omnichannel Chat System, completely replacing omnichannel chat platform.
   **Persona**: Maya (Home Baker) needs to receive an Instagram DM and see it in her OHC unified feed immediately.
   **Acceptance Criteria**:
   - Implement Rust structs and PostgreSQL migrations with RLS for `Inbox`, `Channel`, `Contact`, `Conversation`, and `Message`.
