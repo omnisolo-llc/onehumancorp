@@ -491,6 +491,7 @@ rust_library(
         "//src/server/integrations/taxjar:server_integrations_taxjar",
         "//src/server/integrations/zoom:server_integrations_zoom",
         "//src/server/integrations/google_calendar:server_integrations_google_calendar",
+        "//src/server/integrations/chat:server_integrations_chat",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",

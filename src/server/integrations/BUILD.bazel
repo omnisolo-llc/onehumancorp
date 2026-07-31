@@ -45,6 +45,9 @@ rust_library(
         "//src/server/integrations/lob:client.rs",
         "//src/server/integrations/lob:mod.rs",
         "//src/server/integrations/lob:provider.rs",
+
+
+
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -84,6 +87,7 @@ rust_library(
         "//src/server/integrations/listmonk:server_integrations_listmonk",
         "//src/server/integrations/mailchimp:server_integrations_mailchimp",
         "//src/server/integrations/manychat:server_integrations_manychat",
+        "//src/server/integrations/chat:server_integrations_chat",
         "//src/server/integrations/nats:server_integrations_nats",
         "//src/server/integrations/pubsub:server_integrations_pubsub",
         "//src/server/integrations/razorpay:server_integrations_razorpay",
