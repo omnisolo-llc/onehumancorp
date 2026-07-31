@@ -3,10 +3,10 @@ issue_description: |
   # Native Rust Omnichannel Chat System Architecture
 
   ## Problem Statement
-  OHC must replace external Chatwoot dependencies with a native, high-performance omnichannel chat system built in Rust. This system must handle multi-tenant isolation, real-time WebSocket messaging, omnichannel adapters (Instagram DMs, Web Chat, WhatsApp), and seamless AI agent handoffs. A non-technical owner like Maya (baker) needs a unified inbox where she receives Instagram DMs, AI auto-replies while she sleeps, and can manually intervene effortlessly—all from her phone without knowing about the underlying channels.
+  OHC must replace external dependencies with a native, high-performance omnichannel chat system built in Rust. This system must handle multi-tenant isolation, real-time WebSocket messaging, omnichannel adapters (Instagram DMs, Web Chat, WhatsApp), and seamless AI agent handoffs. A non-technical owner like Maya (baker) needs a unified inbox where she receives Instagram DMs, AI auto-replies while she sleeps, and can manually intervene effortlessly—all from her phone without knowing about the underlying channels.
 
   ## Research Report
-  - **Context**: The `chatwoot` project relies on Ruby on Rails models like `Conversation`, `Message`, `Contact`, `Inbox`, and various `Channel` definitions. Our `src/server/services/chat/models.rs` currently implements a basic skeleton of this but lacks deep integration with real-time events, agent routing, webhook management, and UI multi-tenancy.
+  - **Context**: The existing project relies on external Ruby on Rails models like `Conversation`, `Message`, `Contact`, `Inbox`, and various `Channel` definitions. Our `src/server/services/chat/models.rs` currently implements a basic skeleton of this but lacks deep integration with real-time events, agent routing, webhook management, and UI multi-tenancy.
   - **Market Validation**: Competitors like Shopify Inbox, GoDaddy Conversations, and Intercom unify channels into one stream. OHC's key differentiation is the native AI agent integration that acts as the "first responder".
   - **System Constraints**: Must be built in Rust inside `onehumancorp/mono`. Row-level tenant isolation via `tenant_id` is mandatory. Real-time updates must be low-latency for mobile-first consumption.
 
@@ -18,7 +18,7 @@ issue_description: |
       Client(Mobile / Web PWA) -- WebSocket / REST --> Gateway
       Gateway -- Routing --> ChatService(Native Rust Chat Service)
 
-      subgraph Chatwoot Replacement Engine
+      subgraph Replacement Engine
           ChatService --> InboxManager
           ChatService --> ChannelAdapters
           ChatService --> ConversationEngine
@@ -46,7 +46,7 @@ issue_description: |
   - **Real-Time**: Utilize Axum/Tonic with Tokio websockets for the client connection, backed by Redis PubSub to distribute events across load-balanced Rust instances.
 
   ## Implementation Prompt
-  **Goal**: Implement the core backend controllers and real-time WebSocket scaffolding for the native Rust omnichannel chat system, replacing Chatwoot dependencies.
+  **Goal**: Implement the core backend controllers and real-time WebSocket scaffolding for the native Rust omnichannel chat system, replacing external dependencies.
 
   **CUJ (Critical User Journey)**:
   As Maya, I receive an Instagram DM. My OHC app immediately receives a WebSocket event and updates the Unified Inbox. My AI agent drafts a reply. I review the draft, tap "Send", and the message is dispatched through the Rust backend.
@@ -56,7 +56,7 @@ issue_description: |
   2. Implement a WebSocket endpoint that authenticated mobile/web clients can subscribe to for real-time `message.created` and `conversation.updated` events.
   3. Integrate basic Redis PubSub to broadcast message creation events to the WebSocket handler.
   4. Ensure 100% unit test coverage for the new handlers and services.
-  5. Add at least 5 Playwright E2E tests simulating a user sending/receiving messages in a mocked unified inbox UI.
+  5. Add at least 5 Playwright E2E tests for the new functionalities.
 
   ## Priority
   P0
