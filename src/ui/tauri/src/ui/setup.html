@@ -343,6 +343,25 @@
         });
       });
 
+      const domainInputEl = document.getElementById('domain-name');
+      if (domainInputEl) {
+        domainInputEl.addEventListener('input', () => {
+          if (window.validateStep) {
+             const errorEl = document.getElementById('domain-error');
+             if (errorEl && errorEl.style.display !== 'none') {
+                 const domainInput = document.getElementById('domain-name');
+                 if (domainInput) {
+                    const val = domainInput.value.trim();
+                    if (val.length >= 3 && /^[a-z0-9-]+$/.test(val) && !val.startsWith('-') && !val.endsWith('-')) {
+                        errorEl.style.display = 'none';
+                        errorEl.innerText = '';
+                    }
+                 }
+             }
+          }
+        });
+      }
+
       const nameInputEl = document.getElementById('business-name');
       if (nameInputEl) {
         nameInputEl.addEventListener('keydown', (e) => {
