@@ -233,7 +233,10 @@ impl StrictHierarchicalPromptBuilder {
         let limit = 32768;
 
         if let Some((idx, _)) = user_instr.char_indices().nth(limit) {
-            user_instr = format!("{}\n... [User Instructions TRUNCATED TO 32KiB]", &user_instr[..idx]);
+            user_instr = format!(
+                "{}\n... [User Instructions TRUNCATED TO 32KiB]",
+                &user_instr[..idx]
+            );
         }
 
         let mut processed_memory_index = Vec::new();
