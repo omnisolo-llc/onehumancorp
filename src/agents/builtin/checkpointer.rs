@@ -326,136 +326,199 @@ impl CheckpointSaver for GitCheckpointer {
     }
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
-        let refs_to_try = vec![
-            Self::safe_tag_name(checkpoint_id),
-            format!("checkpoint-{}", checkpoint_id),
-            checkpoint_id.to_string(),
-        ];
-
-        // 1. Stash uncommitted and untracked changes to support safe time-travel debugging
-        let stash_out = Command::new("git")
-            .arg("stash")
-            .arg("push")
-            .arg("--include-untracked")
-            .arg("-m")
-            .arg(format!(
-                "Auto-stash before restoring checkpoint {}",
-                checkpoint_id
-            ))
+        // Record the current original reference (commit hash/branch name) for a rollback checkpoint
+        let original_ref = match Command::new("git")
+            .args(["rev-parse", "HEAD"])
             .current_dir(&self.repo_path)
             .output()
             .await
-            .map_err(|e| e.to_string())?;
+        {
+            Ok(out) if out.status.success() => {
+                let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                if s.is_empty() { None } else { Some(s) }
+            }
+            _ => None,
+        };
 
-        if !stash_out.status.success() {
-            tracing::warn!(
-                "Auto-stash failed: {}",
-                String::from_utf8_lossy(&stash_out.stderr)
-            );
-        }
+        let run_restore = async {
+            let refs_to_try = vec![
+                Self::safe_tag_name(checkpoint_id),
+                format!("checkpoint-{}", checkpoint_id),
+                checkpoint_id.to_string(),
+            ];
 
-        // 2. Pre-clean to remove any remaining untracked files (that couldn't be stashed) that might block the checkout
-        let pre_clean = Command::new("git")
-            .arg("clean")
-            .arg("-fdx")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if !pre_clean.status.success() {
-            tracing::warn!(
-                "Pre-clean failed: {}",
-                String::from_utf8_lossy(&pre_clean.stderr)
-            );
-        }
-
-        // 3. Reset HEAD to ensure we are in a clean state before checkout
-        let reset_head = Command::new("git")
-            .arg("reset")
-            .arg("--hard")
-            .arg("HEAD")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if !reset_head.status.success() {
-            tracing::warn!(
-                "Reset HEAD failed: {}",
-                String::from_utf8_lossy(&reset_head.stderr)
-            );
-        }
-
-        let branch_name = format!(
-            "agent-restore-{}",
-            Self::safe_tag_name(checkpoint_id).replace("checkpoint-", "")
-        );
-        let mut success = false;
-        let mut last_err = String::new();
-
-        // 3. Checkout the target tag into a new branch
-        for target_ref in refs_to_try {
-            let output = Command::new("git")
-                .arg("checkout")
-                .arg("-B")
-                .arg(&branch_name)
-                .arg(&target_ref)
+            // 1. Stash uncommitted and untracked changes to support safe time-travel debugging
+            let stash_out = Command::new("git")
+                .arg("stash")
+                .arg("push")
+                .arg("--include-untracked")
+                .arg("-m")
+                .arg(format!(
+                    "Auto-stash before restoring checkpoint {}",
+                    checkpoint_id
+                ))
                 .current_dir(&self.repo_path)
                 .output()
                 .await
                 .map_err(|e| e.to_string())?;
 
-            if output.status.success() {
-                success = true;
-                break;
-            } else {
-                last_err = String::from_utf8_lossy(&output.stderr).into_owned();
+            if !stash_out.status.success() {
+                tracing::warn!(
+                    "Auto-stash failed: {}",
+                    String::from_utf8_lossy(&stash_out.stderr)
+                );
+            }
+
+            // 2. Pre-clean to remove any remaining untracked files (that couldn't be stashed) that might block the checkout
+            let pre_clean = Command::new("git")
+                .arg("clean")
+                .arg("-fdx")
+                .current_dir(&self.repo_path)
+                .output()
+                .await
+                .map_err(|e| e.to_string())?;
+
+            if !pre_clean.status.success() {
+                tracing::warn!(
+                    "Pre-clean failed: {}",
+                    String::from_utf8_lossy(&pre_clean.stderr)
+                );
+            }
+
+            // 3. Reset HEAD to ensure we are in a clean state before checkout
+            let reset_head = Command::new("git")
+                .arg("reset")
+                .arg("--hard")
+                .arg("HEAD")
+                .current_dir(&self.repo_path)
+                .output()
+                .await
+                .map_err(|e| e.to_string())?;
+
+            if !reset_head.status.success() {
+                tracing::warn!(
+                    "Reset HEAD failed: {}",
+                    String::from_utf8_lossy(&reset_head.stderr)
+                );
+            }
+
+            let branch_name = format!(
+                "agent-restore-{}",
+                Self::safe_tag_name(checkpoint_id).replace("checkpoint-", "")
+            );
+            let mut success = false;
+            let mut last_err = String::new();
+
+            // 3. Checkout the target tag into a new branch
+            for target_ref in refs_to_try {
+                let output = Command::new("git")
+                    .arg("checkout")
+                    .arg("-B")
+                    .arg(&branch_name)
+                    .arg(&target_ref)
+                    .current_dir(&self.repo_path)
+                    .output()
+                    .await
+                    .map_err(|e| e.to_string())?;
+
+                if output.status.success() {
+                    success = true;
+                    break;
+                } else {
+                    last_err = String::from_utf8_lossy(&output.stderr).into_owned();
+                }
+            }
+
+            if !success {
+                return Err(format!(
+                    "Failed to restore workspace (checkout): {}",
+                    last_err
+                ));
+            }
+
+            // 4. Robust Restore Edge Cases: Reset to HEAD of the new branch and clean remaining untracked and ignored files to ensure spotless working tree.
+            let reset_branch = Command::new("git")
+                .arg("reset")
+                .arg("--hard")
+                .arg("HEAD")
+                .current_dir(&self.repo_path)
+                .output()
+                .await
+                .map_err(|e| e.to_string())?;
+
+            if !reset_branch.status.success() {
+                return Err(format!(
+                    "Failed to restore workspace (reset branch): {}",
+                    String::from_utf8_lossy(&reset_branch.stderr)
+                ));
+            }
+
+            let clean_output = Command::new("git")
+                .arg("clean")
+                .arg("-fdx")
+                .current_dir(&self.repo_path)
+                .output()
+                .await
+                .map_err(|e| e.to_string())?;
+
+            if !clean_output.status.success() {
+                return Err(format!(
+                    "Failed to restore workspace (clean): {}",
+                    String::from_utf8_lossy(&clean_output.stderr)
+                ));
+            }
+
+            Ok(())
+        };
+
+        match run_restore.await {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                // Rollback to the original state before the failed restore to prevent workspace corruption
+                if let Some(ref orig) = original_ref {
+                    tracing::warn!("Restoring checkpoint failed, rolling back to original ref: {}. Error: {}", orig, e);
+                    let rollback_checkout = Command::new("git")
+                        .arg("checkout")
+                        .arg(orig)
+                        .current_dir(&self.repo_path)
+                        .output()
+                        .await;
+                    if let Ok(out) = rollback_checkout {
+                        if out.status.success() {
+                            let _ = Command::new("git")
+                                .arg("reset")
+                                .arg("--hard")
+                                .arg(orig)
+                                .current_dir(&self.repo_path)
+                                .output()
+                                .await;
+                            let _ = Command::new("git")
+                                .arg("clean")
+                                .arg("-fdx")
+                                .current_dir(&self.repo_path)
+                                .output()
+                                .await;
+                        }
+                    }
+                }
+                Err(e)
             }
         }
-
-        if !success {
-            return Err(format!(
-                "Failed to restore workspace (checkout): {}",
-                last_err
-            ));
-        }
-
-        // 4. Robust Restore Edge Cases: Reset to HEAD of the new branch and clean remaining untracked and ignored files to ensure spotless working tree.
-        let reset_branch = Command::new("git")
-            .arg("reset")
-            .arg("--hard")
-            .arg("HEAD")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if !reset_branch.status.success() {
-            return Err(format!(
-                "Failed to restore workspace (reset branch): {}",
-                String::from_utf8_lossy(&reset_branch.stderr)
-            ));
-        }
-
-        let clean_output = Command::new("git")
-            .arg("clean")
-            .arg("-fdx")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if !clean_output.status.success() {
-            return Err(format!(
-                "Failed to restore workspace (clean): {}",
-                String::from_utf8_lossy(&clean_output.stderr)
-            ));
-        }
-
-        Ok(())
     }
+
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
+        // Robustly handle empty/uninitialized repositories by verifying if HEAD exists first
+        let head_check = Command::new("git")
+            .args(["rev-parse", "--verify", "HEAD"])
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !head_check.status.success() {
+            return Ok(vec![]);
+        }
+
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
         let output = Command::new("git")
@@ -490,6 +553,18 @@ impl CheckpointSaver for GitCheckpointer {
     }
 
     async fn list_threads(&self) -> Result<Vec<String>, String> {
+        // Robustly handle empty/uninitialized repositories by verifying if HEAD exists first
+        let head_check = Command::new("git")
+            .args(["rev-parse", "--verify", "HEAD"])
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if !head_check.status.success() {
+            return Ok(vec![]);
+        }
+
         let output = Command::new("git")
             .arg("ls-tree")
             .arg("-r")
@@ -1319,5 +1394,58 @@ mod restore_stash_tests {
         assert!(untracked_file_path.exists());
         let untracked_content = std::fs::read_to_string(&untracked_file_path).unwrap();
         assert_eq!(untracked_content, "untracked work");
+    }
+}
+
+#[cfg(test)]
+mod git_robustness_tests {
+    use super::*;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_git_checkpointer_empty_repository_handling() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        // Simply initialize without making any commits to keep it an empty repo
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        // Verifying list_threads and list_checkpoints return empty results instead of crashing or failing
+        let threads = saver.list_threads().await.unwrap();
+        assert!(threads.is_empty(), "Expected no threads in empty repo, got {:?}", threads);
+
+        let checkpoints = saver.list_checkpoints("any-thread").await.unwrap();
+        assert!(checkpoints.is_empty(), "Expected no checkpoints in empty repo");
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_restore_failure_rollback() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        // Create a proper first commit / checkpoint
+        let cp = Checkpoint {
+            thread_id: "thread-rollback".to_string(),
+            checkpoint_id: "cp-valid-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "initial"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        let file_path = temp_dir.path().join("tracked_file.txt");
+        std::fs::write(&file_path, "initial content").unwrap();
+
+        saver.put_checkpoint(cp).await.unwrap();
+
+        // Check our state matches "initial content"
+        let orig_content = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(orig_content, "initial content");
+
+        // Attempting to restore a non-existent checkpoint should fail
+        let res = saver.restore_checkpoint("non-existent-checkpoint-id").await;
+        assert!(res.is_err(), "Restoring a bad checkpoint must return an Err");
+
+        // Workspace should have rolled back to the original commit, meaning "tracked_file.txt" retains its original content
+        let final_content = std::fs::read_to_string(&file_path).unwrap();
+        assert_eq!(final_content, "initial content", "Content should remain intact due to rollback");
     }
 }
