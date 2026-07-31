@@ -1,3 +1,4 @@
+pub mod chat_api;
 pub mod sync;
 pub mod oauth;
 pub mod offline_sync;

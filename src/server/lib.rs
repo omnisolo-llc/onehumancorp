@@ -6694,6 +6694,7 @@ async fn create_ui_bom_item_handler(
         .with_state(mesh_transport.clone());
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
+        .nest("/api/v1/chat", crate::api::chat_api::router(db.pool.clone(), std::env::var("REDIS_URL").ok()))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
