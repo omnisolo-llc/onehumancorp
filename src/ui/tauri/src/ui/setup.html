@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Setup - OneHumanCorp</title>
-    <link rel="stylesheet" href="globals.css" />
+    <link rel="stylesheet" href="/globals.css" />
     <style>
       body {
         align-items: center;
@@ -43,7 +43,7 @@
           color: #f5f5f7;
         }
       }
-      .step { display: block !important; }
+      .step { display: none; }
       .step.active { display: block; }
       .next-step-btn {
         width: 100%;
@@ -161,7 +161,7 @@
           <option value="">Select...</option>
           <option value="Modern">Modern</option>
         </select>
-        <div id="submit-error" class="error" style="display: block !important;"></div>
+        <div id="submit-error" class="error" style="display: none;"></div>
         <button id="finish-btn" data-testid="finish-btn" class="next-step-btn">Finish</button><button id="save-draft-btn" data-testid="save-draft-btn" class="secondary-btn">Save Draft</button>
       </div>
 
