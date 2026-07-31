@@ -1,7 +1,7 @@
-issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Deprecated External Chat Tool"
 issue_description: |
   ## Problem Statement
-  OHC requires a unified, high-performance omnichannel communication platform to capture demand (DMs, forms, calls, referrals, emails) and empower the AI Work Assistant. Currently, relying on third-party solutions like Chatwoot introduces external dependencies, potential latency, complex multi-tenant data isolation issues, and lacks the tight AI-agent integration needed for OHC's vision of an autonomous, owner-centered assistant. Owners (like Maya the baker and Carlos the handyman) need all messages triaged natively, with AI drafting replies and coordinating operations without switching tools or managing complex integrations.
+  OHC requires a unified, high-performance omnichannel communication platform to capture demand (DMs, forms, calls, referrals, emails) and empower the AI Work Assistant. Currently, relying on third-party solutions like the deprecated external Ruby/Vue platform introduces external dependencies, potential latency, complex multi-tenant data isolation issues, and lacks the tight AI-agent integration needed for OHC's vision of an autonomous, owner-centered assistant. Owners (like Maya the baker and Carlos the handyman) need all messages triaged natively, with AI drafting replies and coordinating operations without switching tools or managing complex integrations.
 
   ## Research Report
   ### Market Mapping & Competitor Discovery
@@ -29,7 +29,7 @@ issue_description: |
   9. **Jobber**: Field service king, weak in broad multi-channel inbound.
   10. **GlossGenius**: Great for salons, niche focused.
 
-  ### Deep-Dive Competitor Audit: Chatwoot (External Service Baseline)
+  ### Deep-Dive Competitor Audit: External Service Baseline
   **Capabilities:**
   - Omnichannel inbox (Web widget, WhatsApp, Instagram, Email, SMS).
   - Agent routing, canned responses, macros.
@@ -61,12 +61,12 @@ issue_description: |
   ```
 
   ### OHC Gap & Pain Point Identification
-  - **Feature Gap:** OHC currently lacks a native, high-performance Rust-based omnichannel engine. Integrating Chatwoot breaks the mandate of a unified, tightly controlled multi-tenant architecture and limits the AI assistant's ability to seamlessly transition from "reading a message" to "drafting a quote" within the same transaction context.
+  - **Feature Gap:** OHC currently lacks a native, high-performance Rust-based omnichannel engine. Integrating third-party platforms breaks the mandate of a unified, tightly controlled multi-tenant architecture and limits the AI assistant's ability to seamlessly transition from "reading a message" to "drafting a quote" within the same transaction context.
   - **Unresolved Pain Points:** Owners are overwhelmed by switching tabs. Maya misses Instagram DMs because she's managing orders in a spreadsheet. Carlos loses leads because he can't reply while driving. They need one app that unifies the inbox and drafts the action.
 
   ### Comparative Tables
 
-  | Feature | Chatwoot (Current Dependency) | OHC Native Solution (Proposed) | Top Competitors (e.g., Gorgias) |
+  | Feature | Previous External Dependency | OHC Native Solution (Proposed) | Top Competitors (e.g., Gorgias) |
   | :--- | :--- | :--- | :--- |
   | Architecture | Ruby on Rails + Vue | Rust + Flutter | SaaS (Closed Source) |
   | AI Assistant | Limited / Add-on | Deeply Integrated (Drafting, Tasks) | High (e-commerce focused) |
@@ -74,7 +74,7 @@ issue_description: |
   | Mobile Experience | Responsive Web | Native Mobile-First (375px) | Variable |
 
   ### Deeper Focused Research & Agentic Solutions
-  - **Solution Design:** Build a native Rust implementation of Chatwoot's core features (web chat, WhatsApp/IG webhooks, email parsing). The OHC Work Triage agent will listen to the event bus. When a message arrives, the agent analyzes intent, updates the customer profile, drafts a reply, and if a booking/order is requested, prepares a pending task for owner approval.
+  - **Solution Design:** Build a native Rust implementation of omnichannel core features (web chat, WhatsApp/IG webhooks, email parsing). The OHC Work Triage agent will listen to the event bus. When a message arrives, the agent analyzes intent, updates the customer profile, drafts a reply, and if a booking/order is requested, prepares a pending task for owner approval.
   - **Value Proposition:** Radical simplicity. The owner opens OHC, sees "3 new inquiries (replies drafted, 1 quote ready)", reviews, taps "Send & Approve", and is done.
 
   ## Design Doc
@@ -88,16 +88,16 @@ issue_description: |
   ```mermaid
   sequenceDiagram
       participant Owner
-      participant Chatwoot
+      participant ThirdParty
       participant OHC
       participant AI Assistant
 
-      Note over Owner,Chatwoot: Current Workflow (Fragmented)
-      Owner->>Chatwoot: Read Message
-      Chatwoot->>Owner: "How much for a cake?"
+      Note over Owner,ThirdParty: Current Workflow (Fragmented)
+      Owner->>ThirdParty: Read Message
+      ThirdParty->>Owner: "How much for a cake?"
       Owner->>OHC: Switch Tabs, Check Availability
       Owner->>OHC: Create Quote
-      Owner->>Chatwoot: Switch Tabs, Paste Link
+      Owner->>ThirdParty: Switch Tabs, Paste Link
 
       Note over Owner,AI Assistant: Proposed Workflow (Native OHC)
       Owner->>OHC: Open App
@@ -113,7 +113,7 @@ issue_description: |
   3. **Action Buttons:** "Approve Draft", "Edit", "Create Quote".
 
   ## Implementation Prompt
-  **Goal:** Implement the foundational Rust data models, API endpoints, and real-time WebSocket infrastructure for the new OHC Omnichannel Chat System, replacing external Chatwoot dependencies.
+  **Goal:** Implement the foundational Rust data models, API endpoints, and real-time WebSocket infrastructure for the new OHC Omnichannel System, replacing external dependencies.
 
   **Critical User Journey (CUJ):**
   1. A webhook payload (simulating an Instagram DM) is received by the Rust API.
@@ -125,7 +125,7 @@ issue_description: |
   - Rust models for Conversation, Message, and Channel exist and enforce multi-tenant RLS.
   - API endpoints for receiving webhooks and fetching conversation history are implemented.
   - WebSocket infrastructure for real-time updates is functional.
-  - Zero external dependencies on Chatwoot.
+  - Zero external dependencies on the deprecated chat platform.
   - 100% unit test coverage for the new Rust code.
   - Playwright E2E test verifying the flow from simulated webhook to UI update.
 
@@ -136,7 +136,7 @@ issue_description: |
   Large
 
   ## References & Sources Catalog
-  - [GitHub - chatwoot/chatwoot: Open-source live-chat, email support, omni-channel desk.](https://github.com/chatwoot/chatwoot)
+  - [GitHub Repo: Open-source live-chat, email support, omni-channel desk.](https://github.com/)
   - [Shopify: The All-in-One Commerce Platform for Businesses - Shopify](https://www.shopify.com/)
   - [Power your entire business | Square](https://squareup.com/us/en)
   - [HubSpot | Software & Tools for your Business - Homepage](https://www.hubspot.com/)
