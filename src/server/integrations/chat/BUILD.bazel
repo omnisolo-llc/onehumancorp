@@ -1,0 +1,23 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "chat",
+    srcs = glob(["src/**/*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:sea-orm",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:chrono",
+    ],
+)
+
+rust_test(
+    name = "chat_test",
+    crate = ":chat",
+    deps = [
+        "@crates//:tokio",
+        "@crates//:sea-orm",
+    ],
+)
