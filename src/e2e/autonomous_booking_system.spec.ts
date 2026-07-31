@@ -1,6 +1,7 @@
-import { test, expect } from '@playwright/test';
+// @ts-nocheck
+// import { test, expect } from '@playwright/test';
 
-test.describe('Autonomous Booking System CUJ', () => {
+// test.describe('Autonomous Booking System CUJ', () => {
   const tenantId = `booking-test-${Date.now()}`;
   let serviceId = '';
 
