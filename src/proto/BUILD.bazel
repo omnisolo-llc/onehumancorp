@@ -355,3 +355,16 @@ proto_library(
     srcs = ["search.proto"],
     visibility = ["//visibility:public"],
 )
+
+proto_library(
+    name = "chat_proto",
+    srcs = ["chat.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "chat",
+    proto = ":chat_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)

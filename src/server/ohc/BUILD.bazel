@@ -4,7 +4,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_ohc",
-    srcs = ["mod.rs"],
+    srcs = ["mod.rs", "chat/mod.rs", "chat/models.rs", "chat/service.rs"],
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
@@ -22,6 +22,11 @@ rust_library(
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
         "//src/proto:invoice_tonic",
+        "//src/proto:chat_tonic",
         "@crates//:tonic",
+        "@crates//:uuid",
+        "@crates//:sqlx",
+        "@crates//:serde_json",
+        "@crates//:tokio",
     ],
 )
