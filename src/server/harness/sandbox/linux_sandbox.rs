@@ -5,7 +5,7 @@ use serde_json::json;
 use sqlx::PgPool;
 
 use ::server_telemetry::record_bubblewrap_violation;
-use super::ast::ASTParser;
+use super::ast::BashASTValidator;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
 use crate::telemetry::ViolationStore;
@@ -76,7 +76,7 @@ impl LinuxSandbox {
 #[async_trait]
 impl SandboxAdapter for LinuxSandbox {
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
-        let mut ast_parser = ASTParser::new();
+        let mut ast_parser = BashASTValidator::new();
         if let Err(reason) = ast_parser.parse_for_security(cmd) {
             let details = json!({ "command": cmd, "reason": reason });
             let _ = self.violation_store.record_violation(

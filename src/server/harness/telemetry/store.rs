@@ -19,7 +19,7 @@ pub struct ViolationStore {
 impl ViolationStore {
     pub fn new(pool: Option<PgPool>) -> Self {
         let meter = global::meter("ohc.harness.telemetry");
-        let violation_counter = meter.u64_counter("ohc_harness_violations_total").build();
+        let violation_counter = meter.u64_counter("ohc_harness_violation_total").build();
         let token_usage_counter = meter.u64_counter("ohc_tenant_token_usage_total").build();
         let llm_cost_counter = meter.u64_counter("ohc_llm_cost_total_cents").build();
         let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();

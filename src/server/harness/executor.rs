@@ -6,6 +6,17 @@ use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_la
 
 use super::network_proxy::NetworkProxy;
 
+use std::sync::OnceLock;
+use opentelemetry::metrics::Histogram;
+
+fn execution_duration_histogram() -> &'static Histogram<f64> {
+    static HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+    HISTOGRAM.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.harness.telemetry");
+        meter.f64_histogram("ohc_harness_execution_duration_ms").build()
+    })
+}
+
 pub struct LocalShellTask {
     manager: SandboxManager,
 }
@@ -43,14 +54,20 @@ impl LocalShellTask {
 
         let start = Instant::now();
 
-        let output = tokio::process::Command::new("bash")
+
+        let output_res = tokio::process::Command::new("bash")
             .arg("-c")
             .arg(&wrapped_cmd)
             .env("HTTP_PROXY", format!("http://127.0.0.1:{}", proxy_port))
             .env("HTTPS_PROXY", format!("http://127.0.0.1:{}", proxy_port))
             .output()
-            .await
-            .map_err(|e| format!("Failed to spawn process: {}", e))?;
+            .await;
+
+        let duration = start.elapsed().as_millis() as f64;
+        execution_duration_histogram().record(duration, &[]);
+
+        let output = output_res.map_err(|e| format!("Failed to spawn process: {}", e))?;
+
 
         let exit_code = output.status.code().unwrap_or(-1);
 

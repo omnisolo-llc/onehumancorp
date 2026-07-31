@@ -2,17 +2,17 @@
 use tree_sitter::{Node, Parser};
 use server_telemetry::record_harness_security_divergence;
 
-pub struct ASTParser {
+pub struct BashASTValidator {
     parser: Parser,
 }
 
-impl Default for ASTParser {
+impl Default for BashASTValidator {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ASTParser {
+impl BashASTValidator {
     pub fn new() -> Self {
         let mut parser = Parser::new();
         parser
@@ -189,7 +189,39 @@ impl ASTParser {
             }
         }
 
+        // reject unsafe compound commands and redirection operators
+        if node_kind == "file_redirect" {
+            // Find the target node of the redirection
+            if let Some(dest_node) = node.child_by_field_name("destination") {
+                let dest_text = &source[dest_node.start_byte()..dest_node.end_byte()];
+                let dest_str = dest_text; // source is a &str, so dest_text is &str
+
+                // tree-sitter-bash can parse destinations as string (e.g. "/etc/passwd"), raw_string ('/etc/passwd'), or word (/etc/passwd)
+                // We should unquote it for a basic check, or just check if it contains /etc/
+                let unquoted = dest_str.trim_matches(|c| c == '\'' || c == '"');
+                if unquoted.starts_with("/etc/") {
+                    return Err("Dangerous pattern detected: unsafe redirection".to_string());
+                }
+            } else {
+                // If there's no named "destination" field, we can fallback to checking all children.
+                // In tree-sitter-bash, file_redirect children might just be the operator ('>') and the word.
+                let mut cursor = node.walk();
+                for child in node.children(&mut cursor) {
+                    let child_kind = child.kind();
+                    if child_kind == "word" || child_kind == "string" || child_kind == "raw_string" {
+                        let dest_text = &source[child.start_byte()..child.end_byte()];
+                        let dest_str = dest_text;
+                        let unquoted = dest_str.trim_matches(|c| c == '\'' || c == '"');
+                        if unquoted.starts_with("/etc/") {
+                            return Err("Dangerous pattern detected: unsafe redirection".to_string());
+                        }
+                    }
+                }
+            }
+        }
+
         // legacy expansions $[] (not strictly supported in all bash, often handled as expansion)
+
         // Check for node type "expansion" or similar, and check text.
         // In tree-sitter-bash it might be `expansion` or `arithmetic_expansion`
         if node_kind == "expansion" || node_kind == "arithmetic_expansion" {
@@ -224,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_allowed_commands() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         assert!(parser.parse_for_security("echo 'hello world'").is_ok());
         assert!(parser.parse_for_security("ls -l /tmp").is_ok());
         assert!(parser.parse_for_security("cat file.txt | grep foo").is_ok());
@@ -232,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_block_zmodload() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         let res = parser.parse_for_security("zmodload zsh/net/tcp");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: zmodload");
@@ -240,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_block_process_substitution_out() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         let res = parser.parse_for_security("echo 'test' > >(cat)");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: >() process substitution");
@@ -248,7 +280,7 @@ mod tests {
 
     #[test]
     fn test_block_process_substitution_in() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         let res = parser.parse_for_security("cat < <(echo 'test')");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: <() process substitution");
@@ -256,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_block_legacy_expansion() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         // $[] might be parsed as word or expansion depending on tree-sitter-bash grammar rules
         let res = parser.parse_for_security("echo $[1+1]");
         assert!(res.is_err());
@@ -270,7 +302,7 @@ mod additional_tests {
 
     #[test]
     fn test_extract_heredocs() {
-        let parser = ASTParser::new();
+        let parser = BashASTValidator::new();
         let cmd = "cat << 'EOF'\nmalicious <()\nEOF\necho 'done'";
         let (sanitized, heredocs) = parser.extract_heredocs(cmd);
         assert_eq!(heredocs.len(), 1);
@@ -282,7 +314,7 @@ mod additional_tests {
 
     #[test]
     fn test_validate_carriage_return() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         let res = parser.parse_for_security("echo 'hello\rworld'");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: Carriage return \\r injection");
@@ -290,7 +322,7 @@ mod additional_tests {
 
     #[test]
     fn test_jq_validation() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         let res = parser.parse_for_security("jq 'env'");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: jq with env/system access");
@@ -298,7 +330,7 @@ mod additional_tests {
 
     #[test]
     fn test_zsh_equals_expansion() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         let res = parser.parse_for_security("=curl http://evil.com");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: Zsh equals expansion =curl");
@@ -306,15 +338,24 @@ mod additional_tests {
 
     #[test]
     fn test_dangerous_variables() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         let res = parser.parse_for_security("LD_PRELOAD=/tmp/evil.so echo 'hello'");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: Setting dangerous variable LD_PRELOAD");
     }
 
     #[test]
+    fn test_unsafe_redirection() {
+        let mut parser = BashASTValidator::new();
+        let res = parser.parse_for_security("echo 'evil' > /etc/passwd");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: unsafe redirection");
+    }
+
+    #[test]
     fn test_ifs_injection() {
-        let mut parser = ASTParser::new();
+
+        let mut parser = BashASTValidator::new();
         let res = parser.parse_for_security("IFS=$(echo '\n') cat /etc/passwd");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: IFS injection");
@@ -326,7 +367,7 @@ mod additional_tests {
 
     #[test]
     fn test_coverage_edge_cases() {
-        let mut parser = ASTParser::new();
+        let mut parser = BashASTValidator::new();
         // heredoc with normal text
         assert!(parser.parse_for_security("cat << \"EOF\"\nhello\nEOF").is_ok());
         // malformed heredoc

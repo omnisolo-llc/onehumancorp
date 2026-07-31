@@ -320,24 +320,24 @@ impl IsolationStrategy for ProcessIsolationStrategy {
 use std::sync::Mutex;
 use tree_sitter::{Node, Parser};
 
-pub struct ASTValidator {
+pub struct BashASTValidator {
     parser: Mutex<Parser>,
     blocked_commands: Vec<String>,
 }
 
-impl Default for ASTValidator {
+impl Default for BashASTValidator {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ASTValidator {
+impl BashASTValidator {
     pub fn new() -> Self {
         let mut parser = Parser::new();
         parser
             .set_language(&tree_sitter_bash::LANGUAGE.into())
             .expect("Error loading bash grammar");
-        ASTValidator {
+        BashASTValidator {
             parser: Mutex::new(parser),
             blocked_commands: vec![
                 "sudo".to_string(),
@@ -431,12 +431,12 @@ pub trait HarnessBackend: Send + Sync {
 
 pub struct LocalBackend {
     #[allow(dead_code)]
-    validator: Arc<ASTValidator>,
+    validator: Arc<BashASTValidator>,
     config: Config,
 }
 
 impl LocalBackend {
-    pub fn new(#[allow(dead_code)] validator: Arc<ASTValidator>, config: Config) -> Self {
+    pub fn new(#[allow(dead_code)] validator: Arc<BashASTValidator>, config: Config) -> Self {
         LocalBackend { validator, config }
     }
 
@@ -767,7 +767,7 @@ pub enum BackendType {
 pub struct Manager {
     config: Config,
     #[allow(dead_code)]
-    validator: Arc<ASTValidator>,
+    validator: Arc<BashASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
     ssh_backend: Arc<dyn HarnessBackend>,
@@ -779,7 +779,7 @@ pub struct Manager {
 
 impl Manager {
     pub fn new(config: Config) -> Self {
-        let validator = Arc::new(ASTValidator::new());
+        let validator = Arc::new(BashASTValidator::new());
         let local_backend = Arc::new(LocalBackend::new(validator.clone(), config.clone()));
         let docker_backend = Arc::new(DockerBackend::new());
         let ssh_backend = Arc::new(SshBackend::new());
@@ -899,7 +899,7 @@ mod tests {
 
     #[test]
     fn test_astvalidator() {
-        let validator = ASTValidator::new();
+        let validator = BashASTValidator::new();
 
         assert!(validator.validate("ls -l").is_ok());
         assert!(validator.validate("echo hello").is_ok());
@@ -943,7 +943,7 @@ mod tests {
 
     #[test]
     fn test_get_bwrap_args() {
-        let validator = Arc::new(ASTValidator::new());
+        let validator = Arc::new(BashASTValidator::new());
         let runner = LocalBackend::new(validator, Config::default());
         let policy = Policy {
             allowed_paths: vec!["/home/user".to_string()],
@@ -966,7 +966,7 @@ mod tests {
 
     #[test]
     fn test_policy_allow_read_deny_write() {
-        let validator = Arc::new(ASTValidator::new());
+        let validator = Arc::new(BashASTValidator::new());
         let runner = LocalBackend::new(validator, Config::default());
         let policy = Policy {
             allow_read: vec!["/opt".to_string()],
@@ -984,7 +984,7 @@ mod tests {
 
     #[test]
     fn test_get_bwrap_args_with_seccomp() {
-        let validator = Arc::new(ASTValidator::new());
+        let validator = Arc::new(BashASTValidator::new());
         let config = Config {
             enable_seccomp: true,
             seccomp_bpf_path: Some("/tmp/seccomp.bpf".to_string()),

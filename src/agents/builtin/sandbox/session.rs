@@ -5,7 +5,7 @@ use tokio::fs;
 use tokio::process::Command;
 use tokio::sync::RwLock;
 use regex::Regex;
-use crate::harness::ASTValidator;
+use crate::harness::BashASTValidator;
 
 pub struct ShellSession {
     pub session_id: String,
@@ -13,7 +13,7 @@ pub struct ShellSession {
     pub memory_dir: PathBuf,
     pub current_cwd: RwLock<PathBuf>,
     blocked_patterns: Vec<Regex>,
-    ast_validator: ASTValidator,
+    ast_validator: BashASTValidator,
 }
 
 impl ShellSession {
@@ -45,7 +45,7 @@ impl ShellSession {
             memory_dir,
             current_cwd: RwLock::new(sandbox_path.to_path_buf()),
             blocked_patterns,
-            ast_validator: ASTValidator::new(),
+            ast_validator: BashASTValidator::new(),
         })
     }
 

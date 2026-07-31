@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde_json::json;
 use sqlx::PgPool;
 
-use super::ast::ASTParser;
+use super::ast::BashASTValidator;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
 use crate::telemetry::ViolationStore;
@@ -54,7 +54,7 @@ impl MacOsSandbox {
 #[async_trait]
 impl SandboxAdapter for MacOsSandbox {
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
-        let mut ast_parser = ASTParser::new();
+        let mut ast_parser = BashASTValidator::new();
         if let Err(reason) = ast_parser.parse_for_security(cmd) {
             let details = json!({ "command": cmd, "reason": reason });
             let _ = self.violation_store.record_violation(
