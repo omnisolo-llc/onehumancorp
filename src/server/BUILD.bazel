@@ -7,6 +7,7 @@ SERVER_RS_SRCS = [
     "//src/server/services:chat/mod.rs",
     "//src/server/services:chat/models.rs",
     "//src/server/services:chat/service.rs",
+    "//src/server/services:chat/api.rs",
     "health_test.rs",
     "analytics.rs",
     "autodream_sync.rs",

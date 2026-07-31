@@ -7617,6 +7617,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/agents/order-interceptor", axum::routing::post(api::agents::order_interceptor::intercept_order_handler).with_state(db.pool.clone()))
         .nest("/api/v1/agents/pydantic", api::agents::pydantic::router())
         .nest("/api/v1/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/v1/chat", crate::services::chat::api::router(db.pool.clone()))
         .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .merge(api::agent_stream::router(hub.clone()))
@@ -7724,7 +7725,7 @@ async fn create_ui_bom_item_handler(
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/chat", axum::routing::post(|
+        .route("/api/v1/ai_help_chat", axum::routing::post(|
             axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
             axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
             axum::Json(req): axum::Json<ChatRequest>
