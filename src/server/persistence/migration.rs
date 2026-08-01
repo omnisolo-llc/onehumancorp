@@ -395,7 +395,7 @@ where
     let bypass_role_is_usable = transaction
         .query_one(Statement::from_string(
             sea_orm::DatabaseBackend::Postgres,
-            "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_bypassrls' AND pg_has_role(current_user, rolname, 'MEMBER')) AS bypass_role_is_usable"
+            "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_bypassrls' AND rolbypassrls AND pg_has_role(current_user, rolname, 'MEMBER')) AS bypass_role_is_usable"
                 .to_string(),
         ))
         .await?

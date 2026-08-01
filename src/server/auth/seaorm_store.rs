@@ -1398,6 +1398,7 @@ mod atomic_registration_tests {
         assert!(migration_source.contains("0x4f48_435f_4d49_4752"));
         assert!(migration_source.contains("FROM pg_roles"));
         assert!(migration_source.contains("pg_has_role"));
+        assert!(migration_source.contains("rolbypassrls"));
         assert!(migration_source.contains("relrowsecurity"));
         assert!(migration_source.contains("row_security_active"));
         assert!(
