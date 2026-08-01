@@ -1,9 +1,12 @@
+use server_auth::seaorm_store::entities as auth_entities;
 use chrono::Utc;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, Set,
 };
 
 use super::{
+    capabilities::DatabaseBackend as AppBackend,
+
     connection::{AppDatabase, DatabaseUrl},
     entities, migration,
 };
@@ -49,7 +52,7 @@ pub async fn verify(database: &AppDatabase) -> CommandResult<DatabaseVerificatio
         migrations: entities::schema_version::Entity::find()
             .count(database.connection())
             .await?,
-        users: entities::user::Entity::find()
+        users: auth_entities::user::Entity::find()
             .count(database.connection())
             .await?,
         products: entities::product::Entity::find()
@@ -73,9 +76,9 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
     }
     migration::migrate(database).await?;
     let tenant_id = "org-1";
-    let existing = entities::user::Entity::find()
-        .filter(entities::user::Column::TenantId.eq(tenant_id))
-        .filter(entities::user::Column::Email.eq(email))
+    let existing = auth_entities::user::Entity::find()
+        .filter(auth_entities::user::Column::TenantId.eq(tenant_id))
+        .filter(auth_entities::user::Column::Email.eq(email))
         .one(database.connection())
         .await?;
     let password = password.to_owned();
@@ -83,7 +86,7 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
     let now = Utc::now();
 
     if let Some(existing) = existing {
-        let mut admin: entities::user::ActiveModel = existing.into();
+        let mut admin: auth_entities::user::ActiveModel = existing.into();
         admin.username = Set(email.to_owned());
         admin.email = Set(email.to_owned());
         admin.password_hash = Set(password_hash);
@@ -94,7 +97,7 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
         return Ok(());
     }
 
-    entities::user::ActiveModel {
+    auth_entities::user::ActiveModel {
         id: Set(uuid::Uuid::new_v4().to_string()),
         username: Set(email.to_owned()),
         email: Set(email.to_owned()),
