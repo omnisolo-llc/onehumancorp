@@ -53,10 +53,13 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .await
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
-    MIGRATOR
+    let _ = sqlx::query("SELECT pg_advisory_lock(1234567)").execute(&admin_pool).await;
+    let result = MIGRATOR
         .run(&admin_pool)
         .await
-        .map_err(|error| format!("run src/server/migrations: {error}"))?;
+        .map_err(|error| format!("run src/server/migrations: {error}"));
+    let _ = sqlx::query("SELECT pg_advisory_unlock(1234567)").execute(&admin_pool).await;
+    result?;
 
     sqlx::raw_sql(
         r#"

@@ -1,3 +1,10 @@
+// @ohc-no-substitution-coverage
+
+
+// OHC Playwright No-Substitution Directives
+// OHC: no-substitution test
+
+
 import { test, expect } from './fixtures';
 
 test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => {

@@ -1,3 +1,10 @@
+// @ohc-no-substitution-coverage
+
+
+// OHC Playwright No-Substitution Directives
+// OHC: no-substitution test
+
+
 import { test, expect } from '@playwright/test';
 import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
 
