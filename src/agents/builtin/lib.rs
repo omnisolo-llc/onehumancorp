@@ -43,6 +43,7 @@ pub mod guardrails;
 pub mod in_memory_store;
 pub mod json_store;
 pub mod memory;
+pub mod omnichannel_chat;
 pub mod memory_exhaustive_tests;
 pub mod memory_store;
 pub mod openhands;
