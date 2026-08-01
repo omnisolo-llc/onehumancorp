@@ -94,12 +94,12 @@ playwright_spec_workspace_name() {
       printf 'src/playwright_ui/next/%s\n' "${rel#src/ui/next/}"
       ;;
     *)
-      # Fallback for specs discovered inside test roots, such as runfiles directories,
-      # which might not exactly match the original path structure if SOURCE_REPO_ROOT isn't fully resolving.
-      # Only throw error if the substring "src/e2e/" doesn't exist anywhere in the resolved path string.
       if [[ "$rel" == *"src/e2e/"* ]]; then
-        # Use the relative string matched after src/e2e
         printf '%s\n' "src/e2e/${rel#*src/e2e/}"
+      elif [[ "$rel" == *"src/ui/next/src/e2e/"* ]]; then
+        printf 'src/playwright_ui/next/%s\n' "src/e2e/${rel#*src/ui/next/src/e2e/}"
+      elif [[ "$rel" == *"src/ui/next/e2e/"* ]]; then
+        printf 'src/playwright_ui/next/%s\n' "e2e/${rel#*src/ui/next/e2e/}"
       else
         echo "[playwright] Refusing spec outside expected E2E roots: $spec_file" >&2
         return 1
