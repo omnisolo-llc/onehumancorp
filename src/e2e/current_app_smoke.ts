@@ -125,6 +125,9 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
         expect(codeText).toContain('ohc.app/api/v1/growth/embed/widget?type=leaderboard');
     }
     await page.goto('/ui/viral-pwyw-generator.html');
+
+    await page.goto('/viral-seasonal-promo-generator.html');
+    await expect(page.locator('h1', { hasText: 'Viral Seasonal Promo Generator' })).toBeVisible();
     await page.waitForTimeout(1000);
-    await expect(page.locator('h1', { hasText: 'Viral PWYW Drop Generator' })).toBeVisible();
+
 }
