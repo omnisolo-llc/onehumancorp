@@ -3,12 +3,12 @@ issue_description: |
   # Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  The legacy Chatwoot integration has been fully removed from the OHC ecosystem to reduce operational overhead, external dependencies, and complexity. However, we now lack a unified omnichannel inbox for our owners. Our personas (like Maya who gets Instagram DMs, Carlos who gets service requests, and Fatima who receives WhatsApp pre-orders) need to be able to see all their communications in a single, lightning-fast unified inbox powered by AI.
+  The legacy integration has been fully removed from the OHC ecosystem to reduce operational overhead, external dependencies, and complexity. However, we now lack a unified omnichannel inbox for our owners. Our personas (like Maya who gets Instagram DMs, Carlos who gets service requests, and Fatima who receives WhatsApp pre-orders) need to be able to see all their communications in a single, lightning-fast unified inbox powered by AI.
 
-  We need to replicate the core value of Chatwoot (omnichannel unified inbox, webhook ingestion, channel adapters) but implemented natively in Rust within `onehumancorp/mono`. This system must enforce strict multi-tenant Row Level Security, integrate seamlessly with the AI Agent Triage, and run natively within our existing infrastructure.
+  We need to replicate the core value of the old system (omnichannel unified inbox, webhook ingestion, channel adapters) but implemented natively in Rust within `onehumancorp/mono`. This system must enforce strict multi-tenant Row Level Security, integrate seamlessly with the AI Agent Triage, and run natively within our existing infrastructure.
 
   ## Research Report
-  - We analyzed the Chatwoot source code repository to understand its data models, including `accounts` (tenants), `inboxes`, `conversations`, `messages`, `contacts`, and channel adapters (e.g., `channel_web_widgets`, `channel_whatsapp`).
+  - We analyzed the source code repository of the old system to understand its data models, including `accounts` (tenants), `inboxes`, `conversations`, `messages`, `contacts`, and channel adapters (e.g., `channel_web_widgets`, `channel_whatsapp`).
   - By replicating these core models and their relationships natively in Rust with PostgreSQL, we can maintain feature parity while ensuring zero-trust multi-tenant isolation and integrating directly into our existing Bazel build pipeline.
   - OHC's backend will handle webhook ingestion from platforms like Meta (WhatsApp, Instagram) directly.
   - We will implement a Web Widget channel that uses WebSockets for real-time website chat.
