@@ -610,6 +610,7 @@ rust_test(
         "@crates//:temp-env",
         "@crates//:tempfile",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
     ],
 )
 
@@ -649,6 +650,7 @@ rust_test(
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
     ],
 )
 
@@ -671,6 +673,7 @@ rust_test(
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
     ],
 )
 
