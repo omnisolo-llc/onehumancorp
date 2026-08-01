@@ -955,6 +955,7 @@ pub mod services {
     pub mod inventory;
     pub mod agent_feed;
     pub mod customer_memory_graph;
+    pub mod inbox;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
