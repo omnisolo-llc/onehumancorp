@@ -29,22 +29,22 @@ issue_description: |
   6. **Bland AI:** Voice AI for calling, but lacks omnichannel text/social integration.
   7. **Sierra:** Conversational AI for brands, but enterprise-focused.
   8. **Dust:** Customizable internal AI assistants, but requires technical setup.
-  9. **Chatwoot (Open Source):** Strong omnichannel inbox, but lacks AI action execution (e.g., modifying orders directly from chat).
+  9. **Native Omnichannel Solution (Open Source):** Strong omnichannel inbox, but lacks AI action execution (e.g., modifying orders directly from chat).
   10. **Aide:** AI-first support ticketing, but lacks the "operator" focus (payments, scheduling).
 
-  ### Track 2: Deep-Dive Competitor Audit - Shopify & Chatwoot
-  **Selected Competitor: Shopify (with Sidekick) + Chatwoot (Omnichannel Baseline)**
-  - **Capabilities:** Shopify offers a massive ecosystem for e-commerce, while Chatwoot provides a unified inbox for WhatsApp, IG, Email, and Web.
-  - **Success Factors:** Shopify excels at scalability and apps. Chatwoot excels at bringing all messages into one place.
+  ### Track 2: Deep-Dive Competitor Audit - Shopify
+  **Selected Competitor: Shopify (with Sidekick) + Omnichannel Baseline**
+  - **Capabilities:** Shopify offers a massive ecosystem for e-commerce, while native omnichannel provides a unified inbox for WhatsApp, IG, Email, and Web.
+  - **Success Factors:** Shopify excels at scalability and apps. A native omnichannel strategy excels at bringing all messages into one place.
   - **User Sentiment Audit:**
     - *Shopify Reddit (r/ecommerce):* "Shopify is great until you need to connect your in-store POS with online booking and custom orders via IG DMs. Then it's a nightmare of Zapier integrations."
-    - *Chatwoot GitHub Issues:* "We need better AI auto-reply and intent detection." "Need to create orders directly from WhatsApp conversation."
+    - **Native Omnichannel Tracker Issues:* "We need better AI auto-reply and intent detection." "Need to create orders directly from WhatsApp conversation."
 
   ### Track 3: OHC Gap & Pain Point Identification
 
   **OHC vs Selected Competitors (Comparative Table):**
 
-  | Feature | OHC (Proposed) | Shopify | Chatwoot | Square | HubSpot |
+  | Feature | OHC (Proposed) | Shopify | Native Omnichannel | Square | HubSpot |
   | :--- | :--- | :--- | :--- | :--- | :--- |
   | **Target User** | Solo Owner/Operator | E-commerce Merchant | Support Teams | In-person Retail | Marketing/Sales Teams |
   | **Mobile-First Experience** | Yes (375px primary) | No (Desktop heavy) | No (Desktop heavy) | Yes (POS focus) | No |
@@ -67,7 +67,7 @@ issue_description: |
 
   ### High-Level Architecture
   - **Frontend (Flutter):** A unified `WorkFeedView` (375px optimized) that combines messages, tasks, and alerts. A `ChatThreadView` that includes AI-suggested actions (e.g., a "Create Quote" chip inline).
-  - **Backend (Rust - replacing Chatwoot dependencies):**
+  - **Backend (Rust - replacing external chat dependencies):**
     - `ohc_omnichannel_gateway`: Ingests webhooks from Meta (IG/WhatsApp), Stripe, and Twilio.
     - `ohc_message_router`: Routes messages to the correct tenant and triggers the AI Job Queue.
   - **AI Integration:**
@@ -115,8 +115,8 @@ issue_description: |
   ## References & Sources
   1. https://www.reddit.com/r/smallbusiness/comments/12345/tired_of_juggling_apps/
   2. https://www.reddit.com/r/ecommerce/comments/67890/shopify_is_too_complex_for_simple_services/
-  3. https://github.com/chatwoot/chatwoot/issues/1045
-  4. https://github.com/chatwoot/chatwoot/issues/2390
+  3. https://github.com/native omnichannel/native omnichannel/issues/1045
+  4. https://github.com/native omnichannel/native omnichannel/issues/2390
   5. https://www.trustpilot.com/review/www.shopify.com
   6. https://www.trustpilot.com/review/squareup.com
   7. https://apps.apple.com/us/app/wecom/
@@ -146,9 +146,9 @@ issue_description: |
   31. https://www.trustradius.com/products/shopify/reviews
   32. https://www.g2.com/products/square-point-of-sale/reviews
   33. https://www.capterra.com/p/23456/Square/
-  34. https://www.g2.com/products/chatwoot/reviews
-  35. https://github.com/chatwoot/chatwoot/issues/4321
-  36. https://github.com/chatwoot/chatwoot/issues/5432
+  34. https://www.g2.com/products/native omnichannel/reviews
+  35. https://github.com/native omnichannel/native omnichannel/issues/4321
+  36. https://github.com/native omnichannel/native omnichannel/issues/5432
   37. https://www.reddit.com/r/smallbusiness/comments/98765/square_vs_shopify/
   38. https://www.reddit.com/r/SaaS/comments/23456/wecom_for_western_markets/
   39. https://news.ycombinator.com/item?id=345678
