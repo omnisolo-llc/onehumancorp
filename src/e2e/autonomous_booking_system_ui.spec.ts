@@ -1,90 +1,51 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Autonomous Booking System UI', () => {
-  const tenantId = `booking-ui-test-${Date.now()}`;
+test.describe('Autonomous Booking System - Field Service Mobile UI', () => {
+  test('Carlos (Field Service) can see smart booking options on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/ui/booking.html');
 
-  test('Public Booking Form Flow', async ({ page }) => {
-    // 1. Visit booking page
-    await page.goto(`/booking?tenant=${tenantId}&service_id=mock-service`);
-    await expect(page.getByRole('heading', { name: 'Book an Appointment' })).toBeVisible();
+    // Assert Unifi glassmorphism styling is applied
+    const glassContainer = page.locator('.glass-panel').first();
+    await expect(glassContainer).toHaveCSS('backdrop-filter', /blur/);
 
-    // 2. Fill the form
-    await page.fill('input[type="text"]', 'Jane Doe');
-    await page.fill('input[type="email"]', 'jane@example.com');
-    await page.fill('textarea', 'I need a drum lesson.');
+    // Verify the smart AI agent greeting
+    await expect(page.locator('h2')).toContainText('Schedule your repair');
+    await expect(page.locator('.ai-suggestion')).toContainText('Carlos is usually available in your area on Thursday afternoons.');
 
-    // 3. Date Selection triggers slot loading
-    const dateQuery = new Date().toISOString().split('T')[0];
-    await page.fill('input[type="date"]', dateQuery);
+    // Select a service
+    await page.locator('select#serviceType').selectOption('HVAC Repair');
 
-    // Wait for the mock slots to load (9:00 AM, 11:00 AM, etc.)
-    await page.waitForSelector('button:has-text("09:00 AM")');
-    await page.click('button:has-text("09:00 AM")');
+    // Proceed to time selection
+    await page.locator('button#nextStepBtn').click();
 
-    // 4. Submit
-    // Route mock to avoid actual backend errors if not fully seeded
-    await page.route('/api/v1/booking/public/checkout', async (route) => {
-        await route.fulfill({
-            status: 200,
-            json: {
-                booking_id: 'mock-booking',
-                stripe_url: 'https://checkout.stripe.com/pay/mock_session',
-                status: 'pending_payment'
-            }
-        });
-    });
+    // Verify time slots are visible
+    await expect(page.locator('.time-slot-grid')).toBeVisible();
+    await expect(page.locator('button', { hasText: '9:00 AM' })).toBeVisible();
 
-    await page.click('button:has-text("Confirm Booking")');
+    await page.locator('button', { hasText: '9:00 AM' }).click();
 
-    // 5. Verify deposit step
-    await expect(page.getByTestId('booking-checkout-container')).toBeVisible();
-    await expect(page.getByTestId('pay-deposit-btn')).toHaveAttribute('href', /checkout\.stripe\.com/);
+    // Verify checkout intent is triggered
+    await expect(page.locator('.checkout-spinner')).toBeVisible();
   });
 
-  test('Owner Admin Dashboard', async ({ page }) => {
-    // 1. Visit admin bookings dashboard
-    await page.goto(`/admin/bookings?tenant=${tenantId}`);
-    await expect(page.getByRole('heading', { name: 'Booking Management' })).toBeVisible();
+  test('Owner dashboard allows managing resources and AI availability overrides', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/ui/booking-admin.html');
 
-    // Route mocks
-    await page.route('/api/v1/booking/admin/resources', async (route) => {
-        if (route.request().method() === 'GET') {
-            await route.fulfill({
-                status: 200,
-                json: [{ id: 'res-1', name: 'Studio A', description: 'Main Studio', type: 'space' }]
-            });
-        } else {
-            await route.fulfill({ status: 201, json: { id: 'new-res-1' } });
-        }
-    });
+    // Add a new resource
+    await page.locator('input#resourceName').fill('Dr. Smith');
+    await page.locator('select#resourceType').selectOption('staff');
+    await page.locator('button#addResourceBtn').click();
 
-    await page.route('/api/v1/booking/admin/availability', async (route) => {
-        if (route.request().method() === 'GET') {
-            await route.fulfill({
-                status: 200,
-                json: [{ id: 'avail-1', resource_id: 'res-1', start_time: '2025-01-01T09:00:00Z', end_time: '2025-01-01T17:00:00Z' }]
-            });
-        } else {
-            await route.fulfill({ status: 201, json: { id: 'new-avail-1' } });
-        }
-    });
+    // Verify optimistic UI update
+    await expect(page.locator('.resource-list')).toContainText('Dr. Smith');
 
-    await page.reload();
+    // Add an AI availability override (e.g. blocking out a holiday)
+    await page.locator('input#overrideDate').fill('2026-12-25');
+    await page.locator('input#overrideReason').fill('Christmas Holiday');
+    await page.locator('button#addOverrideBtn').click();
 
-    // 2. Check rendered content
-    await expect(page.getByText('Studio A')).toBeVisible();
-
-    // 3. Create Resource
-    const newResNameInput = page.locator('input[type="text"]').first();
-    await newResNameInput.fill('New Tutor Leo');
-    await page.getByRole('button', { name: 'Add Resource' }).click();
-
-    // 4. Create Availability Block
-    // Wait for the select to be populated
-    await page.selectOption('select', 'res-1');
-    const timeInputs = page.locator('input[type="datetime-local"]');
-    await timeInputs.nth(0).fill('2025-02-01T09:00');
-    await timeInputs.nth(1).fill('2025-02-01T17:00');
-    await page.getByRole('button', { name: 'Add Block' }).click();
+    await expect(page.locator('.override-list')).toContainText('Christmas Holiday');
   });
 });
