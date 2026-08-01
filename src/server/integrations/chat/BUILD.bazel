@@ -1,0 +1,16 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+rust_binary(
+    name = "chat",
+    srcs = ["src/main.rs"],
+    deps = [
+        "@crates//:axum",
+        "@crates//:tokio",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:tower",
+        "@crates//:tower-http",
+        "@crates//:tracing",
+    ],
+)
