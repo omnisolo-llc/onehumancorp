@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS chat_inboxes (
 );
 
 ALTER TABLE chat_inboxes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY chat_inboxes_tenant_isolation ON chat_inboxes USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE POLICY tenant_isolation_chat_inboxes ON chat_inboxes FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid) WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS chat_contacts (
     id UUID PRIMARY KEY,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS chat_contacts (
 );
 
 ALTER TABLE chat_contacts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY chat_contacts_tenant_isolation ON chat_contacts USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE POLICY tenant_isolation_chat_contacts ON chat_contacts FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid) WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS chat_contact_inboxes (
     id UUID PRIMARY KEY,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS chat_contact_inboxes (
 );
 
 ALTER TABLE chat_contact_inboxes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY chat_contact_inboxes_tenant_isolation ON chat_contact_inboxes USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE POLICY tenant_isolation_chat_contact_inboxes ON chat_contact_inboxes FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid) WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS chat_conversations (
     id UUID PRIMARY KEY,
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
 );
 
 ALTER TABLE chat_conversations ENABLE ROW LEVEL SECURITY;
-CREATE POLICY chat_conversations_tenant_isolation ON chat_conversations USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE POLICY tenant_isolation_chat_conversations ON chat_conversations FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid) WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY,
@@ -65,10 +65,16 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY chat_messages_tenant_isolation ON chat_messages USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+CREATE POLICY tenant_isolation_chat_messages ON chat_messages FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid) WITH CHECK (tenant_id = current_setting('app.current_tenant', true)::uuid);
 
 
 -- +goose Down
+DROP POLICY IF EXISTS tenant_isolation_chat_messages ON chat_messages;
+DROP POLICY IF EXISTS tenant_isolation_chat_conversations ON chat_conversations;
+DROP POLICY IF EXISTS tenant_isolation_chat_contact_inboxes ON chat_contact_inboxes;
+DROP POLICY IF EXISTS tenant_isolation_chat_contacts ON chat_contacts;
+DROP POLICY IF EXISTS tenant_isolation_chat_inboxes ON chat_inboxes;
+
 DROP TABLE IF EXISTS chat_messages CASCADE;
 DROP TABLE IF EXISTS chat_conversations CASCADE;
 DROP TABLE IF EXISTS chat_contact_inboxes CASCADE;
