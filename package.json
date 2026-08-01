@@ -53,7 +53,6 @@
     "jsdom": "^29.1.1",
     "next-router-mock": "^1.0.5",
     "playwright": "^1.61.1",
-    "postcss": "8.5.19",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "tailwindcss": "^4.3.0",
@@ -80,5 +79,16 @@
     },
     "undici": "7.28.0",
     "ws@6.2.3": "6.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "^8.5.18",
+      "brace-expansion": "^5.0.8",
+      "@modelcontextprotocol/sdk": "^1.24.0",
+      "ws": "^6.2.4",
+      "js-yaml": "^4.3.0",
+      "immutable": "^4.3.9",
+      "sharp": "^0.35.0"
+    }
   }
 }

@@ -3,7 +3,6 @@ import { resolveShellRoute } from "./shellRoutes";
 
 describe("resolveShellRoute", () => {
   test.each([
-    "/login",
     "/onboarding",
     "/booking-widget",
     "/storefront-widget",
@@ -11,6 +10,13 @@ describe("resolveShellRoute", () => {
   ])("assigns formerly standalone route %s to the guard", (pathname) => {
     expect(resolveShellRoute(pathname).owner).toBe("guard");
   });
+
+  test.each(["/login", "/register", "/verify-email"])(
+    "assigns public route %s to the public layout",
+    (pathname) => {
+      expect(resolveShellRoute(pathname).owner).toBe("public");
+    },
+  );
 
   test.each([
     "/action-center",
@@ -92,7 +98,7 @@ describe("resolveShellRoute", () => {
     ["/onboarding", "Setup", "Configure your business workspace."],
   ])("uses explicit metadata for %s", (pathname, title, subtitle) => {
     expect(resolveShellRoute(pathname)).toEqual({
-      owner: "guard",
+      owner: pathname === "/login" ? "public" : "guard",
       title,
       subtitle,
     });

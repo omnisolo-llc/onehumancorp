@@ -78,13 +78,22 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
         .filter(entities::user::Column::Email.eq(email))
         .one(database.connection())
         .await?;
-    if existing.is_some() {
-        return Ok(());
-    }
-
     let password = password.to_owned();
     let password_hash = tokio::task::spawn_blocking(move || bcrypt::hash(password, 10)).await??;
     let now = Utc::now();
+
+    if let Some(existing) = existing {
+        let mut admin: entities::user::ActiveModel = existing.into();
+        admin.username = Set(email.to_owned());
+        admin.email = Set(email.to_owned());
+        admin.password_hash = Set(password_hash);
+        admin.roles = Set(serde_json::json!(["ADMIN"]));
+        admin.active = Set(true);
+        admin.updated_at = Set(now);
+        admin.update(database.connection()).await?;
+        return Ok(());
+    }
+
     entities::user::ActiveModel {
         id: Set(uuid::Uuid::new_v4().to_string()),
         username: Set(email.to_owned()),
