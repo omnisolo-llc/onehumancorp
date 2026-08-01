@@ -6,7 +6,10 @@ exports_files(
         "chat/mod.rs",
         "chat/models.rs",
         "chat/service.rs",
+<<<<<<< HEAD
+=======
         "chat/service_test.rs",
+>>>>>>> 631d30d93 (security: synchronize npm dependency locks)
         "booking.rs",
         "omnichannel_service.rs",
         "mod.rs",
@@ -30,7 +33,10 @@ rust_library(
         "chat/mod.rs",
         "chat/models.rs",
         "chat/service.rs",
+<<<<<<< HEAD
+=======
         "chat/service_test.rs",
+>>>>>>> 631d30d93 (security: synchronize npm dependency locks)
         "booking.rs",
         "omnichannel_service.rs",
         "mod.rs",

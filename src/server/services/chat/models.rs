@@ -8,10 +8,26 @@ pub struct ChatInbox {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub name: String,
+<<<<<<< HEAD
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatChannel {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub inbox_id: Uuid,
+    pub channel_type: String,
+    pub config: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+=======
     pub channel_type: String,
     pub settings: Option<serde_json::Value>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+>>>>>>> 631d30d93 (security: synchronize npm dependency locks)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
@@ -20,6 +36,11 @@ pub struct ChatContact {
     pub tenant_id: Uuid,
     pub name: Option<String>,
     pub email: Option<String>,
+<<<<<<< HEAD
+    pub phone: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+=======
     pub phone_number: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -34,6 +55,7 @@ pub struct ChatContactInbox {
     pub source_id: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+>>>>>>> 631d30d93 (security: synchronize npm dependency locks)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
@@ -42,10 +64,17 @@ pub struct ChatConversation {
     pub tenant_id: Uuid,
     pub inbox_id: Uuid,
     pub contact_id: Uuid,
+<<<<<<< HEAD
+    pub assignee_id: Option<Uuid>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+=======
     pub status: String,
     pub assignee_id: Option<Uuid>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+>>>>>>> 631d30d93 (security: synchronize npm dependency locks)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
@@ -53,9 +82,17 @@ pub struct ChatMessage {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub conversation_id: Uuid,
+<<<<<<< HEAD
+    pub sender_type: String,
+    pub sender_id: Option<Uuid>,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+=======
     pub content: String,
     pub sender_type: String,
     pub sender_id: Option<Uuid>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+>>>>>>> 631d30d93 (security: synchronize npm dependency locks)
 }
