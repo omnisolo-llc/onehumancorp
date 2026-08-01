@@ -10,7 +10,7 @@ mod entities;
 mod migration;
 
 use chrono::Utc;
-use sea_orm::{ActiveModelTrait, EntityTrait, PaginatorTrait, Set};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, PaginatorTrait, Set, Statement};
 
 use connection::AppDatabase;
 
@@ -21,7 +21,6 @@ async fn insert_user(database: &AppDatabase, id: &str, tenant_id: &str, email: &
         username: Set(id.to_string()),
         email: Set(email.to_string()),
         password_hash: Set("unused".to_string()),
-        roles: Set(serde_json::json!(["ADMIN"])),
         active: Set(true),
         tenant_id: Set(tenant_id.to_string()),
         oidc_subject: Set(None),
@@ -31,6 +30,15 @@ async fn insert_user(database: &AppDatabase, id: &str, tenant_id: &str, email: &
     .insert(database.connection())
     .await
     .unwrap();
+    database
+        .connection()
+        .execute(Statement::from_sql_and_values(
+            sea_orm::DatabaseBackend::Sqlite,
+            "UPDATE users SET roles = ? WHERE id = ?",
+            [serde_json::json!(["ADMIN"]).into(), id.into()],
+        ))
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -52,11 +60,59 @@ async fn migration_backfills_normalized_identity_email_claims() {
 }
 
 #[tokio::test]
+async fn migration_backfills_portable_roles_from_existing_json_users() {
+    let database = AppDatabase::connect("sqlite::memory:").await.unwrap();
+    migration::migrate(&database).await.unwrap();
+    insert_user(&database, "existing-user", "tenant-a", "roles@example.test").await;
+
+    migration::migrate(&database).await.unwrap();
+
+    let rows = database
+        .connection()
+        .query_all(Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "SELECT role_name FROM identity_user_roles WHERE user_id = 'existing-user' ORDER BY role_name"
+                .to_string(),
+        ))
+        .await
+        .unwrap();
+    let roles = rows
+        .into_iter()
+        .map(|row| row.try_get::<String>("", "role_name").unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(roles, vec!["ADMIN"]);
+}
+
+#[test]
+fn postgres_portable_schema_retains_the_legacy_text_array_contract() {
+    let migration_source = include_str!("persistence/migration.rs");
+    let persistence_entity_source = include_str!("persistence/entities.rs");
+    let auth_entity_source = include_str!("auth/seaorm_store.rs");
+
+    assert!(migration_source.contains("roles TEXT[] DEFAULT '{}'"));
+    assert!(!persistence_entity_source.contains("pub roles: Json"));
+    assert!(!auth_entity_source.contains("pub roles: Json"));
+    assert!(migration_source.contains("identity_user_roles"));
+}
+
+#[tokio::test]
 async fn migration_rejects_colliding_normalized_identity_emails_without_choosing_an_owner() {
     let database = AppDatabase::connect("sqlite::memory:").await.unwrap();
     migration::migrate(&database).await.unwrap();
-    insert_user(&database, "first-user", "tenant-a", "Same.Person@Example.Test").await;
-    insert_user(&database, "second-user", "tenant-b", "same.person@example.test").await;
+    insert_user(
+        &database,
+        "first-user",
+        "tenant-a",
+        "Same.Person@Example.Test",
+    )
+    .await;
+    insert_user(
+        &database,
+        "second-user",
+        "tenant-b",
+        "same.person@example.test",
+    )
+    .await;
 
     let error = migration::migrate(&database).await.unwrap_err().to_string();
 
@@ -119,7 +175,7 @@ async fn migration_and_admin_bootstrap_are_idempotent_without_demo_rows() {
     assert_eq!(claim.user_id, admin.id);
 
     let verification = commands::verify(&database).await.unwrap();
-    assert_eq!(verification.migrations, 2);
+    assert_eq!(verification.migrations, 3);
     assert_eq!(verification.users, 1);
     assert_eq!(verification.products, 0);
 }
@@ -137,14 +193,11 @@ async fn bootstrap_admin_rejects_an_identity_email_claim_owned_by_another_user()
     .await;
     migration::migrate(&database).await.unwrap();
 
-    let error = commands::bootstrap_admin(
-        &database,
-        "admin@ohc.test",
-        "correct horse battery staple",
-    )
-    .await
-    .unwrap_err()
-    .to_string();
+    let error =
+        commands::bootstrap_admin(&database, "admin@ohc.test", "correct horse battery staple")
+            .await
+            .unwrap_err()
+            .to_string();
 
     assert!(error.contains("admin@ohc.test"), "{error}");
     assert_eq!(

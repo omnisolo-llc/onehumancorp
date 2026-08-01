@@ -1,15 +1,13 @@
 use chrono::Utc;
 use sea_orm::sea_query::Index;
-use sea_orm::{
-    ActiveModelTrait, ConnectionTrait, EntityTrait, QueryOrder, Schema, Set, Statement,
-    TransactionTrait,
-};
+use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, QueryOrder, Schema, Set, Statement};
 
 use super::{capabilities::DatabaseBackend as AppBackend, connection::AppDatabase, entities};
 use server_auth::seaorm_store::entities as auth_entities;
 
 pub const CORE_SCHEMA_VERSION: &str = "20260730_000001_portable_core";
 pub const AUTH_SCHEMA_VERSION: &str = "20260730_000002_auth_registration";
+pub const PORTABLE_ROLE_SCHEMA_VERSION: &str = "20260801_000003_portable_user_roles";
 
 pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     let connection = database.connection();
@@ -23,6 +21,12 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     let mut users = schema.create_table_from_entity(entities::user::Entity);
     users.if_not_exists();
     connection.execute(backend.build(&users)).await?;
+    ensure_legacy_role_column(connection).await?;
+
+    let mut user_roles = schema.create_table_from_entity(auth_entities::identity_user_role::Entity);
+    user_roles.if_not_exists();
+    connection.execute(backend.build(&user_roles)).await?;
+    configure_postgres_role_rls(connection).await?;
 
     let mut products = schema.create_table_from_entity(entities::product::Entity);
     products.if_not_exists();
@@ -136,6 +140,7 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
         connection.execute(backend.build(&index)).await?;
     }
 
+    backfill_portable_user_roles(connection).await?;
     backfill_identity_email_claims(connection).await?;
 
     if entities::schema_version::Entity::find_by_id(CORE_SCHEMA_VERSION)
@@ -178,25 +183,131 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
         .insert(connection)
         .await?;
     }
+    if entities::schema_version::Entity::find_by_id(PORTABLE_ROLE_SCHEMA_VERSION)
+        .one(connection)
+        .await?
+        .is_none()
+    {
+        entities::schema_version::ActiveModel {
+            id: Set(PORTABLE_ROLE_SCHEMA_VERSION.to_owned()),
+            applied_at: Set(Utc::now()),
+        }
+        .insert(connection)
+        .await?;
+    }
     Ok(())
+}
+
+async fn ensure_legacy_role_column(
+    connection: &sea_orm::DatabaseConnection,
+) -> Result<(), sea_orm::DbErr> {
+    let backend = connection.get_database_backend();
+    match backend {
+        sea_orm::DatabaseBackend::Postgres => {
+            connection
+                .execute(Statement::from_string(
+                    backend,
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS roles TEXT[] DEFAULT '{}'"
+                        .to_string(),
+                ))
+                .await?;
+        }
+        sea_orm::DatabaseBackend::MySql => {
+            connection
+                .execute(Statement::from_string(
+                    backend,
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS roles JSON".to_string(),
+                ))
+                .await?;
+        }
+        sea_orm::DatabaseBackend::Sqlite => {
+            let columns = connection
+                .query_all(Statement::from_string(
+                    backend,
+                    "PRAGMA table_info(users)".to_string(),
+                ))
+                .await?;
+            let has_roles = columns.iter().any(|column| {
+                column
+                    .try_get::<String>("", "name")
+                    .is_ok_and(|name| name == "roles")
+            });
+            if !has_roles {
+                connection
+                    .execute(Statement::from_string(
+                        backend,
+                        "ALTER TABLE users ADD COLUMN roles TEXT NOT NULL DEFAULT '[]'".to_string(),
+                    ))
+                    .await?;
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn configure_postgres_role_rls(
+    connection: &sea_orm::DatabaseConnection,
+) -> Result<(), sea_orm::DbErr> {
+    if connection.get_database_backend() != sea_orm::DatabaseBackend::Postgres {
+        return Ok(());
+    }
+    for sql in [
+        "ALTER TABLE identity_user_roles ENABLE ROW LEVEL SECURITY",
+        "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = current_schema() AND tablename = 'identity_user_roles' AND policyname = 'tenant_isolation_identity_user_roles') THEN CREATE POLICY tenant_isolation_identity_user_roles ON identity_user_roles USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true)); END IF; END $$",
+    ] {
+        connection
+            .execute(Statement::from_string(
+                sea_orm::DatabaseBackend::Postgres,
+                sql.to_string(),
+            ))
+            .await?;
+    }
+    Ok(())
+}
+
+async fn backfill_portable_user_roles(
+    connection: &sea_orm::DatabaseConnection,
+) -> Result<(), sea_orm::DbErr> {
+    let backend = connection.get_database_backend();
+    let transaction = server_auth::seaorm_store::begin_global_transaction(connection)
+        .await
+        .map_err(sea_orm::DbErr::Custom)?;
+    let sql = match backend {
+        sea_orm::DatabaseBackend::Postgres => {
+            "INSERT INTO identity_user_roles (user_id, role_name, tenant_id, position) SELECT users.id, role_name, users.tenant_id, position::INTEGER - 1 FROM users CROSS JOIN LATERAL unnest(COALESCE(users.roles, ARRAY[]::TEXT[])) WITH ORDINALITY AS legacy_roles(role_name, position) ON CONFLICT (user_id, role_name) DO NOTHING"
+        }
+        sea_orm::DatabaseBackend::MySql => {
+            "INSERT IGNORE INTO identity_user_roles (user_id, role_name, tenant_id, position) SELECT users.id, legacy_roles.role_name, users.tenant_id, legacy_roles.position - 1 FROM users CROSS JOIN JSON_TABLE(COALESCE(users.roles, JSON_ARRAY()), '$[*]' COLUMNS(position FOR ORDINALITY, role_name VARCHAR(255) PATH '$')) AS legacy_roles"
+        }
+        sea_orm::DatabaseBackend::Sqlite => {
+            "INSERT OR IGNORE INTO identity_user_roles (user_id, role_name, tenant_id, position) SELECT users.id, CAST(legacy_roles.value AS TEXT), users.tenant_id, CAST(legacy_roles.key AS INTEGER) FROM users CROSS JOIN json_each(COALESCE(users.roles, '[]')) AS legacy_roles"
+        }
+    };
+    transaction
+        .execute(Statement::from_string(backend, sql.to_string()))
+        .await?;
+    transaction.commit().await
 }
 
 async fn backfill_identity_email_claims(
     connection: &sea_orm::DatabaseConnection,
 ) -> Result<(), sea_orm::DbErr> {
-    let transaction = connection.begin().await?;
+    let transaction = server_auth::seaorm_store::begin_global_transaction(connection)
+        .await
+        .map_err(sea_orm::DbErr::Custom)?;
     let users = auth_entities::user::Entity::find()
         .order_by_asc(auth_entities::user::Column::Id)
         .all(&transaction)
         .await?;
     let mut expected = Vec::with_capacity(users.len());
     for user in users {
-        let normalized_email = server_auth::validation::normalize_email(&user.email).map_err(|_| {
-            sea_orm::DbErr::Custom(format!(
-                "existing identity has an invalid email: user {}",
-                user.id
-            ))
-        })?;
+        let normalized_email =
+            server_auth::validation::normalize_email(&user.email).map_err(|_| {
+                sea_orm::DbErr::Custom(format!(
+                    "existing identity has an invalid email: user {}",
+                    user.id
+                ))
+            })?;
         expected.push((normalized_email, user.id, user.created_at));
     }
     expected.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
