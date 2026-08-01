@@ -1,4 +1,3 @@
--- +goose Up
 CREATE TABLE IF NOT EXISTS entitlements (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
