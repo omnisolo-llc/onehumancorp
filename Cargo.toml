@@ -127,6 +127,11 @@ version = "=1.1.19"
 default-features = false
 features = [ "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite",]
 
+[dependencies.lettre]
+version = "=0.11.19"
+default-features = false
+features = [ "builder", "smtp-transport", "tokio1-native-tls",]
+
 [dependencies.opentelemetry]
 version = "0.32"
 features = [ "metrics", "trace",]
