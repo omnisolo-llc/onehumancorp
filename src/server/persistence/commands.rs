@@ -1,6 +1,7 @@
 use chrono::Utc;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, Set,
+    TransactionTrait,
 };
 
 use super::{
@@ -65,39 +66,71 @@ pub async fn migrate_from_environment() -> CommandResult {
 }
 
 pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str) -> CommandResult {
-    if !email.contains('@') {
-        return Err("ADMIN_EMAIL must be a valid email address".into());
-    }
+    let normalized_email = server_auth::validation::normalize_email(email)
+        .map_err(|_| "ADMIN_EMAIL must be a valid email address")?;
     if password.len() < 12 {
         return Err("ADMIN_PASSWORD must contain at least 12 characters".into());
     }
     migration::migrate(database).await?;
     let tenant_id = "org-1";
-    let existing = entities::user::Entity::find()
-        .filter(entities::user::Column::TenantId.eq(tenant_id))
-        .filter(entities::user::Column::Email.eq(email))
-        .one(database.connection())
-        .await?;
     let password = password.to_owned();
     let password_hash = tokio::task::spawn_blocking(move || bcrypt::hash(password, 10)).await??;
     let now = Utc::now();
+    let transaction = database.connection().begin().await?;
+    let existing = entities::user::Entity::find()
+        .filter(entities::user::Column::TenantId.eq(tenant_id))
+        .all(&transaction)
+        .await?
+        .into_iter()
+        .find(|user| {
+            server_auth::validation::normalize_email(&user.email)
+                .is_ok_and(|candidate| candidate == normalized_email)
+        });
+    let user_id = existing
+        .as_ref()
+        .map(|user| user.id.clone())
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    match server_auth::seaorm_store::entities::identity_email_claim::Entity::find_by_id(
+        &normalized_email,
+    )
+    .one(&transaction)
+    .await?
+    {
+        Some(claim) if claim.user_id != user_id => {
+            return Err(std::io::Error::other(format!(
+                "identity email collision for normalized email {normalized_email}"
+            ))
+            .into());
+        }
+        Some(_) => {}
+        None => {
+            server_auth::seaorm_store::entities::identity_email_claim::ActiveModel {
+                normalized_email: Set(normalized_email.clone()),
+                user_id: Set(user_id.clone()),
+                claimed_at: Set(now),
+            }
+            .insert(&transaction)
+            .await?;
+        }
+    }
 
     if let Some(existing) = existing {
         let mut admin: entities::user::ActiveModel = existing.into();
-        admin.username = Set(email.to_owned());
-        admin.email = Set(email.to_owned());
+        admin.username = Set(normalized_email.clone());
+        admin.email = Set(normalized_email);
         admin.password_hash = Set(password_hash);
         admin.roles = Set(serde_json::json!(["ADMIN"]));
         admin.active = Set(true);
         admin.updated_at = Set(now);
-        admin.update(database.connection()).await?;
+        admin.update(&transaction).await?;
+        transaction.commit().await?;
         return Ok(());
     }
 
     entities::user::ActiveModel {
-        id: Set(uuid::Uuid::new_v4().to_string()),
-        username: Set(email.to_owned()),
-        email: Set(email.to_owned()),
+        id: Set(user_id),
+        username: Set(normalized_email.clone()),
+        email: Set(normalized_email),
         password_hash: Set(password_hash),
         roles: Set(serde_json::json!(["ADMIN"])),
         active: Set(true),
@@ -106,8 +139,9 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
         created_at: Set(now),
         updated_at: Set(now),
     }
-    .insert(database.connection())
+    .insert(&transaction)
     .await?;
+    transaction.commit().await?;
     Ok(())
 }
 

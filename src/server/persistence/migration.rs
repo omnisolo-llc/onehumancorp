@@ -1,6 +1,9 @@
 use chrono::Utc;
 use sea_orm::sea_query::Index;
-use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, Schema, Set, Statement};
+use sea_orm::{
+    ActiveModelTrait, ConnectionTrait, EntityTrait, QueryOrder, Schema, Set, Statement,
+    TransactionTrait,
+};
 
 use super::{capabilities::DatabaseBackend as AppBackend, connection::AppDatabase, entities};
 use server_auth::seaorm_store::entities as auth_entities;
@@ -50,6 +53,13 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     external_identities.if_not_exists();
     connection
         .execute(backend.build(&external_identities))
+        .await?;
+
+    let mut identity_email_claims =
+        schema.create_table_from_entity(auth_entities::identity_email_claim::Entity);
+    identity_email_claims.if_not_exists();
+    connection
+        .execute(backend.build(&identity_email_claims))
         .await?;
 
     let mut revoked_tokens = schema.create_table_from_entity(auth_entities::revoked_token::Entity);
@@ -126,6 +136,8 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
         connection.execute(backend.build(&index)).await?;
     }
 
+    backfill_identity_email_claims(connection).await?;
+
     if entities::schema_version::Entity::find_by_id(CORE_SCHEMA_VERSION)
         .one(connection)
         .await?
@@ -167,6 +179,62 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
         .await?;
     }
     Ok(())
+}
+
+async fn backfill_identity_email_claims(
+    connection: &sea_orm::DatabaseConnection,
+) -> Result<(), sea_orm::DbErr> {
+    let transaction = connection.begin().await?;
+    let users = auth_entities::user::Entity::find()
+        .order_by_asc(auth_entities::user::Column::Id)
+        .all(&transaction)
+        .await?;
+    let mut expected = Vec::with_capacity(users.len());
+    for user in users {
+        let normalized_email = server_auth::validation::normalize_email(&user.email).map_err(|_| {
+            sea_orm::DbErr::Custom(format!(
+                "existing identity has an invalid email: user {}",
+                user.id
+            ))
+        })?;
+        expected.push((normalized_email, user.id, user.created_at));
+    }
+    expected.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
+    for pair in expected.windows(2) {
+        if pair[0].0 == pair[1].0 && pair[0].1 != pair[1].1 {
+            return Err(identity_email_collision(&pair[0].0));
+        }
+    }
+
+    let existing = auth_entities::identity_email_claim::Entity::find()
+        .all(&transaction)
+        .await?;
+    let existing = existing
+        .into_iter()
+        .map(|claim| (claim.normalized_email, claim.user_id))
+        .collect::<std::collections::HashMap<_, _>>();
+    for (normalized_email, user_id, claimed_at) in expected {
+        if let Some(owner) = existing.get(&normalized_email) {
+            if owner != &user_id {
+                return Err(identity_email_collision(&normalized_email));
+            }
+            continue;
+        }
+        auth_entities::identity_email_claim::ActiveModel {
+            normalized_email: Set(normalized_email),
+            user_id: Set(user_id),
+            claimed_at: Set(claimed_at),
+        }
+        .insert(&transaction)
+        .await?;
+    }
+    transaction.commit().await
+}
+
+fn identity_email_collision(normalized_email: &str) -> sea_orm::DbErr {
+    sea_orm::DbErr::Custom(format!(
+        "identity email collision for normalized email {normalized_email}"
+    ))
 }
 
 async fn mysql_index_exists(

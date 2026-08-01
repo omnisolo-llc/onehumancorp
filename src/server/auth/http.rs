@@ -2482,6 +2482,7 @@ mod tests {
             schema.create_table_from_entity(entities::registration_ticket::Entity),
             schema.create_table_from_entity(entities::invitation::Entity),
             schema.create_table_from_entity(entities::external_identity::Entity),
+            schema.create_table_from_entity(entities::identity_email_claim::Entity),
             schema.create_table_from_entity(entities::revoked_token::Entity),
         ] {
             connection
