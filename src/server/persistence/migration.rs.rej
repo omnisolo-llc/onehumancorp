@@ -1,0 +1,11 @@
+--- src/server/persistence/migration.rs
++++ src/server/persistence/migration.rs
+@@ -3,8 +3,8 @@
+ use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, Schema, Set, Statement};
+
+ use super::{capabilities::DatabaseBackend as AppBackend, connection::AppDatabase, entities};
+-use server_auth::seaorm_store::entities as auth_entities;
++#[cfg(not(test))] use server_auth::seaorm_store::entities as auth_entities;
+
+ pub const CORE_SCHEMA_VERSION: &str = "20260730_000001_portable_core";
+ pub const AUTH_SCHEMA_VERSION: &str = "20260730_000002_auth_registration";

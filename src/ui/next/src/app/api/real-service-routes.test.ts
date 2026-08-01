@@ -17,6 +17,7 @@ const mutationExport = /export\s+(?:async\s+function|function|const)\s+(POST|PUT
 const realAuthority = [
   /\bproxyBackend(?:Get|Post|Put|Patch|Delete|Request)\s*\(/,
   /proxyCurrentBackendPath\s+as\s+(?:POST|PUT|PATCH|DELETE)/,
+  /\b(?:proxyPublicAuthentication|registerAndSealSession)\s*\(/,
   /\bfetch\s*\(/,
   /\bPool\b|\bpg\b|\bsqlx\b/i,
   /process\.env\.[A-Z0-9_]*(?:URL|DSN|ENDPOINT|HOST)/,

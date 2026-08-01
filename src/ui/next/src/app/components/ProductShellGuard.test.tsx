@@ -49,6 +49,22 @@ test("does not double wrap routes that already render AppShell", () => {
   expect(screen.getByText("Assistant content")).toBeDefined();
 });
 
+test.each(["/login", "/register", "/verify-email"])(
+  "does not render the application shell on public route %s",
+  (pathname) => {
+    navigationMock.pathname = pathname;
+
+    render(
+      <ProductShellGuard>
+        <div>Public content</div>
+      </ProductShellGuard>,
+    );
+
+    expect(screen.queryByTestId("app-shell")).toBeNull();
+    expect(screen.getByText("Public content")).toBeDefined();
+  },
+);
+
 test("wraps formerly standalone widget routes in the dashboard shell", () => {
   navigationMock.pathname = "/work-intake-widget";
 

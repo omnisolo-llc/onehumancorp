@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, type FormEvent, useState } from "react";
+import { Suspense, type FormEvent, useEffect, useState } from "react";
 import { safeReturnPath } from "@/lib/auth/url";
 
 const GENERIC_ERROR = "We couldn't sign you in. Check your details and try again.";
+
+type LoginProvider = Readonly<{ key: string; display_name: string }>;
 
 function LoginForm() {
   const router = useRouter();
@@ -15,13 +17,37 @@ function LoginForm() {
   const [organization, setOrganization] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [providers, setProviders] = useState<LoginProvider[]>([]);
+  const next = safeReturnPath(searchParams.get("next"));
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/v1/auth/public-settings", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => response.ok ? response.json() : null)
+      .then((value) => {
+        if (!Array.isArray(value?.providers)) return;
+        setProviders(value.providers.filter((provider: unknown): provider is LoginProvider => {
+          if (provider === null || typeof provider !== "object") return false;
+          const candidate = provider as Record<string, unknown>;
+          return typeof candidate.key === "string"
+            && /^[a-z0-9-]{1,32}$/.test(candidate.key)
+            && typeof candidate.display_name === "string"
+            && candidate.display_name.length > 0
+            && candidate.display_name.length <= 80;
+        }));
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
     setPending(true);
     setError(null);
-    const next = safeReturnPath(searchParams.get("next"));
     try {
       const response = await fetch(`/api/v1/auth/login?next=${encodeURIComponent(next)}`, {
         method: "POST",
@@ -119,7 +145,26 @@ function LoginForm() {
             </button>
           </form>
 
-          <div className="min-h-6" />
+          {providers.length > 0 && (
+            <div className="mt-6 border-t border-gray-200 pt-6 dark:border-gray-700">
+              <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Or use single sign-on</p>
+              <div className="flex flex-col gap-3">
+                {providers.map((provider) => (
+                  <Link
+                    className="min-h-[50px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-800 transition hover:border-[#0066FF] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                    href={`/api/v1/auth/oidc/${provider.key}?next=${encodeURIComponent(next)}`}
+                    key={provider.key}
+                  >
+                    Continue with {provider.display_name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
+            Need an account? <Link className="font-semibold text-[#0066FF]" href="/register">Check registration</Link>
+          </p>
         </section>
       </div>
     </main>

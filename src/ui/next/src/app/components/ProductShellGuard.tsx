@@ -8,7 +8,7 @@ export function ProductShellGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const config = resolveShellRoute(pathname);
 
-  if (config.owner === "page") return <>{children}</>;
+  if (config.owner === "page" || config.owner === "public") return <>{children}</>;
 
   return (
     <AppShell title={config.title} subtitle={config.subtitle}>

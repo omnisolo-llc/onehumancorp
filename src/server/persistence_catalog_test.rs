@@ -6,8 +6,6 @@ mod catalog;
 mod connection;
 #[path = "persistence/entities.rs"]
 mod entities;
-#[path = "persistence/migration.rs"]
-mod migration;
 
 use catalog::{CatalogRepository, NewProduct};
 use connection::AppDatabase;
@@ -15,7 +13,11 @@ use connection::AppDatabase;
 #[tokio::test]
 async fn catalog_repository_reads_only_real_tenant_rows() {
     let database = AppDatabase::connect("sqlite::memory:").await.unwrap();
-    migration::migrate(&database).await.unwrap();
+    let mut products = sea_orm::Schema::new(database.connection().get_database_backend()).create_table_from_entity(entities::product::Entity);
+    use sea_orm::ConnectionTrait;
+    database.connection().execute(database.connection().get_database_backend().build(&products)).await.unwrap();
+
+
     let repository = CatalogRepository::new(database);
 
     repository
