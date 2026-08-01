@@ -67,8 +67,8 @@ test.describe('Premium Aesthetics Verification', () => {
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     // The wizard container usually has glassmorphism
-    await page.waitForSelector('.glassmorphism');
-    const glassContainer = page.locator('.glassmorphism').first();
+    await page.waitForSelector('.glass-panel');
+    const glassContainer = page.locator('.glass-panel').first();
     await expect(glassContainer).toBeVisible();
 
     const styles = await glassContainer.evaluate((el) => {
