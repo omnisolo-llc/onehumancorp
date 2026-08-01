@@ -1,6 +1,11 @@
 import { test, expect } from './fixtures';
 
 test.describe('WhatsApp Cloud API Integrations Setting', () => {
+
+  test.beforeEach(async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+  });
+
   test('Owner can navigate to Settings -> Integrations and see WhatsApp Cloud API', async ({ page }) => {
     // 1. Navigate to Settings -> Integrations
     await page.goto('/settings/integrations');
