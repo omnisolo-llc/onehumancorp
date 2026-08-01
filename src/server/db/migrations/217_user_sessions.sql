@@ -15,6 +15,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS tenant_id TEXT DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS oidc_subject TEXT UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS roles TEXT[] DEFAULT '{}';
 
+
 CREATE TABLE IF NOT EXISTS user_sessions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -25,7 +26,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 
 ALTER TABLE user_sessions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS user_sessions_tenant_isolation_policy ON user_sessions;
-CREATE POLICY user_sessions_tenant_isolation_policy ON user_sessions FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+CREATE POLICY user_sessions_tenant_isolation_policy ON user_sessions FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 -- +goose Down
 DROP TABLE IF EXISTS user_sessions CASCADE;

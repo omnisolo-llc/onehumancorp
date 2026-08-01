@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS omni_inboxes (
 );
 ALTER TABLE omni_inboxes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS omni_inboxes_tenant_isolation_policy ON omni_inboxes;
-CREATE POLICY omni_inboxes_tenant_isolation_policy ON omni_inboxes FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+CREATE POLICY omni_inboxes_tenant_isolation_policy ON omni_inboxes FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 CREATE TABLE IF NOT EXISTS omni_conversations (
     id UUID PRIMARY KEY,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS omni_conversations (
 );
 ALTER TABLE omni_conversations ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS omni_conversations_tenant_isolation_policy ON omni_conversations;
-CREATE POLICY omni_conversations_tenant_isolation_policy ON omni_conversations FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+CREATE POLICY omni_conversations_tenant_isolation_policy ON omni_conversations FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 CREATE TABLE IF NOT EXISTS omni_messages (
     id UUID PRIMARY KEY,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS omni_messages (
 );
 ALTER TABLE omni_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS omni_messages_tenant_isolation_policy ON omni_messages;
-CREATE POLICY omni_messages_tenant_isolation_policy ON omni_messages FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
+CREATE POLICY omni_messages_tenant_isolation_policy ON omni_messages FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
 
 -- +goose Down
 DROP TABLE IF EXISTS omni_messages CASCADE;
