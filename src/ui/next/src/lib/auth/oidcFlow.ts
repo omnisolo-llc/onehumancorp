@@ -173,10 +173,10 @@ function readCookie(request: Request, name: string): string | null {
   return /^[A-Za-z0-9._-]{1,4096}$/.test(value) ? value : null;
 }
 
-function serializeStateCookie(name: string, value: string, secure: boolean): string {
+export function serializeStateCookie(name: string, value: string, secure: boolean): string {
   return [
     `${name}=${value}`,
-    "Path=/api/v1/auth/oidc",
+    "Path=/",
     `Max-Age=${STATE_SECONDS}`,
     "HttpOnly",
     secure ? "Secure" : "",
@@ -184,10 +184,10 @@ function serializeStateCookie(name: string, value: string, secure: boolean): str
   ].filter(Boolean).join("; ");
 }
 
-function deleteStateCookie(name: string, secure: boolean): string {
+export function deleteStateCookie(name: string, secure: boolean): string {
   return [
     `${name}=`,
-    "Path=/api/v1/auth/oidc",
+    "Path=/",
     "Max-Age=0",
     "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
     "HttpOnly",
