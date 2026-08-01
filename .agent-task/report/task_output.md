@@ -20,7 +20,7 @@ issue_description: |
   **Top 10 AI-Native / Rising Competitors:**
   1. Notion AI
   2. Microsoft Copilot (SMB focused)
-  3. Chatwoot (Open Source Omnichannel)
+  3. CW-Legacy (Open Source Omnichannel)
   4. GlossGenius (AI scheduling for salons)
   5. Asana AI Teammates
   6. ClickUp Brain
@@ -57,7 +57,7 @@ issue_description: |
   | Feature | Shopify Sidekick | OHC Current | OHC Target |
   | :--- | :--- | :--- | :--- |
   | Natural Language DB Queries | Yes | Limited | Yes (via Agent) |
-  | Multi-channel Inbox (DMs, SMS) | No (requires apps) | No (Chatwoot retired) | Yes (Native Rust) |
+  | Multi-channel Inbox (DMs, SMS) | No (requires apps) | No (CW-Legacy retired) | Yes (Native Rust) |
   | Proactive Daily Briefing | Limited | No | Yes (Home Screen) |
   | Native POS/Payments | Yes | Stripe Integrations | Yes (Stripe Terminal) |
 
@@ -77,8 +77,8 @@ issue_description: |
 
   ## Actionable Feature Missions
 
-  ### Mission 1: Native Rust Omnichannel Inbox (Chatwoot Replacement)
-  **Problem Statement:** OHC has retired Chatwoot as an external dependency, leaving a gap in omnichannel customer communication. Owners need a unified inbox for IG DMs, Email, and Web Chat that the AI can read and draft replies for.
+  ### Mission 1: Native Rust Omnichannel Inbox (CW-Legacy Replacement)
+  **Problem Statement:** OHC has retired CW-Legacy as an external dependency, leaving a gap in omnichannel customer communication. Owners need a unified inbox for IG DMs, Email, and Web Chat that the AI can read and draft replies for.
   **Design Doc:**
   - Architecture: Implement a new Rust microservice in `onehumancorp/mono` handling WebSockets for real-time chat.
   - UI: A 375px-first mobile view consolidating messages into a unified feed.
@@ -110,8 +110,8 @@ issue_description: |
   10. Salesforce Small Business - https://www.salesforce.com/smallbusiness/
   11. Wix eCommerce - https://www.wix.com/ecommerce/website
   12. Squarespace Commerce - https://www.squarespace.com/ecommerce
-  13. Chatwoot - https://chatwoot.com/
-  14. Chatwoot GitHub - https://github.com/chatwoot/chatwoot
+  13. CW-Legacy - https://cw-legacy.com/
+  14. CW-Legacy GitHub - https://github.com/cw-legacy/cw-legacy
   15. Freshworks - https://www.freshworks.com/
   16. Zendesk - https://www.zendesk.com/
   17. Intercom - https://www.intercom.com/
