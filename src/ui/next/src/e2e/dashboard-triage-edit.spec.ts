@@ -1,10 +1,3 @@
-// @ohc-no-substitution-coverage
-
-
-// OHC Playwright No-Substitution Directives
-// OHC: no-substitution test
-
-
 import { expect, test } from '@playwright/test';
 
 test.describe('Dashboard Triage Action Feed Edit UI', () => {
