@@ -5,6 +5,7 @@ exports_files(
     [
         "chat/mod.rs",
         "chat/models.rs",
+        "chat/service_test.rs",
         "chat/service.rs",
         "booking.rs",
         "omnichannel_service.rs",
@@ -28,6 +29,7 @@ rust_library(
         "bazel_lib.rs",
         "chat/mod.rs",
         "chat/models.rs",
+        "chat/service_test.rs",
         "chat/service.rs",
         "booking.rs",
         "omnichannel_service.rs",
