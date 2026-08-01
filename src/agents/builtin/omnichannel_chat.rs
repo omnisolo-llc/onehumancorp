@@ -4,11 +4,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-/// Chatwoot Retirement & Custom Rust Omnichannel Chat System Standard
+/// Retirement & Custom Rust Omnichannel Chat System Standard
 ///
-/// External Chatwoot dependencies are 100% RETIRED. The builtin AI agent
+/// External dependencies are 100% RETIRED. The builtin AI agent
 /// microservice connects directly via high-performance Rust IPC/gRPC to OHC's
-/// native Rust Chat Engine. This replicates Chatwoot's core features natively:
+/// native Rust Chat Engine. This replicates core features natively:
 /// - native AI auto-responder
 /// - copilot response drafting
 /// - intent classification
@@ -171,7 +171,7 @@ impl OmnichannelChatEngine {
         }
     }
 
-    /// Creates a conversation, imitating Chatwoot webhook behavior
+    /// Creates a conversation, imitating webhook behavior
     pub async fn create_conversation(&self, conv: Conversation) -> Result<(), String> {
         let mut convs = self.active_conversations.write().await;
         convs.insert(conv.id.clone(), conv);
