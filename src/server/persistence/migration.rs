@@ -1,6 +1,9 @@
 use chrono::Utc;
 use sea_orm::sea_query::Index;
-use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, QueryOrder, Schema, Set, Statement};
+use sea_orm::{
+    ActiveModelTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryOrder, Schema, Set,
+    Statement, TransactionTrait,
+};
 
 use super::{capabilities::DatabaseBackend as AppBackend, connection::AppDatabase, entities};
 use server_auth::seaorm_store::entities as auth_entities;
@@ -8,9 +11,26 @@ use server_auth::seaorm_store::entities as auth_entities;
 pub const CORE_SCHEMA_VERSION: &str = "20260730_000001_portable_core";
 pub const AUTH_SCHEMA_VERSION: &str = "20260730_000002_auth_registration";
 pub const PORTABLE_ROLE_SCHEMA_VERSION: &str = "20260801_000003_portable_user_roles";
+const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
 pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     let connection = database.connection();
+    if connection.get_database_backend() == sea_orm::DatabaseBackend::Postgres {
+        let migration_guard = acquire_postgres_migration_guard(connection).await?;
+        migrate_with_connection(database.backend(), &migration_guard).await?;
+        migration_guard.commit().await?;
+        return Ok(());
+    }
+    migrate_with_connection(database.backend(), connection).await
+}
+
+async fn migrate_with_connection<C>(
+    app_backend: AppBackend,
+    connection: &C,
+) -> Result<(), sea_orm::DbErr>
+where
+    C: ConnectionTrait + TransactionTrait,
+{
     let backend = connection.get_database_backend();
     let schema = Schema::new(backend);
 
@@ -26,7 +46,6 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     let mut user_roles = schema.create_table_from_entity(auth_entities::identity_user_role::Entity);
     user_roles.if_not_exists();
     connection.execute(backend.build(&user_roles)).await?;
-    configure_postgres_role_rls(connection).await?;
 
     let mut products = schema.create_table_from_entity(entities::product::Entity);
     products.if_not_exists();
@@ -132,7 +151,7 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
         ),
     ];
     for (table_name, index_name, index) in indexes {
-        if database.backend() == AppBackend::MySql
+        if app_backend == AppBackend::MySql
             && mysql_index_exists(connection, table_name, index_name).await?
         {
             continue;
@@ -142,6 +161,7 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
 
     backfill_portable_user_roles(connection).await?;
     backfill_identity_email_claims(connection).await?;
+    configure_postgres_role_rls(connection).await?;
 
     if entities::schema_version::Entity::find_by_id(CORE_SCHEMA_VERSION)
         .one(connection)
@@ -198,8 +218,22 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     Ok(())
 }
 
-async fn ensure_legacy_role_column(
+async fn acquire_postgres_migration_guard(
     connection: &sea_orm::DatabaseConnection,
+) -> Result<DatabaseTransaction, sea_orm::DbErr> {
+    let transaction = connection.begin().await?;
+    transaction
+        .execute(Statement::from_sql_and_values(
+            sea_orm::DatabaseBackend::Postgres,
+            "SELECT pg_advisory_xact_lock($1)",
+            [POSTGRES_MIGRATION_LOCK_KEY.into()],
+        ))
+        .await?;
+    Ok(transaction)
+}
+
+async fn ensure_legacy_role_column<C: ConnectionTrait>(
+    connection: &C,
 ) -> Result<(), sea_orm::DbErr> {
     let backend = connection.get_database_backend();
     match backend {
@@ -213,12 +247,14 @@ async fn ensure_legacy_role_column(
                 .await?;
         }
         sea_orm::DatabaseBackend::MySql => {
-            connection
-                .execute(Statement::from_string(
-                    backend,
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS roles JSON".to_string(),
-                ))
-                .await?;
+            if !mysql_column_exists(connection, "users", "roles").await? {
+                connection
+                    .execute(Statement::from_string(
+                        backend,
+                        "ALTER TABLE users ADD COLUMN roles JSON".to_string(),
+                    ))
+                    .await?;
+            }
         }
         sea_orm::DatabaseBackend::Sqlite => {
             let columns = connection
@@ -245,8 +281,8 @@ async fn ensure_legacy_role_column(
     Ok(())
 }
 
-async fn configure_postgres_role_rls(
-    connection: &sea_orm::DatabaseConnection,
+async fn configure_postgres_role_rls<C: ConnectionTrait>(
+    connection: &C,
 ) -> Result<(), sea_orm::DbErr> {
     if connection.get_database_backend() != sea_orm::DatabaseBackend::Postgres {
         return Ok(());
@@ -266,13 +302,13 @@ async fn configure_postgres_role_rls(
     Ok(())
 }
 
-async fn backfill_portable_user_roles(
-    connection: &sea_orm::DatabaseConnection,
-) -> Result<(), sea_orm::DbErr> {
+async fn backfill_portable_user_roles<C>(connection: &C) -> Result<(), sea_orm::DbErr>
+where
+    C: ConnectionTrait + TransactionTrait,
+{
     let backend = connection.get_database_backend();
-    let transaction = server_auth::seaorm_store::begin_global_transaction(connection)
-        .await
-        .map_err(sea_orm::DbErr::Custom)?;
+    let (transaction, assumed_bypass_role) =
+        begin_portable_migration_transaction(connection).await?;
     let sql = match backend {
         sea_orm::DatabaseBackend::Postgres => {
             "INSERT INTO identity_user_roles (user_id, role_name, tenant_id, position) SELECT users.id, role_name, users.tenant_id, position::INTEGER - 1 FROM users CROSS JOIN LATERAL unnest(COALESCE(users.roles, ARRAY[]::TEXT[])) WITH ORDINALITY AS legacy_roles(role_name, position) ON CONFLICT (user_id, role_name) DO NOTHING"
@@ -287,15 +323,16 @@ async fn backfill_portable_user_roles(
     transaction
         .execute(Statement::from_string(backend, sql.to_string()))
         .await?;
+    reset_portable_migration_role(&transaction, assumed_bypass_role).await?;
     transaction.commit().await
 }
 
-async fn backfill_identity_email_claims(
-    connection: &sea_orm::DatabaseConnection,
-) -> Result<(), sea_orm::DbErr> {
-    let transaction = server_auth::seaorm_store::begin_global_transaction(connection)
-        .await
-        .map_err(sea_orm::DbErr::Custom)?;
+async fn backfill_identity_email_claims<C>(connection: &C) -> Result<(), sea_orm::DbErr>
+where
+    C: ConnectionTrait + TransactionTrait,
+{
+    let (transaction, assumed_bypass_role) =
+        begin_portable_migration_transaction(connection).await?;
     let users = auth_entities::user::Entity::find()
         .order_by_asc(auth_entities::user::Column::Id)
         .all(&transaction)
@@ -340,7 +377,70 @@ async fn backfill_identity_email_claims(
         .insert(&transaction)
         .await?;
     }
+    reset_portable_migration_role(&transaction, assumed_bypass_role).await?;
     transaction.commit().await
+}
+
+async fn begin_portable_migration_transaction<C>(
+    connection: &C,
+) -> Result<(DatabaseTransaction, bool), sea_orm::DbErr>
+where
+    C: ConnectionTrait + TransactionTrait,
+{
+    let transaction = connection.begin().await?;
+    if connection.get_database_backend() != sea_orm::DatabaseBackend::Postgres {
+        return Ok((transaction, false));
+    }
+
+    let bypass_role_is_usable = transaction
+        .query_one(Statement::from_string(
+            sea_orm::DatabaseBackend::Postgres,
+            "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_bypassrls' AND pg_has_role(current_user, rolname, 'MEMBER')) AS bypass_role_is_usable"
+                .to_string(),
+        ))
+        .await?
+        .ok_or_else(|| sea_orm::DbErr::Custom("PostgreSQL role check returned no row".to_string()))?
+        .try_get::<bool>("", "bypass_role_is_usable")?;
+    if bypass_role_is_usable {
+        transaction
+            .execute(Statement::from_string(
+                sea_orm::DatabaseBackend::Postgres,
+                "SET LOCAL ROLE ohc_bypassrls".to_string(),
+            ))
+            .await?;
+        return Ok((transaction, true));
+    }
+
+    let users_rls_is_active = transaction
+        .query_one(Statement::from_string(
+            sea_orm::DatabaseBackend::Postgres,
+            "SELECT relrowsecurity, row_security_active(oid) AS row_security_active FROM pg_class WHERE oid = to_regclass('users')"
+                .to_string(),
+        ))
+        .await?
+        .is_some_and(|row| row.try_get::<bool>("", "row_security_active").unwrap_or(true));
+    if users_rls_is_active {
+        return Err(sea_orm::DbErr::Custom(
+            "PostgreSQL users RLS is active and requires membership in the ohc_bypassrls migration role"
+                .to_string(),
+        ));
+    }
+    Ok((transaction, false))
+}
+
+async fn reset_portable_migration_role(
+    transaction: &DatabaseTransaction,
+    assumed_bypass_role: bool,
+) -> Result<(), sea_orm::DbErr> {
+    if assumed_bypass_role {
+        transaction
+            .execute(Statement::from_string(
+                sea_orm::DatabaseBackend::Postgres,
+                "SET LOCAL ROLE NONE".to_string(),
+            ))
+            .await?;
+    }
+    Ok(())
 }
 
 fn identity_email_collision(normalized_email: &str) -> sea_orm::DbErr {
@@ -349,8 +449,8 @@ fn identity_email_collision(normalized_email: &str) -> sea_orm::DbErr {
     ))
 }
 
-async fn mysql_index_exists(
-    connection: &sea_orm::DatabaseConnection,
+async fn mysql_index_exists<C: ConnectionTrait>(
+    connection: &C,
     table_name: &str,
     index_name: &str,
 ) -> Result<bool, sea_orm::DbErr> {
@@ -359,6 +459,21 @@ async fn mysql_index_exists(
             sea_orm::DatabaseBackend::MySql,
             "SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ? LIMIT 1",
             [table_name.into(), index_name.into()],
+        ))
+        .await
+        .map(|row| row.is_some())
+}
+
+async fn mysql_column_exists<C: ConnectionTrait>(
+    connection: &C,
+    table_name: &str,
+    column_name: &str,
+) -> Result<bool, sea_orm::DbErr> {
+    connection
+        .query_one(Statement::from_sql_and_values(
+            sea_orm::DatabaseBackend::MySql,
+            "SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1",
+            [table_name.into(), column_name.into()],
         ))
         .await
         .map(|row| row.is_some())
