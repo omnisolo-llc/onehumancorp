@@ -99,9 +99,6 @@ filegroup(
     tags = ["manual"],
 )
 
-filegroup(
-    name = "playwright_spec_coverage",
-)
 
 # Shell script wrapper for running ALL playwright tests via docker compose
 # (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
