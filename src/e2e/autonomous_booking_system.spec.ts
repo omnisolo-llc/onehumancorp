@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 test.describe('Autonomous Booking System CUJ', () => {
   test('Owner sets up a new service and availability', async ({ page }) => {
-    // We cannot mock, and we have no API seed in this environment, so we test navigation.
+    // We cannot Test, and we have no API seed in this environment, so we test navigation.
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('password123');
