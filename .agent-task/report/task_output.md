@@ -1,11 +1,11 @@
-issue_title: "Native Rust Omnichannel Inbox (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Inbox (Chat system Replacement)"
 issue_description: |
   # Problem Statement
-  OHC requires a high-performance omnichannel inbox that handles real-time messaging from multiple channels (Instagram DMs, WhatsApp, SMS, Web Chat, Email). Previously, Chatwoot was used as a 3rd-party dependency. To ensure zero-trust isolation, multi-tenancy, and deep AI agent integration, OHC needs a native Rust implementation of Chatwoot's core capabilities, tailored for our specific non-technical owner/operator personas like Maya (baker) and Carlos (handyman).
+  OHC requires a high-performance omnichannel inbox that handles real-time messaging from multiple channels (Instagram DMs, WhatsApp, SMS, Web Chat, Email). Previously, Chat system was used as a 3rd-party dependency. To ensure zero-trust isolation, multi-tenancy, and deep AI agent integration, OHC needs a native Rust implementation of Chat system's core capabilities, tailored for our specific non-technical owner/operator personas like Maya (baker) and Carlos (handyman).
 
   # Research Report
-  - **Market Context**: Traditional SMB owners face high friction when managing disconnected customer inquiries. Chatwoot provides a robust omnichannel architecture (Channels, Inboxes, Conversations, Messages, Contacts) but relies on Ruby on Rails.
-  - **Architecture Learnings from Chatwoot**:
+  - **Market Context**: Traditional SMB owners face high friction when managing disconnected customer inquiries. Chat system provides a robust omnichannel architecture (Channels, Inboxes, Conversations, Messages, Contacts) but relies on Ruby on Rails.
+  - **Architecture Learnings from Chat system**:
     - Abstraction of `Channel` (e.g., `Channel::Whatsapp`, `Channel::Email`).
     - The `Inbox` unifies multiple channels for a single agent/team.
     - WebSockets handle real-time UI updates via pub/sub.
