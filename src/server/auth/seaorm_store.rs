@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder,
-    QuerySelect, Set, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, DatabaseTransaction,
+    EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set, Statement, TransactionTrait,
 };
 
 use crate::{User, user_repository::UserRepository};
@@ -21,7 +21,6 @@ pub mod entities {
             pub username: String,
             pub email: String,
             pub password_hash: String,
-            pub roles: Json,
             pub active: bool,
             pub tenant_id: String,
             pub oidc_subject: Option<String>,
@@ -31,6 +30,39 @@ pub mod entities {
 
         #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
         pub enum Relation {}
+        impl ActiveModelBehavior for ActiveModel {}
+    }
+
+    pub mod identity_user_role {
+        use super::*;
+
+        #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+        #[sea_orm(table_name = "identity_user_roles")]
+        pub struct Model {
+            #[sea_orm(primary_key, auto_increment = false)]
+            pub user_id: String,
+            #[sea_orm(primary_key, auto_increment = false)]
+            pub role_name: String,
+            pub tenant_id: String,
+            pub position: i32,
+        }
+
+        #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+        pub enum Relation {
+            #[sea_orm(
+                belongs_to = "super::user::Entity",
+                from = "Column::UserId",
+                to = "super::user::Column::Id",
+                on_update = "Cascade",
+                on_delete = "Cascade"
+            )]
+            User,
+        }
+        impl Related<super::user::Entity> for Entity {
+            fn to() -> RelationDef {
+                Relation::User.def()
+            }
+        }
         impl ActiveModelBehavior for ActiveModel {}
     }
 
@@ -247,8 +279,7 @@ async fn invitation_creator_tenant(
         .map_err(db_error)?
         .filter(|creator| creator.active)
         .ok_or_else(|| "invitation unavailable".to_string())?;
-    let creator_roles: Vec<String> = serde_json::from_value(creator.roles)
-        .map_err(|_| "invitation unavailable".to_string())?;
+    let creator_roles = roles_for_user(transaction, &creator.id).await?;
     if !creator_roles
         .iter()
         .any(|role| role.eq_ignore_ascii_case(crate::ROLE_ADMIN))
@@ -342,6 +373,134 @@ pub struct SeaOrmAuthRepository {
     connection: DatabaseConnection,
 }
 
+pub async fn begin_global_transaction(
+    connection: &DatabaseConnection,
+) -> Result<DatabaseTransaction, String> {
+    let transaction = connection.begin().await.map_err(db_error)?;
+    if transaction.get_database_backend() == sea_orm::DatabaseBackend::Postgres {
+        transaction
+            .execute(Statement::from_string(
+                sea_orm::DatabaseBackend::Postgres,
+                "SET LOCAL ROLE ohc_bypassrls".to_string(),
+            ))
+            .await
+            .map_err(db_error)?;
+    }
+    Ok(transaction)
+}
+
+pub async fn begin_tenant_transaction(
+    connection: &DatabaseConnection,
+    tenant_id: &str,
+) -> Result<DatabaseTransaction, String> {
+    let backend = connection.get_database_backend();
+    if backend == sea_orm::DatabaseBackend::Postgres && ::server_config::get().multitenant {
+        if tenant_id.trim().eq_ignore_ascii_case("system") {
+            return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
+        }
+        if tenant_id.trim().is_empty() {
+            return Err("empty tenant_id is not allowed in multi-tenant mode".to_string());
+        }
+    }
+    if backend == sea_orm::DatabaseBackend::Postgres
+        && tenant_id.trim().eq_ignore_ascii_case("system")
+    {
+        return begin_global_transaction(connection).await;
+    }
+    let transaction = connection.begin().await.map_err(db_error)?;
+    if backend == sea_orm::DatabaseBackend::Postgres {
+        transaction
+            .execute(Statement::from_sql_and_values(
+                sea_orm::DatabaseBackend::Postgres,
+                "SELECT set_config('role', 'none', true), set_config('app.current_tenant', $1, true)",
+                [tenant_id.into()],
+            ))
+            .await
+            .map_err(db_error)?;
+    }
+    Ok(transaction)
+}
+
+async fn roles_for_user<C>(connection: &C, user_id: &str) -> Result<Vec<String>, String>
+where
+    C: ConnectionTrait,
+{
+    entities::identity_user_role::Entity::find()
+        .filter(entities::identity_user_role::Column::UserId.eq(user_id))
+        .order_by_asc(entities::identity_user_role::Column::Position)
+        .order_by_asc(entities::identity_user_role::Column::RoleName)
+        .all(connection)
+        .await
+        .map_err(db_error)
+        .map(|roles| roles.into_iter().map(|role| role.role_name).collect())
+}
+
+pub async fn replace_user_roles(
+    transaction: &DatabaseTransaction,
+    user_id: &str,
+    tenant_id: &str,
+    roles: &[String],
+) -> Result<(), String> {
+    use entities::identity_user_role;
+
+    identity_user_role::Entity::delete_many()
+        .filter(identity_user_role::Column::UserId.eq(user_id))
+        .filter(identity_user_role::Column::TenantId.eq(tenant_id))
+        .exec(transaction)
+        .await
+        .map_err(db_error)?;
+
+    let mut seen = std::collections::HashSet::new();
+    for (position, role_name) in roles.iter().enumerate() {
+        if !seen.insert(role_name) {
+            continue;
+        }
+        identity_user_role::ActiveModel {
+            user_id: Set(user_id.to_string()),
+            role_name: Set(role_name.clone()),
+            tenant_id: Set(tenant_id.to_string()),
+            position: Set(position as i32),
+        }
+        .insert(transaction)
+        .await
+        .map_err(db_error)?;
+    }
+
+    let (sql, values) = match transaction.get_database_backend() {
+        sea_orm::DatabaseBackend::Postgres => (
+            "UPDATE users SET roles = COALESCE((SELECT array_agg(role_name ORDER BY position, role_name) FROM identity_user_roles WHERE user_id = $1 AND tenant_id = $2), ARRAY[]::TEXT[]) WHERE id = $1 AND tenant_id = $2",
+            vec![user_id.into(), tenant_id.into()],
+        ),
+        sea_orm::DatabaseBackend::MySql => (
+            "UPDATE users SET roles = COALESCE((SELECT JSON_ARRAYAGG(role_name) FROM (SELECT role_name FROM identity_user_roles WHERE user_id = ? AND tenant_id = ? ORDER BY position, role_name) ordered_roles), JSON_ARRAY()) WHERE id = ? AND tenant_id = ?",
+            vec![
+                user_id.into(),
+                tenant_id.into(),
+                user_id.into(),
+                tenant_id.into(),
+            ],
+        ),
+        sea_orm::DatabaseBackend::Sqlite => (
+            "UPDATE users SET roles = COALESCE((SELECT json_group_array(role_name) FROM (SELECT role_name FROM identity_user_roles WHERE user_id = ? AND tenant_id = ? ORDER BY position, role_name)), '[]') WHERE id = ? AND tenant_id = ?",
+            vec![
+                user_id.into(),
+                tenant_id.into(),
+                user_id.into(),
+                tenant_id.into(),
+            ],
+        ),
+    };
+    transaction
+        .execute(Statement::from_sql_and_values(
+            transaction.get_database_backend(),
+            sql,
+            values,
+        ))
+        .await
+        .map_err(db_error)?;
+    Ok(())
+}
+
 impl SeaOrmAuthRepository {
     pub fn new(connection: DatabaseConnection) -> Self {
         Self { connection }
@@ -352,13 +511,16 @@ impl SeaOrmAuthRepository {
     }
 
     pub async fn registration_mode(&self) -> Result<RegistrationMode, String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         let value = entities::application_setting::Entity::find_by_id("registration_mode")
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
             .map(|setting| setting.value)
             .unwrap_or_else(|| "closed".to_string());
-        RegistrationMode::parse(&value)
+        let mode = RegistrationMode::parse(&value)?;
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(mode)
     }
 
     pub async fn set_registration_mode(
@@ -368,8 +530,9 @@ impl SeaOrmAuthRepository {
         now: DateTime<Utc>,
     ) -> Result<(), String> {
         use entities::application_setting;
+        let transaction = begin_global_transaction(&self.connection).await?;
         if let Some(setting) = application_setting::Entity::find_by_id("registration_mode")
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
         {
@@ -377,7 +540,7 @@ impl SeaOrmAuthRepository {
             active.value = Set(mode.as_str().to_string());
             active.updated_at = Set(now);
             active.updated_by = Set(Some(actor.to_string()));
-            active.update(&self.connection).await.map_err(db_error)?;
+            active.update(&transaction).await.map_err(db_error)?;
         } else {
             application_setting::ActiveModel {
                 key: Set("registration_mode".to_string()),
@@ -385,14 +548,15 @@ impl SeaOrmAuthRepository {
                 updated_at: Set(now),
                 updated_by: Set(Some(actor.to_string())),
             }
-            .insert(&self.connection)
+            .insert(&transaction)
             .await
             .map_err(db_error)?;
         }
-        Ok(())
+        transaction.commit().await.map_err(db_error)
     }
 
     pub async fn create_email_challenge(&self, challenge: NewEmailChallenge) -> Result<(), String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         entities::email_challenge::ActiveModel {
             id: Set(challenge.id),
             email: Set(challenge.email),
@@ -406,57 +570,68 @@ impl SeaOrmAuthRepository {
             verified_at: Set(None),
             invitation_id: Set(challenge.invitation_id),
         }
-        .insert(&self.connection)
+        .insert(&transaction)
         .await
         .map_err(db_error)?;
-        Ok(())
+        transaction.commit().await.map_err(db_error)
     }
 
     pub async fn email_challenge(
         &self,
         id: &str,
     ) -> Result<Option<entities::email_challenge::Model>, String> {
-        entities::email_challenge::Entity::find_by_id(id)
-            .one(&self.connection)
+        let transaction = begin_global_transaction(&self.connection).await?;
+        let challenge = entities::email_challenge::Entity::find_by_id(id)
+            .one(&transaction)
             .await
-            .map_err(db_error)
+            .map_err(db_error)?;
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(challenge)
     }
 
     pub async fn latest_email_challenge(
         &self,
         email: &str,
     ) -> Result<Option<entities::email_challenge::Model>, String> {
-        entities::email_challenge::Entity::find()
+        let transaction = begin_global_transaction(&self.connection).await?;
+        let challenge = entities::email_challenge::Entity::find()
             .filter(entities::email_challenge::Column::Email.eq(email))
             .order_by_desc(entities::email_challenge::Column::CreatedAt)
-            .one(&self.connection)
+            .one(&transaction)
             .await
-            .map_err(db_error)
+            .map_err(db_error)?;
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(challenge)
     }
 
     pub async fn delete_email_challenge(&self, id: &str) -> Result<(), String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         entities::email_challenge::Entity::delete_by_id(id)
-            .exec(&self.connection)
+            .exec(&transaction)
             .await
             .map_err(db_error)?;
-        Ok(())
+        transaction.commit().await.map_err(db_error)
     }
 
     pub async fn registration_ticket_by_hash(
         &self,
         token_hash: &str,
     ) -> Result<Option<entities::registration_ticket::Model>, String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         let tickets = entities::registration_ticket::Entity::find()
             .filter(entities::registration_ticket::Column::TokenHash.eq(token_hash))
             .limit(2)
-            .all(&self.connection)
+            .all(&transaction)
             .await
             .map_err(db_error)?;
-        Ok((tickets.len() == 1).then(|| tickets[0].clone()))
+        let ticket = (tickets.len() == 1).then(|| tickets[0].clone());
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(ticket)
     }
 
     pub async fn record_challenge_failure(&self, id: &str, attempts: i32) -> Result<bool, String> {
         use entities::email_challenge;
+        let transaction = begin_global_transaction(&self.connection).await?;
         let result = email_challenge::Entity::update_many()
             .col_expr(
                 email_challenge::Column::Attempts,
@@ -465,9 +640,10 @@ impl SeaOrmAuthRepository {
             .filter(email_challenge::Column::Id.eq(id))
             .filter(email_challenge::Column::Attempts.eq(attempts))
             .filter(email_challenge::Column::VerifiedAt.is_null())
-            .exec(&self.connection)
+            .exec(&transaction)
             .await
             .map_err(db_error)?;
+        transaction.commit().await.map_err(db_error)?;
         Ok(result.rows_affected == 1)
     }
 
@@ -478,7 +654,7 @@ impl SeaOrmAuthRepository {
         ticket: NewRegistrationTicket,
     ) -> Result<(), String> {
         use entities::{email_challenge, registration_ticket};
-        let transaction = self.connection.begin().await.map_err(db_error)?;
+        let transaction = begin_global_transaction(&self.connection).await?;
         let mut claim = email_challenge::Entity::update_many()
             .col_expr(
                 email_challenge::Column::VerifiedAt,
@@ -491,9 +667,9 @@ impl SeaOrmAuthRepository {
             .filter(email_challenge::Column::ExpiresAt.gt(ticket.issued_at))
             .filter(email_challenge::Column::Attempts.lt(5));
         claim = match ticket.invitation_id.as_deref() {
-            Some(invitation_id) => claim.filter(
-                email_challenge::Column::InvitationId.eq(invitation_id),
-            ),
+            Some(invitation_id) => {
+                claim.filter(email_challenge::Column::InvitationId.eq(invitation_id))
+            }
             None => claim.filter(email_challenge::Column::InvitationId.is_null()),
         };
         let claimed = claim.exec(&transaction).await.map_err(db_error)?;
@@ -523,7 +699,7 @@ impl SeaOrmAuthRepository {
         mut user: User,
     ) -> Result<User, String> {
         use entities::{invitation, registration_ticket, user as user_entity};
-        let transaction = self.connection.begin().await.map_err(db_error)?;
+        let transaction = begin_global_transaction(&self.connection).await?;
         let normalized_email = crate::validation::normalize_email(&user.email)
             .map_err(|_| "account already exists".to_string())?;
         user.email = normalized_email.clone();
@@ -587,8 +763,9 @@ impl SeaOrmAuthRepository {
         let tenant_id = match mode {
             RegistrationMode::Closed => return Err("registration closed".to_string()),
             RegistrationMode::Open => user.organization_id.clone().unwrap_or_default(),
-            RegistrationMode::InviteOnly => invitation
-                .ok_or_else(|| "invitation unavailable".to_string())?,
+            RegistrationMode::InviteOnly => {
+                invitation.ok_or_else(|| "invitation unavailable".to_string())?
+            }
         };
         user.organization_id = Some(tenant_id.clone());
         claim_identity_email(
@@ -604,9 +781,8 @@ impl SeaOrmAuthRepository {
             username: Set(user.username.clone()),
             email: Set(user.email.clone()),
             password_hash: Set(user.password_hash.clone()),
-            roles: Set(serde_json::json!(user.roles)),
             active: Set(user.active),
-            tenant_id: Set(tenant_id),
+            tenant_id: Set(tenant_id.clone()),
             oidc_subject: Set(user.oidc_subject.clone()),
             created_at: Set(user.created_at),
             updated_at: Set(user.updated_at),
@@ -614,35 +790,40 @@ impl SeaOrmAuthRepository {
         .insert(&transaction)
         .await
         .map_err(db_error)?;
+        replace_user_roles(&transaction, &user.id, &tenant_id, &user.roles).await?;
 
         transaction.commit().await.map_err(db_error)?;
         Ok(user)
     }
 
     pub async fn public_oidc_providers(&self) -> Result<Vec<PublicOidcProvider>, String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         let providers = entities::oidc_provider::Entity::find()
             .filter(entities::oidc_provider::Column::Enabled.eq(true))
             .order_by_asc(entities::oidc_provider::Column::DisplayName)
-            .all(&self.connection)
+            .all(&transaction)
             .await
             .map_err(db_error)?;
-        Ok(providers
+        let providers = providers
             .into_iter()
             .map(|provider| PublicOidcProvider {
                 key: provider.key,
                 display_name: provider.display_name,
                 provider_kind: provider.provider_kind,
             })
-            .collect())
+            .collect();
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(providers)
     }
 
     pub async fn admin_oidc_providers(&self) -> Result<Vec<AdminOidcProvider>, String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         let providers = entities::oidc_provider::Entity::find()
             .order_by_asc(entities::oidc_provider::Column::DisplayName)
-            .all(&self.connection)
+            .all(&transaction)
             .await
             .map_err(db_error)?;
-        Ok(providers
+        let providers = providers
             .into_iter()
             .map(|provider| AdminOidcProvider {
                 key: provider.key,
@@ -653,24 +834,27 @@ impl SeaOrmAuthRepository {
                     && !provider.secret_ref.trim().is_empty(),
                 enabled: provider.enabled,
             })
-            .collect())
+            .collect();
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(providers)
     }
 
     pub async fn oidc_provider(&self, key: &str) -> Result<Option<OidcProviderConfig>, String> {
-        entities::oidc_provider::Entity::find_by_id(key)
-            .one(&self.connection)
+        let transaction = begin_global_transaction(&self.connection).await?;
+        let provider = entities::oidc_provider::Entity::find_by_id(key)
+            .one(&transaction)
             .await
-            .map_err(db_error)
-            .map(|provider| {
-                provider.map(|provider| OidcProviderConfig {
-                    key: provider.key,
-                    display_name: provider.display_name,
-                    issuer: provider.issuer,
-                    client_id: provider.client_id,
-                    secret_ref: provider.secret_ref,
-                    enabled: provider.enabled,
-                })
-            })
+            .map_err(db_error)?
+            .map(|provider| OidcProviderConfig {
+                key: provider.key,
+                display_name: provider.display_name,
+                issuer: provider.issuer,
+                client_id: provider.client_id,
+                secret_ref: provider.secret_ref,
+                enabled: provider.enabled,
+            });
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(provider)
     }
 
     pub async fn set_oidc_provider_enabled(
@@ -679,21 +863,25 @@ impl SeaOrmAuthRepository {
         enabled: bool,
         now: DateTime<Utc>,
     ) -> Result<bool, String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         let Some(provider) = entities::oidc_provider::Entity::find_by_id(key)
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
         else {
+            transaction.rollback().await.map_err(db_error)?;
             return Ok(false);
         };
         let mut active: entities::oidc_provider::ActiveModel = provider.into();
         active.enabled = Set(enabled);
         active.updated_at = Set(now);
-        active.update(&self.connection).await.map_err(db_error)?;
+        active.update(&transaction).await.map_err(db_error)?;
+        transaction.commit().await.map_err(db_error)?;
         Ok(true)
     }
 
     pub async fn sync_configured_oidc_providers_from_environment(&self) -> Result<(), String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         let mut configured = Vec::new();
         if let Ok(client_id) = std::env::var("OHC_OIDC_GOOGLE_CLIENT_ID") {
             if !client_id.trim().is_empty() {
@@ -725,7 +913,7 @@ impl SeaOrmAuthRepository {
         for known_key in ["google", "keycloak"] {
             if !configured.iter().any(|provider| provider.0 == known_key) {
                 if let Some(existing) = entities::oidc_provider::Entity::find_by_id(known_key)
-                    .one(&self.connection)
+                    .one(&transaction)
                     .await
                     .map_err(db_error)?
                 {
@@ -734,13 +922,13 @@ impl SeaOrmAuthRepository {
                     active.secret_ref = Set(String::new());
                     active.enabled = Set(false);
                     active.updated_at = Set(Utc::now());
-                    active.update(&self.connection).await.map_err(db_error)?;
+                    active.update(&transaction).await.map_err(db_error)?;
                 }
             }
         }
         for (key, display_name, provider_kind, issuer, client_id, secret_ref) in configured {
             if let Some(existing) = entities::oidc_provider::Entity::find_by_id(&key)
-                .one(&self.connection)
+                .one(&transaction)
                 .await
                 .map_err(db_error)?
             {
@@ -752,7 +940,7 @@ impl SeaOrmAuthRepository {
                 active.secret_ref = Set(secret_ref);
                 active.scopes = Set(serde_json::json!(["openid", "email", "profile"]));
                 active.updated_at = Set(Utc::now());
-                active.update(&self.connection).await.map_err(db_error)?;
+                active.update(&transaction).await.map_err(db_error)?;
             } else {
                 let now = Utc::now();
                 entities::oidc_provider::ActiveModel {
@@ -767,12 +955,12 @@ impl SeaOrmAuthRepository {
                     created_at: Set(now),
                     updated_at: Set(now),
                 }
-                .insert(&self.connection)
+                .insert(&transaction)
                 .await
                 .map_err(db_error)?;
             }
         }
-        Ok(())
+        transaction.commit().await.map_err(db_error)
     }
 
     pub async fn user_for_external_identity(
@@ -781,22 +969,29 @@ impl SeaOrmAuthRepository {
         issuer: &str,
         subject: &str,
     ) -> Result<Option<User>, String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         let identities = entities::external_identity::Entity::find()
             .filter(entities::external_identity::Column::ProviderKey.eq(provider_key))
             .filter(entities::external_identity::Column::Issuer.eq(issuer))
             .filter(entities::external_identity::Column::Subject.eq(subject))
             .limit(2)
-            .all(&self.connection)
+            .all(&transaction)
             .await
             .map_err(db_error)?;
         if identities.len() != 1 {
+            transaction.rollback().await.map_err(db_error)?;
             return Ok(None);
         }
         let user = entities::user::Entity::find_by_id(&identities[0].user_id)
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?;
-        Ok(user.map(model_to_user))
+        let user = match user {
+            Some(user) => Some(model_to_user(user, &transaction).await?),
+            None => None,
+        };
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(user)
     }
 
     pub async fn active_invitation_id_by_token(
@@ -805,16 +1000,19 @@ impl SeaOrmAuthRepository {
         token_hash: &str,
         now: DateTime<Utc>,
     ) -> Result<Option<String>, String> {
+        let transaction = begin_global_transaction(&self.connection).await?;
         let invitations = entities::invitation::Entity::find()
             .filter(entities::invitation::Column::Email.eq(email))
             .filter(entities::invitation::Column::TokenHash.eq(token_hash))
             .filter(entities::invitation::Column::ConsumedAt.is_null())
             .filter(entities::invitation::Column::ExpiresAt.gt(now))
             .limit(2)
-            .all(&self.connection)
+            .all(&transaction)
             .await
             .map_err(db_error)?;
-        Ok((invitations.len() == 1).then(|| invitations[0].id.clone()))
+        let invitation = (invitations.len() == 1).then(|| invitations[0].id.clone());
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(invitation)
     }
 
     pub async fn create_oidc_user(
@@ -825,7 +1023,7 @@ impl SeaOrmAuthRepository {
         subject: &str,
     ) -> Result<User, String> {
         use entities::{external_identity, invitation, user as user_entity};
-        let transaction = self.connection.begin().await.map_err(db_error)?;
+        let transaction = begin_global_transaction(&self.connection).await?;
         let normalized_email = crate::validation::normalize_email(&user.email)
             .map_err(|_| "OIDC login denied".to_string())?;
         user.email = normalized_email.clone();
@@ -895,9 +1093,8 @@ impl SeaOrmAuthRepository {
             username: Set(user.username.clone()),
             email: Set(user.email.clone()),
             password_hash: Set(user.password_hash.clone()),
-            roles: Set(serde_json::json!(user.roles)),
             active: Set(true),
-            tenant_id: Set(tenant_id),
+            tenant_id: Set(tenant_id.clone()),
             oidc_subject: Set(user.oidc_subject.clone()),
             created_at: Set(user.created_at),
             updated_at: Set(user.updated_at),
@@ -905,6 +1102,7 @@ impl SeaOrmAuthRepository {
         .insert(&transaction)
         .await
         .map_err(db_error)?;
+        replace_user_roles(&transaction, &user.id, &tenant_id, &user.roles).await?;
         external_identity::ActiveModel {
             id: Set(uuid::Uuid::new_v4().to_string()),
             user_id: Set(user.id.clone()),
@@ -922,19 +1120,23 @@ impl SeaOrmAuthRepository {
     }
 }
 
-fn model_to_user(model: entities::user::Model) -> User {
-    User {
+async fn model_to_user<C>(model: entities::user::Model, connection: &C) -> Result<User, String>
+where
+    C: ConnectionTrait,
+{
+    let roles = roles_for_user(connection, &model.id).await?;
+    Ok(User {
         id: model.id,
         username: model.username,
         email: model.email,
         password_hash: model.password_hash,
-        roles: serde_json::from_value(model.roles).unwrap_or_default(),
+        roles,
         active: model.active,
         organization_id: Some(model.tenant_id),
         created_at: model.created_at,
         updated_at: model.updated_at,
         oidc_subject: model.oidc_subject,
-    }
+    })
 }
 
 fn db_error(error: sea_orm::DbErr) -> String {
@@ -950,7 +1152,7 @@ impl UserRepository for SeaOrmAuthRepository {
         let normalized_email = crate::validation::normalize_email(&user.email)
             .map_err(|_| "email already registered".to_string())?;
         user.email = normalized_email.clone();
-        let transaction = self.connection.begin().await.map_err(db_error)?;
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
         claim_identity_email(
             &transaction,
             &normalized_email,
@@ -960,11 +1162,10 @@ impl UserRepository for SeaOrmAuthRepository {
         )
         .await?;
         entities::user::ActiveModel {
-            id: Set(user.id),
+            id: Set(user.id.clone()),
             username: Set(user.username),
             email: Set(user.email),
             password_hash: Set(user.password_hash),
-            roles: Set(serde_json::json!(user.roles)),
             active: Set(user.active),
             tenant_id: Set(org_id.to_string()),
             oidc_subject: Set(user.oidc_subject),
@@ -974,39 +1175,49 @@ impl UserRepository for SeaOrmAuthRepository {
         .insert(&transaction)
         .await
         .map_err(db_error)?;
+        replace_user_roles(&transaction, &user.id, org_id, &user.roles).await?;
         transaction.commit().await.map_err(db_error)
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
         let model = entities::user::Entity::find_by_id(id)
             .filter(entities::user::Column::TenantId.eq(org_id))
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
             .ok_or_else(|| "user not found".to_string())?;
-        Ok(model_to_user(model))
+        let user = model_to_user(model, &transaction).await?;
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(user)
     }
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
         let model = entities::user::Entity::find()
             .filter(entities::user::Column::Username.eq(username))
             .filter(entities::user::Column::TenantId.eq(org_id))
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
             .ok_or_else(|| "user not found".to_string())?;
-        Ok(model_to_user(model))
+        let user = model_to_user(model, &transaction).await?;
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(user)
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
         let model = entities::user::Entity::find()
             .filter(entities::user::Column::Email.eq(email))
             .filter(entities::user::Column::TenantId.eq(org_id))
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
             .ok_or_else(|| "user not found".to_string())?;
-        Ok(model_to_user(model))
+        let user = model_to_user(model, &transaction).await?;
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(user)
     }
 
     async fn get_by_login_identifier(
@@ -1014,6 +1225,7 @@ impl UserRepository for SeaOrmAuthRepository {
         identifier: &str,
         org_id: &str,
     ) -> Result<Option<User>, String> {
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
         let models = entities::user::Entity::find()
             .filter(
                 sea_orm::Condition::any()
@@ -1023,35 +1235,50 @@ impl UserRepository for SeaOrmAuthRepository {
             .filter(entities::user::Column::TenantId.eq(org_id))
             .filter(entities::user::Column::Active.eq(true))
             .limit(2)
-            .all(&self.connection)
+            .all(&transaction)
             .await
             .map_err(db_error)?;
-        Ok((models.len() == 1).then(|| model_to_user(models[0].clone())))
+        let user = if models.len() == 1 {
+            Some(model_to_user(models[0].clone(), &transaction).await?)
+        } else {
+            None
+        };
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(user)
     }
 
     async fn get_by_oidc_subject(&self, subject: &str, org_id: &str) -> Result<User, String> {
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
         let model = entities::user::Entity::find()
             .filter(entities::user::Column::OidcSubject.eq(subject))
             .filter(entities::user::Column::TenantId.eq(org_id))
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
             .ok_or_else(|| "user not found".to_string())?;
-        Ok(model_to_user(model))
+        let user = model_to_user(model, &transaction).await?;
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(user)
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        entities::user::Entity::find()
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
+        let models = entities::user::Entity::find()
             .filter(entities::user::Column::TenantId.eq(org_id))
             .order_by_asc(entities::user::Column::CreatedAt)
-            .all(&self.connection)
+            .all(&transaction)
             .await
-            .map_err(db_error)
-            .map(|models| models.into_iter().map(model_to_user).collect())
+            .map_err(db_error)?;
+        let mut users = Vec::with_capacity(models.len());
+        for model in models {
+            users.push(model_to_user(model, &transaction).await?);
+        }
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(users)
     }
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
-        let transaction = self.connection.begin().await.map_err(db_error)?;
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
         let model = entities::user::Entity::find_by_id(&user.id)
             .filter(entities::user::Column::TenantId.eq(org_id))
             .one(&transaction)
@@ -1069,22 +1296,29 @@ impl UserRepository for SeaOrmAuthRepository {
         active.username = Set(user.username);
         active.email = Set(requested_email);
         active.password_hash = Set(user.password_hash);
-        active.roles = Set(serde_json::json!(user.roles));
         active.active = Set(user.active);
         active.oidc_subject = Set(user.oidc_subject);
         active.updated_at = Set(user.updated_at);
         active.update(&transaction).await.map_err(db_error)?;
+        replace_user_roles(&transaction, &user.id, org_id, &user.roles).await?;
         transaction.commit().await.map_err(db_error)
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
+        entities::identity_user_role::Entity::delete_many()
+            .filter(entities::identity_user_role::Column::UserId.eq(id))
+            .filter(entities::identity_user_role::Column::TenantId.eq(org_id))
+            .exec(&transaction)
+            .await
+            .map_err(db_error)?;
         entities::user::Entity::delete_many()
             .filter(entities::user::Column::Id.eq(id))
             .filter(entities::user::Column::TenantId.eq(org_id))
-            .exec(&self.connection)
+            .exec(&transaction)
             .await
             .map_err(db_error)?;
-        Ok(())
+        transaction.commit().await.map_err(db_error)
     }
 
     async fn revoke_token(
@@ -1093,8 +1327,10 @@ impl UserRepository for SeaOrmAuthRepository {
         exp: DateTime<Utc>,
         org_id: &str,
     ) -> Result<(), String> {
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
         if entities::revoked_token::Entity::find_by_id(&jti)
-            .one(&self.connection)
+            .filter(entities::revoked_token::Column::TenantId.eq(org_id))
+            .one(&transaction)
             .await
             .map_err(db_error)?
             .is_none()
@@ -1104,31 +1340,70 @@ impl UserRepository for SeaOrmAuthRepository {
                 tenant_id: Set(org_id.to_string()),
                 expires_at: Set(exp),
             }
-            .insert(&self.connection)
+            .insert(&transaction)
             .await
             .map_err(db_error)?;
         }
-        Ok(())
+        transaction.commit().await.map_err(db_error)
     }
 
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
-        Ok(entities::revoked_token::Entity::find_by_id(jti)
+        let transaction = begin_tenant_transaction(&self.connection, org_id).await?;
+        let revoked = entities::revoked_token::Entity::find_by_id(jti)
             .filter(entities::revoked_token::Column::TenantId.eq(org_id))
             .filter(entities::revoked_token::Column::ExpiresAt.gt(Utc::now()))
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
-            .is_some())
+            .is_some();
+        transaction.rollback().await.map_err(db_error)?;
+        Ok(revoked)
     }
 }
 
 #[cfg(test)]
 mod atomic_registration_tests {
     use super::*;
-    use sea_orm::{
-        ConnectOptions, ConnectionTrait, Database, EntityTrait, PaginatorTrait, Schema,
-    };
+    use sea_orm::{ConnectOptions, ConnectionTrait, Database, EntityTrait, PaginatorTrait, Schema};
     use std::time::Duration;
+
+    #[test]
+    fn postgres_user_access_declares_transaction_scoped_authority() {
+        let source = include_str!("seaorm_store.rs");
+        let production_source = source
+            .split_once("\n#[cfg(test)]\nmod atomic_registration_tests")
+            .expect("portable repository must retain its test boundary")
+            .0;
+
+        assert!(production_source.contains("begin_tenant_transaction"));
+        assert!(production_source.contains("begin_global_transaction"));
+        assert!(production_source.contains("set_config('app.current_tenant'"));
+        assert!(production_source.contains("SET LOCAL ROLE ohc_bypassrls"));
+        assert!(!production_source.contains("roles: Json"));
+
+        let user_repository_source = production_source
+            .split_once("impl UserRepository for SeaOrmAuthRepository")
+            .expect("portable user repository must exist")
+            .1;
+        assert!(!user_repository_source.contains(".one(&self.connection)"));
+        assert!(!user_repository_source.contains(".all(&self.connection)"));
+        assert!(!user_repository_source.contains(".exec(&self.connection)"));
+
+        let migration_source = include_str!("../persistence/migration.rs");
+        assert!(migration_source.contains("ENABLE ROW LEVEL SECURITY"));
+        assert!(migration_source.contains("tenant_isolation_identity_user_roles"));
+        assert!(migration_source.contains("unnest(COALESCE(users.roles"));
+        assert!(migration_source.contains("JSON_TABLE(COALESCE(users.roles"));
+
+        let startup_source = include_str!("../lib.rs");
+        let legacy_position = startup_source
+            .find("db.run_migrations().await?")
+            .expect("legacy PostgreSQL migration hook must run");
+        let portable_position = startup_source
+            .find("crate::persistence::migration::migrate(database).await?")
+            .expect("portable migration hook must run");
+        assert!(legacy_position < portable_position);
+    }
 
     async fn repositories() -> (
         tempfile::TempDir,
@@ -1157,12 +1432,20 @@ mod atomic_registration_tests {
             schema.create_table_from_entity(entities::invitation::Entity),
             schema.create_table_from_entity(entities::external_identity::Entity),
             schema.create_table_from_entity(entities::identity_email_claim::Entity),
+            schema.create_table_from_entity(entities::identity_user_role::Entity),
         ] {
             first
                 .execute(first.get_database_backend().build(&statement))
                 .await
                 .unwrap();
         }
+        first
+            .execute(sea_orm::Statement::from_string(
+                sea_orm::DatabaseBackend::Sqlite,
+                "ALTER TABLE users ADD COLUMN roles TEXT NOT NULL DEFAULT '[]'".to_string(),
+            ))
+            .await
+            .unwrap();
         let second = connect(url).await;
         (
             directory,
@@ -1277,7 +1560,9 @@ mod atomic_registration_tests {
             .unwrap();
         assert_eq!(users.len(), 1);
         assert_eq!(
-            serde_json::from_value::<Vec<String>>(users[0].roles.clone()).unwrap(),
+            roles_for_user(first.connection(), &users[0].id)
+                .await
+                .unwrap(),
             vec![crate::ROLE_ADMIN.to_string()]
         );
         assert!(!users[0].tenant_id.is_empty());
@@ -1358,29 +1643,39 @@ mod atomic_registration_tests {
         );
         let mut successes = usize::from(left.is_ok()) + usize::from(right.is_ok());
         if left.is_err() {
-            successes += usize::from(first
-                .create_oidc_user(
-                    first_user,
-                    "google",
-                    "https://accounts.google.com",
-                    "google-subject",
-                )
-                .await
-                .is_ok());
+            successes += usize::from(
+                first
+                    .create_oidc_user(
+                        first_user,
+                        "google",
+                        "https://accounts.google.com",
+                        "google-subject",
+                    )
+                    .await
+                    .is_ok(),
+            );
         }
         if right.is_err() {
-            successes += usize::from(second
-                .create_oidc_user(
-                    second_user,
-                    "keycloak",
-                    "https://idp.example.test",
-                    "keycloak-subject",
-                )
-                .await
-                .is_ok());
+            successes += usize::from(
+                second
+                    .create_oidc_user(
+                        second_user,
+                        "keycloak",
+                        "https://idp.example.test",
+                        "keycloak-subject",
+                    )
+                    .await
+                    .is_ok(),
+            );
         }
         assert_eq!(successes, 1);
-        assert_eq!(entities::user::Entity::find().count(first.connection()).await.unwrap(), 1);
+        assert_eq!(
+            entities::user::Entity::find()
+                .count(first.connection())
+                .await
+                .unwrap(),
+            1
+        );
         assert_eq!(
             entities::external_identity::Entity::find()
                 .count(first.connection())
@@ -1454,10 +1749,7 @@ mod atomic_registration_tests {
         let mut first_user = first.get_by_id("first-user", tenant_id).await.unwrap();
         first_user.email = "SECOND@EXAMPLE.TEST".to_string();
 
-        let error = first
-            .update_user(first_user, tenant_id)
-            .await
-            .unwrap_err();
+        let error = first.update_user(first_user, tenant_id).await.unwrap_err();
 
         assert_eq!(error, "email changes require verification");
         assert_eq!(
@@ -1479,5 +1771,44 @@ mod atomic_registration_tests {
                 .unwrap();
             assert_eq!(claim.user_id, owner);
         }
+    }
+
+    #[tokio::test]
+    async fn portable_role_changes_round_trip_and_sync_the_legacy_json_column() {
+        let (_directory, first, _second) = repositories().await;
+        let tenant_id = "tenant-role-sync";
+        let mut user = registration_user("role-user", "role.user@example.test");
+        user.roles = vec!["ADMIN".to_string(), "OPERATOR".to_string()];
+        first.create_user(user.clone(), tenant_id).await.unwrap();
+
+        assert_eq!(
+            first.get_by_id(&user.id, tenant_id).await.unwrap().roles,
+            user.roles
+        );
+
+        user.roles = vec!["VIEWER".to_string()];
+        user.updated_at = Utc::now();
+        first.update_user(user.clone(), tenant_id).await.unwrap();
+
+        assert_eq!(
+            first.get_by_id(&user.id, tenant_id).await.unwrap().roles,
+            user.roles
+        );
+        let legacy_roles = first
+            .connection()
+            .query_one(Statement::from_sql_and_values(
+                sea_orm::DatabaseBackend::Sqlite,
+                "SELECT roles FROM users WHERE id = ?",
+                [user.id.into()],
+            ))
+            .await
+            .unwrap()
+            .unwrap()
+            .try_get::<String>("", "roles")
+            .unwrap();
+        assert_eq!(
+            serde_json::from_str::<Vec<String>>(&legacy_roles).unwrap(),
+            vec!["VIEWER"]
+        );
     }
 }

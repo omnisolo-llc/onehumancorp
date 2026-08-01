@@ -986,8 +986,9 @@ async fn update_oidc_provider(
         return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC settings unavailable");
     };
     let configured = match repository.oidc_provider(&provider).await {
-        Ok(Some(config)) => !config.client_id.trim().is_empty()
-            && !config.secret_ref.trim().is_empty(),
+        Ok(Some(config)) => {
+            !config.client_id.trim().is_empty() && !config.secret_ref.trim().is_empty()
+        }
         Ok(None) => return error(StatusCode::NOT_FOUND, "OIDC provider unavailable"),
         Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC settings unavailable"),
     };
@@ -1045,7 +1046,10 @@ async fn start_email_verification(
     let now = Utc::now();
     let invitation_id = if mode == crate::seaorm_store::RegistrationMode::InviteOnly {
         let raw_token = payload.invitation_token.as_deref().unwrap_or_default();
-        if raw_token.len() < 16 || raw_token.len() > 256 || raw_token.bytes().any(|byte| byte.is_ascii_whitespace()) {
+        if raw_token.len() < 16
+            || raw_token.len() > 256
+            || raw_token.bytes().any(|byte| byte.is_ascii_whitespace())
+        {
             return error(StatusCode::FORBIDDEN, "invitation required");
         }
         let token_hash = registration_hash_hex(
@@ -1320,9 +1324,7 @@ async fn register(
         Ok(_) => return error(StatusCode::BAD_REQUEST, "invalid registration"),
         Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable"),
     };
-    if mode == crate::seaorm_store::RegistrationMode::InviteOnly
-        && ticket.invitation_id.is_none()
-    {
+    if mode == crate::seaorm_store::RegistrationMode::InviteOnly && ticket.invitation_id.is_none() {
         return error(StatusCode::FORBIDDEN, "invitation required");
     }
     if let Err(message) =
@@ -2483,6 +2485,7 @@ mod tests {
             schema.create_table_from_entity(entities::invitation::Entity),
             schema.create_table_from_entity(entities::external_identity::Entity),
             schema.create_table_from_entity(entities::identity_email_claim::Entity),
+            schema.create_table_from_entity(entities::identity_user_role::Entity),
             schema.create_table_from_entity(entities::revoked_token::Entity),
         ] {
             connection
@@ -2490,6 +2493,13 @@ mod tests {
                 .await
                 .unwrap();
         }
+        connection
+            .execute(sea_orm::Statement::from_string(
+                sea_orm::DatabaseBackend::Sqlite,
+                "ALTER TABLE users ADD COLUMN roles TEXT NOT NULL DEFAULT '[]'".to_string(),
+            ))
+            .await
+            .unwrap();
         let repository = Arc::new(crate::seaorm_store::SeaOrmAuthRepository::new(connection));
         let store = Arc::new(Store::with_portable_repo(repository.clone()));
         let raw_ticket = "verified-registration-ticket".to_string();
@@ -2511,14 +2521,15 @@ mod tests {
 
         let invitation_id = if let Some(creator) = invitation_creator {
             let creator_id = creator.id.clone();
+            let creator_tenant_id = creator.organization_id.clone().unwrap_or_default();
+            let creator_roles = creator.roles.clone();
             entities::user::ActiveModel {
                 id: Set(creator.id),
                 username: Set(creator.username),
                 email: Set(creator.email),
                 password_hash: Set(creator.password_hash),
-                roles: Set(serde_json::json!(creator.roles)),
                 active: Set(creator.active),
-                tenant_id: Set(creator.organization_id.unwrap_or_default()),
+                tenant_id: Set(creator_tenant_id.clone()),
                 oidc_subject: Set(creator.oidc_subject),
                 created_at: Set(creator.created_at),
                 updated_at: Set(creator.updated_at),
@@ -2526,6 +2537,17 @@ mod tests {
             .insert(repository.connection())
             .await
             .unwrap();
+            for (position, role_name) in creator_roles.into_iter().enumerate() {
+                entities::identity_user_role::ActiveModel {
+                    user_id: Set(creator_id.clone()),
+                    role_name: Set(role_name),
+                    tenant_id: Set(creator_tenant_id.clone()),
+                    position: Set(position as i32),
+                }
+                .insert(repository.connection())
+                .await
+                .unwrap();
+            }
             let invitation_id = "invitation-7".to_string();
             entities::invitation::ActiveModel {
                 id: Set(invitation_id.clone()),
@@ -2683,7 +2705,6 @@ mod tests {
             username: Set("existing-local-user".to_string()),
             email: Set("new.user@example.test".to_string()),
             password_hash: Set("unused".to_string()),
-            roles: Set(serde_json::json!([super::super::ROLE_VIEWER])),
             active: Set(true),
             tenant_id: Set("another-tenant".to_string()),
             oidc_subject: Set(None),
@@ -2794,13 +2815,15 @@ mod tests {
                 .unwrap_err(),
             "registration closed"
         );
-        assert!(entities::registration_ticket::Entity::find_by_id("ticket-7")
-            .one(repository.connection())
-            .await
-            .unwrap()
-            .unwrap()
-            .consumed_at
-            .is_none());
+        assert!(
+            entities::registration_ticket::Entity::find_by_id("ticket-7")
+                .one(repository.connection())
+                .await
+                .unwrap()
+                .unwrap()
+                .consumed_at
+                .is_none()
+        );
     }
 
     struct FailingRepo {

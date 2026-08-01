@@ -28,7 +28,6 @@ pub mod user {
         pub username: String,
         pub email: String,
         pub password_hash: String,
-        pub roles: Json,
         pub active: bool,
         pub tenant_id: String,
         pub oidc_subject: Option<String>,

@@ -1,7 +1,6 @@
 use chrono::Utc;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, Set,
-    TransactionTrait,
 };
 
 use super::{
@@ -76,7 +75,10 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
     let password = password.to_owned();
     let password_hash = tokio::task::spawn_blocking(move || bcrypt::hash(password, 10)).await??;
     let now = Utc::now();
-    let transaction = database.connection().begin().await?;
+    let transaction =
+        server_auth::seaorm_store::begin_tenant_transaction(database.connection(), tenant_id)
+            .await
+            .map_err(std::io::Error::other)?;
     let existing = entities::user::Entity::find()
         .filter(entities::user::Column::TenantId.eq(tenant_id))
         .all(&transaction)
@@ -119,20 +121,26 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
         admin.username = Set(normalized_email.clone());
         admin.email = Set(normalized_email);
         admin.password_hash = Set(password_hash);
-        admin.roles = Set(serde_json::json!(["ADMIN"]));
         admin.active = Set(true);
         admin.updated_at = Set(now);
         admin.update(&transaction).await?;
+        server_auth::seaorm_store::replace_user_roles(
+            &transaction,
+            &user_id,
+            tenant_id,
+            &["ADMIN".to_string()],
+        )
+        .await
+        .map_err(std::io::Error::other)?;
         transaction.commit().await?;
         return Ok(());
     }
 
     entities::user::ActiveModel {
-        id: Set(user_id),
+        id: Set(user_id.clone()),
         username: Set(normalized_email.clone()),
         email: Set(normalized_email),
         password_hash: Set(password_hash),
-        roles: Set(serde_json::json!(["ADMIN"])),
         active: Set(true),
         tenant_id: Set(tenant_id.to_owned()),
         oidc_subject: Set(None),
@@ -141,6 +149,14 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
     }
     .insert(&transaction)
     .await?;
+    server_auth::seaorm_store::replace_user_roles(
+        &transaction,
+        &user_id,
+        tenant_id,
+        &["ADMIN".to_string()],
+    )
+    .await
+    .map_err(std::io::Error::other)?;
     transaction.commit().await?;
     Ok(())
 }
