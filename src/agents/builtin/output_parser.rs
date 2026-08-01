@@ -281,10 +281,10 @@ Expected Schema:
                 )
             };
             let mut error_msg = Message {
-                role: crate::types::Role::Tool,
-                content: String::new(),
+                role: crate::types::Role::User,
+                content: error_context,
                 tool_calls: vec![],
-                tool_results: vec![crate::types::ToolResult::new_llm_recoverable("call_1".to_string(), "structured_output", &error_context)],
+                tool_results: vec![],
                 response_id: None,
                 previous_response_id: None,
             };
