@@ -4870,15 +4870,18 @@ pub(crate) struct UiDashboardMetrics {
     active_customers: i64,
     pending_orders: i64,
     total_sales: f64,
-    total_campaigns_sent: i64,
-    auto_replied: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    total_campaigns_sent: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    auto_replied: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     top_product: Option<String>,
 }
 
 pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
-    _mobile_optimized: bool,
+    mobile_optimized: bool,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -4894,18 +4897,28 @@ pub(crate) async fn load_ui_dashboard_metrics(
             let t_id4 = tenant_id.to_string();
             let t_id5 = tenant_id.to_string();
 
-            let (c_res, orders_res, cs_res, ar_res, top_product_res) = tokio::join!(
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id1).fetch_one(&pool1).await }),
-                tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN total_amount ELSE 0 END), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id2).fetch_one(&pool2).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id3).fetch_one(&pool3).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, String>(dashboard_top_product_query(true)).bind(&t_id5).fetch_optional(&pool5).await })
-            );
+            let (c_res, orders_res, cs_res, ar_res, top_product_res) = if mobile_optimized {
+                let (c, o) = tokio::join!(
+                    tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id1).fetch_one(&pool1).await }),
+                    tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN total_amount ELSE 0 END), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id2).fetch_one(&pool2).await })
+                );
+                (c, o, Ok(Ok(0)), Ok(Ok(0)), Ok(Ok(None)))
+            } else {
+                tokio::join!(
+                    tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id1).fetch_one(&pool1).await }),
+                    tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) AS BIGINT), CAST(COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN total_amount ELSE 0 END), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id2).fetch_one(&pool2).await }),
+                    tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id3).fetch_one(&pool3).await }),
+                    tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await }),
+                    tokio::spawn(async move { sqlx::query_scalar::<_, String>(dashboard_top_product_query(true)).bind(&t_id5).fetch_optional(&pool5).await })
+                )
+            };
+
             let customers = c_res.map_err(|_| sqlx::Error::RowNotFound)??;
             let orders = orders_res.map_err(|_| sqlx::Error::RowNotFound)??;
-            let campaigns = cs_res.map_err(|_| sqlx::Error::RowNotFound)??;
-            let auto_replied = ar_res.map_err(|_| sqlx::Error::RowNotFound)??;
-            let top_product = top_product_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let campaigns = if mobile_optimized { None } else { Some(cs_res.map_err(|_| sqlx::Error::RowNotFound)??) };
+            let auto_replied = if mobile_optimized { None } else { Some(ar_res.map_err(|_| sqlx::Error::RowNotFound)??) };
+            let top_product = if mobile_optimized { None } else { top_product_res.map_err(|_| sqlx::Error::RowNotFound)?? };
+
             Ok(UiDashboardMetrics {
                 active_customers: customers,
                 pending_orders: orders.0.unwrap_or(0),
@@ -4928,18 +4941,28 @@ pub(crate) async fn load_ui_dashboard_metrics(
             let t_id4 = tenant_id.to_string();
             let t_id5 = tenant_id.to_string();
 
-            let (c_res, orders_res, cs_res, ar_res, top_product_res) = tokio::join!(
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id1).fetch_one(&pool1).await }),
-                tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN total_amount ELSE 0 END), 0.0) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id2).fetch_one(&pool2).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id3).fetch_one(&pool3).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await }),
-                tokio::spawn(async move { sqlx::query_scalar::<_, String>(dashboard_top_product_query(false)).bind(&t_id5).bind(&t_id5).bind(&t_id5).fetch_optional(&pool5).await })
-            );
+            let (c_res, orders_res, cs_res, ar_res, top_product_res) = if mobile_optimized {
+                let (c, o) = tokio::join!(
+                    tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id1).fetch_one(&pool1).await }),
+                    tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN total_amount ELSE 0 END), 0.0) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id2).fetch_one(&pool2).await })
+                );
+                (c, o, Ok(Ok(0)), Ok(Ok(0)), Ok(Ok(None)))
+            } else {
+                tokio::join!(
+                    tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id1).fetch_one(&pool1).await }),
+                    tokio::spawn(async move { sqlx::query_as::<_, (Option<i64>, Option<f64>)>("SELECT CAST(SUM(CASE WHEN LOWER(status) = 'pending' THEN 1 ELSE 0 END) AS INTEGER), CAST(COALESCE(SUM(CASE WHEN LOWER(status) IN ('paid', 'completed') THEN total_amount ELSE 0 END), 0.0) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id2).fetch_one(&pool2).await }),
+                    tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id3).fetch_one(&pool3).await }),
+                    tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id4).fetch_one(&pool4).await }),
+                    tokio::spawn(async move { sqlx::query_scalar::<_, String>(dashboard_top_product_query(false)).bind(&t_id5).bind(&t_id5).bind(&t_id5).fetch_optional(&pool5).await })
+                )
+            };
+
             let customers = c_res.map_err(|_| sqlx::Error::RowNotFound)??;
             let orders = orders_res.map_err(|_| sqlx::Error::RowNotFound)??;
-            let campaigns = cs_res.map_err(|_| sqlx::Error::RowNotFound)??;
-            let auto_replied = ar_res.map_err(|_| sqlx::Error::RowNotFound)??;
-            let top_product = top_product_res.map_err(|_| sqlx::Error::RowNotFound)??;
+            let campaigns = if mobile_optimized { None } else { Some(cs_res.map_err(|_| sqlx::Error::RowNotFound)??) };
+            let auto_replied = if mobile_optimized { None } else { Some(ar_res.map_err(|_| sqlx::Error::RowNotFound)??) };
+            let top_product = if mobile_optimized { None } else { top_product_res.map_err(|_| sqlx::Error::RowNotFound)?? };
+
             Ok(UiDashboardMetrics {
                 active_customers: customers,
                 pending_orders: orders.0.unwrap_or(0),
@@ -5044,8 +5067,8 @@ async fn ui_dashboard_analytics_briefing_handler(
                 active_customers: 0,
                 pending_orders: 0,
                 total_sales: 0.0,
-                total_campaigns_sent: 0,
-                auto_replied: 0,
+                total_campaigns_sent: Some(0),
+                auto_replied: Some(0),
                 top_product: None,
             });
             let inbox_messages = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).unwrap_or_default();
@@ -5118,7 +5141,7 @@ async fn ui_dashboard_analytics_chat_handler(
                     format!("Your latest messages are from: {}.", senders.join(", "))
                 }
             } else if text_bg.contains("order") || text_bg.contains("booking") || text_bg.contains("revenue") || text_bg.contains("sale") {
-                let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0, top_product: None });
+                let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: Some(0), auto_replied: Some(0), top_product: None });
                 format!("You have {} pending orders. Total sales are ${:.2}.", metrics.pending_orders, metrics.total_sales)
             } else {
                 "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
