@@ -128,6 +128,33 @@ async fn handle_rpc(
             id: payload.id.clone(),
         });
     }
+    if payload.method == "omnichannel_chat_webhook" {
+        let params_val = payload.params.clone().unwrap_or_else(|| serde_json::json!({}));
+        if let Ok(webhook_msg) = serde_json::from_value::<crate::omnichannel_chat::WebhookMessage>(params_val) {
+            let engine = crate::omnichannel_chat::OmnichannelChatEngine::new();
+            let intent = engine.process_incoming_message(&webhook_msg);
+            let action = engine.draft_copilot_response(&webhook_msg, &intent);
+            let result_json = serde_json::to_value(action).unwrap_or(serde_json::Value::Null);
+            return Json(JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: payload.id.clone(),
+                result: Some(result_json),
+                error: None,
+            });
+        } else {
+            return Json(JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                result: None,
+                error: Some(JsonRpcError {
+                    code: -32602,
+                    message: "Invalid webhook payload".to_string(),
+                    data: None,
+                }),
+                id: payload.id.clone(),
+            });
+        }
+    }
+
     if payload.method == "execute_visual_workflow" {
         let workflow_req = payload
             .params
