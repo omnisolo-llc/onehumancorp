@@ -930,7 +930,7 @@ pub mod services {
     pub mod growth;
     pub mod onboarding;
     pub mod sync;
-    pub mod chat;
+
 
     #[cfg(not(ohc_bazel))]
     pub mod intake;
