@@ -1,0 +1,25 @@
+exports_files(["Cargo.toml"])
+
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_chat",
+    srcs = glob(["src/**/*.rs"]),
+    crate_root = "src/lib.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:axum",
+        "@crates//:tokio",
+        "@crates//:tokio-tungstenite",
+        "@crates//:sqlx",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:async-trait",
+        "//src/server/integrations/meta:server_integrations_meta",
+        "//src/server/common:server_common",
+    ],
+)
