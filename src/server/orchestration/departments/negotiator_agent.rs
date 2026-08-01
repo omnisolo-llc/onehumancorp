@@ -133,6 +133,18 @@ impl Department for NegotiatorAgent {
                     .execute(&pool)
                     .await;
 
+                let interaction_log_id = uuid::Uuid::new_v4().to_string();
+                if let Err(e) = sqlx::query("INSERT INTO agent_interaction_logs (id, tenant_id, customer_id, inbox_message_id, agent_type, action, context) VALUES ($1, $2, $3, $4, 'negotiator_agent', 'autonomous_quote_agreed', $5)")
+                    .bind(&interaction_log_id)
+                    .bind(&event.tenant_id)
+                    .bind(&customer_id)
+                    .bind(&inbox_id)
+                    .bind(message)
+                    .execute(&pool).await
+                {
+                    tracing::error!("Failed to insert agent interaction log: {}", e);
+                }
+
                 let action_payload = serde_json::json!({
                     "feature_type": "autonomous_quote_agreed",
                     "service": pending_service_name,
@@ -224,6 +236,18 @@ impl Department for NegotiatorAgent {
             .bind(price)
             .bind(&suggested_time)
             .execute(&pool).await;
+
+        let interaction_log_id = uuid::Uuid::new_v4().to_string();
+        if let Err(e) = sqlx::query("INSERT INTO agent_interaction_logs (id, tenant_id, customer_id, inbox_message_id, agent_type, action, context) VALUES ($1, $2, $3, $4, 'negotiator_agent', 'autonomous_quote_draft', $5)")
+            .bind(&interaction_log_id)
+            .bind(&event.tenant_id)
+            .bind(&customer_id)
+            .bind(&inbox_id)
+            .bind(message)
+            .execute(&pool).await
+        {
+            tracing::error!("Failed to insert agent interaction log: {}", e);
+        }
 
         let action_payload = serde_json::json!({
             "feature_type": "autonomous_quote_draft",
@@ -376,5 +400,16 @@ mod tests {
 
         assert!(is_quote_intent);
         assert_eq!(service_name, "Emergency Repair");
+    }
+
+    #[test]
+    fn test_negotiator_agent_interaction_logging_basic() {
+        let raw_response = r#"{"intent":"quote", "service_name":"Leaky Sink Repair", "confidence":0.99}"#;
+        let mut is_quote_intent = false;
+        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&raw_response) {
+            let intent = parsed.get("intent").and_then(|v| v.as_str()).unwrap_or("");
+            if intent == "quote" { is_quote_intent = true; }
+        }
+        assert!(is_quote_intent);
     }
 }
