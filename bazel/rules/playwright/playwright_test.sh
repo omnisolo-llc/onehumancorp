@@ -82,6 +82,9 @@ playwright_spec_workspace_name() {
       break
     fi
   done
+  if [[ "$rel" == /app/* ]]; then
+    rel="${rel#/app/}"
+  fi
   rel="${rel#./}"
   case "$rel" in
     src/e2e/*.spec.ts)
