@@ -3,12 +3,12 @@ issue_description: |
   # Native Rust Omnichannel Chat System Implementation
 
   ## Problem Statement
-  OneHumanCorp (OHC) is transitioning away from the legacy external dependency (Chatwoot) for omnichannel customer support and chat functionality. The goal is to build a high-performance, multi-tenant, omnichannel chat engine natively in Rust inside `onehumancorp/mono`. This new system must support WhatsApp Business, Web Widget integrations, and other channels while strictly adhering to tenant isolation (Row Level Security via `tenant_id`). It must also integrate seamlessly with the AI Agent Triage to categorize incoming messages and automate responses, serving non-technical owners like Maya (baker) and Carlos (handyman) effectively.
+  OneHumanCorp (OHC) is transitioning away from the legacy external dependency for omnichannel customer support and chat functionality. The goal is to build a high-performance, multi-tenant, omnichannel chat engine natively in Rust inside `onehumancorp/mono`. This new system must support WhatsApp Business, Web Widget integrations, and other channels while strictly adhering to tenant isolation (Row Level Security via `tenant_id`). It must also integrate seamlessly with the AI Agent Triage to categorize incoming messages and automate responses, serving non-technical owners like Maya (baker) and Carlos (handyman) effectively.
 
   ## Research Report
   - **Codebase Audit:** The current `src/server/integrations/chat/` directory is essentially empty (only a `README.md` exists) and acts as a placeholder.
-  - **Chatwoot Source Benchmarking:**
-    - The Chatwoot architecture relies on concepts like `Inbox`, `Conversation`, `Message`, `Contact`, and specific channel models (`Channel::Whatsapp`, `Channel::WebWidget`).
+  - **Source Benchmarking:**
+    - The legacy architecture relies on concepts like `Inbox`, `Conversation`, `Message`, `Contact`, and specific channel models (`Channel::Whatsapp`, `Channel::WebWidget`).
     - It uses WebSockets heavily for real-time widget updates.
     - OHC needs to replicate this architecture but natively in Rust, using `tonic` for gRPC/REST APIs, `sqlx` or `diesel` for PostgreSQL with RLS, and a native WebSocket implementation.
   - **Competitor Systems Analysis:** Modern helpdesk solutions prioritize speed, agent handoff, and unified inboxes. Native implementations benefit from lower latency and tight integration with core business objects (e.g., matching a WhatsApp message directly to an order).
@@ -94,7 +94,7 @@ issue_description: |
   5. Add unit and integration tests to verify multi-tenant isolation (user A cannot see user B's messages).
 
   *Acceptance Criteria:*
-  - All new database tables enforce tenant isolation.
+  - All new tables enforce tenant isolation.
   - Rust models and APIs are implemented and fully unit tested (100% coverage).
   - The WebSocket endpoint can establish a connection and broadcast a test message to an authenticated client.
   - Existing tests on `main` continue to pass without regression.
