@@ -113,7 +113,7 @@ async fn handle_booking_request(
     }
     let feed_result = sqlx::query(
         r#"
-        INSERT INTO agent_feed (id, tenant_id, event_source, lifecycle_state, context_payload)
+        INSERT INTO agent_feed_items (id, tenant_id, event_source, lifecycle_state, context_payload)
         VALUES ($1, $2, 'booking_request', 'new', $3)
         "#,
     )
