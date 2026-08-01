@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import '../globals.css';
 
 import { PoweredByOHC } from "../components/PoweredByOHC";
+import { useProPlan } from '../components/useProPlan';
 
 export default function ViralCouponUnlockPage() {
   const router = useRouter();
@@ -13,8 +14,17 @@ export default function ViralCouponUnlockPage() {
   const [couponCode, setCouponCode] = useState('WELCOME20');
   const [sharesRequired, setSharesRequired] = useState(3);
   const [copied, setCopied] = useState(false);
+  const { hasPro } = useProPlan();
+  const [showPaywall, setShowPaywall] = useState(false);
 
-  const generatedLink = `https://ohc.app/unlock/${tenant.toLowerCase().replace(/\s+/g, '-')}`;
+  const generatedLink = `https://ohc.app/unlock/${tenant.toLowerCase().replace(/\s+/g, '-')}${hasPro ? '?branding=false' : ''}`;
+
+  const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!hasPro) {
+      e.preventDefault();
+      setShowPaywall(true);
+    }
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedLink);
@@ -71,6 +81,20 @@ export default function ViralCouponUnlockPage() {
                 onChange={(e) => setSharesRequired(parseInt(e.target.value) || 1)}
                 className="w-full px-3 py-2 border border-gray-300/50 rounded-lg bg-white/50 backdrop-blur-sm min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all"
               />
+            </div>
+
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
+                <input
+                    type="checkbox"
+                    id="removeBranding"
+                    checked={hasPro}
+                    onChange={handleRemoveBranding}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    Remove "Powered by OHC" Badge
+                    {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
+                </label>
             </div>
           </div>
 
@@ -160,14 +184,53 @@ export default function ViralCouponUnlockPage() {
                     </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t w-full text-center border-gray-100">
-                  <PoweredByOHC tenantId="growth" />
-                </div>
+                {!hasPro && (
+                  <div className="mt-8 pt-6 border-t w-full text-center border-gray-100">
+                    <PoweredByOHC tenantId="growth" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </main>
+
+      {showPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+             <div className="flex justify-end mb-2">
+               <button
+                 aria-label="Close paywall"
+                 onClick={() => setShowPaywall(false)}
+                 className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+               >
+                 <span className="text-xl leading-none">&times;</span>
+               </button>
+             </div>
+             <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg mx-auto mb-6 text-white font-bold">
+               PRO
+             </div>
+             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
+             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+               Make the Viral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+             </p>
+             <button
+               onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}
+               className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+               style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+             >
+               Upgrade to Pro
+             </button>
+             <button
+               onClick={() => setShowPaywall(false)}
+               className="mt-2 text-gray-500 hover:text-gray-700 font-medium text-sm w-full"
+             >
+               Cancel
+             </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

@@ -12,9 +12,16 @@ vi.mock('../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
 }));
 
+const mockUseProPlan = vi.fn();
+vi.mock('../components/useProPlan', () => ({
+  useProPlan: () => mockUseProPlan(),
+}));
+
 describe('ViralCouponUnlockPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseProPlan.mockReturnValue({ hasPro: false, claimTrial: vi.fn(), claimError: null });
+
     Object.assign(navigator, {
       clipboard: {
         writeText: vi.fn().mockResolvedValue(undefined),
@@ -87,5 +94,25 @@ describe('ViralCouponUnlockPage', () => {
     fireEvent.click(backBtn);
 
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('shows paywall when non-Pro user clicks to remove branding', () => {
+    render(<ViralCouponUnlockPage />);
+
+    const removeBrandingCheckbox = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    fireEvent.click(removeBrandingCheckbox);
+
+    expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();
+  });
+
+  it('hides Powered by OHC widget when user is Pro', () => {
+    mockUseProPlan.mockReturnValue({ hasPro: true, claimTrial: vi.fn(), claimError: null });
+    render(<ViralCouponUnlockPage />);
+
+    const removeBrandingCheckbox = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i }) as HTMLInputElement;
+    expect(removeBrandingCheckbox.checked).toBe(true);
+
+    const poweredBy = screen.queryByTestId('powered-by-ohc');
+    expect(poweredBy).toBeNull();
   });
 });
