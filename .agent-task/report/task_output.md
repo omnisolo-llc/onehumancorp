@@ -1,10 +1,10 @@
-issue_title: "Native Rust Omnichannel Chat Engine Architecture (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat Engine Architecture (Legacy Chat Replacement)"
 issue_description: |
   # Problem Statement
-  OHC is retiring the external Chatwoot dependency in favor of a native, high-performance omnichannel chat system written in Rust (`src/server/integrations/chat`). We need a unified inbox that brings together WhatsApp, Instagram, Email, Web Widget, and Meta channels without relying on a third-party service. This must feel invisible to the non-technical owner (Maya, Carlos) who just wants to see all customer communication in one place.
+  OHC is retiring the external Legacy External Chat dependency in favor of a native, high-performance omnichannel chat system written in Rust (`src/server/integrations/chat`). We need a unified inbox that brings together WhatsApp, Instagram, Email, Web Widget, and Meta channels without relying on a third-party service. This must feel invisible to the non-technical owner (Maya, Carlos) who just wants to see all customer communication in one place.
 
   # Research Report
-  Based on a deep audit of the `chatwoot` source code (`db/schema.rb`, data models, and inbox architecture), a scalable omnichannel system requires the following core entities:
+  Based on a deep audit of the `Legacy External Chat` source code (`db/schema.rb`, data models, and inbox architecture), a scalable omnichannel system requires the following core entities:
   1. **Accounts/Tenants**: Strict isolation for multi-tenancy.
   2. **Inboxes**: A unified container for channels.
   3. **Channels**: Adapters for WhatsApp, Web Widgets, API, Email, Facebook, Instagram, Twitter, etc.
@@ -12,7 +12,7 @@ issue_description: |
   5. **Messages**: The individual payloads (text, attachments, etc.) within a Conversation.
   6. **Contacts**: The unified identity of a customer across multiple channels.
 
-  Competitor systems (Shopify Inbox, Wix Chat) offer a seamless mobile-first unified inbox. To replicate Chatwoot's functionality natively in Rust, OHC requires a WebSocket-based real-time event system, background job queues for processing webhooks, and strict Row Level Security (RLS) in PostgreSQL.
+  Competitor systems (Shopify Inbox, Wix Chat) offer a seamless mobile-first unified inbox. To replicate Legacy External Chat's functionality natively in Rust, OHC requires a WebSocket-based real-time event system, background job queues for processing webhooks, and strict Row Level Security (RLS) in PostgreSQL.
 
   # Design Doc
 
@@ -46,7 +46,7 @@ issue_description: |
 
   # Implementation Prompt
   **To the Implementer:**
-  You are tasked with implementing the Core Data Model and Rust API for the Native Omnichannel Chat Engine, replacing Chatwoot.
+  You are tasked with implementing the Core Data Model and Rust API for the Native Omnichannel Chat Engine, replacing Legacy External Chat.
   1. Create the PostgreSQL migration schemas for `inboxes`, `channels`, `contacts`, `conversations`, and `messages`. Apply strict `tenant_id` RLS to every table.
   2. Implement the Rust REST API endpoints for fetching conversations and sending messages in `src/server/integrations/chat/`.
   3. Implement a basic WebSocket endpoint in Rust for real-time web widget connections.
