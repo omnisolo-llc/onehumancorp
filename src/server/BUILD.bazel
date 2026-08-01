@@ -470,6 +470,7 @@ rust_library(
         "//src/server/integrations/cal_com:server_integrations_cal_com",
         "//src/server/integrations/calendly:server_integrations_calendly",
         "//src/server/integrations/chromadb:server_integrations_chromadb",
+        "//src/server/integrations/chat:server_integrations_chat",
         "//src/server/integrations/core:server_integrations_core",
         "//src/server/integrations/doordash:server_integrations_doordash",
         "//src/server/integrations/easypost:server_integrations_easypost",

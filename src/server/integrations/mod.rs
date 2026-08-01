@@ -64,3 +64,7 @@ pub mod trello;
 pub use ::server_integrations_whatsapp_cloud as whatsapp_cloud;
 #[cfg(not(ohc_bazel))]
 pub mod whatsapp_cloud;
+#[cfg(ohc_bazel)]
+pub use ::server_integrations_chat as chat;
+#[cfg(not(ohc_bazel))]
+pub mod chat;
