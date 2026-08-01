@@ -1,13 +1,13 @@
-issue_title: "Implement Native Rust Omnichannel Chat System (Chatwoot Parity)"
+issue_title: "Implement Native Rust Omnichannel Chat System (Native Rust Parity)"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing Chatwoot as an external dependency with a native, high-performance Rust omnichannel chat engine. Our current `src/server/services/chat` provides only a basic schema (Inbox, Channel, Contact, Conversation, Message). It lacks the advanced routing, channel adapters (WhatsApp, Email, Web Widget, Instagram), SLA policies, WebSocket real-time messaging, and multi-tenant row-level security required by non-technical operators (like Maya the baker or Carlos the handyman) to manage all customer interactions transparently from a unified, mobile-first feed.
+  OneHumanCorp (OHC) is replacing the legacy system as an external dependency with a native, high-performance Rust omnichannel chat engine. Our current `src/server/services/chat` provides only a basic schema (Inbox, Channel, Contact, Conversation, Message). It lacks the advanced routing, channel adapters (WhatsApp, Email, Web Widget, Instagram), SLA policies, WebSocket real-time messaging, and multi-tenant row-level security required by non-technical operators (like Maya the baker or Carlos the handyman) to manage all customer interactions transparently from a unified, mobile-first feed.
 
   ## Research Report
-  - **Chatwoot Audit:** Analyzed the Chatwoot source code repository (specifically `app/models/`, `app/models/channel/`, `app/controllers/`).
-  - Chatwoot handles multi-channel integrations using polymorphic associations for `Channel` (e.g., `Channel::WebWidget`, `Channel::Whatsapp`, `Channel::Email`).
+  - **Omnichannel Audit:** Analyzed the legacy system source code repository (specifically `app/models/`, `app/models/channel/`, `app/controllers/`).
+  - The legacy system handles multi-channel integrations using polymorphic associations for `Channel` (e.g., `Channel::WebWidget`, `Channel::Whatsapp`, `Channel::Email`).
   - Conversations have robust states (`open`, `snoozed`, `resolved`), assignee tracking, agent last seen, and SLAs.
-  - Chatwoot uses background jobs (Sidekiq) heavily for message delivery, webhook processing, and automation rules.
+  - The legacy system uses background jobs (Sidekiq) heavily for message delivery, webhook processing, and automation rules.
   - **OHC Architecture Parity:** To replicate this in OHC's native Rust system, we need to extend the data models to support polymorphic channel configurations (Instagram, SMS, Web), introduce WebSocket capabilities for real-time inbox updates, and define strict multi-tenant Row-Level Security (RLS) in PostgreSQL. The system must support AI Agent routing so AI "Customer Assistant" can automatically draft replies.
 
   ## Design Doc
