@@ -63,18 +63,20 @@ export default function HelpCenterPage() {
 
         <div className="mb-8 sm:mb-10 w-full max-w-2xl mx-auto block">
           <div className="w-full relative block">
-            <WithTooltip id="help-search-tooltip">
-              <input
-                data-testid="help-search-input"
-                type="text"
-                placeholder="Search for help articles and videos..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
-              />
-              <svg className="w-6 h-6 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+            <WithTooltip id="help-search-tooltip" defaultText="Search the Help Center for guides and tutorials">
+              <div className="relative">
+                <input
+                  data-testid="help-search-input"
+                  type="text"
+                  placeholder="Search for help articles and videos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-600 text-gray-900 backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:bg-white/90 min-h-[50px] text-base placeholder:text-gray-500 transition-all rounded-[24px]"
+                />
+                <svg className="w-6 h-6 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
             </WithTooltip>
           </div>
         </div>
@@ -103,15 +105,17 @@ export default function HelpCenterPage() {
               Try adjusting your search terms or ask our AI assistant for help.
             </p>
             <WithTooltip id="ask-ai-tooltip" defaultText="Open AI Help Chat to get answers instantly.">
-            <button
-              className="px-8 py-4 bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold rounded-full shadow-lg backdrop-blur-md saturate-[210%] transition-all min-h-[44px] hover:-translate-y-1 active:scale-95 text-lg"
-              onClick={() => {
-                const event = new CustomEvent('open-help-chat');
-                window.dispatchEvent(event);
-              }}
-            >
-              Ask anything
-            </button>
+              <div className="inline-block relative">
+                <button
+                  className="px-8 py-4 bg-[#0071E3] hover:bg-[#0077ED] text-white font-semibold rounded-full shadow-lg backdrop-blur-md saturate-[210%] transition-all min-h-[44px] hover:-translate-y-1 active:scale-95 text-lg"
+                  onClick={() => {
+                    const event = new CustomEvent('open-help-chat');
+                    window.dispatchEvent(event);
+                  }}
+                >
+                  Ask anything
+                </button>
+              </div>
             </WithTooltip>
           </div>
         ) : (

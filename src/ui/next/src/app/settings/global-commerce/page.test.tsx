@@ -8,6 +8,7 @@ vi.mock('@/lib/utils/api', () => ({
 }));
 
 vi.mock('@/app/components/AppShell', () => ({
+  AppShell: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
   default: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
 }));
 
