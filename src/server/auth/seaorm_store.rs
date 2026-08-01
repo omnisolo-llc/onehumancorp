@@ -1390,7 +1390,12 @@ mod atomic_registration_tests {
         assert!(!user_repository_source.contains(".exec(&self.connection)"));
 
         let migration_source = include_str!("../persistence/migration.rs");
-        assert!(migration_source.contains("ENABLE ROW LEVEL SECURITY"));
+        assert!(
+            migration_source.contains("ALTER TABLE identity_user_roles ENABLE ROW LEVEL SECURITY")
+        );
+        assert!(
+            migration_source.contains("ALTER TABLE identity_user_roles FORCE ROW LEVEL SECURITY")
+        );
         assert!(migration_source.contains("tenant_isolation_identity_user_roles"));
         assert!(migration_source.contains("unnest(COALESCE(users.roles"));
         assert!(migration_source.contains("JSON_TABLE(COALESCE(users.roles"));
