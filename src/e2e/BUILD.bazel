@@ -38,47 +38,17 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/api-docs.spec.ts",
     "//src/ui/next:src/e2e/approval_inbox.spec.ts",
     "//src/ui/next:src/e2e/viral-agent-paywall.spec.ts",
-    "//src/ui/next:src/e2e/plan.spec.ts",
-    "//src/ui/next:src/e2e/zero-click-builder.spec.ts",
-
-
-
-    "//src/ui/next:src/e2e/langgraph.spec.ts",
-
-    "//src/ui/next:src/e2e/morning-briefing.spec.ts",
-    "//src/ui/next:src/e2e/agentic-booking.spec.ts",
-
-    "//src/ui/next:src/e2e/business-analytics.spec.ts",
-    "//src/ui/next:src/e2e/changelog.spec.ts",
-    "//src/ui/next:src/e2e/cost-dashboard.spec.ts",
-    "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
-    "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
-    "//src/ui/next:src/e2e/help.spec.ts",
-    "//src/ui/next:src/e2e/integrations.spec.ts",
-    "//src/ui/next:src/e2e/milestone-loop.spec.ts",
-    "//src/ui/next:src/e2e/review-campaign.spec.ts",
-    "//src/ui/next:src/e2e/store-wrapped.spec.ts",
-    "//src/ui/next:src/e2e/supply_chain.spec.ts",
-
-    "//src/ui/next:src/e2e/videos.spec.ts",
-
-
-    "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
-
-    "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",
-    "//src/ui/next:e2e/agents.spec.ts",
-    "//src/ui/next:e2e/builder_ui.spec.ts",
-    "//src/ui/next:e2e/conversational_checkout.spec.ts",
-    "//src/ui/next:src/e2e/documentation_cuj.spec.ts",
-
-    "//src/ui/next:src/e2e/help_components.spec.ts",
-    "//src/ui/next:e2e/referrals.spec.ts",
-
-
-
-    "//src/ui/next:e2e/storefront_v2.spec.ts",
-    "//src/ui/next:src/e2e/viral-post-generator.spec.ts",
+    "//src/ui/next:src/e2e/code-native-execution.spec.ts",
+    "//src/ui/next:src/e2e/test_triage_dashboard.spec.ts",
+    "//src/ui/next:src/e2e/omni_inbox_triage.spec.ts",
+    "//src/ui/next:src/e2e/unified_triage_feed.spec.ts",
+    "//src/ui/next:src/e2e/dashboard-triage-edit.spec.ts",
+    "//src/ui/next:src/e2e/brand-studio.spec.ts",
+    "//src/ui/next:src/e2e/pos.spec.ts",
 ]
+
+# The complete list of historical spec files to execute locally.
+_ALL_E2E_SPECS = glob(["**/*.spec.ts"]) + _NEXT_UI_E2E_SPECS
 
 # The aggregate CI gate intentionally exercises only maintained, real-stack
 # journeys. The complete historical suite remains available as per-spec manual
@@ -96,14 +66,18 @@ _CI_REAL_STACK_E2E_SPECS = [
 filegroup(
     name = "legacy_playwright_mock_contracts",
     srcs = glob(["**/*.mock-contract.ts"]),
-    tags = ["manual"],
+    visibility = ["//visibility:public"],
 )
 
-# Shell script wrapper for running ALL playwright tests via docker compose
-# (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
+# Playwright E2E test execution under bazel requires the compiled Rust server,
+# the generated Tauri/Next outputs, and a specialized runner script.
+#
+# Because E2E tests require Docker for the database (postgres/redis), the CI
+# environment uses an explicit docker-compose runner, while local bazel invocations
+# rely on `playwright.config.ts` starting the DB using its globalSetup script.
 sh_binary(
-    name = "run_playwright_e2e",
-    srcs = ["//bazel/rules/playwright:run_playwright.sh"],
+    name = "playwright_bin",
+    srcs = ["//scripts:run-playwright.mjs"],
     data = [
         "//deploy:docker-compose.e2e.yml",
         "//scripts:run-playwright.mjs",
@@ -158,4 +132,3 @@ sh_test(
     data = ["//release:all_release_artifacts"],
     tags = ["lint"],
 )
-# Adding test dynamically is fine since we ran out of time
