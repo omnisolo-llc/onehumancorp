@@ -1,6 +1,0 @@
-✅ fix(ui/tests): Export named and default AppShell mock component
-
-This commit fixes `AppShell` component mock definitions in
-`triage/page.test.tsx` and `settings/global-commerce/page.test.tsx`,
-resolving the Vitest run failure related to `No "AppShell" export is defined`.
-It successfully restores `next_vitest` to a 100% green state.
