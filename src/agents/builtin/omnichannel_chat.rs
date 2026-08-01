@@ -2,7 +2,7 @@
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role};
 use std::sync::Arc;
 
-/// Master Catalog Harness Innovation: Chatwoot Retirement & Native Rust Omnichannel Chat Integration
+/// Master Catalog Harness Innovation: Native Rust Omnichannel Chat Integration
 /// Native AI auto-responder, copilot response drafting, intent classification, and human agent handoff features in Rust.
 
 #[derive(Debug, PartialEq, Clone)]
