@@ -4,6 +4,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TapToPayOverlay } from './TapToPayOverlay';
 
 describe('TapToPayOverlay Component', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn();
@@ -55,6 +59,8 @@ describe('TapToPayOverlay Component', () => {
   });
 
   it('handles API errors gracefully', async () => {
+    const originalConsoleError = console.error;
+    console.error = vi.fn();
     // Mock the connection-token call to fail
     (global.fetch as any).mockResolvedValueOnce({ ok: false });
 
