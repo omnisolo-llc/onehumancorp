@@ -1051,22 +1051,30 @@ impl UserRepository for SeaOrmAuthRepository {
     }
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        let transaction = self.connection.begin().await.map_err(db_error)?;
         let model = entities::user::Entity::find_by_id(&user.id)
             .filter(entities::user::Column::TenantId.eq(org_id))
-            .one(&self.connection)
+            .one(&transaction)
             .await
             .map_err(db_error)?
             .ok_or_else(|| "user not found".to_string())?;
+        let persisted_email = crate::validation::normalize_email(&model.email)
+            .map_err(|_| "authentication persistence unavailable".to_string())?;
+        let requested_email = crate::validation::normalize_email(&user.email)
+            .map_err(|_| "email changes require verification".to_string())?;
+        if persisted_email != requested_email {
+            return Err("email changes require verification".to_string());
+        }
         let mut active: entities::user::ActiveModel = model.into();
         active.username = Set(user.username);
-        active.email = Set(user.email);
+        active.email = Set(requested_email);
         active.password_hash = Set(user.password_hash);
         active.roles = Set(serde_json::json!(user.roles));
         active.active = Set(user.active);
         active.oidc_subject = Set(user.oidc_subject);
         active.updated_at = Set(user.updated_at);
-        active.update(&self.connection).await.map_err(db_error)?;
-        Ok(())
+        active.update(&transaction).await.map_err(db_error)?;
+        transaction.commit().await.map_err(db_error)
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
@@ -1423,5 +1431,53 @@ mod atomic_registration_tests {
             .unwrap()
             .unwrap();
         assert!(invitation.consumed_at.is_none());
+    }
+
+    #[tokio::test]
+    async fn update_user_cannot_adopt_another_claimed_email() {
+        let (_directory, first, _second) = repositories().await;
+        let tenant_id = "tenant-a";
+        first
+            .create_user(
+                registration_user("first-user", "first@example.test"),
+                tenant_id,
+            )
+            .await
+            .unwrap();
+        first
+            .create_user(
+                registration_user("second-user", "second@example.test"),
+                tenant_id,
+            )
+            .await
+            .unwrap();
+        let mut first_user = first.get_by_id("first-user", tenant_id).await.unwrap();
+        first_user.email = "SECOND@EXAMPLE.TEST".to_string();
+
+        let error = first
+            .update_user(first_user, tenant_id)
+            .await
+            .unwrap_err();
+
+        assert_eq!(error, "email changes require verification");
+        assert_eq!(
+            first
+                .get_by_id("first-user", tenant_id)
+                .await
+                .unwrap()
+                .email,
+            "first@example.test"
+        );
+        for (email, owner) in [
+            ("first@example.test", "first-user"),
+            ("second@example.test", "second-user"),
+        ] {
+            let claim = entities::identity_email_claim::Entity::find_by_id(email)
+                .one(first.connection())
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(claim.user_id, owner);
+        }
     }
 }
