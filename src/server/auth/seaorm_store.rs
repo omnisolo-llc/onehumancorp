@@ -164,6 +164,23 @@ pub mod entities {
         impl ActiveModelBehavior for ActiveModel {}
     }
 
+    pub mod identity_email_claim {
+        use super::*;
+
+        #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+        #[sea_orm(table_name = "identity_email_claims")]
+        pub struct Model {
+            #[sea_orm(primary_key, auto_increment = false)]
+            pub normalized_email: String,
+            pub user_id: String,
+            pub claimed_at: DateTimeUtc,
+        }
+
+        #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+        pub enum Relation {}
+        impl ActiveModelBehavior for ActiveModel {}
+    }
+
     pub mod revoked_token {
         use super::*;
 
@@ -241,6 +258,34 @@ async fn invitation_creator_tenant(
         return Err("invitation unavailable".to_string());
     }
     Ok(creator.tenant_id)
+}
+
+async fn claim_identity_email(
+    transaction: &sea_orm::DatabaseTransaction,
+    normalized_email: &str,
+    user_id: &str,
+    claimed_at: DateTime<Utc>,
+    conflict_message: &str,
+) -> Result<(), String> {
+    let result = entities::identity_email_claim::ActiveModel {
+        normalized_email: Set(normalized_email.to_string()),
+        user_id: Set(user_id.to_string()),
+        claimed_at: Set(claimed_at),
+    }
+    .insert(transaction)
+    .await;
+    match result {
+        Ok(_) => Ok(()),
+        Err(error)
+            if matches!(
+                error.sql_err(),
+                Some(sea_orm::SqlErr::UniqueConstraintViolation(_))
+            ) =>
+        {
+            Err(conflict_message.to_string())
+        }
+        Err(error) => Err(db_error(error)),
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -434,18 +479,25 @@ impl SeaOrmAuthRepository {
     ) -> Result<(), String> {
         use entities::{email_challenge, registration_ticket};
         let transaction = self.connection.begin().await.map_err(db_error)?;
-        let challenge = email_challenge::Entity::find_by_id(challenge_id)
-            .one(&transaction)
-            .await
-            .map_err(db_error)?
-            .ok_or_else(|| "verification challenge unavailable".to_string())?;
-        if challenge.code_hash != expected_code_hash
-            || challenge.verified_at.is_some()
-            || challenge.expires_at <= ticket.issued_at
-            || challenge.attempts >= 5
-            || challenge.email != ticket.email
-            || challenge.invitation_id != ticket.invitation_id
-        {
+        let mut claim = email_challenge::Entity::update_many()
+            .col_expr(
+                email_challenge::Column::VerifiedAt,
+                sea_orm::sea_query::Expr::value(Some(ticket.issued_at)),
+            )
+            .filter(email_challenge::Column::Id.eq(challenge_id))
+            .filter(email_challenge::Column::CodeHash.eq(expected_code_hash))
+            .filter(email_challenge::Column::Email.eq(&ticket.email))
+            .filter(email_challenge::Column::VerifiedAt.is_null())
+            .filter(email_challenge::Column::ExpiresAt.gt(ticket.issued_at))
+            .filter(email_challenge::Column::Attempts.lt(5));
+        claim = match ticket.invitation_id.as_deref() {
+            Some(invitation_id) => claim.filter(
+                email_challenge::Column::InvitationId.eq(invitation_id),
+            ),
+            None => claim.filter(email_challenge::Column::InvitationId.is_null()),
+        };
+        let claimed = claim.exec(&transaction).await.map_err(db_error)?;
+        if claimed.rows_affected != 1 {
             return Err("verification challenge unavailable".to_string());
         }
 
@@ -461,10 +513,6 @@ impl SeaOrmAuthRepository {
         .insert(&transaction)
         .await
         .map_err(db_error)?;
-
-        let mut active: email_challenge::ActiveModel = challenge.into();
-        active.verified_at = Set(Some(ticket.issued_at));
-        active.update(&transaction).await.map_err(db_error)?;
         transaction.commit().await.map_err(db_error)
     }
 
@@ -476,37 +524,62 @@ impl SeaOrmAuthRepository {
     ) -> Result<User, String> {
         use entities::{invitation, registration_ticket, user as user_entity};
         let transaction = self.connection.begin().await.map_err(db_error)?;
+        let normalized_email = crate::validation::normalize_email(&user.email)
+            .map_err(|_| "account already exists".to_string())?;
+        user.email = normalized_email.clone();
         let mode = registration_mode_in_transaction(&transaction).await?;
         if mode == RegistrationMode::Closed {
             return Err("registration closed".to_string());
         }
-        let tickets = registration_ticket::Entity::find()
+        let claimed = registration_ticket::Entity::update_many()
+            .col_expr(
+                registration_ticket::Column::ConsumedAt,
+                sea_orm::sea_query::Expr::value(Some(now)),
+            )
             .filter(registration_ticket::Column::TokenHash.eq(token_hash))
-            .limit(2)
-            .all(&transaction)
+            .filter(registration_ticket::Column::Email.eq(&user.email))
+            .filter(registration_ticket::Column::ConsumedAt.is_null())
+            .filter(registration_ticket::Column::ExpiresAt.gt(now))
+            .exec(&transaction)
             .await
             .map_err(db_error)?;
-        if tickets.len() != 1 {
+        if claimed.rows_affected != 1 {
             return Err("registration ticket unavailable".to_string());
         }
-        let ticket = tickets.into_iter().next().expect("one ticket");
-        if ticket.consumed_at.is_some() || ticket.expires_at <= now || ticket.email != user.email {
-            return Err("registration ticket unavailable".to_string());
-        }
+        let ticket = registration_ticket::Entity::find()
+            .filter(registration_ticket::Column::TokenHash.eq(token_hash))
+            .one(&transaction)
+            .await
+            .map_err(db_error)?
+            .ok_or_else(|| "registration ticket unavailable".to_string())?;
 
-        let invitation = if let Some(invitation_id) = ticket.invitation_id.as_deref() {
+        let invitation = if mode == RegistrationMode::InviteOnly {
+            let invitation_id = ticket
+                .invitation_id
+                .as_deref()
+                .ok_or_else(|| "invitation unavailable".to_string())?;
             let invitation = invitation::Entity::find_by_id(invitation_id)
                 .one(&transaction)
                 .await
                 .map_err(db_error)?
                 .ok_or_else(|| "invitation unavailable".to_string())?;
-            if invitation.consumed_at.is_some()
-                || invitation.expires_at <= now
-                || invitation.email != user.email
-            {
+            let tenant_id = invitation_creator_tenant(&transaction, &invitation).await?;
+            let claimed = invitation::Entity::update_many()
+                .col_expr(
+                    invitation::Column::ConsumedAt,
+                    sea_orm::sea_query::Expr::value(Some(now)),
+                )
+                .filter(invitation::Column::Id.eq(invitation_id))
+                .filter(invitation::Column::Email.eq(&user.email))
+                .filter(invitation::Column::ConsumedAt.is_null())
+                .filter(invitation::Column::ExpiresAt.gt(now))
+                .exec(&transaction)
+                .await
+                .map_err(db_error)?;
+            if claimed.rows_affected != 1 {
                 return Err("invitation unavailable".to_string());
             }
-            Some(invitation)
+            Some(tenant_id)
         } else {
             None
         };
@@ -514,14 +587,18 @@ impl SeaOrmAuthRepository {
         let tenant_id = match mode {
             RegistrationMode::Closed => return Err("registration closed".to_string()),
             RegistrationMode::Open => user.organization_id.clone().unwrap_or_default(),
-            RegistrationMode::InviteOnly => {
-                let invitation = invitation
-                    .as_ref()
-                    .ok_or_else(|| "invitation unavailable".to_string())?;
-                invitation_creator_tenant(&transaction, invitation).await?
-            }
+            RegistrationMode::InviteOnly => invitation
+                .ok_or_else(|| "invitation unavailable".to_string())?,
         };
         user.organization_id = Some(tenant_id.clone());
+        claim_identity_email(
+            &transaction,
+            &normalized_email,
+            &user.id,
+            now,
+            "account already exists",
+        )
+        .await?;
         user_entity::ActiveModel {
             id: Set(user.id.clone()),
             username: Set(user.username.clone()),
@@ -538,14 +615,6 @@ impl SeaOrmAuthRepository {
         .await
         .map_err(db_error)?;
 
-        let mut active: registration_ticket::ActiveModel = ticket.into();
-        active.consumed_at = Set(Some(now));
-        active.update(&transaction).await.map_err(db_error)?;
-        if let Some(invitation) = invitation {
-            let mut active: invitation::ActiveModel = invitation.into();
-            active.consumed_at = Set(Some(now));
-            active.update(&transaction).await.map_err(db_error)?;
-        }
         transaction.commit().await.map_err(db_error)?;
         Ok(user)
     }
@@ -730,33 +799,6 @@ impl SeaOrmAuthRepository {
         Ok(user.map(model_to_user))
     }
 
-    pub async fn any_user_with_email(&self, email: &str) -> Result<bool, String> {
-        Ok(entities::user::Entity::find()
-            .filter(entities::user::Column::Email.eq(email))
-            .limit(1)
-            .one(&self.connection)
-            .await
-            .map_err(db_error)?
-            .is_some())
-    }
-
-    pub async fn active_invitation_id(
-        &self,
-        email: &str,
-        now: DateTime<Utc>,
-    ) -> Result<Option<String>, String> {
-        let invitations = entities::invitation::Entity::find()
-            .filter(entities::invitation::Column::Email.eq(email))
-            .filter(entities::invitation::Column::ConsumedAt.is_null())
-            .filter(entities::invitation::Column::ExpiresAt.gt(now))
-            .order_by_asc(entities::invitation::Column::CreatedAt)
-            .limit(2)
-            .all(&self.connection)
-            .await
-            .map_err(db_error)?;
-        Ok((invitations.len() == 1).then(|| invitations[0].id.clone()))
-    }
-
     pub async fn active_invitation_id_by_token(
         &self,
         email: &str,
@@ -781,40 +823,73 @@ impl SeaOrmAuthRepository {
         provider_key: &str,
         issuer: &str,
         subject: &str,
-        invitation_id: Option<&str>,
     ) -> Result<User, String> {
-        use entities::{external_identity, user as user_entity};
+        use entities::{external_identity, invitation, user as user_entity};
         let transaction = self.connection.begin().await.map_err(db_error)?;
+        let normalized_email = crate::validation::normalize_email(&user.email)
+            .map_err(|_| "OIDC login denied".to_string())?;
+        user.email = normalized_email.clone();
+        let now = Utc::now();
         let mode = registration_mode_in_transaction(&transaction).await?;
         if mode == RegistrationMode::Closed {
             return Err("registration closed".to_string());
         }
-        let invitation = if let Some(invitation_id) = invitation_id {
-            let invitation = entities::invitation::Entity::find_by_id(invitation_id)
-                .one(&transaction)
-                .await
-                .map_err(db_error)?
-                .filter(|invitation| {
-                    invitation.consumed_at.is_none()
-                        && invitation.expires_at > Utc::now()
-                        && invitation.email == user.email
-                })
-                .ok_or_else(|| "invitation unavailable".to_string())?;
-            Some(invitation)
-        } else {
-            None
-        };
+        if user_entity::Entity::find()
+            .filter(user_entity::Column::Email.eq(&normalized_email))
+            .limit(1)
+            .one(&transaction)
+            .await
+            .map_err(db_error)?
+            .is_some()
+        {
+            return Err("existing account must explicitly link this provider".to_string());
+        }
         let tenant_id = match mode {
             RegistrationMode::Closed => return Err("registration closed".to_string()),
             RegistrationMode::Open => user.organization_id.clone().unwrap_or_default(),
             RegistrationMode::InviteOnly => {
-                let invitation = invitation
-                    .as_ref()
-                    .ok_or_else(|| "invitation unavailable".to_string())?;
-                invitation_creator_tenant(&transaction, invitation).await?
+                let invitations = invitation::Entity::find()
+                    .filter(invitation::Column::Email.eq(&normalized_email))
+                    .filter(invitation::Column::ConsumedAt.is_null())
+                    .filter(invitation::Column::ExpiresAt.gt(now))
+                    .order_by_asc(invitation::Column::CreatedAt)
+                    .limit(2)
+                    .all(&transaction)
+                    .await
+                    .map_err(db_error)?;
+                if invitations.len() != 1 {
+                    return Err("registration closed".to_string());
+                }
+                let invitation = &invitations[0];
+                let tenant_id = invitation_creator_tenant(&transaction, invitation).await?;
+                let claimed = invitation::Entity::update_many()
+                    .col_expr(
+                        invitation::Column::ConsumedAt,
+                        sea_orm::sea_query::Expr::value(Some(now)),
+                    )
+                    .filter(invitation::Column::Id.eq(&invitation.id))
+                    .filter(invitation::Column::Email.eq(&normalized_email))
+                    .filter(invitation::Column::ConsumedAt.is_null())
+                    .filter(invitation::Column::ExpiresAt.gt(now))
+                    .exec(&transaction)
+                    .await
+                    .map_err(db_error)?;
+                if claimed.rows_affected != 1 {
+                    return Err("invitation unavailable".to_string());
+                }
+                tenant_id
             }
         };
         user.organization_id = Some(tenant_id.clone());
+        user.oidc_subject = Some(format!("{issuer}|{subject}"));
+        claim_identity_email(
+            &transaction,
+            &normalized_email,
+            &user.id,
+            now,
+            "existing account must explicitly link this provider",
+        )
+        .await?;
         user_entity::ActiveModel {
             id: Set(user.id.clone()),
             username: Set(user.username.clone()),
@@ -823,7 +898,7 @@ impl SeaOrmAuthRepository {
             roles: Set(serde_json::json!(user.roles)),
             active: Set(true),
             tenant_id: Set(tenant_id),
-            oidc_subject: Set(Some(format!("{issuer}|{subject}"))),
+            oidc_subject: Set(user.oidc_subject.clone()),
             created_at: Set(user.created_at),
             updated_at: Set(user.updated_at),
         }
@@ -837,16 +912,11 @@ impl SeaOrmAuthRepository {
             issuer: Set(issuer.to_string()),
             subject: Set(subject.to_string()),
             email: Set(user.email.clone()),
-            created_at: Set(Utc::now()),
+            created_at: Set(now),
         }
         .insert(&transaction)
         .await
         .map_err(db_error)?;
-        if let Some(invitation) = invitation {
-            let mut active: entities::invitation::ActiveModel = invitation.into();
-            active.consumed_at = Set(Some(Utc::now()));
-            active.update(&transaction).await.map_err(db_error)?;
-        }
         transaction.commit().await.map_err(db_error)?;
         Ok(user)
     }
@@ -877,6 +947,18 @@ impl UserRepository for SeaOrmAuthRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let mut user = user;
         user.organization_id = Some(org_id.to_string());
+        let normalized_email = crate::validation::normalize_email(&user.email)
+            .map_err(|_| "email already registered".to_string())?;
+        user.email = normalized_email.clone();
+        let transaction = self.connection.begin().await.map_err(db_error)?;
+        claim_identity_email(
+            &transaction,
+            &normalized_email,
+            &user.id,
+            user.created_at,
+            "email already registered",
+        )
+        .await?;
         entities::user::ActiveModel {
             id: Set(user.id),
             username: Set(user.username),
@@ -889,10 +971,10 @@ impl UserRepository for SeaOrmAuthRepository {
             created_at: Set(user.created_at),
             updated_at: Set(user.updated_at),
         }
-        .insert(&self.connection)
+        .insert(&transaction)
         .await
         .map_err(db_error)?;
-        Ok(())
+        transaction.commit().await.map_err(db_error)
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
@@ -1029,5 +1111,317 @@ impl UserRepository for SeaOrmAuthRepository {
             .await
             .map_err(db_error)?
             .is_some())
+    }
+}
+
+#[cfg(test)]
+mod atomic_registration_tests {
+    use super::*;
+    use sea_orm::{
+        ConnectOptions, ConnectionTrait, Database, EntityTrait, PaginatorTrait, Schema,
+    };
+    use std::time::Duration;
+
+    async fn repositories() -> (
+        tempfile::TempDir,
+        SeaOrmAuthRepository,
+        SeaOrmAuthRepository,
+    ) {
+        let directory = tempfile::tempdir().unwrap();
+        let database_path = directory.path().join("atomic-auth.sqlite");
+        let url = format!("sqlite://{}?mode=rwc", database_path.display());
+        let connect = |url: String| async move {
+            let mut options = ConnectOptions::new(url);
+            options
+                .max_connections(4)
+                .connect_timeout(Duration::from_secs(5))
+                .acquire_timeout(Duration::from_secs(5))
+                .sqlx_logging(false);
+            Database::connect(options).await.unwrap()
+        };
+        let first = connect(url.clone()).await;
+        let schema = Schema::new(first.get_database_backend());
+        for statement in [
+            schema.create_table_from_entity(entities::user::Entity),
+            schema.create_table_from_entity(entities::application_setting::Entity),
+            schema.create_table_from_entity(entities::email_challenge::Entity),
+            schema.create_table_from_entity(entities::registration_ticket::Entity),
+            schema.create_table_from_entity(entities::invitation::Entity),
+            schema.create_table_from_entity(entities::external_identity::Entity),
+            schema.create_table_from_entity(entities::identity_email_claim::Entity),
+        ] {
+            first
+                .execute(first.get_database_backend().build(&statement))
+                .await
+                .unwrap();
+        }
+        let second = connect(url).await;
+        (
+            directory,
+            SeaOrmAuthRepository::new(first),
+            SeaOrmAuthRepository::new(second),
+        )
+    }
+
+    async fn set_mode(repository: &SeaOrmAuthRepository, mode: RegistrationMode) {
+        entities::application_setting::ActiveModel {
+            key: Set("registration_mode".to_string()),
+            value: Set(mode.as_str().to_string()),
+            updated_at: Set(Utc::now()),
+            updated_by: Set(None),
+        }
+        .insert(repository.connection())
+        .await
+        .unwrap();
+    }
+
+    fn registration_user(id: &str, email: &str) -> User {
+        let now = Utc::now();
+        User {
+            id: id.to_string(),
+            username: id.to_string(),
+            email: email.to_string(),
+            password_hash: "unused".to_string(),
+            roles: vec![crate::ROLE_ADMIN.to_string()],
+            active: true,
+            organization_id: Some(uuid::Uuid::new_v4().to_string()),
+            created_at: now,
+            updated_at: now,
+            oidc_subject: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn concurrent_challenge_verification_issues_exactly_one_ticket() {
+        let (_directory, first, second) = repositories().await;
+        let now = Utc::now();
+        entities::email_challenge::ActiveModel {
+            id: Set("challenge".to_string()),
+            email: Set("verified@example.test".to_string()),
+            code_hash: Set("expected-code".to_string()),
+            source_hash: Set("source".to_string()),
+            created_at: Set(now),
+            expires_at: Set(now + chrono::Duration::minutes(10)),
+            resend_after: Set(now),
+            attempts: Set(0),
+            send_count: Set(1),
+            verified_at: Set(None),
+            invitation_id: Set(None),
+        }
+        .insert(first.connection())
+        .await
+        .unwrap();
+        let ticket = |id: &str| NewRegistrationTicket {
+            id: id.to_string(),
+            email: "verified@example.test".to_string(),
+            token_hash: format!("hash-{id}"),
+            issued_at: now,
+            expires_at: now + chrono::Duration::minutes(20),
+            invitation_id: None,
+        };
+        let (left, right) = tokio::join!(
+            first.verify_challenge_and_issue_ticket("challenge", "expected-code", ticket("one")),
+            second.verify_challenge_and_issue_ticket("challenge", "expected-code", ticket("two")),
+        );
+        assert_eq!(usize::from(left.is_ok()) + usize::from(right.is_ok()), 1);
+        assert_eq!(
+            entities::registration_ticket::Entity::find()
+                .count(first.connection())
+                .await
+                .unwrap(),
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn concurrent_ticket_consumption_creates_exactly_one_admin_tenant() {
+        let (_directory, first, second) = repositories().await;
+        set_mode(&first, RegistrationMode::Open).await;
+        let now = Utc::now();
+        entities::registration_ticket::ActiveModel {
+            id: Set("ticket".to_string()),
+            email: Set("verified@example.test".to_string()),
+            token_hash: Set("single-use".to_string()),
+            issued_at: Set(now),
+            expires_at: Set(now + chrono::Duration::minutes(20)),
+            consumed_at: Set(None),
+            invitation_id: Set(None),
+        }
+        .insert(first.connection())
+        .await
+        .unwrap();
+        let (left, right) = tokio::join!(
+            first.consume_ticket_and_create_user(
+                "single-use",
+                now,
+                registration_user("first-user", "verified@example.test"),
+            ),
+            second.consume_ticket_and_create_user(
+                "single-use",
+                now,
+                registration_user("second-user", "verified@example.test"),
+            ),
+        );
+        assert_eq!(usize::from(left.is_ok()) + usize::from(right.is_ok()), 1);
+        let users = entities::user::Entity::find()
+            .all(first.connection())
+            .await
+            .unwrap();
+        assert_eq!(users.len(), 1);
+        assert_eq!(
+            serde_json::from_value::<Vec<String>>(users[0].roles.clone()).unwrap(),
+            vec![crate::ROLE_ADMIN.to_string()]
+        );
+        assert!(!users[0].tenant_id.is_empty());
+    }
+
+    #[tokio::test]
+    async fn separate_password_tickets_can_claim_a_normalized_email_only_once() {
+        let (_directory, first, second) = repositories().await;
+        set_mode(&first, RegistrationMode::Open).await;
+        let now = Utc::now();
+        for (id, email) in [
+            ("first-ticket", "same.person@example.test"),
+            ("second-ticket", "same.person@example.test"),
+        ] {
+            entities::registration_ticket::ActiveModel {
+                id: Set(id.to_string()),
+                email: Set(email.to_string()),
+                token_hash: Set(format!("hash-{id}")),
+                issued_at: Set(now),
+                expires_at: Set(now + chrono::Duration::minutes(20)),
+                consumed_at: Set(None),
+                invitation_id: Set(None),
+            }
+            .insert(first.connection())
+            .await
+            .unwrap();
+        }
+
+        let (left, right) = tokio::join!(
+            first.consume_ticket_and_create_user(
+                "hash-first-ticket",
+                now,
+                registration_user("first-user", "same.person@example.test"),
+            ),
+            second.consume_ticket_and_create_user(
+                "hash-second-ticket",
+                now,
+                registration_user("second-user", "same.person@example.test"),
+            ),
+        );
+        assert_eq!(usize::from(left.is_ok()) + usize::from(right.is_ok()), 1);
+        assert_eq!(
+            entities::user::Entity::find()
+                .count(first.connection())
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            entities::identity_email_claim::Entity::find()
+                .count(first.connection())
+                .await
+                .unwrap(),
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn concurrent_oidc_subjects_can_claim_a_normalized_email_only_once() {
+        let (_directory, first, second) = repositories().await;
+        set_mode(&first, RegistrationMode::Open).await;
+        let email = "same.person@example.test";
+        let first_user = registration_user("google-user", email);
+        let second_user = registration_user("keycloak-user", email);
+        let (left, right) = tokio::join!(
+            first.create_oidc_user(
+                first_user.clone(),
+                "google",
+                "https://accounts.google.com",
+                "google-subject",
+            ),
+            second.create_oidc_user(
+                second_user.clone(),
+                "keycloak",
+                "https://idp.example.test",
+                "keycloak-subject",
+            ),
+        );
+        let mut successes = usize::from(left.is_ok()) + usize::from(right.is_ok());
+        if left.is_err() {
+            successes += usize::from(first
+                .create_oidc_user(
+                    first_user,
+                    "google",
+                    "https://accounts.google.com",
+                    "google-subject",
+                )
+                .await
+                .is_ok());
+        }
+        if right.is_err() {
+            successes += usize::from(second
+                .create_oidc_user(
+                    second_user,
+                    "keycloak",
+                    "https://idp.example.test",
+                    "keycloak-subject",
+                )
+                .await
+                .is_ok());
+        }
+        assert_eq!(successes, 1);
+        assert_eq!(entities::user::Entity::find().count(first.connection()).await.unwrap(), 1);
+        assert_eq!(
+            entities::external_identity::Entity::find()
+                .count(first.connection())
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            entities::identity_email_claim::Entity::find()
+                .count(first.connection())
+                .await
+                .unwrap(),
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn open_oidc_registration_does_not_consume_a_matching_invitation() {
+        let (_directory, first, _second) = repositories().await;
+        set_mode(&first, RegistrationMode::Open).await;
+        let now = Utc::now();
+        entities::invitation::ActiveModel {
+            id: Set("unused-invitation".to_string()),
+            email: Set("invited@example.test".to_string()),
+            token_hash: Set("unused-token".to_string()),
+            created_at: Set(now),
+            expires_at: Set(now + chrono::Duration::hours(1)),
+            consumed_at: Set(None),
+            created_by: Set("missing-creator".to_string()),
+        }
+        .insert(first.connection())
+        .await
+        .unwrap();
+
+        first
+            .create_oidc_user(
+                registration_user("open-user", "invited@example.test"),
+                "google",
+                "https://accounts.google.com",
+                "open-subject",
+            )
+            .await
+            .unwrap();
+
+        let invitation = entities::invitation::Entity::find_by_id("unused-invitation")
+            .one(first.connection())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(invitation.consumed_at.is_none());
     }
 }

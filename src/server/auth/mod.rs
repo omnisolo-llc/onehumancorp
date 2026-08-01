@@ -794,28 +794,9 @@ impl Store {
             }
             return Ok(user);
         }
-        let mode = repository.registration_mode().await?;
-        if mode == crate::seaorm_store::RegistrationMode::Closed {
-            return Err("registration closed".to_string());
-        }
-
         let email = crate::validation::normalize_email(&identity.email)
             .map_err(|_| "OIDC login denied".to_string())?;
-        if repository.any_user_with_email(&email).await? {
-            return Err("existing account must explicitly link this provider".to_string());
-        }
         let now = Utc::now();
-        let invitation_id = match mode {
-            crate::seaorm_store::RegistrationMode::Closed => {
-                return Err("registration closed".to_string());
-            }
-            crate::seaorm_store::RegistrationMode::Open => None,
-            crate::seaorm_store::RegistrationMode::InviteOnly => repository
-                .active_invitation_id(&email, now)
-                .await?
-                .ok_or_else(|| "registration closed".to_string())
-                .map(Some)?,
-        };
 
         let base_username = if identity.username.trim().is_empty() {
             email.split('@').next().unwrap_or_default()
@@ -841,13 +822,7 @@ impl Store {
             oidc_subject: Some(format!("{issuer}|{}", identity.sub)),
         };
         let user = repository
-            .create_oidc_user(
-                user,
-                provider_key,
-                issuer,
-                &identity.sub,
-                invitation_id.as_deref(),
-            )
+            .create_oidc_user(user, provider_key, issuer, &identity.sub)
             .await?;
         let organization_id = user.organization_id.clone().unwrap_or_default();
         self.users.write().expect("Failed to acquire lock").insert(user.id.clone(), user.clone());
