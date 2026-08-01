@@ -19,22 +19,38 @@ test.describe('Omnichannel Chat Native Integration', () => {
     });
 
     test('should handle Greeting intent via auto-responder', async ({ page }) => {
-        // Placeholder E2E test for the Greeting intent logic
-        expect(true).toBe(true);
+        const widgetTrigger = page.locator('[data-testid="native-chat-trigger"]');
+        await widgetTrigger.click();
+        await page.fill('input[placeholder="Type a message..."]', 'Hello');
+        await page.click('button:has-text("Send")');
+        // Wait for system copilot reply
+        await expect(page.locator('text="Hello! How can we help you today?"').first()).toBeVisible({ timeout: 5000 });
     });
 
     test('should handle Sales intent via auto-responder', async ({ page }) => {
-        // Placeholder E2E test for the Sales intent logic
-        expect(true).toBe(true);
+        const widgetTrigger = page.locator('[data-testid="native-chat-trigger"]');
+        await widgetTrigger.click();
+        await page.fill('input[placeholder="Type a message..."]', 'What is the price?');
+        await page.click('button:has-text("Send")');
+        // Wait for system copilot reply
+        await expect(page.locator('text="Thanks for reaching out! You can view our pricing"').first()).toBeVisible({ timeout: 5000 });
     });
 
     test('should handle Support intent via auto-responder', async ({ page }) => {
-        // Placeholder E2E test for the Support intent logic
-        expect(true).toBe(true);
+        const widgetTrigger = page.locator('[data-testid="native-chat-trigger"]');
+        await widgetTrigger.click();
+        await page.fill('input[placeholder="Type a message..."]', 'It is broken');
+        await page.click('button:has-text("Send")');
+        // Wait for system copilot reply
+        await expect(page.locator('text="I\'m sorry to hear you\'re experiencing issues"').first()).toBeVisible({ timeout: 5000 });
     });
 
     test('should trigger Human Handoff when explicitly requested', async ({ page }) => {
-        // Placeholder E2E test for the Human Handoff intent logic
-        expect(true).toBe(true);
+        const widgetTrigger = page.locator('[data-testid="native-chat-trigger"]');
+        await widgetTrigger.click();
+        await page.fill('input[placeholder="Type a message..."]', 'human please');
+        await page.click('button:has-text("Send")');
+        // Wait for system copilot reply
+        await expect(page.locator('text="Transferring to human: Handoff requested for conversation 101"').first()).toBeVisible({ timeout: 5000 });
     });
 });

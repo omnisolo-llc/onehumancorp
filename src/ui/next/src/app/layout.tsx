@@ -10,6 +10,7 @@ import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
 import { NotificationManager } from "../components/NotificationManager";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
 import { ProductShellGuard } from './components/ProductShellGuard';
+import { OmnichannelChatWidget } from '../components/ui/OmnichannelChatWidget';
 
 export const viewport = {
   width: 'device-width',
@@ -39,6 +40,7 @@ export default function RootLayout({
               <NetworkStatusIndicator />
               <SyncManagerInitializer />
               <NotificationManager />
+              <OmnichannelChatWidget />
             </WalkthroughProvider>
                   </TooltipProvider>
         </RateLimitWarningProvider>

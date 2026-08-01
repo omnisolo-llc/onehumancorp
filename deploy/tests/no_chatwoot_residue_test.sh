@@ -32,6 +32,9 @@ allowed_reference_paths=(
   docs/superpowers/plans/2026-07-13-chatwoot-removal.md
   docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md
   docs/reports/production_agent_optimization_report.md
+  src/agents/builtin/omnichannel_chat.rs
+  src/e2e/playwright/omnichannel_chat.spec.ts
+  src/ui/next/src/components/ui/OmnichannelChatWidget.tsx
   "${historical[@]}"
 )
 
