@@ -1,4 +1,5 @@
 pub mod claude_subagents;
+pub mod chatwoot_omnichannel;
 pub mod compaction;
 pub mod durable_execution;
 pub mod omni_context;
