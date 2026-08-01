@@ -1,0 +1,29 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(["Cargo.toml", "api.rs", "models.rs", "ws.rs", "mod.rs"])
+
+rust_library(
+    name = "server_integrations_chat",
+    srcs = [
+        "api.rs",
+        "models.rs",
+        "ws.rs",
+        "mod.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/common:server_common",
+        "@crates//:axum",
+        "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:futures-util",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)
