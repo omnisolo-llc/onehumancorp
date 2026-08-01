@@ -1,0 +1,35 @@
+exports_files(["Cargo.toml"])
+
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_chat",
+    srcs = glob(["**/*.rs"], exclude=["chat_unit_test.rs"]),
+    crate_root = "mod.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/integrations/core:server_integrations_core",
+        "@crates//:axum",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_chat_unit_test",
+    srcs = ["chat_unit_test.rs"],
+    edition = "2024",
+    deps = [
+        ":server_integrations_chat",
+        "//src/server/harness:server_harness",
+    ],
+)
