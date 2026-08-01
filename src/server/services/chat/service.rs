@@ -16,7 +16,13 @@ impl ChatService {
         tenant_id: Uuid,
         name: String,
     ) -> Result<ChatInbox, sqlx::Error> {
-        sqlx::query_as(
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET LOCAL app.current_tenant_id = $1")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let res = sqlx::query_as(
             r#"
             INSERT INTO chat_inboxes (id, tenant_id, name)
             VALUES ($1, $2, $3)
@@ -26,8 +32,11 @@ impl ChatService {
         .bind(Uuid::new_v4())
         .bind(tenant_id)
         .bind(name)
-        .fetch_one(&self.pool)
-        .await
+        .fetch_one(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(res)
     }
 
     pub async fn create_channel(
@@ -37,7 +46,13 @@ impl ChatService {
         channel_type: String,
         config: serde_json::Value,
     ) -> Result<ChatChannel, sqlx::Error> {
-        sqlx::query_as(
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET LOCAL app.current_tenant_id = $1")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let res = sqlx::query_as(
             r#"
             INSERT INTO chat_channels (id, tenant_id, inbox_id, channel_type, config)
             VALUES ($1, $2, $3, $4, $5)
@@ -49,8 +64,11 @@ impl ChatService {
         .bind(inbox_id)
         .bind(channel_type)
         .bind(config)
-        .fetch_one(&self.pool)
-        .await
+        .fetch_one(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(res)
     }
 
     pub async fn create_contact(
@@ -60,7 +78,13 @@ impl ChatService {
         email: Option<String>,
         phone: Option<String>,
     ) -> Result<ChatContact, sqlx::Error> {
-        sqlx::query_as(
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET LOCAL app.current_tenant_id = $1")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let res = sqlx::query_as(
             r#"
             INSERT INTO chat_contacts (id, tenant_id, name, email, phone)
             VALUES ($1, $2, $3, $4, $5)
@@ -72,8 +96,11 @@ impl ChatService {
         .bind(name)
         .bind(email)
         .bind(phone)
-        .fetch_one(&self.pool)
-        .await
+        .fetch_one(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(res)
     }
 
     pub async fn start_conversation(
@@ -83,7 +110,13 @@ impl ChatService {
         contact_id: Uuid,
         assignee_id: Option<Uuid>,
     ) -> Result<ChatConversation, sqlx::Error> {
-        sqlx::query_as(
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET LOCAL app.current_tenant_id = $1")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let res = sqlx::query_as(
             r#"
             INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status)
             VALUES ($1, $2, $3, $4, $5, 'open')
@@ -95,8 +128,11 @@ impl ChatService {
         .bind(inbox_id)
         .bind(contact_id)
         .bind(assignee_id)
-        .fetch_one(&self.pool)
-        .await
+        .fetch_one(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(res)
     }
 
     pub async fn send_message(
@@ -107,7 +143,13 @@ impl ChatService {
         sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
-        sqlx::query_as(
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET LOCAL app.current_tenant_id = $1")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let res = sqlx::query_as(
             r#"
             INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -120,7 +162,27 @@ impl ChatService {
         .bind(sender_type)
         .bind(sender_id)
         .bind(content)
-        .fetch_one(&self.pool)
-        .await
+        .fetch_one(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(res)
+    }
+
+    pub async fn list_inboxes(&self, tenant_id: Uuid) -> Result<Vec<ChatInbox>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET LOCAL app.current_tenant_id = $1")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let inboxes = sqlx::query_as(
+            r#"SELECT id, tenant_id, name, created_at, updated_at FROM chat_inboxes"#
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(inboxes)
     }
 }
