@@ -58,7 +58,7 @@ rust_library(
         "agent_protocol.rs",
         "auth.rs",
         "autogen.rs",
-        "chatwoot_omnichannel.rs",
+        "native_omnichannel.rs",
         "checkpointer.rs",
         "claude_subagents.rs",
         "codex_runner.rs",

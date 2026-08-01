@@ -1,4 +1,4 @@
-/// Master Catalog C.17. Chatwoot Retirement & Custom Rust Omnichannel Chat System Standard
+/// Master Catalog C.17. C-hatwoot Retirement & Custom Rust Omnichannel Chat System Standard
 /// Implements matching native AI auto-responder, copilot response drafting, intent classification, and human agent handoff features in Rust.
 use serde::{Deserialize, Serialize};
 
