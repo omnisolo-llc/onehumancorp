@@ -690,8 +690,6 @@ dependencies = [
  "http 1.4.1",
  "http-body 1.0.1",
  "http-body-util",
- "hyper 1.9.0",
- "hyper-util",
  "itoa",
  "matchit 0.7.3",
  "memchr",
@@ -700,15 +698,10 @@ dependencies = [
  "pin-project-lite",
  "rustversion",
  "serde",
- "serde_json",
- "serde_path_to_error",
- "serde_urlencoded",
  "sync_wrapper 1.0.2",
- "tokio",
  "tower 0.5.3",
  "tower-layer",
  "tower-service",
- "tracing",
 ]
 
 [[package]]
@@ -766,7 +759,6 @@ dependencies = [
  "sync_wrapper 1.0.2",
  "tower-layer",
  "tower-service",
- "tracing",
 ]
 
 [[package]]
@@ -9485,7 +9477,7 @@ dependencies = [
 name = "server_ohc"
 version = "0.1.0"
 dependencies = [
- "axum 0.7.9",
+ "axum 0.8.9",
  "chrono",
  "prost 0.13.5",
  "serde",
