@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Native Omnichannel Chat Webhook and WS', () => {
   test('should process a webhook payload and verify it in the backend', async ({ request }) => {
-    const tenantId = '00000000-0000-0000-0000-000000000001';
-    const inboxId = '00000000-0000-0000-0000-000000000002';
+    const tenantId = 'tenant_1';
+    const inboxId = 'inbox_1';
     const payload = {
         tenant_id: tenantId,
         inbox_id: inboxId,

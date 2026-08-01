@@ -2928,6 +2928,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             database.as_ref().clone(),
         ))
     });
+    let legacy_sqlx_background_enabled = portable_database.as_ref().is_none_or(|database| {
+        database.backend() != crate::persistence::DatabaseBackend::MySql
+    });
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
     if std::env::var("OHC_AGENT_TOKEN").is_err() && std::env::var("OHC_AGENT_SPIFFE_ID").is_err() {
         unsafe {
@@ -2963,7 +2966,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
-    autodream_worker.start();
+    if legacy_sqlx_background_enabled {
+        autodream_worker.start();
+    }
 
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
@@ -2971,64 +2976,92 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
     let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, 20, 2, vec!["TASK_SUMMARY".to_string(), "NOTES".to_string(), "SESSION_DATA".to_string(), "NOTE".to_string(), "SUMMARY".to_string(), "CS_NOTE".to_string(), "AGENT_ACTION".to_string()], Some(cb)));
-    let _ = consolidation_worker.spawn_background_task();
+    if legacy_sqlx_background_enabled {
+        let _ = consolidation_worker.spawn_background_task();
+    }
 
     let retention_job = crate::workers::subscription_retention_job::SubscriptionRetentionJob::new(db.clone());
-    retention_job.start();
+    if legacy_sqlx_background_enabled {
+        retention_job.start();
+    }
 
     let replenishment_job = crate::workers::subscription_replenishment_job::SubscriptionReplenishmentJob::new(db.clone());
     let health_job = crate::workers::subscription_health_job::SubscriptionHealthJob::new(db.clone());
-    replenishment_job.start();
-    health_job.start();
+    if legacy_sqlx_background_enabled {
+        replenishment_job.start();
+        health_job.start();
+    }
     // Start Subscription Replenishment Worker
     let replenishment_worker = std::sync::Arc::new(crate::workers::subscription_replenishment_worker::SubscriptionReplenishmentWorker::new(db.clone()));
-    replenishment_worker.start();
+    if legacy_sqlx_background_enabled {
+        replenishment_worker.start();
+    }
 
     // Start Competitor Audit Worker
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
-    competitor_audit_worker.start();
+    if legacy_sqlx_background_enabled {
+        competitor_audit_worker.start();
+    }
 
     let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
     let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());
-    promoter_worker.start();
-
-    ops_worker.start();
+    if legacy_sqlx_background_enabled {
+        promoter_worker.start();
+        ops_worker.start();
+    }
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
-    cs_worker.start();
+    if legacy_sqlx_background_enabled {
+        cs_worker.start();
+    }
 
 
     // Start Booking Reengagement Worker
     let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
-    booking_reengagement_worker.start();
+    if legacy_sqlx_background_enabled {
+        booking_reengagement_worker.start();
+    }
     let booking_reengagement_job = crate::workers::booking_reengagement_job::BookingReengagementJob::new(db.clone());
-    booking_reengagement_job.start();
+    if legacy_sqlx_background_enabled {
+        booking_reengagement_job.start();
+    }
 
     // Start Message Triage Worker
     let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
     let customer_memory_worker = Arc::new(crate::workers::customer_memory_worker::CustomerMemoryWorker::new(db.clone()));
-    customer_memory_worker.start();
-
-    message_triage_worker.start();
+    if legacy_sqlx_background_enabled {
+        customer_memory_worker.start();
+        message_triage_worker.start();
+    }
 
     // Start Deposit Follow-Up Worker
     let deposit_follow_up_worker = Arc::new(crate::workers::deposit_follow_up_worker::DepositFollowUpWorker::new(db.clone()));
-    deposit_follow_up_worker.start();
+    if legacy_sqlx_background_enabled {
+        deposit_follow_up_worker.start();
+    }
 
     // Start Missed Lead Recovery Worker
     let missed_lead_recovery_worker = Arc::new(crate::workers::missed_lead_recovery_worker::MissedLeadRecoveryWorker::new(db.clone()));
-    missed_lead_recovery_worker.start();
+    if legacy_sqlx_background_enabled {
+        missed_lead_recovery_worker.start();
+    }
 
     // Start Proactive Analysis Worker
     let proactive_operations_worker = crate::workers::proactive_operations_worker::ProactiveOperationsWorker::new(db.clone());
-    proactive_operations_worker.start();
+    if legacy_sqlx_background_enabled {
+        proactive_operations_worker.start();
+    }
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
-    proactive_analysis_worker.start();
+    if legacy_sqlx_background_enabled {
+        proactive_analysis_worker.start();
+    }
 
     // Start Daily Ops Routine Worker
     let daily_ops_routine_worker = crate::workers::daily_ops_routine_worker::DailyOpsRoutineWorker::new(db.clone());
-    daily_ops_routine_worker.start();
+    if legacy_sqlx_background_enabled {
+        daily_ops_routine_worker.start();
+    }
 
-    if matches!(&db.store, crate::db::DbStore::Postgres) {
+    if legacy_sqlx_background_enabled && matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
 
@@ -3036,21 +3069,30 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
-    forecaster.start();
+    if legacy_sqlx_background_enabled {
+        forecaster.start();
+    }
 
     // Start Agent Memory Pipeline
     let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
     let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
-    let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
-    tokio::spawn(async move {
-        loop {
-            if let Err(e) = agent_memory_pipeline_clone.run().await {
-                ::server_telemetry::record_error_signal("[bug] Agent Memory Pipeline error");
-                tracing::error!("Agent Memory Pipeline error: {}", e);
+    if legacy_sqlx_background_enabled {
+        let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
+        tokio::spawn(async move {
+            loop {
+                if let Err(e) = agent_memory_pipeline_clone.run().await {
+                    ::server_telemetry::record_error_signal("[bug] Agent Memory Pipeline error");
+                    tracing::error!("Agent Memory Pipeline error: {}", e);
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
             }
-            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-        }
-    });
+        });
+    } else {
+        tracing::info!(
+            event = "database.legacy_background_workers_disabled",
+            backend = "mysql"
+        );
+    }
 
     // Ensure local database permissions are secure in standalone mode
     if crate::is_standalone_runtime() {
@@ -3153,10 +3195,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
     let health_worker = std::sync::Arc::new(crate::workers::subscription_health_worker::SubscriptionHealthWorker::new(db.clone()).with_orchestrator(dept_orchestrator.clone()));
-    health_worker.start();
+    if legacy_sqlx_background_enabled {
+        health_worker.start();
+    }
     let agent_action_worker = std::sync::Arc::new(crate::workers::agent_action_worker::AgentActionWorker::new(db.pool.clone(), std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string())));
-    agent_action_worker.start();
-    let _ = crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone(), dept_orchestrator.clone());
+    if legacy_sqlx_background_enabled {
+        agent_action_worker.start();
+        let _ = crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone(), dept_orchestrator.clone());
+    }
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone()).with_hub(hub.clone())));
@@ -3459,24 +3505,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
-    let auth_repo: std::sync::Arc<dyn crate::auth::user_repository::UserRepository> =
-        if db.is_mysql() {
-            if let Some(mysql_pool) = crate::db::get_mysql_pool_if_exists() {
-                std::sync::Arc::new(crate::auth::mysql_store::MySqlUserRepository::new(mysql_pool))
-            } else {
-                panic!("MySQL connection enabled but pool is missing");
-            }
-        } else {
-            match &db.store {
-                crate::db::DbStore::Postgres => std::sync::Arc::new(
-                    crate::auth::postgres_store::PgUserRepository::new(db.pool.clone()),
-                ),
-                crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(
-                    crate::auth::sqlite_store::SqliteUserRepository::new(sqlite_pool.clone()),
-                ),
-            }
-        };
-    let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_repo(auth_repo));
+    let auth_database = portable_database
+        .as_ref()
+        .ok_or_else(|| std::io::Error::other("portable authentication database unavailable"))?;
+    let auth_repo = std::sync::Arc::new(crate::auth::seaorm_store::SeaOrmAuthRepository::new(
+        auth_database.connection().clone(),
+    ));
+    auth_repo.sync_configured_oidc_providers_from_environment().await
+        .map_err(std::io::Error::other)?;
+    let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_portable_repo(auth_repo));
     let http_auth_router = crate::auth::http::router(http_auth_store.clone()).map_err(|error| {
         std::io::Error::new(std::io::ErrorKind::InvalidInput, error)
     })?;
@@ -7939,13 +7976,13 @@ async fn create_ui_bom_item_handler(
     let store = http_auth_store.clone();
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
-    if ::server_config::is_telemetry_enabled() {
+    if legacy_sqlx_background_enabled && ::server_config::is_telemetry_enabled() {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(db.pool.clone(), cloud_url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Parallel);
         telemetry_daemon.start();
     }
 
-    if is_cloud {
+    if is_cloud && legacy_sqlx_background_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let power_sync_orchestrator = Arc::new(crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(db.clone(), cloud_url.clone()));
         power_sync_orchestrator.start().await;
@@ -8000,10 +8037,12 @@ async fn create_ui_bom_item_handler(
     }
 
     // Start Cache Invalidator Service
-    let invalidator_pool = db.pool.clone();
-    tokio::spawn(async move {
-        tokio::spawn(crate::services::cache_invalidator::start_cache_invalidator(invalidator_pool));
-    });
+    if legacy_sqlx_background_enabled {
+        let invalidator_pool = db.pool.clone();
+        tokio::spawn(async move {
+            tokio::spawn(crate::services::cache_invalidator::start_cache_invalidator(invalidator_pool));
+        });
+    }
 
     // Start Temp File Cleanup Background Task
     tokio::spawn(async move {
@@ -8026,11 +8065,12 @@ async fn create_ui_bom_item_handler(
         }
     };
 
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
-        let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(300));
-        loop {
-            tokio::select! {
+    if legacy_sqlx_background_enabled {
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
+            let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(300));
+            loop {
+                tokio::select! {
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
@@ -8086,9 +8126,10 @@ async fn create_ui_bom_item_handler(
                         }
                     }
                 }
+                }
             }
-        }
-    });
+        });
+    }
 
     tracing::info!("Server listening on {}", addr);
 

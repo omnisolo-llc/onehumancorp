@@ -483,6 +483,11 @@ pub async fn validate_oidc_token(
 
     let raw = token_data.claims;
 
+    if raw.get("email_verified").and_then(|value| value.as_bool()) != Some(true) {
+        tracing::warn!(event = "auth.oidc.unverified_email");
+        return Err(OidcValidationError::InvalidToken);
+    }
+
     // Securely check for token expiration before processing
     let current_ts = Utc::now().timestamp();
     if let Some(exp) = raw.get("exp").and_then(|v| v.as_i64()) {
@@ -556,17 +561,17 @@ pub async fn validate_oidc_token(
         session_id: None,
         iat: raw.get("iat").and_then(|v| v.as_i64()).unwrap_or_default(),
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
-        jti: {
-            let jti = raw
-                .get("jti")
-                .and_then(|v| v.as_str())
-                .unwrap_or_default()
-                .to_string();
-            if jti.trim().is_empty() {
-                return Err(OidcValidationError::InvalidToken);
-            }
-            jti
-        },
+        jti: raw
+            .get("jti")
+            .and_then(|v| v.as_str())
+            .filter(|value| !value.trim().is_empty())
+            .map(str::to_string)
+            .unwrap_or_else(|| {
+                format!(
+                    "oidc:{}",
+                    raw.get("sub").and_then(|v| v.as_str()).unwrap_or_default()
+                )
+            }),
     })
 }
 

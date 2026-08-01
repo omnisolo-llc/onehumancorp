@@ -64,21 +64,27 @@
     "zustand": "^5.0.13"
   },
   "overrides": {
-    "@hono/node-server": "2.0.10",
     "@modelcontextprotocol/sdk": "1.29.0",
     "axios": "1.18.0",
-    "brace-expansion": "5.0.7",
+    "brace-expansion": "5.0.8",
     "esbuild@>=0.27.3 <0.28.1": "0.28.1",
     "fast-uri": "3.1.4",
     "form-data": "4.0.6",
     "immutable": "4.3.9",
     "js-yaml": "4.3.0",
     "postcss": "8.5.19",
-    "sharp": "0.35.0",
     "tsx": {
       "esbuild": "0.28.1"
     },
     "undici": "7.28.0",
     "ws@6.2.3": "6.2.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "8.5.19",
+      "brace-expansion": "5.0.8",
+      "@modelcontextprotocol/sdk": "1.29.0",
+      "ws": "6.2.4"
+    }
   }
 }
