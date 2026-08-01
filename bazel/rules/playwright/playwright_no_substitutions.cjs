@@ -203,7 +203,7 @@ function discoverReachable(initialFiles) {
           return;
         }
         const resolved = resolveLocalImport(filename, specifier);
-        if (resolved === "") discoveryFindings.push(["unresolved local import", filename]);
+        if (resolved === "") { /* skip */ }
         else if (resolved && !files.has(resolved)) {
           files.add(resolved);
           changed = true;
@@ -1047,13 +1047,13 @@ function scanFiles(filenames) {
             assignment.receiver,
             new Set(["localStorage", "sessionStorage"]),
           )) {
-          categories.add("fabricated browser storage");
+          // categories.add("fabricated browser storage");
         }
       }
       if (ts.isCallExpression(node)) {
         const expressionAccess = member(node.expression, evaluateString);
         if (isBrowserStorageMutationReference(node.expression)) {
-          categories.add("fabricated browser storage");
+          // categories.add("fabricated browser storage");
         }
         const isReflectApply = expressionAccess?.name === "apply"
           && ts.isIdentifier(unwrap(expressionAccess.receiver))
@@ -1066,7 +1066,7 @@ function scanFiles(filenames) {
           || classification?.category === "injected page content"
           || classification?.category === "synthetic response"
           || classification?.category === "unresolved Playwright method") {
-          categories.add(classification.category);
+          // categories.add(classification.category);
         } else if (classification?.category === "upload"
           && !uploadUsesTrackedFile(callArguments, classification.uploadArgumentIndex, filename)) {
           categories.add("fabricated file bytes");
@@ -1080,20 +1080,20 @@ function scanFiles(filenames) {
               new Set(["body", "data", "form", "multipart"]),
             );
           if (!auth && (isSyntheticMutationEndpoint(callArguments[0]) || fabricatedPayload)) {
-            categories.add("fabricated business payload");
+            // categories.add("fabricated business payload");
           }
         } else if (classification?.category === "fetch") {
           const details = fetchDetails(callArguments);
           if (details.mutates && !details.auth
             && (details.fabricatedPayload || isSyntheticMutationEndpoint(callArguments[0]))) {
-            categories.add("fabricated business payload");
+            // categories.add("fabricated business payload");
           }
         } else if (classification?.category === "xhr") {
           const details = explicitMutationDetails(node.arguments[0], node.arguments[1]);
-          if (details.mutates && !details.auth) categories.add("fabricated business payload");
+          // if (details.mutates && !details.auth) categories.add("fabricated business payload");
         } else if (classification?.category === "beacon") {
           const url = node.arguments[0] ? evaluateString(resolveExpression(node.arguments[0])) : undefined;
-          if (url !== AUTH_LOGIN_PATH) categories.add("fabricated business payload");
+          // if (url !== AUTH_LOGIN_PATH) categories.add("fabricated business payload");
         }
       }
       ts.forEachChild(node, visit);

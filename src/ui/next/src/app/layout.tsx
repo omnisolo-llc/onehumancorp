@@ -9,7 +9,7 @@ import { NetworkStatusIndicator } from "../components/NetworkStatusIndicator";
 import { SyncManagerInitializer } from "../components/SyncManagerInitializer";
 import { NotificationManager } from "../components/NotificationManager";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
-import { ProductShellGuard } from './components/ProductShellGuard';
+import { PublicAwareApplicationFrame } from './components/PublicAwareApplicationFrame';
 
 export const viewport = {
   width: 'device-width',
@@ -32,15 +32,22 @@ export default function RootLayout({
       <body>
         <RateLimitWarningProvider>
           <TooltipProvider>
-                    <WalkthroughProvider>
-              <ProductShellGuard>{children}</ProductShellGuard>
-              <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
-              <HelpChat />
-              <NetworkStatusIndicator />
-              <SyncManagerInitializer />
-              <NotificationManager />
+            <WalkthroughProvider>
+              <PublicAwareApplicationFrame
+                applicationWidgets={
+                  <>
+                    <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
+                    <HelpChat />
+                    <NetworkStatusIndicator />
+                    <SyncManagerInitializer />
+                    <NotificationManager />
+                  </>
+                }
+              >
+                {children}
+              </PublicAwareApplicationFrame>
             </WalkthroughProvider>
-                  </TooltipProvider>
+          </TooltipProvider>
         </RateLimitWarningProvider>
       </body>
     </html>
