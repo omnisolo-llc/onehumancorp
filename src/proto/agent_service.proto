@@ -260,3 +260,22 @@ message SubagentLifecycleEvent {
   SubagentHeartbeat heartbeat = 5;
   TaskNotification notification = 6;
 }
+
+
+message ChatMessage {
+  string role = 1;
+  string content = 2;
+}
+
+message ProcessChatMessageRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  string channel = 3;
+  repeated ChatMessage message_history = 4;
+}
+
+message ProcessChatMessageResponse {
+  string response_text = 1;
+  string handoff_reason = 2;
+  string intent_detected = 3;
+}

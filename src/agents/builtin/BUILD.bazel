@@ -19,6 +19,9 @@ rust_library(
         "expert_team.rs",
         "hnsw_memory.rs",
         "output_parser.rs",
+        "omnichannel_chat.rs",
+
+
         "human_in_loop.rs",
         "pubsub.rs",
         "request_profile.rs",
@@ -91,6 +94,9 @@ rust_library(
         "observation_masking.rs",
         "omni_context.rs",
         "output_parser.rs",
+        "omnichannel_chat.rs",
+
+
         "human_in_loop.rs",
         "plane.rs",
         "jit_retrieval.rs",
