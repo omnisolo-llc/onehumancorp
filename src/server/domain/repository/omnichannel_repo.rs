@@ -7,7 +7,7 @@ use crate::db::DB;
 #[derive(Clone, Debug, FromRow)]
 pub struct OmniInbox {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
     pub name: String,
     pub channel_type: String,
     pub created_at: Option<DateTime<Utc>>,
@@ -17,7 +17,7 @@ pub struct OmniInbox {
 #[derive(Clone, Debug, FromRow)]
 pub struct OmniConversation {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
     pub inbox_id: Uuid,
     pub contact_id: Uuid,
     pub status: String,
@@ -30,7 +30,7 @@ pub struct OmniConversation {
 #[derive(Clone, Debug, FromRow)]
 pub struct OmniMessage {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
     pub conversation_id: Uuid,
     pub content: String,
     pub message_type: String,
@@ -48,7 +48,7 @@ impl OmniChannelRepo {
         Self { db }
     }
 
-    pub async fn create_inbox(&self, tenant_id: Uuid, name: String, channel_type: String) -> Result<OmniInbox, sqlx::Error> {
+    pub async fn create_inbox(&self, tenant_id: String, name: String, channel_type: String) -> Result<OmniInbox, sqlx::Error> {
         let mut tx = self.db.pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let id = Uuid::new_v4();
@@ -56,7 +56,7 @@ impl OmniChannelRepo {
             "INSERT INTO omni_inboxes (id, tenant_id, name, channel_type) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, name, channel_type, created_at, updated_at",
         )
         .bind(id)
-        .bind(tenant_id)
+        .bind(&tenant_id)
         .bind(name)
         .bind(channel_type)
         .fetch_one(&mut *tx)
@@ -65,7 +65,7 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_conversation(&self, tenant_id: Uuid, inbox_id: Uuid, contact_id: Uuid) -> Result<OmniConversation, sqlx::Error> {
+    pub async fn create_conversation(&self, tenant_id: String, inbox_id: Uuid, contact_id: Uuid) -> Result<OmniConversation, sqlx::Error> {
         let mut tx = self.db.pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let id = Uuid::new_v4();
@@ -73,7 +73,7 @@ impl OmniChannelRepo {
             "INSERT INTO omni_conversations (id, tenant_id, inbox_id, contact_id) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, inbox_id, contact_id, status, snoozed_until, last_activity_at, created_at, updated_at",
         )
         .bind(id)
-        .bind(tenant_id)
+        .bind(&tenant_id)
         .bind(inbox_id)
         .bind(contact_id)
         .fetch_one(&mut *tx)
@@ -82,7 +82,7 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_message(&self, tenant_id: Uuid, conversation_id: Uuid, content: String, message_type: String) -> Result<OmniMessage, sqlx::Error> {
+    pub async fn create_message(&self, tenant_id: String, conversation_id: Uuid, content: String, message_type: String) -> Result<OmniMessage, sqlx::Error> {
         let mut tx = self.db.pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let id = Uuid::new_v4();
@@ -90,7 +90,7 @@ impl OmniChannelRepo {
             "INSERT INTO omni_messages (id, tenant_id, conversation_id, content, message_type) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, conversation_id, content, message_type, status, created_at, updated_at",
         )
         .bind(id)
-        .bind(tenant_id)
+        .bind(&tenant_id)
         .bind(conversation_id)
         .bind(content)
         .bind(message_type)
@@ -100,13 +100,13 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn get_conversations_for_tenant(&self, tenant_id: Uuid) -> Result<Vec<OmniConversation>, sqlx::Error> {
+    pub async fn get_conversations_for_tenant(&self, tenant_id: String) -> Result<Vec<OmniConversation>, sqlx::Error> {
         let mut tx = self.db.pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;
         let records = sqlx::query_as::<_, OmniConversation>(
             "SELECT id, tenant_id, inbox_id, contact_id, status, snoozed_until, last_activity_at, created_at, updated_at FROM omni_conversations WHERE tenant_id = $1",
         )
-        .bind(tenant_id)
+        .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await?;
         tx.commit().await?;
@@ -123,7 +123,7 @@ mod tests {
     fn test_omni_inbox_struct() {
         let inbox = OmniInbox {
             id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
+            tenant_id: "tenant-1".to_string(),
             name: "Main IG".to_string(),
             channel_type: "instagram".to_string(),
             created_at: None,
@@ -136,7 +136,7 @@ mod tests {
     fn test_omni_conversation_struct() {
         let conv = OmniConversation {
             id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
+            tenant_id: "tenant-1".to_string(),
             inbox_id: Uuid::new_v4(),
             contact_id: Uuid::new_v4(),
             status: "open".to_string(),
@@ -152,7 +152,7 @@ mod tests {
     fn test_omni_message_struct() {
         let msg = OmniMessage {
             id: Uuid::new_v4(),
-            tenant_id: Uuid::new_v4(),
+            tenant_id: "tenant-1".to_string(),
             conversation_id: Uuid::new_v4(),
             content: "Hello".to_string(),
             message_type: "incoming".to_string(),
