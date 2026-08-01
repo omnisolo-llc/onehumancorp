@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS chat_contacts (
     name TEXT,
     email TEXT,
     phone TEXT,
+    source_id TEXT,
+    UNIQUE(tenant_id, source_id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -52,6 +54,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     sender_type TEXT NOT NULL, -- e.g. 'contact', 'agent', 'bot'
     sender_id UUID,
     content TEXT NOT NULL,
+    source_id TEXT,
+    UNIQUE(tenant_id, source_id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

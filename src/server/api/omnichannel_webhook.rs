@@ -448,3 +448,114 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
     }
 }
+
+use crate::services::chat::service::ChatService;
+use crate::services::chat::models::{ChatMessage};
+
+#[derive(Deserialize, Debug)]
+pub struct NormalizedChatPayload {
+    pub tenant_id: Uuid,
+    pub inbox_id: Uuid,
+    pub channel_type: String,
+    pub contact_source_id: String,
+    pub contact_name: Option<String>,
+    pub message_source_id: String,
+    pub message_content: String,
+}
+
+pub async fn handle_native_chat_webhook(
+    State(state): State<AppState>,
+    Json(payload): Json<NormalizedChatPayload>,
+) -> impl IntoResponse {
+    let pool = state.db.pool.clone();
+    let chat_service = ChatService::new(pool);
+
+    match chat_service.process_webhook_payload(
+        payload.tenant_id,
+        payload.inbox_id,
+        payload.channel_type,
+        payload.contact_source_id,
+        payload.contact_name,
+        payload.message_source_id,
+        payload.message_content,
+    ).await {
+        Ok(msg) => (StatusCode::OK, Json(WebhookResponse { success: true, message_id: Some(msg.id.to_string()) })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to process native chat webhook: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response()
+        }
+    }
+}
+
+#[cfg(test)]
+}
+
+#[cfg(test)]
+mod native_chat_e2e_tests {
+    use super::*;
+    use axum::http::StatusCode;
+    use sqlx::PgPool;
+    use crate::services::chat::service::ChatService;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    #[ignore] // Ignoring by default as it requires an active PgPool
+    async fn test_native_chat_webhook_cuj_e2e() {
+        let pool = PgPool::connect("postgres://postgres:postgres@localhost/ohc").await.unwrap();
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres
+        })));
+
+        let app_state = AppState {
+            db: Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }),
+            orchestrator,
+        };
+
+        let chat_service = ChatService::new(pool.clone());
+        let tenant_id = Uuid::new_v4();
+        let inbox_id = Uuid::new_v4();
+
+        // 1. Setup minimal dependencies
+        let _inbox = chat_service.create_inbox(tenant_id, "Test Webhook Inbox".to_string()).await.unwrap();
+
+        // 2. Prepare payload
+        let payload = NormalizedChatPayload {
+            tenant_id,
+            inbox_id: _inbox.id,
+            channel_type: "instagram".to_string(),
+            contact_source_id: "ig_12345".to_string(),
+            contact_name: Some("Instagram User".to_string()),
+            message_source_id: "msg_ig_001".to_string(),
+            message_content: "Hello from IG!".to_string(),
+        };
+
+        // 3. Hit the handler (simulated)
+        let res = handle_native_chat_webhook(State(app_state), Json(payload)).await.into_response();
+
+        assert_eq!(res.status(), StatusCode::OK);
+
+        // Ensure idempotency works
+        let payload2 = NormalizedChatPayload {
+            tenant_id,
+            inbox_id: _inbox.id,
+            channel_type: "instagram".to_string(),
+            contact_source_id: "ig_12345".to_string(),
+            contact_name: Some("Instagram User".to_string()),
+            message_source_id: "msg_ig_001".to_string(),
+            message_content: "Hello from IG! updated".to_string(),
+        };
+
+        let app_state2 = AppState {
+            db: Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }),
+            orchestrator: Arc::new(DepartmentOrchestrator::new(Arc::new(crate::db::DB {
+                pool: pool.clone(),
+                store: crate::db::DbStore::Postgres
+            }))),
+        };
+
+        let res2 = handle_native_chat_webhook(State(app_state2), Json(payload2)).await.into_response();
+        assert_eq!(res2.status(), StatusCode::OK);
+    }
+}

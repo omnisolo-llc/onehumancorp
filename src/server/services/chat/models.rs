@@ -30,6 +30,7 @@ pub struct ChatContact {
     pub name: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,
+    pub source_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -54,6 +55,7 @@ pub struct ChatMessage {
     pub sender_type: String,
     pub sender_id: Option<Uuid>,
     pub content: String,
+    pub source_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
