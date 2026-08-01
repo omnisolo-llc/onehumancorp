@@ -3,14 +3,14 @@ issue_description: |
   **Title:** Architect Native Rust Omnichannel Chat System for OHC
 
   **Problem Statement:**
-  As a business owner like Maya (the baker) or Carlos (the handyman), I receive customer messages from various platforms like Instagram DMs, SMS, WhatsApp, and email. Currently, it's difficult for me to manage all these interactions in one place without needing third-party tools like Chatwoot, which is disconnected from my core operational data in OneHumanCorp. I need a single unified inbox right inside my assistant to view, manage, and reply to all customer messages, and where AI can help me draft responses automatically.
+  As a business owner like Maya (the baker) or Carlos (the handyman), I receive customer messages from various platforms like Instagram DMs, SMS, WhatsApp, and email. Currently, it's difficult for me to manage all these interactions in one place. I need a single unified inbox right inside my assistant to view, manage, and reply to all customer messages, and where AI can help me draft responses automatically.
 
   **Research Report:**
-  - The Chatwoot source code reveals a robust omnichannel architecture based around Inboxes, Channels, Conversations, Contacts, and Messages.
+  - The source code of popular open source solutions reveals a robust omnichannel architecture based around Inboxes, Channels, Conversations, Contacts, and Messages.
   - It supports multiple channel adapters: API, Email, Facebook Page, Instagram, LINE, SMS, Telegram, TikTok, Twilio, Twitter, Web Widget, WhatsApp.
   - It uses WebSocket real-time messaging for instant updates and agent routing algorithms for assignment.
   - Competitors like Shopify Inbox, Wix Inbox, and HubSpot unify messages natively so that commerce data (orders, inventory, bookings) can be attached directly to conversations.
-  - Our current `src/server/services/chat` is highly nascent, with just basic schemas. Chatwoot integration is being fully retired as per standard guidelines. We need to design a feature-rich, multi-tenant Rust-based chat system replacing Chatwoot completely while providing native integrations with the rest of OHC (e.g., attaching quotes, products, or bookings to a message).
+  - Our current `src/server/services/chat` is highly nascent, with just basic schemas. We need to design a feature-rich, multi-tenant Rust-based chat system providing native integrations with the rest of OHC (e.g., attaching quotes, products, or bookings to a message).
 
   **Design Doc:**
   - **Architecture Diagram**:
@@ -37,7 +37,7 @@ issue_description: |
     - Generates auto-replies or suggests drafts to the owner based on context (previous messages, FAQ, product knowledge base).
     - Categorizes conversations (e.g., "sales inquiry", "support").
   - **Key Design Decisions**:
-    - Native multi-tenant data model over independent Chatwoot instances.
+    - Native multi-tenant data model over independent instances.
     - Real-time updates via WebSockets, but designed offline-first on the client using a local database (e.g. SQLite via Flutter).
     - Channel adapters pattern: each external integration (WhatsApp, Instagram, Email) implements a common interface to ingest and dispatch messages, normalizing payloads before they hit the core `ChatConversation` layer.
 
@@ -49,7 +49,6 @@ issue_description: |
     2. Owner views a message from a customer.
     3. Owner types a reply and hits send. The customer receives the message.
   - **Acceptance Criteria**:
-    - All existing Chatwoot third-party integrations are removed or deprecated.
     - Core domain entities (Inbox, Channel, Contact, Conversation, Message) are expanded to support full omnichannel features (e.g. channel-specific configs, read receipts).
     - AI Service integration for drafting replies.
     - WebSocket infrastructure for real-time delivery to connected clients.
