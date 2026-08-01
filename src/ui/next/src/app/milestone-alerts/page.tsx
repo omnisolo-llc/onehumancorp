@@ -18,7 +18,17 @@ export default function MilestoneAlertsPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
     }
-  }, []);
+
+    // Fetch real milestones using standard fetch
+    fetch('/api/v1/growth/milestones/check')
+        .then(res => res.json())
+        .then((data: any) => {
+            if(data && data.milestones) {
+                setMilestones(data.milestones);
+            }
+        }).catch(e => console.error("Could not fetch milestones"));
+
+  }, [tenant]);
 
   const shareMilestone = (title: string) => {
     const shareText = `We just reached a new milestone: ${title}! Powered by OHC. https://ohc.app?ref=${encodeURIComponent(tenant)}`;

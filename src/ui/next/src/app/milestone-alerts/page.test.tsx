@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MilestoneAlertsPage from './page';
 
@@ -28,16 +28,30 @@ describe('MilestoneAlertsPage', () => {
       value: localStorageMock,
       writable: true
     });
+
+    global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+            milestones: [
+                { id: 1, title: '10th Order!', message: 'Congratulations on reaching 10 orders! Share the good news with your network.', icon: '🎉', achieved: true },
+                { id: 2, title: '100th Customer', message: 'You just welcomed your 100th customer. Keep growing!', icon: '💯', achieved: false },
+                { id: 3, title: '$10k Revenue', message: 'You have reached $10,000 in revenue. Amazing milestone!', icon: '💸', achieved: false }
+            ]
+        })
+    }) as any;
   });
 
-  it('renders correctly', () => {
+  it('renders correctly', async () => {
     render(<MilestoneAlertsPage />);
-    expect(screen.getByText('Success Milestone Alerts')).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText('Success Milestone Alerts')).toBeDefined();
+    });
   });
 
-  it('copies share text to clipboard when share is clicked (and navigator.share is undefined)', () => {
+  it('copies share text to clipboard when share is clicked (and navigator.share is undefined)', async () => {
     window.alert = vi.fn();
     render(<MilestoneAlertsPage />);
+    await waitFor(() => screen.getByRole('button', { name: /Share Milestone/i }));
     const shareButton = screen.getByRole('button', { name: /Share Milestone/i });
     fireEvent.click(shareButton);
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
