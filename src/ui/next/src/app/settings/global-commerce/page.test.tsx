@@ -7,11 +7,9 @@ vi.mock('@/lib/utils/api', () => ({
   putJson: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('@/app/components/AppShell', () => {
-  return {
-    AppShell: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
-  }
-});
+vi.mock('@/app/components/AppShell', () => ({
+  AppShell: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
+}));
 
 describe('GlobalCommerceSettings', () => {
   it('renders loading state initially', () => {

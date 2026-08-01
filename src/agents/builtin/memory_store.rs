@@ -541,6 +541,7 @@ impl VectorRepository {
 
                     // Sort by distance ascending
                     entries.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(std::cmp::Ordering::Equal));
+                    entries.dedup_by(|a, b| a.record.id == b.record.id);
                     entries.truncate(limit as usize);
 
                     results = entries.into_iter().map(|e| e.record).collect();
@@ -1032,8 +1033,17 @@ impl VectorRepository {
                                         String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
                                             .unwrap_or_default()
                                     });
-                                let embedding: Vec<f32> =
+                                let mut embedding: Vec<f32> =
                                     serde_json::from_str(&emb_str).unwrap_or_default();
+
+                                // Precompute L2 normalization to speed up the O(N^2) loop
+                                let norm: f32 =
+                                    embedding.iter().map(|&x| x * x).sum::<f32>().sqrt();
+                                if norm > 0.0 {
+                                    for v in embedding.iter_mut() {
+                                        *v /= norm;
+                                    }
+                                }
 
                                 MinimalRecord {
                                     id: row.get("id"),
@@ -1055,7 +1065,14 @@ impl VectorRepository {
                                 let a = &records[i];
                                 let b = &records[j];
 
-                                let distance = cosine_distance(&a.embedding, &b.embedding);
+                                // Both vectors are already L2-normalized, so dot product is the cosine similarity
+                                let similarity: f32 = a
+                                    .embedding
+                                    .iter()
+                                    .zip(b.embedding.iter())
+                                    .map(|(x, y)| x * y)
+                                    .sum();
+                                let distance = 1.0 - similarity;
 
                                 if distance < 0.05 {
                                     let (id_a, id_b) = if a.id < b.id {
