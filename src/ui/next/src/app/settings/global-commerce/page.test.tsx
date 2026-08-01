@@ -7,9 +7,13 @@ vi.mock('@/lib/utils/api', () => ({
   putJson: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock('@/app/components/AppShell', () => ({
-  default: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
-}));
+vi.mock(import("@/app/components/AppShell"), async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    AppShell: ({ children }: any) => <div data-testid="app-shell">{children}</div>
+  }
+})
 
 describe('GlobalCommerceSettings', () => {
   it('renders loading state initially', () => {

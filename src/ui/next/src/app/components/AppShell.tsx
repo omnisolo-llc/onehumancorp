@@ -156,7 +156,7 @@ function NavLink({ item }: { item: NavItem }) {
   return link;
 }
 
-export function AppShell({
+export const AppShell = function({
   title,
   subtitle,
   children,
