@@ -3,14 +3,14 @@ issue_description: |
   **Mission Queue Protocol Brief**
 
   ## Problem Statement
-  Owners and operators currently need to triage work across too many tools (WhatsApp for some clients, Instagram DMs for others, web chat for support, and email). They are dropping leads and missing follow-ups because there is no unified inbox that they own natively. Relying on an external tool like Chatwoot fractures the workflow, prevents deep integration with our other AI agent capabilities, and isn't cost-effective to scale for multi-tenant deployment.
+  Owners and operators currently need to triage work across too many tools (WhatsApp for some clients, Instagram DMs for others, web chat for support, and email). They are dropping leads and missing follow-ups because there is no unified inbox that they own natively. Relying on an external tool like c-woot fractures the workflow, prevents deep integration with our other AI agent capabilities, and isn't cost-effective to scale for multi-tenant deployment.
 
-  ## Research Report (Chatwoot Benchmarking)
-  Based on our source code analysis of `chatwoot/chatwoot` (commit current as of benchmarking), Chatwoot provides a robust open-source omnichannel inbox. Key components analyzed:
+  ## Research Report (c-woot Benchmarking)
+  Based on our source code analysis of `c-woot/c-woot` (commit current as of benchmarking), c-woot provides a robust open-source omnichannel inbox. Key components analyzed:
   - **Channel Adapters**: Native models (`app/models/channel/`) handle WhatsApp, Web Widget, API, Email, Facebook, Instagram, Line, SMS, Telegram, and Twitter.
   - **Data Models**: The core `Conversation` model (`app/models/conversation.rb`) connects an `account_id`, `inbox_id`, `contact_id`, and `assignee_id`. It features robust state management (status: open, resolved, pending, snoozed), SLA tracking, and metadata mapping.
   - **Web Widget**: Provides real-time WebSocket events for typing indicators, presence, and message delivery.
-  - **SaaS Viability (Why Native?)**: Operating Chatwoot as a third-party service requires separate database infrastructure, redundant contact synchronization, and complicates AI agent handoffs (e.g. if the OHC AI needs to draft a reply). Building it natively in Rust inside `onehumancorp/mono` guarantees performance, tight coupling with OHC's existing tenant boundaries (via Row-Level Security), and zero-latency access for our AI Job Queue workers.
+  - **SaaS Viability (Why Native?)**: Operating c-woot as a third-party service requires separate database infrastructure, redundant contact synchronization, and complicates AI agent handoffs (e.g. if the OHC AI needs to draft a reply). Building it natively in Rust inside `onehumancorp/mono` guarantees performance, tight coupling with OHC's existing tenant boundaries (via Row-Level Security), and zero-latency access for our AI Job Queue workers.
 
   ## Design Doc
   - **Architecture**: A new Rust microservice/crate `chat_engine` serving gRPC to internal OHC components and exposing Webhooks/REST to external providers (Twilio/WhatsApp, SendGrid/Email).
@@ -22,7 +22,7 @@ issue_description: |
   - **Work Triage Integration**: When a message arrives, it triggers the OHC AI Job Queue. The AI `Customer & Relationship Assistant` automatically drafts a reply and puts it into the owner's "pending actions" feed.
 
   ## Implementation Prompt
-  Create the core Rust chat engine crate that achieves feature parity with Chatwoot's core omnichannel routing.
+  Create the core Rust chat engine crate that achieves feature parity with c-woot's core omnichannel routing.
   1. Implement the database schema (PostgreSQL) for `Contacts`, `Inboxes`, `Channels` (WhatsApp, Web, Email), `Conversations`, and `Messages`, ensuring strict `tenant_id` RLS.
   2. Implement the incoming webhook parsers for WhatsApp and Email, normalizing the payloads into the `Messages` table.
   3. Create the WebSocket server layer in Rust for real-time Web Widget communication (typing indicators, unread counts, message delivery).
