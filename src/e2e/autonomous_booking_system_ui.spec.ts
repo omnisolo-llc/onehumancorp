@@ -18,73 +18,43 @@ test.describe('Autonomous Booking System UI', () => {
     await page.fill('input[type="date"]', dateQuery);
 
     // Wait for the mock slots to load (9:00 AM, 11:00 AM, etc.)
-    await page.waitForSelector('button:has-text("09:00 AM")');
-    await page.click('button:has-text("09:00 AM")');
+    await expect(page.getByText('9:00 AM')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('11:00 AM')).toBeVisible();
 
-    // 4. Submit
-    // Route mock to avoid actual backend errors if not fully seeded
-    await page.route('/api/v1/booking/public/checkout', async (route) => {
-        await route.fulfill({
-            status: 200,
-            json: {
-                booking_id: 'mock-booking',
-                stripe_url: 'https://checkout.stripe.com/pay/mock_session',
-                status: 'pending_payment'
-            }
-        });
-    });
+    // 4. Select a slot
+    await page.getByText('9:00 AM').click();
+    await expect(page.getByText('Selected: 9:00 AM')).toBeVisible();
 
-    await page.click('button:has-text("Confirm Booking")');
+    // 5. Submit booking
+    await page.getByRole('button', { name: 'Confirm Booking' }).click();
 
-    // 5. Verify deposit step
-    await expect(page.getByTestId('booking-checkout-container')).toBeVisible();
-    await expect(page.getByTestId('pay-deposit-btn')).toHaveAttribute('href', /checkout\.stripe\.com/);
+    // Wait for checkout flow to trigger
+    await expect(page.getByRole('heading', { name: 'Booking Confirmed' })).toBeVisible({ timeout: 10000 });
   });
 
-  test('Owner Admin Dashboard', async ({ page }) => {
-    // 1. Visit admin bookings dashboard
-    await page.goto(`/admin/bookings?tenant=${tenantId}`);
-    await expect(page.getByRole('heading', { name: 'Booking Management' })).toBeVisible();
+  test('Admin Resource UI Flow', async ({ page }) => {
+    await page.goto(`/admin/booking/resources?tenant=${tenantId}`);
+    await expect(page.getByRole('heading', { name: 'Resources' })).toBeVisible();
 
-    // Route mocks
-    await page.route('/api/v1/booking/admin/resources', async (route) => {
-        if (route.request().method() === 'GET') {
-            await route.fulfill({
-                status: 200,
-                json: [{ id: 'res-1', name: 'Studio A', description: 'Main Studio', type: 'space' }]
-            });
-        } else {
-            await route.fulfill({ status: 201, json: { id: 'new-res-1' } });
-        }
-    });
-
-    await page.route('/api/v1/booking/admin/availability', async (route) => {
-        if (route.request().method() === 'GET') {
-            await route.fulfill({
-                status: 200,
-                json: [{ id: 'avail-1', resource_id: 'res-1', start_time: '2025-01-01T09:00:00Z', end_time: '2025-01-01T17:00:00Z' }]
-            });
-        } else {
-            await route.fulfill({ status: 201, json: { id: 'new-avail-1' } });
-        }
-    });
-
-    await page.reload();
-
-    // 2. Check rendered content
-    await expect(page.getByText('Studio A')).toBeVisible();
-
-    // 3. Create Resource
-    const newResNameInput = page.locator('input[type="text"]').first();
-    await newResNameInput.fill('New Tutor Leo');
+    // Fill new resource
+    await page.fill('input[name="name"]', 'Leo');
+    await page.fill('input[name="description"]', 'Music Tutor');
+    await page.selectOption('select[name="type"]', 'provider');
     await page.getByRole('button', { name: 'Add Resource' }).click();
 
-    // 4. Create Availability Block
-    // Wait for the select to be populated
-    await page.selectOption('select', 'res-1');
-    const timeInputs = page.locator('input[type="datetime-local"]');
-    await timeInputs.nth(0).fill('2025-02-01T09:00');
-    await timeInputs.nth(1).fill('2025-02-01T17:00');
-    await page.getByRole('button', { name: 'Add Block' }).click();
+    await expect(page.getByText('Leo - provider')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Admin Availability UI Flow', async ({ page }) => {
+    await page.goto(`/admin/booking/availability?tenant=${tenantId}`);
+    await expect(page.getByRole('heading', { name: 'Availability' })).toBeVisible();
+
+    await page.selectOption('select[name="resource_id"]', 'leo-123');
+    await page.fill('input[name="start_time"]', '2025-12-01T09:00');
+    await page.fill('input[name="end_time"]', '2025-12-01T17:00');
+
+    await page.getByRole('button', { name: 'Add Availability' }).click();
+
+    await expect(page.getByText('2025-12-01T09:00 to 2025-12-01T17:00')).toBeVisible({ timeout: 5000 });
   });
 });

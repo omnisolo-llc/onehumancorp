@@ -5,22 +5,24 @@ test.describe('Edge Ledger Sync Protocol', () => {
         const tenantId = 'test_tenant_edge_ledger_' + Date.now();
         const txId = 'tx_' + Date.now();
 
+        const syncPayload = {
+            transactions: [
+                {
+                    transaction_id: txId,
+                    amount_cents: 1000,
+                    currency: 'USD',
+                    status: 'PENDING',
+                    device_signature: 'sig_123',
+                    payload: '{"items": [{"id": "item_1", "qty": 1}]}',
+                }
+            ]
+        };
+
         const response = await request.post('/api/v1/terminal/edge_sync', {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
-                transactions: [
-                    {
-                        transaction_id: txId,
-                        amount_cents: 1000,
-                        currency: 'USD',
-                        status: 'PENDING',
-                        device_signature: 'sig_123',
-                        payload: '{"items": [{"id": "item_1", "qty": 1}]}',
-                    }
-                ]
-            }
+            data: syncPayload
         });
 
         expect(response.status()).toBe(200);
@@ -29,23 +31,24 @@ test.describe('Edge Ledger Sync Protocol', () => {
         expect(body.synced_count).toBe(1);
         expect(body.failed_transaction_ids).toHaveLength(0);
 
+        const dupPayload = {
+            transactions: [
+                {
+                    transaction_id: txId,
+                    amount_cents: 1000,
+                    currency: 'USD',
+                    status: 'PENDING',
+                    device_signature: 'sig_123',
+                    payload: '{"items": [{"id": "item_1", "qty": 1}]}',
+                }
+            ]
+        };
         // Test idempotency: Resend same transaction batch
         const responseDuplicate = await request.post('/api/v1/terminal/edge_sync', {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
-                transactions: [
-                    {
-                        transaction_id: txId,
-                        amount_cents: 1000,
-                        currency: 'USD',
-                        status: 'PENDING',
-                        device_signature: 'sig_123',
-                        payload: '{"items": [{"id": "item_1", "qty": 1}]}',
-                    }
-                ]
-            }
+            data: dupPayload
         });
 
         expect(responseDuplicate.status()).toBe(200);

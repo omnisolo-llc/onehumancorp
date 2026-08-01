@@ -642,6 +642,7 @@ rust_test(
     ],
     edition = "2024",
     deps = [
+        "//src/server/auth:server_auth",
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:sea-orm",
