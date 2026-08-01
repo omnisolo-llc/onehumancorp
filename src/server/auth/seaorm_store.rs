@@ -208,6 +208,41 @@ impl RegistrationMode {
     }
 }
 
+async fn registration_mode_in_transaction(
+    transaction: &sea_orm::DatabaseTransaction,
+) -> Result<RegistrationMode, String> {
+    let value = entities::application_setting::Entity::find_by_id("registration_mode")
+        .one(transaction)
+        .await
+        .map_err(db_error)?
+        .map(|setting| setting.value)
+        .unwrap_or_else(|| "closed".to_string());
+    RegistrationMode::parse(&value)
+}
+
+async fn invitation_creator_tenant(
+    transaction: &sea_orm::DatabaseTransaction,
+    invitation: &entities::invitation::Model,
+) -> Result<String, String> {
+    let creator = entities::user::Entity::find_by_id(&invitation.created_by)
+        .one(transaction)
+        .await
+        .map_err(db_error)?
+        .filter(|creator| creator.active)
+        .ok_or_else(|| "invitation unavailable".to_string())?;
+    let creator_roles: Vec<String> = serde_json::from_value(creator.roles)
+        .map_err(|_| "invitation unavailable".to_string())?;
+    if !creator_roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case(crate::ROLE_ADMIN))
+        || creator.tenant_id.trim().is_empty()
+        || creator.tenant_id.eq_ignore_ascii_case("system")
+    {
+        return Err("invitation unavailable".to_string());
+    }
+    Ok(creator.tenant_id)
+}
+
 #[derive(Clone, Debug)]
 pub struct NewEmailChallenge {
     pub id: String,
@@ -437,10 +472,14 @@ impl SeaOrmAuthRepository {
         &self,
         token_hash: &str,
         now: DateTime<Utc>,
-        user: User,
-    ) -> Result<(), String> {
+        mut user: User,
+    ) -> Result<User, String> {
         use entities::{invitation, registration_ticket, user as user_entity};
         let transaction = self.connection.begin().await.map_err(db_error)?;
+        let mode = registration_mode_in_transaction(&transaction).await?;
+        if mode == RegistrationMode::Closed {
+            return Err("registration closed".to_string());
+        }
         let tickets = registration_ticket::Entity::find()
             .filter(registration_ticket::Column::TokenHash.eq(token_hash))
             .limit(2)
@@ -472,7 +511,17 @@ impl SeaOrmAuthRepository {
             None
         };
 
-        let tenant_id = user.organization_id.clone().unwrap_or_default();
+        let tenant_id = match mode {
+            RegistrationMode::Closed => return Err("registration closed".to_string()),
+            RegistrationMode::Open => user.organization_id.clone().unwrap_or_default(),
+            RegistrationMode::InviteOnly => {
+                let invitation = invitation
+                    .as_ref()
+                    .ok_or_else(|| "invitation unavailable".to_string())?;
+                invitation_creator_tenant(&transaction, invitation).await?
+            }
+        };
+        user.organization_id = Some(tenant_id.clone());
         user_entity::ActiveModel {
             id: Set(user.id.clone()),
             username: Set(user.username.clone()),
@@ -497,7 +546,8 @@ impl SeaOrmAuthRepository {
             active.consumed_at = Set(Some(now));
             active.update(&transaction).await.map_err(db_error)?;
         }
-        transaction.commit().await.map_err(db_error)
+        transaction.commit().await.map_err(db_error)?;
+        Ok(user)
     }
 
     pub async fn public_oidc_providers(&self) -> Result<Vec<PublicOidcProvider>, String> {
@@ -727,14 +777,44 @@ impl SeaOrmAuthRepository {
 
     pub async fn create_oidc_user(
         &self,
-        user: User,
+        mut user: User,
         provider_key: &str,
         issuer: &str,
         subject: &str,
         invitation_id: Option<&str>,
-    ) -> Result<(), String> {
+    ) -> Result<User, String> {
         use entities::{external_identity, user as user_entity};
         let transaction = self.connection.begin().await.map_err(db_error)?;
+        let mode = registration_mode_in_transaction(&transaction).await?;
+        if mode == RegistrationMode::Closed {
+            return Err("registration closed".to_string());
+        }
+        let invitation = if let Some(invitation_id) = invitation_id {
+            let invitation = entities::invitation::Entity::find_by_id(invitation_id)
+                .one(&transaction)
+                .await
+                .map_err(db_error)?
+                .filter(|invitation| {
+                    invitation.consumed_at.is_none()
+                        && invitation.expires_at > Utc::now()
+                        && invitation.email == user.email
+                })
+                .ok_or_else(|| "invitation unavailable".to_string())?;
+            Some(invitation)
+        } else {
+            None
+        };
+        let tenant_id = match mode {
+            RegistrationMode::Closed => return Err("registration closed".to_string()),
+            RegistrationMode::Open => user.organization_id.clone().unwrap_or_default(),
+            RegistrationMode::InviteOnly => {
+                let invitation = invitation
+                    .as_ref()
+                    .ok_or_else(|| "invitation unavailable".to_string())?;
+                invitation_creator_tenant(&transaction, invitation).await?
+            }
+        };
+        user.organization_id = Some(tenant_id.clone());
         user_entity::ActiveModel {
             id: Set(user.id.clone()),
             username: Set(user.username.clone()),
@@ -742,7 +822,7 @@ impl SeaOrmAuthRepository {
             password_hash: Set(user.password_hash.clone()),
             roles: Set(serde_json::json!(user.roles)),
             active: Set(true),
-            tenant_id: Set(user.organization_id.clone().unwrap_or_default()),
+            tenant_id: Set(tenant_id),
             oidc_subject: Set(Some(format!("{issuer}|{subject}"))),
             created_at: Set(user.created_at),
             updated_at: Set(user.updated_at),
@@ -752,7 +832,7 @@ impl SeaOrmAuthRepository {
         .map_err(db_error)?;
         external_identity::ActiveModel {
             id: Set(uuid::Uuid::new_v4().to_string()),
-            user_id: Set(user.id),
+            user_id: Set(user.id.clone()),
             provider_key: Set(provider_key.to_string()),
             issuer: Set(issuer.to_string()),
             subject: Set(subject.to_string()),
@@ -762,23 +842,13 @@ impl SeaOrmAuthRepository {
         .insert(&transaction)
         .await
         .map_err(db_error)?;
-        if let Some(invitation_id) = invitation_id {
-            let invitation = entities::invitation::Entity::find_by_id(invitation_id)
-                .one(&transaction)
-                .await
-                .map_err(db_error)?
-                .ok_or_else(|| "invitation unavailable".to_string())?;
-            if invitation.consumed_at.is_some()
-                || invitation.expires_at <= Utc::now()
-                || invitation.email != user.email
-            {
-                return Err("invitation unavailable".to_string());
-            }
+        if let Some(invitation) = invitation {
             let mut active: entities::invitation::ActiveModel = invitation.into();
             active.consumed_at = Set(Some(Utc::now()));
             active.update(&transaction).await.map_err(db_error)?;
         }
-        transaction.commit().await.map_err(db_error)
+        transaction.commit().await.map_err(db_error)?;
+        Ok(user)
     }
 }
 

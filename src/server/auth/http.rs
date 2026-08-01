@@ -756,7 +756,8 @@ impl HttpAuthState {
 #[serde(deny_unknown_fields)]
 struct RegisterRequest {
     registration_ticket: String,
-    organization_id: String,
+    #[serde(rename = "organization_id")]
+    _client_organization_id: String,
     username: String,
     password: String,
 }
@@ -1297,15 +1298,6 @@ async fn register(
             );
         }
     };
-    let organization_id = match crate::validation::normalize_organization(&payload.organization_id) {
-        Ok(organization_id) => organization_id,
-        Err(message) => {
-            return no_store_json(
-                StatusCode::BAD_REQUEST,
-                &serde_json::json!({ "error": message }),
-            );
-        }
-    };
     let Some(repository) = state.store.portable_repo() else {
         return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable");
     };
@@ -1349,7 +1341,6 @@ async fn register(
             ticket.email,
             payload.password,
             vec![super::ROLE_ADMIN.to_string()],
-            organization_id,
             &ticket_hash,
         )
         .await;
@@ -1812,13 +1803,14 @@ fn router_for_test() -> Router {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{User, user_repository::UserRepository};
+    use crate::{User, seaorm_store::entities, user_repository::UserRepository};
     use async_trait::async_trait;
     use axum::{
         body::{Body, to_bytes},
         http::Request,
     };
     use chrono::{DateTime, Utc};
+    use sea_orm::{ActiveModelTrait, ConnectionTrait, Database, EntityTrait, Schema, Set};
     use std::net::{Ipv4Addr, SocketAddr};
     use tower::ServiceExt;
 
@@ -2472,6 +2464,342 @@ mod tests {
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
         let body = to_bytes(response.into_body(), 1024).await.unwrap();
         assert_eq!(body.as_ref(), br#"{"error":"registration unavailable"}"#);
+    }
+
+    async fn registration_test_app(
+        mode: crate::seaorm_store::RegistrationMode,
+        invitation_creator: Option<User>,
+    ) -> (
+        Router,
+        Arc<crate::seaorm_store::SeaOrmAuthRepository>,
+        String,
+    ) {
+        let connection = Database::connect("sqlite::memory:").await.unwrap();
+        let schema = Schema::new(connection.get_database_backend());
+        for statement in [
+            schema.create_table_from_entity(entities::user::Entity),
+            schema.create_table_from_entity(entities::application_setting::Entity),
+            schema.create_table_from_entity(entities::registration_ticket::Entity),
+            schema.create_table_from_entity(entities::invitation::Entity),
+            schema.create_table_from_entity(entities::external_identity::Entity),
+            schema.create_table_from_entity(entities::revoked_token::Entity),
+        ] {
+            connection
+                .execute(connection.get_database_backend().build(&statement))
+                .await
+                .unwrap();
+        }
+        let repository = Arc::new(crate::seaorm_store::SeaOrmAuthRepository::new(connection));
+        let store = Arc::new(Store::with_portable_repo(repository.clone()));
+        let raw_ticket = "verified-registration-ticket".to_string();
+        let ticket_hash = registration_hash_hex(
+            &store.registration_hash_key(),
+            b"registration-ticket",
+            &[raw_ticket.as_bytes()],
+        );
+        let now = Utc::now();
+        entities::application_setting::ActiveModel {
+            key: Set("registration_mode".to_string()),
+            value: Set(mode.as_str().to_string()),
+            updated_at: Set(now),
+            updated_by: Set(None),
+        }
+        .insert(repository.connection())
+        .await
+        .unwrap();
+
+        let invitation_id = if let Some(creator) = invitation_creator {
+            let creator_id = creator.id.clone();
+            entities::user::ActiveModel {
+                id: Set(creator.id),
+                username: Set(creator.username),
+                email: Set(creator.email),
+                password_hash: Set(creator.password_hash),
+                roles: Set(serde_json::json!(creator.roles)),
+                active: Set(creator.active),
+                tenant_id: Set(creator.organization_id.unwrap_or_default()),
+                oidc_subject: Set(creator.oidc_subject),
+                created_at: Set(creator.created_at),
+                updated_at: Set(creator.updated_at),
+            }
+            .insert(repository.connection())
+            .await
+            .unwrap();
+            let invitation_id = "invitation-7".to_string();
+            entities::invitation::ActiveModel {
+                id: Set(invitation_id.clone()),
+                email: Set("new.user@example.test".to_string()),
+                token_hash: Set("invitation-hash".to_string()),
+                created_at: Set(now),
+                expires_at: Set(now + chrono::Duration::hours(1)),
+                consumed_at: Set(None),
+                created_by: Set(creator_id),
+            }
+            .insert(repository.connection())
+            .await
+            .unwrap();
+            Some(invitation_id)
+        } else {
+            None
+        };
+
+        entities::registration_ticket::ActiveModel {
+            id: Set("ticket-7".to_string()),
+            email: Set("new.user@example.test".to_string()),
+            token_hash: Set(ticket_hash),
+            issued_at: Set(now),
+            expires_at: Set(now + chrono::Duration::hours(1)),
+            consumed_at: Set(None),
+            invitation_id: Set(invitation_id),
+        }
+        .insert(repository.connection())
+        .await
+        .unwrap();
+
+        (
+            router_with_state(HttpAuthState::new(store, HashSet::new())),
+            repository,
+            raw_ticket,
+        )
+    }
+
+    fn registration_creator(active: bool, roles: Vec<String>) -> User {
+        let now = Utc::now();
+        User {
+            id: "creator-7".to_string(),
+            username: "tenant-owner".to_string(),
+            email: "owner@example.test".to_string(),
+            password_hash: "unused".to_string(),
+            roles,
+            active,
+            organization_id: Some("trusted-tenant".to_string()),
+            created_at: now,
+            updated_at: now,
+            oidc_subject: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn open_registration_ignores_client_tenant_and_creates_a_fresh_tenant() {
+        let (app, _, ticket) =
+            registration_test_app(crate::seaorm_store::RegistrationMode::Open, None).await;
+        let response = app
+            .oneshot(json_request(
+                "/api/v1/auth/register",
+                serde_json::json!({
+                    "registration_ticket": ticket,
+                    "organization_id": "victim-tenant",
+                    "username": "new-user",
+                    "password": "violet river cabin orbit"
+                })
+                .to_string(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let body: serde_json::Value =
+            serde_json::from_slice(&to_bytes(response.into_body(), 4096).await.unwrap()).unwrap();
+        let organization_id = body["user"]["organization_id"].as_str().unwrap();
+        assert_ne!(organization_id, "victim-tenant");
+        assert!(uuid::Uuid::parse_str(organization_id).is_ok());
+    }
+
+    #[tokio::test]
+    async fn invited_registration_uses_the_active_admin_creators_tenant() {
+        let creator = registration_creator(true, vec![super::super::ROLE_ADMIN.to_string()]);
+        let (app, repository, ticket) = registration_test_app(
+            crate::seaorm_store::RegistrationMode::InviteOnly,
+            Some(creator),
+        )
+        .await;
+        let response = app
+            .oneshot(json_request(
+                "/api/v1/auth/register",
+                serde_json::json!({
+                    "registration_ticket": ticket,
+                    "organization_id": "attacker-chosen-tenant",
+                    "username": "new-user",
+                    "password": "violet river cabin orbit"
+                })
+                .to_string(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let persisted = repository
+            .get_by_email("new.user@example.test", "trusted-tenant")
+            .await
+            .unwrap();
+        assert_eq!(persisted.organization_id.as_deref(), Some("trusted-tenant"));
+    }
+
+    #[tokio::test]
+    async fn invited_registration_fails_without_an_active_admin_creator() {
+        for creator in [
+            registration_creator(false, vec![super::super::ROLE_ADMIN.to_string()]),
+            registration_creator(true, vec![super::super::ROLE_VIEWER.to_string()]),
+        ] {
+            let (app, repository, ticket) = registration_test_app(
+                crate::seaorm_store::RegistrationMode::InviteOnly,
+                Some(creator),
+            )
+            .await;
+            let response = app
+                .oneshot(json_request(
+                    "/api/v1/auth/register",
+                    serde_json::json!({
+                        "registration_ticket": ticket,
+                        "organization_id": "attacker-chosen-tenant",
+                        "username": "new-user",
+                        "password": "violet river cabin orbit"
+                    })
+                    .to_string(),
+                ))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+            assert!(
+                entities::registration_ticket::Entity::find_by_id("ticket-7")
+                    .one(repository.connection())
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .consumed_at
+                    .is_none()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn closed_oidc_registration_rejects_even_with_an_active_invitation() {
+        let creator = registration_creator(true, vec![super::super::ROLE_ADMIN.to_string()]);
+        let (_, repository, _) =
+            registration_test_app(crate::seaorm_store::RegistrationMode::Closed, Some(creator))
+                .await;
+        let now = Utc::now();
+        entities::user::ActiveModel {
+            id: Set("existing-local-user".to_string()),
+            username: Set("existing-local-user".to_string()),
+            email: Set("new.user@example.test".to_string()),
+            password_hash: Set("unused".to_string()),
+            roles: Set(serde_json::json!([super::super::ROLE_VIEWER])),
+            active: Set(true),
+            tenant_id: Set("another-tenant".to_string()),
+            oidc_subject: Set(None),
+            created_at: Set(now),
+            updated_at: Set(now),
+        }
+        .insert(repository.connection())
+        .await
+        .unwrap();
+        let store = Store::with_portable_repo(repository);
+        let identity = ::server_common::Claims {
+            sub: "provider-subject".to_string(),
+            exp: (now + chrono::Duration::hours(1)).timestamp(),
+            iat: now.timestamp(),
+            organization_id: None,
+            username: "new-user".to_string(),
+            email: "new.user@example.test".to_string(),
+            roles: vec!["ADMIN".to_string()],
+            session_id: None,
+            jti: "provider-token".to_string(),
+        };
+        assert_eq!(
+            store
+                .authenticate_oidc_identity("google", "https://accounts.google.com", &identity)
+                .await
+                .unwrap_err(),
+            "registration closed"
+        );
+    }
+
+    #[tokio::test]
+    async fn invited_oidc_registration_uses_creator_tenant_and_application_jwt() {
+        use axum::routing::get;
+
+        let creator = registration_creator(true, vec![super::super::ROLE_ADMIN.to_string()]);
+        let (_, repository, _) = registration_test_app(
+            crate::seaorm_store::RegistrationMode::InviteOnly,
+            Some(creator),
+        )
+        .await;
+        let store = Arc::new(Store::with_portable_repo(repository));
+        let now = Utc::now();
+        let identity = ::server_common::Claims {
+            sub: "provider-subject".to_string(),
+            exp: (now + chrono::Duration::hours(1)).timestamp(),
+            iat: now.timestamp(),
+            organization_id: Some("external-realm".to_string()),
+            username: "new-user".to_string(),
+            email: "new.user@example.test".to_string(),
+            roles: vec!["external-admin".to_string()],
+            session_id: None,
+            jti: "provider-token".to_string(),
+        };
+        let user = store
+            .authenticate_oidc_identity("google", "https://accounts.google.com", &identity)
+            .await
+            .unwrap();
+        assert_eq!(user.organization_id.as_deref(), Some("trusted-tenant"));
+        assert_eq!(user.roles, vec![super::super::ROLE_ADMIN.to_string()]);
+        let token = store.issue_token(&user).unwrap();
+        let app = Router::new()
+            .route("/", get(|| async { StatusCode::OK }))
+            .layer(axum::middleware::from_fn_with_state(
+                store,
+                super::super::strict_bearer_auth_middleware,
+            ));
+        let response = app
+            .oneshot(
+                Request::get("/")
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn registration_transaction_rechecks_closed_mode_before_consuming_ticket() {
+        let creator = registration_creator(true, vec![super::super::ROLE_ADMIN.to_string()]);
+        let (_, repository, _) =
+            registration_test_app(crate::seaorm_store::RegistrationMode::Closed, Some(creator))
+                .await;
+        let ticket_hash = entities::registration_ticket::Entity::find_by_id("ticket-7")
+            .one(repository.connection())
+            .await
+            .unwrap()
+            .unwrap()
+            .token_hash;
+        let now = Utc::now();
+        let candidate = User {
+            id: "new-user-id".to_string(),
+            username: "new-user".to_string(),
+            email: "new.user@example.test".to_string(),
+            password_hash: "unused".to_string(),
+            roles: vec![super::super::ROLE_ADMIN.to_string()],
+            active: true,
+            organization_id: Some(uuid::Uuid::new_v4().to_string()),
+            created_at: now,
+            updated_at: now,
+            oidc_subject: None,
+        };
+        assert_eq!(
+            repository
+                .consume_ticket_and_create_user(&ticket_hash, now, candidate)
+                .await
+                .unwrap_err(),
+            "registration closed"
+        );
+        assert!(entities::registration_ticket::Entity::find_by_id("ticket-7")
+            .one(repository.connection())
+            .await
+            .unwrap()
+            .unwrap()
+            .consumed_at
+            .is_none());
     }
 
     struct FailingRepo {
