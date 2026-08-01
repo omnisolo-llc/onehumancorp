@@ -80,27 +80,19 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/viral-post-generator.spec.ts",
 ]
 
-# The aggregate CI gate intentionally exercises only maintained, real-stack
-# journeys. The complete historical suite remains available as per-spec manual
-# targets, while this subset is forbidden from intercepting or fabricating API,
-# database, or upload behavior by playwright_spec_coverage.
 _CI_REAL_STACK_E2E_SPECS = [
     "//src/e2e:login_auth.spec.ts",
     "//src/e2e:real_data_contract.spec.ts",
     "//src/ui/next:src/e2e/app-shell-style.spec.ts",
+    "//src/e2e:omnichannel_chat.spec.ts",
 ]
 
-# Historical browser contracts that relied on response interception, injected
-# documents, fabricated mutations, or in-memory upload bytes. They are kept as
-# explicit migration debt, but are not executable Playwright E2E specs.
 filegroup(
     name = "legacy_playwright_mock_contracts",
     srcs = glob(["**/*.mock-contract.ts"]),
     tags = ["manual"],
 )
 
-# Shell script wrapper for running ALL playwright tests via docker compose
-# (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
 sh_binary(
     name = "run_playwright_e2e",
     srcs = ["//bazel/rules/playwright:run_playwright.sh"],
@@ -117,12 +109,6 @@ sh_binary(
     visibility = ["//visibility:public"],
 )
 
-# Per-spec Playwright test targets plus the shard targets used by the explicit
-# `//src/e2e:playwright` CI gate. A generated check ensures the CI subset only
-# references discovered specs.
-# Run suite: bazel test //src/e2e:playwright
-# Run one CI shard: bazel test //src/e2e:playwright_shard_1_of_4
-# Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
     ci_specs = _CI_REAL_STACK_E2E_SPECS,
     ci_discovery_data = [
@@ -158,4 +144,3 @@ sh_test(
     data = ["//release:all_release_artifacts"],
     tags = ["lint"],
 )
-# Adding test dynamically is fine since we ran out of time

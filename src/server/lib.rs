@@ -6691,6 +6691,7 @@ async fn create_ui_bom_item_handler(
         axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
+        .nest("/api/v1/chat", crate::domain::chat::api::chat_routes(db.pool.clone()))
         .with_state(mesh_transport.clone());
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
