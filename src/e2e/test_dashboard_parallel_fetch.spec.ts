@@ -14,11 +14,11 @@ test.describe('Dashboard Parallel Fetch', () => {
     await expect(page.locator('text=Growth & Virality')).toBeVisible();
 
     // Check if we have the fallback rendering in case of no data
-    const ordersContainer = page.locator('text=Recent Orders').locator('..').locator('..');
+    const ordersContainer = page.locator('text=Recent Orders').locator('..').locator('..').locator('..');
 
     // Create locators for both possible states
     const ordersTable = ordersContainer.locator('table');
-    const emptyState = ordersContainer.locator('.app-empty').or(page.locator('text=No order rows found for this tenant.'));
+    const emptyState = ordersContainer.locator('.app-empty').or(page.locator('text=No orders found.'));
 
     // Wait for either the table or the empty state to become visible
     await expect(ordersTable.or(emptyState)).toBeVisible();
