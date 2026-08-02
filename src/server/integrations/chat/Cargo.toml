@@ -1,0 +1,16 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+axum = { version = "0.8.1", features = ["ws", "macros"] }
+sea-orm = { version = "1.1.19", features = ["macros", "runtime-tokio-native-tls", "sqlx-postgres", "with-chrono", "with-json", "with-uuid", "mock"] }
+chrono = { workspace = true }
+server_common = { path = "../../common" }
+tracing = "0.1"
+futures = { workspace = true }
