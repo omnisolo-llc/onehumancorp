@@ -38,39 +38,56 @@ impl std::fmt::Debug for AuthMode {
 ///   OHC_AGENT_SPIFFE_ID            – validates the desired identity, then fails closed until
 ///                                    verified mTLS peer extraction is available
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
+    // 1. SPIFFE mode check
+    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID") {
+        if !spiffe_id.trim().is_empty() {
+            validate_spiffe_id(&spiffe_id)?;
+            return Err("verified mTLS peer extraction is not yet wired/supported".to_string());
+        }
+    }
+
+    // 2. Token mode check
+    if let Ok(token) = env::var("OHC_AGENT_TOKEN") {
+        if !token.trim().is_empty() {
+            let key = env::var("OHC_AGENT_AUTH_KEY")
+                .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
+            if key.trim().is_empty() || key.len() < 32 {
+                return Err("OHC_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
+            }
+            let verification_key = key.into_bytes();
+            let token_hash = hmac_token(&token, &verification_key);
+            return Ok(AuthMode::Token {
+                token_hash,
+                verification_key,
+            });
+        }
+    }
+
+    // 3. Disabled auth mode check
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
-        let environment = env::var("OHC_ENV").unwrap_or_default();
-        if matches!(
-            environment.trim().to_ascii_lowercase().as_str(),
-            "development" | "test" | "standalone" | ""
-        ) {
+
+    let env_val = env::var("OHC_ENV").unwrap_or_default();
+    let env_str = env_val.trim().to_ascii_lowercase();
+
+    // If OHC_AGENT_AUTH_DISABLED is explicitly true, allow it only in dev, test, or standalone
+    if auth_disabled {
+        if env_str == "development" || env_str == "test" || env_str == "standalone" {
             return Ok(AuthMode::Disabled);
+        } else {
+            return Err(
+                "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development, test, or standalone"
+                    .to_string(),
+            );
         }
-        return Err(
-            "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development, test, or standalone"
-                .to_string(),
-        );
     }
 
-    if let Ok(token) = env::var("OHC_AGENT_TOKEN")
-        && !token.trim().is_empty()
-    {
-        let key = env::var("OHC_AGENT_AUTH_KEY")
-            .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
-        if key.trim().is_empty() || key.len() < 32 {
-            return Err("OHC_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
-        }
-        let verification_key = key.into_bytes();
-        let token_hash = hmac_token(&token, &verification_key);
-        return Ok(AuthMode::Token {
-            token_hash,
-            verification_key,
-        });
+    // If nothing is configured, and we are in development, test, or standalone, we can fallback to Disabled.
+    if env_str == "development" || env_str == "test" || env_str == "standalone" {
+        return Ok(AuthMode::Disabled);
     }
 
-    return Ok(AuthMode::Disabled);
+    Err("complete authentication configuration is required (missing OHC_AGENT_TOKEN, OHC_AGENT_SPIFFE_ID or OHC_AGENT_AUTH_DISABLED)".to_string())
 }
 
 /// Check a bearer token against an expected HMAC hash.

@@ -152,7 +152,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_missing_restic_password_returns_error() {
-        temp_env::with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], || {
+        temp_env::async_with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], async {
             let executor = ResticExecutor {
                 runner: Arc::new(MockRunner),
             };
@@ -169,15 +169,15 @@ mod tests {
                 }
                 other => panic!("Expected LlmRecoverable, got: {:?}", other),
             }
-        });
+        }).await;
     }
 
     #[tokio::test]
     async fn test_cloud_mode_returns_error() {
-        temp_env::with_vars(vec![
+        temp_env::async_with_vars(vec![
             ("RESTIC_PASSWORD", Some("test_pass")),
             ("OHC_EXECUTION_MODE", Some("cloud")),
-        ], || {
+        ], async {
             let executor = ResticExecutor {
                 runner: Arc::new(MockRunner),
             };
@@ -194,12 +194,17 @@ mod tests {
                 }
                 other => panic!("Expected LlmRecoverable, got: {:?}", other),
             }
-        });
+        }).await;
     }
 
     #[tokio::test]
     async fn test_no_hardcoded_dummy_password() {
         let source = include_str!("restic.rs");
-        assert!(!source.contains("dummy_password"), "Hardcoded 'dummy_password' should have been removed");
+        let target_pattern = format!("{}_{}", "dummy", "password");
+        // We find occurrences, but we exclude the line where this test's pattern or assertion is defined
+        let has_pattern_in_impl = source.lines()
+            .filter(|line| !line.contains("target_pattern") && !line.contains("test_no_hardcoded_dummy_password"))
+            .any(|line| line.contains(&target_pattern));
+        assert!(!has_pattern_in_impl, "Hardcoded dummy password should have been removed from the implementation");
     }
 }
