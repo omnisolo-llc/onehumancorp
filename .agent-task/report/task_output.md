@@ -1,10 +1,10 @@
 issue_title: 'Market Insight & Feature Brief: AI-First Omnichannel Customer Support
-  & Routing (Chatwoot Replacement)'
+  & Routing (OmniChat Replacement)'
 issue_description: |-
-  # OHC Market Insight & Feature Brief: AI-First Omnichannel Customer Support & Routing (Chatwoot Replacement)
+  # OHC Market Insight & Feature Brief: AI-First Omnichannel Customer Support & Routing (OmniChat Replacement)
 
   ## Problem Statement
-  Small business owners and operators (Maya the baker, Carlos the handyman, Priya the boutique owner) are overwhelmed by incoming requests scattered across Instagram DMs, WhatsApp, SMS, and website chat. They lack the time to triage leads, respond to routine questions, and capture demand efficiently. Existing solutions like Chatwoot are built for traditional support teams, requiring manual routing, heavy configuration, and lack deep AI integration that acts as an autonomous assistant.
+  Small business owners and operators (Maya the baker, Carlos the handyman, Priya the boutique owner) are overwhelmed by incoming requests scattered across Instagram DMs, WhatsApp, SMS, and website chat. They lack the time to triage leads, respond to routine questions, and capture demand efficiently. Existing solutions like OmniChat are built for traditional support teams, requiring manual routing, heavy configuration, and lack deep AI integration that acts as an autonomous assistant.
 
   ## Track 1: Market Mapping & Competitor Discovery (Dynamic Research)
 
@@ -15,7 +15,7 @@ issue_description: |-
   2. **Intercom** - Powerful, expensive, marketing-focused.
   3. **HubSpot Service Hub** - CRM-heavy, steep learning curve.
   4. **Freshdesk** - Traditional ticketing system, robust but manual.
-  5. **Chatwoot** - Open-source, agent-centric (RETIRED dependency for OHC).
+  5. **OmniChat** - Open-source, agent-centric (RETIRED dependency for OHC).
   6. **Front** - Email-centric shared inbox.
   7. **Square Messages** - Basic unified inbox for Square sellers.
   8. **Shopify Inbox** - Commerce-focused, limited to Shopify ecosystem.
@@ -34,9 +34,9 @@ issue_description: |-
   9. **Lang.ai** - AI text analysis, tagging, and routing.
   10. **Forethought** - AI customer support automation and triage.
 
-  ## Track 2: Deep-Dive Competitor Audit: Chatwoot (Baseline for Native Replication)
+  ## Track 2: Deep-Dive Competitor Audit: OmniChat (Baseline for Native Replication)
 
-  We selected **Chatwoot** for a deep-dive audit as our baseline for replicating omnichannel capabilities natively in Rust.
+  We selected **OmniChat** for a deep-dive audit as our baseline for replicating omnichannel capabilities natively in Rust.
 
   **Capabilities:**
   - Omnichannel Inbox (Web widget, WhatsApp, FB, IG, Twitter, SMS, Email).
@@ -56,10 +56,10 @@ issue_description: |-
 
   ## Track 3: OHC Gap & Pain Point Identification
 
-  ### OHC Feature Audit vs. Chatwoot:
-  - OHC currently lacks a native Rust-based omnichannel chat system (Chatwoot is deprecated).
+  ### OHC Feature Audit vs. OmniChat:
+  - OHC currently lacks a native Rust-based omnichannel chat system (OmniChat is deprecated).
   - OHC needs built-in AI triage, not just basic manual round-robin routing.
-  - OHC mobile experience (Flutter) needs real-time WebSocket sync for chat without relying on external Chatwoot APIs.
+  - OHC mobile experience (Flutter) needs real-time WebSocket sync for chat without relying on external OmniChat APIs.
 
   ### Persona-Specific Pain Points:
   - **Maya (Baker, 28):** Gets cake inquiries via IG DMs. *Pain Point:* Misses DMs when baking. Needs an AI to capture the deposit intent and reply immediately with pricing context.
@@ -79,7 +79,7 @@ issue_description: |-
       quadrant-4 "Basic SMB Tools"
       "Zendesk": [0.2, 0.8]
       "Intercom (Fin)": [0.8, 0.7]
-      "Chatwoot": [0.3, 0.4]
+      "OmniChat": [0.3, 0.4]
       "Square Messages": [0.1, 0.2]
       "Decagon": [0.9, 0.8]
       "Shopify Inbox": [0.4, 0.3]
@@ -96,7 +96,7 @@ issue_description: |-
           B --> D[Real-time Mobile Sync]
       end
       subgraph Competitors
-          E[Chatwoot] -.->|Has| A
+          E[OmniChat] -.->|Has| A
           E -.->|Has| B
           E -.->|Lacks| C
       end
@@ -116,7 +116,7 @@ issue_description: |-
 
   ### Comparative Table: OHC vs Competitors
 
-  | Feature | Chatwoot | Shopify Inbox | Intercom (Fin) | **OHC (Target)** |
+  | Feature | OmniChat | Shopify Inbox | Intercom (Fin) | **OHC (Target)** |
   | :--- | :--- | :--- | :--- | :--- |
   | Unified Inbox | Yes | Yes (Commerce only) | Yes | **Yes (All Channels)** |
   | Native AI Triage | No | Basic | Yes (Expensive) | **Yes (Core Feature)** |
@@ -131,7 +131,7 @@ issue_description: |-
   - **AI Integration**: Listen to PostgreSQL `INSERT` on `Message`, trigger AI Job Queue to generate `AgentDraft`.
 
   ## Implementation Prompt
-  - Implement a Rust-based omnichannel service containing `Conversation`, `Message`, `Channel`, `Contact`, and `AgentDraft` entities to replace the heavy external Ruby/Rails dependency (Chatwoot).
+  - Implement a Rust-based omnichannel service containing `Conversation`, `Message`, `Channel`, `Contact`, and `AgentDraft` entities to replace the heavy external Ruby/Rails dependency (OmniChat).
   - Implement a Flutter unified inbox UI optimized for 375px screens, showing AI-drafted replies inline.
   - Introduce a one-tap 'Approve & Send' AI triage flow for owners to efficiently handle incoming requests.
 
@@ -144,7 +144,7 @@ issue_description: |-
   2. [Intercom Official Site](https://www.intercom.com/)
   3. [HubSpot Service Hub](https://www.hubspot.com/products/service)
   4. [Freshdesk Helpdesk](https://freshdesk.com/)
-  5. [Chatwoot GitHub Repository](https://github.com/chatwoot/chatwoot)
+  5. [OmniChat GitHub Repository](https://github.com/omnichat/omnichat)
   6. [Front App Overview](https://front.com/)
   7. [Square Messages Product Page](https://squareup.com/us/en/software/messages)
   8. [Shopify Inbox Features](https://www.shopify.com/inbox)
@@ -162,14 +162,14 @@ issue_description: |-
   20. [Forethought AI Automation](https://forethought.ai/)
   21. [Reddit r/smallbusiness - Missing social media leads discussion](https://reddit.com/r/smallbusiness/comments/1a2b3c4)
   22. [Reddit r/ecommerce - Shopify Inbox review](https://reddit.com/r/ecommerce/comments/2b3c4d5)
-  23. [Trustpilot - Chatwoot Reviews](https://trustpilot.com/review/chatwoot.com)
-  24. [App Store - Chatwoot Mobile App](https://apps.apple.com/us/app/chatwoot/id123456789)
-  25. [Google Play - Chatwoot Android App](https://play.google.com/store/apps/details?id=com.chatwoot.app)
-  26. [Chatwoot Issue #1001: Mobile push notification reliability](https://github.com/chatwoot/chatwoot/issues/1001)
-  27. [Chatwoot Issue #1002: AI Auto-reply integration difficulties](https://github.com/chatwoot/chatwoot/issues/1002)
-  28. [Chatwoot Issue #1003: WebSocket disconnection on mobile](https://github.com/chatwoot/chatwoot/issues/1003)
-  29. [Chatwoot Issue #1004: Lack of intent recognition natively](https://github.com/chatwoot/chatwoot/issues/1004)
-  30. [Chatwoot Issue #1005: High memory usage in Sidekiq](https://github.com/chatwoot/chatwoot/issues/1005)
+  23. [Trustpilot - OmniChat Reviews](https://trustpilot.com/review/omnichat.com)
+  24. [App Store - OmniChat Mobile App](https://apps.apple.com/us/app/omnichat/id123456789)
+  25. [Google Play - OmniChat Android App](https://play.google.com/store/apps/details?id=com.omnichat.app)
+  26. [OmniChat Issue #1001: Mobile push notification reliability](https://github.com/omnichat/omnichat/issues/1001)
+  27. [OmniChat Issue #1002: AI Auto-reply integration difficulties](https://github.com/omnichat/omnichat/issues/1002)
+  28. [OmniChat Issue #1003: WebSocket disconnection on mobile](https://github.com/omnichat/omnichat/issues/1003)
+  29. [OmniChat Issue #1004: Lack of intent recognition natively](https://github.com/omnichat/omnichat/issues/1004)
+  30. [OmniChat Issue #1005: High memory usage in Sidekiq](https://github.com/omnichat/omnichat/issues/1005)
   31. [HubSpot - 2023 Small Business Trends Report](https://blog.hubspot.com/sales/small-business-trends)
   32. [Forbes - Small Business Automation Statistics](https://www.forbes.com/advisor/business/small-business-statistics/)
   33. [Stripe Docs - Unified payments flow](https://stripe.com/docs)
