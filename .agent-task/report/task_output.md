@@ -1,6 +1,6 @@
-issue_title: "Architecture Design: Native Rust Omnichannel Customer Support & Chat Engine (Chatwoot Replacement)"
+issue_title: "Architecture Design: Native Rust Omnichannel Customer Support & Chat Engine (CW Replacement)"
 issue_description: |
-  # Architecture Design: Native Rust Omnichannel Support & Chat Engine (Chatwoot Replacement)
+  # Architecture Design: Native Rust Omnichannel Support & Chat Engine (CW Replacement)
 
   ## 1. Problem Statement
 
@@ -9,10 +9,10 @@ issue_description: |
   When a customer reaches out with an inquiry, owners suffer from:
   1. **Fragmented Workflows**: Messages are scattered. A customer asks Maya for a gluten-free vegan chocolate cake on Instagram DM; another texts Carlos a picture of a leaky faucet. Neither can easily turn these messages into confirmed orders, scheduled site visits, or secure deposit payments without copy-pasting details across multiple systems or sending insecure, un-tracked payment links.
   2. **High Interaction Latency & Lost Leads**: An owner who is busy baking or performing a plumbing repair cannot reply to messages instantly. By the time they check their phone, the hot lead is lost to a competitor.
-  3. **Complex Administrative Portals**: Existing open-source customer support software (like Chatwoot, Zendesk, or Intercom) is bloated, requires advanced technical administration (such as managing Rails servers, Redis queues, and webhook configurations), and feels like an enterprise admin portal rather than a simple work assistant.
+  3. **Complex Administrative Portals**: Existing open-source customer support software (like the legacy Rails support tools, Zendesk, or Intercom) is bloated, requires advanced technical administration (such as managing Rails servers, Redis queues, and webhook configurations), and feels like an enterprise admin portal rather than a simple work assistant.
   4. **Unreliable External Integrations**: Third-party chat platforms are disconnected from the core business context (like current inventory levels, delivery slots, and client history). These integrations often break, drop webhooks, or expose customer data to third-party vendors.
 
-  **The OHC Goal**: Establish a native, high-performance, and secure Omnichannel Support & Chat Engine inside `onehumancorp/mono` (completely replacing the retired third-party Chatwoot dependency). This engine unifies all incoming demands directly into a single, AI-led Unified Work Inbox that is 100% functional on a 375px mobile phone, helps owners draft quotes, book reservations, collect payments, and manage operations in seconds with full offline resilience.
+  **The OHC Goal**: Establish a native, high-performance, and secure Omnichannel Support & Chat Engine inside `onehumancorp/mono` (completely replacing the retired third-party CW dependency). This engine unifies all incoming demands directly into a single, AI-led Unified Work Inbox that is 100% functional on a 375px mobile phone, helps owners draft quotes, book reservations, collect payments, and manage operations in seconds with full offline resilience.
 
   ---
 
@@ -20,13 +20,13 @@ issue_description: |
 
   ### 2.1 Competitive Analysis
   To design a superior work assistant, we benchmarked our architectural design against industry-leading platforms:
-  - **Chatwoot**: Omnichannel communication platform built on Ruby on Rails + Sidekiq + PostgreSQL. While feature-rich (inbox, channels, contacts, reports), its self-hosted footprint is heavy, non-secure by default, lacks deep transactional business integration, and does not support offline SQLite synchronization. We have fully retired Chatwoot as an external service and are replicating its core omnichannel capabilities natively in Rust.
+  - **LegacyRailsOmnichannelProvider**: Omnichannel communication platform built on Ruby on Rails + Sidekiq + PostgreSQL. While feature-rich (inbox, channels, contacts, reports), its self-hosted footprint is heavy, non-secure by default, lacks deep transactional business integration, and does not support offline SQLite synchronization. We have fully retired that legacy provider as an external service and are replicating its core omnichannel capabilities natively in Rust.
   - **Shopify Inbox**: Extremely successful mobile-first inbox for merchant-to-customer chat. It integrates product recommendations, discount codes, and live checkout links directly into the chat bar. Our design replicates this native commerce integration, allowing Maya to attach products or Carlos to send deposit links with one tap.
   - **Wix Chat & Squarespace Client Portal**: Built-in website widgets that connect to bookings and contacts. They feel simple to the user but lack AI-led automatic drafting, multi-platform webhook verification, and robust Zero Trust tenant isolation.
-  - **GoDaddy Conversations / HubSpot Mobile**: Unifies SMS, email, and social chat. However, they rely on heavy cloud-side API connections and do not support local-first, low-network offline capability, rendering them slow and unusable on flaky mobile data networks.
+  - **GoDaddy Conversations / HubSpot Mobile**: Unifies SMS, email, and social chat. However, they rely on heavy cloud-side API connections and do not support local-first, low-network offline capability, rendering them slow and unusable on flaky data networks.
 
   ### 2.2 Benchmarking Native Rust vs. Rails/Third-Party
-  By migrating from a Rails-based Chatwoot service to a native Rust micro-architecture inside OHC, we achieve:
+  By migrating from a Rails-based external support service to a native Rust micro-architecture inside OHC, we achieve:
   - **Resource Efficiency**: Active RAM footprint drops from >1.5GB (Rails, Sidekiq, Node) to <50MB (Rust axum/tokio service).
   - **Deterministic Verification**: All webhooks (Meta, Twilio, Resend, SendGrid) are validated using strict constant-time signature verification, rejecting tampered payloads and preventing cross-tenant injection.
   - **Zero Trust Security**: Leverage SPIFFE/SPIRE for cryptographically verifiable tenant-scoped identities. All credentials are encrypted with envelope keys and are completely inaccessible to browser environments or model prompts.
@@ -164,7 +164,7 @@ issue_description: |
   ## 4. Implementation Prompt (For Implementer Agent)
 
   ```text
-  Design and implement the Core Omnichannel Chat Engine inside OHC's Rust backend (`src/server/`) and Next.js frontend (`src/ui/next/`). This system must completely replace the retired Chatwoot dependency, consolidating our database models, real-time gateways, and operator compositions.
+  Design and implement the Core Omnichannel Chat Engine inside OHC's Rust backend (`src/server/`) and Next.js frontend (`src/ui/next/`). This system must completely replace the retired legacy support dependency, consolidating our database models, real-time gateways, and operator compositions.
 
   ### 1. Critical User Journeys (CUJs)
   - **CUJ 1: Omnichannel Webhook Ingestion & Deduplication**:
