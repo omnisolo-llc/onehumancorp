@@ -25,6 +25,7 @@ pub mod chaos;
 pub mod syndication_handler;
 pub mod dynamic_workflows;
 
+pub mod chat;
 pub mod catalog;
 pub mod shipping;
 pub mod meta_webhook;

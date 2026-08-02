@@ -123,4 +123,78 @@ impl ChatService {
         .fetch_one(&self.pool)
         .await
     }
+
+    pub async fn get_messages(
+        &self,
+        tenant_id: Uuid,
+        conversation_id: Uuid,
+    ) -> Result<Vec<ChatMessage>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            FROM chat_messages
+            WHERE tenant_id = $1 AND conversation_id = $2
+            ORDER BY created_at ASC
+            "#
+        )
+        .bind(tenant_id)
+        .bind(conversation_id)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    pub async fn get_channel_by_inbox(
+        &self,
+        tenant_id: Uuid,
+        inbox_id: Uuid,
+        channel_type: &str,
+    ) -> Result<Option<ChatChannel>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, inbox_id, channel_type, config, created_at, updated_at
+            FROM chat_channels
+            WHERE tenant_id = $1 AND inbox_id = $2 AND channel_type = $3
+            "#
+        )
+        .bind(tenant_id)
+        .bind(inbox_id)
+        .bind(channel_type)
+        .fetch_optional(&self.pool)
+        .await
+    }
+
+    pub async fn upsert_contact(
+        &self,
+        tenant_id: Uuid,
+        email: Option<String>,
+        name: Option<String>,
+        phone: Option<String>,
+    ) -> Result<ChatContact, sqlx::Error> {
+        if let Some(ref e) = email {
+            if let Some(contact) = sqlx::query_as::<_, ChatContact>(
+                "SELECT * FROM chat_contacts WHERE tenant_id = $1 AND email = $2"
+            )
+            .bind(tenant_id)
+            .bind(e)
+            .fetch_optional(&self.pool)
+            .await? {
+                return Ok(contact);
+            }
+        }
+
+        sqlx::query_as(
+            r#"
+            INSERT INTO chat_contacts (id, tenant_id, name, email, phone)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, tenant_id, name, email, phone, created_at, updated_at
+            "#
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(name)
+        .bind(email)
+        .bind(phone)
+        .fetch_one(&self.pool)
+        .await
+    }
 }
