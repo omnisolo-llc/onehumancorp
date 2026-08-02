@@ -389,9 +389,8 @@ struct ApiKeyMetadata {
     expires_at: Option<String>,
 }
 
-fn get_member_uuid(sub: &str) -> uuid::Uuid {
-    uuid::Uuid::parse_str(sub)
-        .unwrap_or_else(|_| uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, sub.as_bytes()))
+fn get_member_uuid(sub: &str) -> String {
+    sub.to_string()
 }
 
 #[derive(Clone)]
