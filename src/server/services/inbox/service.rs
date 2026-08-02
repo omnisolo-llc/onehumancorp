@@ -122,20 +122,26 @@ impl InboxService {
         thread_id: &str,
         _message_content: &str,
     ) -> Result<(), sqlx::Error> {
+        // Queue the inbound message for the Autonomous Negotiator.
+        // The orchestration layer will pick this up to generate a quote.
         let action_id = Uuid::new_v4().to_string();
-        let payload = r#"{"draft_reply": "Thank you for reaching out! Let me check on that for you."}"#;
+        let payload = serde_json::json!({
+            "inbound_message": _message_content,
+            "thread_id": thread_id
+        });
+        let payload_str = serde_json::to_string(&payload).unwrap_or_default();
 
         sqlx::query(
-            r#"INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'DraftReply', $4, 'pending')"#
+            r#"INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'AgenticNegotiationQueue', $4, 'queued_for_agent')"#
         )
-        .bind(action_id)
+        .bind(&action_id)
         .bind(tenant_id)
         .bind(thread_id)
-        .bind(payload)
+        .bind(&payload_str)
         .execute(&mut **tx)
         .await?;
 
-        info!("Triggered AI triage for thread {}", thread_id);
+        info!("Queued AI Agentic Negotiation for thread {} (action {})", thread_id, action_id);
         Ok(())
     }
 
@@ -177,7 +183,12 @@ impl InboxService {
              if resolution == "approved" {
                  if let Some(payload) = action_payload {
                      if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&payload) {
-                         if let Some(reply) = parsed.get("draft_reply").and_then(|v| v.as_str()) {
+                         let mut reply_opt = parsed.get("draft_reply").and_then(|v| v.as_str()).map(|s| s.to_string());
+                         if reply_opt.is_none() && parsed.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                             let price = parsed.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                             reply_opt = Some(format!("I have prepared a quote for your request. The suggested price is ${:.2}. Let me know if you would like to proceed.", price));
+                         }
+                         if let Some(reply) = reply_opt {
                              let msg_id = Uuid::new_v4().to_string();
                              sqlx::query(
                                 r#"INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES ($1, $2, $3, 'agent', $4)"#
@@ -185,10 +196,10 @@ impl InboxService {
                              .bind(msg_id)
                              .bind(tenant_id)
                              .bind(&thread_id)
-                             .bind(reply)
+                             .bind(&reply)
                              .execute(&mut *tx)
                              .await?;
-                             info!("Executed approved DraftReply action {} for thread {}", action_id, thread_id);
+                             info!("Executed approved action {} for thread {}", action_id, thread_id);
                          }
                      }
                  }
