@@ -7,6 +7,7 @@ exports_files(["BUILD.bazel"])
 
 _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/test_viewport.spec.ts",
+    "//src/ui/next:src/e2e/native_omni_chat.spec.ts",
 
     "//src/ui/next:src/e2e/calendar.spec.ts",
     "//src/ui/next:src/e2e/exit-intent-builder.spec.ts",
@@ -88,6 +89,7 @@ _CI_REAL_STACK_E2E_SPECS = [
     "//src/e2e:login_auth.spec.ts",
     "//src/e2e:real_data_contract.spec.ts",
     "//src/ui/next:src/e2e/app-shell-style.spec.ts",
+    "//src/ui/next:src/e2e/native_omni_chat.spec.ts",
 ]
 
 # Historical browser contracts that relied on response interception, injected

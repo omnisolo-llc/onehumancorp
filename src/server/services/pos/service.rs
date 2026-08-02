@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use ::server_ohc::app::pos_service_server::PosService;
 use ::server_ohc::app::{
     EndTerminalSessionRequest, EndTerminalSessionResponse, StartTerminalSessionRequest,

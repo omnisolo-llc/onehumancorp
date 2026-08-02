@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use super::saga::*;
 use sqlx::PgPool;
 use std::env;

@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use sqlx::{FromRow};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
