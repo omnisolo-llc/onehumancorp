@@ -76,6 +76,9 @@ done
 playwright_spec_workspace_name() {
   local spec_file="$1"
   local rel="$spec_file"
+  rel="${rel#*execroot/_main/}"
+  rel="${rel#*/bazel-out/*/bin/}"
+  if [[ "$rel" == /app/* ]]; then rel="${rel#/app/}"; fi
   for root in "$SOURCE_REPO_ROOT" "$workspace_root" "$RUNFILES_ROOT"; do
     if [[ -n "$root" && "$rel" == "$root/"* ]]; then
       rel="${rel#$root/}"
