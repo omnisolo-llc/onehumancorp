@@ -3,7 +3,7 @@ use std::time::Duration;
 use tokio::sync::OnceCell;
 
 static POSTGRES_SETUP: OnceCell<Result<(), String>> = OnceCell::const_new();
-// Embedded SQLx migrations for test database setup.
+// Embedded SQLx migrations for test database setup (updated 217).
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../migrations");
 
 #[derive(Debug, Clone, PartialEq, Eq)]
