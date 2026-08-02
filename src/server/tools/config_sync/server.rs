@@ -100,6 +100,12 @@ impl ConfigSyncServer {
                 }
 
                 let config_str = serde_json::to_string(&payload).unwrap_or_else(|_| "".to_string());
+                if crate::is_standalone_runtime() && !::server_config::is_telemetry_enabled() {
+                    return Err(tonic::Status::failed_precondition(
+                        "Telemetry disabled in standalone mode. Sync is forbidden for local sovereignty.",
+                    ));
+                }
+
                 if config_str.len() > max_size {
                     return Err(tonic::Status::invalid_argument("Config payload too large"));
                 }
