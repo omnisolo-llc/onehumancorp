@@ -7,3 +7,4 @@ pub mod migration;
 
 pub use capabilities::{DatabaseBackend, DatabaseCapabilities};
 pub use connection::{AppDatabase, DatabaseUrl};
+pub mod chat;
