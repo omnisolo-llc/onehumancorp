@@ -794,10 +794,10 @@ Output JSON format:
     }
 }
 
-/// Chatwoot Retirement & Native Rust Omnichannel Chat Integration
-/// External Chatwoot dependencies are 100% RETIRED. The builtin AI agent microservice
+/// chat platform Retirement & Native Rust Omnichannel Chat Integration
+/// External chat platform dependencies are 100% RETIRED. The builtin AI agent microservice
 /// connects directly via high-performance Rust IPC/gRPC to OHC's native Rust Chat Engine.
-/// Replicates Chatwoot bot/webhook protocols: native AI auto-responder, copilot response drafting,
+/// Replicates chat platform bot/webhook protocols: native AI auto-responder, copilot response drafting,
 /// intent classification, and human agent handoff features in Rust.
 
 pub struct OmnichannelChatEngine {
@@ -864,7 +864,7 @@ mod omnichannel_tests {
     use super::*;
 
     #[test]
-    fn test_chatwoot_native_replication() {
+    fn test_chat_platform_native_replication() {
         let engine = OmnichannelChatEngine::new();
 
         // Intent classification
