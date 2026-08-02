@@ -128,28 +128,6 @@ export const PUBLIC_ROUTE_ENTRIES = [
     reason: "load immutable framework assets needed by the login page",
     owner: "framework",
   },
-
-  {
-    method: "GET",
-    invocation: "page",
-    matcher: { kind: "exact", path: "/onboarding" },
-    reason: "render the onboarding page",
-    owner: "authentication",
-  },
-  {
-    method: "POST",
-    invocation: "route-handler",
-    matcher: { kind: "exact", path: "/api/v1/onboarding/chat" },
-    reason: "chat with onboarding agent",
-    owner: "authentication",
-    api: {
-      bodyLimitBytes: 4096,
-      rateLimitPolicy: "backend-registration",
-      tenantSource: "none",
-      replayPolicy: "one-time-registration",
-      cachePolicy: "private-no-store",
-    },
-  },
 ] as const satisfies readonly PublicRouteEntry[];
 
 export function classifyRequest(input: RequestDescriptor): RouteDecision {
