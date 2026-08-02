@@ -8898,6 +8898,8 @@ dependencies = [
  "serde",
  "server_config",
  "sqlx",
+ "temp-env",
+ "tempfile",
 ]
 
 [[package]]
@@ -8906,6 +8908,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "serde",
+ "temp-env",
  "tracing",
 ]
 
