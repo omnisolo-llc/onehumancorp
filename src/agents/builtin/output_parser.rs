@@ -72,28 +72,6 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputPars
 
 
 
-impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputParser<T> {
-    fn parse_message(&self, msg: &Message) -> Result<T, String> {
-        // Output Parsing: Primary mechanic is extracting from native tool_calls
-        if !msg.tool_calls.is_empty()
-            && let Some(call) = msg
-                .tool_calls
-                .iter()
-                .find(|t| t.name == "structured_output")
-        {
-            if let Some(data) = call.arguments.get("data") {
-                return self.validate_schema(data);
-            } else {
-                return Err(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
-                    );
-            }
-        }
-
-        // Strict enforcement: Rely entirely on native tool_calls API objects.
-        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
-    }
-}
 
 pub struct RetryWithErrorOutputParser<'a, T> {
     parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
