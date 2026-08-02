@@ -1,15 +1,15 @@
-issue_title: "Architecture & Implementation Plan: Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Architecture & Implementation Plan: Native Rust Omnichannel Chat System"
 issue_description: |
   # Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  OneHumanCorp previously relied on Chatwoot as an external dependency for omnichannel customer support and chat functionality. Relying on an external Ruby on Rails monolith creates latency, limits our multi-tenant row-level security architecture, complicates Zero-Trust deployments (SPIFFE/SPIRE), and fractures the experience for our core owner/operator personas (Maya, Carlos, Priya). To deliver a unified, assistant-first experience where AI agents can seamlessly intercept, triage, and draft replies to customer messages across Instagram, WhatsApp, and Web, OHC must natively implement a high-performance, multi-tenant omnichannel chat engine in Rust.
+  OneHumanCorp previously relied on an external third-party service for omnichannel customer support and chat functionality. Relying on an external Ruby on Rails monolith creates latency, limits our multi-tenant row-level security architecture, complicates Zero-Trust deployments (SPIFFE/SPIRE), and fractures the experience for our core owner/operator personas (Maya, Carlos, Priya). To deliver a unified, assistant-first experience where AI agents can seamlessly intercept, triage, and draft replies to customer messages across Instagram, WhatsApp, and Web, OHC must natively implement a high-performance, multi-tenant omnichannel chat engine in Rust.
 
   ## Research Report
-  **Chatwoot Source Code Audit Findings:**
-  - **Data Models:** Chatwoot uses a hierarchical structure centered around `Account` (tenant), `Inbox`, `Conversation`, `Message`, and `Contact`. It supports polymorphic `Channel` adapters (e.g., `Channel::WebWidget`, `Channel::Email`, `Channel::Api`).
+  **Source Code Audit Findings:**
+  - **Data Models:** The previous external system uses a hierarchical structure centered around `Account` (tenant), `Inbox`, `Conversation`, `Message`, and `Contact`. It supports polymorphic `Channel` adapters (e.g., `Channel::WebWidget`, `Channel::Email`, `Channel::Api`).
   - **Real-time Messaging:** WebSockets broadcast events like `message.created` and `conversation.updated` to connected clients (both agents and customers).
-  - **AI & Automation:** Agents/Bots (`agent_bot.rb`), automation rules (`automation_rule.rb`), and macros (`macro.rb`) trigger off message and conversation lifecycle events.
+  - **AI & Automation:** Agents/Bots, automation rules, and macros trigger off message and conversation lifecycle events.
   - **Competitor Benchmarking:** Shopify Inbox, Wix Inbox, and Stripe's unified messaging all natively integrate chat into their core data graphs. A native Rust implementation in OHC allows us to bind conversations directly to OHC `Orders`, `Appointments`, and `Customers` without brittle webhook synchronizations.
 
   ## Design Doc
@@ -61,7 +61,7 @@ issue_description: |
 
   ## Implementation Prompt
   **To the Implementer Agent:**
-  Your task is to implement the core native Rust Chat microservice replacing Chatwoot.
+  Your task is to implement the core native Rust Chat microservice replacing the external dependency.
   1. Define the PostgreSQL schema for `inboxes`, `channels`, `contacts`, `conversations`, and `messages`, ensuring `tenant_id` is present for RLS.
   2. Implement a Rust web service (e.g., using `axum`) with REST endpoints for creating/fetching messages and a WebSocket endpoint for real-time updates.
   3. Integrate Redis PubSub to broadcast events when new messages arrive.
