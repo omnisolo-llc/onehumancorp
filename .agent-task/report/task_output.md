@@ -1,12 +1,12 @@
 issue_title: "Native Rust Omnichannel Chat: Core Data Models & Channel Adapters"
 issue_description: |
   # Problem Statement
-  OneHumanCorp (OHC) is transitioning away from using Chatwoot as an external dependency for its omnichannel inbox features. We need a native, high-performance replacement built in Rust, hosted inside our monolithic repository (`onehumancorp/mono`).
+  OneHumanCorp (OHC) is transitioning away from using an external Ruby-on-Rails dependency for its omnichannel inbox features. We need a native, high-performance replacement built in Rust, hosted inside our monolithic repository (`onehumancorp/mono`).
 
   Owners (like Maya the baker and Carlos the handyman) currently face friction managing customer communications across SMS, WhatsApp, Email, and Instagram. They need a unified inbox that aggregates all messages seamlessly and allows AI agents (like The Ambassador) to draft replies using a unified history context. Relying on an external system limits our ability to enforce strict multi-tenancy rules and integrate tightly with our custom AI Agent pipeline.
 
   # Research Report
-  - **Chatwoot Source Code Audit**: Investigated the `app/models` and `app/models/channel` directories in the Chatwoot Ruby on Rails repository.
+  - **Source Code Audit**: Investigated the `app/models` and `app/models/channel` directories in the legacy Ruby-on-Rails repository.
   - **Key Entities Identified**:
     - `Account` (Tenant)
     - `Inbox` (Collection of conversations for a specific channel)
