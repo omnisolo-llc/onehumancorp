@@ -8779,3 +8779,4 @@ mod health_test;
 // optimization done
 #[cfg(test)]
 pub mod chaos_network_test;
+pub mod omnichannel;
