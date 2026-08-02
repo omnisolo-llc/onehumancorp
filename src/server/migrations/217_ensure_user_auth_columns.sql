@@ -7,6 +7,14 @@ BEGIN
     END IF;
 END $$;
 
+-- Drop foreign keys referencing users(id) before altering the type
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'api_keys') THEN
+        ALTER TABLE api_keys DROP CONSTRAINT IF EXISTS api_keys_member_id_fkey;
+    END IF;
+END $$;
+
 ALTER TABLE users ALTER COLUMN id TYPE TEXT USING id::text;
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
