@@ -200,13 +200,11 @@ if [[ "$scan_runfiles" == true ]]; then
   fi
   check_forbidden_markers "${runfile_specs[@]}"
   if (( ${#ci_specs[@]} > 0 )); then
-    local ci_runfile_specs=()
+    ci_runfile_specs=()
     for spec in "${runfile_specs[@]}"; do
-      local base_name
       base_name="$(basename "$spec")"
-      local matched=false
+      matched=false
       for ci_spec in "${ci_specs[@]}"; do
-        local ci_base_name
         ci_spec_resolved="$(display_spec "$ci_spec")"
         ci_base_name="$(basename "$ci_spec_resolved")"
         if [[ "$base_name" == "$ci_base_name" ]]; then
