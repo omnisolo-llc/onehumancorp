@@ -1,14 +1,14 @@
-issue_title: "Architect & Implement Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Architect & Implement Native Rust Omnichannel Chat System (the legacy external dependency Replacement)"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) needs a native, high-performance omnichannel chat system built in Rust to entirely replace the external dependency on Chatwoot. Currently, relying on an external service limits our ability to enforce strict tenant isolation, integrate deeply with our AI Agent triage system, and optimize for mobile-first low-latency operations. The owners (like Maya, Carlos, and Priya) need a seamless, real-time inbox where WhatsApp, Instagram DMs, SMS, and Web Widget chats flow into a unified interface, natively deeply integrated with OHC's internal agent orchestrator (KAIROS).
+  OneHumanCorp (OHC) needs a native, high-performance omnichannel chat system built in Rust to entirely replace the external dependency on the legacy external dependency. Currently, relying on an external service limits our ability to enforce strict tenant isolation, integrate deeply with our AI Agent triage system, and optimize for mobile-first low-latency operations. The owners (like Maya, Carlos, and Priya) need a seamless, real-time inbox where WhatsApp, Instagram DMs, SMS, and Web Widget chats flow into a unified interface, natively deeply integrated with OHC's internal agent orchestrator (KAIROS).
 
   ## Research Report
-  Based on an architectural audit of Chatwoot's source code and industry standards (e.g., Shopify Inbox, Stripe, Intercom):
-  - **Data Models:** Chatwoot uses a robust polymorphic channel model. Core entities include `Account` (Tenant), `Inbox` (Channel configuration), `Conversation`, `Message`, and `Contact`. This allows a unified inbox experience regardless of the origin channel.
-  - **Real-Time Messaging:** Chatwoot uses Ruby's ActionCable for WebSockets. For our Rust native implementation, we will utilize `axum` with `tokio-tungstenite` to achieve an order of magnitude lower latency and higher concurrent connection limits, crucial for high-traffic merchants.
+  Based on an architectural audit of the legacy external dependency's source code and industry standards (e.g., Shopify Inbox, Stripe, Intercom):
+  - **Data Models:** the legacy external dependency uses a robust polymorphic channel model. Core entities include `Account` (Tenant), `Inbox` (Channel configuration), `Conversation`, `Message`, and `Contact`. This allows a unified inbox experience regardless of the origin channel.
+  - **Real-Time Messaging:** the legacy external dependency uses Ruby's ActionCable for WebSockets. For our Rust native implementation, we will utilize `axum` with `tokio-tungstenite` to achieve an order of magnitude lower latency and higher concurrent connection limits, crucial for high-traffic merchants.
   - **Multi-Tenancy:** We require strict Row Level Security (RLS). Every entity must have a `tenant_id` linked securely to the authenticated owner session.
-  - **AI Agent Integration:** Unlike Chatwoot, which treats AI as an external bot, OHC's chat system must natively treat AI agents as first-class citizens. Messages must flow into an AI Job Queue for KAIROS to triage before routing to the human owner.
+  - **AI Agent Integration:** Unlike the legacy external dependency, which treats AI as an external bot, OHC's chat system must natively treat AI agents as first-class citizens. Messages must flow into an AI Job Queue for KAIROS to triage before routing to the human owner.
   - **Mobile-First UX:** The unified inbox must work beautifully on a 375px viewport (mobile), allowing owners to quickly act (draft replies, send payment links) without horizontal scrolling.
 
   ## Design Doc
@@ -92,7 +92,7 @@ issue_description: |
   - Migrations execute cleanly and enforce RLS.
   - Rust API can create messages and broadcast them via WebSockets.
   - 100% test pass rate in CI.
-  - No external Chatwoot dependencies exist in the code path.
+  - No external the legacy external dependency dependencies exist in the code path.
 
 issue_priority: P0
 issue_category: research
