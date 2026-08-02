@@ -2592,7 +2592,7 @@ impl Agent {
                             }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                            if llm_recoverable_count >= 2 {
+                            if llm_recoverable_count >= std::cmp::min(cfg.max_retries, 2) {
                                 break Err(crate::types::ToolError::Unexpected(format!("Error executing planned step: LLM-recoverable retries exhausted: {}", err_msg)));
                             }
                             llm_recoverable_count += 1;
@@ -2738,7 +2738,7 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                        if llm_recoverable_count >= 2 {
+                        if llm_recoverable_count >= std::cmp::min(cfg.max_retries, 2) {
                             return Err(format!("Error executing planned step: LLM-recoverable retries exhausted: {}", err_msg).into());
                         }
                         llm_recoverable_count += 1;

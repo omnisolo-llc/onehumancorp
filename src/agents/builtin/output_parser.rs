@@ -140,6 +140,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         strategy: &dyn RetryStrategy,
     ) -> Result<T, ToolError> {
         // SOTA Harness Patterns (2025-2026): Error Handling
+
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut current_req = req.clone();
 
@@ -172,7 +173,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
             let resp = match self.llm.chat(current_req.clone()).await {
                 Ok(r) => r,
                 Err(e) => {
-                    if attempt >= max_retries {
+                    if attempt > max_retries {
                         return Err(ToolError::Transient(format!(
                             "LLM Error after retries: {}",
                             e
@@ -191,7 +192,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
             match self.parser.parse_message(msg) {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
-                    if attempt >= max_retries {
+                    if attempt > max_retries {
                         if parse_error_msg.contains("Validation Error")
                             || parse_error_msg.contains("Semantic validation failed")
                             || parse_error_msg.contains("Expected native tool_calls")
