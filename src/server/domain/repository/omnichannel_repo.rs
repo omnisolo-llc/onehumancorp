@@ -4,6 +4,23 @@ use chrono::{DateTime, Utc};
 use std::sync::Arc;
 use crate::db::DB;
 
+#[derive(Clone, Debug, FromRow, serde::Serialize, serde::Deserialize)]
+pub struct ChatOutboxJob {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub message_id: Uuid,
+    pub status: String, // 'queued', 'leased', 'retry_wait', 'completed', 'dead_letter', 'cancelled'
+    pub retry_count: i32,
+    pub lease_expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, FromRow, serde::Serialize, serde::Deserialize)]
+pub struct AutomationFence {
+    pub id: Uuid,
+    pub conversation_id: Uuid,
+    pub fence_version: i32,
+}
+
 #[derive(Clone, Debug, FromRow)]
 pub struct CustomerProfile {
     pub id: Uuid,
@@ -201,6 +218,205 @@ impl OmniChannelRepo {
         .await?;
         Ok(record)
     }
+
+    pub async fn create_outbox_job(&self, tenant_id: Uuid, message_id: Uuid) -> Result<ChatOutboxJob, sqlx::Error> {
+        let id = Uuid::new_v4();
+        let status = "queued".to_string();
+        let retry_count = 0;
+
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let record = sqlx::query_as::<_, ChatOutboxJob>(
+                    "INSERT INTO chat_delivery_jobs (id, tenant_id, message_id, status, retry_count, lease_expires_at) VALUES ($1, $2, $3, $4, $5, NULL) RETURNING id, tenant_id, message_id, status, retry_count, lease_expires_at",
+                )
+                .bind(id)
+                .bind(tenant_id)
+                .bind(message_id)
+                .bind(&status)
+                .bind(retry_count)
+                .fetch_one(&self.db.pool)
+                .await?;
+                Ok(record)
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "INSERT INTO chat_delivery_jobs (id, tenant_id, message_id, status, retry_count, lease_expires_at) VALUES (?, ?, ?, ?, ?, NULL)",
+                )
+                .bind(&id.to_string())
+                .bind(&tenant_id.to_string())
+                .bind(&message_id.to_string())
+                .bind(&status)
+                .bind(retry_count)
+                .execute(pool)
+                .await?;
+
+                Ok(ChatOutboxJob {
+                    id,
+                    tenant_id,
+                    message_id,
+                    status,
+                    retry_count,
+                    lease_expires_at: None,
+                })
+            }
+        }
+    }
+
+    pub async fn lease_outbox_job(&self, lease_duration_secs: i64) -> Result<Option<ChatOutboxJob>, sqlx::Error> {
+        let now = Utc::now();
+        let expires = now + chrono::Duration::seconds(lease_duration_secs);
+
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let record = sqlx::query_as::<_, ChatOutboxJob>(
+                    "UPDATE chat_delivery_jobs
+                     SET status = 'leased', lease_expires_at = $1
+                     WHERE id = (
+                         SELECT id FROM chat_delivery_jobs
+                         WHERE status = 'queued' OR (status = 'leased' AND lease_expires_at < $2)
+                         LIMIT 1 FOR UPDATE SKIP LOCKED
+                     )
+                     RETURNING id, tenant_id, message_id, status, retry_count, lease_expires_at",
+                )
+                .bind(expires)
+                .bind(now)
+                .fetch_optional(&self.db.pool)
+                .await?;
+                Ok(record)
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                let row_opt: Option<(String, String, String, String, i32, Option<String>)> = sqlx::query_as(
+                    "SELECT id, tenant_id, message_id, status, retry_count, lease_expires_at FROM chat_delivery_jobs
+                     WHERE status = 'queued' OR (status = 'leased' AND lease_expires_at < ?) LIMIT 1",
+                )
+                .bind(now.to_rfc3339())
+                .fetch_optional(pool)
+                .await?;
+
+                if let Some((id_str, tenant_str, message_str, _, r_count, _)) = row_opt {
+                    sqlx::query(
+                        "UPDATE chat_delivery_jobs SET status = 'leased', lease_expires_at = ? WHERE id = ?",
+                    )
+                    .bind(expires.to_rfc3339())
+                    .bind(&id_str)
+                    .execute(pool)
+                    .await?;
+
+                    Ok(Some(ChatOutboxJob {
+                        id: Uuid::parse_str(&id_str).unwrap_or_default(),
+                        tenant_id: Uuid::parse_str(&tenant_str).unwrap_or_default(),
+                        message_id: Uuid::parse_str(&message_str).unwrap_or_default(),
+                        status: "leased".to_string(),
+                        retry_count: r_count,
+                        lease_expires_at: Some(expires),
+                    }))
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+
+    pub async fn update_outbox_job_status(&self, id: Uuid, status: &str, retry_count: i32) -> Result<(), sqlx::Error> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query(
+                    "UPDATE chat_delivery_jobs SET status = $1, retry_count = $2, lease_expires_at = NULL WHERE id = $3",
+                )
+                .bind(status)
+                .bind(retry_count)
+                .bind(id)
+                .execute(&self.db.pool)
+                .await?;
+                Ok(())
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "UPDATE chat_delivery_jobs SET status = ?, retry_count = ?, lease_expires_at = NULL WHERE id = ?",
+                )
+                .bind(status)
+                .bind(retry_count)
+                .bind(&id.to_string())
+                .execute(pool)
+                .await?;
+                Ok(())
+            }
+        }
+    }
+
+    pub async fn increment_automation_fence(&self, conversation_id: Uuid) -> Result<i32, sqlx::Error> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row: (i32,) = sqlx::query_as(
+                    "INSERT INTO chat_automation_fences (id, conversation_id, fence_version)
+                     VALUES ($1, $2, 1)
+                     ON CONFLICT (conversation_id)
+                     DO UPDATE SET fence_version = chat_automation_fences.fence_version + 1
+                     RETURNING fence_version"
+                )
+                .bind(Uuid::new_v4())
+                .bind(conversation_id)
+                .fetch_one(&self.db.pool)
+                .await?;
+                Ok(row.0)
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                let existing: Option<(i32,)> = sqlx::query_as(
+                    "SELECT fence_version FROM chat_automation_fences WHERE conversation_id = ?"
+                )
+                .bind(&conversation_id.to_string())
+                .fetch_optional(pool)
+                .await?;
+
+                if let Some((v,)) = existing {
+                    let next_v = v + 1;
+                    sqlx::query(
+                        "UPDATE chat_automation_fences SET fence_version = ? WHERE conversation_id = ?"
+                    )
+                    .bind(next_v)
+                    .bind(&conversation_id.to_string())
+                    .execute(pool)
+                    .await?;
+                    Ok(next_v)
+                } else {
+                    let id = Uuid::new_v4();
+                    sqlx::query(
+                        "INSERT INTO chat_automation_fences (id, conversation_id, fence_version) VALUES (?, ?, 1)"
+                    )
+                    .bind(&id.to_string())
+                    .bind(&conversation_id.to_string())
+                    .execute(pool)
+                    .await?;
+                    Ok(1)
+                }
+            }
+        }
+    }
+
+    pub async fn check_automation_fence(&self, conversation_id: Uuid, expected_version: i32) -> Result<bool, sqlx::Error> {
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row: Option<(i32,)> = sqlx::query_as(
+                    "SELECT fence_version FROM chat_automation_fences WHERE conversation_id = $1"
+                )
+                .bind(conversation_id)
+                .fetch_optional(&self.db.pool)
+                .await?;
+
+                Ok(row.map_or(true, |r| r.0 == expected_version))
+            },
+            crate::db::DbStore::Sqlite(pool) => {
+                let row: Option<(i32,)> = sqlx::query_as(
+                    "SELECT fence_version FROM chat_automation_fences WHERE conversation_id = ?"
+                )
+                .bind(&conversation_id.to_string())
+                .fetch_optional(pool)
+                .await?;
+
+                Ok(row.map_or(true, |r| r.0 == expected_version))
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -257,5 +473,74 @@ mod tests {
             updated_at: None,
         };
         assert_eq!(draft.status, "PENDING");
+    }
+
+    #[tokio::test]
+    async fn test_outbox_and_automation_fence_sqlite() {
+        use sqlx::SqlitePool;
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+
+        let schema = r#"
+            CREATE TABLE chat_delivery_jobs (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                message_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                retry_count INTEGER NOT NULL,
+                lease_expires_at TEXT
+            );
+            CREATE TABLE chat_automation_fences (
+                id TEXT PRIMARY KEY,
+                conversation_id TEXT UNIQUE NOT NULL,
+                fence_version INTEGER NOT NULL
+            );
+        "#;
+        sqlx::query(schema).execute(&pool).await.unwrap();
+
+        let db = DB {
+            pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool),
+        };
+
+        let repo = OmniChannelRepo::new(Arc::new(db));
+
+        let tenant_id = Uuid::new_v4();
+        let message_id = Uuid::new_v4();
+        let conversation_id = Uuid::new_v4();
+
+        // 1. Create Outbox Job
+        let job = repo.create_outbox_job(tenant_id, message_id).await.unwrap();
+        assert_eq!(job.status, "queued");
+        assert_eq!(job.retry_count, 0);
+
+        // 2. Lease Outbox Job
+        let leased_opt = repo.lease_outbox_job(30).await.unwrap();
+        assert!(leased_opt.is_some());
+        let leased = leased_opt.unwrap();
+        assert_eq!(leased.status, "leased");
+        assert!(leased.lease_expires_at.is_some());
+
+        // 3. Update Job Status
+        repo.update_outbox_job_status(job.id, "completed", 1).await.unwrap();
+
+        // 4. Try leasing again (none should be queued/expired now)
+        let leased_opt2 = repo.lease_outbox_job(30).await.unwrap();
+        assert!(leased_opt2.is_none());
+
+        // 5. Automation Fence Increment
+        let version1 = repo.increment_automation_fence(conversation_id).await.unwrap();
+        assert_eq!(version1, 1);
+
+        let check1 = repo.check_automation_fence(conversation_id, 1).await.unwrap();
+        assert!(check1);
+
+        let version2 = repo.increment_automation_fence(conversation_id).await.unwrap();
+        assert_eq!(version2, 2);
+
+        let check2 = repo.check_automation_fence(conversation_id, 1).await.unwrap();
+        assert!(!check2);
+
+        let check3 = repo.check_automation_fence(conversation_id, 2).await.unwrap();
+        assert!(check3);
     }
 }

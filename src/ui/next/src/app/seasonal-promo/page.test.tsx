@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import SeasonalPromoPage from './page';
 import { describe, it, expect, beforeEach, vi } from 'vitest';

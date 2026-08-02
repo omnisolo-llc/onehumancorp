@@ -1,7 +1,14 @@
 import React from 'react';
+import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 import InboxPage from './page';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
 
 const queryState = vi.hoisted(() => ({
   data: [] as Array<Record<string, string>>,
@@ -21,6 +28,24 @@ vi.mock('../components/AppShell', () => ({
 
 beforeEach(() => {
   queryState.data = [];
+  global.fetch = vi.fn().mockImplementation((url: string) => {
+    if (url.includes('/api/v1/agents/approvals')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ pending_approvals: [] }),
+      });
+    }
+    if (url.includes('/api/v1/memory/summary/')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ total_interactions: 0, segments: [], preferences: [], summary: '' }),
+      });
+    }
+    return Promise.resolve({
+      ok: true,
+      json: async () => ([]),
+    });
+  }) as any;
 });
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
