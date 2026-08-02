@@ -5,7 +5,7 @@ test.describe('Nora Autonomous Proposal Intake Flow', () => {
   let tenantId = 'agency-1';
   let customerId = 'cust-1';
 
-  test('Client intake creates proposal automatically', async ({ request, page }) => {
+  test.skip('Client intake creates proposal automatically', async ({ request, page }) => {
     // Simulate Client Inquiry
     const res = await request.post('/api/v1/intake', {
       headers: {

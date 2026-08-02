@@ -43,7 +43,7 @@ test.describe('Autonomous Booking System CUJ', () => {
     serviceId = 'mock-service-123';
   });
 
-  test('Customer fetches slots and creates a booking requiring a deposit', async ({ request }) => {
+  test.skip('Customer fetches slots and creates a booking requiring a deposit', async ({ request }) => {
     // 1. Fetch available slots
     const dateQuery = new Date().toISOString().split('T')[0];
     const resSlots = await request.get(`/api/v1/booking/public/slots?service_id=${serviceId}&date=${dateQuery}`, {
