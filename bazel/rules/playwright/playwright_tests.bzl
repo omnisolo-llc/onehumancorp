@@ -113,7 +113,9 @@ def define_playwright_tests(specs, ci_specs = [], ci_shard_count = 16, data = []
     ] + data + ci_discovery_data
     coverage_attrs["args"] = (
         ["--scan-runfiles", "--support"] +
-        ["$(rootpath {})".format(source) for source in enforcement_sources]
+        ["$(rootpath {})".format(source) for source in enforcement_sources] +
+        ["--ci-specs"] +
+        ["$(rootpath {})".format(source) for source in ci_specs]
     )
     coverage_attrs["data"] = coverage_data
     sh_test(**coverage_attrs)

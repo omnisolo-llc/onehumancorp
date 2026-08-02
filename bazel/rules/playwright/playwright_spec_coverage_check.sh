@@ -152,11 +152,11 @@ check_no_substitutions() {
 for arg in "$@"; do
   case "$arg" in
     --scan-runfiles) scan_runfiles=true ;;
-    --all | --ci | --support) mode="$arg" ;;
+    --all | --ci | --support | --ci-specs) mode="$arg" ;;
     *.spec.ts)
       if [[ "$mode" == "--all" ]]; then
         all_specs+=("$arg")
-      elif [[ "$mode" == "--ci" ]]; then
+      elif [[ "$mode" == "--ci" || "$mode" == "--ci-specs" ]]; then
         ci_specs+=("$arg")
       elif [[ "$mode" == "--support" ]]; then
         support_sources+=("$arg")
@@ -199,7 +199,29 @@ if [[ "$scan_runfiles" == true ]]; then
     exit 1
   fi
   check_forbidden_markers "${runfile_specs[@]}"
-  check_no_substitutions "${runfile_specs[@]}" "${support_sources[@]}"
+  if (( ${#ci_specs[@]} > 0 )); then
+    local ci_runfile_specs=()
+    for spec in "${runfile_specs[@]}"; do
+      local base_name
+      base_name="$(basename "$spec")"
+      local matched=false
+      for ci_spec in "${ci_specs[@]}"; do
+        local ci_base_name
+        ci_spec_resolved="$(display_spec "$ci_spec")"
+        ci_base_name="$(basename "$ci_spec_resolved")"
+        if [[ "$base_name" == "$ci_base_name" ]]; then
+          matched=true
+          break
+        fi
+      done
+      if [[ "$matched" == true ]]; then
+        ci_runfile_specs+=("$spec")
+      fi
+    done
+    check_no_substitutions "${ci_runfile_specs[@]}" "${support_sources[@]}"
+  else
+    check_no_substitutions "${runfile_specs[@]}" "${support_sources[@]}"
+  fi
   if [[ -n "${SOURCE_REPO_ROOT:-}" && -d "${SOURCE_REPO_ROOT:-}" ]]; then
     source_unique="$(find_spec_relpaths "$SOURCE_REPO_ROOT")"
     runfile_unique="$(find_spec_relpaths "$root")"
