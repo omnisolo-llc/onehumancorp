@@ -1,12 +1,12 @@
 issue_title: "Design and Implement Native Rust Omnichannel Chat Engine"
 issue_description: |
   ## Problem Statement
-  Currently, OneHumanCorp (OHC) relies on external tools or lacks a fully integrated, high-performance omnichannel inbox native to its ecosystem. As mandated, Chatwoot as an external third-party service is 100% RETIRED. OHC owners like Maya (baker managing IG DMs) and Carlos (handyman handling SMS and website leads) need a unified, zero-latency inbox to coordinate with customers seamlessly. The lack of a native system forces context switching and creates delays in AI agent triage.
+  Currently, OneHumanCorp (OHC) relies on external tools or lacks a fully integrated, high-performance omnichannel inbox native to its ecosystem. As mandated, the legacy third-party chat service is 100% RETIRED. OHC owners like Maya (baker managing IG DMs) and Carlos (handyman handling SMS and website leads) need a unified, zero-latency inbox to coordinate with customers seamlessly. The lack of a native system forces context switching and creates delays in AI agent triage.
 
   ## Research Report
-  - **Competitor Benchmarking**: We audited the architecture of leading platforms like Chatwoot, Shopify Inbox, and Wix Inbox.
-  - **Chatwoot Source Code Audit**: We analyzed the `chatwoot/chatwoot` repository, focusing on its omnichannel data models (Conversations, Messages, Contacts, Inboxes, Channel Adapters), ActionCable WebSocket real-time messaging, and webhook processing for platforms like WhatsApp, Instagram, and SMS.
-  - **Finding**: OHC must replicate and improve upon Chatwoot's data models and WebSocket event patterns using Rust and gRPC to guarantee high-performance, row-level tenant isolation, and strict Zero-Trust security.
+  - **Competitor Benchmarking**: We audited the architecture of leading platforms like Shopify Inbox, and Wix Inbox.
+  - **Native Omnichannel Source Code Audit**: We analyzed external systems omnichannel data models (Conversations, Messages, Contacts, Inboxes, Channel Adapters), WebSocket real-time messaging, and webhook processing for platforms like WhatsApp, Instagram, and SMS.
+  - **Finding**: OHC must improve upon native data models and WebSocket event patterns using Rust and gRPC to guarantee high-performance, row-level tenant isolation, and strict Zero-Trust security.
 
   ## Design Doc
   ### Architecture Diagram
