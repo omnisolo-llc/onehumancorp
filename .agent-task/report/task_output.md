@@ -8,16 +8,16 @@ issue_description: |
   - **Carlos (handyman)** operates on the road; he needs instant, real-time message notifications without manually refreshing a dashboard or waiting for slow email polls.
   - **Fatima (food cart operator)** runs in low-data and flaky network situations; she needs a real-time pre-order queue that alerts her immediately when an order is placed, but degrades gracefully with visual cue indicators when offline.
 
-  Currently, OHC is retiring external dependencies like Chatwoot. Relying on traditional HTTP polling or exposing raw JWT tokens to client-side browser JavaScript compromises both performance and security. We need a high-performance, native Rust real-time WebSocket and Ephemeral Presence Engine integrated into `onehumancorp/mono` to power low-latency updates, secure multi-tenant isolation, and agentic workspace synchronization.
+  Currently, OHC is retiring external dependencies like the legacy Rails-based chat engine (retired chat dependency). Relying on traditional HTTP polling or exposing raw JWT tokens to client-side browser JavaScript compromises both performance and security. We need a high-performance, native Rust real-time WebSocket and Ephemeral Presence Engine integrated into `onehumancorp/mono` to power low-latency updates, secure multi-tenant isolation, and agentic workspace synchronization.
 
   ---
 
   ## 2. Research Report & Competitive Benchmarking
 
-  ### Chatwoot Benchmarking & Architecture Review
-  - **The Chatwoot Legacy:** Chatwoot uses Ruby on Rails with ActionCable for WebSocket pub-sub and Sidekiq with Redis for background jobs and webhook deliveries.
+  ### Retired Chat Engine Benchmarking & Architecture Review
+  - **The Legacy Architecture:** The retired platform uses Ruby on Rails with ActionCable for WebSocket pub-sub and Sidekiq with Redis for background jobs and webhook deliveries.
   - **ActionCable Limitations:** While easy to deploy, ActionCable maintains state in Ruby threads, incurring high memory footprints (~30-50MB per connection under load) and high CPU overhead on connection upgrades. Scalability requires complex Redis adapter configurations.
-  - **Presence & Ephemeral State:** Chatwoot tracks user presence via Redis-backed `AppearanceChannel` and typing events via explicit ActionCable channel broadcasts. However, there is no built-in protection against client credential leakage via URL parameters, nor fine-grained tenant-level isolation for WebSocket subscribers.
+  - **Presence & Ephemeral State:** The legacy system tracks user presence via Redis-backed `AppearanceChannel` and typing events via explicit ActionCable channel broadcasts. However, there is no built-in protection against client credential leakage via URL parameters, nor fine-grained tenant-level isolation for WebSocket subscribers.
 
   ### Competitive Platform Analysis
   - **Shopify (Oxygen & Storefront API):** Uses highly distributed edge workers (Cloudflare) to route requests. Real-time updates utilize GraphQL Subscriptions over WebSockets, which are highly efficient but require complex infrastructure orchestration.
@@ -144,7 +144,7 @@ issue_description: |
   ## 7. Implementation Prompt for Engineering Swarm
 
   ```text
-  Design and implement a native Rust real-time WebSocket and Ephemeral Presence Engine inside `src/server/` replacing the retired Chatwoot ActionCable footprint.
+  Design and implement a native Rust real-time WebSocket and Ephemeral Presence Engine inside `src/server/` replacing the retired chat system footprint.
 
   Your implementation must deliver a secure, high-performance, multi-tenant real-time gateway that meets these Critical User Journeys (CUJs):
   1. Operator Handshake CUJ: The operator workspace requests a short-lived (60s), single-use WebSocket ticket via a secure HTTP endpoint (`POST /api/v1/auth/realtime-ticket`), which returns a ticket containing jti, user_id, and tenant_id. The client then initiates a WebSocket connection supplying this ticket in the 'Sec-WebSocket-Protocol' subprotocol header.
