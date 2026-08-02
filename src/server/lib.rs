@@ -7659,13 +7659,12 @@ async fn create_ui_bom_item_handler(
         .merge(api::agent_stream::router(hub.clone()))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .route("/ws", axum::routing::get(api::unified_ws::unified_ws_handler))
-        .route("/api/v1/auth/realtime-ticket", axum::routing::post(api::realtime::realtime_ticket_handler).route_layer(
+        .route("/api/v1/auth/realtime-ticket", axum::routing::post(api::unified_ws::unified_ws_handler).route_layer(
             axum::middleware::from_fn_with_state(
                 http_auth_store.clone(),
                 ::server_auth::strict_bearer_auth_middleware,
             ),
         ))
-        .merge(api::realtime::router())
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
