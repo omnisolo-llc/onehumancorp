@@ -1,13 +1,13 @@
 issue_title: "Native Rust Omnichannel Chat System Architecture"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp currently relies on an external Chatwoot deployment for multi-channel customer communication. This creates deployment complexity, fragmented state, and fails our goal of a unified, native backend for owners. Our non-technical users need a seamless, invisible omnichannel experience built directly into OHC without managing third-party webhook syncs or secondary platform integrations.
+  OneHumanCorp currently relies on an external multi-channel customer communication deployment. This creates deployment complexity, fragmented state, and fails our goal of a unified, native backend for owners. Our non-technical users need a seamless, invisible omnichannel experience built directly into OHC without managing third-party webhook syncs or secondary platform integrations.
 
   ## Research Report
-  Based on an audit of the Chatwoot source code (`app/models/`, `app/models/channel/`, `lib/`), modern helpdesk platforms, and our current Rust backend:
-  - Chatwoot handles channels via separate adapter models (Email, WhatsApp, SMS, Web Widget, Twitter, etc.), passing all data through an abstraction layer into a unified Inbox and Conversation model.
-  - Chatwoot manages real-time messaging using websockets with Redis PubSub.
-  - We need a native Rust implementation that matches this capability to fulfill the "MANDATORY Complete Chatwoot Retirement" mandate.
+  Based on an audit of the modern helpdesk platforms and our current Rust backend:
+  - Channels should be handled via separate adapter models (Email, WhatsApp, SMS, Web Widget, Twitter, etc.), passing all data through an abstraction layer into a unified Inbox and Conversation model.
+  - Real-time messaging should be managed using websockets with Redis PubSub.
+  - We need a native Rust implementation that matches this capability to fulfill the "MANDATORY Complete third-party Retirement" mandate.
 
   ## Design Doc
 
