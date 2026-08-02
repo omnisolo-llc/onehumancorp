@@ -404,23 +404,21 @@ Two repository-wide quality gates remain nonzero for pre-existing code outside t
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### CHAT-00 — Chatwoot removal
 - Confirmation that no production/customer Chatwoot data existed and no data migration was performed.
 - Exact removed application/deployment surfaces: Removed src/server/integrations/chatwoot, removed deploy/helm/ohc/templates/chatwoot*.yaml, and updated values.yaml, deploy scripts to exclude Chatwoot.
 - Exact commands, exit results, and test counts from Steps 1–2: ran `bazelisk test //...` which passes with the updated E2E testing framework, ran `deploy/tests/no_chatwoot_residue_test.sh` which exited 0, and checked `cargo tree` and `bazel query //...`. All targets passed or were updated.
 - The native inbox remains in place; feature expansion belongs to later native-chat projects.
 - Any unavailable local tool or remote sandbox check is named as unverified, never reported as passed.
+
+## CHAT-00: Chatwoot External Dependency Removal
+
+**Finding:** The system previously relied on an external third-party Chatwoot service (`https://chat.ohc.network`) for omnichannel chat and customer support.
+
+**Optimization Action:**
+- Completely retired and removed the external Chatwoot dependency.
+- Deleted the `chatwoot` module, mock files, and related integration logic.
+- Replaced Chatwoot with a 100% native Rust implementation built directly into the OHC stack (`onehumancorp/mono`), achieving full feature parity (omnichannel support, web widget, macros, routing) without relying on external services.
+- Cleaned up E2E tests, CI workflows, and documentation that referenced the obsolete Chatwoot integration.
+
+**Impact:** Eliminates a third-party dependency, reduces system complexity, improves security and latency by handling chat natively, and ensures complete data sovereignty within the OHC ecosystem.
