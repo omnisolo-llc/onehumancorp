@@ -4,10 +4,11 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
+    "//src/server/api:chat/mod.rs",
     "//src/server/services:chat/mod.rs",
     "//src/server/services:chat/models.rs",
     "//src/server/services:chat/service.rs",
-    "health_test.rs",
+                    "health_test.rs",
     "analytics.rs",
     "autodream_sync.rs",
     "billing.rs",
@@ -610,6 +611,7 @@ rust_test(
         "@crates//:temp-env",
         "@crates//:tempfile",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
     ],
 )
 
@@ -649,6 +651,7 @@ rust_test(
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
     ],
 )
 
@@ -671,6 +674,7 @@ rust_test(
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
     ],
 )
 
@@ -955,6 +959,7 @@ rust_test(
         "@crates//:sqlx",
         "@crates//:tokio",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
     ],
 )
 
@@ -981,6 +986,7 @@ rust_test(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
         "//src/agents/builtin:ohc_builtin_agent_lib",
     ],
 )

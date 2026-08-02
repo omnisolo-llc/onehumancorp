@@ -201,40 +201,80 @@ pub async fn handle_omnichannel_webhook(
     let pool = &state.db.pool;
 
     let insert_result = match &state.db.store {
+
         crate::db::DbStore::Postgres => {
+            // First, find or create the inbox based on the source channel
+            let inbox_id = match sqlx::query("SELECT id FROM chat_inboxes WHERE tenant_id = $1 AND channel_type = $2 LIMIT 1").bind(&payload.tenant_id).bind(&payload.source).fetch_optional(pool).await {
+                Ok(Some(row)) => sqlx::Row::get(&row, "id"),
+                _ => {
+                    let new_inbox_id = Uuid::new_v4().to_string();
+                    let name = payload.source.clone() + " Inbox";
+                    sqlx::query("INSERT INTO chat_inboxes (id, tenant_id, name, channel_type) VALUES ($1, $2, $3, $4)").bind(&new_inbox_id).bind(&payload.tenant_id).bind(name).bind(&payload.source).execute(pool).await.ok();
+                    new_inbox_id
+                }
+            };
+
+            // Then find or create conversation
+            let conv_id = match sqlx::query("SELECT id FROM chat_conversations WHERE tenant_id = $1 AND contact_id = $2 AND inbox_id = $3 LIMIT 1").bind(&payload.tenant_id).bind(&customer_id).bind(&inbox_id).fetch_optional(pool).await {
+                Ok(Some(row)) => sqlx::Row::get(&row, "id"),
+                _ => {
+                    let new_conv_id = Uuid::new_v4().to_string();
+                    sqlx::query("INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id) VALUES ($1, $2, $3, $4)").bind(&new_conv_id).bind(&payload.tenant_id).bind(&inbox_id).bind(&customer_id).execute(pool).await.ok();
+                    new_conv_id
+                }
+            };
+
             sqlx::query(
                 r#"
-                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
-                VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())
+                INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, status, created_at)
+                VALUES ($1, $2, $3, 'contact', $4, $5, 'unread', NOW())
                 "#
             )
             .bind(&id)
             .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
-            .bind(&payload.sender_id)
+            .bind(&conv_id)
             .bind(&customer_id)
+            .bind(&payload.message)
             .execute(pool)
             .await.map(|_| ())
         },
+
+
         crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let inbox_id = match sqlx::query("SELECT id FROM chat_inboxes WHERE tenant_id = ? AND channel_type = ? LIMIT 1").bind(&payload.tenant_id).bind(&payload.source).fetch_optional(sqlite_pool).await {
+                Ok(Some(row)) => sqlx::Row::get(&row, "id"),
+                _ => {
+                    let new_inbox_id = Uuid::new_v4().to_string();
+                    let name = payload.source.clone() + " Inbox";
+                    sqlx::query("INSERT INTO chat_inboxes (id, tenant_id, name, channel_type) VALUES (?, ?, ?, ?)").bind(&new_inbox_id).bind(&payload.tenant_id).bind(name).bind(&payload.source).execute(sqlite_pool).await.ok();
+                    new_inbox_id
+                }
+            };
+
+            let conv_id = match sqlx::query("SELECT id FROM chat_conversations WHERE tenant_id = ? AND contact_id = ? AND inbox_id = ? LIMIT 1").bind(&payload.tenant_id).bind(&customer_id).bind(&inbox_id).fetch_optional(sqlite_pool).await {
+                Ok(Some(row)) => sqlx::Row::get(&row, "id"),
+                _ => {
+                    let new_conv_id = Uuid::new_v4().to_string();
+                    sqlx::query("INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id) VALUES (?, ?, ?, ?)").bind(&new_conv_id).bind(&payload.tenant_id).bind(&inbox_id).bind(&customer_id).execute(sqlite_pool).await.ok();
+                    new_conv_id
+                }
+            };
+
             sqlx::query(
                 r#"
-                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
-                VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)
+                INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content, status, created_at)
+                VALUES (?, ?, ?, 'contact', ?, ?, 'unread', CURRENT_TIMESTAMP)
                 "#
             )
             .bind(&id)
             .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
-            .bind(&payload.sender_id)
+            .bind(&conv_id)
             .bind(&customer_id)
+            .bind(&payload.message)
             .execute(sqlite_pool)
             .await.map(|_| ())
         }
+
     };
 
     let payload_json = serde_json::json!({

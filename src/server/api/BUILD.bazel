@@ -1,5 +1,6 @@
 
 exports_files([
+    "chat/mod.rs",
         "work_triage.rs",
         "walkup.rs",
         "perplexity.rs","chaos.rs", "sync_gateway.rs"])
