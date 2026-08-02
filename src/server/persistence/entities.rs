@@ -67,3 +67,114 @@ pub mod product {
 
     impl ActiveModelBehavior for ActiveModel {}
 }
+
+
+pub mod chat_inboxes {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[sea_orm(table_name = "chat_inboxes")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub id: String,
+        pub tenant_id: String,
+        pub name: String,
+        pub created_at: Option<DateTimeUtc>,
+        pub updated_at: Option<DateTimeUtc>,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
+
+pub mod chat_channels {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[sea_orm(table_name = "chat_channels")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub id: String,
+        pub tenant_id: String,
+        pub inbox_id: String,
+        pub channel_type: String,
+        pub config: Option<Json>,
+        pub created_at: Option<DateTimeUtc>,
+        pub updated_at: Option<DateTimeUtc>,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
+
+pub mod chat_contacts {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[sea_orm(table_name = "chat_contacts")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub id: String,
+        pub tenant_id: String,
+        pub name: Option<String>,
+        pub email: Option<String>,
+        pub phone: Option<String>,
+        pub created_at: Option<DateTimeUtc>,
+        pub updated_at: Option<DateTimeUtc>,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
+
+pub mod chat_conversations {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[sea_orm(table_name = "chat_conversations")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub id: String,
+        pub tenant_id: String,
+        pub inbox_id: String,
+        pub contact_id: String,
+        pub assignee_id: Option<String>,
+        pub status: String,
+        pub created_at: Option<DateTimeUtc>,
+        pub updated_at: Option<DateTimeUtc>,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
+
+pub mod chat_messages {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+    #[sea_orm(table_name = "chat_messages")]
+    pub struct Model {
+        #[sea_orm(primary_key, auto_increment = false)]
+        pub id: String,
+        pub tenant_id: String,
+        pub conversation_id: String,
+        pub sender_type: String,
+        pub sender_id: Option<String>,
+        pub content: String,
+        pub created_at: Option<DateTimeUtc>,
+        pub updated_at: Option<DateTimeUtc>,
+    }
+
+    #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+    pub enum Relation {}
+
+    impl ActiveModelBehavior for ActiveModel {}
+}
