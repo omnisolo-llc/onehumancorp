@@ -23,7 +23,7 @@ test.describe('Autonomous Booking System UI', () => {
 
     // 4. Submit
     // Route mock to avoid actual backend errors if not fully seeded
-    // removed network mock for hermetic testing
+    // REMOVED MOCK to satisfy e2e network constraints
 
     await page.click('button:has-text("Confirm Booking")');
 
@@ -38,4 +38,4 @@ test.describe('Autonomous Booking System UI', () => {
     await expect(page.getByRole('heading', { name: 'Booking Management' })).toBeVisible();
 
     // Route mocks
-    // removed network mock for hermetic testing
+    // REMOVED MOCK to satisfy e2e network constraints

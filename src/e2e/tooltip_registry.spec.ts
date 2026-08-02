@@ -14,7 +14,7 @@ test.describe('Tooltip Registry', () => {
     await expect(page.locator('.ohc-toast')).toHaveText('Tooltip added successfully');
 
     // Wait for the UI to update the table
-    await page.waitForTimeout(1000); // UI may take a bit to fetch again
+    await page.locator('input#input-test-dynamic-id').waitFor({ state: 'attached' });
 
     await expect(page.locator('input#input-test-dynamic-id')).toHaveValue('My test tooltip text');
 

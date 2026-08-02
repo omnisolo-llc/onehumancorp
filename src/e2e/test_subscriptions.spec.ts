@@ -12,23 +12,23 @@ test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => 
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(375);
 
-    // assertion removed due to no-mock constraint
+    await expect(page.locator('h1')).toHaveText('Recurring Membership');
 
     const textarea = page.locator('textarea#offerDescription');
     await expect(textarea).toBeVisible();
     await textarea.fill('4 guitar lessons a month for $200');
 
     // Route the API call to return a mocked response since we don't have the LLM running consistently in E2E
-    // removed network mock for hermetic testing
+    // REMOVED MOCK to satisfy e2e network constraints
 
     await page.locator('button#generateBtn').click();
 
     // Verify the parsed structured data shows up in the UI
     await expect(page.locator('#result')).toBeVisible();
-    // assertion removed due to no-mock constraint
-    // assertion removed due to no-mock constraint
-    // assertion removed due to no-mock constraint
-    // assertion removed due to no-mock constraint
-    // assertion removed due to no-mock constraint
+    await expect(page.locator('#resName')).toHaveText('Guitar Lessons Monthly');
+    await expect(page.locator('#resPrice')).toHaveText('$200.00');
+    await expect(page.locator('#resInterval')).toHaveText('month');
+    await expect(page.locator('#resFeature')).toHaveText('guitar lessons');
+    await expect(page.locator('#resUses')).toHaveText('4 uses / month');
   });
 });

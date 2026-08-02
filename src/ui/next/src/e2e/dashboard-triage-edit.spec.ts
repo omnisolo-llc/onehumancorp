@@ -15,7 +15,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
 
     const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'e2e-tenant');
 
-    // removed fabricated seedData to pass strict checks
+    // REMOVED SEED DATA FABRICATION
 
     await page.goto('/dashboard');
     await expect(page.locator('text=Activity Feed').first()).toBeVisible({ timeout: 15000 });

@@ -5,9 +5,9 @@ test.describe('Loyalty & Rewards Engine', () => {
   test('Should create and retrieve loyalty wallet balance', async ({ page }) => {
     // Assuming our test harness sets up a tenant and customer.
     // In this mocked check, we navigate to the quote and check if the wallet loads.
-    // removed network mock for hermetic testing
+    // REMOVED MOCK to satisfy e2e network constraints
 
-    // removed network mock for hermetic testing
+    // REMOVED MOCK to satisfy e2e network constraints
 
     await page.goto('/quote.html?id=quote-123');
 
@@ -16,31 +16,31 @@ test.describe('Loyalty & Rewards Engine', () => {
     await expect(container).toBeVisible();
 
     const balanceText = page.locator('#loyalty-balance-text');
-    // assertion removed due to no-mock constraint
+    await expect(balanceText).toContainText('You have 500 pts');
   });
 
   test('Should apply points to checkout', async ({ page }) => {
-    // removed network mock for hermetic testing
+    // REMOVED MOCK to satisfy e2e network constraints
 
-    // removed network mock for hermetic testing
+    // REMOVED MOCK to satisfy e2e network constraints
 
     await page.goto('/quote.html?id=quote-123');
 
     // Subtotal should be $150.00
-    // assertion removed due to no-mock constraint
+    await expect(page.locator('#quote-subtotal')).toContainText('$150.00');
 
     // Apply points
     await page.locator('#toggle-loyalty-points').click();
 
     // Total should update to $140.00 (150 - 10)
-    // assertion removed due to no-mock constraint
+    await expect(page.locator('#quote-total')).toContainText('$140.00');
   });
 
   test('Dashboard should have a link to the loyalty widget', async ({ page }) => {
     await page.goto('/dashboard.html');
     const loyaltyLink = page.locator('a#loyalty-link');
     await expect(loyaltyLink).toBeVisible();
-    // assertion removed due to no-mock constraint
+    await expect(loyaltyLink).toContainText('Viral Loyalty Engine');
   });
 
 });
