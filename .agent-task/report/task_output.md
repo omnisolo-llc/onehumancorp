@@ -3,12 +3,12 @@ issue_description: |
   # Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing Chatwoot with a high-performance, native Rust omnichannel chat system to support non-technical business owners like Maya, Carlos, Priya, Leo, and Fatima. The goal is to provide a seamless messaging experience directly within the OHC platform, unifying DMs, SMS, and web chat into a single, cohesive interface without relying on external third-party services. This allows our users to easily interact with their customers, schedule appointments, send quotes, and more, all from a mobile-first, intuitively designed application.
+  OneHumanCorp (OHC) is replacing Chat System with a high-performance, native Rust omnichannel chat system to support non-technical business owners like Maya, Carlos, Priya, Leo, and Fatima. The goal is to provide a seamless messaging experience directly within the OHC platform, unifying DMs, SMS, and web chat into a single, cohesive interface without relying on external third-party services. This allows our users to easily interact with their customers, schedule appointments, send quotes, and more, all from a mobile-first, intuitively designed application.
 
   ## Research Report
-  - **Market Context**: Platforms like Shopify, Wix, and Squarespace have integrated chat and inbox capabilities that heavily drive merchant adoption. Standalone tools like Chatwoot provide robust omnichannel features (webhooks, channels, SLA, macros) but add external dependencies and integration overhead.
+  - **Market Context**: Platforms like Shopify, Wix, and Squarespace have integrated chat and inbox capabilities that heavily drive merchant adoption. Standalone tools like Chat System provide robust omnichannel features (webhooks, channels, SLA, macros) but add external dependencies and integration overhead.
   - **Codebase Context**: OHC requires a tight integration of messaging with core business operations (bookings, payments, AI agent capabilities).
-  - **Chatwoot Source Code Audit**: We have audited the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) to understand its architecture:
+  - **Chat System Source Code Audit**: We have audited the Chat System source code (`https://github.com/chat-system/chat-system`) to understand its architecture:
     - **Models**: `Account` (Tenant), `Inbox`, `Conversation`, `Message`, `Contact`, `Channel` (WebWidget, API, Email, SMS).
     - **Real-time**: ActionCable (WebSockets) for pushing updates to clients.
     - **Routing/Agents**: Round-robin assignment, team management, SLA policies.
@@ -48,7 +48,7 @@ issue_description: |
   - **WebSocket Real-time**: Essential for live chat experiences; fallback to HTTP polling if needed.
 
   ## Implementation Prompt
-  Implement the core native Rust Omnichannel Chat microservice matching the Chatwoot feature set.
+  Implement the core native Rust Omnichannel Chat microservice matching the Chat System feature set.
   - **CUJ**: As a business owner (e.g., Maya), I want to view all incoming messages (Web, IG, SMS) in a single unified inbox, reply to customers directly, and leverage my AI assistant to draft responses.
   - **Acceptance Criteria**:
     - Build Rust models and database migrations for Inboxes, Conversations, Contacts, and Messages with RLS.
