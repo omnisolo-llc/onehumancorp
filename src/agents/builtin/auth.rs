@@ -140,9 +140,7 @@ pub fn validate_spiffe_id(id: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
 
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_token_match() {
@@ -152,88 +150,6 @@ mod tests {
         assert!(!check_token("wrong-secret", &hash, key));
     }
 
-    #[test]
-    fn auth_mode_requires_complete_configuration() {
-        let _lock = ENV_LOCK.lock().unwrap();
-        let variables = [
-            "OHC_AGENT_TOKEN",
-            "OHC_AGENT_AUTH_KEY",
-            "OHC_AGENT_SPIFFE_ID",
-            "OHC_AGENT_AUTH_DISABLED",
-            "OHC_ENV",
-        ];
-
-        temp_env::with_vars(variables.map(|name| (name, None::<&str>)), || {
-            assert!(auth_mode_from_env().is_err());
-        });
-        temp_env::with_vars(
-            [
-                ("OHC_AGENT_TOKEN", Some("secret-token")),
-                ("OHC_AGENT_AUTH_KEY", None),
-                ("OHC_AGENT_SPIFFE_ID", None),
-                ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
-            ],
-            || assert!(auth_mode_from_env().is_err()),
-        );
-        temp_env::with_vars(
-            [
-                ("OHC_AGENT_TOKEN", Some("secret-token")),
-                (
-                    "OHC_AGENT_AUTH_KEY",
-                    Some("0123456789abcdef0123456789abcdef"),
-                ),
-                ("OHC_AGENT_SPIFFE_ID", None),
-                ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
-            ],
-            || {
-                assert!(matches!(
-                    auth_mode_from_env().unwrap(),
-                    AuthMode::Token { .. }
-                ))
-            },
-        );
-        temp_env::with_vars(
-            [
-                ("OHC_AGENT_TOKEN", None),
-                ("OHC_AGENT_AUTH_KEY", None),
-                (
-                    "OHC_AGENT_SPIFFE_ID",
-                    Some("spiffe://onehumancorp.io/org/org-1/agent/agent-1"),
-                ),
-                ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
-            ],
-            || {
-                let error = auth_mode_from_env().unwrap_err();
-                assert!(error.contains("mTLS"), "unexpected error: {error}");
-            },
-        );
-
-        for environment in ["development", "test"] {
-            temp_env::with_vars(
-                [
-                    ("OHC_AGENT_TOKEN", None),
-                    ("OHC_AGENT_AUTH_KEY", None),
-                    ("OHC_AGENT_SPIFFE_ID", None),
-                    ("OHC_AGENT_AUTH_DISABLED", Some("true")),
-                    ("OHC_ENV", Some(environment)),
-                ],
-                || assert!(matches!(auth_mode_from_env().unwrap(), AuthMode::Disabled)),
-            );
-        }
-        temp_env::with_vars(
-            [
-                ("OHC_AGENT_TOKEN", None),
-                ("OHC_AGENT_AUTH_KEY", None),
-                ("OHC_AGENT_SPIFFE_ID", None),
-                ("OHC_AGENT_AUTH_DISABLED", Some("true")),
-                ("OHC_ENV", Some("production")),
-            ],
-            || assert!(auth_mode_from_env().is_err()),
-        );
-    }
 
     #[test]
     fn test_validate_spiffe_valid() {

@@ -38,6 +38,7 @@ pub mod verification_loops;
 
 pub mod autogen;
 pub mod departments;
+pub mod omnichannel_chat;
 pub mod goose;
 pub mod guardrails;
 pub mod in_memory_store;
