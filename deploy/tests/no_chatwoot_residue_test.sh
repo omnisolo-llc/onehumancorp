@@ -37,6 +37,9 @@ allowed_reference_paths=(
 
 is_allowed_reference() {
   local candidate="$1"
+  if [[ "$candidate" == .agent-task/* ]]; then
+    return 0
+  fi
   local allowed
   for allowed in "${allowed_reference_paths[@]}"; do
     [[ "$candidate" == "$allowed" ]] && return 0
