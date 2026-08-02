@@ -1,3 +1,4 @@
+issue_title: "Implement Native Rust Omnichannel Chat System"
 issue_description: |
   # Native Rust Omnichannel Chat System - Architecture & Design Brief
 
