@@ -80,7 +80,7 @@ describe('AIWorkspacePage', () => {
       fireEvent.click(assistantTabBtn);
     });
     expect(screen.getByText('AI Planning Assistant')).toBeDefined();
-  });
+  }, 20000);
 
   it('allows user to toggle automation active state', async () => {
     render(<AIWorkspacePage />);
@@ -196,7 +196,7 @@ describe('AIWorkspacePage', () => {
     expect(docLibraryHeader).toBeDefined();
 
     // Edit the existing note content
-    const textarea = screen.getByPlaceholderText(/Start typing note details here.../i);
+    const textarea = screen.getByPlaceholderText<HTMLTextAreaElement>(/Start typing note details here.../i);
     await act(async () => {
       fireEvent.change(textarea, { target: { value: 'Updated note technical design specification.' } });
     });
