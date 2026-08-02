@@ -76,6 +76,8 @@ impl PgCheckpointer {
 /// 3. Enables the orchestrator to revert the entire workspace state reliably on LLM-recoverable errors
 ///    or user rollbacks via `git reset --hard` and `git clean -fdx`.
 pub struct GitCheckpointer {
+    /// Mutex to serialize git operations to prevent concurrent index.lock issues
+    git_lock: tokio::sync::Mutex<()>,
     // State Management: Git Commit Checkpointing Mechanic
     repo_path: PathBuf,
 }
@@ -131,7 +133,7 @@ impl GitCheckpointer {
             );
         }
 
-        GitCheckpointer { repo_path }
+        GitCheckpointer { repo_path, git_lock: tokio::sync::Mutex::new(()) }
     }
 
     fn progress_file_path(&self, thread_id: &str) -> PathBuf {
@@ -195,6 +197,7 @@ impl CheckpointSaver for GitCheckpointer {
 
         let mut output = None;
 
+        let _guard = self.git_lock.lock().await;
         for target_ref in refs_to_try {
             let res = Command::new("git")
                 .arg("show")
@@ -243,12 +246,7 @@ impl CheckpointSaver for GitCheckpointer {
             .await
             .map_err(|e| e.to_string())?;
 
-        // 0. Conflict Resolution / Stale Lock Files: Ensure no stale git index lock prevents us from adding files
-        let lock_file = self.repo_path.join(".git/index.lock");
-        if lock_file.exists() {
-            let _ = tokio::fs::remove_file(&lock_file).await;
-            tracing::warn!("Removed stale git index.lock file before checkpointing.");
-        }
+        let _guard = self.git_lock.lock().await;
 
         // 0.5. Missing .gitignore defaults: Ensure we don't snapshot massive build directories if user forgot to ignore them
         let gitignore_path = self.repo_path.join(".gitignore");
@@ -270,20 +268,48 @@ impl CheckpointSaver for GitCheckpointer {
             }
         }
 
-        // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
-        let add_out = Command::new("git")
-            .arg("add")
-            .arg("-A")
-            .current_dir(&self.repo_path)
-            .output()
-            .await
-            .map_err(|e| format!("Failed to execute git add: {}", e))?;
+        // Robust retry loop with backoff for git operations to handle concurrent index.lock issues gracefully
+        let max_retries = 3;
+        let mut retry_count = 0;
+        let mut add_success = false;
 
-        if !add_out.status.success() {
-            return Err(format!(
-                "git add failed: {}",
-                String::from_utf8_lossy(&add_out.stderr)
-            ));
+        while retry_count <= max_retries {
+            // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
+            let add_out = Command::new("git")
+                .arg("add")
+                .arg("-A")
+                .current_dir(&self.repo_path)
+                .output()
+                .await
+                .map_err(|e| format!("Failed to execute git add: {}", e))?;
+
+            if add_out.status.success() {
+                add_success = true;
+                break;
+            }
+
+            let stderr = String::from_utf8_lossy(&add_out.stderr);
+            if stderr.contains("index.lock") {
+                tracing::warn!("Transient git lock issue detected during add. Retrying {}/{}", retry_count + 1, max_retries);
+                tokio::time::sleep(std::time::Duration::from_millis((100 * 2_u64.pow(retry_count as u32)) as u64)).await;
+
+                // If it's the very last attempt, we aggressively try to remove the lock if it seems completely stuck
+                if retry_count == max_retries - 1 {
+                    let lock_file = self.repo_path.join(".git/index.lock");
+                    if lock_file.exists() {
+                        let _ = tokio::fs::remove_file(&lock_file).await;
+                        tracing::warn!("Removed apparently stale git index.lock file as a last resort.");
+                    }
+                }
+
+                retry_count += 1;
+            } else {
+                return Err(format!("git add failed: {}", stderr));
+            }
+        }
+
+        if !add_success {
+            return Err("git add failed after retries due to persistent lock".to_string());
         }
 
         // 2. Commit the changes
@@ -326,11 +352,41 @@ impl CheckpointSaver for GitCheckpointer {
     }
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
+        let _guard = self.git_lock.lock().await;
+
         let refs_to_try = vec![
             Self::safe_tag_name(checkpoint_id),
             format!("checkpoint-{}", checkpoint_id),
             checkpoint_id.to_string(),
         ];
+
+        // Capture initial state for rollback
+        let initial_branch_out = Command::new("git")
+            .arg("branch")
+            .arg("--show-current")
+            .current_dir(&self.repo_path)
+            .output()
+            .await;
+
+        let mut initial_ref = String::new();
+        if let Ok(out) = initial_branch_out {
+            if out.status.success() {
+                initial_ref = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            }
+        }
+        if initial_ref.is_empty() {
+            let initial_head_out = Command::new("git")
+                .arg("rev-parse")
+                .arg("HEAD")
+                .current_dir(&self.repo_path)
+                .output()
+                .await;
+            if let Ok(out) = initial_head_out {
+                if out.status.success() {
+                    initial_ref = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                }
+            }
+        }
 
         // 1. Stash uncommitted and untracked changes to support safe time-travel debugging
         let stash_out = Command::new("git")
@@ -415,6 +471,15 @@ impl CheckpointSaver for GitCheckpointer {
         }
 
         if !success {
+            // Attempt Rollback
+            if !initial_ref.is_empty() {
+                let _ = Command::new("git")
+                    .arg("checkout")
+                    .arg(&initial_ref)
+                    .current_dir(&self.repo_path)
+                    .output()
+                    .await;
+            }
             return Err(format!(
                 "Failed to restore workspace (checkout): {}",
                 last_err
@@ -432,6 +497,15 @@ impl CheckpointSaver for GitCheckpointer {
             .map_err(|e| e.to_string())?;
 
         if !reset_branch.status.success() {
+            // Attempt Rollback
+            if !initial_ref.is_empty() {
+                let _ = Command::new("git")
+                    .arg("checkout")
+                    .arg(&initial_ref)
+                    .current_dir(&self.repo_path)
+                    .output()
+                    .await;
+            }
             return Err(format!(
                 "Failed to restore workspace (reset branch): {}",
                 String::from_utf8_lossy(&reset_branch.stderr)
@@ -447,6 +521,15 @@ impl CheckpointSaver for GitCheckpointer {
             .map_err(|e| e.to_string())?;
 
         if !clean_output.status.success() {
+             // Attempt Rollback
+             if !initial_ref.is_empty() {
+                let _ = Command::new("git")
+                    .arg("checkout")
+                    .arg(&initial_ref)
+                    .current_dir(&self.repo_path)
+                    .output()
+                    .await;
+            }
             return Err(format!(
                 "Failed to restore workspace (clean): {}",
                 String::from_utf8_lossy(&clean_output.stderr)
@@ -1319,5 +1402,54 @@ mod restore_stash_tests {
         assert!(untracked_file_path.exists());
         let untracked_content = std::fs::read_to_string(&untracked_file_path).unwrap();
         assert_eq!(untracked_content, "untracked work");
+    }
+}
+
+#[cfg(test)]
+mod concurrency_tests {
+    use super::*;
+    use chrono::Utc;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_git_checkpointer_concurrency() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = Arc::new(GitCheckpointer::new(temp_dir.path().to_path_buf()));
+        let mut handles = vec![];
+
+        for i in 0..10 {
+            let saver_clone = saver.clone();
+            let thread_id = "thread-concurrent".to_string();
+            let checkpoint_id = format!("cp-concurrent-{}", i);
+
+            let handle = tokio::spawn(async move {
+                let cp = Checkpoint {
+                    thread_id,
+                    checkpoint_id,
+                    parent_id: None,
+                    data: serde_json::json!({"state": i}),
+                    metadata: serde_json::json!({}),
+                    created_at: Utc::now(),
+                };
+                saver_clone.put_checkpoint(cp).await
+            });
+            handles.push(handle);
+        }
+
+        let mut successes = 0;
+        let mut failures = 0;
+        for handle in handles {
+            let res = handle.await.unwrap();
+            if res.is_ok() {
+                successes += 1;
+            } else {
+                failures += 1;
+                println!("Concurrency failure: {:?}", res.unwrap_err());
+            }
+        }
+
+        // All 10 concurrent writes should succeed due to mutex serialization
+        assert_eq!(successes, 10);
+        assert_eq!(failures, 0);
     }
 }
