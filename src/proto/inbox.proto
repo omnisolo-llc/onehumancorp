@@ -46,3 +46,39 @@ message FetchMessagesRequest {
 message FetchMessagesResponse {
     repeated OmniMessage messages = 1;
 }
+
+message ChatInbox {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    int64 created_at_unix = 4;
+    int64 updated_at_unix = 5;
+}
+
+message CreateInboxRequest {
+    string tenant_id = 1;
+    string name = 2;
+}
+
+message CreateInboxResponse {
+    ChatInbox inbox = 1;
+}
+
+message SendMessageRequest {
+    string tenant_id = 1;
+    string conversation_id = 2;
+    string sender_type = 3;
+    string sender_id = 4;
+    string content = 5;
+}
+
+message SendMessageResponse {
+    OmniMessage message = 1;
+}
+
+service InboxService {
+    rpc FetchConversations(FetchConversationsRequest) returns (FetchConversationsResponse);
+    rpc FetchMessages(FetchMessagesRequest) returns (FetchMessagesResponse);
+    rpc CreateInbox(CreateInboxRequest) returns (CreateInboxResponse);
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+}

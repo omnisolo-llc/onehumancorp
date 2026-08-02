@@ -154,6 +154,7 @@ SERVER_RS_SRCS = [
     "//src/server/domain:incidents.rs",
     "//src/server/domain:invoice.rs",
     "//src/server/domain:mod.rs",
+    "//src/server/ohc/chat:srcs",
     "//src/server/domain:money.rs",
     "//src/server/domain:model.rs",
     "//src/server/domain:organization.rs",
