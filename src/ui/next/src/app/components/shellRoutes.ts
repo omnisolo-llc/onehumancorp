@@ -1,7 +1,5 @@
-import { isPublicPagePath } from "../../lib/auth/publicRoutes";
-
 export type ShellRoute = {
-  owner: "guard" | "page" | "public";
+  owner: "guard" | "page";
   title: string;
   subtitle?: string;
 };
@@ -113,14 +111,6 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
     title: "Login",
     subtitle: "Access your business workspace.",
   },
-  "/register": {
-    title: "Create account",
-    subtitle: "Verify your email before creating your workspace.",
-  },
-  "/verify-email": {
-    title: "Verify email",
-    subtitle: "Enter the one-time code sent to your email.",
-  },
   "/loyalty-program": { title: "Loyalty Program" },
   "/merch": { title: "Merch" },
   "/milestones": { title: "Milestones" },
@@ -199,7 +189,7 @@ export function resolveShellRoute(pathname: string | null): ShellRoute {
   const metadata = metadataPrefix ? routeMetadata[metadataPrefix] : undefined;
 
   return {
-    owner: isPublicPagePath(pathname) ? "public" : isPageOwned(safePathname) ? "page" : "guard",
+    owner: isPageOwned(safePathname) ? "page" : "guard",
     title: metadata?.title ?? titleFromPath(safePathname),
     subtitle: metadata?.subtitle ?? standardSubtitle,
   };

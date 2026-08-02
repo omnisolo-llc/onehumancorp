@@ -15,9 +15,9 @@ export type RequestDescriptor = Readonly<{
 
 export type PublicApiContract = Readonly<{
   bodyLimitBytes: 4096;
-  rateLimitPolicy: "next-source-and-rust-account" | "backend-registration" | "backend-oidc";
-  tenantSource: "validated-organization-field" | "none";
-  replayPolicy: "non-idempotent-credential-exchange" | "one-time-registration" | "read-only" | "oidc-state";
+  rateLimitPolicy: "next-source-and-rust-account";
+  tenantSource: "validated-organization-field";
+  replayPolicy: "non-idempotent-credential-exchange";
   cachePolicy: "private-no-store";
 }>;
 
