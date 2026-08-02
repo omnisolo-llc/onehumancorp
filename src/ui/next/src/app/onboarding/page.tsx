@@ -1846,18 +1846,32 @@ export default function OnboardingWizard() {
                     Website Template
                   </label>
                   <div className="grid grid-cols-2 gap-3">
-                    {["Modern", "Minimal", "Bold", "Classic"].map(
-                      (template) => (
+                    {[
+                      { id: "Modern", label: "Modern", icon: "✨", desc: "Dynamic & sleek" },
+                      { id: "Minimal", label: "Minimal", icon: "🍃", desc: "Clean & quiet" },
+                      { id: "Bold", label: "Bold", icon: "🔥", desc: "High energy" },
+                      { id: "Classic", label: "Classic", icon: "🏛️", desc: "Elegant & robust" },
+                    ].map(
+                      (item) => (
                         <div
-                          key={template}
+                          key={item.id}
                           onClick={() =>
-                            updateState({ websiteTemplate: template })
+                            updateState({ websiteTemplate: item.id })
                           }
-                          className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] ${websiteTemplate === template ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white"}`}
+                          className={`p-4 border cursor-pointer transition-all duration-[300ms] rounded-[16px] flex flex-col items-start gap-1 relative overflow-hidden ${websiteTemplate === item.id ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-[0_4px_12px_rgba(0,102,255,0.15)] scale-[1.02]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white hover:scale-[1.01]"}`}
                         >
-                          <div className="font-semibold text-sm">
-                            {template}
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{item.icon}</span>
+                            <div className="font-bold text-sm tracking-tight">
+                              {item.label}
+                            </div>
                           </div>
+                          <span className="text-[11px] opacity-70 leading-tight">
+                            {item.desc}
+                          </span>
+                          {websiteTemplate === item.id && (
+                            <div className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-[#0066FF]" />
+                          )}
                         </div>
                       ),
                     )}
@@ -1871,25 +1885,31 @@ export default function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => updateState({ domainChoice: "subdomain" })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] flex flex-col items-center justify-center text-center ${domainChoice === "subdomain" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
+                      className={`p-4 border cursor-pointer transition-all duration-[300ms] rounded-[16px] flex flex-col items-center justify-center text-center relative ${domainChoice === "subdomain" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-[0_4px_12px_rgba(0,102,255,0.15)] scale-[1.02]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500 hover:scale-[1.01]"}`}
                     >
-                      <span className="font-semibold text-sm mb-1">
+                      <span className="font-bold text-sm mb-1">
                         Free Subdomain
                       </span>
                       <span className="text-[10px] opacity-70">
                         your-name.ohc.app
                       </span>
+                      {domainChoice === "subdomain" && (
+                        <div className="absolute top-1.5 right-2 w-1.5 h-1.5 rounded-full bg-[#0066FF]" />
+                      )}
                     </div>
                     <div
                       onClick={() => updateState({ domainChoice: "custom" })}
-                      className={`p-3 border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] rounded-[16px] flex flex-col items-center justify-center text-center ${domainChoice === "custom" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"}`}
+                      className={`p-4 border cursor-pointer transition-all duration-[300ms] rounded-[16px] flex flex-col items-center justify-center text-center relative ${domainChoice === "custom" ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-[0_4px_12px_rgba(0,102,255,0.15)] scale-[1.02]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500 hover:scale-[1.01]"}`}
                     >
-                      <span className="font-semibold text-sm mb-1">
+                      <span className="font-bold text-sm mb-1">
                         Custom Domain
                       </span>
                       <span className="text-[10px] opacity-70">
                         your-name.com
                       </span>
+                      {domainChoice === "custom" && (
+                        <div className="absolute top-1.5 right-2 w-1.5 h-1.5 rounded-full bg-[#0066FF]" />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1909,7 +1929,7 @@ export default function OnboardingWizard() {
                         <div
                           key={agent.id}
                           onClick={() => handleAgentToggle(agent.id)}
-                          className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]  border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "glass-control rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500"}`}
+                          className={`cursor-pointer p-3.5 flex items-start gap-3 transition-all duration-[300ms] border rounded-[16px] relative overflow-hidden ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_4px_12px_rgba(0,102,255,0.1)] scale-[1.01]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control hover:border-gray-400 dark:hover:border-gray-500"}`}
                         >
                           <div
                             className={`flex items-center justify-center w-10 h-10 rounded-full text-lg ${isActive ? "bg-[#0066FF]/20" : "bg-black/10 dark:bg-white/10"}`}
@@ -1954,8 +1974,8 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 glass-control rounded-[8px] text-[#1D1D1F] dark:text-white">
-                    <span className="font-semibold text-sm">
+                  <label className="flex items-center justify-between cursor-pointer p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control rounded-[16px] text-[#1D1D1F] dark:text-white transition-all duration-300 hover:border-gray-400 dark:hover:border-gray-500">
+                    <span className="font-bold text-sm tracking-tight">
                       Allow AI to Auto-Respond
                     </span>
                     <input
@@ -1967,10 +1987,10 @@ export default function OnboardingWizard() {
                       }
                     />
                     <div
-                      className={`w-10 h-6 rounded-full transition-colors ${aiAutoRespond ? "bg-[#34C759]" : "bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(255,255,255,0.1)]"} relative`}
+                      className={`w-12 h-7 rounded-full transition-colors duration-300 ${aiAutoRespond ? "bg-[#34C759]" : "bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(255,255,255,0.1)]"} relative`}
                     >
                       <div
-                        className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${aiAutoRespond ? "translate-x-5" : "translate-x-1"}`}
+                        className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-all duration-300 ${aiAutoRespond ? "left-[22px]" : "left-[4px]"}`}
                       ></div>
                     </div>
                   </label>

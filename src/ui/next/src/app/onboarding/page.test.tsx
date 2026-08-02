@@ -1308,4 +1308,26 @@ describe("OnboardingWizard", () => {
     });
     await user.click(skipBtns[0]);
   });
+
+  it("Step 3: Renders glassmorphic template styles and domain options correctly", async () => {
+    act(() => {
+      useOnboardingStore.setState({
+        step: 3,
+        websiteTemplate: "Modern",
+        domainChoice: "subdomain",
+      });
+    });
+
+    await renderOnboardingWizard();
+
+    // Verify template labels
+    screen.getByText("Modern");
+    screen.getByText("Minimal");
+    screen.getByText("Bold");
+    screen.getByText("Classic");
+
+    // Verify custom domain text
+    screen.getByText("Free Subdomain");
+    screen.getByText("Custom Domain");
+  });
 });
