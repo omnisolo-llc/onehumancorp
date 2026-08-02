@@ -1,20 +1,5 @@
 -- Migration 217: Ensure user authentication columns and TEXT id format exist regardless of table creation order
-
-DO $$
-BEGIN
-    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user_sessions') THEN
-        ALTER TABLE user_sessions DROP CONSTRAINT IF EXISTS fk_rails_9fa262d742;
-    END IF;
-END $$;
-
--- Drop foreign keys referencing users(id) before altering the type
-DO $$
-BEGIN
-    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'api_keys') THEN
-        ALTER TABLE api_keys DROP CONSTRAINT IF EXISTS api_keys_member_id_fkey;
-    END IF;
-END $$;
-
+ALTER TABLE user_sessions DROP CONSTRAINT IF EXISTS fk_rails_9fa262d742;
 ALTER TABLE users ALTER COLUMN id TYPE TEXT USING id::text;
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;

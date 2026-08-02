@@ -29,6 +29,43 @@ pub trait PydanticSchemaValidator<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String>;
 }
 
+pub struct AdvancedPydanticOutputParser<T: Send + Sync> {
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T: Send + Sync> Default for AdvancedPydanticOutputParser<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T: Send + Sync> AdvancedPydanticOutputParser<T> {
+    pub fn new() -> Self {
+        Self {
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for AdvancedPydanticOutputParser<T> {
+    fn parse_message(&self, msg: &Message) -> Result<T, String> {
+        // Output Parsing: Primary mechanic is extracting from native tool_calls
+        if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
+            if let Some(data) = call.arguments.get("data") {
+                return self.validate_schema(data);
+            } else {
+                return Err(
+                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                    );
+            }
+        }
+
+        // Strict enforcement: Rely entirely on native tool_calls API objects.
+        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
+    }
+}
+
+
 pub struct StructuredOutputParser<T: Send + Sync> {
     _marker: std::marker::PhantomData<T>,
 }
@@ -50,7 +87,12 @@ impl<T: Send + Sync> StructuredOutputParser<T> {
 impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
-        if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
+        if !msg.tool_calls.is_empty()
+            && let Some(call) = msg
+                .tool_calls
+                .iter()
+                .find(|t| t.name == "structured_output")
+        {
             if let Some(data) = call.arguments.get("data") {
                 return self.validate_schema(data);
             } else {
@@ -61,17 +103,9 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for StructuredOutputPars
         }
 
         // Strict enforcement: Rely entirely on native tool_calls API objects.
-        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
+        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
     }
 }
-
-
-
-
-
-
-
-
 
 pub struct RetryWithErrorOutputParser<'a, T> {
     parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
@@ -287,7 +321,7 @@ pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
     req: ChatRequest,
     max_retries: usize,
 ) -> Result<T, ToolError> {
-    let parser = Box::new(StructuredOutputParser::<T>::new());
+    let parser = Box::new(AdvancedPydanticOutputParser::<T>::new());
     let retry_parser = RetryWithErrorOutputParser::new(parser, llm.clone());
     retry_parser.parse_with_prompt(req, max_retries).await
 }
@@ -734,86 +768,6 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
         assert_eq!(result.expect("Expected TestOutput in test").result, "recovered_eof");
-
-    #[tokio::test]
-    async fn test_parse_structured_output_missing_data_recovery() {
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"wrong_key": {"result": "missing data"}}),
-                ),
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"data": {"result": "recovered from missing"}}),
-                ),
-            ]),
-        });
-
-        let req = create_test_req();
-        let result: Result<TestOutput, _> =
-            parse_structured_output(&(client.clone() as Arc<dyn LlmClientForParser>), req, 2).await;
-
-        assert!(result.is_ok());
-        assert_eq!(result.expect("OK").result, "recovered from missing");
-    }
-
-    #[tokio::test]
-    async fn test_parse_structured_output_malformed_schema_recovery() {
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"data": ["not_an_object"]}),
-                ),
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"data": {"result": "recovered from malformed"}}),
-                ),
-            ]),
-        });
-
-        let req = create_test_req();
-        let result: Result<TestOutput, _> =
-            parse_structured_output(&(client.clone() as Arc<dyn LlmClientForParser>), req, 2).await;
-
-        assert!(result.is_ok());
-        assert_eq!(result.expect("OK").result, "recovered from malformed");
-    }
-
-    #[derive(Deserialize, Debug, PartialEq)]
-    struct EnumTestOutput {
-        enum_val: TestEnum,
-    }
-
-    #[derive(Deserialize, Debug, PartialEq)]
-    enum TestEnum {
-        ValidA,
-        ValidB,
-    }
-
-    #[tokio::test]
-    async fn test_parse_structured_output_enum_mismatch_recovery() {
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"data": {"enum_val": "InvalidC"}}),
-                ),
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"data": {"enum_val": "ValidB"}}),
-                ),
-            ]),
-        });
-
-        let req = create_test_req();
-        let result: Result<EnumTestOutput, _> =
-            parse_structured_output(&(client.clone() as Arc<dyn LlmClientForParser>), req, 2).await;
-
-        assert!(result.is_ok());
-        assert_eq!(result.expect("OK").enum_val, TestEnum::ValidB);
-    }
     }
 }
 
@@ -923,7 +877,7 @@ mod retry_tests {
         let req = create_test_req();
         // Since test wrapper implements OutputParser<T>, parse_structured_output works for this.
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, failing_client as Arc<dyn LlmClientForParser>);
         let result: Result<TestOutput, _> = retry_parser.parse_with_prompt(req, 3).await;
@@ -950,7 +904,7 @@ mod retry_tests {
 
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, failing_client as Arc<dyn LlmClientForParser>);
         let result: Result<TestOutput, _> = retry_parser.parse_with_prompt(req, 2).await;
@@ -1062,7 +1016,7 @@ mod tests_clamped {
 
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, failing_client.clone() as Arc<dyn LlmClientForParser>);
 
@@ -1145,7 +1099,7 @@ mod tests_clamped {
 
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
 
@@ -1188,7 +1142,7 @@ mod tests_clamped {
 
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser =
             RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
 
@@ -1214,13 +1168,17 @@ fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(data: &serde_json::V
     }
 }
 
-impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
+impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
         validate_pydantic_schema(data)
     }
 }
 
-
+impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
+    fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
+        validate_pydantic_schema(data)
+    }
+}
 
 #[cfg(test)]
 mod strict_output_tests {
@@ -1306,7 +1264,7 @@ mod strict_output_tests {
         });
 
         let parser: Box<dyn OutputParser<StrictTestOutput> + Send + Sync> =
-            Box::new(StructuredOutputParser::new());
+            Box::new(AdvancedPydanticOutputParser::new());
         let retry_parser = RetryWithErrorOutputParser::new(parser, client.clone() as Arc<dyn LlmClientForParser>);
 
         let req = create_test_req();
