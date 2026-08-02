@@ -625,6 +625,7 @@ rust_test(
     deps = [
         "@crates//:sea-orm",
         "@crates//:serde",
+"//src/server/auth:server_auth",
         "@crates//:tokio",
     ],
 )
@@ -647,6 +648,7 @@ rust_test(
         "@crates//:sea-orm",
         "@crates//:serde",
         "@crates//:serde_json",
+"//src/server/auth:server_auth",
         "@crates//:tokio",
         "@crates//:uuid",
     ],
@@ -670,6 +672,7 @@ rust_test(
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:tokio",
+        "//src/server/auth:server_auth",
         "@crates//:uuid",
     ],
 )
