@@ -1,0 +1,34 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(
+    [
+        "mod.rs",
+        "migrations/tenant_isolation_test.rs",
+        "models.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "chat",
+    srcs = [
+        "mod.rs",
+        "migrations/tenant_isolation_test.rs",
+        "models.rs",
+    ],
+    crate_root = "mod.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:tokio",
+    ],
+)
+
+rust_test(
+    name = "chat_test",
+    crate = ":chat",
+)
