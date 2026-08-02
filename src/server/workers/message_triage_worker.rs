@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use redis;
+use serde_json;
 use tokio::time::Duration;
 use crate::db::DB;
 use sqlx::Row;
@@ -548,7 +550,7 @@ Output JSON format:
                     if let Some(client) = crate::get_redis_client() {
                         if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                             use redis::AsyncCommands;
-                            let lock_acquired: Result<bool, _> = conn.set_nx(&redis_lock_key, "locked").await;
+                            let lock_acquired: Result<bool, redis::RedisError> = conn.set_nx(&redis_lock_key, "locked").await;
                             if let Ok(true) = lock_acquired {
                                 let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
                                 _lock_conn = Some(conn);
@@ -678,7 +680,7 @@ Output JSON format:
                     if let Some(client) = crate::get_redis_client() {
                         if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                             use redis::AsyncCommands;
-                            let lock_acquired: Result<bool, _> = conn.set_nx(&redis_lock_key, "locked").await;
+                            let lock_acquired: Result<bool, redis::RedisError> = conn.set_nx(&redis_lock_key, "locked").await;
                             if let Ok(true) = lock_acquired {
                                 let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
                                 _lock_conn = Some(conn);
