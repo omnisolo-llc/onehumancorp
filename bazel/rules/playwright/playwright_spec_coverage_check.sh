@@ -22,7 +22,8 @@ runfiles_root() {
 spec_relpath() {
   local root="$1"
   local spec="$2"
-  python3 - "$root" "$spec" <<'PY'
+  local rel
+  python3 - "$root" "$spec" <<'PY' > /tmp/relpath_out || true
 import os
 import sys
 root = os.path.abspath(sys.argv[1])
@@ -33,6 +34,9 @@ except ValueError:
     relative = spec
 print(spec if relative.startswith("../") else relative)
 PY
+  rel=$(cat /tmp/relpath_out)
+  rel="${rel#/app/}"
+  echo "$rel"
 }
 
 display_spec() {
@@ -199,7 +203,7 @@ if [[ "$scan_runfiles" == true ]]; then
     exit 1
   fi
   check_forbidden_markers "${runfile_specs[@]}"
-  # check_no_substitutions "${runfile_specs[@]}" "${support_sources[@]}"
+  check_no_substitutions "${runfile_specs[@]}" "${support_sources[@]}"
   if [[ -n "${SOURCE_REPO_ROOT:-}" && -d "${SOURCE_REPO_ROOT:-}" ]]; then
     source_unique="$(find_spec_relpaths "$SOURCE_REPO_ROOT")"
     runfile_unique="$(find_spec_relpaths "$root")"
@@ -239,5 +243,5 @@ if [[ -n "$not_discovered" ]]; then
   exit 1
 fi
 
-# check_no_substitutions "${all_specs[@]}" "${support_sources[@]}"
+check_no_substitutions "${all_specs[@]}" "${support_sources[@]}"
 echo "Bazel aggregate CI selection includes ${#ci_specs[@]} of ${#all_specs[@]} discovered Playwright specs."
