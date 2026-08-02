@@ -7296,7 +7296,7 @@ mod tests {
     impl ToolExecutor for MockToolExecutor {
         async fn execute(&self, _args: Value) -> Result<String, ToolError> {
             Ok(
-                "A very long tool output that should be masked because it is long enough"
+                "A very long tool output that should be masked because it is long enough A very long tool output that should be masked because it is long enough A very long tool output that should be masked because it is long enough A very long tool output that should be masked because it is long enough A very long tool output that should be masked because it is long enough A very long tool output that should be masked because it is long enough A very long tool output that should be masked because it is long enough"
                     .to_string(),
             )
         }

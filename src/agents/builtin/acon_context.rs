@@ -6,12 +6,15 @@ use crate::types::{Message, Role};
 pub struct AconConfig {
     /// Number of recent messages to preserve completely.
     pub preserve_recent_messages_count: usize,
+    /// Maximum size of a tool output to keep unmasked even if it's old (in characters).
+    pub max_tool_output_length: usize,
 }
 
 impl Default for AconConfig {
     fn default() -> Self {
         Self {
             preserve_recent_messages_count: 2,
+            max_tool_output_length: 500,
         }
     }
 }
@@ -38,7 +41,7 @@ impl AconStrategy {
                     for tr in &mut msg.tool_results {
                         if tr.error.is_empty()
                             && !tr.content.starts_with("[ACON:")
-                            && !tr.content.is_empty()
+                            && tr.content.len() > self.config.max_tool_output_length
                         {
                             tr.content =
                                 "[ACON: Tool output omitted to prioritize reasoning traces.]"
@@ -70,7 +73,7 @@ mod tests {
                 tool_calls: vec![],
                 tool_results: vec![ToolResult {
                     tool_call_id: "call_1".to_string(),
-                    content: "Massive log output".to_string(),
+                    content: "A".repeat(1000), // Massive log output
                     error: String::new(),
                 }],
                 response_id: None,
@@ -90,7 +93,7 @@ mod tests {
                 tool_calls: vec![],
                 tool_results: vec![ToolResult {
                     tool_call_id: "call_2".to_string(),
-                    content: "Another tool result".to_string(),
+                    content: "A".repeat(1000), // Massive log output, but recent
                     error: String::new(),
                 }],
                 response_id: None,
@@ -108,10 +111,11 @@ mod tests {
 
         let config = AconConfig {
             preserve_recent_messages_count: 2,
+            max_tool_output_length: 500,
         };
         apply_acon_strategy(&mut messages, &config);
 
-        // First tool message should be masked (it is outside the preserved count)
+        // First tool message should be masked (it is outside the preserved count and > max length)
         assert_eq!(
             messages[0].tool_results[0].content,
             "[ACON: Tool output omitted to prioritize reasoning traces.]"
@@ -124,6 +128,52 @@ mod tests {
         );
 
         // Second tool message is within the recent preserved count
-        assert_eq!(messages[2].tool_results[0].content, "Another tool result");
+        assert_eq!(messages[2].tool_results[0].content, "A".repeat(1000));
+    }
+
+    #[test]
+    fn test_apply_acon_strategy_preserves_short_tool_outputs() {
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "Short log output".to_string(), // Short log output
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "I'm thinking...".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Thinking again...".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            }
+        ];
+
+        let config = AconConfig {
+            preserve_recent_messages_count: 1, // First tool message will be outside the preserved count
+            max_tool_output_length: 500,
+        };
+        apply_acon_strategy(&mut messages, &config);
+
+        // First tool message should NOT be masked since it's < max_tool_output_length
+        assert_eq!(
+            messages[0].tool_results[0].content,
+            "Short log output"
+        );
     }
 }
