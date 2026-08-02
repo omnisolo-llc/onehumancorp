@@ -137,7 +137,7 @@ export default function PricingPage() {
                     <p className="text-xl font-bold text-gray-900">
                         {planDetails?.storage_used_bytes ? (planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1) : 0} MB
                         <span className="text-sm font-normal text-gray-500 ml-1">
-                            / {planDetails?.storage_limit_bytes ? (planDetails.storage_limit_bytes / (1024 * 1024)).toFixed(0) + ' MB' : '∞'}
+                            / {(planDetails?.storage_limit_bytes ?? 0) > 0 ? (planDetails.storage_limit_bytes / (1024 * 1024)).toFixed(0) + ' MB' : '∞'}
                         </span>
                     </p>
                 </div>
