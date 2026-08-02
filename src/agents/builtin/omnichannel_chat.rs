@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolError, Usage};
 use crate::llm::LlmClient;
 
-/// Represents the events emitted by the native omnichannel chat system (formerly Chatwoot webhooks).
+/// Represents the events emitted by the native omnichannel chat system (formerly third-party webhooks).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum WebhookEvent {
