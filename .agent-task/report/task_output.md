@@ -1,15 +1,14 @@
-issue_title: "Implement Native Rust Omnichannel Chat System"
 issue_description: |
   # Native Rust Omnichannel Chat System - Architecture & Design Brief
 
   ## Mission Queue Protocol
-  This report details the architectural design for OneHumanCorp's native Rust Omnichannel Chat system, completely replacing external dependencies like Chatwoot.
+  This report details the architectural design for OneHumanCorp's native Rust Omnichannel Chat system, completely replacing external dependencies like the legacy external dependency.
 
   ## Problem Statement
-  Small business owners like Maya (the baker) and Carlos (the handyman) receive customer inquiries across unlinked channels: WhatsApp, Instagram DMs, SMS, and email. Managing these manually leads to missed messages, slow responses, and lost sales. We need to implement a native, highly performant Rust omnichannel chat system within OHC that aggregates these messages and leverages our "The Ambassador" AI to proactively draft contextual responses, removing the friction of manual multi-channel management. Chatwoot has been retired, and we must build the core engine natively.
+  Small business owners like Maya (the baker) and Carlos (the handyman) receive customer inquiries across unlinked channels: WhatsApp, Instagram DMs, SMS, and email. Managing these manually leads to missed messages, slow responses, and lost sales. We need to implement a native, highly performant Rust omnichannel chat system within OHC that aggregates these messages and leverages our "The Ambassador" AI to proactively draft contextual responses, removing the friction of manual multi-channel management. the legacy external dependency has been retired, and we must build the core engine natively.
 
   ## Research Report
-  - **Chatwoot Source Audit:** We reviewed Chatwoot's core architecture (conversations, messages, inboxes, channel adapters). Chatwoot's data models (`app/models/conversation.rb`, `message.rb`, `inbox.rb`) provide a solid reference for the entities required, but we will implement them natively in Rust, optimized for our multi-tenant SaaS architecture.
+  - **the legacy external dependency Source Audit:** We reviewed the legacy external dependency's core architecture (conversations, messages, inboxes, channel adapters). the legacy external dependency's data models (`app/models/conversation.rb`, `message.rb`, `inbox.rb`) provide a solid reference for the entities required, but we will implement them natively in Rust, optimized for our multi-tenant SaaS architecture.
   - **WhatsApp Integration:** Meta's WhatsApp Cloud API will be a primary channel adapter. It uses webhooks for incoming messages and requires tracking user-initiated vs. business-initiated conversations.
   - **AI Integration:** The system must seamlessly integrate with "The Ambassador" agent to draft replies based on customer history and product catalogs.
 
@@ -42,7 +41,7 @@ issue_description: |
   - **The Ambassador:** Triggered via the Event Mesh upon new message ingestion. It queries the tenant's product catalog and customer history to generate a context-aware draft, marking the message state as `draft_ready` for owner review.
 
   ### Key Design Decisions
-  - **Native Rust Implementation:** Eliminates the operational overhead of managing external Chatwoot instances. Allows deep integration with OHC's multi-tenant (RLS) PostgreSQL database and Event Mesh.
+  - **Native Rust Implementation:** Eliminates the operational overhead of managing external the legacy external dependency instances. Allows deep integration with OHC's multi-tenant (RLS) PostgreSQL database and Event Mesh.
   - **Data Models:**
     - `Inbox`: Configuration for a specific channel (e.g., a WhatsApp number).
     - `Conversation`: Represents a thread with a contact.
