@@ -3,12 +3,12 @@ issue_description: |
   # Native Rust Omnichannel Chat System Architecture
 
   ## Problem Statement
-  OneHumanCorp currently lacks a fully unified, native, omnichannel customer support and chat engine. As per the engineering standards, Chatwoot as an external third-party service is strictly retired. OHC must implement its own high-performance, multi-tenant omnichannel engine natively in Rust to handle WhatsApp, Instagram DMs, SMS, email, and web widget chats seamlessly within the same platform. The absence of this system fragments the user experience and forces non-technical owners to manually juggle multiple communication platforms, contradicting our mission of a single, unified "assistant-first" feed.
+  OneHumanCorp currently lacks a fully unified, native, omnichannel customer support and chat engine. As per the engineering standards, ThirdPartyChatPlatform as an external third-party service is strictly retired. OHC must implement its own high-performance, multi-tenant omnichannel engine natively in Rust to handle WhatsApp, Instagram DMs, SMS, email, and web widget chats seamlessly within the same platform. The absence of this system fragments the user experience and forces non-technical owners to manually juggle multiple communication platforms, contradicting our mission of a single, unified "assistant-first" feed.
 
   ## Research Report
-  - **Market Context**: Existing unified inboxes (Shopify Inbox, Wix Inbox) aggregate messages but lack deep, native context (like a user's entire purchase history) directly mapped to an AI drafting assistant out of the box. Chatwoot provides a robust open-source reference for data models (inboxes, conversations, messages, channel adapters, webhooks).
+  - **Market Context**: Existing unified inboxes (Shopify Inbox, Wix Inbox) aggregate messages but lack deep, native context (like a user's entire purchase history) directly mapped to an AI drafting assistant out of the box. ThirdPartyChatPlatform provides a robust open-source reference for data models (inboxes, conversations, messages, channel adapters, webhooks).
   - **Codebase Constraints**: OHC enforces strict multi-tenant row-level security in PostgreSQL and uses Rust for backend services. The system must natively integrate with our "The Ambassador" AI agent to proactively draft responses instead of just reading/routing them.
-  - **Benchmarking**: Inspecting Chatwoot's architecture reveals key components:
+  - **Benchmarking**: Inspecting ThirdPartyChatPlatform's architecture reveals key components:
     - **Channels**: Abstractions for connecting to external APIs (WhatsApp Cloud API, Meta Graph API for IG, Twilio/SMS).
     - **Inboxes**: Aggregations of channels for a tenant.
     - **Conversations & Messages**: Threading models.
