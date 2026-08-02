@@ -3,31 +3,31 @@
 -- Fix customer_profile RLS policy
 ALTER TABLE IF EXISTS customer_profile ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS customer_profile_tenant_isolation_policy ON customer_profile;
-CREATE POLICY customer_profile_tenant_isolation_policy ON customer_profile FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+CREATE POLICY customer_profile_tenant_isolation_policy ON customer_profile FOR ALL USING (tenant_id = current_setting('app.current_tenant', true));
 
 -- Fix work_item RLS policy
 ALTER TABLE IF EXISTS work_item ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS work_item_tenant_isolation_policy ON work_item;
-CREATE POLICY work_item_tenant_isolation_policy ON work_item FOR ALL USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+CREATE POLICY work_item_tenant_isolation_policy ON work_item FOR ALL USING (tenant_id = current_setting('app.current_tenant', true));
 
 -- Fix agent_draft RLS policy
 ALTER TABLE IF EXISTS agent_draft ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS agent_draft_tenant_isolation_policy ON agent_draft;
 CREATE POLICY agent_draft_tenant_isolation_policy ON agent_draft FOR ALL USING (
     EXISTS (
-        SELECT 1 FROM work_item WHERE work_item.id = agent_draft.work_item_id AND work_item.tenant_id = current_setting('app.current_tenant', true)::uuid
+        SELECT 1 FROM work_item WHERE work_item.id = agent_draft.work_item_id AND work_item.tenant_id = current_setting('app.current_tenant', true)
     )
 );
 
 -- Fix proposed_bookings RLS policy
 ALTER TABLE IF EXISTS proposed_bookings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS proposed_bookings_tenant_isolation ON proposed_bookings;
-CREATE POLICY proposed_bookings_tenant_isolation ON proposed_bookings USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+CREATE POLICY proposed_bookings_tenant_isolation ON proposed_bookings USING (tenant_id = current_setting('app.current_tenant', true));
 
 -- Fix work_tasks RLS policy
 ALTER TABLE IF EXISTS work_tasks ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS work_tasks_tenant_isolation ON work_tasks;
-CREATE POLICY work_tasks_tenant_isolation ON work_tasks USING (tenant_id = current_setting('app.current_tenant', true)::uuid);
+CREATE POLICY work_tasks_tenant_isolation ON work_tasks USING (tenant_id = current_setting('app.current_tenant', true));
 
 -- Fix availability_schedules RLS policy
 ALTER TABLE IF EXISTS availability_schedules ENABLE ROW LEVEL SECURITY;

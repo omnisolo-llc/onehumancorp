@@ -3,8 +3,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "mod.rs",
-        "migrations/tenant_isolation_test.rs",
         "models.rs",
+        "migrations/tenant_isolation_test.rs"
     ],
     visibility = ["//visibility:public"],
 )
@@ -13,8 +13,8 @@ rust_library(
     name = "chat",
     srcs = [
         "mod.rs",
-        "migrations/tenant_isolation_test.rs",
         "models.rs",
+        "migrations/tenant_isolation_test.rs"
     ],
     crate_root = "mod.rs",
     visibility = ["//visibility:public"],
