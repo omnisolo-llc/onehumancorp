@@ -1,4 +1,4 @@
-issue_title: "Native Rust Omnichannel Chat Engine (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat Engine"
 issue_description: |
   # Mission Queue Protocol: Native Rust Omnichannel Chat Engine
 
@@ -6,9 +6,9 @@ issue_description: |
   OHC currently relies on third-party integrations for omnichannel customer support, which breaks our core promise of a unified, native assistant. Maya (baker) and Carlos (handyman) don't want to log into another portal or pay another subscription to see their Instagram, WhatsApp, and website messages. They need a single, fast, zero-configuration inbox right inside the OHC app that their AI assistant can access directly to draft replies and manage context.
 
   ## Research Report
-  - **Market Context**: Shopify Inbox, Wix Inbox, and GoDaddy Conversations all provide native, unified messaging. Chatwoot provides an open-source model for omnichannel (Channels, Inboxes, Conversations, Contacts, Messages) but relies on Ruby on Rails, Sidekiq, and external Redis, which is too heavy for our standalone/mobile-first deployments.
-  - **Codebase Findings**: OHC uses Rust for the backend (`onehumancorp/mono`). We need a native Rust implementation of the core omnichannel messaging engine as Chatwoot is being 100% retired.
-  - **Competitor Benchmarking (Chatwoot)**:
+  - **Market Context**: Shopify Inbox, Wix Inbox, and GoDaddy Conversations all provide native, unified messaging. We need a native Rust implementation of the core omnichannel messaging engine.
+  - **Codebase Findings**: OHC uses Rust for the backend (`onehumancorp/mono`).
+  - **Competitor Benchmarking**:
     - **Models**: `Account`, `Inbox`, `Channel::*`, `Conversation`, `Message`, `Contact`.
     - **Real-time**: WebSockets for typing indicators and message delivery.
     - **Architecture**: Multi-tenant by default.
