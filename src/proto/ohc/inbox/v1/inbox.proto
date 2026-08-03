@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package ohc.chat.v1;
+package ohc.inbox.v1;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
 
-option go_package = "onehumancorp/src/proto/ohc/chat/v1";
+option go_package = "onehumancorp/src/proto/ohc/inbox/v1";
 
-service ChatService {
+service InboxService {
   rpc CreateConversation(CreateConversationRequest) returns (Conversation);
   rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
   rpc SendMessage(SendMessageRequest) returns (Message);

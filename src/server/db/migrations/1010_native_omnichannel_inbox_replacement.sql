@@ -1,6 +1,9 @@
 -- Create core tables for native omnichannel chat
 -- Replaces old external chat platform implementation
 
+-- Ensure pgcrypto is available for gen_random_bytes
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- UUIDv7 Generation Function
 -- Properly compliant with RFC 4122 / 9562 for UUID version 7
 CREATE OR REPLACE FUNCTION generate_uuid_v7() RETURNS uuid

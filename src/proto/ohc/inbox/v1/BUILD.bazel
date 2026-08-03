@@ -2,8 +2,8 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 
 proto_library(
-    name = "chat_proto",
-    srcs = ["chat.proto"],
+    name = "inbox_proto",
+    srcs = ["inbox.proto"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_protobuf//:timestamp_proto",
@@ -12,9 +12,9 @@ proto_library(
 )
 
 go_proto_library(
-    name = "chat_go_proto",
+    name = "inbox_go_proto",
     compilers = ["@io_bazel_rules_go//proto:go_grpc"],
-    importpath = "onehumancorp/src/proto/ohc/chat/v1",
-    proto = ":chat_proto",
+    importpath = "onehumancorp/src/proto/ohc/inbox/v1",
+    proto = ":inbox_proto",
     visibility = ["//visibility:public"],
 )
