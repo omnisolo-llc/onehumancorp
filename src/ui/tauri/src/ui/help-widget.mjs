@@ -256,6 +256,9 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: 1;
         }
 
+        @media (max-width: 414px) {
+          #ai-chat-interface { width: 100% !important; height: 100vh !important; max-height: 100vh !important; bottom: 0 !important; right: 0 !important; border-radius: 16px 16px 0 0 !important; }
+        }
         @media (max-width: 480px) {
             #ai-chat-interface {
                 bottom: 0;
@@ -263,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 width: 100vw;
                 height: 100%;
                 max-height: 100vh;
-                border-radius: 0;
+                border-radius: 16px 16px 0 0;
                 box-sizing: border-box;
             }
         }
