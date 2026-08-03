@@ -1,0 +1,27 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "ohc_chat",
+    srcs = glob(["src/**/*.rs"]),
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:tokio",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "//src/server/common:server_common",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:tracing",
+        "@crates//:chrono",
+        "@crates//:futures",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "ohc_chat_test",
+    crate = ":ohc_chat",
+)
