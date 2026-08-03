@@ -120,8 +120,8 @@ impl QuoteGenerationWorker {
 
         let req = ChatRequest {
             model: "default-model".to_string(),
-            system: system_prompt,
-            messages: vec![Message::user(payload.inquiry)],
+            system: crate::pricing::compression::reduce_tokens(&system_prompt),
+            messages: vec![Message::user(crate::pricing::compression::reduce_tokens(&payload.inquiry))],
             temperature: 0.1,
             max_tokens: 1024,
             tools: vec![],
