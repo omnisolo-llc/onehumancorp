@@ -187,7 +187,6 @@ function makeStringEvaluator(checker) {
 function discoverReachable(initialFiles) {
   const files = new Set(initialFiles.map((file) => path.resolve(file)));
   const discoveryFindings = [];
-  const visitedFiles = new Set();
   let changed = true;
   while (changed) {
     changed = false;
@@ -195,8 +194,6 @@ function discoverReachable(initialFiles) {
     const checker = program.getTypeChecker();
     const evaluateString = makeStringEvaluator(checker);
     for (const filename of [...files]) {
-      if (visitedFiles.has(filename)) continue;
-      visitedFiles.add(filename);
       const sourceFile = program.getSourceFile(filename);
       if (!sourceFile) continue;
       function addSpecifier(node, dynamic) {
