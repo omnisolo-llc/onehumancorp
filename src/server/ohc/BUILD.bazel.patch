@@ -1,0 +1,12 @@
+<<<<<<< SEARCH
+rust_test(
+    name = "server_ohc_test",
+    crate = ":server_ohc",
+)
+=======
+rust_test(
+    name = "server_ohc_test",
+    crate = ":server_ohc",
+    rustc_flags = ["--cfg=ohc_bazel"],
+)
+>>>>>>> REPLACE

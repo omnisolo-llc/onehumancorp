@@ -1,0 +1,8 @@
+<<<<<<< SEARCH
+pub mod catalog;
+pub mod shipping;
+=======
+pub mod chat;
+pub mod catalog;
+pub mod shipping;
+>>>>>>> REPLACE

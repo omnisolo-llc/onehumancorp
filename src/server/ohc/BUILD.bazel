@@ -25,3 +25,11 @@ rust_library(
         "@crates//:tonic",
     ],
 )
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_ohc_test",
+    crate = ":server_ohc",
+    rustc_flags = ["--cfg=ohc_bazel"],
+)

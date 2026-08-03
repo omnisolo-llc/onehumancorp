@@ -1,0 +1,10 @@
+<<<<<<< SEARCH
+        "mcp_webhook.rs",
+        "mesh_handler.rs",
+        "meta_webhook.rs",
+=======
+        "mcp_webhook.rs",
+        "mesh_handler.rs",
+        "meta_webhook.rs",
+        "chat.rs",
+>>>>>>> REPLACE
