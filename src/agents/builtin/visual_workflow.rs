@@ -128,6 +128,7 @@ fn evaluate_condition(expr: &str) -> bool {
 pub trait BlockConnectUI: Send + Sync {
     fn generate_ui_schema(&self) -> String;
     fn validate_connection(&self, source_node: &Node, target_node: &Node) -> Result<(), String>;
+    fn validate_graph(&self) -> Result<(), String>;
 }
 
 impl BlockConnectUI for WorkflowGraph {
@@ -175,6 +176,89 @@ impl BlockConnectUI for WorkflowGraph {
         if matches!(source_node.node_type, NodeType::Input { .. }) && matches!(target_node.node_type, NodeType::Output) {
             return Err("Direct connection from Input to Output is not allowed.".to_string());
         }
+        Ok(())
+    }
+
+    fn validate_graph(&self) -> Result<(), String> {
+        let mut node_ids = std::collections::HashSet::new();
+        for node in &self.nodes {
+            if !node_ids.insert(node.id.clone()) {
+                return Err(format!("Duplicate node id found: {}", node.id));
+            }
+        }
+
+        let mut in_degrees: HashMap<String, usize> = HashMap::new();
+        let mut out_degrees: HashMap<String, usize> = HashMap::new();
+        let mut adj_list: HashMap<String, Vec<String>> = HashMap::new();
+
+        for node in &self.nodes {
+            in_degrees.insert(node.id.clone(), 0);
+            out_degrees.insert(node.id.clone(), 0);
+            adj_list.insert(node.id.clone(), Vec::new());
+        }
+
+        for edge in &self.edges {
+            if !node_ids.contains(&edge.source) {
+                return Err(format!("Edge refers to missing source node: {}", edge.source));
+            }
+            if !node_ids.contains(&edge.target) {
+                return Err(format!("Edge refers to missing target node: {}", edge.target));
+            }
+            *in_degrees.get_mut(&edge.target).unwrap() += 1;
+            *out_degrees.get_mut(&edge.source).unwrap() += 1;
+            adj_list.get_mut(&edge.source).unwrap().push(edge.target.clone());
+        }
+
+        for node in &self.nodes {
+            match node.node_type {
+                NodeType::Input { .. } => {
+                    if in_degrees[&node.id] > 0 {
+                        return Err(format!("Input node '{}' cannot have incoming edges.", node.id));
+                    }
+                }
+                NodeType::Output => {
+                    if out_degrees[&node.id] > 0 {
+                        return Err(format!("Output node '{}' cannot have outgoing edges.", node.id));
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Cycle detection using DFS
+        let mut visited = std::collections::HashSet::new();
+        let mut rec_stack = std::collections::HashSet::new();
+
+        fn is_cyclic(
+            node: &str,
+            adj_list: &HashMap<String, Vec<String>>,
+            visited: &mut std::collections::HashSet<String>,
+            rec_stack: &mut std::collections::HashSet<String>,
+        ) -> bool {
+            if !visited.contains(node) {
+                visited.insert(node.to_string());
+                rec_stack.insert(node.to_string());
+
+                if let Some(neighbors) = adj_list.get(node) {
+                    for neighbor in neighbors {
+                        if !visited.contains(neighbor) && is_cyclic(neighbor, adj_list, visited, rec_stack) {
+                            return true;
+                        } else if rec_stack.contains(neighbor) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            rec_stack.remove(node);
+            false
+        }
+
+        for node in &self.nodes {
+            if is_cyclic(&node.id, &adj_list, &mut visited, &mut rec_stack) {
+                return Err("Graph contains a cycle, which is not allowed in a directed acyclic workflow graph.".to_string());
+            }
+        }
+
         Ok(())
     }
 }
@@ -1600,13 +1684,54 @@ mod additional_tests {
 
     #[test]
     fn test_visual_workflow_block_connect_ui_validation() {
-        let graph = WorkflowGraph { nodes: vec![], edges: vec![] };
         let in_node = Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_json".to_string() } };
         let out_node = Node { id: "out".to_string(), node_type: NodeType::Output };
+        let graph = WorkflowGraph { nodes: vec![in_node.clone(), out_node.clone()], edges: vec![] };
 
         let res1 = graph.validate_connection(&out_node, &in_node);
         assert!(res1.is_err());
         let res2 = graph.validate_connection(&in_node, &out_node);
-        assert!(res2.is_err());
+        assert!(res2.is_err()); // Direct connection not allowed
+
+        // Test validate_graph
+        let valid_graph = WorkflowGraph {
+            nodes: vec![
+                in_node.clone(),
+                Node { id: "mid".to_string(), node_type: NodeType::Llm { prompt_template: "test".to_string() } },
+                out_node.clone(),
+            ],
+            edges: vec![
+                Edge { source: "in".to_string(), target: "mid".to_string() },
+                Edge { source: "mid".to_string(), target: "out".to_string() },
+            ],
+        };
+        assert!(valid_graph.validate_graph().is_ok());
+
+        // Test duplicate node id
+        let dup_graph = WorkflowGraph {
+            nodes: vec![in_node.clone(), in_node.clone()],
+            edges: vec![],
+        };
+        assert!(dup_graph.validate_graph().is_err());
+
+        // Test cycle detection
+        let cycle_graph = WorkflowGraph {
+            nodes: vec![
+                Node { id: "mid1".to_string(), node_type: NodeType::Llm { prompt_template: "test".to_string() } },
+                Node { id: "mid2".to_string(), node_type: NodeType::Llm { prompt_template: "test".to_string() } },
+            ],
+            edges: vec![
+                Edge { source: "mid1".to_string(), target: "mid2".to_string() },
+                Edge { source: "mid2".to_string(), target: "mid1".to_string() },
+            ],
+        };
+        assert!(cycle_graph.validate_graph().is_err());
+
+        // Test missing node
+        let missing_node_graph = WorkflowGraph {
+            nodes: vec![in_node.clone()],
+            edges: vec![Edge { source: "in".to_string(), target: "missing".to_string() }],
+        };
+        assert!(missing_node_graph.validate_graph().is_err());
     }
 }

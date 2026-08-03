@@ -80,5 +80,25 @@
     },
     "undici": "7.28.0",
     "ws@6.2.3": "6.2.4"
-  }
+  },
+  "description": "> [!IMPORTANT] > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onehumancorp/mono.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/onehumancorp/mono/issues"
+  },
+  "homepage": "https://github.com/onehumancorp/mono#readme"
 }
