@@ -9024,6 +9024,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "server_integrations_chat_system"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "server_integrations_chromadb"
 version = "0.1.0"
 dependencies = [
