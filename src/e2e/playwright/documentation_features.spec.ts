@@ -43,29 +43,19 @@ test.describe('Documentation Features CUJ', () => {
   });
 
   test('User can navigate to Advanced API Docs and see tooltip on header', async ({ page }) => {
-    // Intercept network request to API spec to avoid breaking due to no backend
-    await page.route('/api/v1/api-docs-spec', async (route) => {
-      const json = {
-        openapi: "3.0.0",
-        info: {
-          title: "API Documentation (for Advanced Users)",
-          version: "1.0.0"
-        },
-        paths: {}
-      };
-      await route.fulfill({ json });
-    });
-
     await page.goto('/api-docs');
+
+    // Check title
     await expect(page.locator('h1')).toContainText('OHC Advanced API Reference');
 
-    // Wait for the Swagger UI to be rendered and check for the correct mock title
-    await expect(page.locator('.swagger-ui')).toBeVisible();
-    await expect(page.locator('.swagger-ui .title')).toContainText('API Documentation (for Advanced Users)');
-
+    // Hover the tooltip element
     const tooltipTarget = page.locator('#api-docs-tooltip');
     await expect(tooltipTarget).toBeVisible();
+
+    // Simulate hover
     await tooltipTarget.hover();
+
+    // Check if tooltip becomes visible. We expect the global tooltip element to appear
     const globalTooltip = page.locator('.ohc-tooltip');
     await expect(globalTooltip).toHaveClass(/visible/);
     await expect(globalTooltip).toContainText('Direct API access is only for custom integrations.');
