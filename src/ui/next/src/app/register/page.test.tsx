@@ -7,14 +7,15 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 describe("registration entry", () => {
+  beforeEach(() => { global.fetch = vi.fn(); });
   beforeEach(() => {
     push.mockReset();
     sessionStorage.clear();
-    vi.mocked(fetch).mockReset();
+    (global.fetch as import("vitest").Mock).mockReset();
   });
 
   it("shows the persisted closed policy without collecting credentials", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({
+    (global.fetch as import("vitest").Mock).mockResolvedValueOnce(Response.json({
       registration_mode: "closed",
       registration_available: false,
       email_verification_required: true,
@@ -28,7 +29,7 @@ describe("registration entry", () => {
   });
 
   it("collects only email before verification and stores a bounded challenge", async () => {
-    vi.mocked(fetch)
+    (global.fetch as import("vitest").Mock)
       .mockResolvedValueOnce(Response.json({
         registration_mode: "open",
         registration_available: true,

@@ -70,8 +70,10 @@ describe('AgentFeedCard', () => {
 
         const editButton = screen.getByRole('button', { name: 'Edit Draft' });
         fireEvent.click(editButton);
+        const saveButton = screen.getByRole('button', { name: 'Save' });
+        fireEvent.click(saveButton);
 
-        expect(mockEdit).toHaveBeenCalledWith('draft-123');
+        expect(mockEdit).toHaveBeenCalledWith('draft-123', 'Hello Alice! We can deliver the cake on Friday.');
         expect(mockEdit).toHaveBeenCalledTimes(1);
     });
 

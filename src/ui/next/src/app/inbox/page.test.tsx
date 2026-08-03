@@ -11,6 +11,10 @@ vi.mock('@powersync/react', () => ({
   useQuery: () => ({ data: queryState.data }),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+}));
+
 vi.mock('../../lib/powersync/PowerSyncProvider', () => ({
   PowerSyncProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

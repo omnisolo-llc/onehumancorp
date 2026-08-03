@@ -10,9 +10,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("login page", () => {
-  beforeEach(() => {
+  beforeEach(() => { global.fetch = vi.fn();
     replace.mockReset();
-    vi.mocked(fetch).mockReset();
+    if (vi.isMockFunction(fetch)) fetch.mockReset();
   });
 
   it("submits controlled credentials and navigates only after success", async () => {

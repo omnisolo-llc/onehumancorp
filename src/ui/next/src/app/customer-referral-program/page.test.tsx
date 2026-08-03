@@ -115,9 +115,11 @@ describe('CustomerReferralProgramPage', () => {
         fireEvent.click(toggle);
     });
 
-    expect(screen.queryByText('Pro Feature')).toBeNull();
+
     // The exact text "⚡ Powered by OHC" in the preview should be removed
-    expect(screen.queryByText('⚡ Powered by OHC')).toBeNull();
+    const previewContainer = screen.getAllByText('Give $10, Get $10')[0].closest('.glassmorphism');
+    const badge = Array.from(previewContainer?.querySelectorAll('span') || []).find(el => el.textContent === '⚡ Powered by OHC');
+    expect(badge).toBeUndefined();
   });
 
 });

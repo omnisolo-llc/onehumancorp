@@ -2,9 +2,11 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  resolve: { alias: { "@": "/app/src/ui/next/src" } },
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    environment: "jsdom",
+    setupFiles: ["setupTests.ts"],
     globals: true,
     include: [
       'src/ui/next/src/**/*.test.{ts,tsx}',

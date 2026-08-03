@@ -7,6 +7,7 @@ const replace = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace }) }));
 
 describe("email verification", () => {
+  beforeEach(() => { global.fetch = vi.fn(); });
   beforeEach(() => {
     replace.mockReset();
     sessionStorage.clear();
@@ -14,11 +15,11 @@ describe("email verification", () => {
       "ohc-registration-challenge",
       JSON.stringify({ challengeId: "challenge-7", email: "alice@example.test" }),
     );
-    vi.mocked(fetch).mockReset();
+    (global.fetch as import("vitest").Mock).mockReset();
   });
 
   it("does not expose account credentials until the email code succeeds", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({
+    (global.fetch as import("vitest").Mock).mockResolvedValueOnce(Response.json({
       registration_ticket: "ticket-7",
       expires_in_seconds: 1200,
     }));
@@ -39,7 +40,7 @@ describe("email verification", () => {
 
   it("creates a sealed session only after submitting the verified ticket", async () => {
     sessionStorage.setItem("ohc-registration-ticket", "ticket-7");
-    vi.mocked(fetch)
+    (global.fetch as import("vitest").Mock)
       .mockResolvedValueOnce(Response.json({ registration_ticket: "ticket-7", expires_in_seconds: 1200 }))
       .mockResolvedValueOnce(Response.json({ user: { id: "user-7" }, next: "/onboarding" }, { status: 201 }));
     render(<VerifyEmailPage />);
