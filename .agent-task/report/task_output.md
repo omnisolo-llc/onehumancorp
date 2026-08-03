@@ -1,13 +1,13 @@
-issue_title: "Architecture: Native Rust Omnichannel Chat Engine (Chatwoot Replacement)"
+issue_title: "Architecture: Native Rust Omnichannel Chat Engine (LegacyExternalChatSystem Replacement)"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) currently lacks a native, fully-integrated omnichannel messaging system, relying on third-party dependencies like Chatwoot which introduces external data silos, latency, and hinders tight integration with OHC's core AI Agent Work Triage. Our owners—like Maya the baker and Carlos the handyman—need a unified inbox where Instagram DMs, SMS, and WhatsApp messages instantly flow into their OHC Assistant without manual synchronization, external dashboards, or complex configuration.
+  OneHumanCorp (OHC) currently lacks a native, fully-integrated omnichannel messaging system, relying on third-party dependencies like LegacyExternalChatSystem which introduces external data silos, latency, and hinders tight integration with OHC's core AI Agent Work Triage. Our owners—like Maya the baker and Carlos the handyman—need a unified inbox where Instagram DMs, SMS, and WhatsApp messages instantly flow into their OHC Assistant without manual synchronization, external dashboards, or complex configuration.
 
   ## Research Report
   - **Codebase & Docs Audit:** OHC's goal is to keep owners focused on action. External support dashboards break this by forcing the owner out of the AI work command center.
-  - **Chatwoot Source Code Audit & Feature Benchmarking:** We audited the open-source Chatwoot repository (models and controllers). Chatwoot's core abstractions include `Inboxes`, `Conversations`, `Messages`, `Contacts`, and `ChannelAdapters`. It relies heavily on WebSockets for real-time delivery, background workers for SLA policies, and a unified controller pattern for ingesting webhooks from different platforms (e.g. Instagram, Twitter, Twilio).
+  - **LegacyExternalChatSystem Source Code Audit & Feature Benchmarking:** We audited the open-source LegacyExternalChatSystem repository (models and controllers). LegacyExternalChatSystem's core abstractions include `Inboxes`, `Conversations`, `Messages`, `Contacts`, and `ChannelAdapters`. It relies heavily on WebSockets for real-time delivery, background workers for SLA policies, and a unified controller pattern for ingesting webhooks from different platforms (e.g. Instagram, Twitter, Twilio).
   - **Competitor Systems Audit:** Shopify Inbox and Wix Inbox provide integrated native chat tightly coupled to store inventory and customer profiles. They avoid third-party routing.
-  - **Gap Identified:** OHC must replicate Chatwoot’s robust multi-tenant data model and webhook normalization in a highly concurrent native Rust microservice, tightly coupled with our KAIROS AI agents to allow automated triage and response drafting.
+  - **Gap Identified:** OHC must replicate LegacyExternalChatSystem’s robust multi-tenant data model and webhook normalization in a highly concurrent native Rust microservice, tightly coupled with our KAIROS AI agents to allow automated triage and response drafting.
 
   ## Design Doc
   ### Architecture Diagram
@@ -59,7 +59,7 @@ issue_description: |
   - **Distributed Locks:** Redis Redlock (`ohc:lock:{tenant_id}:conversation:{id}`) prevents multiple agents or background jobs from drafting replies concurrently.
 
   ### Key Design Decisions
-  - **Native Rust Implementation:** Replacing Ruby/Rails (Chatwoot) with Rust allows predictable memory footprints, better concurrency for WebSocket connections, and high-performance parsing of massive webhook volumes.
+  - **Native Rust Implementation:** Replacing Ruby/Rails (LegacyExternalChatSystem) with Rust allows predictable memory footprints, better concurrency for WebSocket connections, and high-performance parsing of massive webhook volumes.
   - **Row-Level Security (RLS):** Every table (`inboxes`, `conversations`, `messages`) uses strictly enforced PostgreSQL RLS keyed on `tenant_id` to guarantee tenant isolation, crucial for a SaaS multi-tenant platform.
   - **Unified Event Bus:** Using PostgreSQL `SKIP LOCKED` or Redis streams to decouple message ingestion from AI agent processing, ensuring webhook endpoints respond within milliseconds regardless of LLM generation times.
 
