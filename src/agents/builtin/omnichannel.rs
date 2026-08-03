@@ -168,7 +168,7 @@ impl OmnichannelEngine for NativeOmnichannelEngine {
     }
 
     async fn request_human_handoff(&self, _session_id: &str, _reason: &str) -> Result<(), String> {
-        // Native rust equivalent of chatwoot's handoff
+        // Native rust equivalent of previous system's handoff
         // In a real implementation this would update the session state in DB
         Ok(())
     }
