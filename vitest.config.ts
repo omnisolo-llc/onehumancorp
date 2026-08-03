@@ -22,5 +22,6 @@ export default defineConfig({
       '**/.cache/**',
     ],
     cache: false,
+    setupFiles: ['./setupTests.ts'],
   },
 })
