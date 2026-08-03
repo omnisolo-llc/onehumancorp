@@ -187,6 +187,7 @@ function makeStringEvaluator(checker) {
 function discoverReachable(initialFiles) {
   const files = new Set(initialFiles.map((file) => path.resolve(file)));
   const discoveryFindings = [];
+  const visitedFiles = new Set();
   let changed = true;
   while (changed) {
     changed = false;
@@ -194,6 +195,8 @@ function discoverReachable(initialFiles) {
     const checker = program.getTypeChecker();
     const evaluateString = makeStringEvaluator(checker);
     for (const filename of [...files]) {
+      if (visitedFiles.has(filename)) continue;
+      visitedFiles.add(filename);
       const sourceFile = program.getSourceFile(filename);
       if (!sourceFile) continue;
       function addSpecifier(node, dynamic) {
@@ -457,43 +460,54 @@ function scanFiles(filenames) {
     return changed;
   }
 
+  const propagationNodes = [];
+  for (const filename of filenames) {
+    const sourceFile = program.getSourceFile(filename);
+    if (!sourceFile) continue;
+    function collectPropagationNodes(node) {
+      if (ts.isVariableDeclaration(node) && node.initializer) {
+        propagationNodes.push({ type: "variable", node });
+      } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+        propagationNodes.push({ type: "assignment", node });
+      } else if (ts.isCallExpression(node)) {
+        propagationNodes.push({ type: "call", node });
+      } else if (ts.isReturnStatement(node) && node.expression) {
+        propagationNodes.push({ type: "return", node });
+      }
+      ts.forEachChild(node, collectPropagationNodes);
+    }
+    collectPropagationNodes(sourceFile);
+  }
+
   let changed = true;
   while (changed) {
     changed = false;
-    for (const filename of filenames) {
-      const sourceFile = program.getSourceFile(filename);
-      if (!sourceFile) continue;
-      function propagate(node) {
-        if (ts.isVariableDeclaration(node) && node.initializer) {
-          changed = addKindsToBinding(node.name, kindsOf(node.initializer)) || changed;
+    for (const item of propagationNodes) {
+      const node = item.node;
+      if (item.type === "variable") {
+        changed = addKindsToBinding(node.name, kindsOf(node.initializer)) || changed;
+      } else if (item.type === "assignment") {
+        changed = addKindsToBinding(node.left, kindsOf(node.right)) || changed;
+      } else if (item.type === "call") {
+        const signature = checker.getResolvedSignature(node);
+        const declaration = signature?.declaration;
+        if (declaration && ts.isFunctionLike(declaration)) {
+          node.arguments.forEach((argument, index) => {
+            if (declaration.parameters[index]) changed = mapArgumentToParameter(argument, declaration.parameters[index]) || changed;
+          });
         }
-        if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
-          changed = addKindsToBinding(node.left, kindsOf(node.right)) || changed;
+      } else if (item.type === "return") {
+        let owner = node.parent;
+        while (owner && !ts.isFunctionLike(owner)) owner = owner.parent;
+        if (owner?.name && ts.isIdentifier(owner.name)) {
+          const symbol = symbolAt(checker, owner.name);
+          const returns = functionReturns.get(symbol) || new Set();
+          const before = returns.size;
+          for (const kind of kindsOf(node.expression)) returns.add(kind);
+          functionReturns.set(symbol, returns);
+          changed = returns.size !== before || changed;
         }
-        if (ts.isCallExpression(node)) {
-          const signature = checker.getResolvedSignature(node);
-          const declaration = signature?.declaration;
-          if (declaration && ts.isFunctionLike(declaration)) {
-            node.arguments.forEach((argument, index) => {
-              if (declaration.parameters[index]) changed = mapArgumentToParameter(argument, declaration.parameters[index]) || changed;
-            });
-          }
-        }
-        if (ts.isReturnStatement(node) && node.expression) {
-          let owner = node.parent;
-          while (owner && !ts.isFunctionLike(owner)) owner = owner.parent;
-          if (owner?.name && ts.isIdentifier(owner.name)) {
-            const symbol = symbolAt(checker, owner.name);
-            const returns = functionReturns.get(symbol) || new Set();
-            const before = returns.size;
-            for (const kind of kindsOf(node.expression)) returns.add(kind);
-            functionReturns.set(symbol, returns);
-            changed = returns.size !== before || changed;
-          }
-        }
-        ts.forEachChild(node, propagate);
       }
-      propagate(sourceFile);
     }
   }
 
