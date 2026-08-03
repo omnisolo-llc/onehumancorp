@@ -7,8 +7,10 @@ use serde::{Deserialize};
 use std::sync::Arc;
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::ohc::domain::omnichannel_repo::OmnichannelRepo;
-use crate::ohc::domain::omnichannel::{Inbox, Contact, Conversation, Message};
+
+// Since we are compiling ohc-mono which imports server_ohc
+use server_ohc::domain::omnichannel_repo::OmnichannelRepo;
+use server_ohc::domain::omnichannel::{Inbox, Contact, Conversation, Message};
 
 #[derive(Clone)]
 pub struct AppState {
