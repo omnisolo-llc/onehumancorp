@@ -23,7 +23,7 @@ pub struct ChatChannel {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow, sqlx::Type)]
 pub struct ChatContact {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -34,7 +34,7 @@ pub struct ChatContact {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow, sqlx::Type)]
 pub struct ChatConversation {
     pub id: Uuid,
     pub tenant_id: Uuid,
