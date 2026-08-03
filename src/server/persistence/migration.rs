@@ -7,6 +7,7 @@ use server_auth::seaorm_store::entities as auth_entities;
 
 pub const CORE_SCHEMA_VERSION: &str = "20260730_000001_portable_core";
 pub const AUTH_SCHEMA_VERSION: &str = "20260730_000002_auth_registration";
+pub const OMNICHANNEL_SCHEMA_VERSION: &str = "20260730_000003_omnichannel";
 
 pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     let connection = database.connection();
@@ -51,6 +52,26 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
     connection
         .execute(backend.build(&external_identities))
         .await?;
+
+    let mut channels = schema.create_table_from_entity(entities::omnichannel_channel::Entity);
+    channels.if_not_exists();
+    connection.execute(backend.build(&channels)).await?;
+
+    let mut inboxes = schema.create_table_from_entity(entities::omnichannel_inbox::Entity);
+    inboxes.if_not_exists();
+    connection.execute(backend.build(&inboxes)).await?;
+
+    let mut contacts = schema.create_table_from_entity(entities::omnichannel_contact::Entity);
+    contacts.if_not_exists();
+    connection.execute(backend.build(&contacts)).await?;
+
+    let mut conversations = schema.create_table_from_entity(entities::omnichannel_conversation::Entity);
+    conversations.if_not_exists();
+    connection.execute(backend.build(&conversations)).await?;
+
+    let mut messages = schema.create_table_from_entity(entities::omnichannel_message::Entity);
+    messages.if_not_exists();
+    connection.execute(backend.build(&messages)).await?;
 
     let mut revoked_tokens = schema.create_table_from_entity(auth_entities::revoked_token::Entity);
     revoked_tokens.if_not_exists();
@@ -166,6 +187,20 @@ pub async fn migrate(database: &AppDatabase) -> Result<(), sea_orm::DbErr> {
         .insert(connection)
         .await?;
     }
+
+    if entities::schema_version::Entity::find_by_id(OMNICHANNEL_SCHEMA_VERSION)
+        .one(connection)
+        .await?
+        .is_none()
+    {
+        entities::schema_version::ActiveModel {
+            id: Set(OMNICHANNEL_SCHEMA_VERSION.to_owned()),
+            applied_at: Set(Utc::now()),
+        }
+        .insert(connection)
+        .await?;
+    }
+
     Ok(())
 }
 

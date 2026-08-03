@@ -647,6 +647,7 @@ rust_test(
         "@crates//:sea-orm",
         "@crates//:serde",
         "@crates//:serde_json",
+        "//src/server/auth:server_auth",
         "@crates//:tokio",
         "@crates//:uuid",
     ],
@@ -671,6 +672,7 @@ rust_test(
         "@crates//:serde_json",
         "@crates//:tokio",
         "@crates//:uuid",
+        "//src/server/auth:server_auth",
     ],
 )
 
