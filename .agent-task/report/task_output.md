@@ -1,14 +1,14 @@
-issue_title: "Architect Native Rust Omnichannel Chat to Retire Chatwoot Dependency"
+issue_title: "Architect Native Rust Omnichannel Chat to Retire legacy external dependency Dependency"
 issue_description: |
   # Mission Queue Protocol: Native Omnichannel Chat Architecture
 
   ## Problem Statement
-  Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" simply aggregate messages without context. OHC currently aims to build an AI-first "Ambassador" agent but relies on an unfinished or missing native Rust implementation (based on Chatwoot's legacy architecture). We must natively build the foundational models, API endpoints, and webhook receivers for a unified inbox that supports our mobile-first 375px UX and Agentic Workflows.
+  Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" simply aggregate messages without context. OHC currently aims to build an AI-first "Ambassador" agent but relies on an unfinished or missing native Rust implementation. We must natively build the foundational models, API endpoints, and webhook receivers for a unified inbox that supports our mobile-first 375px UX and Agentic Workflows.
 
   ## Research Report
   **Findings:**
-  - **Chatwoot Architecture:** Chatwoot uses a robust multi-tenant model involving `Account`, `Inbox`, `Channel`, `Contact`, `ContactInbox`, `Conversation`, `ConversationParticipant`, `Message`, and `Attachment`.
-  - **OHC Requirement:** The `chatwoot` external service is 100% RETIRED. OHC must implement these features natively in Rust.
+  - **Legacy Architecture:** The legacy system used a robust multi-tenant model involving `Account`, `Inbox`, `Channel`, `Contact`, `ContactInbox`, `Conversation`, `ConversationParticipant`, `Message`, and `Attachment`.
+  - **OHC Requirement:** The legacy external service is 100% RETIRED. OHC must implement these features natively in Rust.
   - **Current State:** OHC has basic stubs in `src/server/services/chat/models.rs` and `src/server/services/chat/service.rs`. However, it lacks comprehensive database schemas (missing `chat_inboxes`, `chat_channels`, etc., in DB migrations), complete RLS tenant isolation, channel-specific adapter interfaces (like Meta/WhatsApp webhooks), and real-time WebSocket capabilities.
 
   ## Design Doc
@@ -37,7 +37,7 @@ issue_description: |
   - **The Ambassador (Operations/CS):** Subscribes to the `work_item` or `message_created` event bus. Upon receiving a message, queries the `customer_profile` and unified conversation history, drafts a response, and inserts it into `agent_draft` or `action_required`.
 
   ## Implementation Prompt
-  **Objective:** Implement the foundational database schema and Rust backend services for OHC's Native Omnichannel Chat, mirroring Chatwoot's core data models but optimized for OHC's multi-tenant architecture and AI agent integration.
+  **Objective:** Implement the foundational database schema and Rust backend services for OHC's Native Omnichannel Chat, mirroring core data models but optimized for OHC's multi-tenant architecture and AI agent integration.
 
   **Critical User Journey (CUJ):**
   A customer sends a message via WhatsApp (simulated via API). The system receives it, identifies the `ChatContact`, creates a `ChatConversation` (if one doesn't exist), and stores the `ChatMessage`. The owner opens the mobile app (375px) and sees the message in their unified inbox.
