@@ -104,4 +104,34 @@ test.describe('Premium Aesthetics Verification', () => {
     const mainContainer = page.locator('body');
     await expect(mainContainer).toBeVisible();
   });
+
+  test('Verify glassmorphism effect on Zero-Click Onboarding Chat Agent', async ({ page }) => {
+    await page.goto('/onboarding/zero-click');
+
+    // Wait for the main glassmorphism container
+    await page.waitForSelector('.glassmorphism');
+
+    // Select the glassmorphism element
+    const glassContainer = page.locator('.glassmorphism').first();
+
+    // Ensure it exists and is visible
+    await expect(glassContainer).toBeVisible();
+
+    // Evaluate the computed styles to guarantee the premium aesthetics
+    const styles = await glassContainer.evaluate((el) => {
+      const computed = window.getComputedStyle(el);
+      return {
+        backdropFilter: computed.backdropFilter,
+        backgroundColor: computed.backgroundColor,
+        border: computed.border,
+        borderRadius: computed.borderRadius,
+      };
+    });
+
+    expect(styles).toBeDefined();
+    expect(styles.backgroundColor).toMatch(/rgba?\(\d+,\s*\d+,\s*\d+(?:,\s*[0-9.]+)?\)|rgb\(\d+,\s*\d+,\s*\d+\)/);
+    expect(styles.backdropFilter).toMatch(/blur\(30px\)\s+saturate\((?:210%|2\.1)\)/);
+    expect(styles.border).toBeDefined();
+    expect(styles.borderRadius).toBe("16px");
+  });
 });
