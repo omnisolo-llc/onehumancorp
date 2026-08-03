@@ -7768,6 +7768,12 @@ async fn create_ui_bom_item_handler(
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/chat/conversations", axum::routing::get(crate::api::chat::list_conversations_handler)
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/chat/conversations/:id/messages", axum::routing::get(crate::api::chat::get_conversation_messages_handler)
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
+        .route("/api/v1/chat/conversations/:id/messages", axum::routing::post(crate::api::chat::send_message_handler)
+            .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/chat", axum::routing::post(|
             axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
             axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,

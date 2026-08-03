@@ -123,4 +123,91 @@ impl ChatService {
         .fetch_one(&self.pool)
         .await
     }
+
+    pub async fn get_open_conversations_with_contacts(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Vec<(ChatConversation, ChatContact)>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let records = sqlx::query_as::<_, (ChatConversation, ChatContact)>(
+            r#"
+            SELECT
+                c.id as "id!: _", c.tenant_id as "tenant_id!: _", c.inbox_id as "inbox_id!: _",
+                c.contact_id as "contact_id!: _", c.assignee_id, c.status as "status!: _",
+                c.created_at as "created_at!: _", c.updated_at as "updated_at!: _",
+                ct.id as "id!: _", ct.tenant_id as "tenant_id!: _", ct.name, ct.email, ct.phone,
+                ct.created_at as "created_at!: _", ct.updated_at as "updated_at!: _"
+            FROM chat_conversations c
+            JOIN chat_contacts ct ON c.contact_id = ct.id
+            WHERE c.tenant_id = $1 AND c.status = 'open'
+            ORDER BY c.updated_at DESC
+            "#
+        )
+        .bind(tenant_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(records)
+    }
+
+    pub async fn get_conversation_messages(
+        &self,
+        tenant_id: Uuid,
+        conversation_id: Uuid,
+    ) -> Result<Vec<ChatMessage>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let records = sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            FROM chat_messages
+            WHERE tenant_id = $1 AND conversation_id = $2
+            ORDER BY created_at ASC
+            "#
+        )
+        .bind(tenant_id)
+        .bind(conversation_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(records)
+    }
+
+    pub async fn get_contact(
+        &self,
+        tenant_id: Uuid,
+        contact_id: Uuid,
+    ) -> Result<ChatContact, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let record = sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, name, email, phone, created_at, updated_at
+            FROM chat_contacts
+            WHERE tenant_id = $1 AND id = $2
+            "#
+        )
+        .bind(tenant_id)
+        .bind(contact_id)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(record)
+    }
 }

@@ -528,8 +528,42 @@ function InboxWorkspace({
 }
 
 function PowerSyncInboxContent() {
-  const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
-  return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadConversations() {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`/api/v1/chat/conversations`);
+        if (!res.ok) throw new Error("Failed to load conversations");
+        const data = await res.json();
+        const mapped = data.map((item: any) => ({
+          id: item.conversation.id,
+          source: item.conversation.channel_type || "chat",
+          content: `Chat with ${item.contact.name || "Unknown"}`,
+          status: item.conversation.status,
+          sender_id: item.contact.id,
+          customer_id: item.contact.id,
+          created_at: item.conversation.created_at,
+          ...item
+        }));
+        setMessages(mapped);
+      } catch (err: any) {
+        setError(err?.message || "Failed to load conversations");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadConversations();
+  }, []);
+
+  if (loading) return <InboxLoadingState />;
+  if (error) return <div className="app-empty">{error}</div>;
+
+  return <InboxWorkspace messages={messages} sourceLabel="Native Chat Conversations active." />;
 }
 
 function InboxLoadingState() {

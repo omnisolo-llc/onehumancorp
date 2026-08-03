@@ -1,9 +1,107 @@
-use axum::Json;
+use axum::{extract::{State, Path}, Json};
 use serde_json::Value;
+use std::sync::Arc;
+use uuid::Uuid;
+use crate::db::DB;
+use crate::services::chat::service::ChatService;
+use crate::services::chat::models::{ChatConversation, ChatContact, ChatMessage};
+use server_common::Claims;
+use axum::response::IntoResponse;
 
 #[derive(serde::Deserialize)]
 pub struct ChatRequest {
     pub message: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct ConversationWithContactResponse {
+    pub conversation: ChatConversation,
+    pub contact: ChatContact,
+}
+
+#[derive(serde::Deserialize)]
+pub struct SendMessageRequest {
+    pub sender_type: String,
+    pub sender_id: Option<Uuid>,
+    pub content: String,
+}
+
+pub async fn list_conversations_handler(
+    State(db): State<Arc<DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<Claims>,
+) -> axum::response::Response {
+    let tenant_id = match claims.organization_id.and_then(|id| Uuid::parse_str(&id).ok()) {
+        Some(id) => id,
+        None => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    let chat_service = ChatService::new(db.pool.clone());
+    match chat_service.get_open_conversations_with_contacts(tenant_id).await {
+        Ok(records) => {
+            let res: Vec<ConversationWithContactResponse> = records
+                .into_iter()
+                .map(|(conversation, contact)| ConversationWithContactResponse {
+                    conversation,
+                    contact,
+                })
+                .collect();
+            (axum::http::StatusCode::OK, Json(res)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch open conversations: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn get_conversation_messages_handler(
+    State(db): State<Arc<DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<Claims>,
+    Path(conversation_id): Path<Uuid>,
+) -> axum::response::Response {
+    let tenant_id = match claims.organization_id.and_then(|id| Uuid::parse_str(&id).ok()) {
+        Some(id) => id,
+        None => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    let chat_service = ChatService::new(db.pool.clone());
+    match chat_service.get_conversation_messages(tenant_id, conversation_id).await {
+        Ok(messages) => (axum::http::StatusCode::OK, Json(messages)).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to fetch conversation messages: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+pub async fn send_message_handler(
+    State(db): State<Arc<DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<Claims>,
+    Path(conversation_id): Path<Uuid>,
+    Json(payload): Json<SendMessageRequest>,
+) -> axum::response::Response {
+    let tenant_id = match claims.organization_id.and_then(|id| Uuid::parse_str(&id).ok()) {
+        Some(id) => id,
+        None => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    let chat_service = ChatService::new(db.pool.clone());
+    match chat_service
+        .send_message(
+            tenant_id,
+            conversation_id,
+            payload.sender_type,
+            payload.sender_id,
+            payload.content,
+        )
+        .await
+    {
+        Ok(message) => (axum::http::StatusCode::CREATED, Json(message)).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to send message: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 pub async fn help_chat_handler(Json(req): Json<ChatRequest>) -> Json<Value> {
