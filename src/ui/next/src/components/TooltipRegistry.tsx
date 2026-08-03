@@ -71,9 +71,11 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       timeoutId = setTimeout(() => setWindowWidth(window.innerWidth), 150);
     };
     window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
     return () => {
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
     };
   }, []);
 
@@ -104,7 +106,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           className="fixed z-[100] backdrop-blur-[30px] backdrop-saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 !rounded-[8px] text-gray-900 dark:text-gray-100 text-sm font-inter p-3 shadow-[0_4px_24px_rgba(0,0,0,0.04)] pointer-events-none w-auto max-w-[calc(100vw-32px)] md:max-w-xs mx-4 text-center leading-relaxed"
           style={{
             top: tooltipRect.top - 10,
-            left: Math.max(144, Math.min(windowWidth - 144, tooltipRect.left + tooltipRect.width / 2)),
+            left: Math.max(16, Math.min(windowWidth - 16, tooltipRect.left + tooltipRect.width / 2)),
             marginTop: '-100%'
           }}
         >
