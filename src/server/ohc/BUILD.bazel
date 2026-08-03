@@ -4,8 +4,9 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_ohc",
-    srcs = ["mod.rs"],
+    srcs = glob(["**/*.rs"]),
     edition = "2024",
+    crate_root = "mod.rs",
     rustc_flags = ["--cfg=ohc_bazel"],
     visibility = ["//visibility:public"],
     deps = [
@@ -24,4 +25,10 @@ rust_library(
         "//src/proto:invoice_tonic",
         "@crates//:tonic",
     ],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+rust_test(
+    name = "server_ohc_test",
+    crate = ":server_ohc",
 )
