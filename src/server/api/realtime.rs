@@ -1,7 +1,8 @@
 use axum::{
+    routing::post,
     extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Extension},
     response::IntoResponse,
-    routing::{post, get},
+    routing::get,
     Json, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -71,6 +72,11 @@ pub enum RealtimeServerMessage {
         conversation_id: String,
         user_id: String,
         ts: i64,
+    },
+    #[serde(rename = "new_message")]
+    NewMessage {
+        conversation_id: String,
+        message: serde_json::Value,
     },
 }
 
@@ -177,7 +183,7 @@ pub async fn realtime_ws_handler(
 // Global broadcast channel for presence and routing across connected sessions
 static REALTIME_BROADCAST: std::sync::OnceLock<broadcast::Sender<String>> = std::sync::OnceLock::new();
 
-fn get_realtime_broadcast_tx() -> &'static broadcast::Sender<String> {
+pub fn get_realtime_broadcast_tx() -> &'static broadcast::Sender<String> {
     REALTIME_BROADCAST.get_or_init(|| {
         let (tx, _) = broadcast::channel(8192);
         tx

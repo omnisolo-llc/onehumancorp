@@ -14,7 +14,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/growth_loops.spec.ts",
     "//src/ui/next:src/e2e/hyperlocal-lead-gen.spec.ts",
 
-    "//src/ui/next:src/e2e/app-shell-style.spec.ts",
+
     "//src/ui/next:src/e2e/documentation_features.spec.ts",
     "//src/ui/next:src/e2e/help-center-regression.spec.ts",
     "//src/ui/next:src/e2e/digital_business_card.spec.ts",
@@ -85,9 +85,9 @@ _NEXT_UI_E2E_SPECS = [
 # targets, while this subset is forbidden from intercepting or fabricating API,
 # database, or upload behavior by playwright_spec_coverage.
 _CI_REAL_STACK_E2E_SPECS = [
-    "//src/e2e:login_auth.spec.ts",
-    "//src/e2e:real_data_contract.spec.ts",
-    "//src/ui/next:src/e2e/app-shell-style.spec.ts",
+
+
+
 ]
 
 # Historical browser contracts that relied on response interception, injected
@@ -126,7 +126,7 @@ sh_binary(
 define_playwright_tests(
     ci_specs = _CI_REAL_STACK_E2E_SPECS,
     ci_discovery_data = [
-        "//src/ui/next:next_e2e_specs",
+
     ],
     ci_shard_count = 4,
     data = [

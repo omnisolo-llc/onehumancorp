@@ -340,6 +340,7 @@ pub async fn handle_omnichannel_webhook(
 mod tests {
     use super::*;
     use crate::db::DB;
+use crate::services::chat::service::ChatService;
 
     use sqlx::SqlitePool;
 

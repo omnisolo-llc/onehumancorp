@@ -12,6 +12,7 @@ use uuid::Uuid;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::DepartmentEvent;
 use crate::db::DB;
+use crate::services::chat::service::ChatService;
 use super::identity::resolve_identity;
 
 #[derive(Clone)]
@@ -81,8 +82,8 @@ pub async fn get_conversations(
     }
     match &state.db.store {
         crate::db::DbStore::Postgres => {
-            let query = "SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = $1 ORDER BY created_at DESC";
-            match sqlx::query(query).bind(&tenant_id).fetch_all(&state.db.pool).await {
+            let query = "SELECT c.id::text, c.tenant_id::text, c.contact_id::text as customer_id, i.name as channel, c.status, CAST(c.created_at AS text) as created_at FROM chat_conversations c JOIN chat_inboxes i ON c.inbox_id = i.id WHERE c.tenant_id = $1 ORDER BY c.created_at DESC";
+            match sqlx::query(query).bind(Uuid::parse_str(&tenant_id).unwrap_or_default()).fetch_all(&state.db.pool).await {
                 Ok(rows) => {
                     let conversations: Vec<ConversationResponse> = rows.into_iter().map(|row| ConversationResponse {
                         id: sqlx::Row::get(&row, "id"),
@@ -101,7 +102,7 @@ pub async fn get_conversations(
             }
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let query = "SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = ? ORDER BY created_at DESC";
+            let query = "SELECT c.id, c.tenant_id, c.contact_id as customer_id, i.name as channel, c.status, CAST(c.created_at AS text) as created_at FROM chat_conversations c JOIN chat_inboxes i ON c.inbox_id = i.id WHERE c.tenant_id = ? ORDER BY c.created_at DESC";
             match sqlx::query(query).bind(&tenant_id).fetch_all(sqlite_pool).await {
                 Ok(rows) => {
                     let conversations: Vec<ConversationResponse> = rows.into_iter().map(|row| ConversationResponse {
@@ -133,8 +134,8 @@ pub async fn get_messages(
     }
     match &state.db.store {
         crate::db::DbStore::Postgres => {
-            let query = "SELECT id, tenant_id, source, original_content, translated_content, draft_reply, status, sender_id, CAST(created_at AS text) as created_at FROM omni_inbox_messages WHERE tenant_id = $1 AND customer_id = (SELECT customer_id FROM unified_threads WHERE id = $2) ORDER BY created_at ASC";
-            match sqlx::query(query).bind(&tenant_id).bind(&conversation_id).fetch_all(&state.db.pool).await {
+            let query = "SELECT m.id::text, m.tenant_id::text, i.name as source, m.content as original_content, m.content as translated_content, '' as draft_reply, 'unread' as status, COALESCE(m.sender_id::text, '') as sender_id, CAST(m.created_at AS text) as created_at FROM chat_messages m JOIN chat_conversations c ON m.conversation_id = c.id JOIN chat_inboxes i ON c.inbox_id = i.id WHERE m.tenant_id = $1 AND m.conversation_id = $2 ORDER BY m.created_at ASC";
+            match sqlx::query(query).bind(Uuid::parse_str(&tenant_id).unwrap_or_default()).bind(Uuid::parse_str(&conversation_id).unwrap_or_default()).fetch_all(&state.db.pool).await {
                 Ok(rows) => {
                     let messages: Vec<MessageResponse> = rows.into_iter().map(|row| MessageResponse {
                         id: sqlx::Row::get(&row, "id"),
@@ -156,7 +157,7 @@ pub async fn get_messages(
             }
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let query = "SELECT id, tenant_id, source, original_content, translated_content, draft_reply, status, sender_id, CAST(created_at AS text) as created_at FROM omni_inbox_messages WHERE tenant_id = ? AND customer_id = (SELECT customer_id FROM unified_threads WHERE id = ?) ORDER BY created_at ASC";
+            let query = "SELECT m.id, m.tenant_id, i.name as source, m.content as original_content, m.content as translated_content, '' as draft_reply, 'unread' as status, COALESCE(m.sender_id, '') as sender_id, CAST(m.created_at AS text) as created_at FROM chat_messages m JOIN chat_conversations c ON m.conversation_id = c.id JOIN chat_inboxes i ON c.inbox_id = i.id WHERE m.tenant_id = ? AND m.conversation_id = ? ORDER BY m.created_at ASC";
             match sqlx::query(query).bind(&tenant_id).bind(&conversation_id).fetch_all(sqlite_pool).await {
                 Ok(rows) => {
                     let messages: Vec<MessageResponse> = rows.into_iter().map(|row| MessageResponse {
@@ -193,63 +194,68 @@ pub async fn handle_omnichannel_webhook(
         )
             .into_response();
     }
-    let customer_id = resolve_identity(&state.db, &payload.tenant_id, &payload.source, &payload.sender_id).await;
+    let pool = state.db.pool.clone();
+    let chat_service = ChatService::new(pool.clone());
+    let tenant_uuid = Uuid::parse_str(&payload.tenant_id).unwrap_or_default();
 
-    let id = Uuid::new_v4().to_string();
-    let _target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
+    // In a real app we'd resolve or create inbox based on source
+    let inbox_name = payload.source.clone();
+    let inbox = match sqlx::query_as::<_, crate::services::chat::models::ChatInbox>(
+        "SELECT id, tenant_id, name, created_at, updated_at FROM chat_inboxes WHERE tenant_id = $1 AND name = $2"
+    )
+    .bind(tenant_uuid)
+    .bind(&inbox_name)
+    .fetch_optional(&pool).await {
+        Ok(Some(i)) => i,
+        _ => chat_service.create_inbox(tenant_uuid, inbox_name).await.unwrap()
+    };
 
-    let pool = &state.db.pool;
+    // Create or fetch contact
+    let contact = match sqlx::query_as::<_, crate::services::chat::models::ChatContact>(
+        "SELECT id, tenant_id, name, email, phone, created_at, updated_at FROM chat_contacts WHERE tenant_id = $1 AND phone = $2"
+    )
+    .bind(tenant_uuid)
+    .bind(&payload.sender_id)
+    .fetch_optional(&pool).await {
+        Ok(Some(c)) => c,
+        _ => chat_service.create_contact(tenant_uuid, None, None, Some(payload.sender_id.clone())).await.unwrap()
+    };
 
-    let insert_result = match &state.db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query(
-                r#"
-                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
-                VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())
-                "#
-            )
-            .bind(&id)
-            .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
-            .bind(&payload.sender_id)
-            .bind(&customer_id)
-            .execute(pool)
-            .await.map(|_| ())
-        },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query(
-                r#"
-                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
-                VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)
-                "#
-            )
-            .bind(&id)
-            .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
-            .bind(&payload.sender_id)
-            .bind(&customer_id)
-            .execute(sqlite_pool)
-            .await.map(|_| ())
+    // Create or fetch conversation
+    let conversation = match sqlx::query_as::<_, crate::services::chat::models::ChatConversation>(
+        "SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at FROM chat_conversations WHERE tenant_id = $1 AND inbox_id = $2 AND contact_id = $3"
+    )
+    .bind(tenant_uuid)
+    .bind(inbox.id)
+    .bind(contact.id)
+    .fetch_optional(&pool).await {
+        Ok(Some(cv)) => cv,
+        _ => chat_service.start_conversation(tenant_uuid, inbox.id, contact.id, None).await.unwrap()
+    };
+
+    let message = match chat_service.send_message(
+        tenant_uuid,
+        conversation.id,
+        "contact".to_string(),
+        Some(contact.id),
+        payload.message.clone()
+    ).await {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!("Failed to insert chat_message: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
         }
     };
 
     let payload_json = serde_json::json!({
-        "message_id": id,
-        "inbox_message_id": id,
+        "message_id": message.id.to_string(),
+        "inbox_message_id": message.id.to_string(),
         "source": payload.source,
         "content": payload.message,
-        "sender_id": payload.sender_id
+        "sender_id": payload.sender_id,
+        "conversation_id": conversation.id.to_string()
     });
     let job_id = Uuid::new_v4().to_string();
-
-    if let Err(e) = insert_result {
-        tracing::error!("Failed to insert into inbox_messages: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
-    }
 
     let enqueue_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
@@ -276,6 +282,16 @@ pub async fn handle_omnichannel_webhook(
         tracing::error!("Failed to enqueue message_triage job: {}", e);
     }
 
+    // Broadcast to websocket clients
+    let ws_msg = crate::api::realtime::RealtimeServerMessage::NewMessage {
+        conversation_id: conversation.id.to_string(),
+        message: payload_json.clone(),
+    };
+    if let Ok(serialized) = serde_json::to_string(&ws_msg) {
+        let tx = crate::api::realtime::get_realtime_broadcast_tx();
+        let _ = tx.send(serialized);
+    }
+
     let event = DepartmentEvent {
         id: Uuid::new_v4().to_string(),
         tenant_id: payload.tenant_id.clone(),
@@ -284,7 +300,7 @@ pub async fn handle_omnichannel_webhook(
     };
 
     match state.orchestrator.dispatch_event(event).await {
-        Ok(_) => (StatusCode::OK, Json(WebhookResponse { success: true, message_id: Some(id) })).into_response(),
+        Ok(_) => (StatusCode::OK, Json(WebhookResponse { success: true, message_id: Some(message.id.to_string()) })).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response()
     }
 }

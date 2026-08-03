@@ -603,9 +603,9 @@ pub async fn parse_subscription_description(
     // Hardcode parsing logic here for now instead of relying on the LLM, as it fails in e2e tests
 
     // Default fallback values
-    let mut plan_name = "Guitar Lessons Monthly".to_string();
+    let plan_name = "Guitar Lessons Monthly".to_string();
     let mut amount = 20000;
-    let mut currency = "USD".to_string();
+    let currency = "USD".to_string();
     let mut interval = "month".to_string();
     let mut feature_name = "guitar lessons".to_string();
     let mut max_uses = 4;

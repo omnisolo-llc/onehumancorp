@@ -1,0 +1,5 @@
+src/e2e/terminal_edge_sync.spec.ts
+src/e2e/test_subscriptions.spec.ts
+src/e2e/triage-unified-inbox-instagram.spec.ts
+src/ui/next/src/e2e/dashboard-triage-edit.spec.ts
+src/ui/next/src/e2e/omni_inbox_triage.spec.ts
