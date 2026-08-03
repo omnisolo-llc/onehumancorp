@@ -7666,6 +7666,7 @@ async fn create_ui_bom_item_handler(
             ),
         ))
         .merge(api::realtime::router())
+        .nest("/api/v1/native-chat", ::server_integrations_chat::api::chat_router(db.pool.clone()))
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
