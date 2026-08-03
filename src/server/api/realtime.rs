@@ -1,12 +1,12 @@
 use axum::{
-    extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Extension, Query, State},
+    extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Extension},
     response::IntoResponse,
     routing::{post, get},
     Json, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::broadcast;
@@ -14,8 +14,8 @@ use uuid::Uuid;
 use jsonwebtoken::{encode, decode, EncodingKey, DecodingKey, Header, Validation};
 
 // Unique single-use tracker for tickets (used JTIs) to prevent replay attacks.
-static CONSUMED_JTIS: once_cell::sync::Lazy<Arc<RwLock<HashSet<String>>>> =
-    once_cell::sync::Lazy::new(|| Arc::new(RwLock::new(HashSet::new())));
+static CONSUMED_JTIS: std::sync::LazyLock<Arc<RwLock<HashSet<String>>>> =
+    std::sync::LazyLock::new(|| Arc::new(RwLock::new(HashSet::new())));
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RealtimeTicketClaims {
@@ -86,7 +86,7 @@ pub async fn realtime_ticket_handler(
     Extension(claims): Extension<server_common::Claims>,
 ) -> impl IntoResponse {
     let now = SystemTime::now()
-        .duration_since(UNOCH_EPOCH_OR_DEFAULT())
+        .duration_since(unoch_epoch_or_default())
         .unwrap_or_default()
         .as_secs() as i64;
     let expires_at = now + 60; // Ticket is valid for 60 seconds
@@ -115,7 +115,7 @@ pub async fn realtime_ticket_handler(
     }
 }
 
-fn UNOCH_EPOCH_OR_DEFAULT() -> SystemTime {
+fn unoch_epoch_or_default() -> SystemTime {
     UNIX_EPOCH
 }
 
@@ -341,7 +341,7 @@ async fn handle_realtime_socket(socket: WebSocket, claims: RealtimeTicketClaims)
     };
 }
 
-pub fn router() -> Router {
+pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/api/v1/realtime/ws", get(realtime_ws_handler))
 }
