@@ -1,7 +1,7 @@
-use chrono::Utc;
-use sqlx::{PgPool, Row, SqlitePool};
-use std::time::Duration;
 use tracing::{info, warn};
+use std::time::Duration;
+use sqlx::{SqlitePool, PgPool, Row};
+use chrono::Utc;
 
 pub struct McpSyncWorker {
     sqlite_pool: SqlitePool,
@@ -17,8 +17,7 @@ impl McpSyncWorker {
     }
 
     pub fn process_telemetry_labels(labels_json: &str) -> String {
-        let parsed = serde_json::from_str::<serde_json::Value>(labels_json)
-            .unwrap_or(serde_json::Value::Null);
+        let parsed = serde_json::from_str::<serde_json::Value>(labels_json).unwrap_or(serde_json::Value::Null);
         crate::redact_interface_pii(parsed).to_string()
     }
 
@@ -49,10 +48,7 @@ impl McpSyncWorker {
             return Ok(());
         }
 
-        info!(
-            "Simulating MCP upload for {} pending metrics...",
-            rows.len()
-        );
+        info!("Simulating MCP upload for {} pending metrics...", rows.len());
 
         let mut tx = self.pg_pool.begin().await?;
 

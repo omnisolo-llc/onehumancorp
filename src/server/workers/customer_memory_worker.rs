@@ -1,7 +1,7 @@
-use crate::db::DB;
-use sqlx::Row;
 use std::sync::Arc;
 use tokio::time::Duration;
+use crate::db::DB;
+use sqlx::Row;
 use uuid::Uuid;
 
 pub struct CustomerMemoryWorker {
@@ -15,9 +15,7 @@ impl CustomerMemoryWorker {
 
     pub fn start(self: Arc<Self>) {
         tokio::spawn(async move {
-            tracing::info!(
-                "Starting CustomerMemoryWorker for Agentic Omnichannel Customer Context Memory Architecture..."
-            );
+            tracing::info!("Starting CustomerMemoryWorker for Agentic Omnichannel Customer Context Memory Architecture...");
             loop {
                 match self.poll().await {
                     Ok(true) => {
@@ -49,7 +47,7 @@ impl CustomerMemoryWorker {
                     ORDER BY created_at ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
-                    "#,
+                    "#
                 )
                 .fetch_optional(&mut *tx)
                 .await
@@ -70,7 +68,7 @@ impl CustomerMemoryWorker {
                 };
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
-            }
+            },
             crate::db::DbStore::Sqlite(pool) => {
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
@@ -80,7 +78,7 @@ impl CustomerMemoryWorker {
                     WHERE status = 'pending'
                     ORDER BY created_at ASC
                     LIMIT 1
-                    "#,
+                    "#
                 )
                 .fetch_optional(&mut *tx)
                 .await
@@ -110,19 +108,16 @@ impl CustomerMemoryWorker {
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
                     let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| e.to_string())?;
                     let row = sqlx::query("SELECT customer_id, channel, raw_content FROM interaction_events WHERE id = $1")
                         .bind(event_id)
                         .fetch_optional(&mut *tx)
                         .await
                         .map_err(|e| e.to_string())?;
                     if let Some(r) = row {
-                        event_data =
-                            Some((r.get("customer_id"), r.get("channel"), r.get("raw_content")));
+                        event_data = Some((r.get("customer_id"), r.get("channel"), r.get("raw_content")));
                     }
-                }
+                },
                 crate::db::DbStore::Sqlite(pool) => {
                     let row = sqlx::query("SELECT customer_id, channel, raw_content FROM interaction_events WHERE id = ?")
                         .bind(event_id)
@@ -130,8 +125,7 @@ impl CustomerMemoryWorker {
                         .await
                         .map_err(|e| e.to_string())?;
                     if let Some(r) = row {
-                        event_data =
-                            Some((r.get("customer_id"), r.get("channel"), r.get("raw_content")));
+                        event_data = Some((r.get("customer_id"), r.get("channel"), r.get("raw_content")));
                     }
                 }
             };
@@ -154,12 +148,9 @@ impl CustomerMemoryWorker {
                     let llm_call = async {
                         match std::env::var("OHC_LLM_PROVIDER").as_deref() {
                             Ok("minimax") => {
-                                let api_key = std::env::var("MINIMAX_API_KEY")
-                                    .unwrap_or_else(|_| "fake-key".to_string());
+                                let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
                                 if !api_key.is_empty() {
-                                    crate::minimax::MinimaxClient::new(api_key)
-                                        .reason(&prompt)
-                                        .await
+                                    crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
                                 } else {
                                     crate::minimax::LocalLLMClient::new().reason(&prompt).await
                                 }
@@ -194,9 +185,7 @@ impl CustomerMemoryWorker {
                 let upsert_res: Result<(), String> = match &self.db.store {
                     crate::db::DbStore::Postgres => {
                         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-                        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                            .await
-                            .map_err(|e| e.to_string())?;
+                        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| e.to_string())?;
 
                         let current_context = sqlx::query("SELECT context_graph FROM customer_memory_context WHERE tenant_id = $1 AND customer_id = $2")
                             .bind(&tenant_id).bind(&customer_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
@@ -205,9 +194,7 @@ impl CustomerMemoryWorker {
                         if let Some(r) = current_context {
                             if let Ok(val) = r.try_get::<serde_json::Value, _>("context_graph") {
                                 // Merge logic could be more sophisticated, but simple replacement/merge
-                                if let (Some(obj1), Some(obj2)) =
-                                    (val.as_object(), final_context.as_object_mut())
-                                {
+                                if let (Some(obj1), Some(obj2)) = (val.as_object(), final_context.as_object_mut()) {
                                     for (k, v) in obj1 {
                                         if !obj2.contains_key(k) {
                                             obj2.insert(k.clone(), v.clone());
@@ -234,7 +221,7 @@ impl CustomerMemoryWorker {
 
                         tx.commit().await.map_err(|e| e.to_string())?;
                         res.map(|_| ()).map_err(|e| e.to_string())
-                    }
+                    },
                     crate::db::DbStore::Sqlite(pool) => {
                         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -244,9 +231,7 @@ impl CustomerMemoryWorker {
                         let mut final_context = context_graph;
                         if let Some(r) = current_context {
                             if let Ok(val) = r.try_get::<serde_json::Value, _>("context_graph") {
-                                if let (Some(obj1), Some(obj2)) =
-                                    (val.as_object(), final_context.as_object_mut())
-                                {
+                                if let (Some(obj1), Some(obj2)) = (val.as_object(), final_context.as_object_mut()) {
                                     for (k, v) in obj1 {
                                         if !obj2.contains_key(k) {
                                             obj2.insert(k.clone(), v.clone());
@@ -286,7 +271,7 @@ impl CustomerMemoryWorker {
                         let _ = sqlx::query("UPDATE interaction_event_jobs SET status = 'completed', updated_at = NOW() WHERE job_id = $1")
                             .bind(job_id)
                             .execute(&self.db.pool).await;
-                    }
+                    },
                     crate::db::DbStore::Sqlite(pool) => {
                         let _ = sqlx::query("UPDATE interaction_event_jobs SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE job_id = ?")
                             .bind(job_id)
@@ -300,7 +285,7 @@ impl CustomerMemoryWorker {
                         let _ = sqlx::query("UPDATE interaction_event_jobs SET status = 'failed', updated_at = NOW() WHERE job_id = $1")
                             .bind(job_id)
                             .execute(&self.db.pool).await;
-                    }
+                    },
                     crate::db::DbStore::Sqlite(pool) => {
                         let _ = sqlx::query("UPDATE interaction_event_jobs SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE job_id = ?")
                             .bind(job_id)

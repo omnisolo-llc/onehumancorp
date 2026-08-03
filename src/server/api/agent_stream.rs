@@ -4,14 +4,14 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use crate::hub::Hub;
-use ::server_ohc::orchestration::Message;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::IntoResponse;
 use chrono::Utc;
 use futures_util::Stream;
 use tokio::sync::broadcast;
+use crate::hub::Hub;
+use ::server_ohc::orchestration::Message;
 
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(30);
 
@@ -62,7 +62,11 @@ fn message_to_sse_event(msg: &Message) -> String {
         "meeting_id": msg.meeting_id,
         "timestamp": msg.occurred_at_unix,
     });
-    format!("event: {}\ndata: {}\n\n", msg.r#type, payload)
+    format!(
+        "event: {}\ndata: {}\n\n",
+        msg.r#type,
+        payload
+    )
 }
 
 pub fn openai_chunk_from_message(msg: &Message, finish_reason: Option<&str>) -> serde_json::Value {
@@ -127,7 +131,9 @@ impl Stream for AgentEventStream {
         }
 
         if this.keep_alive.poll_tick(cx).is_ready() {
-            let ping = format!(": ping\n\n");
+            let ping = format!(
+                ": ping\n\n"
+            );
             return Poll::Ready(Some(Ok(ping)));
         }
 
@@ -161,12 +167,7 @@ mod tests {
             .unwrap();
 
         let response = response.into_response();
-        let ct = response
-            .headers()
-            .get("content-type")
-            .unwrap()
-            .to_str()
-            .unwrap();
+        let ct = response.headers().get("content-type").unwrap().to_str().unwrap();
         assert_eq!(ct, "text/event-stream");
     }
 
@@ -178,12 +179,7 @@ mod tests {
             .unwrap();
 
         let response = response.into_response();
-        let cc = response
-            .headers()
-            .get("cache-control")
-            .unwrap()
-            .to_str()
-            .unwrap();
+        let cc = response.headers().get("cache-control").unwrap().to_str().unwrap();
         assert_eq!(cc, "no-cache");
     }
 
@@ -195,12 +191,7 @@ mod tests {
             .unwrap();
 
         let response = response.into_response();
-        let conn = response
-            .headers()
-            .get("connection")
-            .unwrap()
-            .to_str()
-            .unwrap();
+        let conn = response.headers().get("connection").unwrap().to_str().unwrap();
         assert_eq!(conn, "keep-alive");
     }
 

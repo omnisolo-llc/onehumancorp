@@ -16,9 +16,7 @@ impl DailyClient {
     pub async fn create_meeting(&self, topic: &str) -> Result<String, String> {
         let url = "https://api.daily.co/v1/rooms";
         // Daily.co requires alphanumeric names and hyphens only
-        let sanitized_topic = topic
-            .to_lowercase()
-            .chars()
+        let sanitized_topic = topic.to_lowercase().chars()
             .map(|c| if c.is_alphanumeric() { c } else { '-' })
             .collect::<String>();
 
@@ -27,9 +25,7 @@ impl DailyClient {
             "privacy": "public"
         });
 
-        let res = self
-            .http_client
-            .post(url)
+        let res = self.http_client.post(url)
             .bearer_auth(&self.api_key)
             .json(&payload)
             .send()
@@ -39,12 +35,8 @@ impl DailyClient {
             Ok(resp) => {
                 if resp.status().is_success() {
                     let text = resp.text().await.unwrap_or_default();
-                    let json: serde_json::Value =
-                        serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
-                    let join_url = json["url"]
-                        .as_str()
-                        .unwrap_or("https://domain.daily.co/mock_meeting_123")
-                        .to_string();
+                    let json: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+                    let join_url = json["url"].as_str().unwrap_or("https://domain.daily.co/mock_meeting_123").to_string();
                     Ok(join_url)
                 } else {
                     Err(format!("Daily API error: {}", resp.status()))

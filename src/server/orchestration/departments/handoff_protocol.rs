@@ -1,8 +1,8 @@
+use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use crate::orchestration::departments::types::TaskEnvelope;
 use chrono::Utc;
 use serde_json::json;
-use std::sync::Arc;
 
 pub struct DepartmentHandoffManager {
     db: Arc<DB>,
@@ -59,10 +59,8 @@ impl DepartmentHandoffManager {
                 }
             }
             DbStore::Sqlite(pool) => {
-                let payload_str =
-                    serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string());
-                let routing_str =
-                    serde_json::to_string(&routing_history).unwrap_or_else(|_| "[]".to_string());
+                let payload_str = serde_json::to_string(&payload).unwrap_or_else(|_| "{}".to_string());
+                let routing_str = serde_json::to_string(&routing_history).unwrap_or_else(|_| "[]".to_string());
                 let res = sqlx::query(
                     "INSERT INTO task_envelopes (id, tenant_id, current_department, status, payload, routing_history, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
                 )
@@ -114,21 +112,16 @@ impl DepartmentHandoffManager {
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query(
-                    "SELECT routing_history FROM task_envelopes WHERE id = ? AND tenant_id = ?",
-                )
-                .bind(envelope_id)
-                .bind(tenant_id)
-                .fetch_one(pool)
-                .await;
+                let row = sqlx::query("SELECT routing_history FROM task_envelopes WHERE id = ? AND tenant_id = ?")
+                    .bind(envelope_id)
+                    .bind(tenant_id)
+                    .fetch_one(pool).await;
 
                 if let Ok(r) = row {
                     use sqlx::Row;
                     let mut history_arr: Vec<serde_json::Value> = vec![];
                     if let Ok(history_str) = r.try_get::<String, _>("routing_history") {
-                        if let Ok(parsed) =
-                            serde_json::from_str::<Vec<serde_json::Value>>(&history_str)
-                        {
+                        if let Ok(parsed) = serde_json::from_str::<Vec<serde_json::Value>>(&history_str) {
                             history_arr = parsed;
                         }
                     }

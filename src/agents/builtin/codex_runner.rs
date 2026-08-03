@@ -386,6 +386,7 @@ impl AppServer {
                 },
             };
             return serde_json::to_string(&resp).unwrap_or_default();
+
         } else if req.method == "ap_list_checkpoints" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let task_id = req

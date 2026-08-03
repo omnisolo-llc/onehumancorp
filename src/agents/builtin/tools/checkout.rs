@@ -1,11 +1,8 @@
-use super::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
 use ohc_builtin_agent_core::types::ToolError;
-use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use serde::Deserialize;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -39,8 +36,7 @@ impl PydanticToolExecutor<ConversationalCheckoutArgs> for ConversationalCheckout
         let db_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
-        let pool = sqlx::PgPool::connect(&db_url)
-            .await
+        let pool = sqlx::PgPool::connect(&db_url).await
             .map_err(|e| ToolError::LlmRecoverable(format!("DB connection failed: {}", e)))?;
 
         sqlx::query(

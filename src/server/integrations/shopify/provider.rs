@@ -104,20 +104,16 @@ mod tests {
 
     #[test]
     fn test_shopify_provider_new() {
-        let provider = ShopifyProvider::new(
-            "my-store.myshopify.com".to_string(),
-            "test-token".to_string(),
-        );
+        let provider =
+            ShopifyProvider::new("my-store.myshopify.com".to_string(), "test-token".to_string());
         assert_eq!(provider.metadata.id, "shopify");
         assert_eq!(provider.metadata.category, "ecommerce");
     }
 
     #[test]
     fn test_shopify_provider_to_integration_provider() {
-        let provider = ShopifyProvider::new(
-            "my-store.myshopify.com".to_string(),
-            "test-token".to_string(),
-        );
+        let provider =
+            ShopifyProvider::new("my-store.myshopify.com".to_string(), "test-token".to_string());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "shopify");
     }
@@ -128,7 +124,10 @@ mod tests {
             "my-store.myshopify.com".to_string(),
             "test-token".to_string(),
         ));
-        let provider = ShopifyProvider::with_client(client, "my-store.myshopify.com".to_string());
+        let provider = ShopifyProvider::with_client(
+            client,
+            "my-store.myshopify.com".to_string(),
+        );
         assert_eq!(provider.metadata.id, "shopify");
     }
 }

@@ -1,3 +1,4 @@
+
 use crate::db::DB;
 use sqlx::Row;
 
@@ -43,7 +44,7 @@ pub async fn resolve_identity(
 
             let mut db_query = sqlx::query(query).bind(tenant_id).bind(sender_id);
             if source == "whatsapp" || source == "sms" || source == "twilio" || source != "email" {
-                db_query = db_query.bind(sender_id);
+                 db_query = db_query.bind(sender_id);
             }
 
             let row = db_query.fetch_optional(sqlite_pool).await.ok()??;

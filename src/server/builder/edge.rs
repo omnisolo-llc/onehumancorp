@@ -1,22 +1,20 @@
-use crate::utils::cache::HybridCache;
 use axum::{
-    body::Body,
-    extract::{Extension, Path},
-    http::header::CACHE_CONTROL,
+    extract::{Path, Extension},
     response::{Html, IntoResponse, Response},
+    http::header::CACHE_CONTROL,
+    body::Body,
 };
 use sqlx::PgPool;
-use std::collections::HashSet;
 use std::sync::Arc;
-use std::sync::OnceLock;
-use tokio::sync::Mutex;
 use uuid::Uuid;
+use crate::utils::cache::HybridCache;
+use std::sync::OnceLock;
+use std::collections::HashSet;
+use tokio::sync::Mutex;
 
 pub static ONGOING_GENERATION: OnceLock<Arc<Mutex<HashSet<String>>>> = OnceLock::new();
 pub fn get_ongoing_generation() -> Arc<Mutex<HashSet<String>>> {
-    ONGOING_GENERATION
-        .get_or_init(|| Arc::new(Mutex::new(HashSet::new())))
-        .clone()
+    ONGOING_GENERATION.get_or_init(|| Arc::new(Mutex::new(HashSet::new()))).clone()
 }
 
 pub static EDGE_CACHE: OnceLock<Arc<HybridCache<String>>> = OnceLock::new();
@@ -44,10 +42,10 @@ pub struct EdgeWorkerState {
 
 pub fn escape_html(s: &str) -> String {
     s.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&#x27;")
+     .replace("<", "&lt;")
+     .replace(">", "&gt;")
+     .replace("\"", "&quot;")
+     .replace("'", "&#x27;")
 }
 
 pub struct StorefrontRouter;
@@ -76,6 +74,7 @@ fn edge_tenant_matches_claims(claims: &::server_common::Claims, tenant_id: &str)
         .is_some_and(|organization_id| !organization_id.is_empty() && organization_id == tenant_id)
 }
 
+
 pub async fn inject_dynamic_inventory(
     mut html: String,
     tenant_id: Uuid,
@@ -100,7 +99,7 @@ pub async fn inject_dynamic_inventory(
                 }
             } else {
                 let db_res: Result<Option<i32>, _> = sqlx::query_scalar(
-                    "SELECT inventory_count FROM products WHERE tenant_id = $1 AND id = $2",
+                    "SELECT inventory_count FROM products WHERE tenant_id = $1 AND id = $2"
                 )
                 .bind(tenant_id.to_string())
                 .bind(&pid_str)
@@ -109,13 +108,7 @@ pub async fn inject_dynamic_inventory(
 
                 if let Ok(Some(count)) = db_res {
                     inventory_count = count;
-                    cache
-                        .set(
-                            &kv_key,
-                            count.to_string(),
-                            std::time::Duration::from_secs(60),
-                        )
-                        .await;
+                    cache.set(&kv_key, count.to_string(), std::time::Duration::from_secs(60)).await;
                 }
             }
 
@@ -143,20 +136,15 @@ pub async fn handle_edge_request_impl(
     if !edge_tenant_matches_claims(&claims, &tenant_id_str) {
         return Err(axum::http::StatusCode::FORBIDDEN);
     }
-    let tenant_id =
-        Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
+    let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
-    let locale = headers
-        .get("accept-language")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("en-US");
+    let locale = headers.get("accept-language").and_then(|v| v.to_str().ok()).unwrap_or("en-US");
     let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
     let cache = get_edge_cache();
 
     if let Some((mut cached_html, stale)) = cache.get_with_swr(&cache_key).await {
-        cached_html =
-            inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
+        cached_html = inject_dynamic_inventory(cached_html, tenant_id, &state.pool, cache.clone()).await;
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         std::hash::Hash::hash(&cached_html, &mut hasher);
         let etag = format!("\"{:x}\"", std::hash::Hasher::finish(&hasher));
@@ -168,15 +156,11 @@ pub async fn handle_edge_request_impl(
             response.headers_mut().insert("Surrogate-Key", val);
         }
         if let Ok(etag_val) = etag.parse::<axum::http::HeaderValue>() {
-            response
-                .headers_mut()
-                .insert(axum::http::header::ETAG, etag_val);
+            response.headers_mut().insert(axum::http::header::ETAG, etag_val);
         }
         response.headers_mut().insert(
             CACHE_CONTROL,
-            axum::http::HeaderValue::from_static(
-                "public, s-maxage=60, stale-while-revalidate=86400",
-            ),
+            axum::http::HeaderValue::from_static("public, s-maxage=60, stale-while-revalidate=86400"),
         );
         if stale {
             // Spawn background regeneration logic if it was stale, but prevent thundering herd
@@ -187,14 +171,7 @@ pub async fn handle_edge_request_impl(
                 let pool_clone = state.pool.clone();
                 let cache_key_clone = cache_key.clone();
                 tokio::spawn(async move {
-                    let _ = regenerate_cache(
-                        pool_clone,
-                        tenant_id,
-                        site_id,
-                        cache_key_clone.clone(),
-                        cache,
-                    )
-                    .await;
+                    let _ = regenerate_cache(pool_clone, tenant_id, site_id, cache_key_clone.clone(), cache).await;
                     let ongoing = get_ongoing_generation();
                     ongoing.lock().await.remove(&cache_key_clone);
                 });
@@ -231,28 +208,17 @@ pub async fn handle_edge_request_impl(
                 response.headers_mut().insert("Surrogate-Key", val);
             }
             if let Ok(etag_val) = etag.parse::<axum::http::HeaderValue>() {
-                response
-                    .headers_mut()
-                    .insert(axum::http::header::ETAG, etag_val);
+                response.headers_mut().insert(axum::http::header::ETAG, etag_val);
             }
             response.headers_mut().insert(
                 CACHE_CONTROL,
-                axum::http::HeaderValue::from_static(
-                    "public, s-maxage=60, stale-while-revalidate=86400",
-                ),
+                axum::http::HeaderValue::from_static("public, s-maxage=60, stale-while-revalidate=86400"),
             );
             return Ok(response);
         }
     }
 
-    let result = regenerate_cache(
-        state.pool.clone(),
-        tenant_id,
-        site_id,
-        cache_key.clone(),
-        cache.clone(),
-    )
-    .await;
+    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await;
 
     {
         let ongoing = get_ongoing_generation();
@@ -269,16 +235,12 @@ pub async fn handle_edge_request_impl(
     let mut response = Html(html).into_response();
     if !tags.is_empty() {
         if let Ok(cache_tag) = tags.join(", ").parse::<axum::http::HeaderValue>() {
-            response
-                .headers_mut()
-                .insert("Cache-Tag", cache_tag.clone());
+            response.headers_mut().insert("Cache-Tag", cache_tag.clone());
             response.headers_mut().insert("Surrogate-Key", cache_tag);
         }
     }
     if let Ok(etag_val) = etag.parse::<axum::http::HeaderValue>() {
-        response
-            .headers_mut()
-            .insert(axum::http::header::ETAG, etag_val);
+        response.headers_mut().insert(axum::http::header::ETAG, etag_val);
     }
     response.headers_mut().insert(
         CACHE_CONTROL,
@@ -306,7 +268,7 @@ pub async fn regenerate_product_cache(
     let (site_id_res, seo_res) = tokio::join!(
         async move {
             sqlx::query_scalar::<_, Uuid>(
-                "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1",
+                "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
             )
             .bind(tenant_id)
             .fetch_one(&pool1)
@@ -325,34 +287,21 @@ pub async fn regenerate_product_cache(
 
     if let Ok(site_id) = site_id_res {
         // Just call regenerate_cache from builder edge
-        if let Ok((mut html, tags)) = regenerate_cache(
-            pool.clone(),
-            tenant_id,
-            site_id,
-            cache_key.clone(),
-            cache.clone(),
-        )
-        .await
-        {
+        if let Ok((mut html, tags)) = regenerate_cache(pool.clone(), tenant_id, site_id, cache_key.clone(), cache.clone()).await {
+
             if let Ok(Some(row)) = seo_res {
                 if let Some(seo_title) = row.seo_title {
                     if let Some(start) = html.find("<title>") {
                         if let Some(end) = html[start..].find("</title>") {
                             let end = start + end + "</title>".len();
-                            let safe_title = seo_title
-                                .replace("&", "&amp;")
-                                .replace("<", "&lt;")
-                                .replace(">", "&gt;");
+                            let safe_title = seo_title.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
                             html.replace_range(start..end, &format!("<title>{}</title>\n<meta name=\"title\" content=\"{}\">\n<meta property=\"og:title\" content=\"{}\">", safe_title, safe_title, safe_title));
                         }
                     }
                 }
 
                 if let Some(seo_desc) = row.seo_description {
-                    let safe_desc = seo_desc
-                        .replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;");
+                    let safe_desc = seo_desc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
                     if let Some(start) = html.find("<meta name=\"description\"") {
                         if let Some(end) = html[start..].find(">") {
                             let end = start + end + ">".len();
@@ -367,35 +316,16 @@ pub async fn regenerate_product_cache(
                     if let Some(start) = html.find("<script type=\"application/ld+json\">") {
                         if let Some(end) = html[start..].find("</script>") {
                             let end = start + end + "</script>".len();
-                            html.replace_range(
-                                start..end,
-                                &format!(
-                                    "<script type=\"application/ld+json\">\n{}\n</script>",
-                                    serde_json::to_string(&seo_schema.0).unwrap_or_default()
-                                ),
-                            );
+                            html.replace_range(start..end, &format!("<script type=\"application/ld+json\">\n{}\n</script>", serde_json::to_string(&seo_schema.0).unwrap_or_default()));
                         }
                     } else if let Some(head_end) = html.find("</head>") {
-                        html.insert_str(
-                            head_end,
-                            &format!(
-                                "<script type=\"application/ld+json\">\n{}\n</script>\n",
-                                serde_json::to_string(&seo_schema.0).unwrap_or_default()
-                            ),
-                        );
+                        html.insert_str(head_end, &format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_schema.0).unwrap_or_default()));
                     }
                 }
             }
 
             // Pre-warm the cache since SWR or cache miss just resolved
-            cache
-                .set_with_tags(
-                    &cache_key,
-                    html.clone(),
-                    tags.clone(),
-                    std::time::Duration::from_secs(3600),
-                )
-                .await;
+            cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
 
             return Ok((html, tags));
         }
@@ -440,30 +370,17 @@ pub async fn regenerate_cache(
 
     html.push_str(&format!("<title>{}</title>\n", escape_html(&page.title)));
     if let Some(seo_name) = page.seo_metadata.get("name").and_then(|v| v.as_str()) {
-        html.push_str(&format!(
-            "<meta name=\"title\" content=\"{}\">\n",
-            escape_html(seo_name)
-        ));
+        html.push_str(&format!("<meta name=\"title\" content=\"{}\">\n", escape_html(seo_name)));
     }
-    if let Some(seo_description) = page
-        .seo_metadata
-        .get("description")
-        .and_then(|v| v.as_str())
-    {
-        html.push_str(&format!(
-            "<meta name=\"description\" content=\"{}\">\n",
-            escape_html(seo_description)
-        ));
+    if let Some(seo_description) = page.seo_metadata.get("description").and_then(|v| v.as_str()) {
+        html.push_str(&format!("<meta name=\"description\" content=\"{}\">\n", escape_html(seo_description)));
     }
 
     let mut seo_ld = page.seo_metadata.clone();
     if seo_ld.get("@context").is_none() {
         seo_ld["@context"] = serde_json::Value::String("https://schema.org".to_string());
     }
-    html.push_str(&format!(
-        "<script type=\"application/ld+json\">\n{}\n</script>\n",
-        serde_json::to_string(&seo_ld).unwrap_or_default()
-    ));
+    html.push_str(&format!("<script type=\"application/ld+json\">\n{}\n</script>\n", serde_json::to_string(&seo_ld).unwrap_or_default()));
 
     html.push_str(r#"
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
@@ -516,42 +433,19 @@ pub async fn regenerate_cache(
         html.push_str("<div class=\"block\">\n");
         match block.block_type.as_str() {
             "HeroBlock" | "Hero" => {
-                let title = block
-                    .content
-                    .get("headline")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Welcome");
-                let subtitle = block
-                    .content
-                    .get("subtitle")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                html.push_str(&format!(
-                    "<h1 class=\"hero-title font-outfit\">{}</h1>\n",
-                    escape_html(title)
-                ));
-                html.push_str(&format!(
-                    "<p class=\"hero-subtitle\">{}</p>\n",
-                    escape_html(subtitle)
-                ));
+                let title = block.content.get("headline").and_then(|v| v.as_str()).unwrap_or("Welcome");
+                let subtitle = block.content.get("subtitle").and_then(|v| v.as_str()).unwrap_or("");
+                html.push_str(&format!("<h1 class=\"hero-title font-outfit\">{}</h1>\n", escape_html(title)));
+                html.push_str(&format!("<p class=\"hero-subtitle\">{}</p>\n", escape_html(subtitle)));
             }
             "ProductGridBlock" | "Catalog" => {
                 html.push_str("<h2 class=\"font-outfit\">Our Products</h2>\n");
                 html.push_str("<div class=\"product-grid\">\n");
                 if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
                     for item in items {
-                        let name = item
-                            .get("name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("Product");
-                        let price = item
-                            .get("price")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("$0.00");
-                        let desc = item
-                            .get("description")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
+                        let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
+                        let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
+                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
                             tags.push(format!("entity:product:{}", pid));
                             html.push_str(&format!(
@@ -575,21 +469,10 @@ pub async fn regenerate_cache(
                 html.push_str("</div>\n");
             }
             "ServiceBookingBlock" | "Booking" => {
-                let title = block
-                    .content
-                    .get("title")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Book a Service");
-                let avail = block
-                    .content
-                    .get("availability")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Available now");
+                let title = block.content.get("title").and_then(|v| v.as_str()).unwrap_or("Book a Service");
+                let avail = block.content.get("availability").and_then(|v| v.as_str()).unwrap_or("Available now");
                 html.push_str("<div class=\"service-block\">\n");
-                html.push_str(&format!(
-                    "<h3 class=\"font-outfit\">{}</h3>\n",
-                    escape_html(title)
-                ));
+                html.push_str(&format!("<h3 class=\"font-outfit\">{}</h3>\n", escape_html(title)));
                 html.push_str(&format!("<p>{}</p>\n", escape_html(avail)));
                 html.push_str("<button class=\"btn\">Book Now</button>\n");
                 html.push_str("</div>\n");
@@ -616,8 +499,7 @@ pub async fn regenerate_cache(
         html.push_str("</div>\n");
     }
 
-    html.push_str(
-        r#"
+    html.push_str(r#"
         <div class="block" style="text-align: center; font-size: 12px; color: #888;">
             ⚡ Powered by OHC
         </div>
@@ -636,17 +518,9 @@ pub async fn regenerate_cache(
     </script>
     </body>
     </html>
-    "#,
-    );
+    "#);
 
-    cache
-        .set_with_tags(
-            &cache_key,
-            html.clone(),
-            tags.clone(),
-            std::time::Duration::from_secs(3600),
-        )
-        .await;
+    cache.set_with_tags(&cache_key, html.clone(), tags.clone(), std::time::Duration::from_secs(3600)).await;
 
     Ok((html, tags))
 }

@@ -1,6 +1,6 @@
-use rand::RngCore;
 use std::collections::HashMap;
 use std::sync::RwLock;
+use rand::RngCore;
 
 pub struct ReferralTracker {
     total_referrals: RwLock<i32>,

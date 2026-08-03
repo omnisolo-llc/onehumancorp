@@ -1,22 +1,16 @@
-use serde_json::Value;
 use sqlx::PgPool;
+use serde_json::Value;
 
-pub async fn handle_inbox_action(
-    tenant_id: &str,
-    payload: &Value,
-    pool: &PgPool,
-) -> Result<(), sqlx::Error> {
+pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
     if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
         tracing::info!("Approved ambassador reply for inbox message: {}", inbox_id);
 
         // Handle both standard inbox_messages and omni_inbox_messages updates
-        sqlx::query(
-            "UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2",
-        )
-        .bind(inbox_id)
-        .bind(tenant_id)
-        .execute(pool)
-        .await?;
+        sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1 AND tenant_id = $2")
+            .bind(inbox_id)
+            .bind(tenant_id)
+            .execute(pool)
+            .await?;
 
         let draft_reply = payload
             .get("generated_response")
@@ -33,7 +27,7 @@ pub async fn handle_inbox_action(
 
         // Fetch message details to dispatch out if it's WhatsApp or SMS
         let row: Option<(String, String)> = sqlx::query_as(
-            "SELECT source, sender_id FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2",
+            "SELECT source, sender_id FROM omni_inbox_messages WHERE id = $1 AND tenant_id = $2"
         )
         .bind(inbox_id)
         .bind(tenant_id)
@@ -52,78 +46,41 @@ pub async fn handle_inbox_action(
                 let draft_reply_clone = draft_reply.to_string();
                 let sender_id_clone = sender_id.to_string();
 
-                if let Some((integration_id, bot_token_opt, api_token_opt, from_phone_opt)) =
-                    creds_row
-                {
+                if let Some((integration_id, bot_token_opt, api_token_opt, from_phone_opt)) = creds_row {
                     let bot_token = bot_token_opt.unwrap_or_default();
                     let api_token = api_token_opt.unwrap_or_default();
                     let from_phone = from_phone_opt.unwrap_or_default();
                     if integration_id == "whatsapp" {
                         tokio::spawn(async move {
-                            let provider =
-                                crate::integrations::twilio::provider::TwilioProvider::new(
-                                    bot_token, api_token,
-                                );
-                            if let Err(e) = provider
-                                .send_whatsapp(&sender_id_clone, &from_phone, &draft_reply_clone)
-                                .await
-                            {
+                            let provider = crate::integrations::twilio::provider::TwilioProvider::new(bot_token, api_token);
+                            if let Err(e) = provider.send_whatsapp(&sender_id_clone, &from_phone, &draft_reply_clone).await {
                                 tracing::error!("Failed to send Twilio WhatsApp reply: {}", e);
                             } else {
-                                tracing::info!(
-                                    "Successfully sent Twilio WhatsApp reply to {}",
-                                    sender_id_clone
-                                );
+                                tracing::info!("Successfully sent Twilio WhatsApp reply to {}", sender_id_clone);
                             }
                         });
                     } else {
                         let registry = crate::integrations::registry::IntegrationsRegistry::new();
                         tokio::spawn(async move {
-                            if let Err(e) = registry
-                                .send_whatsapp(
-                                    "whatsapp_cloud_api",
-                                    &sender_id_clone,
-                                    "omni",
-                                    &draft_reply_clone,
-                                )
-                                .await
-                            {
+                            if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
                                 tracing::error!("Failed to send WhatsApp Cloud API reply: {}", e);
                             } else {
-                                tracing::info!(
-                                    "Successfully sent WhatsApp Cloud API reply to {}",
-                                    sender_id_clone
-                                );
+                                tracing::info!("Successfully sent WhatsApp Cloud API reply to {}", sender_id_clone);
                             }
                         });
                     }
                 } else {
                     let registry = crate::integrations::registry::IntegrationsRegistry::new();
                     tokio::spawn(async move {
-                        if let Err(e) = registry
-                            .send_whatsapp(
-                                "whatsapp_cloud_api",
-                                &sender_id_clone,
-                                "omni",
-                                &draft_reply_clone,
-                            )
-                            .await
-                        {
+                        if let Err(e) = registry.send_whatsapp("whatsapp_cloud_api", &sender_id_clone, "omni", &draft_reply_clone).await {
                             tracing::error!("Failed to send WhatsApp reply: {}", e);
                         } else {
-                            tracing::info!(
-                                "Successfully sent WhatsApp reply to {}",
-                                sender_id_clone
-                            );
+                            tracing::info!("Successfully sent WhatsApp reply to {}", sender_id_clone);
                         }
                     });
                 }
             } else if source == "instagram" || source == "facebook" {
-                let integration_id = if source == "whatsapp" {
-                    "whatsapp_cloud_api"
-                } else {
-                    "meta"
-                };
+                let integration_id = if source == "whatsapp" { "whatsapp_cloud_api" } else { "meta" };
                 let meta_creds: Result<String, sqlx::Error> = sqlx::query_scalar(
                     "SELECT api_token FROM integration_credentials WHERE integration_id = $1 AND tenant_id = $2 LIMIT 1"
                 )
@@ -152,22 +109,10 @@ pub async fn handle_inbox_action(
                         let source_clone = source.clone();
                         let integration_id_clone = integration_id.to_string();
                         tokio::spawn(async move {
-                            if let Err(e) = registry
-                                .send_message(
-                                    &integration_id_clone,
-                                    &source_clone,
-                                    &sender_id_clone,
-                                    &draft_reply_clone,
-                                )
-                                .await
-                            {
+                            if let Err(e) = registry.send_message(&integration_id_clone, &source_clone, &sender_id_clone, &draft_reply_clone).await {
                                 tracing::error!("Failed to send {} reply: {}", source_clone, e);
                             } else {
-                                tracing::info!(
-                                    "Successfully sent {} reply to {}",
-                                    source_clone,
-                                    sender_id_clone
-                                );
+                                tracing::info!("Successfully sent {} reply to {}", source_clone, sender_id_clone);
                             }
                         });
                     }
@@ -182,28 +127,21 @@ pub async fn handle_inbox_action(
 
                 let (account_sid, auth_token, from_number) = match twilio_creds {
                     Ok(creds) => creds,
-                    Err(_) => (
-                        std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
-                        std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
-                        std::env::var("TWILIO_FROM_NUMBER").unwrap_or_default(),
-                    ),
+                    Err(_) => {
+                        (
+                            std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+                            std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+                            std::env::var("TWILIO_FROM_NUMBER").unwrap_or_default(),
+                        )
+                    }
                 };
 
-                if !account_sid.trim().is_empty()
-                    && !auth_token.trim().is_empty()
-                    && !from_number.trim().is_empty()
-                {
-                    let provider = crate::integrations::twilio::provider::TwilioProvider::new(
-                        account_sid,
-                        auth_token,
-                    );
+                if !account_sid.trim().is_empty() && !auth_token.trim().is_empty() && !from_number.trim().is_empty() {
+                    let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
                     let draft_reply_clone = draft_reply.to_string();
 
                     tokio::spawn(async move {
-                        if let Err(e) = provider
-                            .send_sms(&sender_id, &from_number, &draft_reply_clone)
-                            .await
-                        {
+                        if let Err(e) = provider.send_sms(&sender_id, &from_number, &draft_reply_clone).await {
                             tracing::error!("Failed to send SMS reply: {}", e);
                         } else {
                             tracing::info!("Successfully sent SMS reply to {}", sender_id);

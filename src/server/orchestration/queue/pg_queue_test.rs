@@ -1,7 +1,7 @@
-use super::{Job, PgTaskQueue, TaskQueue};
-use chrono::Utc;
-use sqlx::postgres::PgPoolOptions;
+use super::{TaskQueue, Job, PgTaskQueue};
 use std::sync::Arc;
+use sqlx::postgres::PgPoolOptions;
+use chrono::Utc;
 
 #[tokio::test]
 async fn test_pg_fail_backoff() {
@@ -10,22 +10,12 @@ async fn test_pg_fail_backoff() {
     }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-    let pool = match PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await
-    {
-        Ok(p) => p,
-        Err(_) => return,
-    };
+    let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
 
     let queue = PgTaskQueue::new(Arc::new(pool.clone()));
 
     // Ensure table is clean for tests
-    sqlx::query("DELETE FROM ohc_job_queue")
-        .execute(&pool)
-        .await
-        .unwrap();
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
 
     let job = Job {
         id: "job-fail-pg-1".to_string(),
@@ -49,12 +39,7 @@ async fn test_pg_fail_backoff() {
 
     // After fail, retry_count should be 1, status PENDING, and next_retry_at should be updated
     use sqlx::Row;
-    let row = sqlx::query(
-        "SELECT retry_count, status, next_retry_at FROM ohc_job_queue WHERE id = 'job-fail-pg-1'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let row = sqlx::query("SELECT retry_count, status, next_retry_at FROM ohc_job_queue WHERE id = 'job-fail-pg-1'").fetch_one(&pool).await.unwrap();
 
     let retry_count: i32 = row.get("retry_count");
     assert_eq!(retry_count, 1);
@@ -68,15 +53,8 @@ async fn test_pg_fail_backoff() {
     let backoff_duration = chrono::Duration::seconds(2);
     let expected_time = before_fail + backoff_duration;
 
-    let diff = next_retry_at
-        .signed_duration_since(expected_time)
-        .num_milliseconds()
-        .abs();
-    assert!(
-        diff < 1000,
-        "next_retry_at timestamp should be roughly Utc::now() + backoff time, but got difference of {} ms",
-        diff
-    );
+    let diff = next_retry_at.signed_duration_since(expected_time).num_milliseconds().abs();
+    assert!(diff < 1000, "next_retry_at timestamp should be roughly Utc::now() + backoff time, but got difference of {} ms", diff);
 }
 
 #[tokio::test]
@@ -86,30 +64,14 @@ async fn test_pg_fail_max_retries_dead_letter() {
     }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-    let pool = match PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await
-    {
-        Ok(p) => p,
-        Err(_) => return,
-    };
+    let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
 
     let queue = PgTaskQueue::new(Arc::new(pool.clone()));
 
     // Ensure tables are clean for tests
-    sqlx::query("DELETE FROM ohc_job_queue")
-        .execute(&pool)
-        .await
-        .unwrap();
-    sqlx::query("DELETE FROM department_dead_letters")
-        .execute(&pool)
-        .await
-        .unwrap();
-    sqlx::query("DELETE FROM agents WHERE id = 'agent-1'")
-        .execute(&pool)
-        .await
-        .unwrap();
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+    sqlx::query("DELETE FROM department_dead_letters").execute(&pool).await.unwrap();
+    sqlx::query("DELETE FROM agents WHERE id = 'agent-1'").execute(&pool).await.unwrap();
     sqlx::query("INSERT INTO agents (id, tenant_id, name, role, status) VALUES ('agent-1', 'test_org', 'test', 'test', 'ACTIVE')").execute(&pool).await.unwrap();
 
     let job = Job {
@@ -134,10 +96,7 @@ async fn test_pg_fail_max_retries_dead_letter() {
 
     // Verify job is marked as FAILED
     use sqlx::Row;
-    let row = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = 'job-fail-pg-dead'")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let row = sqlx::query("SELECT status FROM ohc_job_queue WHERE id = 'job-fail-pg-dead'").fetch_one(&pool).await.unwrap();
     let status: String = row.get("status");
     assert_eq!(status, "FAILED");
 
@@ -155,10 +114,7 @@ async fn test_pg_fail_max_retries_dead_letter() {
     assert_eq!(dl_payload, "{\"test\":\"payload\"}");
     assert_eq!(dl_error_message, "test reason");
 
-    let agent_row = sqlx::query("SELECT status FROM agents WHERE id = 'agent-1'")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+    let agent_row = sqlx::query("SELECT status FROM agents WHERE id = 'agent-1'").fetch_one(&pool).await.unwrap();
     let agent_status: String = agent_row.get("status");
     assert_eq!(agent_status, "PAUSED");
 }
@@ -174,20 +130,13 @@ async fn test_pg_queue_concurrent_workers() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
         .max_connections(20)
-        .connect(&database_url)
-        .await;
-    let pool = match pool {
-        Ok(p) => p,
-        Err(_) => return,
-    };
+        .connect(&database_url).await;
+    let pool = match pool { Ok(p) => p, Err(_) => return, };
 
     let queue = Arc::new(PgTaskQueue::new(Arc::new(pool.clone())));
 
     // Clean queue
-    sqlx::query("DELETE FROM ohc_job_queue")
-        .execute(&pool)
-        .await
-        .unwrap();
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
 
     // Enqueue 100 jobs
     let mut jobs = Vec::new();
@@ -217,10 +166,7 @@ async fn test_pg_queue_concurrent_workers() {
         let count = processed_count.clone();
         workers.push(tokio::spawn(async move {
             loop {
-                let job = q
-                    .dequeue(vec!["concurrent-role".to_string()], 0, 0)
-                    .await
-                    .unwrap();
+                let job = q.dequeue(vec!["concurrent-role".to_string()], 0, 0).await.unwrap();
                 match job {
                     Some(j) => {
                         q.complete(&j.id).await.unwrap();
@@ -236,18 +182,11 @@ async fn test_pg_queue_concurrent_workers() {
         w.await.unwrap();
     }
 
-    assert_eq!(
-        processed_count.load(Ordering::SeqCst),
-        100,
-        "Exactly 100 jobs should be executed"
-    );
+    assert_eq!(processed_count.load(Ordering::SeqCst), 100, "Exactly 100 jobs should be executed");
 
     // Verify 0 duplicates or pending jobs
-    let remaining: (i64,) =
-        sqlx::query_as("SELECT count(*) FROM ohc_job_queue WHERE status = 'PENDING'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let remaining: (i64,) = sqlx::query_as("SELECT count(*) FROM ohc_job_queue WHERE status = 'PENDING'")
+        .fetch_one(&pool).await.unwrap();
     assert_eq!(remaining.0, 0, "There should be no pending jobs left");
 }
 
@@ -258,22 +197,12 @@ async fn test_pg_queue_rls_isolation() {
     }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-    let pool = match PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await
-    {
-        Ok(p) => p,
-        Err(_) => return,
-    };
+    let pool = match PgPoolOptions::new().max_connections(5).connect(&database_url).await { Ok(p) => p, Err(_) => return, };
 
     let queue = PgTaskQueue::new(Arc::new(pool.clone()));
 
     // Clean queue
-    sqlx::query("DELETE FROM ohc_job_queue")
-        .execute(&pool)
-        .await
-        .unwrap();
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
 
     let job1 = Job {
         id: "job-rls-1".to_string(),
@@ -309,20 +238,12 @@ async fn test_pg_queue_rls_isolation() {
     queue.enqueue(job2).await.unwrap();
 
     // Now try to dequeue, we should see both jobs because dequeue runs in system context (ohc_bypassrls)
-    let dequeued1 = queue
-        .dequeue(vec!["rls-role".to_string()], 0, 0)
-        .await
-        .unwrap()
-        .unwrap();
-    let dequeued2 = queue
-        .dequeue(vec!["rls-role".to_string()], 0, 0)
-        .await
-        .unwrap()
-        .unwrap();
+    let dequeued1 = queue.dequeue(vec!["rls-role".to_string()], 0, 0).await.unwrap().unwrap();
+    let dequeued2 = queue.dequeue(vec!["rls-role".to_string()], 0, 0).await.unwrap().unwrap();
 
     // One from A, one from B
     assert!(
-        (dequeued1.tenant_id == "tenant_A" && dequeued2.tenant_id == "tenant_B")
-            || (dequeued1.tenant_id == "tenant_B" && dequeued2.tenant_id == "tenant_A")
+        (dequeued1.tenant_id == "tenant_A" && dequeued2.tenant_id == "tenant_B") ||
+        (dequeued1.tenant_id == "tenant_B" && dequeued2.tenant_id == "tenant_A")
     );
 }

@@ -73,7 +73,10 @@ impl GoogleWorkspaceClient {
         page_size: u32,
     ) -> Result<Vec<DriveFile>, String> {
         let token = self.validated_access_token()?;
-        let url = format!("{}/drive/v3/files", self.base_url.trim_end_matches('/'));
+        let url = format!(
+            "{}/drive/v3/files",
+            self.base_url.trim_end_matches('/')
+        );
 
         let resp = self
             .http_client
@@ -159,13 +162,17 @@ impl GoogleWorkspaceClient {
 
         // metadata part
         body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
-        body.extend_from_slice(b"Content-Type: application/json; charset=UTF-8\r\n\r\n");
+        body.extend_from_slice(
+            b"Content-Type: application/json; charset=UTF-8\r\n\r\n",
+        );
         body.extend_from_slice(metadata.to_string().as_bytes());
         body.extend_from_slice(b"\r\n");
 
         // file content part
         body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
-        body.extend_from_slice(format!("Content-Type: {}\r\n\r\n", mime_type).as_bytes());
+        body.extend_from_slice(
+            format!("Content-Type: {}\r\n\r\n", mime_type).as_bytes(),
+        );
         body.extend_from_slice(content);
         body.extend_from_slice(b"\r\n");
 
@@ -337,7 +344,12 @@ impl GoogleWorkspaceClient {
 
     // ── Gmail ─────────────────────────────────────────────────────
 
-    pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<String, String> {
+    pub async fn send_email(
+        &self,
+        to: &str,
+        subject: &str,
+        body: &str,
+    ) -> Result<String, String> {
         let token = self.validated_access_token()?;
         let url = format!(
             "{}/gmail/v1/users/me/messages/send",
@@ -400,7 +412,10 @@ impl GoogleWorkspaceClient {
             .http_client
             .get(&url)
             .bearer_auth(token)
-            .query(&[("q", query), ("maxResults", &max_results.to_string())])
+            .query(&[
+                ("q", query),
+                ("maxResults", &max_results.to_string()),
+            ])
             .send()
             .await
             .map_err(|e| format!("Network error listing messages: {}", e))?;
@@ -414,7 +429,10 @@ impl GoogleWorkspaceClient {
             .await
             .map_err(|e| format!("Failed to parse message list: {}", e))?;
 
-        let message_refs = body["messages"].as_array().cloned().unwrap_or_default();
+        let message_refs = body["messages"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
 
         let mut messages = Vec::new();
         for msg_ref in message_refs {
@@ -481,19 +499,11 @@ fn rfc2822_date_now() -> String {
     let month_days: [u32; 12] = [
         31,
         if leap { 29 } else { 28 },
-        31,
-        30,
-        31,
-        30,
-        31,
-        31,
-        30,
-        31,
-        30,
-        31,
+        31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
     ];
     let month_names = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
     let day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -553,7 +563,9 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
+    async fn start_server(
+        response_body: &'static str,
+    ) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -571,7 +583,8 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) =
+                        request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -599,9 +612,7 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx
-                .send(String::from_utf8(request).unwrap())
-                .unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
         });
 
         (base_url, request_rx)
@@ -641,8 +652,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_file_returns_single_drive_file() {
-        let response =
-            r#"{"id": "abc", "name": "report.pdf", "mimeType": "application/pdf", "parents": []}"#;
+        let response = r#"{"id": "abc", "name": "report.pdf", "mimeType": "application/pdf", "parents": []}"#;
         let (base_url, request_rx) = start_server(response).await;
         let client =
             GoogleWorkspaceClient::with_base_url_for_test("my-token".to_string(), base_url);
@@ -673,10 +683,10 @@ mod tests {
 
     #[tokio::test]
     async fn create_spreadsheet_returns_id() {
-        let response =
-            r#"{"spreadsheetId": "sheet-abc-123", "properties": {"title": "New Sheet"}}"#;
+        let response = r#"{"spreadsheetId": "sheet-abc-123", "properties": {"title": "New Sheet"}}"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client = GoogleWorkspaceClient::with_base_url_for_test("token".to_string(), base_url);
+        let client =
+            GoogleWorkspaceClient::with_base_url_for_test("token".to_string(), base_url);
 
         let id = client.create_spreadsheet("New Sheet").await.unwrap();
         assert_eq!(id, "sheet-abc-123");
@@ -787,7 +797,8 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
-        let client = GoogleWorkspaceClient::with_base_url_for_test("   ".to_string(), base_url);
+        let client =
+            GoogleWorkspaceClient::with_base_url_for_test("   ".to_string(), base_url);
         let error = client.list_files("root", 10).await.unwrap_err();
         assert_eq!(error, "Google Workspace access token is required");
     }
@@ -799,12 +810,12 @@ mod tests {
 
         tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
-            let response =
-                "HTTP/1.1 403 Forbidden\r\ncontent-length: 0\r\nconnection: close\r\n\r\n";
+            let response = "HTTP/1.1 403 Forbidden\r\ncontent-length: 0\r\nconnection: close\r\n\r\n";
             stream.write_all(response.as_bytes()).await.unwrap();
         });
 
-        let client = GoogleWorkspaceClient::with_base_url_for_test("token".to_string(), base_url);
+        let client =
+            GoogleWorkspaceClient::with_base_url_for_test("token".to_string(), base_url);
         let error = client.get_file("x").await.unwrap_err();
         assert!(error.contains("403"));
     }

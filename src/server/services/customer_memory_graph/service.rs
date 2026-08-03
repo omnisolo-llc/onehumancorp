@@ -1,7 +1,7 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CustomerProfileSummary {
@@ -22,13 +22,7 @@ impl CustomerMemoryGraphService {
         Self { pool }
     }
 
-    pub async fn ingest_interaction(
-        &self,
-        tenant_id: &str,
-        customer_id: &str,
-        channel: &str,
-        raw_content: &str,
-    ) -> Result<Uuid, sqlx::Error> {
+    pub async fn ingest_interaction(&self, tenant_id: &str, customer_id: &str, channel: &str, raw_content: &str) -> Result<Uuid, sqlx::Error> {
         let event_id = Uuid::new_v4();
 
         let mut tx = self.pool.begin().await?;
@@ -70,20 +64,17 @@ impl CustomerMemoryGraphService {
         Ok(event_id)
     }
 
-    pub async fn get_profile_summary(
-        &self,
-        tenant_id: &str,
-        customer_id: &str,
-    ) -> Result<CustomerProfileSummary, sqlx::Error> {
+    pub async fn get_profile_summary(&self, tenant_id: &str, customer_id: &str) -> Result<CustomerProfileSummary, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
 
-        let record =
-            sqlx::query("SELECT profile_summary FROM customers WHERE id = $1 AND tenant_id = $2")
-                .bind(customer_id)
-                .bind(tenant_id)
-                .fetch_optional(&mut *tx)
-                .await?;
+        let record = sqlx::query(
+            "SELECT profile_summary FROM customers WHERE id = $1 AND tenant_id = $2"
+        )
+        .bind(customer_id)
+        .bind(tenant_id)
+        .fetch_optional(&mut *tx)
+        .await?;
 
         let memory_context_record = sqlx::query(
             "SELECT context_graph FROM customer_memory_context WHERE customer_id = $1 AND tenant_id = $2"
@@ -94,9 +85,7 @@ impl CustomerMemoryGraphService {
         .await?;
 
         let mut summary = if let Some(row) = record {
-            if let Ok(val) =
-                row.try_get::<sqlx::types::Json<CustomerProfileSummary>, _>("profile_summary")
-            {
+            if let Ok(val) = row.try_get::<sqlx::types::Json<CustomerProfileSummary>, _>("profile_summary") {
                 val.0
             } else {
                 CustomerProfileSummary {
@@ -128,6 +117,7 @@ impl CustomerMemoryGraphService {
         tx.commit().await?;
         Ok(summary)
     }
+
 }
 #[cfg(test)]
 mod tests {
@@ -230,12 +220,7 @@ mod tests {
         .await
         .unwrap();
 
-        for table in [
-            "customers",
-            "interaction_events",
-            "interaction_event_jobs",
-            "customer_memory_context",
-        ] {
+        for table in ["customers", "interaction_events", "interaction_event_jobs", "customer_memory_context"] {
             for statement in [
                 format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"),
                 format!("ALTER TABLE {table} FORCE ROW LEVEL SECURITY"),
@@ -301,11 +286,12 @@ mod tests {
         ::server_common::auth_utils::set_org_context(&mut *tenant_a_tx, "tenant-a")
             .await
             .unwrap();
-        let stored_tenants: Vec<String> =
-            sqlx::query_scalar("SELECT tenant_id FROM interaction_events ORDER BY tenant_id")
-                .fetch_all(&mut *tenant_a_tx)
-                .await
-                .unwrap();
+        let stored_tenants: Vec<String> = sqlx::query_scalar(
+            "SELECT tenant_id FROM interaction_events ORDER BY tenant_id",
+        )
+        .fetch_all(&mut *tenant_a_tx)
+        .await
+        .unwrap();
         tenant_a_tx.commit().await.unwrap();
         assert_eq!(stored_tenants, vec!["tenant-a"]);
 

@@ -79,7 +79,7 @@ impl VectorRepository {
         }
     }
 
-    pub fn get_store_pool(&self) -> &sqlx::SqlitePool {
+        pub fn get_store_pool(&self) -> &sqlx::SqlitePool {
         match &self.store {
             VectorMemoryStore::Sqlite(pool) => pool,
             _ => panic!("Expected Sqlite pool"),
@@ -180,10 +180,7 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn upsert_session_summary(
-        &self,
-        summary: &AgentSessionSummary,
-    ) -> Result<(), String> {
+        pub async fn upsert_session_summary(&self, summary: &AgentSessionSummary) -> Result<(), String> {
         let emb_str = serde_json::to_string(&summary.summary_embedding)
             .map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {}", e))?;
 
@@ -226,36 +223,13 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn get_customer_session_summaries(
-        &self,
-        tenant_id: &str,
-        customer_id: &str,
-        limit: i64,
-    ) -> Result<Vec<AgentSessionSummary>, String> {
+    pub async fn get_customer_session_summaries(&self, tenant_id: &str, customer_id: &str, limit: i64) -> Result<Vec<AgentSessionSummary>, String> {
         let mut results = Vec::new();
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let rows = sqlx::query("SELECT id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding::text, raw_state, created_at, updated_at FROM agent_session_summaries WHERE tenant_id = $1 AND customer_id = $2 ORDER BY updated_at DESC LIMIT $3")
                     .bind(tenant_id).bind(customer_id).bind(limit).fetch_all(pool).await.map_err(|e| e.to_string())?;
-                for row in rows {
-                    use sqlx::Row;
-                    let emb_str: String = row
-                        .try_get("summary_embedding")
-                        .unwrap_or_else(|_| "[]".to_string());
-                    let emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
-                    results.push(AgentSessionSummary {
-                        id: row.get("id"),
-                        tenant_id: row.get("tenant_id"),
-                        agent_id: row.get("agent_id"),
-                        customer_id: row.get("customer_id"),
-                        session_id: row.get("session_id"),
-                        turn_index: row.get("turn_index"),
-                        summary_embedding: emb,
-                        raw_state: row.try_get("raw_state").unwrap_or(None),
-                        created_at: row.get("created_at"),
-                        updated_at: row.get("updated_at"),
-                    });
-                }
+                for row in rows { use sqlx::Row; let emb_str: String = row.try_get("summary_embedding").unwrap_or_else(|_| "[]".to_string()); let emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default(); results.push(AgentSessionSummary { id: row.get("id"), tenant_id: row.get("tenant_id"), agent_id: row.get("agent_id"), customer_id: row.get("customer_id"), session_id: row.get("session_id"), turn_index: row.get("turn_index"), summary_embedding: emb, raw_state: row.try_get("raw_state").unwrap_or(None), created_at: row.get("created_at"), updated_at: row.get("updated_at") }); }
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let rows = sqlx::query("SELECT id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding, raw_state, created_at, updated_at FROM agent_session_summaries WHERE tenant_id = ? AND customer_id = ? ORDER BY updated_at DESC LIMIT ?")
@@ -268,18 +242,7 @@ impl VectorRepository {
                     };
                     let emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
                     let raw_state: Option<String> = row.try_get("raw_state").unwrap_or(None);
-                    results.push(AgentSessionSummary {
-                        id: row.get("id"),
-                        tenant_id: row.get("tenant_id"),
-                        agent_id: row.get("agent_id"),
-                        customer_id: row.get("customer_id"),
-                        session_id: row.get("session_id"),
-                        turn_index: row.get("turn_index"),
-                        summary_embedding: emb,
-                        raw_state,
-                        created_at: row.get("created_at"),
-                        updated_at: row.get("updated_at"),
-                    });
+                    results.push(AgentSessionSummary { id: row.get("id"), tenant_id: row.get("tenant_id"), agent_id: row.get("agent_id"), customer_id: row.get("customer_id"), session_id: row.get("session_id"), turn_index: row.get("turn_index"), summary_embedding: emb, raw_state, created_at: row.get("created_at"), updated_at: row.get("updated_at") });
                 }
             }
         }
@@ -571,23 +534,13 @@ impl VectorRepository {
                     }
 
                     // Fallback to simple sort since memory list is bounded by 1000
-                    let mut entries: Vec<HeapEntry> = all_records
-                        .into_iter()
-                        .map(|record| {
-                            let dist = cosine_distance(&record.embedding, &query_emb);
-                            HeapEntry {
-                                record,
-                                distance: dist,
-                            }
-                        })
-                        .collect();
+                    let mut entries: Vec<HeapEntry> = all_records.into_iter().map(|record| {
+                        let dist = cosine_distance(&record.embedding, &query_emb);
+                        HeapEntry { record, distance: dist }
+                    }).collect();
 
                     // Sort by distance ascending
-                    entries.sort_by(|a, b| {
-                        a.distance
-                            .partial_cmp(&b.distance)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    });
+                    entries.sort_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap_or(std::cmp::Ordering::Equal));
                     entries.truncate(limit as usize);
 
                     results = entries.into_iter().map(|e| e.record).collect();
@@ -629,29 +582,22 @@ impl VectorRepository {
         if source_types.is_empty() {
             return Ok(());
         }
-        let placeholders_sqlite: Vec<String> =
-            source_types.iter().map(|_| "?".to_string()).collect();
+        let placeholders_sqlite: Vec<String> = source_types.iter().map(|_| "?".to_string()).collect();
         let in_clause_sqlite = placeholders_sqlite.join(", ");
-        let query_sqlite = format!(
-            "DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = 0 AND reference_count < ? AND source_type IN ({})) OR (reliability_score < ? AND owner_override = 0 AND last_referenced_at < ?)",
-            in_clause_sqlite
-        );
+        let query_sqlite = format!("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = 0 AND reference_count < ? AND source_type IN ({})) OR (reliability_score < ? AND owner_override = 0 AND last_referenced_at < ?)", in_clause_sqlite);
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let query_pg = "DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < $2 AND source_type = ANY($4)) OR (reliability_score < $3 AND owner_override = FALSE AND last_referenced_at < $1)";
 
-                let source_types_vec: Vec<String> =
-                    source_types.iter().map(|s| s.to_string()).collect();
+                let source_types_vec: Vec<String> = source_types.iter().map(|s| s.to_string()).collect();
 
                 sqlx::query(query_pg)
                     .bind(older_than)
                     .bind(max_reference_count)
                     .bind(min_reliability)
                     .bind(&source_types_vec)
-                    .execute(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                    .execute(pool).await.map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let mut query = sqlx::query(&query_sqlite)
@@ -1315,9 +1261,7 @@ mod tests {
         repo.upsert(&prune_low_refs).await.unwrap();
 
         // Pass 30 for min_reliability and 4 for max_reference_count
-        repo.prune_stale(threshold_time, 30, 4, &["TASK_SUMMARY"])
-            .await
-            .unwrap();
+        repo.prune_stale(threshold_time, 30, 4, &["TASK_SUMMARY"]).await.unwrap();
 
         assert!(
             repo.get_by_id("prune_unreliable").await.unwrap().is_none(),
@@ -1333,10 +1277,7 @@ mod tests {
     async fn test_prune_stale_conservative_logic() {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match sqlx::sqlite::SqlitePoolOptions::new()
-            .connect_with(conn_opts)
-            .await
-        {
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -1434,9 +1375,7 @@ mod tests {
         repo.upsert(&rec3).await.unwrap();
         repo.upsert(&rec4).await.unwrap();
 
-        repo.prune_stale(threshold_date, 20, 2, &["TASK_SUMMARY"])
-            .await
-            .unwrap();
+        repo.prune_stale(threshold_date, 20, 2, &["TASK_SUMMARY"]).await.unwrap();
 
         assert!(repo.get_by_id("rec1").await.unwrap().is_none());
         assert!(repo.get_by_id("rec2").await.unwrap().is_some());
@@ -1526,6 +1465,7 @@ pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
         Box::pin(async move { Ok(vec![]) })
     }
 
+
     /// 3-Tier: Get the lightweight index (always loaded in context)
     async fn get_lightweight_index(&self) -> Result<String, String> {
         Ok("".to_string())
@@ -1610,7 +1550,7 @@ impl LongTermMemory for PersistentMemoryStore {
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
-    fn get_customer_session_summaries<'a>(
+        fn get_customer_session_summaries<'a>(
         &'a self,
         tenant_id: &'a str,
         customer_id: &'a str,
@@ -1912,7 +1852,7 @@ impl LongTermMemory for RedisMemoryStore {
         Ok(results)
     }
 
-    fn get_customer_session_summaries<'a>(
+        fn get_customer_session_summaries<'a>(
         &'a self,
         _tenant_id: &'a str,
         _customer_id: &'a str,
@@ -2455,10 +2395,7 @@ mod get_conflicts_tests {
     async fn test_resolve_conflict_metadata_merge() {
         use std::str::FromStr;
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = match sqlx::sqlite::SqlitePoolOptions::new()
-            .connect_with(conn_opts)
-            .await
-        {
+        let pool = match sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await {
             Ok(p) => p,
             Err(_) => return,
         };
@@ -2522,8 +2459,7 @@ mod get_conflicts_tests {
 
         let resolved = repo.get_by_id("winner_id").await.unwrap().unwrap();
 
-        let metadata: serde_json::Value =
-            serde_json::from_str(&resolved.metadata.unwrap()).unwrap();
+        let metadata: serde_json::Value = serde_json::from_str(&resolved.metadata.unwrap()).unwrap();
         assert_eq!(metadata["key1"], "winner1");
         assert_eq!(metadata["key2"], "winner2");
         assert_eq!(metadata["key3"], "loser3");
@@ -3279,9 +3215,7 @@ mod anthropic_memory_tests {
         repo.upsert(&old_record).await.unwrap();
         repo.upsert(&new_record).await.unwrap();
 
-        repo.prune_stale(threshold, 20, 2, &["TASK_SUMMARY"])
-            .await
-            .unwrap();
+        repo.prune_stale(threshold, 20, 2, &["TASK_SUMMARY"]).await.unwrap();
 
         use sqlx::Row;
         let query = "SELECT id FROM consolidated_memory";
@@ -4550,26 +4484,18 @@ mod get_and_delete_tests {
         repo.upsert(&keep_wrong_type).await.unwrap();
         repo.upsert(&prune_unreliable_old).await.unwrap();
 
-        repo.prune_stale(threshold_time, 20, 2, &["TASK_SUMMARY"])
-            .await
-            .unwrap();
+        repo.prune_stale(threshold_time, 20, 2, &["TASK_SUMMARY"]).await.unwrap();
 
         assert!(
             repo.get_by_id("prune_stale").await.unwrap().is_none(),
             "Should have pruned stale task summary"
         );
         assert!(
-            repo.get_by_id("prune_unreliable_old")
-                .await
-                .unwrap()
-                .is_none(),
+            repo.get_by_id("prune_unreliable_old").await.unwrap().is_none(),
             "Should have pruned unreliable and old record"
         );
         assert!(
-            repo.get_by_id("keep_unreliable_recent")
-                .await
-                .unwrap()
-                .is_some(),
+            repo.get_by_id("keep_unreliable_recent").await.unwrap().is_some(),
             "Should have kept unreliable but recent record"
         );
 

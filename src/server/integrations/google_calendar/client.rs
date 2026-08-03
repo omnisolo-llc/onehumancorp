@@ -292,7 +292,8 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) =
+                        request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -320,9 +321,7 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx
-                .send(String::from_utf8(request).unwrap())
-                .unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
         });
 
         (base_url, request_rx)
@@ -363,9 +362,11 @@ mod tests {
         assert_eq!(created_link, "https://meet.google.com/aaa-bbbb-ccc");
 
         let request = request_rx.await.unwrap();
-        assert!(request.starts_with(
-            "POST /calendar/v3/calendars/primary/events?conferenceDataVersion=1 HTTP/1.1"
-        ));
+        assert!(
+            request.starts_with(
+                "POST /calendar/v3/calendars/primary/events?conferenceDataVersion=1 HTTP/1.1"
+            )
+        );
         assert!(
             request.contains("authorization: Bearer valid-token")
                 || request.contains("Authorization: Bearer valid-token")

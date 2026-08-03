@@ -1,10 +1,10 @@
-use base64::Engine;
-use base64::engine::general_purpose::STANDARD;
-use dashmap::DashMap;
-use flate2::Compression;
-use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
-use std::io::{Cursor, Read, Write};
+use flate2::read::GzDecoder;
+use flate2::Compression;
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
+use std::io::{Write, Read, Cursor};
+use dashmap::DashMap;
 use std::sync::OnceLock;
 
 const COMPRESSION_PREFIX: &str = "gz_b64:";
@@ -12,9 +12,7 @@ const COMPRESSION_PREFIX: &str = "gz_b64:";
 #[inline]
 pub fn compress_lossless(data: &str) -> Result<String, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder
-        .write_all(data.as_bytes())
-        .map_err(|e| e.to_string())?;
+    encoder.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
     let compressed = encoder.finish().map_err(|e| e.to_string())?;
 
     let b64 = STANDARD.encode(&compressed);
@@ -32,192 +30,30 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
 
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    decoder
-        .read_to_end(&mut decompressed)
-        .map_err(|e| e.to_string())?;
+    decoder.read_to_end(&mut decompressed).map_err(|e| e.to_string())?;
 
     String::from_utf8(decompressed).map_err(|e| e.to_string())
 }
 
 static STOP_WORDS: &[&str] = &[
-    "a",
-    "about",
-    "above",
-    "after",
-    "again",
-    "against",
-    "all",
-    "am",
-    "an",
-    "and",
-    "any",
-    "are",
-    "aren't",
-    "as",
-    "at",
-    "be",
-    "because",
-    "been",
-    "before",
-    "being",
-    "below",
-    "between",
-    "both",
-    "but",
-    "by",
-    "can",
-    "can't",
-    "cannot",
-    "could",
-    "couldn't",
-    "did",
-    "didn't",
-    "do",
-    "does",
-    "doesn't",
-    "doing",
-    "don't",
-    "down",
-    "during",
-    "each",
-    "few",
-    "for",
-    "from",
-    "further",
-    "had",
-    "hadn't",
-    "has",
-    "hasn't",
-    "have",
-    "haven't",
-    "having",
-    "he",
-    "he'd",
-    "he'll",
-    "he's",
-    "her",
-    "here",
-    "here's",
-    "hers",
-    "herself",
-    "him",
-    "himself",
-    "his",
-    "how",
-    "how's",
-    "i",
-    "i'd",
-    "i'll",
-    "i'm",
-    "i've",
-    "if",
-    "in",
-    "into",
-    "is",
-    "isn't",
-    "it",
-    "it's",
-    "its",
-    "itself",
-    "just",
-    "let's",
-    "me",
-    "more",
-    "most",
-    "mustn't",
-    "my",
-    "myself",
-    "no",
-    "nor",
-    "not",
-    "now",
-    "of",
-    "off",
-    "on",
-    "once",
-    "only",
-    "or",
-    "other",
-    "ought",
-    "our",
-    "ours",
-    "ourselves",
-    "out",
-    "over",
-    "own",
-    "same",
-    "shan't",
-    "she",
-    "she'd",
-    "she'll",
-    "she's",
-    "should",
-    "shouldn't",
-    "so",
-    "some",
-    "such",
-    "than",
-    "that",
-    "that's",
-    "the",
-    "their",
-    "theirs",
-    "them",
-    "themselves",
-    "then",
-    "there",
-    "there's",
-    "these",
-    "they",
-    "they'd",
-    "they'll",
-    "they're",
-    "they've",
-    "this",
-    "those",
-    "through",
-    "to",
-    "too",
-    "under",
-    "until",
-    "up",
-    "very",
-    "was",
-    "wasn't",
-    "we",
-    "we'd",
-    "we'll",
-    "we're",
-    "we've",
-    "were",
-    "weren't",
-    "what",
-    "what's",
-    "when",
-    "when's",
-    "where",
-    "where's",
-    "which",
-    "while",
-    "who",
-    "who's",
-    "whom",
-    "why",
-    "why's",
-    "will",
-    "with",
-    "won't",
-    "would",
-    "wouldn't",
-    "you",
-    "you'd",
-    "you'll",
-    "you're",
-    "you've",
-    "your",
-    "yours",
-    "yourself",
-    "yourselves",
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
+    "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being",
+    "below", "between", "both", "but", "by", "can", "can't", "cannot", "could", "couldn't",
+    "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during", "each",
+    "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't",
+    "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself",
+    "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've",
+    "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself", "just",
+    "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", "not",
+    "now", "of", "off", "on", "once", "only", "or", "other", "ought", "our",
+    "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", "she'll",
+    "she's", "should", "shouldn't", "so", "some", "such", "than", "that", "that's", "the",
+    "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd",
+    "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until",
+    "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were",
+    "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who",
+    "who's", "whom", "why", "why's", "will", "with", "won't", "would", "wouldn't", "you",
+    "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves",
 ];
 
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -229,6 +65,7 @@ struct CacheEntry {
 
 static REDUCE_TOKENS_CACHE: OnceLock<DashMap<String, CacheEntry>> = OnceLock::new();
 
+
 pub fn reduce_tokens(data: &str) -> String {
     let cache = REDUCE_TOKENS_CACHE.get_or_init(DashMap::new);
 
@@ -237,8 +74,7 @@ pub fn reduce_tokens(data: &str) -> String {
         return cached.value.clone();
     }
 
-    let reduced = data
-        .split_whitespace()
+    let reduced = data.split_whitespace()
         .filter(|word| {
             let len = word.len();
             if len == 0 || len > 10 {
@@ -292,16 +128,14 @@ pub fn reduce_tokens(data: &str) -> String {
         }
     }
 
-    cache.insert(
-        data.to_string(),
-        CacheEntry {
-            value: reduced.clone(),
-            // Start count at 1 so new items aren't immediately evicted in the first pass
-            access_count: AtomicU32::new(1),
-        },
-    );
+    cache.insert(data.to_string(), CacheEntry {
+        value: reduced.clone(),
+        // Start count at 1 so new items aren't immediately evicted in the first pass
+        access_count: AtomicU32::new(1),
+    });
     reduced
 }
+
 
 pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
     if max_words == 0 {
@@ -316,10 +150,9 @@ pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
 
 pub fn minify_json_prompt(data: &str) -> String {
     if let Ok(val) = serde_json::from_str::<serde_json::Value>(data)
-        && let Ok(minified) = serde_json::to_string(&val)
-    {
-        return minified;
-    }
+        && let Ok(minified) = serde_json::to_string(&val) {
+            return minified;
+        }
     data.to_string()
 }
 
@@ -341,28 +174,21 @@ pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), St
     // We use a default quality for WebP encoding
     // This reduces storage compression and CDN transit costs significantly.
     let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
-    resized
-        .write_with_encoder(encoder)
-        .map_err(|e| e.to_string())?;
+    resized.write_with_encoder(encoder).map_err(|e| e.to_string())?;
 
     Ok((webp_data, "image/webp".to_string()))
 }
 
 pub fn is_image_extension(ext: &str) -> bool {
-    matches!(
-        ext.to_lowercase().as_str(),
-        "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp"
-    )
+    matches!(ext.to_lowercase().as_str(), "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp")
 }
 
 pub fn get_optimized_key(key: &str) -> String {
     let path = std::path::Path::new(key);
     if let Some(ext) = path.extension().and_then(|e| e.to_str())
-        && is_image_extension(ext)
-        && ext.to_lowercase() != "webp"
-    {
-        return path.with_extension("webp").to_string_lossy().to_string();
-    }
+        && is_image_extension(ext) && ext.to_lowercase() != "webp" {
+            return path.with_extension("webp").to_string_lossy().to_string();
+        }
     key.to_string()
 }
 
@@ -417,10 +243,8 @@ mod tests {
 
         let minified = minify_json_prompt(input_json);
         // Field order might vary depending on serde implementation. Parse it back.
-        let parsed_min: serde_json::Value =
-            serde_json::from_str(&minified).expect("failed to unwrap");
-        let parsed_orig: serde_json::Value =
-            serde_json::from_str(input_json).expect("failed to unwrap");
+        let parsed_min: serde_json::Value = serde_json::from_str(&minified).expect("failed to unwrap");
+        let parsed_orig: serde_json::Value = serde_json::from_str(input_json).expect("failed to unwrap");
         assert_eq!(parsed_min, parsed_orig);
 
         // Ensure no whitespace outside strings
@@ -454,8 +278,7 @@ mod tests {
         let img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(10, 10);
         let mut png_data = Vec::new();
         let mut cursor = Cursor::new(&mut png_data);
-        img.write_to(&mut cursor, image::ImageFormat::Png)
-            .expect("failed to unwrap");
+        img.write_to(&mut cursor, image::ImageFormat::Png).expect("failed to unwrap");
 
         let (optimized, mime) = optimize_image(&png_data, 5).expect("failed to unwrap");
         assert_eq!(mime, "image/webp");

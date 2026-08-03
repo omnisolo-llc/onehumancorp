@@ -1,10 +1,10 @@
+use std::path::{Path, PathBuf};
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::storage::provider::Provider;
 use ::server_common::Claims;
+use crate::storage::provider::Provider;
 
 /// Cleans a relative path string and resolves it securely against the base path.
 /// Blocks absolute paths and traversing above the root directory using `..`.
@@ -80,11 +80,7 @@ impl FsMcpTool {
                 let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
                 loop {
                     interval.tick().await;
-                    Self::cleanup_old_files(
-                        local_dir_clone.clone(),
-                        std::time::Duration::from_secs(86400 * 7),
-                    )
-                    .await; // 7 days
+                    Self::cleanup_old_files(local_dir_clone.clone(), std::time::Duration::from_secs(86400 * 7)).await; // 7 days
                 }
             });
         }
@@ -96,10 +92,7 @@ impl FsMcpTool {
         }
     }
 
-    pub fn cleanup_old_files(
-        dir: std::path::PathBuf,
-        max_age: std::time::Duration,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    pub fn cleanup_old_files(dir: std::path::PathBuf, max_age: std::time::Duration) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
         Box::pin(async move {
             if let Ok(mut entries) = tokio::fs::read_dir(&dir).await {
                 while let Ok(Some(entry)) = entries.next_entry().await {
@@ -126,10 +119,7 @@ impl FsMcpTool {
             let full_path = clean_path_str(&self.local_base_dir, path).ok_or("Invalid path")?;
             fs::read_to_string(&full_path).map_err(|e| e.to_string())
         } else {
-            let org_id = claims
-                .organization_id
-                .as_ref()
-                .ok_or("Organization ID required for cloud mode")?;
+            let org_id = claims.organization_id.as_ref().ok_or("Organization ID required for cloud mode")?;
             let key = clean_s3_key(org_id, path).ok_or("Invalid path")?;
             if let Some(ref provider) = self.storage_provider {
                 let data = provider.read_blob(&key).await.map_err(|e| e.to_string())?;
@@ -148,16 +138,10 @@ impl FsMcpTool {
             }
             fs::write(&full_path, content).map_err(|e| e.to_string())
         } else {
-            let org_id = claims
-                .organization_id
-                .as_ref()
-                .ok_or("Organization ID required for cloud mode")?;
+            let org_id = claims.organization_id.as_ref().ok_or("Organization ID required for cloud mode")?;
             let key = clean_s3_key(org_id, path).ok_or("Invalid path")?;
             if let Some(ref provider) = self.storage_provider {
-                provider
-                    .write_blob(&key, content.as_bytes())
-                    .await
-                    .map_err(|e| e.to_string())
+                provider.write_blob(&key, content.as_bytes()).await.map_err(|e| e.to_string())
             } else {
                 Err("Storage provider not configured".to_string())
             }
@@ -179,16 +163,10 @@ impl FsMcpTool {
             }
             Ok(entries)
         } else {
-            let org_id = claims
-                .organization_id
-                .as_ref()
-                .ok_or("Organization ID required for cloud mode")?;
+            let org_id = claims.organization_id.as_ref().ok_or("Organization ID required for cloud mode")?;
             let key_prefix = clean_s3_key(org_id, path).ok_or("Invalid path")?;
             if let Some(ref provider) = self.storage_provider {
-                let blobs = provider
-                    .list_blobs(&key_prefix)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let blobs = provider.list_blobs(&key_prefix).await.map_err(|e| e.to_string())?;
                 let mut entries = Vec::new();
                 for blob in blobs {
                     entries.push(blob.key.clone());
@@ -208,14 +186,8 @@ mod tests {
     #[test]
     fn test_path_traversal() {
         let base = PathBuf::from("/base/dir");
-        assert_eq!(
-            clean_path_str(&base, "test.txt"),
-            Some(PathBuf::from("/base/dir/test.txt"))
-        );
-        assert_eq!(
-            clean_path_str(&base, "folder/test.txt"),
-            Some(PathBuf::from("/base/dir/folder/test.txt"))
-        );
+        assert_eq!(clean_path_str(&base, "test.txt"), Some(PathBuf::from("/base/dir/test.txt")));
+        assert_eq!(clean_path_str(&base, "folder/test.txt"), Some(PathBuf::from("/base/dir/folder/test.txt")));
         assert_eq!(clean_path_str(&base, "../test.txt"), None);
         assert_eq!(clean_path_str(&base, "folder/../../test.txt"), None);
         assert_eq!(clean_path_str(&base, "/test.txt"), None);
@@ -223,41 +195,35 @@ mod tests {
 
     #[test]
     fn test_s3_key_clean() {
-        assert_eq!(
-            clean_s3_key("org1", "test.txt"),
-            Some("tenant/org1/fs/test.txt".to_string())
-        );
+        assert_eq!(clean_s3_key("org1", "test.txt"), Some("tenant/org1/fs/test.txt".to_string()));
         assert_eq!(clean_s3_key("org1", "../test.txt"), None);
-        assert_eq!(
-            clean_s3_key("org1", "folder/test.txt"),
-            Some("tenant/org1/fs/folder/test.txt".to_string())
-        );
+        assert_eq!(clean_s3_key("org1", "folder/test.txt"), Some("tenant/org1/fs/folder/test.txt".to_string()));
     }
 }
 
 #[cfg(test)]
 mod additional_tests {
     use super::*;
-    use crate::storage::provider::{BlobMetadata, Provider};
     use async_trait::async_trait;
-    use chrono::Utc;
     use std::io;
+    use crate::storage::provider::{Provider, BlobMetadata};
     use std::sync::Arc;
+    use chrono::Utc;
 
     struct MockProvider;
     #[async_trait]
     impl Provider for MockProvider {
-        fn is_local(&self) -> bool {
-            false
-        }
+        fn is_local(&self) -> bool { false }
         async fn list_blobs(&self, prefix: &str) -> io::Result<Vec<BlobMetadata>> {
             if prefix == "tenant/org1/fs/testdir" {
-                Ok(vec![BlobMetadata {
-                    key: "test1.txt".to_string(),
-                    size: 0,
-                    last_modified: Utc::now(),
-                    content_type: "".to_string(),
-                }])
+                Ok(vec![
+                   BlobMetadata {
+                       key: "test1.txt".to_string(),
+                       size: 0,
+                       last_modified: Utc::now(),
+                       content_type: "".to_string(),
+                   }
+                ])
             } else {
                 Ok(vec![])
             }
@@ -265,9 +231,7 @@ mod additional_tests {
         async fn read_blob_metadata(&self, _key: &str) -> io::Result<BlobMetadata> {
             Err(io::Error::new(io::ErrorKind::NotFound, "not found"))
         }
-        async fn get_blob_url(&self, _key: &str) -> io::Result<String> {
-            Ok("".to_string())
-        }
+        async fn get_blob_url(&self, _key: &str) -> io::Result<String> { Ok("".to_string()) }
         async fn read_blob(&self, key: &str) -> io::Result<Vec<u8>> {
             if key == "tenant/org1/fs/test.txt" {
                 Ok(b"test data".to_vec())
@@ -276,11 +240,11 @@ mod additional_tests {
             }
         }
         async fn write_blob(&self, key: &str, _data: &[u8]) -> io::Result<()> {
-            if key == "tenant/org1/fs/test.txt" {
-                Ok(())
-            } else {
-                Err(io::Error::new(io::ErrorKind::PermissionDenied, "denied"))
-            }
+             if key == "tenant/org1/fs/test.txt" {
+                 Ok(())
+             } else {
+                 Err(io::Error::new(io::ErrorKind::PermissionDenied, "denied"))
+             }
         }
     }
 

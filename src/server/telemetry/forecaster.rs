@@ -1,9 +1,9 @@
-use chrono::{DateTime, Utc};
-use serde_json::Value;
-use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::time::{Duration, interval};
+use tokio::time::{interval, Duration};
+use sqlx::PgPool;
+use chrono::{Utc, DateTime};
+use serde_json::Value;
 
 #[allow(clippy::type_complexity)]
 pub struct Forecaster {
@@ -64,8 +64,7 @@ impl Forecaster {
             let labels_json: String = row.get("labels_json");
 
             if let Ok(parsed) = serde_json::from_str::<Value>(&labels_json)
-                && let Some(org_id) = parsed.get("organization_id").and_then(|v| v.as_str())
-            {
+            && let Some(org_id) = parsed.get("organization_id").and_then(|v| v.as_str()) {
                 *recent_usage.entry(org_id.to_string()).or_insert(0) += val as i64;
             }
         }
@@ -99,20 +98,19 @@ impl Forecaster {
                 forecasts.push((org_id, predicted_24h as f32));
             }
 
-            samples.retain(|_, org_samples| org_samples.iter().map(|(_, t)| *t).sum::<i64>() > 0);
+            samples.retain(|_, org_samples| {
+                org_samples.iter().map(|(_, t)| *t).sum::<i64>() > 0
+            });
         }
 
         // 2. Record forecasts and alerts
         let budget_threshold = 100_000.0;
 
         for (org_id, forecast) in forecasts {
-            let _ =
-                crate::record_token_burn_rate_predicted_24h(&self.pool, &org_id, forecast).await;
+            let _ = crate::record_token_burn_rate_predicted_24h(&self.pool, &org_id, forecast).await;
 
             if forecast > budget_threshold {
-                let _ =
-                    crate::record_token_budget_alert(&self.pool, &org_id, "predicted_24h_exceeded")
-                        .await;
+                let _ = crate::record_token_budget_alert(&self.pool, &org_id, "predicted_24h_exceeded").await;
                 tracing::warn!("Token budget forecast exceeded for tenant"); // pii-safe // pii-safe
             }
         }
@@ -127,8 +125,7 @@ mod tests {
     use sqlx::PgPool;
 
     async fn setup_test_db() -> Result<PgPool, sqlx::Error> {
-        let db_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         PgPool::connect(&db_url).await
     }
 
@@ -149,10 +146,8 @@ mod tests {
                 labels_json TEXT NOT NULL,
                 timestamp TIMESTAMPTZ NOT NULL,
                 sync_status TEXT NOT NULL
-            )",
-        )
-        .execute(&pool)
-        .await;
+            )"
+        ).execute(&pool).await;
 
         let org_id = "test_org_forecaster_v2";
         let payload = serde_json::json!({ "organization_id": org_id }).to_string();

@@ -124,12 +124,11 @@ impl SubagentRegistry {
     pub fn kill(&self, task_id: &str) -> bool {
         let mut tasks = self.tasks.write().expect("lock failed");
         if let Some(s) = tasks.get_mut(task_id)
-            && s.status == "running"
-        {
-            s.status = "killed".to_string();
-            s.ended_at = chrono::Utc::now().timestamp_millis();
-            return true;
-        }
+            && s.status == "running" {
+                s.status = "killed".to_string();
+                s.ended_at = chrono::Utc::now().timestamp_millis();
+                return true;
+            }
         false
     }
 

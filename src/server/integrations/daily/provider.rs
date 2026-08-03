@@ -29,7 +29,7 @@ impl DailyProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            },
+            }
         }
     }
 
@@ -58,11 +58,7 @@ mod tests {
 }
 
 impl DailyProvider {
-    pub async fn generate_meeting_for_booking(
-        &self,
-        _booking_id: &str,
-        topic: &str,
-    ) -> Result<String, String> {
+    pub async fn generate_meeting_for_booking(&self, _booking_id: &str, topic: &str) -> Result<String, String> {
         let link = self.create_meeting(topic).await?;
         // Attach link to booking record in DB
         Ok(link)

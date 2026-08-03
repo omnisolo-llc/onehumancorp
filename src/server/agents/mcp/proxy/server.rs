@@ -1,11 +1,11 @@
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelService;
-use ::server_ohc::mcp_proxy::{ProxyToServer, ServerToProxy};
-use sqlx::PgPool;
-use std::sync::Arc;
+use ::server_ohc::mcp_proxy::{ServerToProxy, ProxyToServer};
+use tonic::{Request, Response, Status, Streaming};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{Request, Response, Status, Streaming};
 use tracing::info;
+use std::sync::Arc;
+use sqlx::PgPool;
 
 #[derive(Clone)]
 pub struct ReverseTunnelServer {
@@ -51,10 +51,7 @@ impl McpReverseTunnelService for ReverseTunnelServer {
     async fn establish_tunnel(
         &self,
         request: Request<Streaming<ProxyToServer>>,
-    ) -> Result<
-        Response<<ReverseTunnelServer as McpReverseTunnelService>::EstablishTunnelStream>,
-        Status,
-    > {
+    ) -> Result<Response<<ReverseTunnelServer as McpReverseTunnelService>::EstablishTunnelStream>, Status> {
         let mut in_stream = request.into_inner();
 
         let (tx, rx) = mpsc::channel(128);
@@ -76,26 +73,15 @@ impl McpReverseTunnelService for ReverseTunnelServer {
                             // but currently the proxy unauthenticated connection is enough
                             active_spiffe_id = Some(reg.spiffe_id.clone());
 
-                            let agent_id =
-                                reg.spiffe_id.split('/').last().unwrap_or("").to_string();
+                            let agent_id = reg.spiffe_id.split('/').last().unwrap_or("").to_string();
                             active_agent_id = Some(agent_id.clone());
                             connections.insert(agent_id, tx.clone());
 
-                            ::server_telemetry::record_harness_init_latency(
-                                tunnel_start.elapsed().as_secs_f64(),
-                            );
-                            let _ = ::server_telemetry::record_mcp_proxy_connections_active(
-                                &pool,
-                                &reg.spiffe_id,
-                                1.0,
-                            )
-                            .await;
+                            ::server_telemetry::record_harness_init_latency(tunnel_start.elapsed().as_secs_f64());
+                            let _ = ::server_telemetry::record_mcp_proxy_connections_active(&pool, &reg.spiffe_id, 1.0).await;
                         }
                         ::server_ohc::mcp_proxy::proxy_to_server::Payload::InvokeResponse(res) => {
-                            info!(
-                                "Received response for {}: success={}",
-                                msg.request_id, res.success
-                            );
+                            info!("Received response for {}: success={}", msg.request_id, res.success);
                         }
                     }
                 }
@@ -106,10 +92,7 @@ impl McpReverseTunnelService for ReverseTunnelServer {
             }
 
             if let Some(spiffe_id) = active_spiffe_id {
-                let _ = ::server_telemetry::record_mcp_proxy_connections_active(
-                    &pool, &spiffe_id, -1.0,
-                )
-                .await;
+                let _ = ::server_telemetry::record_mcp_proxy_connections_active(&pool, &spiffe_id, -1.0).await;
             }
 
             info!("Tunnel connection closed.");

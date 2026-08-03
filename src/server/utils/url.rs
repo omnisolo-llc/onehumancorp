@@ -38,9 +38,6 @@ mod tests {
     fn test_url_decode() {
         assert_eq!(url_decode("Hello+World"), "Hello World");
         assert_eq!(url_decode("Hello%20World"), "Hello World");
-        assert_eq!(
-            url_decode("whatsapp%3A%2B1234567890"),
-            "whatsapp:+1234567890"
-        );
+        assert_eq!(url_decode("whatsapp%3A%2B1234567890"), "whatsapp:+1234567890");
     }
 }

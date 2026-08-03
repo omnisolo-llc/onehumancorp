@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Output;
 use std::time::Duration;
-use tempfile::{TempDir, tempdir};
+use tempfile::{tempdir, TempDir};
 use tokio::process::Command as AsyncCommand;
 use tokio::time::timeout;
 
@@ -37,30 +37,18 @@ impl LocalEnvironment {
 #[async_trait::async_trait]
 impl ExecutionEnvironment for LocalEnvironment {
     async fn execute_context(&self, command: String, work_dir: String) -> SandboxResult<String> {
-        self.execute(&command, &work_dir, Duration::from_secs(30))
-            .await
+        self.execute(&command, &work_dir, Duration::from_secs(30)).await
             .map(|out| String::from_utf8_lossy(&out.stdout).to_string())
     }
 }
 
 impl LocalEnvironment {
-    pub async fn execute(
-        &self,
-        cmd: &str,
-        work_dir: &str,
-        timeout_dur: Duration,
-    ) -> SandboxResult<Output> {
+    pub async fn execute(&self, cmd: &str, work_dir: &str, timeout_dur: Duration) -> SandboxResult<Output> {
         // Wrap command for Bash execution to disable extended globs
-        let wrapped_cmd = format!(
-            "shopt -u extglob 2>/dev/null || true; cd '{}'; {}",
-            work_dir, cmd
-        );
+        let wrapped_cmd = format!("shopt -u extglob 2>/dev/null || true; cd '{}'; {}", work_dir, cmd);
 
         let dir_str = self.dir.path().to_str().ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "failed to convert temp dir path to string",
-            )
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "failed to convert temp dir path to string")
         })?;
 
         let mut command = AsyncCommand::new("bash");
@@ -128,14 +116,11 @@ impl LocalEnvironment {
                     #[cfg(target_os = "linux")]
                     let stime_usec = rusage_end.ru_stime.tv_usec - rusage_start.ru_stime.tv_usec;
                     #[cfg(not(target_os = "linux"))]
-                    let utime_usec =
-                        rusage_end.ru_utime.tv_usec as i64 - rusage_start.ru_utime.tv_usec as i64;
+                    let utime_usec = rusage_end.ru_utime.tv_usec as i64 - rusage_start.ru_utime.tv_usec as i64;
                     #[cfg(not(target_os = "linux"))]
-                    let stime_usec =
-                        rusage_end.ru_stime.tv_usec as i64 - rusage_start.ru_stime.tv_usec as i64;
+                    let stime_usec = rusage_end.ru_stime.tv_usec as i64 - rusage_start.ru_stime.tv_usec as i64;
                     let stime_sec = rusage_end.ru_stime.tv_sec - rusage_start.ru_stime.tv_sec;
-                    let cpu_usage = (utime_sec as f64 + utime_usec as f64 / 1_000_000.0)
-                        + (stime_sec as f64 + stime_usec as f64 / 1_000_000.0);
+                    let cpu_usage = (utime_sec as f64 + utime_usec as f64 / 1_000_000.0) + (stime_sec as f64 + stime_usec as f64 / 1_000_000.0);
                     let mem_bytes = (rusage_end.ru_maxrss) as f64 * 1024.0;
                     let net_io = (rusage_end.ru_inblock + rusage_end.ru_oublock) as f64;
                     ::server_telemetry::record_sandbox_cpu_usage("local_sandbox", cpu_usage);
@@ -145,11 +130,7 @@ impl LocalEnvironment {
 
                 Ok(output)
             }
-            Err(_) => Err(std::io::Error::new(
-                std::io::ErrorKind::TimedOut,
-                "Command execution timed out",
-            )
-            .into()),
+            Err(_) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "Command execution timed out").into()),
         }
     }
 }
@@ -163,10 +144,7 @@ mod tests {
     async fn test_sandbox_execute_tmpdir() {
         let sm = LocalEnvironment::new().unwrap();
         let work_dir = sm.dir_path().to_str().unwrap().to_string();
-        let output = sm
-            .execute_context("echo $TMPDIR".to_string(), work_dir)
-            .await
-            .unwrap();
+        let output = sm.execute_context("echo $TMPDIR".to_string(), work_dir).await.unwrap();
 
         assert_eq!(output.trim(), sm.dir_path().to_str().unwrap());
     }
@@ -175,32 +153,19 @@ mod tests {
     async fn test_sandbox_execute_shopt() {
         let sm = LocalEnvironment::new().unwrap();
         let work_dir = sm.dir_path().to_str().unwrap().to_string();
-        let output = sm
-            .execute_context("shopt | grep extglob".to_string(), work_dir)
-            .await
-            .unwrap();
+        let output = sm.execute_context("shopt | grep extglob".to_string(), work_dir).await.unwrap();
 
-        assert!(
-            output.contains("extglob\toff")
-                || output.contains("extglob        \toff")
-                || output.contains("extglob\t off")
-                || output.contains("extglob") && output.contains("off")
-        );
+        assert!(output.contains("extglob\toff") || output.contains("extglob        \toff") || output.contains("extglob\t off") || output.contains("extglob") && output.contains("off"));
     }
 
     #[tokio::test]
     async fn test_sandbox_execute_timeout() {
         let sm = LocalEnvironment::new().unwrap();
         let work_dir = sm.dir_path().to_str().unwrap().to_string();
-        let result = sm
-            .execute("sleep 1", &work_dir, Duration::from_millis(10))
-            .await;
+        let result = sm.execute("sleep 1", &work_dir, Duration::from_millis(10)).await;
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Command execution timed out"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "Command execution timed out");
     }
 
     #[tokio::test]
@@ -208,10 +173,7 @@ mod tests {
         let sm = LocalEnvironment::new().unwrap();
         let work_dir = sm.dir_path().to_str().unwrap().to_string();
 
-        let output = sm
-            .execute_context("echo ${GITHUB_TOKEN:-not_found}".to_string(), work_dir)
-            .await
-            .unwrap();
+        let output = sm.execute_context("echo ${GITHUB_TOKEN:-not_found}".to_string(), work_dir).await.unwrap();
 
         // It should output not_found because the environment variable is stripped out from the command context
         assert_eq!(output.trim(), "not_found");
@@ -222,10 +184,7 @@ mod tests {
         let sm = LocalEnvironment::new().unwrap();
         let work_dir = sm.dir_path().to_str().unwrap().to_string();
 
-        let output = sm
-            .execute_context("echo $HOME".to_string(), work_dir)
-            .await
-            .unwrap();
+        let output = sm.execute_context("echo $HOME".to_string(), work_dir).await.unwrap();
 
         let expected_home = sm.dir_path().join(".agent-home");
         assert_eq!(output.trim(), expected_home.to_str().unwrap());

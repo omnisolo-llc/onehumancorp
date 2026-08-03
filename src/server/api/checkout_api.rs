@@ -1,8 +1,8 @@
-use crate::hub::Hub;
-use axum::http::HeaderMap;
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{extract::State, Json, response::IntoResponse, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::hub::Hub;
+use axum::http::HeaderMap;
 
 #[derive(Deserialize)]
 pub struct CreateCheckoutSessionRequest {
@@ -31,65 +31,37 @@ pub async fn create_checkout_session_handler(
 
     let mut db_tx = match hub.pool.begin().await {
         Ok(tx) => tx,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"success": false, "error_message": e.to_string()})),
-            )
-                .into_response();
-        }
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false, "error_message": e.to_string()}))).into_response()
     };
 
     if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"success": false, "error_message": e.to_string()})),
-        )
-            .into_response();
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"success": false, "error_message": e.to_string()}))).into_response()
     }
+
 
     let mut reserved_locks = Vec::new();
     let mut updated_cart_payload = req_data.cart_payload.clone();
 
     if let Some(cart) = &mut updated_cart_payload {
         if let Some(items) = cart.as_array_mut() {
-            let inventory_service =
-                crate::services::inventory::InventoryService::new(hub.redis_client());
-            let ttl = if req_data.r#type == "IN_PERSON" {
-                15
-            } else {
-                300
-            };
+            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client());
+            let ttl = if req_data.r#type == "IN_PERSON" { 15 } else { 300 };
 
             for item in items {
-                if let (Some(product_obj), Some(quantity)) = (
-                    item.get("product").cloned(),
-                    item.get("quantity").and_then(|q| q.as_i64()),
-                ) {
+                if let (Some(product_obj), Some(quantity)) = (item.get("product").cloned(), item.get("quantity").and_then(|q| q.as_i64())) {
                     if let Some(product_id) = product_obj.get("id").and_then(|id| id.as_str()) {
-                        let reserve_result = inventory_service
-                            .reserve_inventory(&tenant_id, product_id, quantity as i32, ttl)
-                            .await;
+                        let reserve_result = inventory_service.reserve_inventory(&tenant_id, product_id, quantity as i32, ttl).await;
                         match reserve_result {
                             Ok(res) if res.success => {
-                                reserved_locks.push((
-                                    product_id.to_string(),
-                                    res.lock_id.clone(),
-                                    quantity as i32,
-                                ));
+                                reserved_locks.push((product_id.to_string(), res.lock_id.clone(), quantity as i32));
                                 if let Some(obj) = item.as_object_mut() {
-                                    obj.insert(
-                                        "lock_id".to_string(),
-                                        serde_json::Value::String(res.lock_id),
-                                    );
+                                    obj.insert("lock_id".to_string(), serde_json::Value::String(res.lock_id));
                                 }
                             }
                             _ => {
                                 // Rollback reserved locks if we failed midway
                                 for (pid, lid, qty) in reserved_locks {
-                                    let _ = inventory_service
-                                        .release_inventory(&tenant_id, &pid, qty, &lid)
-                                        .await;
+                                    let _ = inventory_service.release_inventory(&tenant_id, &pid, qty, &lid).await;
                                 }
                                 let _ = db_tx.rollback().await;
                                 return (StatusCode::CONFLICT, Json(CreateCheckoutSessionResponse {
@@ -131,37 +103,25 @@ pub async fn create_checkout_session_handler(
             let service = crate::services::inventory::InventoryService::new(hub.redis_client());
             for item in items {
                 if let Some(product_id) = item.get("product_id").and_then(|p| p.as_str()) {
-                    let quantity =
-                        item.get("quantity").and_then(|q| q.as_i64()).unwrap_or(1) as i32;
+                    let quantity = item.get("quantity").and_then(|q| q.as_i64()).unwrap_or(1) as i32;
                     // Redlock 5 minutes for online checkout cart
-                    match service
-                        .reserve_inventory(&tenant_id, product_id, quantity, 300)
-                        .await
-                    {
+                    match service.reserve_inventory(&tenant_id, product_id, quantity, 300).await {
                         Ok(res) if !res.success => {
                             let _ = db_tx.rollback().await;
-                            return (
-                                StatusCode::BAD_REQUEST,
-                                Json(CreateCheckoutSessionResponse {
-                                    session_id: "".to_string(),
-                                    success: false,
-                                    error_message: Some(res.error_message),
-                                }),
-                            )
-                                .into_response();
-                        }
+                            return (StatusCode::BAD_REQUEST, Json(CreateCheckoutSessionResponse {
+                                session_id: "".to_string(),
+                                success: false,
+                                error_message: Some(res.error_message),
+                            })).into_response()
+                        },
                         Err(e) => {
                             let _ = db_tx.rollback().await;
-                            return (
-                                StatusCode::INTERNAL_SERVER_ERROR,
-                                Json(CreateCheckoutSessionResponse {
-                                    session_id: "".to_string(),
-                                    success: false,
-                                    error_message: Some(e),
-                                }),
-                            )
-                                .into_response();
-                        }
+                            return (StatusCode::INTERNAL_SERVER_ERROR, Json(CreateCheckoutSessionResponse {
+                                session_id: "".to_string(),
+                                success: false,
+                                error_message: Some(e),
+                            })).into_response()
+                        },
                         _ => {}
                     }
                 }
@@ -183,35 +143,22 @@ pub async fn create_checkout_session_handler(
     match query.execute(&mut *db_tx).await {
         Ok(_) => {
             let _ = db_tx.commit().await;
-            (
-                StatusCode::OK,
-                Json(CreateCheckoutSessionResponse {
-                    session_id,
-                    success: true,
-                    error_message: None,
-                }),
-            )
-                .into_response()
-        }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(CreateCheckoutSessionResponse {
+            (StatusCode::OK, Json(CreateCheckoutSessionResponse {
+                session_id,
+                success: true,
+                error_message: None,
+            })).into_response()
+        },
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(CreateCheckoutSessionResponse {
                 session_id: "".to_string(),
                 success: false,
                 error_message: Some(e.to_string()),
-            }),
-        )
-            .into_response(),
+            })).into_response()
+        }
     }
 }
 
-pub fn router(
-    hub: Arc<Hub>,
-) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
-    axum::Router::new()
-        .route(
-            "/session",
-            axum::routing::post(create_checkout_session_handler),
-        )
-        .with_state(hub)
+pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+    axum::Router::new().route("/session", axum::routing::post(create_checkout_session_handler)).with_state(hub)
 }

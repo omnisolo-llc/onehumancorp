@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::time::Instant;
 use tokio::sync::RwLock;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -68,11 +68,7 @@ impl McpGateway {
         }
     }
 
-    pub async fn register_tool(
-        &self,
-        spiffe_id: &str,
-        schema: DynamicToolSchema,
-    ) -> Result<(), String> {
+    pub async fn register_tool(&self, spiffe_id: &str, schema: DynamicToolSchema) -> Result<(), String> {
         // Authenticate/Authorize via SPIFFE
         if !spiffe_id.starts_with("spiffe://") {
             return Err("Invalid SPIFFE ID".to_string());
@@ -93,8 +89,8 @@ impl McpGateway {
 
     pub async fn process_rate_limiting_event(&self, payload_bytes: &[u8]) -> Result<(), String> {
         // Strict JSON validation via dec.DisallowUnknownFields() equivalent
-        let event: ToolExecutionRateLimitingEvent =
-            serde_json::from_slice(payload_bytes).map_err(|e| format!("Invalid payload: {}", e))?;
+        let event: ToolExecutionRateLimitingEvent = serde_json::from_slice(payload_bytes)
+            .map_err(|e| format!("Invalid payload: {}", e))?;
 
         let mut active = self.active_executions.write().await;
         active.insert(event.event_id.clone(), Instant::now());
@@ -107,12 +103,7 @@ impl McpGateway {
         active.remove(event_id);
     }
 
-    pub async fn invoke_tool(
-        &self,
-        spiffe_id: &str,
-        tool_name: &str,
-        args: Value,
-    ) -> Result<String, String> {
+    pub async fn invoke_tool(&self, spiffe_id: &str, tool_name: &str, args: Value) -> Result<String, String> {
         // Find the tool
         let reg = self.registry.read().await;
         let tool = match reg.get(tool_name) {
@@ -132,9 +123,7 @@ impl McpGateway {
         if let Some(rate) = tool.rate_limit {
             let key = format!("{}:{}", spiffe_id, tool_name);
             let mut limiters = self.rate_limiters.write().await;
-            let bucket = limiters
-                .entry(key)
-                .or_insert_with(|| TokenBucket::new(rate, rate));
+            let bucket = limiters.entry(key).or_insert_with(|| TokenBucket::new(rate, rate));
 
             if !bucket.consume(1.0) {
                 return Err("429 Too Many Requests".to_string());
@@ -143,10 +132,7 @@ impl McpGateway {
 
         // Simulate invoking the tool via HTTP/RPC
         // In a real implementation, this would make an actual network call to tool.endpoint_url
-        Ok(format!(
-            "Successfully invoked dynamic tool {} with args: {}",
-            tool_name, args
-        ))
+        Ok(format!("Successfully invoked dynamic tool {} with args: {}", tool_name, args))
     }
 
     pub async fn get_active_executions_count(&self) -> usize {
@@ -172,9 +158,7 @@ mod tests {
             rate_limit: None,
         };
 
-        let result = gateway
-            .register_tool("spiffe://example.org/agent-1", schema)
-            .await;
+        let result = gateway.register_tool("spiffe://example.org/agent-1", schema).await;
         assert!(result.is_ok());
 
         let discovered = gateway.discover_tools("weather").await;
@@ -195,29 +179,14 @@ mod tests {
             rate_limit: None,
         };
 
-        gateway
-            .register_tool("spiffe://example.org/admin", schema)
-            .await
-            .unwrap();
+        gateway.register_tool("spiffe://example.org/admin", schema).await.unwrap();
 
         // Should fail due to wrong SPIFFE ID
-        let res_fail = gateway
-            .invoke_tool(
-                "spiffe://example.org/random-agent",
-                "secure_finance",
-                serde_json::json!({}),
-            )
-            .await;
+        let res_fail = gateway.invoke_tool("spiffe://example.org/random-agent", "secure_finance", serde_json::json!({})).await;
         assert!(res_fail.is_err());
 
         // Should succeed with correct SPIFFE ID
-        let res_ok = gateway
-            .invoke_tool(
-                "spiffe://example.org/finance-agent",
-                "secure_finance",
-                serde_json::json!({}),
-            )
-            .await;
+        let res_ok = gateway.invoke_tool("spiffe://example.org/finance-agent", "secure_finance", serde_json::json!({})).await;
         assert!(res_ok.is_ok());
     }
 
@@ -234,22 +203,13 @@ mod tests {
             rate_limit: Some(5.0),
         };
 
-        gateway
-            .register_tool("spiffe://example.org/admin", schema)
-            .await
-            .unwrap();
+        gateway.register_tool("spiffe://example.org/admin", schema).await.unwrap();
 
         let mut success_count = 0;
         let mut rate_limited_count = 0;
 
         for _ in 0..20 {
-            let res = gateway
-                .invoke_tool(
-                    "spiffe://example.org/agent-1",
-                    "rate_limited_api",
-                    serde_json::json!({}),
-                )
-                .await;
+            let res = gateway.invoke_tool("spiffe://example.org/agent-1", "rate_limited_api", serde_json::json!({})).await;
             if res.is_ok() {
                 success_count += 1;
             } else if let Err(e) = res {
@@ -272,12 +232,9 @@ mod tests {
             "agent_id": "agent_x",
             "payload": [1, 2, 3],
             "unknown_field": "should cause failure"
-        })
-        .to_string();
+        }).to_string();
 
-        let res = gateway
-            .process_rate_limiting_event(invalid_payload.as_bytes())
-            .await;
+        let res = gateway.process_rate_limiting_event(invalid_payload.as_bytes()).await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("unknown field `unknown_field`"));
     }
@@ -290,14 +247,10 @@ mod tests {
             "event_id": "event_123",
             "agent_id": "agent_x",
             "payload": [1, 2, 3]
-        })
-        .to_string();
+        }).to_string();
 
         // Simulate incoming event
-        gateway
-            .process_rate_limiting_event(valid_payload.as_bytes())
-            .await
-            .unwrap();
+        gateway.process_rate_limiting_event(valid_payload.as_bytes()).await.unwrap();
 
         // Active executions should grow
         assert_eq!(gateway.get_active_executions_count().await, 1);

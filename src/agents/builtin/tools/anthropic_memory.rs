@@ -4,20 +4,16 @@ use serde_json::json;
 use std::sync::Arc;
 
 use super::{
-    Tool,
     pydantic::{PydanticAdapter, PydanticToolExecutor},
+    Tool,
 };
+
 
 #[async_trait::async_trait]
 pub trait MemoryAccessor: Send + Sync {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String>;
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
-    async fn search_cross_session_messages(
-        &self,
-        query: &str,
-        limit: usize,
-        summarize: bool,
-    ) -> Result<Vec<String>, String>;
+    async fn search_cross_session_messages(&self, query: &str, limit: usize, summarize: bool) -> Result<Vec<String>, String>;
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String>;
 }
 
@@ -80,17 +76,13 @@ impl PydanticToolExecutor<TranscriptSearchArgs> for TranscriptSearchExecutor {
     async fn execute_typed(&self, args: TranscriptSearchArgs) -> Result<String, ToolError> {
         let limit = args.limit.unwrap_or(5);
 
-        let results = self
-            .accessor
+        let results = self.accessor
             .search_transcripts(&args.query, limit)
             .await
             .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if results.is_empty() {
-            Ok(format!(
-                "No transcripts found matching query: {}",
-                args.query
-            ))
+            Ok(format!("No transcripts found matching query: {}", args.query))
         } else {
             Ok(results.join("\n\n---\n\n"))
         }
@@ -119,6 +111,7 @@ pub fn transcript_search_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
         execute: Arc::new(PydanticAdapter::new(TranscriptSearchExecutor { accessor })),
     }
 }
+
 
 // SOTA Harness Pattern: Pydantic-first tool schema validation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -192,17 +185,13 @@ impl PydanticToolExecutor<CrossSessionSearchArgs> for CrossSessionSearchExecutor
         let limit = args.limit.unwrap_or(5);
         let summarize = args.summarize.unwrap_or(true);
 
-        let results = self
-            .accessor
+        let results = self.accessor
             .search_cross_session_messages(&args.query, limit, summarize)
             .await
             .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if results.is_empty() {
-            Ok(format!(
-                "No cross-session messages found matching query: {}",
-                args.query
-            ))
+            Ok(format!("No cross-session messages found matching query: {}", args.query))
         } else {
             Ok(results.join("\n\n---\n\n"))
         }
@@ -249,19 +238,10 @@ mod tests {
         async fn retrieve_topic(&self, _topic_name: &str) -> Result<String, String> {
             Ok("".to_string())
         }
-        async fn search_transcripts(
-            &self,
-            _query: &str,
-            _limit: usize,
-        ) -> Result<Vec<String>, String> {
+        async fn search_transcripts(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> {
             Ok(vec![])
         }
-        async fn search_cross_session_messages(
-            &self,
-            _query: &str,
-            _limit: usize,
-            _summarize: bool,
-        ) -> Result<Vec<String>, String> {
+        async fn search_cross_session_messages(&self, _query: &str, _limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
             Ok(vec![])
         }
         async fn write_topic(&self, _topic_name: &str, _content: &str) -> Result<(), String> {
@@ -280,6 +260,7 @@ mod tests {
         assert!(res.is_err());
         let err_msg = res.unwrap_err().to_string();
         assert!(err_msg.contains("Validation Error (Pydantic-first tool schema)"));
+
     }
 
     #[tokio::test]

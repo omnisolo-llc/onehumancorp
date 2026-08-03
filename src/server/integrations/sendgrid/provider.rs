@@ -29,7 +29,7 @@ impl SendGridProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            },
+            }
         }
     }
 

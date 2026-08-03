@@ -50,21 +50,12 @@ impl SlackProvider {
         Ok(())
     }
 
-    pub async fn send_block_message(
-        &self,
-        channel: &str,
-        blocks: &[serde_json::Value],
-    ) -> Result<(), String> {
+    pub async fn send_block_message(&self, channel: &str, blocks: &[serde_json::Value]) -> Result<(), String> {
         self.client.send_block_message(channel, blocks).await?;
         Ok(())
     }
 
-    pub async fn upload_file(
-        &self,
-        channel: &str,
-        filename: &str,
-        content: &[u8],
-    ) -> Result<(), String> {
+    pub async fn upload_file(&self, channel: &str, filename: &str, content: &[u8]) -> Result<(), String> {
         self.client.upload_file(channel, filename, content).await
     }
 
@@ -72,19 +63,11 @@ impl SlackProvider {
         self.client.list_channels().await
     }
 
-    pub async fn get_channel_history(
-        &self,
-        channel_id: &str,
-        limit: u32,
-    ) -> Result<Vec<super::client::SlackMessage>, String> {
+    pub async fn get_channel_history(&self, channel_id: &str, limit: u32) -> Result<Vec<super::client::SlackMessage>, String> {
         self.client.get_channel_history(channel_id, limit).await
     }
 
-    pub async fn create_channel(
-        &self,
-        name: &str,
-        is_private: bool,
-    ) -> Result<super::client::SlackChannel, String> {
+    pub async fn create_channel(&self, name: &str, is_private: bool) -> Result<super::client::SlackChannel, String> {
         self.client.create_channel(name, is_private).await
     }
 }

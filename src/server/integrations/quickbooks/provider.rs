@@ -10,7 +10,10 @@ pub struct QuickBooksProvider {
 impl QuickBooksProvider {
     pub fn new(access_token: String, realm_id: String) -> Self {
         let client = QuickBooksClient::new(access_token, realm_id.clone());
-        let base_url = format!("https://quickbooks.api.intuit.com/v3/company/{}", realm_id);
+        let base_url = format!(
+            "https://quickbooks.api.intuit.com/v3/company/{}",
+            realm_id
+        );
 
         Self {
             client: Arc::new(client),
@@ -98,14 +101,16 @@ mod tests {
 
     #[test]
     fn test_quickbooks_provider_new() {
-        let provider = QuickBooksProvider::new("test-token".to_string(), "realm-123".to_string());
+        let provider =
+            QuickBooksProvider::new("test-token".to_string(), "realm-123".to_string());
         assert_eq!(provider.metadata.id, "quickbooks");
         assert_eq!(provider.metadata.category, "accounting");
     }
 
     #[test]
     fn test_quickbooks_provider_to_integration_provider() {
-        let provider = QuickBooksProvider::new("test-token".to_string(), "realm-123".to_string());
+        let provider =
+            QuickBooksProvider::new("test-token".to_string(), "realm-123".to_string());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "quickbooks");
     }

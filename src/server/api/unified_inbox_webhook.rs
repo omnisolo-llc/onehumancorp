@@ -1,10 +1,10 @@
 use crate::db::DB;
 use axum::{
-    Router,
     extract::{Extension, Json, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
+    Router,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
@@ -80,6 +80,7 @@ pub struct LocalUiTenantQuery {
     pub mobile_optimized: Option<bool>,
 }
 
+
 async fn generate_draft_reply(
     tenant_id: &str,
     customer_id: &str,
@@ -88,22 +89,22 @@ async fn generate_draft_reply(
     db: &Arc<DB>,
 ) -> String {
     let (business_name, industry): (String, String) = match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query_as("SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1")
-                .bind(tenant_id)
-                .fetch_optional(&db.pool)
-                .await
-                .unwrap_or(None)
-                .unwrap_or_else(|| ("A business".to_string(), "".to_string()))
-        }
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query_as("SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?")
-                .bind(tenant_id)
-                .fetch_optional(sqlite_pool)
-                .await
-                .unwrap_or(None)
-                .unwrap_or_else(|| ("A business".to_string(), "".to_string()))
-        }
+        crate::db::DbStore::Postgres => sqlx::query_as(
+            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+        )
+        .bind(tenant_id)
+        .fetch_optional(&db.pool)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_else(|| ("A business".to_string(), "".to_string())),
+        crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query_as(
+            "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?"
+        )
+        .bind(tenant_id)
+        .fetch_optional(sqlite_pool)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_else(|| ("A business".to_string(), "".to_string())),
     };
 
     let business_context = if industry.is_empty() {
@@ -115,38 +116,20 @@ async fn generate_draft_reply(
     let mut enriched_context_summary = context_summary.to_string();
 
     let embedding = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-        Ok("gemini") => {
-            crate::minimax::LocalLLMClient::new()
-                .generate_embedding(customer_message)
-                .await
-        }
+        Ok("gemini") => crate::minimax::LocalLLMClient::new().generate_embedding(customer_message).await,
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.is_empty() {
-                crate::minimax::LocalLLMClient::new()
-                    .generate_embedding(customer_message)
-                    .await
+                crate::minimax::LocalLLMClient::new().generate_embedding(customer_message).await
             } else {
-                crate::minimax::MinimaxClient::new(api_key)
-                    .generate_embedding(customer_message)
-                    .await
+                crate::minimax::MinimaxClient::new(api_key).generate_embedding(customer_message).await
             }
         }
-        _ => {
-            crate::minimax::LocalLLMClient::new()
-                .generate_embedding(customer_message)
-                .await
-        }
+        _ => crate::minimax::LocalLLMClient::new().generate_embedding(customer_message).await,
     };
 
     if let Ok(emb) = embedding {
-        let emb_str = format!(
-            "[{}]",
-            emb.iter()
-                .map(|f| f.to_string())
-                .collect::<Vec<_>>()
-                .join(",")
-        );
+        let emb_str = format!("[{}]", emb.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
         let similar_memories: Result<Vec<String>, sqlx::Error> = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = db.pool.begin().await.unwrap();
@@ -178,14 +161,11 @@ async fn generate_draft_reply(
 
         if let Ok(mems) = similar_memories {
             if !mems.is_empty() {
-                enriched_context_summary = format!(
-                    "{} Past memories: {}",
-                    enriched_context_summary,
-                    mems.join("; ")
-                );
+                enriched_context_summary = format!("{} Past memories: {}", enriched_context_summary, mems.join("; "));
             }
         }
     }
+
 
     let prompt = format!(
         "Write one concise, warm customer-service reply. Business context: {}. Customer recent history: {}. Customer message: {}",
@@ -195,35 +175,22 @@ async fn generate_draft_reply(
 
     let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
         Ok("gemini") => {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&compressed_prompt)
-                .await
+            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
         }
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.is_empty() {
-                crate::minimax::LocalLLMClient::new()
-                    .reason(&compressed_prompt)
-                    .await
+                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
             } else {
-                crate::minimax::MinimaxClient::new(api_key)
-                    .reason(&compressed_prompt)
-                    .await
+                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
             }
         }
-        _ => {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&compressed_prompt)
-                .await
-        }
+        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
     };
 
     match llm_res {
         Ok(reply) => reply,
-        Err(_) => format!(
-            "Hi there! Thanks for your message: '{}'. How can we help?",
-            customer_message
-        ),
+        Err(_) => format!("Hi there! Thanks for your message: '{}'. How can we help?", customer_message),
     }
 }
 
@@ -277,13 +244,7 @@ pub async fn handle_unified_webhook(
         }
     }
 
-    let resolved_customer = crate::api::inbox::identity::resolve_identity(
-        &state.db,
-        tenant_id,
-        &payload.source,
-        &payload.identifier,
-    )
-    .await;
+    let resolved_customer = crate::api::inbox::identity::resolve_identity(&state.db, tenant_id, &payload.source, &payload.identifier).await;
     let customer_id = resolved_customer.unwrap_or_else(|| format!("cust-{}", Uuid::new_v4()));
 
     let intent_id = Uuid::new_v4().to_string();
@@ -324,14 +285,11 @@ pub async fn handle_unified_webhook(
             if let Ok(rows) = recent_history {
                 if !rows.is_empty() {
                     let mut history_str = String::from("Recent history: ");
-                    let history_items: Vec<String> = rows
-                        .into_iter()
-                        .map(|row| {
-                            let channel: String = row.get("channel");
-                            let created_at: String = row.try_get("created_at").unwrap_or_default();
-                            format!("Sent {} ({})", channel, created_at)
-                        })
-                        .collect();
+                    let history_items: Vec<String> = rows.into_iter().map(|row| {
+                        let channel: String = row.get("channel");
+                        let created_at: String = row.try_get("created_at").unwrap_or_default();
+                        format!("Sent {} ({})", channel, created_at)
+                    }).collect();
                     history_str.push_str(&history_items.join(", "));
                     context_summary = history_str;
                 }
@@ -357,8 +315,7 @@ pub async fn handle_unified_webhook(
                 &payload.message,
                 &context_summary,
                 &state.db,
-            )
-            .await;
+            ).await;
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary,
@@ -385,14 +342,11 @@ pub async fn handle_unified_webhook(
             if let Ok(rows) = recent_history {
                 if !rows.is_empty() {
                     let mut history_str = String::from("Recent history: ");
-                    let history_items: Vec<String> = rows
-                        .into_iter()
-                        .map(|row| {
-                            let channel: String = row.get("channel");
-                            let created_at: String = row.try_get("created_at").unwrap_or_default();
-                            format!("Sent {} ({})", channel, created_at)
-                        })
-                        .collect();
+                    let history_items: Vec<String> = rows.into_iter().map(|row| {
+                        let channel: String = row.get("channel");
+                        let created_at: String = row.try_get("created_at").unwrap_or_default();
+                        format!("Sent {} ({})", channel, created_at)
+                    }).collect();
                     history_str.push_str(&history_items.join(", "));
                     context_summary = history_str;
                 }
@@ -418,8 +372,7 @@ pub async fn handle_unified_webhook(
                 &payload.message,
                 &context_summary,
                 &state.db,
-            )
-            .await;
+            ).await;
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary,
@@ -452,10 +405,7 @@ pub async fn get_unified_feed(
     Extension(claims): Extension<::server_common::Claims>,
     Query(query): Query<LocalUiTenantQuery>,
 ) -> impl IntoResponse {
-    let Some(tenant_id) = claims
-        .organization_id
-        .filter(|tenant| !tenant.trim().is_empty())
-    else {
+    let Some(tenant_id) = claims.organization_id.filter(|tenant| !tenant.trim().is_empty()) else {
         return (
             StatusCode::UNAUTHORIZED,
             axum::Json(serde_json::json!({"error": "tenant context required"})),
@@ -509,11 +459,7 @@ pub async fn get_unified_feed(
     (StatusCode::OK, axum::Json(feed_items)).into_response()
 }
 
-async fn fetch_unified_feed_items(
-    state: &AppState,
-    tenant_id: &str,
-    mobile_optimized: bool,
-) -> Vec<UnifiedFeedItem> {
+async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_optimized: bool) -> Vec<UnifiedFeedItem> {
     let mut feed_items: Vec<UnifiedFeedItem> = vec![];
 
     let threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error>;
@@ -562,10 +508,8 @@ async fn fetch_unified_feed_items(
         }
 
         let thread_ids: Vec<String> = threads_rows.iter().map(|t| t.id.clone()).collect();
-        let mut messages_map: std::collections::HashMap<String, Vec<UnifiedMessage>> =
-            std::collections::HashMap::new();
-        let mut triage_actions_map: std::collections::HashMap<String, Vec<UnifiedTriageAction>> =
-            std::collections::HashMap::new();
+        let mut messages_map: std::collections::HashMap<String, Vec<UnifiedMessage>> = std::collections::HashMap::new();
+        let mut triage_actions_map: std::collections::HashMap<String, Vec<UnifiedTriageAction>> = std::collections::HashMap::new();
 
         match &state.db.store {
             crate::db::DbStore::Postgres => {
@@ -581,48 +525,23 @@ async fn fetch_unified_feed_items(
                     for m_row in msg_rows {
                         use sqlx::Row;
                         let t_id: String = m_row.get("thread_id");
-                        messages_map.entry(t_id).or_default().push(UnifiedMessage {
-                            id: m_row.get("id"),
-                            tenant_id: m_row.get("tenant_id"),
-                            thread_id: m_row.get("thread_id"),
-                            sender_type: m_row.get("sender_type"),
-                            content: m_row.get("content"),
-                            created_at: m_row.try_get("created_at").unwrap_or_default(),
-                        });
+                        messages_map.entry(t_id).or_default().push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: m_row.get("content"), created_at: m_row.try_get("created_at").unwrap_or_default() });
                     }
                 }
                 if let Ok(action_rows) = action_res {
                     for a_row in action_rows {
                         use sqlx::Row;
                         let t_id: String = a_row.get("thread_id");
-                        triage_actions_map
-                            .entry(t_id)
-                            .or_default()
-                            .push(UnifiedTriageAction {
-                                id: a_row.get("id"),
-                                tenant_id: a_row.get("tenant_id"),
-                                thread_id: a_row.get("thread_id"),
-                                action_type: a_row.get("action_type"),
-                                action_payload: a_row.try_get("action_payload").ok(),
-                                status: a_row.get("status"),
-                                created_at: a_row.try_get("created_at").unwrap_or_default(),
-                                updated_at: a_row.try_get("updated_at").unwrap_or_default(),
-                            });
+                        triage_actions_map.entry(t_id).or_default().push(UnifiedTriageAction { id: a_row.get("id"), tenant_id: a_row.get("tenant_id"), thread_id: a_row.get("thread_id"), action_type: a_row.get("action_type"), action_payload: a_row.try_get("action_payload").ok(), status: a_row.get("status"), created_at: a_row.try_get("created_at").unwrap_or_default(), updated_at: a_row.try_get("updated_at").unwrap_or_default() });
                     }
                 }
-            }
+            },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let pool = sqlite_pool.clone();
 
                 let placeholders = thread_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                let msg_query = format!(
-                    "SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id IN ({}) ORDER BY created_at ASC",
-                    placeholders
-                );
-                let action_query = format!(
-                    "SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id IN ({})",
-                    placeholders
-                );
+                let msg_query = format!("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id IN ({}) ORDER BY created_at ASC", placeholders);
+                let action_query = format!("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id IN ({})", placeholders);
 
                 let (msg_res, action_res) = tokio::join!(
                     async {
@@ -645,33 +564,14 @@ async fn fetch_unified_feed_items(
                     for m_row in msg_rows {
                         use sqlx::Row;
                         let t_id: String = m_row.get("thread_id");
-                        messages_map.entry(t_id).or_default().push(UnifiedMessage {
-                            id: m_row.get("id"),
-                            tenant_id: m_row.get("tenant_id"),
-                            thread_id: m_row.get("thread_id"),
-                            sender_type: m_row.get("sender_type"),
-                            content: m_row.get("content"),
-                            created_at: m_row.try_get("created_at").unwrap_or_default(),
-                        });
+                        messages_map.entry(t_id).or_default().push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: m_row.get("content"), created_at: m_row.try_get("created_at").unwrap_or_default() });
                     }
                 }
                 if let Ok(action_rows) = action_res {
                     for a_row in action_rows {
                         use sqlx::Row;
                         let t_id: String = a_row.get("thread_id");
-                        triage_actions_map
-                            .entry(t_id)
-                            .or_default()
-                            .push(UnifiedTriageAction {
-                                id: a_row.get("id"),
-                                tenant_id: a_row.get("tenant_id"),
-                                thread_id: a_row.get("thread_id"),
-                                action_type: a_row.get("action_type"),
-                                action_payload: a_row.try_get("action_payload").ok(),
-                                status: a_row.get("status"),
-                                created_at: a_row.try_get("created_at").unwrap_or_default(),
-                                updated_at: a_row.try_get("updated_at").unwrap_or_default(),
-                            });
+                        triage_actions_map.entry(t_id).or_default().push(UnifiedTriageAction { id: a_row.get("id"), tenant_id: a_row.get("tenant_id"), thread_id: a_row.get("thread_id"), action_type: a_row.get("action_type"), action_payload: a_row.try_get("action_payload").ok(), status: a_row.get("status"), created_at: a_row.try_get("created_at").unwrap_or_default(), updated_at: a_row.try_get("updated_at").unwrap_or_default() });
                     }
                 }
             }

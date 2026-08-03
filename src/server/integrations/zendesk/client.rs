@@ -242,7 +242,10 @@ impl ZendeskClient {
         Ok(resp.results)
     }
 
-    pub async fn get_ticket_comments(&self, ticket_id: u64) -> Result<Vec<ZendeskComment>, String> {
+    pub async fn get_ticket_comments(
+        &self,
+        ticket_id: u64,
+    ) -> Result<Vec<ZendeskComment>, String> {
         let path = format!("/api/v2/tickets/{}/comments.json", ticket_id);
         let res = self.request(reqwest::Method::GET, &path).await?;
         let resp: CommentsResponse = res
@@ -482,7 +485,8 @@ mod tests {
 
     #[test]
     fn test_client_new() {
-        let client = ZendeskClient::new("mycompany".into(), "admin@my.com".into(), "tok123".into());
+        let client =
+            ZendeskClient::new("mycompany".into(), "admin@my.com".into(), "tok123".into());
         assert_eq!(client.base_url, "https://mycompany.zendesk.com");
         assert_eq!(client.email, "admin@my.com");
     }

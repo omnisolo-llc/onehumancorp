@@ -1,8 +1,8 @@
-use ::server_ohc::orchestration::b2b_service_server::B2bService;
-use ::server_ohc::orchestration::*;
-use chrono::Utc;
-use std::sync::RwLock;
 use tonic::{Request, Response, Status};
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::b2b_service_server::B2bService;
+use std::sync::RwLock;
+use chrono::Utc;
 
 pub struct MyB2BService {
     approvals: RwLock<Vec<ApprovalRequest>>,
@@ -79,19 +79,13 @@ impl B2bService for MyB2BService {
     ) -> Result<Response<ApprovalsResponse>, Status> {
         let req = request.into_inner();
         if req.approval_id.is_empty() || req.decision.is_empty() {
-            return Err(Status::invalid_argument(
-                "approvalId and decision are required",
-            ));
+            return Err(Status::invalid_argument("approvalId and decision are required"));
         }
 
         let new_status = match req.decision.as_str() {
             "approve" => "APPROVED",
             "reject" => "REJECTED",
-            _ => {
-                return Err(Status::invalid_argument(
-                    "decision must be 'approve' or 'reject'",
-                ));
-            }
+            _ => return Err(Status::invalid_argument("decision must be 'approve' or 'reject'")),
         };
 
         let now = Utc::now();
@@ -133,9 +127,7 @@ impl B2bService for MyB2BService {
     ) -> Result<Response<HandoffPackage>, Status> {
         let req = request.into_inner();
         if req.from_agent_id.is_empty() || req.intent.is_empty() {
-            return Err(Status::invalid_argument(
-                "fromAgentId and intent are required",
-            ));
+            return Err(Status::invalid_argument("fromAgentId and intent are required"));
         }
 
         let now = Utc::now();
@@ -163,15 +155,11 @@ impl B2bService for MyB2BService {
     ) -> Result<Response<HandoffsResponse>, Status> {
         let req = request.into_inner();
         if req.handoff_id.is_empty() || req.status.is_empty() {
-            return Err(Status::invalid_argument(
-                "handoffId and status are required",
-            ));
+            return Err(Status::invalid_argument("handoffId and status are required"));
         }
 
         if req.status != "acknowledged" && req.status != "resolved" {
-            return Err(Status::invalid_argument(
-                "status must be 'acknowledged' or 'resolved'",
-            ));
+            return Err(Status::invalid_argument("status must be 'acknowledged' or 'resolved'"));
         }
 
         let mut handoffs = self.handoffs.write().unwrap();
@@ -195,9 +183,7 @@ impl B2bService for MyB2BService {
         }
 
         if already_resolved {
-            return Err(Status::failed_precondition(
-                "State Changed: This handoff has already been acknowledged or resolved.",
-            ));
+            return Err(Status::failed_precondition("State Changed: This handoff has already been acknowledged or resolved."));
         }
 
         Ok(Response::new(HandoffsResponse {
@@ -217,21 +203,15 @@ impl B2bService for MyB2BService {
 
     async fn b2b_handshake(
         &self,
-        request: Request<B2bHandshakeRequest>,
+                request: Request<B2bHandshakeRequest>,
     ) -> Result<Response<TrustAgreement>, Status> {
         let req = request.into_inner();
         if req.partner_org.is_empty() || req.partner_jwks.is_empty() {
-            return Err(Status::invalid_argument(
-                "partnerOrg and partnerJwksUrl are required",
-            ));
+            return Err(Status::invalid_argument("partnerOrg and partnerJwksUrl are required"));
         }
 
         let agreement = TrustAgreement {
-            id: format!(
-                "ta-{}-{}",
-                req.partner_org.replace(".", "-"),
-                Utc::now().timestamp()
-            ),
+            id: format!("ta-{}-{}", req.partner_org.replace(".", "-"), Utc::now().timestamp()),
             partner_org: req.partner_org,
             partner_jwks: req.partner_jwks,
             allowed_roles: req.allowed_roles,
@@ -247,7 +227,7 @@ impl B2bService for MyB2BService {
 
     async fn b2b_revoke(
         &self,
-        request: Request<B2bRevokeRequest>,
+                request: Request<B2bRevokeRequest>,
     ) -> Result<Response<TrustAgreement>, Status> {
         let req = request.into_inner();
         if req.agreement_id.is_empty() {

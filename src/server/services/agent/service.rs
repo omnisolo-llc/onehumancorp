@@ -1,9 +1,9 @@
-use crate::hub::Hub;
-use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-use ::server_ohc::orchestration::*;
-use chrono::Utc;
-use std::sync::{Arc, RwLock};
 use tonic::{Request, Response, Status};
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
+use std::sync::{Arc, RwLock};
+use chrono::Utc;
+use crate::hub::Hub;
 
 pub struct MyAgentManagerService {
     hub: Arc<Hub>,
@@ -23,15 +23,8 @@ impl MyAgentManagerService {
         }
     }
 
-    async fn get_snapshot(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<DashboardSnapshot, Status> {
-        let cache_key = format!(
-            "agent_dashboard_snapshot_{}:mobile:{}",
-            org_id, mobile_optimized
-        );
+    async fn get_snapshot(&self, org_id: &str, mobile_optimized: bool) -> Result<DashboardSnapshot, Status> {
+        let cache_key = format!("agent_dashboard_snapshot_{}:mobile:{}", org_id, mobile_optimized);
         if let Some(snapshot) = self.snapshot_cache.get(&cache_key).await {
             return Ok(snapshot);
         }
@@ -46,26 +39,14 @@ impl MyAgentManagerService {
         let org_id_clone_for_meetings = org_id.to_string();
         let (agents_res, meetings_res, cost_res_spawn, tasks_res) = if mobile_optimized {
             let (r1, r2) = tokio::join!(
-                tokio::spawn(async move {
-                    Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents).await)
-                }),
-                tokio::spawn(async move {
-                    hub_meetings
-                        .get_meetings_by_org(&org_id_clone_for_meetings)
-                        .await
-                })
+                tokio::spawn(async move { Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents).await) }),
+                tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await })
             );
             (r1, r2, Ok((0.0, 0, vec![])), Ok(vec![]))
         } else {
             tokio::join!(
-                tokio::spawn(async move {
-                    Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents).await)
-                }),
-                tokio::spawn(async move {
-                    hub_meetings
-                        .get_meetings_by_org(&org_id_clone_for_meetings)
-                        .await
-                }),
+                tokio::spawn(async move { Arc::new(hub_agents.get_agents_by_org(&org_id_clone_for_agents).await) }),
+                tokio::spawn(async move { hub_meetings.get_meetings_by_org(&org_id_clone_for_meetings).await }),
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
                     (
@@ -75,9 +56,7 @@ impl MyAgentManagerService {
                     )
                 }),
                 tokio::spawn(async move {
-                    hub_tasks
-                        .task_manager()
-                        .get_pending_approvals(&org_id_clone)
+                    hub_tasks.task_manager().get_pending_approvals(&org_id_clone)
                 })
             )
         };
@@ -87,8 +66,7 @@ impl MyAgentManagerService {
         let task_queue = tasks_res.unwrap();
         let queue_length = task_queue.len() as i32;
         let proto_task_queue = task_queue.into_iter().map(|t| t.into_proto()).collect();
-        let mut proto_task_queue_mut: Vec<::server_ohc::orchestration::SharedTask> =
-            proto_task_queue;
+        let mut proto_task_queue_mut: Vec<::server_ohc::orchestration::SharedTask> = proto_task_queue;
         if mobile_optimized {
             for task in proto_task_queue_mut.iter_mut() {
                 task.description.clear();
@@ -103,17 +81,9 @@ impl MyAgentManagerService {
             if !org_agent_ids.contains(name.as_str()) {
                 continue;
             }
-            let pct = if total_cost > 0.0 {
-                (cost / total_cost) as f32
-            } else {
-                0.0
-            };
+            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
             agent_costs.push(AgentCostSummary {
-                name: if mobile_optimized {
-                    String::new()
-                } else {
-                    name
-                },
+                name: if mobile_optimized { String::new() } else { name },
                 cost_usd: cost,
                 roi,
                 efficiency,
@@ -144,10 +114,7 @@ impl MyAgentManagerService {
         for a in agents_list.iter() {
             *status_map.entry(a.status.clone()).or_insert(0) += 1;
         }
-        let statuses = status_map
-            .into_iter()
-            .map(|(status, count)| StatusCount { status, count })
-            .collect();
+        let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
         let snapshot = DashboardSnapshot {
             meetings: meetings_list,
@@ -158,13 +125,7 @@ impl MyAgentManagerService {
             queue_length,
             updated_at_unix: Utc::now().timestamp(),
         };
-        self.snapshot_cache
-            .set(
-                &cache_key,
-                snapshot.clone(),
-                std::time::Duration::from_secs(5),
-            )
-            .await;
+        self.snapshot_cache.set(&cache_key, snapshot.clone(), std::time::Duration::from_secs(5)).await;
         Ok(snapshot)
     }
 }
@@ -198,20 +159,12 @@ impl AgentManagerService for MyAgentManagerService {
             role: req.role,
             organization_id: org_id.clone(),
             status: "IDLE".to_string(),
-            provider_type: if req.provider_type.is_empty() {
-                "builtin".to_string()
-            } else {
-                req.provider_type
-            },
+            provider_type: if req.provider_type.is_empty() { "builtin".to_string() } else { req.provider_type },
         };
 
         self.hub.register_agent(agent).await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id))
-            .await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id))
-            .await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
         Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
@@ -225,22 +178,19 @@ impl AgentManagerService for MyAgentManagerService {
             return Err(Status::invalid_argument("agentId is required"));
         }
 
-        let agent =
-            self.hub.get_agent(&req.agent_id).await.ok_or_else(|| {
-                Status::permission_denied("agent does not belong to organization")
-            })?;
+        let agent = self
+            .hub
+            .get_agent(&req.agent_id)
+            .await
+            .ok_or_else(|| Status::permission_denied("agent does not belong to organization"))?;
         if agent.organization_id != org_id {
             return Err(Status::permission_denied(
                 "agent does not belong to organization",
             ));
         }
         self.hub.fire_agent(&req.agent_id).await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id))
-            .await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id))
-            .await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
         Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
@@ -250,20 +200,18 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let org_id = authenticated_org(&request)?;
         let req = request.into_inner();
-        let task = req
-            .task
-            .ok_or_else(|| Status::invalid_argument("task is required"))?;
+        let task = req.task.ok_or_else(|| Status::invalid_argument("task is required"))?;
 
         if req.from_agent_id.is_empty() || req.to_agent_id.is_empty() {
-            return Err(Status::invalid_argument(
-                "from_agent_id and to_agent_id are required",
-            ));
+            return Err(Status::invalid_argument("from_agent_id and to_agent_id are required"));
         }
 
         for agent_id in [&req.from_agent_id, &req.to_agent_id] {
-            let agent = self.hub.get_agent(agent_id).await.ok_or_else(|| {
-                Status::permission_denied("agent does not belong to organization")
-            })?;
+            let agent = self
+                .hub
+                .get_agent(agent_id)
+                .await
+                .ok_or_else(|| Status::permission_denied("agent does not belong to organization"))?;
             if agent.organization_id != org_id {
                 return Err(Status::permission_denied(
                     "agent does not belong to organization",
@@ -271,17 +219,10 @@ impl AgentManagerService for MyAgentManagerService {
             }
         }
 
-        self.hub
-            .clone()
-            .delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
-            .await
+        self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task).await
             .map_err(|e| Status::invalid_argument(e))?;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id))
-            .await;
-        self.snapshot_cache
-            .invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id))
-            .await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:false", org_id)).await;
+        self.snapshot_cache.invalidate(&format!("agent_dashboard_snapshot_{}:mobile:true", org_id)).await;
         Ok(Response::new(self.get_snapshot(&org_id, false).await?))
     }
 
@@ -291,16 +232,8 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<AgentProvidersResponse>, Status> {
         authenticated_org(&request)?;
         let providers = vec![
-            AgentProviderInfo {
-                r#type: "builtin".to_string(),
-                name: "Builtin".to_string(),
-                authenticated: true,
-            },
-            AgentProviderInfo {
-                r#type: "claude".to_string(),
-                name: "Claude".to_string(),
-                authenticated: false,
-            },
+            AgentProviderInfo { r#type: "builtin".to_string(), name: "Builtin".to_string(), authenticated: true },
+            AgentProviderInfo { r#type: "claude".to_string(), name: "Claude".to_string(), authenticated: false },
         ];
         Ok(Response::new(AgentProvidersResponse { providers }))
     }
@@ -325,16 +258,13 @@ impl AgentManagerService for MyAgentManagerService {
         let org_id = authenticated_org(&request)?;
         let agents = self.hub.get_agents_by_org(&org_id).await;
         let now = Utc::now();
-        let identities = agents
-            .into_iter()
-            .map(|a| AgentIdentity {
-                agent_id: a.id.clone(),
-                svid: format!("spiffe://onehumancorp.io/org/{org_id}/agent/{}", a.id),
-                trust_domain: "onehumancorp.io".to_string(),
-                issued_at_unix: now.timestamp(),
-                expires_at_unix: (now + chrono::Duration::hours(24)).timestamp(),
-            })
-            .collect();
+        let identities = agents.into_iter().map(|a| AgentIdentity {
+            agent_id: a.id.clone(),
+            svid: format!("spiffe://onehumancorp.io/org/{org_id}/agent/{}", a.id),
+            trust_domain: "onehumancorp.io".to_string(),
+            issued_at_unix: now.timestamp(),
+            expires_at_unix: (now + chrono::Duration::hours(24)).timestamp(),
+        }).collect();
 
         Ok(Response::new(IdentitiesResponse { identities }))
     }
@@ -366,11 +296,7 @@ impl AgentManagerService for MyAgentManagerService {
             name: req.name,
             domain: req.domain,
             description: req.description,
-            source: if req.source.is_empty() {
-                "custom".to_string()
-            } else {
-                req.source
-            },
+            source: if req.source.is_empty() { "custom".to_string() } else { req.source },
             author: req.author,
             roles: req.roles,
             imported_at_unix: now.timestamp(),
@@ -404,9 +330,7 @@ impl AgentManagerService for MyAgentManagerService {
         let org_id_clone_for_agents = org_id.clone();
         let org_id_clone_for_meetings = org_id.clone();
         let (agents_res, meetings_res) = tokio::join!(
-            tokio::spawn(async move {
-                Arc::new(hub1.get_agents_by_org(&org_id_clone_for_agents).await)
-            }),
+            tokio::spawn(async move { Arc::new(hub1.get_agents_by_org(&org_id_clone_for_agents).await) }),
             tokio::spawn(async move { hub2.get_meetings_by_org(&org_id_clone_for_meetings).await })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
@@ -442,19 +366,14 @@ impl AgentManagerService for MyAgentManagerService {
         Ok(Response::new(snap))
     }
 
+
     async fn get_dashboard_snapshot(
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let org_id_req = authenticated_org(&request)?;
-        let mobile_optimized = request
-            .metadata()
-            .get("x-mobile-optimized")
-            .map(|v| v.to_str().unwrap_or("false") == "true")
-            .unwrap_or(false);
-        Ok(Response::new(
-            self.get_snapshot(&org_id_req, mobile_optimized).await?,
-        ))
+        let mobile_optimized = request.metadata().get("x-mobile-optimized").map(|v| v.to_str().unwrap_or("false") == "true").unwrap_or(false);
+        Ok(Response::new(self.get_snapshot(&org_id_req, mobile_optimized).await?))
     }
 
     async fn restore_snapshot(
@@ -490,26 +409,24 @@ mod tests {
 
     fn request_for_org<T>(message: T, org_id: &str) -> Request<T> {
         let mut request = Request::new(message);
-        let identity = format!("spiffe://onehumancorp.io/org/{org_id}/agent/test-agent");
+        let identity = format!(
+            "spiffe://onehumancorp.io/org/{org_id}/agent/test-agent"
+        );
         request
             .metadata_mut()
             .insert("x-spiffe-id", identity.parse().unwrap());
         request
     }
 
+
     async fn setup_test_agent_manager_service() -> MyAgentManagerService {
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(database_url)
-            .await
-            .unwrap();
+            .connect(database_url).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        let db = Arc::new(crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(pool.clone()),
-        });
+        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
@@ -520,43 +437,34 @@ mod tests {
     #[tokio::test]
     async fn cross_org_resources_and_mutations_are_rejected() {
         let service = setup_test_agent_manager_service().await;
-        service
-            .hub
-            .register_agent(Agent {
-                id: "org-a-agent".to_string(),
-                name: "Agent A".to_string(),
-                role: "assistant".to_string(),
-                organization_id: "org-a".to_string(),
-                status: "IDLE".to_string(),
-                provider_type: "builtin".to_string(),
-            })
-            .await;
+        service.hub.register_agent(Agent {
+            id: "org-a-agent".to_string(),
+            name: "Agent A".to_string(),
+            role: "assistant".to_string(),
+            organization_id: "org-a".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        }).await;
         service
             .hub
             .get_cost_auditor()
             .record_manual_cost("org-b-agent", "org-b", 500);
-        service
-            .hub
-            .register_agent(Agent {
-                id: "org-b-agent".to_string(),
-                name: "Agent B".to_string(),
-                role: "assistant".to_string(),
-                organization_id: "org-b".to_string(),
-                status: "IDLE".to_string(),
-                provider_type: "builtin".to_string(),
-            })
-            .await;
-        service
-            .hub
-            .register_agent(Agent {
-                id: "org-a-spoofed-prefix".to_string(),
-                name: "Spoofed prefix".to_string(),
-                role: "assistant".to_string(),
-                organization_id: "org-b".to_string(),
-                status: "IDLE".to_string(),
-                provider_type: "builtin".to_string(),
-            })
-            .await;
+        service.hub.register_agent(Agent {
+            id: "org-b-agent".to_string(),
+            name: "Agent B".to_string(),
+            role: "assistant".to_string(),
+            organization_id: "org-b".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        }).await;
+        service.hub.register_agent(Agent {
+            id: "org-a-spoofed-prefix".to_string(),
+            name: "Spoofed prefix".to_string(),
+            role: "assistant".to_string(),
+            organization_id: "org-b".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        }).await;
 
         let identities = service
             .get_identities(request_for_org(EmptyRequest {}, "org-a"))
@@ -652,12 +560,7 @@ mod tests {
         };
         let mut request = Request::new(req);
         let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
-                .parse()
-                .unwrap(),
-        );
+        metadata.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
         *request.metadata_mut() = metadata;
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -672,15 +575,12 @@ mod tests {
         let agent_id = res.agents[0].id.clone();
 
         // Fire Agent
-        let fire_req = FireAgentRequest { agent_id };
+        let fire_req = FireAgentRequest {
+            agent_id,
+        };
         let mut fire_request = Request::new(fire_req);
         let mut metadata2 = tonic::metadata::MetadataMap::new();
-        metadata2.insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
-                .parse()
-                .unwrap(),
-        );
+        metadata2.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
         *fire_request.metadata_mut() = metadata2;
         fire_request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -699,12 +599,7 @@ mod tests {
         let req = EmptyRequest {};
         let mut request = Request::new(req);
         let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
-                .parse()
-                .unwrap(),
-        );
+        metadata.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
         *request.metadata_mut() = metadata;
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -712,11 +607,7 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res = service
-            .get_dashboard_snapshot(request)
-            .await
-            .unwrap()
-            .into_inner();
+        let res = service.get_dashboard_snapshot(request).await.unwrap().into_inner();
         assert!(res.costs.is_some());
     }
 
@@ -729,12 +620,7 @@ mod tests {
         };
         let mut request = Request::new(req);
         let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
-                .parse()
-                .unwrap(),
-        );
+        metadata.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
         *request.metadata_mut() = metadata;
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -751,12 +637,7 @@ mod tests {
         };
         let mut restore_request = Request::new(restore_req);
         let mut metadata2 = tonic::metadata::MetadataMap::new();
-        metadata2.insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org/system/agent/test"
-                .parse()
-                .unwrap(),
-        );
+        metadata2.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
         *restore_request.metadata_mut() = metadata2;
         restore_request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -764,14 +645,11 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let restore_res = service
-            .restore_snapshot(restore_request)
-            .await
-            .unwrap()
-            .into_inner();
+        let restore_res = service.restore_snapshot(restore_request).await.unwrap().into_inner();
         assert!(restore_res.costs.is_some());
     }
 }
+
 
 #[cfg(test)]
 mod benchmark_tests {
@@ -789,15 +667,9 @@ mod benchmark_tests {
             organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        })
-        .await;
+        }).await;
 
-        hub.open_meeting(
-            "meeting_1".to_string(),
-            vec!["agent_1".to_string()],
-            "Test Agenda".to_string(),
-        )
-        .await;
+        hub.open_meeting("meeting_1".to_string(), vec!["agent_1".to_string()], "Test Agenda".to_string()).await;
 
         MyAgentManagerService::new(hub)
     }
@@ -810,14 +682,7 @@ mod benchmark_tests {
         let _snapshot = service.get_snapshot("test_org", false).await.unwrap();
         let elapsed = start.elapsed();
 
-        tracing::debug!(
-            "AgentManagerService::get_snapshot benchmark completed in {} ms",
-            elapsed.as_millis()
-        );
-        assert!(
-            elapsed.as_millis() < 500,
-            "AgentManagerService::get_snapshot took too long: {} ms",
-            elapsed.as_millis()
-        );
+        tracing::debug!("AgentManagerService::get_snapshot benchmark completed in {} ms", elapsed.as_millis());
+        assert!(elapsed.as_millis() < 500, "AgentManagerService::get_snapshot took too long: {} ms", elapsed.as_millis());
     }
 }

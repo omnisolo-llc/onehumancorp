@@ -1,19 +1,23 @@
 use axum::{
-    body::Body, extract::Request, extract::State, http::StatusCode, middleware::Next,
+    body::Body,
+    extract::Request,
+    extract::State,
+    middleware::Next,
     response::IntoResponse,
+    http::StatusCode,
 };
-use base64::{Engine as _, engine::general_purpose::STANDARD};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hmac::{Hmac, Mac};
 use sha1::Sha1;
-use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
+use std::collections::HashMap;
 
 use crate::db::DB;
-use crate::hub::Hub;
-use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::identity_resolution::IdentityResolver;
 use ::server_utils::url::url_decode;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::hub::Hub;
+use crate::orchestration::identity_resolution::IdentityResolver;
 
 #[derive(Clone)]
 pub struct TwilioWebhookState {
@@ -72,7 +76,10 @@ fn canonical_twilio_url(base_url: &str, request_uri: &axum::http::Uri) -> Option
     Some(url.into())
 }
 
-pub async fn twilio_signature_middleware(request: Request, next: Next) -> axum::response::Response {
+pub async fn twilio_signature_middleware(
+    request: Request,
+    next: Next,
+) -> axum::response::Response {
     const TWILIO_BODY_LIMIT_BYTES: usize = 262_144;
 
     let auth_token = std::env::var("TWILIO_AUTH_TOKEN").ok();
@@ -118,31 +125,16 @@ pub async fn twilio_webhook_post_handler(
         }
     }
 
-    let sender_id = params
-        .get("From")
-        .cloned()
-        .unwrap_or_else(|| "unknown".to_string());
-    let to_number = params
-        .get("To")
-        .cloned()
-        .unwrap_or_else(|| "unknown".to_string());
-    let mut text = params
-        .get("Body")
-        .cloned()
-        .unwrap_or_else(|| "".to_string());
+    let sender_id = params.get("From").cloned().unwrap_or_else(|| "unknown".to_string());
+    let to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
+    let mut text = params.get("Body").cloned().unwrap_or_else(|| "".to_string());
     let mut has_audio = false;
     let mut audio_url = "".to_string();
 
-    let num_media: usize = params
-        .get("NumMedia")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+    let num_media: usize = params.get("NumMedia").and_then(|s| s.parse().ok()).unwrap_or(0);
     for i in 0..num_media {
         if let Some(media_url) = params.get(&format!("MediaUrl{}", i)) {
-            let media_type = params
-                .get(&format!("MediaContentType{}", i))
-                .cloned()
-                .unwrap_or_else(|| "unknown".to_string());
+            let media_type = params.get(&format!("MediaContentType{}", i)).cloned().unwrap_or_else(|| "unknown".to_string());
             if media_type.starts_with("audio/") || media_type == "application/ogg" {
                 has_audio = true;
                 audio_url = media_url.clone();
@@ -153,11 +145,7 @@ pub async fn twilio_webhook_post_handler(
 
     if !text.is_empty() || num_media > 0 {
         if has_audio {
-            tracing::info!(
-                "Received Twilio WhatsApp Voice Note from {}: {}",
-                sender_id,
-                audio_url
-            );
+            tracing::info!("Received Twilio WhatsApp Voice Note from {}: {}", sender_id, audio_url);
             text = "Voice order transcribed: 2x Chicken Plates for 1pm. (Mocked transcription via Whisper API)".to_string();
         }
         tracing::info!("Received Twilio message from {}: {}", sender_id, text);
@@ -190,7 +178,7 @@ pub async fn twilio_webhook_post_handler(
                     Some(id) => id,
                     None => return StatusCode::NOT_FOUND.into_response(),
                 }
-            }
+            },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let mut tid = sqlx::query_scalar::<_, String>(
                     "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
@@ -223,18 +211,12 @@ pub async fn twilio_webhook_post_handler(
 
         // Twilio sends whatsapp messages with "whatsapp:" prefix in the From/To fields
         // but we can also just hardcode the source to whatsapp for this specific webhook if it's meant exclusively for whatsapp
-        let source = if sender_id.starts_with("whatsapp:") {
-            "whatsapp".to_string()
-        } else {
-            "sms".to_string()
-        };
+        let source = if sender_id.starts_with("whatsapp:") { "whatsapp".to_string() } else { "sms".to_string() };
 
         // Identity Resolution
         let resolver = IdentityResolver::new(state.db.clone());
         let clean_sender_id = sender_id.replace("whatsapp:", "");
-        let customer_id_result = resolver
-            .resolve_or_create_customer(&tenant_id, &clean_sender_id, &source)
-            .await;
+        let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &clean_sender_id, &source).await;
         let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
 
         let insert_result = match &state.db.store {
@@ -343,18 +325,9 @@ pub async fn twilio_voice_webhook_handler(
         }
     }
 
-    let call_sid = params
-        .get("CallSid")
-        .cloned()
-        .unwrap_or_else(|| "unknown".to_string());
-    let sender_id = params
-        .get("From")
-        .cloned()
-        .unwrap_or_else(|| "unknown".to_string());
-    let to_number = params
-        .get("To")
-        .cloned()
-        .unwrap_or_else(|| "unknown".to_string());
+    let call_sid = params.get("CallSid").cloned().unwrap_or_else(|| "unknown".to_string());
+    let sender_id = params.get("From").cloned().unwrap_or_else(|| "unknown".to_string());
+    let to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
     let speech_result = params.get("SpeechResult").cloned();
 
     let pool = &state.db.pool;
@@ -384,7 +357,7 @@ pub async fn twilio_voice_webhook_handler(
                 Some(id) => id,
                 None => return StatusCode::NOT_FOUND.into_response(),
             }
-        }
+        },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let mut tid = sqlx::query_scalar::<_, String>(
                 "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
@@ -415,20 +388,14 @@ pub async fn twilio_voice_webhook_handler(
 
     let ai_response = if let Some(user_text) = speech_result {
         // Continuing call
-        let session_id = state
-            .voice_sessions
-            .get(&call_sid)
-            .map(|r| r.value().clone())
-            .unwrap_or_else(|| call_sid.clone());
+        let session_id = state.voice_sessions.get(&call_sid).map(|r| r.value().clone()).unwrap_or_else(|| call_sid.clone());
 
         // Log the user's speech
         let inbox_id = Uuid::new_v4().to_string();
         let clean_sender_id = sender_id.replace("whatsapp:", "");
 
         let resolver = IdentityResolver::new(state.db.clone());
-        let customer_id_result = resolver
-            .resolve_or_create_customer(&tenant_id, &clean_sender_id, "voice")
-            .await;
+        let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &clean_sender_id, "voice").await;
         let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
 
         let insert_result = match &state.db.store {
@@ -515,16 +482,10 @@ pub async fn twilio_voice_webhook_handler(
             let _ = orchestrator_clone.dispatch_event(event).await;
         });
 
-        state
-            .voice_router
-            .process_user_input(&session_id, &user_text, &to_number)
-            .await
+        state.voice_router.process_user_input(&session_id, &user_text, &to_number).await
     } else {
         // New call
-        let session_id = state
-            .voice_engine
-            .handle_incoming_call(&tenant_id, &sender_id)
-            .await;
+        let session_id = state.voice_engine.handle_incoming_call(&tenant_id, &sender_id).await;
         state.voice_sessions.insert(call_sid.clone(), session_id);
         "Hello! Thank you for calling. How can I help you today?".to_string()
     };

@@ -1,8 +1,9 @@
-use crate::db::DB;
 use std::sync::Arc;
+use crate::db::DB;
 use std::time::Duration;
 
 use uuid::Uuid;
+
 
 use tokio::time::timeout;
 
@@ -27,14 +28,18 @@ impl ProactiveAnalysisWorker {
 
                 // 1. Get all active tenants
                 let tenants: Vec<String> = match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT id FROM tenants")
-                        .fetch_all(&db.pool)
-                        .await
-                        .unwrap_or_default(),
-                    crate::db::DbStore::Sqlite(_) => sqlx::query_scalar("SELECT id FROM tenants")
-                        .fetch_all(&db.pool)
-                        .await
-                        .unwrap_or_default(),
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_scalar("SELECT id FROM tenants")
+                            .fetch_all(&db.pool)
+                            .await
+                            .unwrap_or_default()
+                    },
+                    crate::db::DbStore::Sqlite(_) => {
+                        sqlx::query_scalar("SELECT id FROM tenants")
+                            .fetch_all(&db.pool)
+                            .await
+                            .unwrap_or_default()
+                    }
                 };
 
                 for tenant_id in tenants {
@@ -99,10 +104,7 @@ impl ProactiveAnalysisWorker {
 
                     // Only proceed if we have something interesting
                     if unconfirmed_bookings > 0 || unfulfilled_orders > 0 {
-                        let prompt = format!(
-                            "You are the Proactive Context Agent for a business owner. They have {} unconfirmed bookings and {} unfulfilled pending orders from the last 7 days. Give me a short, friendly message highlighting this anomaly and suggesting what they should do next, and output a JSON array of 1 possible action with a 'type' (e.g. 'DraftFollowups' or 'SendReminders') and 'payload' (a short description of the action). Example output format: {{\"message\": \"...\", \"actions\": [{{\"type\": \"...\", \"payload\": \"...\"}}]}}",
-                            unconfirmed_bookings, unfulfilled_orders
-                        );
+                        let prompt = format!("You are the Proactive Context Agent for a business owner. They have {} unconfirmed bookings and {} unfulfilled pending orders from the last 7 days. Give me a short, friendly message highlighting this anomaly and suggesting what they should do next, and output a JSON array of 1 possible action with a 'type' (e.g. 'DraftFollowups' or 'SendReminders') and 'payload' (a short description of the action). Example output format: {{\"message\": \"...\", \"actions\": [{{\"type\": \"...\", \"payload\": \"...\"}}]}}", unconfirmed_bookings, unfulfilled_orders);
 
                         let mut attempts = 0;
                         let mut ai_response = String::new();
@@ -124,28 +126,24 @@ impl ProactiveAnalysisWorker {
                                 Ok(Ok(content)) => {
                                     ai_response = content;
                                     break;
-                                }
+                                },
                                 _ => {
                                     attempts += 1;
-                                    tokio::time::sleep(std::time::Duration::from_secs(
-                                        2u64.pow(attempts as u32),
-                                    ))
-                                    .await;
+                                    tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
                                 }
                             }
                         }
 
                         if ai_response.is_empty() {
                             let task_id = Uuid::new_v4().to_string();
-                            let _context_message =
-                                "System is paused. Please manually check business performance.";
+                            let _context_message = "System is paused. Please manually check business performance.";
                             match &db.store {
                                 crate::db::DbStore::Postgres => {
                                     let _ = sqlx::query(
                                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(&task_id).bind(&tenant_id).bind("business_advisory").bind(serde_json::json!({"description": "AI Agent Paused: The Advisor"})).bind(serde_json::json!({"proposed_content": "System is paused. Please manually check business performance."})).bind("PAUSED")
                                     .execute(&db.pool).await;
-                                }
+                                },
                                 crate::db::DbStore::Sqlite(_) => {
                                     let _ = sqlx::query(
                                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
@@ -182,17 +180,11 @@ impl ProactiveAnalysisWorker {
                         if !ai_response.is_empty() {
                             // Extract JSON from response (naive extraction, assume the agent returns mostly JSON)
                             let json_start = ai_response.find('{').unwrap_or(0);
-                            let json_end =
-                                ai_response.rfind('}').unwrap_or(ai_response.len() - 1) + 1;
+                            let json_end = ai_response.rfind('}').unwrap_or(ai_response.len() - 1) + 1;
                             if json_start < json_end {
                                 let json_str = &ai_response[json_start..json_end];
-                                if let Ok(parsed) =
-                                    serde_json::from_str::<serde_json::Value>(json_str)
-                                {
-                                    let context_message = parsed
-                                        .get("message")
-                                        .and_then(|m| m.as_str())
-                                        .unwrap_or("You have some items needing attention.");
+                                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json_str) {
+                                    let context_message = parsed.get("message").and_then(|m| m.as_str()).unwrap_or("You have some items needing attention.");
                                     let task_id = Uuid::new_v4().to_string();
 
                                     match &db.store {
@@ -208,7 +200,7 @@ impl ProactiveAnalysisWorker {
                                             .bind("pending")
                                             .execute(&db.pool)
                                             .await;
-                                        }
+                                        },
                                         crate::db::DbStore::Sqlite(_) => {
                                             let _ = sqlx::query(
                                                 "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?)"
@@ -224,18 +216,10 @@ impl ProactiveAnalysisWorker {
                                         }
                                     }
 
-                                    if let Some(actions) =
-                                        parsed.get("actions").and_then(|a| a.as_array())
-                                    {
+                                    if let Some(actions) = parsed.get("actions").and_then(|a| a.as_array()) {
                                         if let Some(first_action) = actions.first() {
-                                            let action_type = first_action
-                                                .get("type")
-                                                .and_then(|t| t.as_str())
-                                                .unwrap_or("Review");
-                                            let action_payload = first_action
-                                                .get("payload")
-                                                .and_then(|p| p.as_str())
-                                                .unwrap_or("");
+                                            let action_type = first_action.get("type").and_then(|t| t.as_str()).unwrap_or("Review");
+                                            let action_payload = first_action.get("payload").and_then(|p| p.as_str()).unwrap_or("");
 
                                             match &db.store {
                                                 crate::db::DbStore::Postgres => {
@@ -249,7 +233,7 @@ impl ProactiveAnalysisWorker {
                                                     .bind(action_payload)
                                                     .execute(&db.pool)
                                                     .await;
-                                                }
+                                                },
                                                 crate::db::DbStore::Sqlite(_) => {
                                                     let _ = sqlx::query(
                                                         "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"

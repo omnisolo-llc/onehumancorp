@@ -1,7 +1,7 @@
-use crate::db::DB;
-use sqlx::Row;
 use std::sync::Arc;
 use tokio::time::Duration;
+use crate::db::DB;
+use sqlx::Row;
 use uuid::Uuid;
 
 pub struct MessageTriageWorker {
@@ -57,8 +57,7 @@ impl MessageTriageWorker {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
-                    let payload: serde_json::Value = serde_json::from_str(&payload_str)
-                        .unwrap_or_else(|_| serde_json::json!({}));
+                    let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
 
                     sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = NOW() WHERE id = $1")
                         .bind(&id)
@@ -70,7 +69,7 @@ impl MessageTriageWorker {
                 };
                 tx.commit().await.map_err(|e| e.to_string())?;
                 res
-            }
+            },
             crate::db::DbStore::Sqlite(pool) => {
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
                 let row = sqlx::query(
@@ -90,8 +89,7 @@ impl MessageTriageWorker {
                     let id: String = r.get("id");
                     let tenant_id: String = r.get("tenant_id");
                     let payload_str: String = r.get("payload");
-                    let payload: serde_json::Value = serde_json::from_str(&payload_str)
-                        .unwrap_or_else(|_| serde_json::json!({}));
+                    let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
 
                     sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(&id)
@@ -107,22 +105,10 @@ impl MessageTriageWorker {
         };
 
         if let Some((job_id, tenant_id, payload)) = job {
-            let message_id = payload
-                .get("message_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let source = payload
-                .get("source")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown");
-            let customer_message = payload
-                .get("content")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let sender_id = payload
-                .get("sender_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown");
+            let message_id = payload.get("message_id").and_then(|v| v.as_str()).unwrap_or("");
+            let source = payload.get("source").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let customer_message = payload.get("content").and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("unknown");
 
             // Extract intent & context using LLM
             let prompt = format!(
@@ -160,16 +146,12 @@ Output JSON format:
                 content: customer_message.to_string(),
             };
 
-            let _omni_result = router.route_and_synthesize(&msg).await.unwrap_or(
-                crate::orchestration::router::DraftReply {
-                    final_draft:
-                        "Thanks for reaching out! We will review this and get back to you soon."
-                            .to_string(),
-                    operations_context: None,
-                    sales_context: None,
-                    customer_context: None,
-                },
-            );
+            let _omni_result = router.route_and_synthesize(&msg).await.unwrap_or(crate::orchestration::router::DraftReply {
+                final_draft: "Thanks for reaching out! We will review this and get back to you soon.".to_string(),
+                operations_context: None,
+                sales_context: None,
+                customer_context: None,
+            });
 
             let mut extracted = serde_json::json!({
                 "priority": "Medium",
@@ -190,73 +172,43 @@ Output JSON format:
                         .as_deref()
                     {
                         Ok("minimax") => {
-                            let api_key = std::env::var("MINIMAX_API_KEY")
-                                .unwrap_or_else(|_| "fake-key".to_string());
+                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
                             if !api_key.is_empty() {
-                                crate::minimax::MinimaxClient::new(api_key)
-                                    .reason(&compressed_prompt_clone)
-                                    .await
+                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt_clone).await
                             } else {
-                                crate::minimax::LocalLLMClient::new()
-                                    .reason(&compressed_prompt_clone)
-                                    .await
+                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt_clone).await
                             }
                         }
-                        _ => {
-                            crate::minimax::LocalLLMClient::new()
-                                .reason(&compressed_prompt_clone)
-                                .await
-                        }
+                        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt_clone).await,
                     }
                 };
 
                 match tokio::time::timeout(Duration::from_secs(60), llm_call).await {
                     Ok(Ok(reply)) => {
                         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&reply) {
-                            if parsed.is_object()
-                                && parsed.get("priority").is_some()
-                                && parsed.get("context_summary").is_some()
-                                && parsed.get("action_type").is_some()
-                                && parsed.get("action_payload").is_some()
-                            {
+                            if parsed.is_object() && parsed.get("priority").is_some() && parsed.get("context_summary").is_some() && parsed.get("action_type").is_some() && parsed.get("action_payload").is_some() {
                                 extracted = parsed;
                                 break;
                             }
                         }
                         retry_count += 1;
-                        tracing::warn!(
-                            "LLM returned invalid format in MessageTriageWorker (attempt {}/{})",
-                            retry_count,
-                            max_retries
-                        );
+                        tracing::warn!("LLM returned invalid format in MessageTriageWorker (attempt {}/{})", retry_count, max_retries);
                         if retry_count < max_retries {
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32)))
-                                .await;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
                         }
                     }
                     Ok(Err(e)) => {
                         retry_count += 1;
-                        tracing::warn!(
-                            "LLM error in MessageTriageWorker (attempt {}/{}): {}",
-                            retry_count,
-                            max_retries,
-                            e
-                        );
+                        tracing::warn!("LLM error in MessageTriageWorker (attempt {}/{}): {}", retry_count, max_retries, e);
                         if retry_count < max_retries {
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32)))
-                                .await;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
                         }
                     }
                     Err(_) => {
                         retry_count += 1;
-                        tracing::warn!(
-                            "LLM timeout in MessageTriageWorker (attempt {}/{}): 60s exceeded",
-                            retry_count,
-                            max_retries
-                        );
+                        tracing::warn!("LLM timeout in MessageTriageWorker (attempt {}/{}): 60s exceeded", retry_count, max_retries);
                         if retry_count < max_retries {
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32)))
-                                .await;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
                         }
                     }
                 }
@@ -274,7 +226,7 @@ Output JSON format:
                             .bind(&tenant_id)
                             .execute(&self.db.pool)
                             .await;
-                        }
+                        },
                         crate::db::DbStore::Sqlite(pool) => {
                             let _ = sqlx::query(
                                 r#"
@@ -291,18 +243,9 @@ Output JSON format:
                 }
             }
 
-            let priority = extracted
-                .get("priority")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Medium");
-            let feature_type = extracted
-                .get("feature_type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("general");
-            let context_summary = extracted
-                .get("context_summary")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Customer inquiry");
+            let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");
+            let feature_type = extracted.get("feature_type").and_then(|v| v.as_str()).unwrap_or("general");
+            let context_summary = extracted.get("context_summary").and_then(|v| v.as_str()).unwrap_or("Customer inquiry");
 
             // Integrate OmniContextRouter here to get the drafted action payload with sub-agent context
             let router = crate::orchestration::router::OmniContextRouter::new();
@@ -331,7 +274,7 @@ Output JSON format:
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
                             .bind(&job_id)
                             .execute(&self.db.pool).await;
-                    }
+                    },
                     crate::db::DbStore::Sqlite(pool) => {
                         let _ = sqlx::query(
                             r#"
@@ -356,17 +299,13 @@ Output JSON format:
 
             let omni_result = omni_result_res.unwrap();
 
-            let action_type = extracted
-                .get("action_type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Draft Reply");
+            let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
 
             let mut action_payload_str = omni_result.final_draft;
             if action_type == "Draft Quote" || action_type == "Draft Booking" {
                 if let Some(payload) = extracted.get("action_payload") {
                     if payload.is_object() || payload.is_array() {
-                        action_payload_str =
-                            serde_json::to_string(payload).unwrap_or(action_payload_str);
+                        action_payload_str = serde_json::to_string(payload).unwrap_or(action_payload_str);
                     } else if let Some(s) = payload.as_str() {
                         action_payload_str = s.to_string();
                     }
@@ -384,14 +323,8 @@ Output JSON format:
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
             let mut past_orders = String::new();
             if let Some(cid) = customer_id_val {
-                if let Ok(orders) = sqlx::query_as::<_, (f64,)>(
-                    "SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2",
-                )
-                .bind(&tenant_id)
-                .bind(&cid)
-                .fetch_all(&self.db.pool)
-                .await
-                {
+                if let Ok(orders) = sqlx::query_as::<_, (f64,)>("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
+                    .bind(&tenant_id).bind(&cid).fetch_all(&self.db.pool).await {
                     if !orders.is_empty() {
                         past_orders = format!("Returning Customer ({} past orders).", orders.len());
                     }
@@ -404,35 +337,17 @@ Output JSON format:
             let mut booking_id_opt: Option<String> = None;
 
             if action_type == "Draft Booking" {
-                if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(&action_payload)
-                {
+                if let Ok(booking_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                     let draft_booking_id = Uuid::new_v4();
                     booking_id_opt = Some(draft_booking_id.to_string());
-                    let service_id = booking_data
-                        .get("service_id")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("unknown_service");
-                    let start_time_str = booking_data
-                        .get("start_time")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
-                    let end_time_str = booking_data
-                        .get("end_time")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("");
+                    let service_id = booking_data.get("service_id").and_then(|v| v.as_str()).unwrap_or("unknown_service");
+                    let start_time_str = booking_data.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                    let end_time_str = booking_data.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
 
-                    let st = chrono::DateTime::parse_from_rfc3339(start_time_str)
-                        .ok()
-                        .map(|d| d.with_timezone(&chrono::Utc))
-                        .unwrap_or_else(chrono::Utc::now);
-                    let et = chrono::DateTime::parse_from_rfc3339(end_time_str)
-                        .ok()
-                        .map(|d| d.with_timezone(&chrono::Utc))
-                        .unwrap_or_else(chrono::Utc::now);
+                    let st = chrono::DateTime::parse_from_rfc3339(start_time_str).ok().map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(chrono::Utc::now);
+                    let et = chrono::DateTime::parse_from_rfc3339(end_time_str).ok().map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(chrono::Utc::now);
 
-                    let customer_id_uuid = customer_id_val
-                        .and_then(|v| Uuid::parse_str(v).ok())
-                        .unwrap_or_else(Uuid::new_v4);
+                    let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
 
                     match &self.db.store {
                         crate::db::DbStore::Postgres => {
@@ -459,7 +374,7 @@ Output JSON format:
 
                                 let _ = tx.commit().await;
                             }
-                        }
+                        },
                         crate::db::DbStore::Sqlite(sqlite_pool) => {
                             let _ = sqlx::query(
                                 "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
@@ -484,8 +399,7 @@ Output JSON format:
                     }
                 }
             } else if action_type == "Reassign Shift" {
-                if let Ok(_shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload)
-                {
+                if let Ok(_shift_data) = serde_json::from_str::<serde_json::Value>(&action_payload) {
                     let draft_shift_id = Uuid::new_v4();
                     booking_id_opt = Some(draft_shift_id.to_string());
                 }
@@ -494,17 +408,9 @@ Output JSON format:
                     let mut modified_quote_data = quote_data.clone();
                     let draft_quote_id = Uuid::new_v4();
                     quote_id_opt = Some(draft_quote_id.to_string());
-                    let total_amount_cents = quote_data
-                        .get("total_amount_cents")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(0);
-                    let required_deposit_cents = quote_data
-                        .get("required_deposit_cents")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(0);
-                    let customer_id_uuid = customer_id_val
-                        .and_then(|v| Uuid::parse_str(v).ok())
-                        .unwrap_or_else(Uuid::new_v4);
+                    let total_amount_cents = quote_data.get("total_amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let required_deposit_cents = quote_data.get("required_deposit_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let customer_id_uuid = customer_id_val.and_then(|v| Uuid::parse_str(v).ok()).unwrap_or_else(Uuid::new_v4);
 
                     match &self.db.store {
                         crate::db::DbStore::Postgres => {
@@ -519,37 +425,19 @@ Output JSON format:
                                 .bind(required_deposit_cents)
                                 .execute(&mut *tx).await;
 
-                                if let Some(items) =
-                                    quote_data.get("line_items").and_then(|v| v.as_array())
-                                {
+                                if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
                                     let mut scope = String::new();
                                     for item in items {
-                                        let desc = item
-                                            .get("description")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("");
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                                         if !scope.is_empty() {
                                             scope.push_str(", ");
                                         }
                                         scope.push_str(desc);
                                         let item_id = Uuid::new_v4();
-                                        let desc = item
-                                            .get("description")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("");
-                                        let price = item
-                                            .get("unit_price_cents")
-                                            .and_then(|v| v.as_i64())
-                                            .unwrap_or(0);
-                                        let qty = item
-                                            .get("quantity")
-                                            .and_then(|v| v.as_i64())
-                                            .unwrap_or(1)
-                                            as i32;
-                                        let is_opt = item
-                                            .get("is_optional")
-                                            .and_then(|v| v.as_bool())
-                                            .unwrap_or(false);
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                        let price = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                        let is_opt = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
                                         let _ = sqlx::query(
                                             "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7)"
                                         )
@@ -565,17 +453,11 @@ Output JSON format:
                                 }
                                 let _ = tx.commit().await;
 
-                                modified_quote_data["price"] =
-                                    serde_json::json!((total_amount_cents as f64) / 100.0);
-                                if let Some(items) =
-                                    quote_data.get("line_items").and_then(|v| v.as_array())
-                                {
+                                modified_quote_data["price"] = serde_json::json!((total_amount_cents as f64) / 100.0);
+                                if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
                                     let mut scope = String::new();
                                     for item in items {
-                                        let desc = item
-                                            .get("description")
-                                            .and_then(|v| v.as_str())
-                                            .unwrap_or("");
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                                         if !scope.is_empty() {
                                             scope.push_str(", ");
                                         }
@@ -584,11 +466,10 @@ Output JSON format:
                                     modified_quote_data["scope"] = serde_json::json!(scope);
                                 }
                                 modified_quote_data["client_name"] = serde_json::json!("Client");
-                                action_payload_str = serde_json::to_string(&modified_quote_data)
-                                    .unwrap_or(action_payload_str);
+                                action_payload_str = serde_json::to_string(&modified_quote_data).unwrap_or(action_payload_str);
                                 action_payload = action_payload_str.clone();
                             }
-                        }
+                        },
                         crate::db::DbStore::Sqlite(sqlite_pool) => {
                             let _ = sqlx::query(
                                 "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, created_at, updated_at) VALUES (?, ?, ?, 'DRAFT', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
@@ -600,26 +481,13 @@ Output JSON format:
                             .bind(required_deposit_cents)
                             .execute(&*sqlite_pool).await;
 
-                            if let Some(items) =
-                                quote_data.get("line_items").and_then(|v| v.as_array())
-                            {
+                            if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
                                 for item in items {
                                     let item_id = Uuid::new_v4();
-                                    let desc = item
-                                        .get("description")
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or("");
-                                    let price = item
-                                        .get("unit_price_cents")
-                                        .and_then(|v| v.as_i64())
-                                        .unwrap_or(0);
-                                    let qty =
-                                        item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1)
-                                            as i32;
-                                    let is_opt = item
-                                        .get("is_optional")
-                                        .and_then(|v| v.as_bool())
-                                        .unwrap_or(false);
+                                    let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                                    let price = item.get("unit_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                                    let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                                    let is_opt = item.get("is_optional").and_then(|v| v.as_bool()).unwrap_or(false);
                                     let _ = sqlx::query(
                                         "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, tenant_id) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)"
                                     )
@@ -634,17 +502,11 @@ Output JSON format:
                                 }
                             }
 
-                            modified_quote_data["price"] =
-                                serde_json::json!((total_amount_cents as f64) / 100.0);
-                            if let Some(items) =
-                                quote_data.get("line_items").and_then(|v| v.as_array())
-                            {
+                            modified_quote_data["price"] = serde_json::json!((total_amount_cents as f64) / 100.0);
+                            if let Some(items) = quote_data.get("line_items").and_then(|v| v.as_array()) {
                                 let mut scope = String::new();
                                 for item in items {
-                                    let desc = item
-                                        .get("description")
-                                        .and_then(|v| v.as_str())
-                                        .unwrap_or("");
+                                    let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
                                     if !scope.is_empty() {
                                         scope.push_str(", ");
                                     }
@@ -653,8 +515,7 @@ Output JSON format:
                                 modified_quote_data["scope"] = serde_json::json!(scope);
                             }
                             modified_quote_data["client_name"] = serde_json::json!("Client");
-                            action_payload_str = serde_json::to_string(&modified_quote_data)
-                                .unwrap_or(action_payload_str);
+                            action_payload_str = serde_json::to_string(&modified_quote_data).unwrap_or(action_payload_str);
                             action_payload = action_payload_str.clone();
                         }
                     }
@@ -679,26 +540,21 @@ Output JSON format:
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
 
+
+
                     // Implement proper Redis locking to prevent race conditions during thread/triage updates
                     let redis_lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
                     let mut _lock_conn = None;
                     if let Some(client) = crate::get_redis_client() {
                         if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                             use redis::AsyncCommands;
-                            let lock_acquired: Result<bool, _> =
-                                conn.set_nx(&redis_lock_key, "locked").await;
+                            let lock_acquired: Result<bool, _> = conn.set_nx(&redis_lock_key, "locked").await;
                             if let Ok(true) = lock_acquired {
                                 let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
                                 _lock_conn = Some(conn);
                             } else {
-                                let redacted_redis_lock_key =
-                                    ::server_telemetry::redact_interface_pii(
-                                        serde_json::Value::String(redis_lock_key.clone()),
-                                    );
-                                tracing::warn!(
-                                    "Failed to acquire redis lock for triage updates: {}",
-                                    redacted_redis_lock_key.as_str().unwrap_or("")
-                                ); // pii-safe
+                                let redacted_redis_lock_key = ::server_telemetry::redact_interface_pii(serde_json::Value::String(redis_lock_key.clone()));
+                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redacted_redis_lock_key.as_str().unwrap_or("")); // pii-safe
                             }
                         }
                     }
@@ -796,7 +652,7 @@ Output JSON format:
                     let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
                         .bind(&job_id)
                         .execute(&self.db.pool).await;
-                }
+                },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&action_payload)
@@ -806,17 +662,15 @@ Output JSON format:
                         tracing::error!("Failed to update omni_inbox_messages: {}", e);
                     }
 
-                    if let Err(e) = sqlx::query(
-                        "UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?",
-                    )
-                    .bind(&action_payload)
-                    .bind(&message_id)
-                    .bind(&tenant_id)
-                    .execute(&*sqlite_pool)
-                    .await
-                    {
+                    if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                        .bind(&action_payload)
+                        .bind(&message_id)
+                        .bind(&tenant_id)
+                        .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
+
+
 
                     // Implement proper Redis locking to prevent race conditions during thread/triage updates
                     let redis_lock_key = format!("ohc:lock:{}:triage:{}", tenant_id, message_id);
@@ -824,20 +678,13 @@ Output JSON format:
                     if let Some(client) = crate::get_redis_client() {
                         if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                             use redis::AsyncCommands;
-                            let lock_acquired: Result<bool, _> =
-                                conn.set_nx(&redis_lock_key, "locked").await;
+                            let lock_acquired: Result<bool, _> = conn.set_nx(&redis_lock_key, "locked").await;
                             if let Ok(true) = lock_acquired {
                                 let _: Result<(), _> = conn.expire(&redis_lock_key, 60).await;
                                 _lock_conn = Some(conn);
                             } else {
-                                let redacted_redis_lock_key =
-                                    ::server_telemetry::redact_interface_pii(
-                                        serde_json::Value::String(redis_lock_key.clone()),
-                                    );
-                                tracing::warn!(
-                                    "Failed to acquire redis lock for triage updates: {}",
-                                    redacted_redis_lock_key.as_str().unwrap_or("")
-                                ); // pii-safe
+                                let redacted_redis_lock_key = ::server_telemetry::redact_interface_pii(serde_json::Value::String(redis_lock_key.clone()));
+                                tracing::warn!("Failed to acquire redis lock for triage updates: {}", redacted_redis_lock_key.as_str().unwrap_or("")); // pii-safe
                             }
                         }
                     }

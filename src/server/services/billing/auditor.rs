@@ -1,9 +1,9 @@
-use ::server_pricing::calculator::{self, CostConfig};
-use opentelemetry::KeyValue;
-use opentelemetry::global;
-use opentelemetry::metrics::Counter;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use ::server_pricing::calculator::{self, CostConfig};
+use opentelemetry::global;
+use opentelemetry::metrics::Counter;
+use opentelemetry::KeyValue;
 
 #[derive(Clone)]
 pub struct AuditEvent {
@@ -61,9 +61,7 @@ impl CostAuditor {
         let meter = global::meter("ohc.billing");
         let llm_cost_counter = meter.u64_counter("ohc_llm_cost_total_cents").build();
         let storage_savings_counter = meter.u64_counter("ohc_storage_savings_total_cents").build();
-        let bandwidth_savings_counter = meter
-            .u64_counter("ohc_bandwidth_savings_total_cents")
-            .build();
+        let bandwidth_savings_counter = meter.u64_counter("ohc_bandwidth_savings_total_cents").build();
         let compute_cost_counter = meter.u64_counter("ohc_compute_cost_total_cents").build();
         let api_calls_counter = meter.u64_counter("ohc_api_calls_total").build();
         let email_sends_counter = meter.u64_counter("ohc_email_sends_total").build();
@@ -116,11 +114,7 @@ impl CostAuditor {
             &self.config,
         );
 
-        if event.input_tokens == 0
-            && event.output_tokens == 0
-            && event.cached_input_tokens == 0
-            && event.local_embedding_tokens == 0
-        {
+        if event.input_tokens == 0 && event.output_tokens == 0 && event.cached_input_tokens == 0 && event.local_embedding_tokens == 0 {
             return 0.0;
         }
 
@@ -141,9 +135,7 @@ impl CostAuditor {
 
         // Detect anomalies (Dynamic threshold check)
         let mut cost_history = self.tenant_cost_history.lock().unwrap();
-        let history = cost_history
-            .entry(event.tenant_id.clone())
-            .or_insert_with(Vec::new);
+        let history = cost_history.entry(event.tenant_id.clone()).or_insert_with(Vec::new);
 
         let avg_cost = if history.is_empty() {
             0.0
@@ -152,22 +144,13 @@ impl CostAuditor {
         };
 
         if avg_cost > 0.0 && cost > avg_cost * 3.0 && cost > 0.05 {
-            let msg = format!(
-                "Anomaly detected: High token usage cost (${:.4}) compared to average (${:.4})",
-                cost, avg_cost
-            );
+            let msg = format!("Anomaly detected: High token usage cost (${:.4}) compared to average (${:.4})", cost, avg_cost);
             tracing::warn!("{}", msg); // pii-safe
 
             let mut anomalies = self.tenant_anomalies.lock().unwrap();
-            anomalies
-                .entry(event.tenant_id.clone())
-                .or_insert_with(Vec::new)
-                .push(msg);
+            anomalies.entry(event.tenant_id.clone()).or_insert_with(Vec::new).push(msg);
         } else if cost > 10.0 {
-            tracing::warn!(
-                "Anomaly detected: Extremely high individual token usage cost ({})",
-                cost
-            ); // pii-safe
+             tracing::warn!("Anomaly detected: Extremely high individual token usage cost ({})", cost); // pii-safe
         }
 
         history.push(cost);
@@ -185,16 +168,11 @@ impl CostAuditor {
         *current_tenant_tokens += event.output_tokens + event.input_tokens;
 
         let mut tenant_cached_tokens = self.tenant_cached_tokens.lock().unwrap();
-        let current_tenant_cached_tokens = tenant_cached_tokens
-            .entry(event.tenant_id.clone())
-            .or_insert(0);
+        let current_tenant_cached_tokens = tenant_cached_tokens.entry(event.tenant_id.clone()).or_insert(0);
         *current_tenant_cached_tokens += event.cached_input_tokens;
 
         let cost_cents = (cost * 100.0).round() as u64;
-        self.llm_cost_counter.add(
-            cost_cents,
-            &[KeyValue::new("agent_id", event.agent_id.clone())],
-        );
+        self.llm_cost_counter.add(cost_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         if let Some(tx) = &self.telemetry_tx {
             let _ = tx.send(event.clone());
@@ -242,8 +220,7 @@ impl CostAuditor {
     }
 
     pub fn record_storage_compression(&self, original_bytes: i64, compressed_bytes: i64) -> f64 {
-        let savings =
-            calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
+        let savings = calculator::calculate_storage_savings(original_bytes, compressed_bytes, &self.config);
 
         let mut storage_savings = self.storage_savings.lock().unwrap();
         *storage_savings += savings;
@@ -254,12 +231,7 @@ impl CostAuditor {
         savings
     }
 
-    pub fn record_bandwidth_compression(
-        &self,
-        tenant_id: &str,
-        original_bytes: i64,
-        compressed_bytes: i64,
-    ) -> f64 {
+    pub fn record_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) -> f64 {
         self.record_bandwidth_savings(tenant_id, original_bytes, compressed_bytes)
     }
 
@@ -268,29 +240,18 @@ impl CostAuditor {
         *storage_savings
     }
 
-    pub fn record_bandwidth_savings(
-        &self,
-        tenant_id: &str,
-        original_bytes: i64,
-        compressed_bytes: i64,
-    ) -> f64 {
-        let savings =
-            calculator::calculate_bandwidth_savings(original_bytes, compressed_bytes, &self.config);
+    pub fn record_bandwidth_savings(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) -> f64 {
+        let savings = calculator::calculate_bandwidth_savings(original_bytes, compressed_bytes, &self.config);
 
         let mut bandwidth_savings = self.bandwidth_savings.lock().unwrap();
         *bandwidth_savings += savings;
 
         let mut tenant_bandwidth_savings = self.tenant_bandwidth_savings.lock().unwrap();
-        let current_tenant_savings = tenant_bandwidth_savings
-            .entry(tenant_id.to_string())
-            .or_insert(0.0);
+        let current_tenant_savings = tenant_bandwidth_savings.entry(tenant_id.to_string()).or_insert(0.0);
         *current_tenant_savings += savings;
 
         let savings_cents = (savings * 100.0).round() as u64;
-        self.bandwidth_savings_counter.add(
-            savings_cents,
-            &[KeyValue::new("tenant_id", tenant_id.to_string())],
-        );
+        self.bandwidth_savings_counter.add(savings_cents, &[KeyValue::new("tenant_id", tenant_id.to_string())]);
         savings
     }
 
@@ -316,17 +277,11 @@ impl CostAuditor {
             let storage_bytes = agent_storage_bytes.get(agent_id).unwrap_or(&0);
             let roi = self.calculate_roi(*cost, *revenue);
             let efficiency = self.calculate_efficiency(*cost, *tokens);
-            result.push((
-                agent_id.clone(),
-                *cost,
-                *tokens,
-                roi,
-                efficiency,
-                *storage_bytes,
-            ));
+            result.push((agent_id.clone(), *cost, *tokens, roi, efficiency, *storage_bytes));
         }
         result
     }
+
 
     pub fn record_agent_storage(&self, agent_id: &str, bytes: i64) {
         let mut agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
@@ -349,13 +304,10 @@ impl CostAuditor {
         let counter = calls.entry(tenant_id.to_string()).or_insert(0);
         *counter += 1;
 
-        self.api_calls_counter.add(
-            1,
-            &[
-                opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-                opentelemetry::KeyValue::new("endpoint", endpoint.to_string()),
-            ],
-        );
+        self.api_calls_counter.add(1, &[
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+            opentelemetry::KeyValue::new("endpoint", endpoint.to_string()),
+        ]);
     }
 
     pub fn record_email_send(&self, tenant_id: &str) {
@@ -363,13 +315,9 @@ impl CostAuditor {
         let counter = sends.entry(tenant_id.to_string()).or_insert(0);
         *counter += 1;
 
-        self.email_sends_counter.add(
-            1,
-            &[opentelemetry::KeyValue::new(
-                "tenant_id",
-                tenant_id.to_string(),
-            )],
-        );
+        self.email_sends_counter.add(1, &[
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        ]);
     }
 
     pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
@@ -391,6 +339,7 @@ impl CostAuditor {
         let anomalies = self.tenant_anomalies.lock().unwrap();
         anomalies.get(tenant_id).cloned().unwrap_or_default()
     }
+
 
     pub fn get_cost_per_gb_month(&self) -> f64 {
         self.config.cost_per_gb_month
@@ -465,35 +414,24 @@ impl CostAuditor {
 
         {
             let mut tenant_revenues = self.tenant_revenues.lock().unwrap();
-            let current_tenant_revenue =
-                tenant_revenues.entry(tenant_id.to_string()).or_insert(0.0);
+            let current_tenant_revenue = tenant_revenues.entry(tenant_id.to_string()).or_insert(0.0);
             *current_tenant_revenue += amount;
         }
 
         {
             let mut tenant_payment_fees = self.tenant_payment_fees.lock().unwrap();
-            let current_tenant_fee = tenant_payment_fees
-                .entry(tenant_id.to_string())
-                .or_insert(0.0);
+            let current_tenant_fee = tenant_payment_fees.entry(tenant_id.to_string()).or_insert(0.0);
 
-            use crate::integrations::stripe::routing::{PaymentMethod, PaymentRouter};
+            use crate::integrations::stripe::routing::{PaymentRouter, PaymentMethod};
             let method = PaymentRouter::optimize_payment_method(amount);
 
             let savings = PaymentRouter::calculate_fee_savings(amount);
             if savings > 0.0 {
-                tracing::info!(
-                    "💰 Miser telemetry: Payment method optimized for revenue recording. Saved ${:.2} in fees",
-                    savings
-                );
+                tracing::info!("💰 Miser telemetry: Payment method optimized for revenue recording. Saved ${:.2} in fees", savings);
             }
             let fee = match method {
-                PaymentMethod::Ach => {
-                    (amount * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP)
-                }
-                PaymentMethod::CreditCard
-                | PaymentMethod::Razorpay
-                | PaymentMethod::MercadoPago
-                | PaymentMethod::Alipay => {
+                PaymentMethod::Ach => (amount * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP),
+                PaymentMethod::CreditCard | PaymentMethod::Razorpay | PaymentMethod::MercadoPago | PaymentMethod::Alipay => {
                     (amount * PaymentRouter::CARD_FEE_PERCENTAGE) + PaymentRouter::CARD_FEE_FIXED
                 }
             };
@@ -504,8 +442,7 @@ impl CostAuditor {
 
     pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
         let compute_cost = calculator::calculate_compute_cost(event.compute_hours, &self.config);
-        let network_cost =
-            calculator::calculate_network_cost(event.network_egress_bytes, &self.config);
+        let network_cost = calculator::calculate_network_cost(event.network_egress_bytes, &self.config);
         let total = compute_cost + network_cost;
 
         let mut agent_costs = self.agent_costs.lock().unwrap();
@@ -520,15 +457,11 @@ impl CostAuditor {
         *total_network_cost += network_cost;
 
         let mut tenant_compute_costs = self.tenant_compute_costs.lock().unwrap();
-        let current_tenant_compute = tenant_compute_costs
-            .entry(event.tenant_id.clone())
-            .or_insert(0.0);
+        let current_tenant_compute = tenant_compute_costs.entry(event.tenant_id.clone()).or_insert(0.0);
         *current_tenant_compute += compute_cost;
 
         let mut tenant_network_costs = self.tenant_network_costs.lock().unwrap();
-        let current_tenant_network = tenant_network_costs
-            .entry(event.tenant_id.clone())
-            .or_insert(0.0);
+        let current_tenant_network = tenant_network_costs.entry(event.tenant_id.clone()).or_insert(0.0);
         *current_tenant_network += network_cost;
 
         let mut tenant_costs = self.tenant_costs.lock().unwrap();
@@ -536,10 +469,7 @@ impl CostAuditor {
         *current_tenant_cost += total;
 
         let total_cents = (total * 100.0).round() as u64;
-        self.compute_cost_counter.add(
-            total_cents,
-            &[KeyValue::new("agent_id", event.agent_id.clone())],
-        );
+        self.compute_cost_counter.add(total_cents, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
         total
     }
@@ -557,19 +487,14 @@ impl CostAuditor {
 
         let mut report = format!("Total Cost: ${:.4}\n", *total_cost);
         report += &format!("Total Savings via Caching: ${:.4}\n", *caching_savings);
-        report += &format!(
-            "Total Savings via Storage Compression: ${:.4}\n",
-            *storage_savings
-        );
+        report += &format!("Total Savings via Storage Compression: ${:.4}\n", *storage_savings);
         report += &format!("Total Compute Cost: ${:.4}\n", *total_compute_cost);
-        report += &format!(
-            "Total Bandwidth Savings: ${:.4}\n",
-            *total_bandwidth_savings
-        );
+        report += &format!("Total Bandwidth Savings: ${:.4}\n", *total_bandwidth_savings);
         report += "Agent Costs:
 ";
 
         for (agent_id, cost) in agent_costs.iter() {
+
             let revenue = agent_revenues.get(agent_id).unwrap_or(&0.0);
             let tokens = agent_tokens.get(agent_id).unwrap_or(&0);
 
@@ -581,10 +506,7 @@ impl CostAuditor {
             let budget = agent_budgets.get(agent_id);
             if let Some(budget) = budget {
                 if cost > budget {
-                    report += &format!(
-                        "- {}: ${:.4} (OVER BUDGET){}\n",
-                        agent_id, cost, metrics_str
-                    );
+                    report += &format!("- {}: ${:.4} (OVER BUDGET){}\n", agent_id, cost, metrics_str);
                 } else {
                     report += &format!("- {}: ${:.4}{}\n", agent_id, cost, metrics_str);
                 }
@@ -597,11 +519,8 @@ impl CostAuditor {
         report += "Tenant Costs:
 ";
         for (tenant_id, cost) in tenant_costs.iter() {
-            report += &format!(
-                "- {}: ${:.4}
-",
-                tenant_id, cost
-            );
+            report += &format!("- {}: ${:.4}
+", tenant_id, cost);
         }
 
         report
@@ -650,6 +569,7 @@ mod tests {
             local_embedding_tokens: 0,
         };
 
+
         let cost = auditor.record_event(event);
         assert_eq!(cost, 2.0); // 1000*0.001 + 500*0.002 = 1.0 + 1.0 = 2.0
 
@@ -660,18 +580,12 @@ mod tests {
         assert_eq!(auditor.get_tenant_cost_cents("tenant1"), 200);
         assert_eq!(auditor.get_total_cost_cents(), 200);
         assert_eq!(auditor.get_tenant_revenue("tenant1"), 5.0);
-        assert_eq!(
-            auditor.get_tenant_payment_fees("tenant1"),
-            5.0 * 0.029 + 0.30
-        );
+        assert_eq!(auditor.get_tenant_payment_fees("tenant1"), 5.0 * 0.029 + 0.30);
 
         auditor.record_revenue("agent1", "tenant1", 1000.0);
         assert_eq!(auditor.get_tenant_revenue("tenant1"), 1005.0);
         // $1000 uses ACH: 1000 * 0.008 = 8.0, capped at 5.0 -> fee is 5.0
-        assert_eq!(
-            auditor.get_tenant_payment_fees("tenant1"),
-            (5.0 * 0.029 + 0.30) + 5.0
-        );
+        assert_eq!(auditor.get_tenant_payment_fees("tenant1"), (5.0 * 0.029 + 0.30) + 5.0);
 
         auditor.set_agent_budget("agent1", 1.0);
         assert!(auditor.is_agent_over_budget("agent1"));
@@ -689,12 +603,7 @@ mod tests {
         };
         let auditor = CostAuditor::new(config);
 
-        let cost = auditor.record_compute_event(ComputeEvent {
-            agent_id: "a".to_string(),
-            tenant_id: "t".to_string(),
-            compute_hours: 5.0,
-            network_egress_bytes: 10 * 1024 * 1024 * 1024,
-        });
+        let cost = auditor.record_compute_event(ComputeEvent { agent_id: "a".to_string(), tenant_id: "t".to_string(), compute_hours: 5.0, network_egress_bytes: 10 * 1024 * 1024 * 1024 });
         assert_eq!(cost, 11.0);
 
         assert_eq!(auditor.get_tenant_compute_cost("t"), 10.0);
@@ -808,8 +717,7 @@ mod tests {
 
         let original_bw_bytes = 1024 * 1024 * 1024; // 1 GB
         let compressed_bw_bytes = 512 * 1024 * 1024; // 0.5 GB
-        let bw_savings =
-            auditor.record_bandwidth_savings("tenant1", original_bw_bytes, compressed_bw_bytes);
+        let bw_savings = auditor.record_bandwidth_savings("tenant1", original_bw_bytes, compressed_bw_bytes);
         assert_eq!(bw_savings, 0.05); // 0.5 GB * 0.10
         assert_eq!(auditor.get_tenant_bandwidth_savings("tenant1"), 0.05);
     }
@@ -825,8 +733,7 @@ mod tests {
         let original_bytes = 1024 * 1024 * 1024 * 3; // 3GB
         let compressed_bytes = 1024 * 1024 * 1024 * 1; // 1GB
 
-        let savings =
-            auditor.record_bandwidth_compression("test_tenant", original_bytes, compressed_bytes);
+        let savings = auditor.record_bandwidth_compression("test_tenant", original_bytes, compressed_bytes);
         // (3GB - 1GB) = 2GB saved. 2 * 0.05 = 0.10
         assert_eq!(savings, 0.1);
         assert_eq!(auditor.get_tenant_bandwidth_savings("test_tenant"), 0.1);

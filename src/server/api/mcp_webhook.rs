@@ -1,4 +1,3 @@
-use crate::hub::Hub;
 use axum::{
     extract::{Json, State},
     http::{HeaderMap, StatusCode},
@@ -9,6 +8,7 @@ use serde_json::Value;
 use sqlx::Row;
 use std::collections::BTreeSet;
 use std::sync::Arc;
+use crate::hub::Hub;
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
@@ -29,10 +29,7 @@ mod tests {
             Some("Bearer configured-secret"),
         ));
         assert!(!valid_mcp_webhook_bearer(None, Some("Bearer secret-token")));
-        assert!(!valid_mcp_webhook_bearer(
-            Some(""),
-            Some("Bearer secret-token")
-        ));
+        assert!(!valid_mcp_webhook_bearer(Some(""), Some("Bearer secret-token")));
         assert!(!valid_mcp_webhook_bearer(
             Some("configured-secret"),
             Some("Bearer wrong"),
@@ -41,9 +38,10 @@ mod tests {
 
     #[test]
     fn configured_payments_and_logistics_patterns_resolve_to_route_metadata() {
-        let config =
-            WebhookTunnelConfig::from_spec("payments:stripe,mercadopago;logistics:doordash,shippo")
-                .expect("config should parse");
+        let config = WebhookTunnelConfig::from_spec(
+            "payments:stripe,mercadopago;logistics:doordash,shippo",
+        )
+        .expect("config should parse");
 
         let stripe = config
             .resolve_path("/webhooks/payments/stripe/tunnel-pay-123")
@@ -172,7 +170,9 @@ pub struct WebhookTunnelId(String);
 impl WebhookTunnelId {
     fn parse(raw: &str) -> Result<Self, WebhookTunnelError> {
         let valid_len = (3..=64).contains(&raw.len());
-        let chars_ok = raw.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+        let chars_ok = raw
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-');
         let boundary_ok = raw
             .chars()
             .next()
@@ -215,9 +215,7 @@ impl WebhookTunnelConfig {
     }
 
     pub fn default_patterns() -> Result<Self, WebhookTunnelError> {
-        Self::from_spec(
-            "payments:stripe,mercadopago,razorpay,alipay;logistics:shippo,easypost,doordash",
-        )
+        Self::from_spec("payments:stripe,mercadopago,razorpay,alipay;logistics:shippo,easypost,doordash")
     }
 
     pub fn from_spec(spec: &str) -> Result<Self, WebhookTunnelError> {
@@ -232,11 +230,7 @@ impl WebhookTunnelConfig {
                 .ok_or(WebhookTunnelError::InvalidPattern)?;
             let class = WebhookTunnelClass::parse(class_raw.trim())?;
 
-            for service in services_raw
-                .split(',')
-                .map(str::trim)
-                .filter(|s| !s.is_empty())
-            {
+            for service in services_raw.split(',').map(str::trim).filter(|s| !s.is_empty()) {
                 if upstream_path_for(class, service).is_none() {
                     return Err(WebhookTunnelError::UnsupportedService {
                         class,
@@ -307,9 +301,7 @@ impl WebhookTunnelConfig {
 fn upstream_path_for(class: WebhookTunnelClass, service: &str) -> Option<&'static str> {
     match (class, service) {
         (WebhookTunnelClass::Payments, "stripe") => Some("/api/v1/billing/webhook/stripe"),
-        (WebhookTunnelClass::Payments, "mercadopago") => {
-            Some("/api/v1/billing/webhook/mercadopago")
-        }
+        (WebhookTunnelClass::Payments, "mercadopago") => Some("/api/v1/billing/webhook/mercadopago"),
         (WebhookTunnelClass::Payments, "razorpay") => Some("/api/v1/billing/webhook/razorpay"),
         (WebhookTunnelClass::Payments, "alipay") => Some("/api/v1/billing/webhook/alipay"),
         (WebhookTunnelClass::Logistics, "shippo") => Some("/api/v1/fulfillment/webhook/shippo"),
@@ -319,8 +311,9 @@ fn upstream_path_for(class: WebhookTunnelClass, service: &str) -> Option<&'stati
     }
 }
 
-use crate::agents::mcp::proxy::server::ReverseTunnelServer;
+
 use axum::extract::Path;
+use crate::agents::mcp::proxy::server::ReverseTunnelServer;
 
 use axum::body::Bytes;
 
@@ -330,22 +323,16 @@ pub async fn handle_relay_webhook(
     body: Bytes,
 ) -> impl IntoResponse {
     match server.forward_webhook(&agent_id, body.to_vec()).await {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(McpWebhookResponse {
-                success: true,
-                message: "Webhook forwarded successfully".to_string(),
-            }),
-        ),
+        Ok(_) => (StatusCode::OK, Json(McpWebhookResponse {
+            success: true,
+            message: "Webhook forwarded successfully".to_string(),
+        })),
         Err(e) => {
             tracing::error!("Failed to forward webhook to agent {}: {}", agent_id, e);
-            (
-                StatusCode::NOT_FOUND,
-                Json(McpWebhookResponse {
-                    success: false,
-                    message: "Agent not connected or error forwarding".to_string(),
-                }),
-            )
+            (StatusCode::NOT_FOUND, Json(McpWebhookResponse {
+                success: false,
+                message: "Agent not connected or error forwarding".to_string(),
+            }))
         }
     }
 }
@@ -370,11 +357,12 @@ pub async fn handle_mcp_webhook(
 
     let t_id = payload.task_id;
 
-    let task =
-        sqlx::query("SELECT organization_id, assigned_agent_id FROM shared_tasks WHERE id = $1")
-            .bind(t_id.to_string())
-            .fetch_optional(&hub.pool)
-            .await;
+    let task = sqlx::query(
+        "SELECT organization_id, assigned_agent_id FROM shared_tasks WHERE id = $1",
+    )
+    .bind(t_id.to_string())
+    .fetch_optional(&hub.pool)
+    .await;
 
     match task {
         Ok(Some(task)) => {
@@ -418,13 +406,15 @@ pub async fn handle_mcp_webhook(
                 }),
             )
         }
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            Json(McpWebhookResponse {
-                success: false,
-                message: "Task not found".to_string(),
-            }),
-        ),
+        Ok(None) => {
+            (
+                StatusCode::NOT_FOUND,
+                Json(McpWebhookResponse {
+                    success: false,
+                    message: "Task not found".to_string(),
+                }),
+            )
+        }
         Err(e) => {
             ::server_telemetry::record_error_signal("[bug] Database error fetching MCP task ");
             tracing::error!("Database error fetching MCP task {}: {}", t_id, e);

@@ -20,11 +20,7 @@ impl MercadoPagoClient {
         }
     }
 
-    pub async fn create_checkout_preference(
-        &self,
-        _price_id: &str,
-        _tenant_id: &str,
-    ) -> Result<String, String> {
+    pub async fn create_checkout_preference(&self, _price_id: &str, _tenant_id: &str) -> Result<String, String> {
         if self.access_token.trim().is_empty()
             || self.access_token.contains("test")
             || self.access_token.contains("mock")
@@ -44,9 +40,7 @@ impl MercadoPagoClient {
             ]
         });
 
-        let res = self
-            .http_client
-            .post(url)
+        let res = self.http_client.post(url)
             .bearer_auth(&self.access_token)
             .json(&payload)
             .send()
@@ -56,14 +50,11 @@ impl MercadoPagoClient {
             Ok(resp) => {
                 if resp.status().is_success() {
                     let text = resp.text().await.unwrap_or_default();
-                    let json: serde_json::Value =
-                        serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+                    let json: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
                     json["init_point"]
                         .as_str()
                         .map(|init_point| init_point.to_string())
-                        .ok_or_else(|| {
-                            "Mercado Pago checkout response missing init_point".to_string()
-                        })
+                        .ok_or_else(|| "Mercado Pago checkout response missing init_point".to_string())
                 } else {
                     Err(format!("Mercado Pago API error: {}", resp.status()))
                 }
@@ -79,12 +70,7 @@ impl MercadoPagoClient {
 }
 
 impl MercadoPagoClient {
-    pub async fn create_payment(
-        &self,
-        amount: f64,
-        description: &str,
-        payer_email: &str,
-    ) -> Result<String, String> {
+    pub async fn create_payment(&self, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
         if self.access_token.trim().is_empty()
             || self.access_token.contains("test")
             || self.access_token.contains("mock")
@@ -103,9 +89,7 @@ impl MercadoPagoClient {
             }
         });
 
-        let res = self
-            .http_client
-            .post(url)
+        let res = self.http_client.post(url)
             .bearer_auth(&self.access_token)
             .json(&payload)
             .send()
@@ -115,8 +99,7 @@ impl MercadoPagoClient {
             Ok(resp) => {
                 if resp.status().is_success() {
                     let text = resp.text().await.unwrap_or_default();
-                    let json: serde_json::Value =
-                        serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
+                    let json: serde_json::Value = serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
                     json["id"]
                         .as_i64()
                         .map(|id| id.to_string())
@@ -143,18 +126,14 @@ mod tests {
     #[tokio::test]
     async fn test_mercadopago_client_create_checkout_preference() {
         let client = MercadoPagoClient::new("test_token".to_string());
-        let result = client
-            .create_checkout_preference("price_123", "tenant_123")
-            .await;
+        let result = client.create_checkout_preference("price_123", "tenant_123").await;
         assert_eq!(result.unwrap_err(), "Mercado Pago access token is required");
     }
 
     #[tokio::test]
     async fn test_mercadopago_client_create_payment() {
         let client = MercadoPagoClient::new("test_token".to_string());
-        let result = client
-            .create_payment(100.0, "Test payment", "test@example.com")
-            .await;
+        let result = client.create_payment(100.0, "Test payment", "test@example.com").await;
         assert_eq!(result.unwrap_err(), "Mercado Pago access token is required");
     }
 

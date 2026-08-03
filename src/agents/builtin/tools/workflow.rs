@@ -1,7 +1,4 @@
-use crate::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use crate::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::json;
 use std::sync::Arc;
@@ -107,8 +104,7 @@ impl WorkflowExecutor {
              Keep only actionable findings. Return a concise verified finding list plus rejected-findings notes.\n\n{}",
             task, shard_bundle
         );
-        let verification =
-            run_builtin_agent(self.runner.clone(), &verification_prompt, false).await?;
+        let verification = run_builtin_agent(self.runner.clone(), &verification_prompt, false).await?;
 
         let synthesis_prompt = format!(
             "You are the synthesizer for an OHC built-in agent workflow.\n\
@@ -194,8 +190,7 @@ impl WorkflowExecutor {
              Keep recommendations that are concrete, measurable, and useful to a small business operator. Return verified findings, rejected notes, and missing data.\n\n{}",
             task, shard_bundle
         );
-        let verification =
-            run_builtin_agent(self.runner.clone(), &verification_prompt, true).await?;
+        let verification = run_builtin_agent(self.runner.clone(), &verification_prompt, true).await?;
 
         let synthesis_prompt = format!(
             "You are the operating chief of staff for a small business using OHC agents.\n\
@@ -287,10 +282,7 @@ async fn run_builtin_agent(
         envs.push(("OHC_LLM_TIMEOUT_SECS".to_string(), "180".to_string()));
         envs.push(("OHC_MAX_TOKENS".to_string(), "1200".to_string()));
         if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
-            envs.push((
-                "OHC_AGENT_SPECIALIST_EXIT_HOLD_SECS".to_string(),
-                "20".to_string(),
-            ));
+            envs.push(("OHC_AGENT_SPECIALIST_EXIT_HOLD_SECS".to_string(), "20".to_string()));
         }
     }
 
@@ -370,9 +362,7 @@ mod tests {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         let executor = WorkflowExecutor { runner };
 
-        let result = executor
-            .execute_typed(serde_json::from_value(json!({"workflow": "unknown"})).unwrap())
-            .await;
+        let result = executor.execute_typed(serde_json::from_value(json!({"workflow": "unknown"})).unwrap()).await;
 
         assert!(matches!(result, Err(ToolError::LlmRecoverable(_))));
     }
@@ -396,13 +386,10 @@ mod tests {
         let executor = WorkflowExecutor { runner };
 
         let result = executor
-            .execute_typed(
-                serde_json::from_value(json!({
-                    "workflow": "ohc_review_branch",
-                    "task": "review the branch"
-                }))
-                .unwrap(),
-            )
+            .execute_typed(serde_json::from_value(json!({
+                "workflow": "ohc_review_branch",
+                "task": "review the branch"
+            })).unwrap())
             .await
             .unwrap();
 

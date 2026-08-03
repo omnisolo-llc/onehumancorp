@@ -1,14 +1,14 @@
-use crate::hub::Hub;
-use ::server_ohc::orchestration::ops_service_server::OpsService;
-use ::server_ohc::orchestration::*;
-use ::server_utils::cache::HybridCache;
-use chrono::Utc;
-use std::pin::Pin;
-use std::sync::OnceLock;
-use std::sync::{Arc, RwLock};
-use tokio_stream::Stream;
-use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status};
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::ops_service_server::OpsService;
+use std::sync::{Arc, RwLock};
+use chrono::Utc;
+use crate::hub::Hub;
+use tokio_stream::Stream;
+use std::pin::Pin;
+use tokio_stream::StreamExt;
+use ::server_utils::cache::HybridCache;
+use std::sync::OnceLock;
 
 static INCIDENTS_CACHE: OnceLock<HybridCache<Vec<Incident>>> = OnceLock::new();
 static COMPUTE_PROFILES_CACHE: OnceLock<HybridCache<Vec<ComputeProfile>>> = OnceLock::new();
@@ -49,15 +49,11 @@ impl OpsService for MyOpsService {
         }
 
         let incidents = self.incidents.read().unwrap().clone();
-        cache
-            .set(
-                &cache_key,
-                incidents.clone(),
-                std::time::Duration::from_secs(5),
-            )
-            .await;
+        cache.set(&cache_key, incidents.clone(), std::time::Duration::from_secs(5)).await;
 
-        Ok(Response::new(IncidentsResponse { incidents }))
+        Ok(Response::new(IncidentsResponse {
+            incidents,
+        }))
     }
 
     async fn create_incident(
@@ -66,9 +62,7 @@ impl OpsService for MyOpsService {
     ) -> Result<Response<Incident>, Status> {
         let req = request.into_inner();
         if req.severity.is_empty() || req.summary.is_empty() {
-            return Err(Status::invalid_argument(
-                "severity and summary are required",
-            ));
+            return Err(Status::invalid_argument("severity and summary are required"));
         }
 
         let now = Utc::now();
@@ -136,23 +130,18 @@ impl OpsService for MyOpsService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<ComputeProfilesResponse>, Status> {
         let cache_key = "ops_compute_profiles".to_string();
-        let cache =
-            COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+        let cache = COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         if let Some(profiles) = cache.get(&cache_key).await {
             return Ok(Response::new(ComputeProfilesResponse { profiles }));
         }
 
         let profiles = self.compute_profiles.read().unwrap().clone();
-        cache
-            .set(
-                &cache_key,
-                profiles.clone(),
-                std::time::Duration::from_secs(3600),
-            )
-            .await;
+        cache.set(&cache_key, profiles.clone(), std::time::Duration::from_secs(3600)).await;
 
-        Ok(Response::new(ComputeProfilesResponse { profiles }))
+        Ok(Response::new(ComputeProfilesResponse {
+            profiles,
+        }))
     }
 
     async fn create_compute_profile(
@@ -177,8 +166,7 @@ impl OpsService for MyOpsService {
             profiles.push(profile.clone());
         }
 
-        let cache =
-            COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+        let cache = COMPUTE_PROFILES_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         cache.invalidate("ops_compute_profiles").await;
 
         Ok(Response::new(profile))
@@ -214,15 +202,11 @@ impl OpsService for MyOpsService {
         }
 
         let alerts = self.budget_alerts.read().unwrap().clone();
-        cache
-            .set(
-                &cache_key,
-                alerts.clone(),
-                std::time::Duration::from_secs(60),
-            )
-            .await;
+        cache.set(&cache_key, alerts.clone(), std::time::Duration::from_secs(60)).await;
 
-        Ok(Response::new(BudgetAlertsResponse { alerts }))
+        Ok(Response::new(BudgetAlertsResponse {
+            alerts,
+        }))
     }
 
     async fn create_budget_alert(
@@ -264,15 +248,11 @@ impl OpsService for MyOpsService {
         }
 
         let pipelines = self.pipelines.read().unwrap().clone();
-        cache
-            .set(
-                &cache_key,
-                pipelines.clone(),
-                std::time::Duration::from_secs(5),
-            )
-            .await;
+        cache.set(&cache_key, pipelines.clone(), std::time::Duration::from_secs(5)).await;
 
-        Ok(Response::new(PipelinesResponse { pipelines }))
+        Ok(Response::new(PipelinesResponse {
+            pipelines,
+        }))
     }
 
     async fn create_pipeline(
@@ -371,14 +351,10 @@ impl OpsService for MyOpsService {
         &self,
         request: Request<ScaleRequest>,
     ) -> Result<Response<ScaleResponse>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
-            .map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() {
-            "system".to_string()
-        } else {
-            tenant_id
-        };
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
 
         let req = request.into_inner();
         if req.role.is_empty() {
@@ -422,9 +398,7 @@ impl OpsService for MyOpsService {
                 if i < idle_agent_ids.len() as i32 {
                     self.hub.fire_agent(&idle_agent_ids[i as usize]).await;
                 } else if (i as usize - idle_agent_ids.len()) < active_agent_ids.len() {
-                    self.hub
-                        .fire_agent(&active_agent_ids[i as usize - idle_agent_ids.len()])
-                        .await;
+                    self.hub.fire_agent(&active_agent_ids[i as usize - idle_agent_ids.len()]).await;
                 }
             }
         }
@@ -436,54 +410,32 @@ impl OpsService for MyOpsService {
         }))
     }
 
-    type StreamScaleEventsStream =
-        Pin<Box<dyn Stream<Item = Result<ScaleEvent, Status>> + Send + 'static>>;
+    type StreamScaleEventsStream = Pin<Box<dyn Stream<Item = Result<ScaleEvent, Status>> + Send + 'static>>;
 
     async fn stream_scale_events(
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<Self::StreamScaleEventsStream>, Status> {
         let events = vec![
-            ScaleEvent {
-                event: "AI Workforce Manager: Reconciling Team Member resource.".to_string(),
-                status: "INFO".to_string(),
-            },
-            ScaleEvent {
-                event: "AI Workforce Manager: Allocating compute profiles...".to_string(),
-                status: "INFO".to_string(),
-            },
-            ScaleEvent {
-                event: "AI Workforce Manager: Provisioning SPIFFE identities...".to_string(),
-                status: "INFO".to_string(),
-            },
-            ScaleEvent {
-                event: "AI Workforce Manager: Integrating with orchestration Hub...".to_string(),
-                status: "INFO".to_string(),
-            },
-            ScaleEvent {
-                event: "AgentHired".to_string(),
-                status: "Ready".to_string(),
-            },
+            ScaleEvent { event: "AI Workforce Manager: Reconciling Team Member resource.".to_string(), status: "INFO".to_string() },
+            ScaleEvent { event: "AI Workforce Manager: Allocating compute profiles...".to_string(), status: "INFO".to_string() },
+            ScaleEvent { event: "AI Workforce Manager: Provisioning SPIFFE identities...".to_string(), status: "INFO".to_string() },
+            ScaleEvent { event: "AI Workforce Manager: Integrating with orchestration Hub...".to_string(), status: "INFO".to_string() },
+            ScaleEvent { event: "AgentHired".to_string(), status: "Ready".to_string() },
         ];
 
         let stream = tokio_stream::iter(events).map(|e| Ok(e));
-        Ok(Response::new(
-            Box::pin(stream) as Self::StreamScaleEventsStream
-        ))
+        Ok(Response::new(Box::pin(stream) as Self::StreamScaleEventsStream))
     }
 
     async fn prune_missions(
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<PruneMissionsResponse>, Status> {
-        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
-            .map_err(|e| Status::unauthenticated(e))?;
+        let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() {
-            "system".to_string()
-        } else {
-            tenant_id
-        };
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
+
 
         let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), org_id);
 
@@ -499,12 +451,12 @@ impl OpsService for MyOpsService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hub::Hub;
     use ::server_ohc::orchestration::{
-        CreateBudgetAlertRequest, CreateComputeProfileRequest, CreateIncidentRequest,
-        CreatePipelineRequest, EmptyRequest, GetClusterStatusRequest, IncidentStatusRequest,
+        EmptyRequest, CreateIncidentRequest, IncidentStatusRequest, CreateComputeProfileRequest,
+        GetClusterStatusRequest, CreateBudgetAlertRequest, CreatePipelineRequest,
         PipelinePromoteRequest, UpdatePipelineStatusRequest,
     };
+    use crate::hub::Hub;
     use std::sync::Arc;
     use tonic::Request;
 
@@ -512,15 +464,10 @@ mod tests {
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(database_url)
-            .await
-            .unwrap();
+            .connect(database_url).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        let db = Arc::new(crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(pool),
-        });
+        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(tx, db.pool.clone()));
@@ -537,18 +484,10 @@ mod tests {
             summary: "Test incident".to_string(),
             rca: "Root cause".to_string(),
         };
-        let res = service
-            .create_incident(Request::new(req))
-            .await
-            .unwrap()
-            .into_inner();
+        let res = service.create_incident(Request::new(req)).await.unwrap().into_inner();
         assert_eq!(res.severity, "HIGH");
 
-        let get_res = service
-            .get_incidents(Request::new(EmptyRequest {}))
-            .await
-            .unwrap()
-            .into_inner();
+        let get_res = service.get_incidents(Request::new(EmptyRequest {})).await.unwrap().into_inner();
         assert_eq!(get_res.incidents.len(), 1);
         assert_eq!(get_res.incidents[0].id, res.id);
     }
@@ -562,11 +501,7 @@ mod tests {
             summary: "Test incident".to_string(),
             rca: "".to_string(),
         };
-        let incident = service
-            .create_incident(Request::new(create_req))
-            .await
-            .unwrap()
-            .into_inner();
+        let incident = service.create_incident(Request::new(create_req)).await.unwrap().into_inner();
 
         let update_req = IncidentStatusRequest {
             incident_id: incident.id.clone(),
@@ -574,11 +509,7 @@ mod tests {
             resolution_plan_id: "plan-1".to_string(),
             rca: "Fixed it".to_string(),
         };
-        let updated = service
-            .update_incident_status(Request::new(update_req))
-            .await
-            .unwrap()
-            .into_inner();
+        let updated = service.update_incident_status(Request::new(update_req)).await.unwrap().into_inner();
         assert_eq!(updated.status, "RESOLVED");
         assert_eq!(updated.resolution_plan_id, "plan-1");
         assert_eq!(updated.rca, "Fixed it");
@@ -594,16 +525,9 @@ mod tests {
             preferred_gpu_type: "A100".to_string(),
             scheduling_priority: 1,
         };
-        service
-            .create_compute_profile(Request::new(req))
-            .await
-            .unwrap();
+        service.create_compute_profile(Request::new(req)).await.unwrap();
 
-        let res = service
-            .get_compute_profiles(Request::new(EmptyRequest {}))
-            .await
-            .unwrap()
-            .into_inner();
+        let res = service.get_compute_profiles(Request::new(EmptyRequest {})).await.unwrap().into_inner();
         assert_eq!(res.profiles.len(), 1);
         assert_eq!(res.profiles[0].role_id, "role-1");
     }
@@ -615,11 +539,7 @@ mod tests {
         let req = GetClusterStatusRequest {
             region: "us-east-1".to_string(),
         };
-        let res = service
-            .get_cluster_status(Request::new(req))
-            .await
-            .unwrap()
-            .into_inner();
+        let res = service.get_cluster_status(Request::new(req)).await.unwrap().into_inner();
         assert_eq!(res.region, "us-east-1");
         assert_eq!(res.status, "healthy");
     }
@@ -635,16 +555,9 @@ mod tests {
             predictive: true,
             forecast_hours: 24,
         };
-        service
-            .create_budget_alert(Request::new(req))
-            .await
-            .unwrap();
+        service.create_budget_alert(Request::new(req)).await.unwrap();
 
-        let res = service
-            .get_budget_alerts(Request::new(EmptyRequest {}))
-            .await
-            .unwrap()
-            .into_inner();
+        let res = service.get_budget_alerts(Request::new(EmptyRequest {})).await.unwrap().into_inner();
         assert_eq!(res.alerts.len(), 1);
         assert_eq!(res.alerts[0].threshold_usd, 100.0);
     }
@@ -658,11 +571,7 @@ mod tests {
             branch: "main".to_string(),
             initiated_by: "user-1".to_string(),
         };
-        let pipeline = service
-            .create_pipeline(Request::new(req))
-            .await
-            .unwrap()
-            .into_inner();
+        let pipeline = service.create_pipeline(Request::new(req)).await.unwrap().into_inner();
         assert_eq!(pipeline.status, "PENDING");
 
         let update_req = UpdatePipelineStatusRequest {
@@ -670,26 +579,15 @@ mod tests {
             status: "STAGING".to_string(),
             staging_url: "https://staging.test".to_string(),
         };
-        service
-            .update_pipeline_status(Request::new(update_req))
-            .await
-            .unwrap();
+        service.update_pipeline_status(Request::new(update_req)).await.unwrap();
 
         let promote_req = PipelinePromoteRequest {
             pipeline_id: pipeline.id.clone(),
         };
-        let promoted = service
-            .promote_pipeline(Request::new(promote_req))
-            .await
-            .unwrap()
-            .into_inner();
+        let promoted = service.promote_pipeline(Request::new(promote_req)).await.unwrap().into_inner();
         assert_eq!(promoted.status, "PROMOTED");
 
-        let get_res = service
-            .get_pipelines(Request::new(EmptyRequest {}))
-            .await
-            .unwrap()
-            .into_inner();
+        let get_res = service.get_pipelines(Request::new(EmptyRequest {})).await.unwrap().into_inner();
         assert_eq!(get_res.pipelines.len(), 1);
     }
 }

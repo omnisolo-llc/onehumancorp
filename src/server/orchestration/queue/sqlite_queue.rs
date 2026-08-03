@@ -1,6 +1,6 @@
 use super::queue::{Job, TaskQueue};
 use async_trait::async_trait;
-use sqlx::{Row, SqlitePool};
+use sqlx::{SqlitePool, Row};
 use std::sync::Arc;
 
 pub struct SQLiteTaskQueue {
@@ -10,23 +10,15 @@ pub struct SQLiteTaskQueue {
 
 impl SQLiteTaskQueue {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
-        Self {
-            pool,
-            mu: tokio::sync::Mutex::new(()),
-        }
+        Self { pool, mu: tokio::sync::Mutex::new(()) }
     }
 }
 
 #[async_trait]
 impl TaskQueue for SQLiteTaskQueue {
-    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
-        if jobs.is_empty() {
-            return Ok(());
-        }
-        ::server_telemetry::record_queue_length_sync(
-            jobs.len() as i32,
-            ::server_telemetry::get_deployment_mode(),
-        );
+async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
+        if jobs.is_empty() { return Ok(()); }
+        ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
@@ -37,10 +29,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
         if !unique_tenants.is_empty() {
             let placeholders: Vec<_> = unique_tenants.iter().map(|_| "?").collect();
-            let count_query = format!(
-                "SELECT tenant_id, COUNT(*) FROM ohc_job_queue WHERE tenant_id IN ({}) AND status = 'PENDING' GROUP BY tenant_id",
-                placeholders.join(",")
-            );
+            let count_query = format!("SELECT tenant_id, COUNT(*) FROM ohc_job_queue WHERE tenant_id IN ({}) AND status = 'PENDING' GROUP BY tenant_id", placeholders.join(","));
 
             let mut q = sqlx::query(&count_query);
             for tenant in &unique_tenants {
@@ -61,9 +50,7 @@ impl TaskQueue for SQLiteTaskQueue {
         // SQLite has a parameter limit (often 32766 or 999). We use a conservative chunk size of 100.
         // 6 parameters per job * 100 = 600 parameters < 999.
         for chunk in jobs.chunks(100) {
-            let mut query_builder = sqlx::QueryBuilder::new(
-                "INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id) ",
-            );
+            let mut query_builder = sqlx::QueryBuilder::new("INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id) ");
             query_builder.push_values(chunk, |mut b, job| {
                 let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
                 let mut next_retry_at = job.next_retry_at;
@@ -73,12 +60,12 @@ impl TaskQueue for SQLiteTaskQueue {
                 }
 
                 b.push_bind(job.id.clone())
-                    .push_bind(job.parent_task_id.clone())
-                    .push_bind(job.job_type.clone())
-                    .push_bind(job.payload.clone())
-                    .push_bind("PENDING")
-                    .push_bind(next_retry_at)
-                    .push_bind(job.tenant_id.clone());
+                 .push_bind(job.parent_task_id.clone())
+                 .push_bind(job.job_type.clone())
+                 .push_bind(job.payload.clone())
+                 .push_bind("PENDING")
+                 .push_bind(next_retry_at)
+                 .push_bind(job.tenant_id.clone());
             });
 
             let query = query_builder.build();
@@ -95,13 +82,11 @@ impl TaskQueue for SQLiteTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
-        let count_row: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM ohc_job_queue WHERE tenant_id = ? AND status = 'PENDING'",
-        )
-        .bind(&job.tenant_id)
-        .fetch_one(&*self.pool)
-        .await
-        .unwrap_or((0,));
+        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE tenant_id = ? AND status = 'PENDING'")
+            .bind(&job.tenant_id)
+            .fetch_one(&*self.pool)
+            .await
+            .unwrap_or((0,));
 
         let mut next_retry_at = job.next_retry_at;
         let bursts_threshold = 10;
@@ -127,12 +112,7 @@ impl TaskQueue for SQLiteTaskQueue {
         Ok(())
     }
 
-    async fn dequeue(
-        &self,
-        roles: Vec<String>,
-        _estimated_vram: i64,
-        _estimated_tokens: i64,
-    ) -> Result<Option<Job>, String> {
+    async fn dequeue(&self, roles: Vec<String>, _estimated_vram: i64, _estimated_tokens: i64) -> Result<Option<Job>, String> {
         if roles.is_empty() {
             return Ok(None);
         }
@@ -142,8 +122,7 @@ impl TaskQueue for SQLiteTaskQueue {
             Ok(guard) => guard,
             Err(_) => {
                 let pg_pool = crate::db::get_pool();
-                let _ =
-                    crate::telemetry::record_sqlite_lock_contention(&pg_pool, "PollTasks").await;
+                let _ = crate::telemetry::record_sqlite_lock_contention(&pg_pool, "PollTasks").await;
                 self.mu.lock().await
             }
         };
@@ -167,67 +146,41 @@ impl TaskQueue for SQLiteTaskQueue {
         }
 
         let start_poll = std::time::Instant::now();
-        let job_opt: Option<sqlx::sqlite::SqliteRow> = tokio::time::timeout(
-            std::time::Duration::from_secs(60),
-            query.fetch_optional(&mut *tx),
-        )
-        .await
-        .map_err(|_| "Timeout fetching job from queue".to_string())?
-        .map_err(|e| e.to_string())?;
+        let job_opt: Option<sqlx::sqlite::SqliteRow> = tokio::time::timeout(std::time::Duration::from_secs(60), query.fetch_optional(&mut *tx)).await.map_err(|_| "Timeout fetching job from queue".to_string())?.map_err(|e| e.to_string())?;
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
-            ::server_telemetry::record_task_claim_contention(
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
         }
 
         if let Some(row) = job_opt {
-            ::server_telemetry::record_queue_length_sync(
-                -1,
-                ::server_telemetry::get_deployment_mode(),
-            );
-            let created_at: chrono::DateTime<chrono::Utc> =
-                match row.try_get::<String, _>("created_at") {
-                    Ok(s) => {
-                        crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now())
-                    }
-                    Err(_) => row
-                        .try_get("created_at")
-                        .unwrap_or_else(|_| chrono::Utc::now()),
-                };
+            ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
+            let created_at: chrono::DateTime<chrono::Utc> = match row.try_get::<String, _>("created_at") {
+                Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                Err(_) => row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
+            };
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(
-                latency,
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_sub_agent_queue_delay(latency, ::server_telemetry::get_deployment_mode());
 
-            let job =
-                Job {
-                    id: row.get("id"),
-                    parent_task_id: row.get("parent_task_id"),
-                    job_type: row.get("job_type"),
-                    payload: row.get("payload"),
-                    status: row.get("status"),
-                    retry_count: row.get("retry_count"),
-                    max_retries: row.get("max_retries"),
-                    next_retry_at: match row.try_get::<String, _>("next_retry_at") {
-                        Ok(s) => crate::db::parse_sqlite_datetime(&s)
-                            .unwrap_or_else(|_| chrono::Utc::now()),
-                        Err(_) => row
-                            .try_get("next_retry_at")
-                            .unwrap_or_else(|_| chrono::Utc::now()),
-                    },
-                    locked_until: row.try_get("locked_until").unwrap_or(None),
-                    created_at,
-                    updated_at: match row.try_get::<String, _>("updated_at") {
-                        Ok(s) => crate::db::parse_sqlite_datetime(&s)
-                            .unwrap_or_else(|_| chrono::Utc::now()),
-                        Err(_) => row
-                            .try_get("updated_at")
-                            .unwrap_or_else(|_| chrono::Utc::now()),
-                    },
-                    tenant_id: row.try_get("tenant_id").unwrap_or_default(),
-                };
+            let job = Job {
+                id: row.get("id"),
+                parent_task_id: row.get("parent_task_id"),
+                job_type: row.get("job_type"),
+                payload: row.get("payload"),
+                status: row.get("status"),
+                retry_count: row.get("retry_count"),
+                max_retries: row.get("max_retries"),
+                next_retry_at: match row.try_get::<String, _>("next_retry_at") {
+                    Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                    Err(_) => row.try_get("next_retry_at").unwrap_or_else(|_| chrono::Utc::now()),
+                },
+                locked_until: row.try_get("locked_until").unwrap_or(None),
+                created_at,
+                updated_at: match row.try_get::<String, _>("updated_at") {
+                    Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                    Err(_) => row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
+                },
+                tenant_id: row.try_get("tenant_id").unwrap_or_default(),
+            };
 
             sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                 .bind(&job.id)
@@ -251,34 +204,18 @@ impl TaskQueue for SQLiteTaskQueue {
             .map_err(|e| e.to_string())?;
 
         if let Some(r) = row {
-            ::server_telemetry::record_queue_length_sync(
-                -1,
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             use sqlx::Row;
-            let updated: chrono::DateTime<chrono::Utc> = match r.try_get::<String, _>("updated_at")
-            {
-                Ok(s) => {
-                    crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now())
-                }
-                Err(_) => r
-                    .try_get("updated_at")
-                    .unwrap_or_else(|_| chrono::Utc::now()),
+            let updated: chrono::DateTime<chrono::Utc> = match r.try_get::<String, _>("updated_at") {
+                Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                Err(_) => r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
             };
-            let next_retry_at: chrono::DateTime<chrono::Utc> =
-                match r.try_get::<String, _>("next_retry_at") {
-                    Ok(s) => {
-                        crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now())
-                    }
-                    Err(_) => r
-                        .try_get("next_retry_at")
-                        .unwrap_or_else(|_| chrono::Utc::now()),
-                };
+            let next_retry_at: chrono::DateTime<chrono::Utc> = match r.try_get::<String, _>("next_retry_at") {
+                Ok(s) => crate::db::parse_sqlite_datetime(&s).unwrap_or_else(|_| chrono::Utc::now()),
+                Err(_) => r.try_get("next_retry_at").unwrap_or_else(|_| chrono::Utc::now()),
+            };
             let latency = (updated - next_retry_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_task_processing_latency(
-                ::server_telemetry::get_deployment_mode(),
-                latency,
-            );
+            ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
         }
         Ok(())
     }
@@ -286,13 +223,11 @@ impl TaskQueue for SQLiteTaskQueue {
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(
-            "SELECT retry_count, max_retries, tenant_id, payload FROM ohc_job_queue WHERE id = ?",
-        )
-        .bind(job_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+        let row = sqlx::query("SELECT retry_count, max_retries, tenant_id, payload FROM ohc_job_queue WHERE id = ?")
+            .bind(job_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         if let Some(r) = row {
             let current_retry_count: i32 = r.try_get("retry_count").unwrap_or(0);
@@ -341,8 +276,7 @@ impl TaskQueue for SQLiteTaskQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_next_retry_at =
-                    chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
+                let new_next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
                 sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = ?, next_retry_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(next_attempt)
                     .bind(new_next_retry_at)

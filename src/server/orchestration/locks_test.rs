@@ -1,4 +1,4 @@
-use super::locks::{DistributedLock, RedisLock, StandaloneLock};
+use super::locks::{StandaloneLock, DistributedLock, RedisLock};
 
 #[tokio::test]
 async fn test_standalone_lock_acquire() {
@@ -20,10 +20,7 @@ async fn test_acquire_resource_standalone_lock() {
     let resource_type = "inventory";
     let resource_id = "item-123";
 
-    let mut _guard1 = lock
-        .acquire_resource(tenant_id, resource_type, resource_id)
-        .await
-        .unwrap();
+    let mut _guard1 = lock.acquire_resource(tenant_id, resource_type, resource_id).await.unwrap();
 
     // The resource should be locked
     let lock_clone = lock.local_locks.lock().await;
@@ -36,8 +33,7 @@ async fn test_acquire_resource_standalone_lock() {
 
 #[tokio::test]
 async fn test_redis_lock_guard_drop_safety() {
-    let redis_url =
-        std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
     let client = match redis::Client::open(redis_url.clone()) {
         Ok(c) => c,
         Err(_) => return,
@@ -54,50 +50,25 @@ async fn test_redis_lock_guard_drop_safety() {
     let key = format!("ohc:lock:task:{}", task_id);
 
     // Clean up before test
-    let _: () = redis::cmd("DEL")
-        .arg(&key)
-        .query_async(&mut conn)
-        .await
-        .unwrap();
+    let _: () = redis::cmd("DEL").arg(&key).query_async(&mut conn).await.unwrap();
 
     let mut guard = lock.acquire(task_id).await.unwrap();
 
     // Verify it is locked in Redis
-    let val1: Option<String> = redis::cmd("GET")
-        .arg(&key)
-        .query_async(&mut conn)
-        .await
-        .unwrap();
+    let val1: Option<String> = redis::cmd("GET").arg(&key).query_async(&mut conn).await.unwrap();
     assert!(val1.is_some(), "Lock should be set");
 
     // Simulate lock expiration and another process acquiring it by manually overwriting the key
     let other_val = "other_process_uuid";
-    let _: () = redis::cmd("SET")
-        .arg(&key)
-        .arg(other_val)
-        .query_async(&mut conn)
-        .await
-        .unwrap();
+    let _: () = redis::cmd("SET").arg(&key).arg(other_val).query_async(&mut conn).await.unwrap();
 
     // Now drop the guard. It should try to delete the lock, but fail because the value doesn't match
     guard.release().await;
 
     // Verify the other process's lock is still there
-    let val2: Option<String> = redis::cmd("GET")
-        .arg(&key)
-        .query_async(&mut conn)
-        .await
-        .unwrap();
-    assert_eq!(
-        val2.unwrap(),
-        other_val,
-        "Lock should not be deleted by the expired guard"
-    );
+    let val2: Option<String> = redis::cmd("GET").arg(&key).query_async(&mut conn).await.unwrap();
+    assert_eq!(val2.unwrap(), other_val, "Lock should not be deleted by the expired guard");
 
     // Clean up after test
-    let _: () = redis::cmd("DEL")
-        .arg(&key)
-        .query_async(&mut conn)
-        .await
-        .unwrap();
+    let _: () = redis::cmd("DEL").arg(&key).query_async(&mut conn).await.unwrap();
 }

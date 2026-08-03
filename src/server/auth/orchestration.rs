@@ -1,6 +1,6 @@
+use tonic::{Request, Status};
 use super::parse_spiffe_id;
 use ::server_ohc::orchestration::*;
-use tonic::{Request, Status};
 
 #[derive(Debug, Clone)]
 pub struct AuthInfo {
@@ -10,9 +10,7 @@ pub struct AuthInfo {
 }
 
 pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
-    let spiffe_id_str = req
-        .metadata()
-        .get("x-spiffe-id")
+    let spiffe_id_str = req.metadata().get("x-spiffe-id")
         .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
         .to_str()
         .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?
@@ -33,34 +31,19 @@ pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
 pub fn authorize_register_agent(auth: &AuthInfo, req: &RegisterAgentRequest) -> Result<(), Status> {
     if let Some(agent) = &req.agent {
         if auth.agent_id != agent.id {
-            return Err(Status::permission_denied(format!(
-                "SPIFFE ID {} cannot register agent {}",
-                auth.spiffe_id, agent.id
-            )));
+            return Err(Status::permission_denied(format!("SPIFFE ID {} cannot register agent {}", auth.spiffe_id, agent.id)));
         }
-        if !auth.org_id.is_empty()
-            && !agent.organization_id.is_empty()
-            && auth.org_id != agent.organization_id
-        {
-            return Err(Status::permission_denied(format!(
-                "SPIFFE ID {} cannot register into organization {}",
-                auth.spiffe_id, agent.organization_id
-            )));
+        if !auth.org_id.is_empty() && !agent.organization_id.is_empty() && auth.org_id != agent.organization_id {
+            return Err(Status::permission_denied(format!("SPIFFE ID {} cannot register into organization {}", auth.spiffe_id, agent.organization_id)));
         }
     }
     Ok(())
 }
 
-pub fn authorize_publish_message(
-    auth: &AuthInfo,
-    req: &PublishMessageRequest,
-) -> Result<(), Status> {
+pub fn authorize_publish_message(auth: &AuthInfo, req: &PublishMessageRequest) -> Result<(), Status> {
     if let Some(msg) = &req.message {
         if auth.agent_id != msg.from_agent {
-            return Err(Status::permission_denied(format!(
-                "SPIFFE ID {} cannot publish as agent {}",
-                auth.spiffe_id, msg.from_agent
-            )));
+            return Err(Status::permission_denied(format!("SPIFFE ID {} cannot publish as agent {}", auth.spiffe_id, msg.from_agent)));
         }
     }
     Ok(())
@@ -68,30 +51,21 @@ pub fn authorize_publish_message(
 
 pub fn authorize_delegate_task(auth: &AuthInfo, req: &DelegateTaskRequest) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
-        return Err(Status::permission_denied(format!(
-            "SPIFFE ID {} cannot delegate task as agent {}",
-            auth.spiffe_id, req.from_agent_id
-        )));
+        return Err(Status::permission_denied(format!("SPIFFE ID {} cannot delegate task as agent {}", auth.spiffe_id, req.from_agent_id)));
     }
     Ok(())
 }
 
 pub fn authorize_sub_task(auth: &AuthInfo, req: &SubTask) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
-        return Err(Status::permission_denied(format!(
-            "SPIFFE ID {} cannot delegate subtask as agent {}",
-            auth.spiffe_id, req.from_agent_id
-        )));
+        return Err(Status::permission_denied(format!("SPIFFE ID {} cannot delegate subtask as agent {}", auth.spiffe_id, req.from_agent_id)));
     }
     Ok(())
 }
 
 pub fn authorize_reason_request(auth: &AuthInfo, req: &ReasonRequest) -> Result<(), Status> {
     if auth.agent_id != req.from_agent_id {
-        return Err(Status::permission_denied(format!(
-            "SPIFFE ID {} cannot request reasoning as agent {}",
-            auth.spiffe_id, req.from_agent_id
-        )));
+        return Err(Status::permission_denied(format!("SPIFFE ID {} cannot request reasoning as agent {}", auth.spiffe_id, req.from_agent_id)));
     }
     Ok(())
 }
@@ -99,10 +73,7 @@ pub fn authorize_reason_request(auth: &AuthInfo, req: &ReasonRequest) -> Result<
 pub fn authorize_open_meeting(auth: &AuthInfo, req: &OpenMeetingRequest) -> Result<(), Status> {
     let found = req.participants.iter().any(|p| p == &auth.agent_id);
     if !found {
-        return Err(Status::permission_denied(format!(
-            "SPIFFE ID {} cannot open a meeting without being a participant",
-            auth.spiffe_id
-        )));
+        return Err(Status::permission_denied(format!("SPIFFE ID {} cannot open a meeting without being a participant", auth.spiffe_id)));
     }
     Ok(())
 }

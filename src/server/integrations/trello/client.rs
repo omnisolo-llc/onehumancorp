@@ -78,7 +78,11 @@ impl TrelloClient {
     }
 
     fn api_url(&self, path: &str) -> String {
-        format!("{}{}", self.base_url.trim_end_matches('/'), path)
+        format!(
+            "{}{}",
+            self.base_url.trim_end_matches('/'),
+            path
+        )
     }
 
     fn validate_credentials(&self) -> Result<(), String> {
@@ -105,9 +109,7 @@ impl TrelloClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!(
-                "Trello API error fetching boards: {status} - {body}"
-            ));
+            return Err(format!("Trello API error fetching boards: {status} - {body}"));
         }
         resp.json::<Vec<TrelloBoard>>()
             .await
@@ -129,9 +131,7 @@ impl TrelloClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!(
-                "Trello API error fetching lists: {status} - {body}"
-            ));
+            return Err(format!("Trello API error fetching lists: {status} - {body}"));
         }
         resp.json::<Vec<TrelloList>>()
             .await
@@ -153,9 +153,7 @@ impl TrelloClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!(
-                "Trello API error fetching cards: {status} - {body}"
-            ));
+            return Err(format!("Trello API error fetching cards: {status} - {body}"));
         }
         resp.json::<Vec<TrelloCard>>()
             .await
@@ -245,7 +243,11 @@ impl TrelloClient {
             .map_err(|e| format!("Failed to parse update card response: {e}"))
     }
 
-    pub async fn move_card(&self, card_id: &str, list_id: &str) -> Result<TrelloCard, String> {
+    pub async fn move_card(
+        &self,
+        card_id: &str,
+        list_id: &str,
+    ) -> Result<TrelloCard, String> {
         self.validate_credentials()?;
         let url = self.api_url(&format!(
             "/cards/{}?idList={}&key={}&token={}",
@@ -304,9 +306,7 @@ impl TrelloClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().await.unwrap_or_default();
-            return Err(format!(
-                "Trello API error fetching labels: {status} - {body}"
-            ));
+            return Err(format!("Trello API error fetching labels: {status} - {body}"));
         }
         resp.json::<Vec<TrelloLabel>>()
             .await
@@ -321,7 +321,9 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_mock_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
+    async fn start_mock_server(
+        response_body: &'static str,
+    ) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -339,7 +341,8 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) =
+                        request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -367,9 +370,7 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx
-                .send(String::from_utf8(request).unwrap())
-                .unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
         });
 
         (base_url, request_rx)
@@ -608,8 +609,11 @@ mod tests {
     async fn credentials_validation_rejects_empty_token() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
-        let client =
-            TrelloClient::with_base_url_for_test("test-key".to_string(), "".to_string(), base_url);
+        let client = TrelloClient::with_base_url_for_test(
+            "test-key".to_string(),
+            "".to_string(),
+            base_url,
+        );
 
         let err = client.get_boards().await.unwrap_err();
         assert!(err.contains("Trello API key and token are required"));

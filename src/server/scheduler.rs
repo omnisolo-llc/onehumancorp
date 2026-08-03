@@ -1,7 +1,7 @@
-use chrono::{DateTime, Duration, Utc};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
+use chrono::{DateTime, Utc, Duration};
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TaskStatus {
@@ -74,21 +74,14 @@ impl Scheduler {
 
     pub fn list_for_org(&self, org_id: &str) -> Vec<Task> {
         let tasks = self.tasks.read().unwrap();
-        tasks
-            .values()
-            .filter(|t| t.organization_id == org_id)
-            .cloned()
-            .collect()
+        tasks.values().filter(|t| t.organization_id == org_id).cloned().collect()
     }
 
     pub fn poll_due(&self) -> Vec<Task> {
         let tasks = self.tasks.read().unwrap();
         let now = Utc::now();
-        tasks
-            .values()
-            .filter(|t| {
-                t.status == TaskStatus::Pending && t.next_run_at.map_or(false, |at| at < now)
-            })
+        tasks.values()
+            .filter(|t| t.status == TaskStatus::Pending && t.next_run_at.map_or(false, |at| at < now))
             .cloned()
             .collect()
     }

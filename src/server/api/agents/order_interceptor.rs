@@ -1,12 +1,13 @@
-use ::server_common::Claims;
 use axum::{
-    Json,
     extract::{Extension, State},
     http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool};
+use ::server_common::Claims;
+use sqlx::{PgPool, FromRow};
+
 
 #[derive(Debug, Deserialize)]
 pub struct InterceptOrderRequest {
@@ -59,12 +60,10 @@ pub async fn intercept_order_handler(
 }
 
 async fn get_tenant_language(pool: &PgPool, tenant_id: &str) -> Result<String, sqlx::Error> {
-    let row = sqlx::query_as::<_, TenantLanguage>(
-        "SELECT language_preference FROM tenants WHERE id = $1",
-    )
-    .bind(tenant_id)
-    .fetch_one(pool)
-    .await?;
+    let row = sqlx::query_as::<_, TenantLanguage>("SELECT language_preference FROM tenants WHERE id = $1")
+        .bind(tenant_id)
+        .fetch_one(pool)
+        .await?;
     Ok(row.language_preference)
 }
 
@@ -86,9 +85,7 @@ pub async fn intercept_order(
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY")
                 .map_err(|_| "MINIMAX_API_KEY is required".to_string())?;
-            crate::minimax::MinimaxClient::new(api_key)
-                .reason(&prompt)
-                .await
+            crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
         }
         _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
     }?;
@@ -100,12 +97,8 @@ fn parse_intercepted_order(raw: &str) -> Result<InterceptedOrder, String> {
     let value: serde_json::Value = match serde_json::from_str(raw) {
         Ok(value) => value,
         Err(_) => {
-            let start = raw
-                .find('{')
-                .ok_or_else(|| "missing JSON object".to_string())?;
-            let end = raw
-                .rfind('}')
-                .ok_or_else(|| "missing JSON object".to_string())?;
+            let start = raw.find('{').ok_or_else(|| "missing JSON object".to_string())?;
+            let end = raw.rfind('}').ok_or_else(|| "missing JSON object".to_string())?;
             serde_json::from_str(&raw[start..=end])
                 .map_err(|e| format!("failed to parse JSON: {e}"))?
         }

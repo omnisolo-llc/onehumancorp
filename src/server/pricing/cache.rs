@@ -1,6 +1,6 @@
-use crate::compression;
-use dashmap::DashMap;
 use std::time::{Duration, Instant};
+use dashmap::DashMap;
+use crate::compression;
 
 #[derive(Debug, Clone)]
 pub struct CacheEntry {
@@ -23,7 +23,7 @@ impl LocalEmbeddingCache {
     }
 
     fn hash_prompt(&self, prompt: &str) -> String {
-        use sha2::{Digest, Sha256};
+        use sha2::{Sha256, Digest};
         let mut hasher = Sha256::new();
         hasher.update(prompt.as_bytes());
         hex::encode(hasher.finalize())
@@ -44,21 +44,16 @@ impl LocalEmbeddingCache {
     pub fn set(&self, prompt: &str, response: &str) {
         let key = self.hash_prompt(prompt);
         let now = Instant::now();
-        self.entries.insert(
-            key,
-            CacheEntry {
-                response: response.to_string(),
-                created_at: now,
-                expires_at: now + self.ttl,
-            },
-        );
+        self.entries.insert(key, CacheEntry {
+            response: response.to_string(),
+            created_at: now,
+            expires_at: now + self.ttl,
+        });
     }
 
     pub fn prune(&self) -> usize {
         let now = Instant::now();
-        let expired_keys: Vec<String> = self
-            .entries
-            .iter()
+        let expired_keys: Vec<String> = self.entries.iter()
             .filter(|entry| now > entry.value().expires_at)
             .map(|entry| entry.key().clone())
             .collect();
@@ -86,7 +81,7 @@ impl CompressedEmbeddingCache {
     }
 
     fn hash_prompt(&self, prompt: &str) -> String {
-        use sha2::{Digest, Sha256};
+        use sha2::{Sha256, Digest};
         let mut hasher = Sha256::new();
         hasher.update(prompt.as_bytes());
         hex::encode(hasher.finalize())
@@ -116,14 +111,11 @@ impl CompressedEmbeddingCache {
 
         match compression::compress_lossless(response) {
             Ok(compressed) => {
-                self.entries.insert(
-                    key,
-                    CacheEntry {
-                        response: compressed,
-                        created_at: now,
-                        expires_at: now + self.ttl,
-                    },
-                );
+                self.entries.insert(key, CacheEntry {
+                    response: compressed,
+                    created_at: now,
+                    expires_at: now + self.ttl,
+                });
             }
             Err(e) => {
                 tracing::error!("Failed to compress cache response: {}", e);
@@ -133,9 +125,7 @@ impl CompressedEmbeddingCache {
 
     pub fn prune(&self) -> usize {
         let now = Instant::now();
-        let expired_keys: Vec<String> = self
-            .entries
-            .iter()
+        let expired_keys: Vec<String> = self.entries.iter()
             .filter(|entry| now > entry.value().expires_at)
             .map(|entry| entry.key().clone())
             .collect();

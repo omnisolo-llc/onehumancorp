@@ -1,8 +1,8 @@
 use axum::{
     extract::Request,
-    http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
+    http::StatusCode,
 };
 use serde_json::json;
 
@@ -31,12 +31,10 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
     // Some routes are explicitly public, we can whitelist them or just rely on Claims presence
     let path = req.uri().path();
     if is_auth_bypass_path(path) {
-        return next.run(req).await;
+         return next.run(req).await;
     }
 
-    let tenant_id_opt = req
-        .extensions()
-        .get::<::server_common::Claims>()
+    let tenant_id_opt = req.extensions().get::<::server_common::Claims>()
         .and_then(|c| c.organization_id.clone());
 
     if let Some(tenant_id) = tenant_id_opt {
@@ -44,14 +42,13 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
             // For now, allow "system" or empty for backwards compatibility in standalone mode
             // or if it's explicitly needed, but the design doc says reject.
             if is_multitenant_mode() {
-                return (
+                 return (
                     StatusCode::FORBIDDEN,
                     axum::Json(json!({
                         "error": "FORBIDDEN",
                         "message": "Invalid or system tenant context."
-                    })),
-                )
-                    .into_response();
+                    }))
+                ).into_response();
             }
         }
 
@@ -61,10 +58,8 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
                 for part in query_str.split('&') {
                     let mut kv = part.splitn(2, '=');
                     if let (Some(k), Some(v)) = (kv.next(), kv.next()) {
-                        let decoded_k =
-                            ::urlencoding::decode(k).unwrap_or(std::borrow::Cow::Borrowed(k));
-                        let decoded_v =
-                            ::urlencoding::decode(v).unwrap_or(std::borrow::Cow::Borrowed(v));
+                        let decoded_k = ::urlencoding::decode(k).unwrap_or(std::borrow::Cow::Borrowed(k));
+                        let decoded_v = ::urlencoding::decode(v).unwrap_or(std::borrow::Cow::Borrowed(v));
                         if decoded_k == "tenant_id" || decoded_k == "tenant" {
                             if !decoded_v.trim().is_empty() && decoded_v.trim() != tenant_id {
                                 return (
@@ -72,9 +67,8 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
                                     axum::Json(json!({
                                         "error": "FORBIDDEN",
                                         "message": "Tenant mismatch."
-                                    })),
-                                )
-                                    .into_response();
+                                    }))
+                                ).into_response();
                             }
                         }
                     }
@@ -93,9 +87,8 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
             axum::Json(json!({
                 "error": "UNAUTHORIZED",
                 "message": "Missing tenant context."
-            })),
-        )
-            .into_response();
+            }))
+        ).into_response();
     }
 }
 
@@ -103,13 +96,13 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
 mod tests {
     use super::*;
     use axum::{
-        Router,
         body::Body,
         http::{Request, StatusCode},
         routing::get,
+        Router,
     };
-    use serde_json::Value;
     use tower::ServiceExt; // for `oneshot`
+    use serde_json::Value;
 
     async fn dummy_handler() -> &'static str {
         "ok"
@@ -208,9 +201,7 @@ mod tests {
         let response = app.oneshot(req).await.unwrap();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let json: Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(json["error"], "UNAUTHORIZED");
     }
@@ -286,7 +277,6 @@ mod tests {
 
             let response2 = app.clone().oneshot(req2).await.unwrap();
             assert_eq!(response2.status(), StatusCode::FORBIDDEN);
-        })
-        .await;
+        }).await;
     }
 }

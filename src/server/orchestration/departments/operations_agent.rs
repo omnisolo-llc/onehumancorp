@@ -1,9 +1,5 @@
-use crate::orchestration::departments::orchestrator::{
-    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
-};
-use crate::orchestration::departments::types::{
-    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
-};
+use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
+use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 
 pub struct OperationsAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -36,22 +32,15 @@ impl Department for OperationsAgent {
             "tenant.quote.requires_scheduling".to_string(),
             "tenant.omnichannel.message.received".to_string(),
             "agent:operations:approved".to_string(),
-            "tenant.pricing.updated".to_string(),
-        ]
+
+            "tenant.pricing.updated".to_string(),]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+
         if event.event_type == "tenant.booking.reschedule_requested" {
-            let message = event
-                .payload
-                .get("message")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let booking_id = event
-                .payload
-                .get("booking_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let booking_id = event.payload.get("booking_id").and_then(|v| v.as_str()).unwrap_or("");
 
             // Simple NLP parser using LLM
             let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
@@ -65,39 +54,26 @@ impl Department for OperationsAgent {
 
             let mut new_time = String::new();
             if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&llm_res) {
-                new_time = parsed
-                    .get("proposed_start_time")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("")
-                    .to_string();
+                new_time = parsed.get("proposed_start_time").and_then(|v| v.as_str()).unwrap_or("").to_string();
             }
 
             if !new_time.is_empty() {
-                let _ = self
-                    .orchestrator
-                    .execute_action(
-                        DepartmentType::Operations,
-                        format!("Reschedule booking {} to {}", booking_id, new_time),
-                        event.tenant_id.clone(),
-                        ActionRisk::DraftForReview,
-                        serde_json::json!({
-                            "booking_id": booking_id,
-                            "new_start_time": new_time,
-                            "feature_type": "reschedule_draft"
-                        }),
-                    )
-                    .await;
+                 let _ = self.orchestrator.execute_action(
+                     DepartmentType::Operations,
+                     format!("Reschedule booking {} to {}", booking_id, new_time),
+                     event.tenant_id.clone(),
+                     ActionRisk::DraftForReview,
+                     serde_json::json!({
+                         "booking_id": booking_id,
+                         "new_start_time": new_time,
+                         "feature_type": "reschedule_draft"
+                     })
+                 ).await;
             }
             return Ok(());
         }
-        if event.event_type == "tenant.inventory.updated"
-            || event.event_type == "tenant.pricing.updated"
-        {
-            let product_id = event
-                .payload
-                .get("product_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+                        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
 
             let mut tags = vec![format!("tenant-id:{}", event.tenant_id)];
             if !product_id.is_empty() {
@@ -112,42 +88,24 @@ impl Department for OperationsAgent {
             if let Some(redis_client) = crate::get_redis_client() {
                 if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
                     use redis::AsyncCommands;
-                    let _: Result<(), _> = conn
-                        .publish("cache_invalidation_events", invalidation_event.to_string())
-                        .await;
+                    let _: Result<(), _> = conn.publish("cache_invalidation_events", invalidation_event.to_string()).await;
                 }
             } else {
                 // Fallback to local cache service invalidation if Redis isn't configured
                 let cache = crate::builder::edge::get_edge_cache();
-                cache
-                    .invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id))
-                    .await;
+                cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
                 let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn_cache
-                    .invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id))
-                    .await;
+                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
                 if !product_id.is_empty() {
-                    cache
-                        .invalidate_by_tag(&format!("entity:product:{}", product_id))
-                        .await;
-                    cdn_cache
-                        .invalidate_by_tag(&format!("entity:product:{}", product_id))
-                        .await;
+                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                 }
             }
         }
 
         if event.event_type == "voice.intent.synced" {
-            let transcription = event
-                .payload
-                .get("transcription")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Unknown transcription");
-            tracing::info!(
-                "Operations Agent: Parsing voice intent from offline queue for tenant {}: {}",
-                event.tenant_id,
-                transcription
-            );
+            let transcription = event.payload.get("transcription").and_then(|v| v.as_str()).unwrap_or("Unknown transcription");
+            tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
             // Log intent to memory
             let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
@@ -190,84 +148,37 @@ impl Department for OperationsAgent {
         }
 
         if event.event_type == "tenant.quote.requires_scheduling" {
-            let preferred_time = event
-                .payload
-                .get("preferred_time")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let service_name = event
-                .payload
-                .get("service_name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Service");
-            let _price = event
-                .payload
-                .get("price")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.0);
+            let preferred_time = event.payload.get("preferred_time").and_then(|v| v.as_str()).unwrap_or("");
+            let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
+            let _price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
             // In a real implementation this would check capacity using DB/Redis,
             // For this task we acquire a tentative lock representing the held slot.
-            if let Ok(true) = self
-                .orchestrator
-                .mesh()
-                .acquire_lock(
-                    &format!("ohc:lock:booking_slot:{}", preferred_time),
-                    "operations_agent",
-                    600,
-                )
-                .await
-            {
-                tracing::info!(
-                    "Operations Agent: Locked slot {} for {}",
-                    preferred_time,
-                    service_name
-                );
-                let action_description = format!(
-                    "Tentatively locked slot {} for quote on {}",
-                    preferred_time, service_name
-                );
-                let _ = self
-                    .orchestrator
-                    .execute_action(
-                        DepartmentType::Operations,
-                        action_description,
-                        event.tenant_id.clone(),
-                        ActionRisk::AutoExecute,
-                        event.payload.clone(),
-                    )
-                    .await;
+            if let Ok(true) = self.orchestrator.mesh().acquire_lock(&format!("ohc:lock:booking_slot:{}", preferred_time), "operations_agent", 600).await {
+                tracing::info!("Operations Agent: Locked slot {} for {}", preferred_time, service_name);
+                let action_description = format!("Tentatively locked slot {} for quote on {}", preferred_time, service_name);
+                let _ = self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    action_description,
+                    event.tenant_id.clone(),
+                    ActionRisk::AutoExecute,
+                    event.payload.clone(),
+                ).await;
             } else {
-                tracing::warn!(
-                    "Operations Agent: Failed to lock slot {} for {}. It might be taken.",
-                    preferred_time,
-                    service_name
-                );
+                tracing::warn!("Operations Agent: Failed to lock slot {} for {}. It might be taken.", preferred_time, service_name);
             }
             return Ok(());
         }
 
         if event.event_type == "tenant.omnichannel.message.received" {
-            let message = event
-                .payload
-                .get("original_message")
+            let message = event.payload.get("original_message")
                 .or_else(|| event.payload.get("message"))
                 .or_else(|| event.payload.get("content"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let sender_id = event
-                .payload
-                .get("sender_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+                .and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
 
             // Simple intent parse for sick/call-out
             let msg_lower = message.to_lowercase();
-            if msg_lower.contains("sick")
-                || msg_lower.contains("call out")
-                || msg_lower.contains("can't make it")
-                || msg_lower.contains("can't make my shift")
-                || msg_lower.contains("not feeling well")
-            {
+            if msg_lower.contains("sick") || msg_lower.contains("call out") || msg_lower.contains("can't make it") || msg_lower.contains("can't make my shift") || msg_lower.contains("not feeling well") {
                 // Check if sender is staff
                 let pool = crate::db::get_pool();
                 let staff_res: Result<(String, String, String), sqlx::Error> = sqlx::query_as("SELECT id, name, role FROM ohc_staff_member WHERE tenant_id = $1 AND phone_number = $2 LIMIT 1")
@@ -292,10 +203,7 @@ impl Department for OperationsAgent {
                             .bind(&staff_id)
                             .fetch_one(&pool).await;
 
-                        let mut action_desc = format!(
-                            "{} called out sick for their upcoming shift. We don't have an available replacement.",
-                            staff_name
-                        );
+                        let mut action_desc = format!("{} called out sick for their upcoming shift. We don't have an available replacement.", staff_name);
                         let mut action_payload = serde_json::json!({
                             "feature_type": "shift_reassignment",
                             "shift_id": shift_id,
@@ -304,10 +212,7 @@ impl Department for OperationsAgent {
                         });
 
                         if let Ok((rep_id, rep_name)) = replacement_res {
-                            action_desc = format!(
-                                "{} called out sick for their shift. {} is available, hasn't reached overtime, and has {} skills. Reassign shift to {}?",
-                                staff_name, rep_name, role, rep_name
-                            );
+                            action_desc = format!("{} called out sick for their shift. {} is available, hasn't reached overtime, and has {} skills. Reassign shift to {}?", staff_name, rep_name, role, rep_name);
                             action_payload = serde_json::json!({
                                 "feature_type": "shift_reassignment",
                                 "shift_id": shift_id,
@@ -319,16 +224,13 @@ impl Department for OperationsAgent {
                             });
                         }
 
-                        let _ = self
-                            .orchestrator
-                            .execute_action(
-                                DepartmentType::Operations,
-                                action_desc,
-                                event.tenant_id.clone(),
-                                ActionRisk::DraftForReview,
-                                action_payload,
-                            )
-                            .await;
+                        let _ = self.orchestrator.execute_action(
+                            DepartmentType::Operations,
+                            action_desc,
+                            event.tenant_id.clone(),
+                            ActionRisk::DraftForReview,
+                            action_payload,
+                        ).await;
                         return Ok(());
                     }
                 }
@@ -339,18 +241,9 @@ impl Department for OperationsAgent {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
                     if feature_type == "shift_reassignment" {
-                        let shift_id = payload
-                            .get("shift_id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        let proposed_staff_id = payload
-                            .get("proposed_staff_id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        let _proposed_staff_name = payload
-                            .get("proposed_staff_name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
+                        let shift_id = payload.get("shift_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let proposed_staff_id = payload.get("proposed_staff_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let _proposed_staff_name = payload.get("proposed_staff_name").and_then(|v| v.as_str()).unwrap_or("");
 
                         if !shift_id.is_empty() && !proposed_staff_id.is_empty() {
                             let pool = crate::db::get_pool();
@@ -389,41 +282,21 @@ impl Department for OperationsAgent {
         }
 
         if event.event_type == "POS_SALE_COMPLETED" {
-            tracing::info!(
-                "Operations Agent: Handling POS sale completion for tenant {}",
-                event.tenant_id
-            ); // pii-safe
+            tracing::info!("Operations Agent: Handling POS sale completion for tenant {}", event.tenant_id); // pii-safe
 
             // Check if stock is depleted to trigger a restock notification
-            let stock_remaining = event
-                .payload
-                .get("stock_remaining")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
-            let product_name = event
-                .payload
-                .get("product_name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Item");
+            let stock_remaining = event.payload.get("stock_remaining").and_then(|v| v.as_i64()).unwrap_or(0);
+            let product_name = event.payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("Item");
 
             if stock_remaining <= 0 {
-                let msg = format!(
-                    "{} sold out. Would you like to draft a restock order?",
-                    product_name
-                );
+                let msg = format!("{} sold out. Would you like to draft a restock order?", product_name);
                 let _ = self.orchestrator.notify_owner(&event.tenant_id, &msg).await;
             }
             return Ok(());
         }
 
-        if event.event_type == "tenant.inventory.updated"
-            || event.event_type == "tenant.pricing.updated"
-        {
-            let product_id = event
-                .payload
-                .get("product_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+                        if event.event_type == "tenant.inventory.updated" || event.event_type == "tenant.pricing.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
 
             let mut tags = vec![format!("tenant-id:{}", event.tenant_id)];
             if !product_id.is_empty() {
@@ -438,27 +311,17 @@ impl Department for OperationsAgent {
             if let Some(redis_client) = crate::get_redis_client() {
                 if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
                     use redis::AsyncCommands;
-                    let _: Result<(), _> = conn
-                        .publish("cache_invalidation_events", invalidation_event.to_string())
-                        .await;
+                    let _: Result<(), _> = conn.publish("cache_invalidation_events", invalidation_event.to_string()).await;
                 }
             } else {
                 // Fallback to local cache service invalidation if Redis isn't configured
                 let cache = crate::builder::edge::get_edge_cache();
-                cache
-                    .invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id))
-                    .await;
+                cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
                 let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn_cache
-                    .invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id))
-                    .await;
+                cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
                 if !product_id.is_empty() {
-                    cache
-                        .invalidate_by_tag(&format!("entity:product:{}", product_id))
-                        .await;
-                    cdn_cache
-                        .invalidate_by_tag(&format!("entity:product:{}", product_id))
-                        .await;
+                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                 }
             }
         }
@@ -476,11 +339,7 @@ impl Department for OperationsAgent {
 
         let action_description = match event.event_type.as_str() {
             "tenant.booking.request_received" => {
-                let start_time = event
-                    .payload
-                    .get("start_time")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let start_time = event.payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
                 let lock_key = format!("ohc:lock:{}:booking_slot:{}", event.tenant_id, start_time);
 
                 // Redlock the slot for 10 minutes to prevent double booking during quote generation
@@ -517,17 +376,13 @@ impl Department for OperationsAgent {
                 } else {
                     return Err("Redis not available".to_string());
                 }
-            }
+            },
 
             "tenant.booking.confirmed" => {
                 let pool = crate::db::get_pool();
                 // We just confirmed a booking. Let's do nightly/daily routing simulation
                 // by generating an optimized service route for today or tomorrow.
-                let staff_id = event
-                    .payload
-                    .get("staff_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let staff_id = event.payload.get("staff_id").and_then(|v| v.as_str()).unwrap_or("");
 
                 // We'll mock geographical clustering by taking pending appointments and generating a route.
                 // For this agentic action, we just trigger DB insertion.
@@ -535,12 +390,10 @@ impl Department for OperationsAgent {
                 let route_date = chrono::Utc::now().date_naive();
 
                 // Find staff_profile_id. Fallback to a seeded one if possible.
-                let staff_profile_id = match sqlx::query_scalar::<_, String>(
-                    "SELECT id FROM staff_profiles WHERE tenant_id = $1 LIMIT 1",
-                )
-                .bind(&event.tenant_id)
-                .fetch_optional(&pool)
-                .await
+                let staff_profile_id = match sqlx::query_scalar::<_, String>("SELECT id FROM staff_profiles WHERE tenant_id = $1 LIMIT 1")
+                    .bind(&event.tenant_id)
+                    .fetch_optional(&pool)
+                    .await
                 {
                     Ok(Some(id)) => id,
                     _ => staff_id.to_string(), // use whatever provided
@@ -563,7 +416,7 @@ impl Department for OperationsAgent {
                         SELECT id FROM appointments
                         WHERE tenant_id = $1 AND DATE(scheduled_start_time) = $2
                         ORDER BY scheduled_start_time ASC
-                        "#,
+                        "#
                     )
                     .bind(&event.tenant_id)
                     .bind(route_date)
@@ -590,222 +443,109 @@ impl Department for OperationsAgent {
 
                     "Operations Agent grouped today's confirmed bookings into an optimized geographic Service Route.".to_string()
                 } else {
-                    "Operations Agent could not generate a route due to missing staff profiles."
-                        .to_string()
+                    "Operations Agent could not generate a route due to missing staff profiles.".to_string()
                 }
-            }
+            },
 
             "tenant.order.created" => {
-                let notes = event
-                    .payload
-                    .get("notes")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let notes = event.payload.get("notes").and_then(|v| v.as_str()).unwrap_or("");
                 if !notes.is_empty() {
                     // Extract tenant language preference here if available, defaulting to English/Arabic for now.
-                    format!(
-                        "Translate order notes to the tenant's preferred language for the kitchen: {}",
-                        notes
-                    )
+                    format!("Translate order notes to the tenant's preferred language for the kitchen: {}", notes)
                 } else {
                     "Process Order & Update Inventory".to_string()
                 }
-            }
+            },
             "tenant.order.updated" => {
-                let status = event
-                    .payload
-                    .get("status")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                let order_id = event
-                    .payload
-                    .get("order_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("unknown");
+                let status = event.payload.get("status").and_then(|v| v.as_str()).unwrap_or("");
+                let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                 if status == "Ready" {
-                    format!(
-                        "Notify customer that order {} is ready for pickup via SMS/WhatsApp",
-                        order_id
-                    )
+                    format!("Notify customer that order {} is ready for pickup via SMS/WhatsApp", order_id)
                 } else {
                     format!("Order {} status updated to {}", order_id, status)
                 }
-            }
+            },
             "LowStockAlert" => {
-                let _product_id = event
-                    .payload
-                    .get("product_id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("unknown");
-                let remaining_stock = event
-                    .payload
-                    .get("remaining_stock")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(0);
-                let _msg = event
-                    .payload
-                    .get("message")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let _product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                let _msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
-                let product_name = event
-                    .payload
-                    .get("product_title")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("unknown item");
+                let product_name = event.payload.get("product_title").and_then(|v| v.as_str()).unwrap_or("unknown item");
 
                 // Enrich payload with Quartermaster agent supply order details
                 let mut new_payload = event.payload.clone();
                 if let Some(obj) = new_payload.as_object_mut() {
-                    obj.insert(
-                        "feature_type".to_string(),
-                        serde_json::json!("supply_order"),
-                    );
-                    obj.insert(
-                        "vendor_name".to_string(),
-                        serde_json::json!("Local Supplier"),
-                    );
-                    obj.insert(
-                        "vendor_contact".to_string(),
-                        serde_json::json!("Sam (WhatsApp)"),
-                    );
+                    obj.insert("feature_type".to_string(), serde_json::json!("supply_order"));
+                    obj.insert("vendor_name".to_string(), serde_json::json!("Local Supplier"));
+                    obj.insert("vendor_contact".to_string(), serde_json::json!("Sam (WhatsApp)"));
                     obj.insert("est_runout_days".to_string(), serde_json::json!(2));
-                    obj.insert(
-                        "suggested_reorder_quantity".to_string(),
-                        serde_json::json!(500),
-                    );
-                    obj.insert(
-                        "draft_message".to_string(),
-                        serde_json::json!(format!(
-                            "Hi Sam, please send 500 more {} to the Main St location.",
-                            product_name
-                        )),
-                    );
+                    obj.insert("suggested_reorder_quantity".to_string(), serde_json::json!(500));
+                    obj.insert("draft_message".to_string(), serde_json::json!(format!("Hi Sam, please send 500 more {} to the Main St location.", product_name)));
                     if remaining_stock == 0 {
-                        obj.insert(
-                            "description".to_string(),
-                            serde_json::json!(format!(
-                                "{} sold out. Would you like to draft a restock order?",
-                                product_name
-                            )),
-                        );
+                        obj.insert("description".to_string(), serde_json::json!(format!("{} sold out. Would you like to draft a restock order?", product_name)));
                     } else {
-                        obj.insert(
-                            "description".to_string(),
-                            serde_json::json!(format!(
-                                "Supply Alert: {} running low. Order drafted.",
-                                product_name
-                            )),
-                        );
+                        obj.insert("description".to_string(), serde_json::json!(format!("Supply Alert: {} running low. Order drafted.", product_name)));
                     }
                 }
 
                 let desc = if remaining_stock == 0 {
-                    format!(
-                        "{} sold out. Would you like to draft a restock order?",
-                        product_name
-                    )
+                    format!("{} sold out. Would you like to draft a restock order?", product_name)
                 } else {
                     format!("Supply Alert: {} running low. Order drafted.", product_name)
                 };
 
                 // Trigger push notification directly for owner visibility
-                let _ = self
-                    .orchestrator
-                    .notify_owner(&event.tenant_id, &desc)
-                    .await;
+                let _ = self.orchestrator.notify_owner(&event.tenant_id, &desc).await;
 
-                return self
-                    .orchestrator
-                    .execute_action(
-                        DepartmentType::Operations,
-                        desc,
-                        event.tenant_id.clone(),
-                        risk,
-                        new_payload,
-                    )
-                    .await
-                    .map(|_| ());
-            }
+                return self.orchestrator.execute_action(
+                    DepartmentType::Operations,
+                    desc,
+                    event.tenant_id.clone(),
+                    risk,
+                    new_payload,
+                ).await.map(|_| ());
+            },
             "inventory.sync.conflict" => {
-                let msg = event
-                    .payload
-                    .get("message")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let msg = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 if msg.contains("Operations has drafted an email to the online customer") {
                     msg.to_string()
                 } else {
-                    let transaction_id = event
-                        .payload
-                        .get("transaction_id")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("unknown");
-                    let product_id = event
-                        .payload
-                        .get("product_id")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("unknown");
-                    let expected = event
-                        .payload
-                        .get("expected_stock")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(0);
-                    let actual = event
-                        .payload
-                        .get("actual_stock")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(0);
+                    let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                    let expected = event.payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let actual = event.payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                     let deficit = expected - actual; // e.g. quantity_deducted if offline stock was 0, but actually pos_sync_worker passes quantity_deducted as expected_stock
 
                     let llm_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    let prompt = format!(
-                        "Context: We have an offline sync conflict. The user tried to sell/deduct {} of item {} but the actual stock is {}. Transaction ID: {}. Please analyze this business conflict. If it can be safely merged (e.g., small negative stock allowed based on typical policies), output exactly 'AUTO_RESOLVE'. Otherwise, formulate a brief, polite question for the business owner to decide how to handle it (e.g. asking to cancel or restock).",
-                        expected, product_id, actual, transaction_id
-                    );
+                    let prompt = format!("Context: We have an offline sync conflict. The user tried to sell/deduct {} of item {} but the actual stock is {}. Transaction ID: {}. Please analyze this business conflict. If it can be safely merged (e.g., small negative stock allowed based on typical policies), output exactly 'AUTO_RESOLVE'. Otherwise, formulate a brief, polite question for the business owner to decide how to handle it (e.g. asking to cancel or restock).", expected, product_id, actual, transaction_id);
 
                     let llm_response = if !llm_key.is_empty() {
                         let llm = crate::minimax::MinimaxClient::new(llm_key);
                         llm.reason(&prompt).await.unwrap_or_else(|_| format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id))
                     } else {
-                        format!(
-                            "We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?",
-                            product_id, deficit, transaction_id
-                        )
+                        format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id)
                     };
 
                     if llm_response.contains("AUTO_RESOLVE") {
                         // Let's create an auto-resolution action
-                        let _ = self
-                            .orchestrator
-                            .execute_action(
-                                DepartmentType::Operations,
-                                format!(
-                                    "Auto-resolving inventory conflict for {} (tx: {})",
-                                    product_id, transaction_id
-                                ),
-                                event.tenant_id.clone(),
-                                ActionRisk::AutoExecute,
-                                event.payload.clone(),
-                            )
-                            .await;
+                        let _ = self.orchestrator.execute_action(
+                            DepartmentType::Operations,
+                            format!("Auto-resolving inventory conflict for {} (tx: {})", product_id, transaction_id),
+                            event.tenant_id.clone(),
+                            ActionRisk::AutoExecute,
+                            event.payload.clone(),
+                        ).await;
                         return Ok(());
                     }
 
                     // Notify customer success to draft a message to the customer
-                    let _ = self
-                        .orchestrator
-                        .execute_action(
-                            DepartmentType::CustomerSuccess,
-                            format!(
-                                "Draft out of stock apology for {} (tx: {})",
-                                product_id, transaction_id
-                            ),
-                            event.tenant_id.clone(),
-                            ActionRisk::DraftForReview,
-                            event.payload.clone(),
-                        )
-                        .await;
+                    let _ = self.orchestrator.execute_action(
+                        DepartmentType::CustomerSuccess,
+                        format!("Draft out of stock apology for {} (tx: {})", product_id, transaction_id),
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        event.payload.clone(),
+                    ).await;
 
                     // Create an actionable task in the owner's Triage Feed asking how to resolve it
                     let pool = crate::db::get_pool();
@@ -818,8 +558,7 @@ impl Department for OperationsAgent {
                         "product_id": product_id,
                         "expected_stock": expected,
                         "actual_stock": actual
-                    })
-                    .to_string();
+                    }).to_string();
 
                     if let Err(e) = sqlx::query(
                         "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'Operations Agent', 'high', $3, 'pending')"
@@ -836,8 +575,7 @@ impl Department for OperationsAgent {
                         "action": "resolve_inventory_conflict",
                         "transaction_id": transaction_id,
                         "product_id": product_id
-                    })
-                    .to_string();
+                    }).to_string();
 
                     if let Err(e) = sqlx::query(
                         "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, 'operations_decision', $4::jsonb)"
@@ -853,7 +591,7 @@ impl Department for OperationsAgent {
 
                     llm_response
                 }
-            }
+            },
             "tenant.subscription.fulfillment_batch.created" => {
                 let batch_id = event
                     .payload
@@ -873,15 +611,13 @@ impl Department for OperationsAgent {
             _ => "Create order and booking".to_string(),
         };
 
-        self.orchestrator
-            .execute_action(
-                DepartmentType::Operations,
-                action_description,
-                event.tenant_id.clone(),
-                risk,
-                event.payload.clone(),
-            )
-            .await?;
+        self.orchestrator.execute_action(
+            DepartmentType::Operations,
+            action_description,
+            event.tenant_id.clone(),
+            risk,
+            event.payload.clone(),
+        ).await?;
 
         if event.event_type == "tenant.subscription.fulfillment_batch.created" {
             return Ok(());
@@ -898,31 +634,16 @@ impl Department for OperationsAgent {
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
-        Some(DepartmentConfig {
-            tone_of_voice: "professional".to_string(),
-            auto_approve_limits: 10.0,
-        })
+        Some(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 10.0 })
     }
+
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
 
-    async fn request_approval(
-        &self,
-        description: String,
-        tenant_id: String,
-        risk: ActionRisk,
-    ) -> Result<ApprovalRequest, String> {
-        self.orchestrator
-            .execute_action(
-                self.department_type(),
-                description.clone(),
-                tenant_id.clone(),
-                risk,
-                serde_json::json!({}),
-            )
-            .await
+    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
+        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
     }
 }
 
@@ -935,6 +656,7 @@ impl BaseAgent for OperationsAgent {
     fn trigger_type(&self) -> AgentTriggerType {
         AgentTriggerType::EventDriven
     }
+
 }
 
 #[cfg(test)]
@@ -1010,11 +732,9 @@ mod tests {
         let orchestrator = test_orchestrator().await;
         let agent = OperationsAgent::new(orchestrator.clone());
 
-        assert!(
-            agent
-                .subscribed_events()
-                .contains(&"tenant.subscription.fulfillment_batch.created".to_string())
-        );
+        assert!(agent
+            .subscribed_events()
+            .contains(&"tenant.subscription.fulfillment_batch.created".to_string()));
 
         let event = DepartmentEvent {
             id: "evt-batch".to_string(),
@@ -1033,11 +753,7 @@ mod tests {
         let approvals = orchestrator.get_activity_feed("tenant-ops", None, 10).await;
         let approval = approvals
             .iter()
-            .find(|approval| {
-                approval
-                    .description
-                    .contains("Prepare subscription fulfillment batch")
-            })
+            .find(|approval| approval.description.contains("Prepare subscription fulfillment batch"))
             .expect("fulfillment batch should create an operations action");
 
         assert_eq!(approval.status, ApprovalStatus::Approved);

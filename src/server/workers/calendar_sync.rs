@@ -1,8 +1,10 @@
+
 use crate::integrations::google_calendar::provider::GoogleCalendarProvider;
 use ::server_common::auth_utils;
-use chrono::{DateTime, Utc};
 use sqlx::Row;
 use std::time::Duration;
+use chrono::{DateTime, Utc};
+
 
 pub async fn run_calendar_sync_worker(redis_client: redis::Client) {
     loop {
@@ -20,7 +22,7 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
 
     // Fetch active calendar integrations
     let rows = sqlx::query(
-        "SELECT id, tenant_id, provider, access_token, sync_metadata FROM calendar_integrations",
+        "SELECT id, tenant_id, provider, access_token, sync_metadata FROM calendar_integrations"
     )
     .fetch_all(&mut *tx)
     .await
@@ -37,9 +39,7 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
 
         if provider == "google_calendar" {
             let lock_key = format!("ohc:lock:{}:calendar_sync", tenant_id);
-            let mut conn = redis_client
-                .get_multiplexed_async_connection()
-                .await
+            let mut conn = redis_client.get_multiplexed_async_connection().await
                 .map_err(|e| format!("Redis conn failed: {}", e))?;
 
             let acquired: bool = redis::cmd("SET")
@@ -86,13 +86,11 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
 
 async fn push_bookings_to_calendar(
     tenant_id: &str,
-    provider_client: &GoogleCalendarProvider,
+    provider_client: &GoogleCalendarProvider
 ) -> Result<(), String> {
     let pool = crate::db::get_pool();
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-    auth_utils::set_org_context(&mut *tx, tenant_id)
-        .await
-        .map_err(|e| e.to_string())?;
+    auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
     // Find unsynced confirmed bookings
     let rows = sqlx::query(
@@ -115,11 +113,8 @@ async fn push_bookings_to_calendar(
         let summary = format!("OHC Booking: {}", booking_id);
 
         // This is a naive sync. Real implementation would check sync_metadata to avoid creating duplicates.
-        if let Err(e) = provider_client
-            .create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339())
-            .await
-        {
-            tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
+        if let Err(e) = provider_client.create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339()).await {
+             tracing::error!("Failed to create event for booking {}: {}", booking_id, e);
         }
     }
 

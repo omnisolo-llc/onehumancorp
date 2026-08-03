@@ -50,6 +50,7 @@ impl SqliteMemoryStore {
         .execute(&pool)
         .await?;
 
+
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS lightweight_index (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -203,26 +204,24 @@ impl LongTermMemory for SqliteMemoryStore {
         }
     }
 
+
     async fn get_lightweight_index(&self) -> Result<String, String> {
-        let rows =
-            sqlx::query_as::<_, (String,)>("SELECT entry FROM lightweight_index ORDER BY id ASC")
-                .fetch_all(&self.pool)
-                .await
-                .map_err(|e| e.to_string())?;
+        let rows = sqlx::query_as::<_, (String,)>("SELECT entry FROM lightweight_index ORDER BY id ASC")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let entries: Vec<String> = rows.into_iter().map(|(entry,)| entry).collect();
         Ok(entries.join("\n"))
     }
 
     fn get_customer_session_summaries<'a>(
+
         &'a self,
         tenant_id: &'a str,
         customer_id: &'a str,
         limit: i64,
-    ) -> crate::langgraph::BoxFuture<
-        'a,
-        Result<Vec<crate::memory_store::AgentSessionSummary>, String>,
-    > {
+    ) -> crate::langgraph::BoxFuture<'a, Result<Vec<crate::memory_store::AgentSessionSummary>, String>> {
         Box::pin(async move {
             let rows = sqlx::query("SELECT id, tenant_id, agent_id, customer_id, session_id, turn_index, summary_embedding, raw_state, created_at, updated_at FROM agent_session_summaries WHERE tenant_id = ? AND customer_id = ? ORDER BY updated_at DESC LIMIT ?")
                 .bind(tenant_id)
@@ -235,9 +234,7 @@ impl LongTermMemory for SqliteMemoryStore {
             let mut results = Vec::new();
             for row in rows {
                 use sqlx::Row;
-                let emb_str: String = row
-                    .try_get("summary_embedding")
-                    .unwrap_or_else(|_| "[]".to_string());
+                let emb_str: String = row.try_get("summary_embedding").unwrap_or_else(|_| "[]".to_string());
                 let emb: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
                 results.push(crate::memory_store::AgentSessionSummary {
                     id: row.get("id"),
@@ -256,6 +253,7 @@ impl LongTermMemory for SqliteMemoryStore {
         })
     }
 
+
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
         sqlx::query("INSERT INTO agent_memory (content, tags) VALUES (?, ?)")
@@ -272,11 +270,7 @@ impl LongTermMemory for SqliteMemoryStore {
         } else {
             content.to_string()
         };
-        let tags_str = if tags.is_empty() {
-            String::new()
-        } else {
-            format!(" [{}]", tags.join(", "))
-        };
+        let tags_str = if tags.is_empty() { String::new() } else { format!(" [{}]", tags.join(", ")) };
         let entry = format!("- {}{}", truncated_content.replace('\n', " "), tags_str);
 
         sqlx::query("INSERT INTO lightweight_index (entry) VALUES (?)")
@@ -409,6 +403,7 @@ impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
         .await
     }
 
+
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
         let timestamp = chrono::Utc::now().timestamp();
         sqlx::query("INSERT INTO topics (topic_name, content, updated_at) VALUES (?, ?, ?) ON CONFLICT(topic_name) DO UPDATE SET content=excluded.content, updated_at=excluded.updated_at")
@@ -426,11 +421,7 @@ impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
         } else {
             content.to_string()
         };
-        let entry = format!(
-            "- [{}] {}",
-            topic_name,
-            truncated_content.replace('\n', " ")
-        );
+        let entry = format!("- [{}] {}", topic_name, truncated_content.replace('\n', " "));
 
         sqlx::query("INSERT INTO lightweight_index (entry) VALUES (?)")
             .bind(entry)
@@ -441,6 +432,7 @@ impl crate::tools::anthropic_memory::MemoryAccessor for SqliteMemoryStore {
         Ok(())
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -457,8 +449,7 @@ mod tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
-            {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("Summary"),
                     usage: crate::types::Usage::default(),
@@ -484,30 +475,23 @@ mod tests {
         assert!(res.unwrap_err().contains("not found"));
 
         // Write a new topic
-        MemoryAccessor::write_topic(&store, "architecture", "We use Rust and Axum")
-            .await
-            .unwrap();
+        MemoryAccessor::write_topic(&store, "architecture", "We use Rust and Axum").await.unwrap();
 
         // Retrieve the topic
-        let content = MemoryAccessor::retrieve_topic(&store, "architecture")
-            .await
-            .unwrap();
+        let content = MemoryAccessor::retrieve_topic(&store, "architecture").await.unwrap();
         assert_eq!(content, "We use Rust and Axum");
 
         // Update the topic
-        MemoryAccessor::write_topic(&store, "architecture", "We use Rust, Axum, and Postgres")
-            .await
-            .unwrap();
+        MemoryAccessor::write_topic(&store, "architecture", "We use Rust, Axum, and Postgres").await.unwrap();
 
         // Retrieve updated content
-        let updated_content = MemoryAccessor::retrieve_topic(&store, "architecture")
-            .await
-            .unwrap();
+        let updated_content = MemoryAccessor::retrieve_topic(&store, "architecture").await.unwrap();
         assert_eq!(updated_content, "We use Rust, Axum, and Postgres");
     }
 
     #[tokio::test]
     async fn test_sqlite_search_transcripts() {
+
         use crate::tools::anthropic_memory::MemoryAccessor;
         use std::sync::Arc;
 
@@ -517,8 +501,7 @@ mod tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
-            {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("Summary"),
                     usage: crate::types::Usage::default(),
@@ -538,31 +521,18 @@ mod tests {
             .await
             .unwrap();
 
-        store
-            .store_session_message("s1", "user", "How do I configure the bazel build?")
-            .await
-            .unwrap();
-        store
-            .store_session_message("s1", "assistant", "Use the BUILD.bazel file in the root.")
-            .await
-            .unwrap();
-        store
-            .store_session_message("s2", "user", "Why does bazel fail on mac?")
-            .await
-            .unwrap();
+        store.store_session_message("s1", "user", "How do I configure the bazel build?").await.unwrap();
+        store.store_session_message("s1", "assistant", "Use the BUILD.bazel file in the root.").await.unwrap();
+        store.store_session_message("s2", "user", "Why does bazel fail on mac?").await.unwrap();
 
-        let transcripts = MemoryAccessor::search_transcripts(&store, "bazel", 10)
-            .await
-            .unwrap();
+        let transcripts = MemoryAccessor::search_transcripts(&store, "bazel", 10).await.unwrap();
 
         // Assert we got raw transcripts instead of just snippets
         assert_eq!(transcripts.len(), 3);
 
         let combined = transcripts.join("\n");
         assert!(combined.contains("[Session: s1] user: How do I configure the bazel build?"));
-        assert!(
-            combined.contains("[Session: s1] assistant: Use the BUILD.bazel file in the root.")
-        );
+        assert!(combined.contains("[Session: s1] assistant: Use the BUILD.bazel file in the root."));
         assert!(combined.contains("[Session: s2] user: Why does bazel fail on mac?"));
     }
 
@@ -689,10 +659,7 @@ mod tests {
         struct MockLlm;
         #[async_trait::async_trait]
         impl crate::llm::LlmClient for MockLlm {
-            async fn chat(
-                &self,
-                _req: ChatRequest,
-            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
                     message: Message::assistant(""),
                     usage: Usage::default(),
@@ -700,17 +667,12 @@ mod tests {
                     response_id: None,
                 })
             }
-            async fn generate_embedding(
-                &self,
-                _text: &str,
-            ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+            async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(vec![])
             }
         }
         let llm = Arc::new(MockLlm);
-        let store = SqliteMemoryStore::new("sqlite::memory:", llm)
-            .await
-            .unwrap();
+        let store = SqliteMemoryStore::new("sqlite::memory:", llm).await.unwrap();
 
         // Need to create the agent_session_summaries table for tests manually if it doesn't exist in memory store setup
         sqlx::query(
@@ -759,10 +721,7 @@ mod tests {
         .await
         .unwrap();
 
-        let summaries = store
-            .get_customer_session_summaries(tenant_id, customer_id, 10)
-            .await
-            .unwrap();
+        let summaries = store.get_customer_session_summaries(tenant_id, customer_id, 10).await.unwrap();
         assert_eq!(summaries.len(), 1);
         assert_eq!(summaries[0].id, id);
         assert_eq!(summaries[0].tenant_id, tenant_id);
@@ -779,8 +738,7 @@ mod tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
-            {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("Summary"),
                     usage: crate::types::Usage::default(),
@@ -800,18 +758,11 @@ mod tests {
             .await
             .unwrap();
 
-        store
-            .store_session_message("s1", "user", "Hello world")
-            .await
-            .unwrap();
+        store.store_session_message("s1", "user", "Hello world").await.unwrap();
 
         // Query with embedded double quotes should not cause SQL error
         let result = MemoryAccessor::search_transcripts(&store, "test\"injection", 10).await;
-        assert!(
-            result.is_ok(),
-            "FTS5 search with embedded quotes should not fail: {:?}",
-            result.err()
-        );
+        assert!(result.is_ok(), "FTS5 search with embedded quotes should not fail: {:?}", result.err());
     }
 
     #[tokio::test]
@@ -825,8 +776,7 @@ mod tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
-            {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("Summary"),
                     usage: crate::types::Usage::default(),
@@ -846,19 +796,11 @@ mod tests {
             .await
             .unwrap();
 
-        store
-            .store_session_message("s1", "user", "Test message")
-            .await
-            .unwrap();
+        store.store_session_message("s1", "user", "Test message").await.unwrap();
 
         // Cross-session search with embedded quotes should not fail
-        let result =
-            MemoryAccessor::search_cross_session_messages(&store, "quote\"attack", 10, false).await;
-        assert!(
-            result.is_ok(),
-            "Cross-session FTS5 with quotes should not fail: {:?}",
-            result.err()
-        );
+        let result = MemoryAccessor::search_cross_session_messages(&store, "quote\"attack", 10, false).await;
+        assert!(result.is_ok(), "Cross-session FTS5 with quotes should not fail: {:?}", result.err());
     }
 
     #[tokio::test]

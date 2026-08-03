@@ -24,10 +24,7 @@ impl MetaProvider {
         }
     }
 
-    pub fn with_client(
-        client: Arc<dyn MetaClientWrapper>,
-        phone_number_id: Option<String>,
-    ) -> Self {
+    pub fn with_client(client: Arc<dyn MetaClientWrapper>, phone_number_id: Option<String>) -> Self {
         Self {
             client,
             metadata: ProviderMetadata {
@@ -47,14 +44,12 @@ impl MetaProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            },
+            }
         }
     }
 
     pub async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
-        self.client
-            .send_message(platform, self.phone_number_id.as_deref(), to, body)
-            .await
+        self.client.send_message(platform, self.phone_number_id.as_deref(), to, body).await
     }
 }
 
@@ -67,13 +62,7 @@ mod tests {
 
     #[async_trait]
     impl MetaClientWrapper for MockMetaClient {
-        async fn send_message(
-            &self,
-            _platform: &str,
-            _from: Option<&str>,
-            _to: &str,
-            _body: &str,
-        ) -> Result<(), String> {
+        async fn send_message(&self, _platform: &str, _from: Option<&str>, _to: &str, _body: &str) -> Result<(), String> {
             Ok(())
         }
     }

@@ -1,6 +1,6 @@
-use crate::hub::Hub;
-use axum::{Json, extract::State, http::HeaderMap, response::IntoResponse};
+use axum::{extract::State, http::HeaderMap, response::IntoResponse, Json};
 use std::sync::Arc;
+use crate::hub::Hub;
 use tracing::info;
 
 #[derive(serde::Serialize)]
@@ -40,49 +40,20 @@ pub struct CapturePaymentIntentResponse {
     pub error_message: Option<String>,
 }
 
-pub fn router(
-    hub: Arc<Hub>,
-) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
-        .route(
-            "/token",
-            axum::routing::post(get_terminal_connection_token_handler),
-        )
-        .route(
-            "/intent",
-            axum::routing::post(create_payment_intent_handler),
-        )
-        .route(
-            "/intent/capture",
-            axum::routing::post(capture_payment_intent_handler),
-        )
-        .route(
-            "/sync_offline",
-            axum::routing::post(sync_offline_transactions_handler),
-        )
-        .route(
-            "/edge_sync",
-            axum::routing::post(sync_edge_ledger_transactions_handler),
-        )
+        .route("/token", axum::routing::post(get_terminal_connection_token_handler))
+        .route("/intent", axum::routing::post(create_payment_intent_handler))
+        .route("/intent/capture", axum::routing::post(capture_payment_intent_handler))
+        .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
+        .route("/edge_sync", axum::routing::post(sync_edge_ledger_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
-        .route(
-            "/session/start",
-            axum::routing::post(start_terminal_session_handler),
-        )
-        .route(
-            "/session/update",
-            axum::routing::post(update_terminal_session_status_handler),
-        )
-        .route(
-            "/session/end",
-            axum::routing::post(end_terminal_session_handler),
-        )
+        .route("/session/start", axum::routing::post(start_terminal_session_handler))
+        .route("/session/update", axum::routing::post(update_terminal_session_status_handler))
+        .route("/session/end", axum::routing::post(end_terminal_session_handler))
         .route("/backend", axum::routing::get(get_terminal_backend_handler))
-        .route(
-            "/backend",
-            axum::routing::post(post_terminal_backend_handler),
-        )
+        .route("/backend", axum::routing::post(post_terminal_backend_handler))
         .with_state(hub)
 }
 
@@ -107,22 +78,12 @@ pub async fn start_terminal_session_handler(
     let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                return Json(StartTerminalSessionResponse {
-                    session_id: "".to_string(),
-                    success: false,
-                    error_message: "Unauthenticated: Missing tenant ID".to_string(),
-                });
+                return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
             } else {
                 auth.org_id.clone()
             }
-        }
-        None => {
-            return Json(StartTerminalSessionResponse {
-                session_id: "".to_string(),
-                success: false,
-                error_message: "Unauthenticated".to_string(),
-            });
-        }
+        },
+        None => return Json(StartTerminalSessionResponse { session_id: "".to_string(), success: false, error_message: "Unauthenticated".to_string() })
     };
 
     let session_id = uuid::Uuid::new_v4().to_string();
@@ -180,23 +141,16 @@ pub async fn update_terminal_session_status_handler(
     let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                return Json(UpdateTerminalSessionStatusResponse {
-                    success: false,
-                    error_message: "Unauthenticated: Missing tenant ID".to_string(),
-                });
+                return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
             } else {
                 auth.org_id.clone()
             }
-        }
-        None => {
-            return Json(UpdateTerminalSessionStatusResponse {
-                success: false,
-                error_message: "Unauthenticated".to_string(),
-            });
-        }
+        },
+        None => return Json(UpdateTerminalSessionStatusResponse { success: false, error_message: "Unauthenticated".to_string() })
     };
 
     let pool = crate::db::get_pool();
+
 
     let status_str = req_data.status.as_str();
     let query = if status_str == "RESOLVED" {
@@ -220,26 +174,18 @@ pub async fn update_terminal_session_status_handler(
             .await
     };
 
+
     match res {
         Ok(result) => {
             if result.rows_affected() > 0 {
-                Json(UpdateTerminalSessionStatusResponse {
-                    success: true,
-                    error_message: "".to_string(),
-                })
+                Json(UpdateTerminalSessionStatusResponse { success: true, error_message: "".to_string() })
             } else {
-                Json(UpdateTerminalSessionStatusResponse {
-                    success: false,
-                    error_message: "Session not found".to_string(),
-                })
+                Json(UpdateTerminalSessionStatusResponse { success: false, error_message: "Session not found".to_string() })
             }
         }
         Err(e) => {
             tracing::error!("Failed to update terminal session status: {}", e);
-            Json(UpdateTerminalSessionStatusResponse {
-                success: false,
-                error_message: e.to_string(),
-            })
+            Json(UpdateTerminalSessionStatusResponse { success: false, error_message: e.to_string() })
         }
     }
 }
@@ -264,20 +210,12 @@ pub async fn end_terminal_session_handler(
     let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                return Json(EndTerminalSessionResponse {
-                    success: false,
-                    error_message: "Unauthenticated: Missing tenant ID".to_string(),
-                });
+                return Json(EndTerminalSessionResponse { success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
             } else {
                 auth.org_id.clone()
             }
-        }
-        None => {
-            return Json(EndTerminalSessionResponse {
-                success: false,
-                error_message: "Unauthenticated".to_string(),
-            });
-        }
+        },
+        None => return Json(EndTerminalSessionResponse { success: false, error_message: "Unauthenticated".to_string() })
     };
 
     let pool = crate::db::get_pool();
@@ -293,26 +231,20 @@ pub async fn end_terminal_session_handler(
     match res {
         Ok(result) => {
             if result.rows_affected() > 0 {
-                Json(EndTerminalSessionResponse {
-                    success: true,
-                    error_message: "".to_string(),
-                })
+                Json(EndTerminalSessionResponse { success: true, error_message: "".to_string() })
             } else {
-                Json(EndTerminalSessionResponse {
-                    success: false,
-                    error_message: "Session not found".to_string(),
-                })
+                Json(EndTerminalSessionResponse { success: false, error_message: "Session not found".to_string() })
             }
         }
         Err(e) => {
             tracing::error!("Failed to end terminal session: {}", e);
-            Json(EndTerminalSessionResponse {
-                success: false,
-                error_message: e.to_string(),
-            })
+            Json(EndTerminalSessionResponse { success: false, error_message: e.to_string() })
         }
     }
 }
+
+
+
 
 #[derive(serde::Deserialize)]
 pub struct ReserveInventoryRequest {
@@ -341,68 +273,41 @@ pub async fn reserve_inventory_handler(
     let tenant_id = match auth_info {
         Some(info) => info.org_id.clone(),
         None => {
-            let spiffe_id_str = _headers
-                .get("x-spiffe-id")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
             // WARNING: SECURITY FIX
             // Only allow tenant override for internal test agents, do not bypass spiffe id auth in prod!
-            if let Some(tenant_override) = _headers
-                .get("x-tenant-id")
-                .and_then(|v| v.to_str().ok())
-                .filter(|_| {
-                    spiffe_id_str.starts_with("spiffe://ohc/org/")
-                        && spiffe_id_str.contains("/agent/")
-                })
-            {
+            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc/org/") && spiffe_id_str.contains("/agent/")) {
                 tenant_override.to_string()
             } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
                 id
             } else {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "unauthenticated" })),
-                )
-                    .into_response();
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
             }
         }
     };
 
-    let service = crate::services::inventory::InventoryService::new(hub.redis_client());
+    let service = crate::services::inventory::InventoryService::new(
+        hub.redis_client()
+    );
 
-    match service
-        .reserve_inventory(
-            &tenant_id,
-            &req_data.product_id,
-            req_data.quantity,
-            if req_data.ttl_seconds > 0 {
-                req_data.ttl_seconds
-            } else {
-                15
-            },
-        )
-        .await
-    {
-        Ok(result) => (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({
+    match service.reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 15 }).await {
+        Ok(result) => {
+            (axum::http::StatusCode::OK, Json(serde_json::json!({
                 "success": result.success,
                 "lock_id": result.lock_id,
                 "error_message": result.error_message
-            })),
-        )
-            .into_response(),
-        Err(e) => (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({
+            }))).into_response()
+        },
+        Err(e) => {
+            (axum::http::StatusCode::OK, Json(serde_json::json!({
                 "success": false,
                 "lock_id": "",
                 "error_message": e
-            })),
-        )
-            .into_response(),
+            }))).into_response()
+        }
     }
 }
+
 
 #[derive(serde::Deserialize)]
 pub struct PosOfflineTransaction {
@@ -472,21 +377,13 @@ pub async fn sync_edge_ledger_transactions_handler(
             }
         }
         None => {
-            let spiffe_id_str = _headers
-                .get("x-spiffe-id")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
-            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok())
-            {
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()) {
                 tenant_override.to_string()
             } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
                 id
             } else {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "unauthenticated" })),
-                )
-                    .into_response();
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
             }
         }
     };
@@ -503,24 +400,21 @@ pub async fn sync_edge_ledger_transactions_handler(
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({ "error": "Internal server error" })),
-                )
-                    .into_response();
+                ).into_response();
             }
         };
 
-        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await
-        {
+        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
             tracing::error!("Failed to set org context: {}", e);
             let _ = db_tx.rollback().await;
             return (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Internal server error" })),
-            )
-                .into_response();
+            ).into_response();
         }
 
         let mut query_builder = sqlx::QueryBuilder::new(
-            "INSERT INTO edge_ledger_transactions (id, tenant_id, transaction_id, amount_cents, currency, status, device_signature, payload, synced_at) ",
+            "INSERT INTO edge_ledger_transactions (id, tenant_id, transaction_id, amount_cents, currency, status, device_signature, payload, synced_at) "
         );
 
         let tenant_id_clone = tenant_id.clone();
@@ -534,17 +428,14 @@ pub async fn sync_edge_ledger_transactions_handler(
             let payload_str = tx.payload.clone();
 
             b.push_bind(id)
-                .push_bind(tenant_id_clone.clone())
-                .push_bind(transaction_id)
-                .push_bind(amount_cents)
-                .push_bind(currency)
-                .push_bind(status)
-                .push_bind(device_signature)
-                .push_bind(sqlx::types::Json(
-                    serde_json::from_str::<serde_json::Value>(&payload_str)
-                        .unwrap_or(serde_json::json!({})),
-                ))
-                .push_bind(sqlx::types::chrono::Utc::now());
+             .push_bind(tenant_id_clone.clone())
+             .push_bind(transaction_id)
+             .push_bind(amount_cents)
+             .push_bind(currency)
+             .push_bind(status)
+             .push_bind(device_signature)
+             .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or(serde_json::json!({}))))
+             .push_bind(sqlx::types::chrono::Utc::now());
         });
 
         query_builder.push(" ON CONFLICT (tenant_id, transaction_id) DO NOTHING");
@@ -573,8 +464,7 @@ pub async fn sync_edge_ledger_transactions_handler(
         success: failed_ids.is_empty(),
         synced_count,
         failed_transaction_ids: failed_ids,
-    })
-    .into_response()
+    }).into_response()
 }
 
 pub async fn sync_offline_transactions_handler(
@@ -617,29 +507,20 @@ pub async fn sync_offline_transactions_handler(
                 return (
                     axum::http::StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({ "error": "Invalid device signature" })),
-                )
-                    .into_response();
+                ).into_response();
             }
         } else {
             return (
                 axum::http::StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({ "error": "Missing device signature" })),
-            )
-                .into_response();
+            ).into_response();
         }
     }
 
-    let client_id = req_data
-        .transactions
-        .first()
-        .and_then(|tx| tx.client_id.clone())
-        .unwrap_or_else(|| "unknown".to_string());
+    let client_id = req_data.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
 
     // Update pos_terminal_sessions
-    let session_id = req_data
-        .session_id
-        .clone()
-        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let session_id = req_data.session_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let _ = sqlx::query(
         "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
          VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
@@ -660,32 +541,26 @@ pub async fn sync_offline_transactions_handler(
                 return (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({ "error": "Internal server error" })),
-                )
-                    .into_response();
+                ).into_response();
             }
         };
 
-        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await
-        {
+        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
             tracing::error!("Failed to set org context: {}", e);
             let _ = db_tx.rollback().await;
             return (
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": "Internal server error" })),
-            )
-                .into_response();
+            ).into_response();
         }
 
         let mut query_builder = sqlx::QueryBuilder::new(
-            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, device_signature, terminal_id) ",
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status, device_signature, terminal_id) "
         );
 
         let tenant_id_clone = tenant_id.clone();
         query_builder.push_values(req_data.transactions.iter(), |mut b, tx| {
-            let tx_id = tx
-                .id
-                .clone()
-                .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+            let tx_id = tx.id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
             let client_id_clone = tx.client_id.clone().unwrap_or_default();
             let amount_cents = tx.amount_cents;
             let currency = tx.currency.clone();
@@ -694,30 +569,24 @@ pub async fn sync_offline_transactions_handler(
             let terminal_id = tx.terminal_id.clone();
 
             b.push_bind(tx_id)
-                .push_bind(tenant_id_clone.clone())
-                .push_bind(client_id_clone)
-                .push_bind(amount_cents)
-                .push_bind(currency)
-                .push_bind(sqlx::types::Json(
-                    serde_json::from_str::<serde_json::Value>(&payload_str)
-                        .unwrap_or(serde_json::json!({})),
-                ))
-                .push_bind("PENDING")
-                .push_bind("pending")
-                .push_bind(device_signature)
-                .push_bind(terminal_id);
+             .push_bind(tenant_id_clone.clone())
+             .push_bind(client_id_clone)
+             .push_bind(amount_cents)
+             .push_bind(currency)
+             .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&payload_str).unwrap_or(serde_json::json!({}))))
+             .push_bind("PENDING")
+             .push_bind("pending")
+             .push_bind(device_signature)
+             .push_bind(terminal_id);
         });
 
-        query_builder.push(
-            " ON CONFLICT (id) DO NOTHING RETURNING id, client_id, amount_cents, currency, payload",
-        );
+        query_builder.push(" ON CONFLICT (id) DO NOTHING RETURNING id, client_id, amount_cents, currency, payload");
 
         match query_builder.build().fetch_all(&mut *db_tx).await {
             Ok(rows) => {
                 // Evaluate conflicts for pending reconciliation synchronously
                 for tx in &req_data.transactions {
-                    if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload)
-                    {
+                    if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
                         if let Some(items) = payload_val.as_array() {
                             for item in items {
                                 if let (Some(product_id), Some(quantity)) = (
@@ -752,24 +621,16 @@ pub async fn sync_offline_transactions_handler(
                                             .await;
 
                                         if let Some(client) = crate::get_redis_client() {
-                                            if let Ok(mut conn) =
-                                                client.get_multiplexed_async_connection().await
-                                            {
-                                                let invalidation_topic =
-                                                    "cache_invalidation_events";
+                                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                                let invalidation_topic = "cache_invalidation_events";
                                                 let invalidation_payload = serde_json::json!({
                                                     "event": "inventory.updated",
                                                     "tags": [
                                                         format!("tenant-id:{}", tenant_id),
                                                         format!("entity:product:{}", product_id)
                                                     ]
-                                                })
-                                                .to_string();
-                                                let _: Result<(), _> = redis::cmd("PUBLISH")
-                                                    .arg(invalidation_topic)
-                                                    .arg(invalidation_payload)
-                                                    .query_async(&mut conn)
-                                                    .await;
+                                                }).to_string();
+                                                let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                                             }
                                         }
                                     }
@@ -781,7 +642,7 @@ pub async fn sync_offline_transactions_handler(
 
                 if !rows.is_empty() {
                     let mut job_query_builder = sqlx::QueryBuilder::new(
-                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) ",
+                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) "
                     );
 
                     job_query_builder.push_values(rows.into_iter(), |mut b, row| {
@@ -793,6 +654,7 @@ pub async fn sync_offline_transactions_handler(
                         let currency: String = row.get("currency");
                         let payload_val: serde_json::Value = row.get("payload");
                         let payload_str = payload_val.to_string();
+
 
                         let mut m_type = None;
                         for tx_req in &req_data.transactions {
@@ -811,16 +673,12 @@ pub async fn sync_offline_transactions_handler(
                             "payload": payload_str,
                             "mutation_type": m_type,
                             "inventory_already_deducted": true,
-                        })
-                        .to_string();
+                        }).to_string();
 
                         b.push_bind(job_id)
-                            .push_bind(tenant_id.clone())
-                            .push_bind("offline_pos_sync")
-                            .push_bind(sqlx::types::Json(
-                                serde_json::from_str::<serde_json::Value>(&job_payload)
-                                    .unwrap_or(serde_json::json!({})),
-                            ));
+                         .push_bind(tenant_id.clone())
+                         .push_bind("offline_pos_sync")
+                         .push_bind(sqlx::types::Json(serde_json::from_str::<serde_json::Value>(&job_payload).unwrap_or(serde_json::json!({}))));
                     });
 
                     if let Err(e) = job_query_builder.build().execute(&mut *db_tx).await {
@@ -838,8 +696,7 @@ pub async fn sync_offline_transactions_handler(
                         } else {
                             // Update pos_terminal_sessions with conflicts_pending if needed
                             if !pending_reconciliation_items.is_empty() {
-                                let conflict_payload =
-                                    serde_json::json!(pending_reconciliation_items.clone());
+                                let conflict_payload = serde_json::json!(pending_reconciliation_items.clone());
                                 let _ = sqlx::query(
                                     "UPDATE pos_terminal_sessions
                                      SET sync_status = 'CONFLICTS_PENDING',
@@ -875,14 +732,10 @@ pub async fn sync_offline_transactions_handler(
 
     // Create an order out of each synced POS offline transaction if the type is cash_sale or tap_to_pay.
     for tx in &req_data.transactions {
-        if tx.mutation_type.as_deref() == Some("cash_sale")
-            || tx.mutation_type.as_deref() == Some("tap_to_pay")
-        {
+        if tx.mutation_type.as_deref() == Some("cash_sale") || tx.mutation_type.as_deref() == Some("tap_to_pay") {
             let pool = crate::db::get_pool();
             if let Ok(mut db_tx) = pool.begin().await {
-                if let Ok(_) =
-                    crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await
-                {
+                if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await {
                     let order_id = uuid::Uuid::new_v4().to_string();
                     let total_amount = (tx.amount_cents as f64) / 100.0;
                     let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
@@ -891,8 +744,7 @@ pub async fn sync_offline_transactions_handler(
                         .bind(None::<String>)
                         .bind(total_amount)
                         .execute(&mut *db_tx).await;
-                    if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload)
-                    {
+                    if let Ok(payload_val) = serde_json::from_str::<serde_json::Value>(&tx.payload) {
                         if let Some(items) = payload_val.as_array() {
                             for item in items {
                                 if let (Some(product_id), Some(quantity)) = (
@@ -968,6 +820,9 @@ pub async fn sync_offline_transactions_handler(
     (axum::http::StatusCode::OK, Json(res)).into_response()
 }
 
+
+
+
 pub async fn commit_inventory_handler(
     _headers: axum::http::HeaderMap,
     State(hub): State<Arc<Hub>>,
@@ -977,51 +832,29 @@ pub async fn commit_inventory_handler(
     let tenant_id = match auth_info {
         Some(info) => info.org_id.clone(),
         None => {
-            let spiffe_id_str = _headers
-                .get("x-spiffe-id")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
             // WARNING: SECURITY FIX
             // Only allow tenant override for internal test agents, do not bypass spiffe id auth in prod!
-            if let Some(tenant_override) = _headers
-                .get("x-tenant-id")
-                .and_then(|v| v.to_str().ok())
-                .filter(|_| {
-                    spiffe_id_str.starts_with("spiffe://ohc/org/")
-                        && spiffe_id_str.contains("/agent/")
-                })
-            {
+            if let Some(tenant_override) = _headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).filter(|_| spiffe_id_str.starts_with("spiffe://ohc/org/") && spiffe_id_str.contains("/agent/")) {
                 tenant_override.to_string()
             } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
                 id
             } else {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "unauthenticated" })),
-                )
-                    .into_response();
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
             }
         }
     };
 
-    let service = crate::services::inventory::InventoryService::new(hub.redis_client());
+    let service = crate::services::inventory::InventoryService::new(
+        hub.redis_client()
+    );
 
-    match service
-        .commit_inventory(
-            &tenant_id,
-            &req_data.product_id,
-            req_data.quantity,
-            &req_data.lock_id,
-        )
-        .await
-    {
+    match service.commit_inventory(&tenant_id, &req_data.product_id, req_data.quantity, &req_data.lock_id).await {
         Ok(result) => {
             if result.success {
                 let pool = crate::db::get_pool();
                 if let Ok(mut tx) = pool.begin().await {
-                    if let Ok(_) =
-                        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
-                    {
+                    if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
                         let order_id = uuid::Uuid::new_v4().to_string();
                         let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
                         let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
@@ -1045,14 +878,12 @@ pub async fn commit_inventory_handler(
                             event_type: "POS_SALE_COMPLETED".to_string(),
                             payload: event_payload,
                         };
-                        let _ = hub
-                            .publish_mesh_event(::server_ohc::orchestration::MeshEvent {
-                                event_id: uuid::Uuid::new_v4().to_string(),
-                                topic: "pos_sales".to_string(),
-                                payload: serde_json::to_vec(&event).unwrap_or_default(),
-                                timestamp: chrono::Utc::now().timestamp(),
-                            })
-                            .await;
+                        let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+                            event_id: uuid::Uuid::new_v4().to_string(),
+                            topic: "pos_sales".to_string(),
+                            payload: serde_json::to_vec(&event).unwrap_or_default(),
+                            timestamp: chrono::Utc::now().timestamp(),
+                        }).await;
 
                         // Create an agent action request for the Operations Agent
                         let action_req_id = uuid::Uuid::new_v4().to_string();
@@ -1074,23 +905,17 @@ pub async fn commit_inventory_handler(
                 }
             }
 
-            (
-                axum::http::StatusCode::OK,
-                Json(serde_json::json!({
-                    "success": result.success,
-                    "error_message": result.error_message
-                })),
-            )
-                .into_response()
-        }
-        Err(e) => (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({
+            (axum::http::StatusCode::OK, Json(serde_json::json!({
+                "success": result.success,
+                "error_message": result.error_message
+            }))).into_response()
+        },
+        Err(e) => {
+            (axum::http::StatusCode::OK, Json(serde_json::json!({
                 "success": false,
                 "error_message": e
-            })),
-        )
-            .into_response(),
+            }))).into_response()
+        }
     }
 }
 
@@ -1107,24 +932,18 @@ pub async fn create_payment_intent_handler(
             } else {
                 auth.org_id.clone()
             }
-        }
+        },
         None => {
-            let spiffe_id_str = _headers
-                .get("x-spiffe-id")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
             if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
                 id
             } else {
-                return Json(Err("Unauthenticated".to_string()));
+                return Json(Err("Unauthenticated".to_string()))
             }
         }
     };
 
-    let idempotency_key = req_data
-        .idempotency_key
-        .clone()
-        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let idempotency_key = req_data.idempotency_key.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
     let pool = crate::db::get_pool();
 
@@ -1147,18 +966,17 @@ pub async fn create_payment_intent_handler(
 
     if let Some(product_id) = &req_data.product_id {
         let quantity = req_data.quantity.unwrap_or(1);
-        let service = crate::services::inventory::InventoryService::new(hub.redis_client());
-        match service
-            .reserve_inventory(&tenant_id, product_id, quantity, 15)
-            .await
-        {
+        let service = crate::services::inventory::InventoryService::new(
+            hub.redis_client()
+        );
+        match service.reserve_inventory(&tenant_id, product_id, quantity, 15).await {
             Ok(result) => {
                 if !result.success {
                     return Json(Err(result.error_message));
                 }
                 lock_id_out = Some(result.lock_id);
-            }
-            Err(e) => return Json(Err(e)),
+            },
+            Err(e) => return Json(Err(e))
         }
     }
 
@@ -1166,14 +984,7 @@ pub async fn create_payment_intent_handler(
     let mut final_amount_cents = req_data.amount_cents;
 
     if let Some(product_id) = &req_data.product_id {
-        let calculated_price = ::server_pricing::engine::apply_yield_management(
-            &pool,
-            &tenant_id,
-            product_id,
-            chrono::Utc::now(),
-            req_data.amount_cents,
-        )
-        .await;
+        let calculated_price = ::server_pricing::engine::apply_yield_management(&pool, &tenant_id, product_id, chrono::Utc::now(), req_data.amount_cents).await;
         final_amount_cents = calculated_price;
     }
 
@@ -1183,36 +994,26 @@ pub async fn create_payment_intent_handler(
         &crate::db::get_pool(),
         &tenant_id,
         "stripe_terminal_payment_intent",
-        0.05,
-    )
-    .await
-    {
+        0.05
+    ).await {
         tracing::warn!("Failed to record api call cost: {}", e);
     }
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    let session_manager =
-        crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
+    let session_manager = crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
 
-    match crate::integrations::stripe::client::StripeClient::new(
-        std::env::var("STRIPE_API_KEY").unwrap_or_default(),
-    )
-    .require_api_key()
-    {
-        Ok(_) => match session_manager
-            .create_terminal_payment_intent(
-                &tenant_id,
-                final_amount_cents,
-                &req_data.currency,
-                req_data.product_id.as_deref(),
-                req_data.quantity,
-                req_data.order_id.as_deref(),
-                &idempotency_key,
-            )
-            .await
-        {
+    match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
+        Ok(_) => match session_manager.create_terminal_payment_intent(
+            &tenant_id,
+            final_amount_cents,
+            &req_data.currency,
+            req_data.product_id.as_deref(),
+            req_data.quantity,
+            req_data.order_id.as_deref(),
+            &idempotency_key,
+        ).await {
             Ok((payment_intent_id, client_secret)) => {
                 let pool = crate::db::get_pool();
 
@@ -1246,24 +1047,16 @@ pub async fn create_payment_intent_handler(
                     tracing::warn!("Failed to update pos terminal session for generic intent: {}", e);
                 }
 
-                Json(Ok(PaymentIntentResponse {
-                    client_secret,
-                    lock_id: lock_id_out,
-                }))
-            }
+                Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out }))
+            },
             Err(e) => {
                 if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
                     let quantity = req_data.quantity.unwrap_or(1);
-                    let service =
-                        crate::services::inventory::InventoryService::new(hub.redis_client());
-                    if let Err(err) = service
-                        .release_inventory(&tenant_id, product_id, quantity, lock_id)
-                        .await
-                    {
-                        tracing::error!(
-                            "Failed to release inventory after stripe intent failed: {}",
-                            err
-                        ); // pii-safe
+                    let service = crate::services::inventory::InventoryService::new(
+                        hub.redis_client()
+                    );
+                    if let Err(err) = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await {
+                        tracing::error!("Failed to release inventory after stripe intent failed: {}", err); // pii-safe
                     }
                 }
                 Json(Err(e))
@@ -1272,15 +1065,11 @@ pub async fn create_payment_intent_handler(
         Err(e) => {
             if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
                 let quantity = req_data.quantity.unwrap_or(1);
-                let service = crate::services::inventory::InventoryService::new(hub.redis_client());
-                if let Err(err) = service
-                    .release_inventory(&tenant_id, product_id, quantity, lock_id)
-                    .await
-                {
-                    tracing::error!(
-                        "Failed to release inventory after stripe intent failed: {}",
-                        err
-                    ); // pii-safe
+                let service = crate::services::inventory::InventoryService::new(
+                    hub.redis_client()
+                );
+                if let Err(err) = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await {
+                    tracing::error!("Failed to release inventory after stripe intent failed: {}", err); // pii-safe
                 }
             }
             Json(Err(e.to_string()))
@@ -1288,26 +1077,23 @@ pub async fn create_payment_intent_handler(
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // tests go here
+        // tests go here
     #[allow(unused_imports)]
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
     async fn test_commit_inventory_low_stock() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options()
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         let tenant_id = "tenant-terminal-test-low";
         sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
@@ -1325,17 +1111,14 @@ mod tests {
             customer_id: None,
             amount_cents: None,
         });
-        let auth_info = Some(axum::extract::Extension(
-            ::server_auth::orchestration::AuthInfo {
-                org_id: tenant_id.to_string(),
-                spiffe_id: "test".to_string(),
-                agent_id: "test".to_string(),
-            },
-        ));
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
         let headers = axum::http::HeaderMap::new();
 
-        let _resp =
-            commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        let _resp = commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
         // Verify action request count
         let action_request_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_action_requests WHERE tenant_id = $1 AND product_id = 'prod-terminal-test-2' AND action_type = 'Reorder'")
             .bind(tenant_id)
@@ -1345,25 +1128,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_commit_inventory_records_order() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options()
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         let tenant_id = "tenant-pos-test-order";
-        sqlx::query(
-            "INSERT INTO tenants (id, name) VALUES ($1, 'POS Test Tenant') ON CONFLICT DO NOTHING",
-        )
-        .bind(tenant_id)
-        .execute(&pool)
-        .await
-        .unwrap();
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'POS Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-pos-test', $1, 'POS Test Prod', 10) ON CONFLICT DO NOTHING")
             .bind(tenant_id).execute(&pool).await.unwrap();
 
@@ -1377,24 +1151,19 @@ mod tests {
             customer_id: None,
             amount_cents: Some(1999),
         });
-        let auth_info = Some(axum::extract::Extension(
-            ::server_auth::orchestration::AuthInfo {
-                org_id: tenant_id.to_string(),
-                spiffe_id: "test".to_string(),
-                agent_id: "test".to_string(),
-            },
-        ));
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
         let headers = axum::http::HeaderMap::new();
 
         commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
 
         // Verify order count
-        let order_count: (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
-                .bind(tenant_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let order_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_one(&pool).await.unwrap();
         assert!(order_count.0 > 0);
 
         // Verify order items count
@@ -1407,12 +1176,9 @@ mod tests {
 
 fn extract_tenant_id_or_error(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
-    headers: &axum::http::HeaderMap,
+    headers: &axum::http::HeaderMap
 ) -> Result<String, axum::response::Response> {
-    let spiffe_id_str = headers
-        .get("x-spiffe-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
     if !spiffe_id_str.is_empty() {
         if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
             return Ok(id);
@@ -1421,20 +1187,12 @@ fn extract_tenant_id_or_error(
     match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                Err((
-                    axum::http::StatusCode::OK,
-                    Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" })),
-                )
-                    .into_response())
+                Err((axum::http::StatusCode::OK, Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" }))).into_response())
             } else {
                 Ok(auth.org_id.clone())
             }
-        }
-        None => Err((
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({ "error": "Unauthenticated" })),
-        )
-            .into_response()),
+        },
+        None => Err((axum::http::StatusCode::OK, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response())
     }
 }
 
@@ -1450,34 +1208,14 @@ pub async fn get_terminal_connection_token_handler(
 
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    let session_manager =
-        crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
+    let session_manager = crate::integrations::stripe::terminal::TerminalSessionManager::new(client);
 
-    match crate::integrations::stripe::client::StripeClient::new(
-        std::env::var("STRIPE_API_KEY").unwrap_or_default(),
-    )
-    .require_api_key()
-    {
-        Ok(_) => match session_manager
-            .create_terminal_connection_token(&tenant_id)
-            .await
-        {
-            Ok(token) => (
-                axum::http::StatusCode::OK,
-                Json(serde_json::json!({ "secret": token })),
-            )
-                .into_response(),
-            Err(e) => (
-                axum::http::StatusCode::OK,
-                Json(serde_json::json!({ "error": e })),
-            )
-                .into_response(),
+    match crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default()).require_api_key() {
+        Ok(_) => match session_manager.create_terminal_connection_token(&tenant_id).await {
+            Ok(token) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "secret": token }))).into_response(),
+            Err(e) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": e }))).into_response(),
         },
-        Err(e) => (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": e.to_string() }))).into_response(),
     }
 }
 
@@ -1498,12 +1236,9 @@ pub async fn capture_payment_intent_handler(
             } else {
                 auth.org_id.clone()
             }
-        }
+        },
         None => {
-            let spiffe_id_str = _headers
-                .get("x-spiffe-id")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
+            let spiffe_id_str = _headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
             if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
                 id
             } else {
@@ -1523,45 +1258,32 @@ pub async fn capture_payment_intent_handler(
 
     match client.require_api_key() {
         Ok(_) => {
-            match client
-                .capture_terminal_payment_intent(&req_data.payment_intent_id)
-                .await
-            {
+            match client.capture_terminal_payment_intent(&req_data.payment_intent_id).await {
                 Ok(status) => {
                     if let Some(product_id) = &req_data.product_id {
                         let quantity = req_data.quantity.unwrap_or(1);
                         let lock_id = req_data.lock_id.clone().unwrap_or_default();
-                        let service =
-                            crate::services::inventory::InventoryService::new(hub.redis_client());
-                        match service
-                            .commit_inventory(&tenant_id, product_id, quantity, &lock_id)
-                            .await
-                        {
+                        let service = crate::services::inventory::InventoryService::new(
+                            hub.redis_client()
+                        );
+                        match service.commit_inventory(&tenant_id, product_id, quantity, &lock_id).await {
                             Ok(res) if !res.success => {
-                                tracing::error!(
-                                    "Failed to commit inventory after successful capture: {}",
-                                    res.error_message
-                                );
-                            }
+                                tracing::error!("Failed to commit inventory after successful capture: {}", res.error_message);
+                            },
                             Ok(_) => {
                                 // Inventory commit successful, log an order if possible
                                 let pool = crate::db::get_pool();
                                 if let Ok(mut tx) = pool.begin().await {
-                                    if let Ok(_) = crate::common::auth_utils::set_org_context(
-                                        &mut *tx, &tenant_id,
-                                    )
-                                    .await
-                                    {
+                                    if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
                                         let order_id = uuid::Uuid::new_v4().to_string();
-                                        let total_amount =
-                                            (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
+                                        let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
                                         let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
                                             .bind(&order_id)
                                             .bind(&tenant_id)
                                             .bind(None::<String>)
                                             .bind(total_amount)
                                             .execute(&mut *tx).await;
-                                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
                                             .bind(uuid::Uuid::new_v4().to_string())
                                             .bind(&tenant_id)
                                             .bind(&order_id)
@@ -1623,12 +1345,9 @@ pub async fn capture_payment_intent_handler(
                                     .await;
                                     let _ = feed_tx.commit().await;
                                 }
-                            }
+                            },
                             Err(e) => {
-                                tracing::error!(
-                                    "Failed to commit inventory after successful capture: {}",
-                                    e
-                                );
+                                tracing::error!("Failed to commit inventory after successful capture: {}", e);
                             }
                         }
                     }
@@ -1638,7 +1357,7 @@ pub async fn capture_payment_intent_handler(
                         status,
                         error_message: None,
                     })
-                }
+                },
                 Err(e) => {
                     tracing::error!("Failed to capture terminal payment intent: {}", e);
                     Json(CapturePaymentIntentResponse {
@@ -1648,12 +1367,14 @@ pub async fn capture_payment_intent_handler(
                     })
                 }
             }
+        },
+        Err(e) => {
+            Json(CapturePaymentIntentResponse {
+                success: false,
+                status: "".to_string(),
+                error_message: Some(e.to_string()),
+            })
         }
-        Err(e) => Json(CapturePaymentIntentResponse {
-            success: false,
-            status: "".to_string(),
-            error_message: Some(e.to_string()),
-        }),
     }
 }
 
@@ -1662,8 +1383,7 @@ pub struct PostBackendRequest {
     pub backend: String,
 }
 
-pub async fn get_terminal_backend_handler()
--> Result<axum::Json<serde_json::Value>, (axum::http::StatusCode, String)> {
+pub async fn get_terminal_backend_handler() -> Result<axum::Json<serde_json::Value>, (axum::http::StatusCode, String)> {
     Ok(axum::Json(serde_json::json!({
         "backend": "local"
     })))
@@ -1674,12 +1394,7 @@ pub async fn post_terminal_backend_handler(
 ) -> Result<axum::Json<serde_json::Value>, (axum::http::StatusCode, String)> {
     // For test/harness purposes only, return the requested backend if valid
     if req.backend == "local" || req.backend == "docker" {
-        return Ok(axum::Json(
-            serde_json::json!({ "success": true, "backend": req.backend }),
-        ));
+        return Ok(axum::Json(serde_json::json!({ "success": true, "backend": req.backend })));
     }
-    Err((
-        axum::http::StatusCode::BAD_REQUEST,
-        "Invalid backend".into(),
-    ))
+    Err((axum::http::StatusCode::BAD_REQUEST, "Invalid backend".into()))
 }

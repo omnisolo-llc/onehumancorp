@@ -53,10 +53,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
 
     if config.mode == "cloud" {
-        let db_url = env_vars
-            .get("OHC_DATABASE_URL")
-            .cloned()
-            .unwrap_or_default();
+        let db_url = env_vars.get("OHC_DATABASE_URL").cloned().unwrap_or_default();
         if db_url.is_empty() {
             if env_vars.contains_key("KUBERNETES_SERVICE_HOST") {
                 config.database_url = String::new();
@@ -73,10 +70,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
 
     if config.mode == "standalone" {
-        let db_url = env_vars
-            .get("OHC_DATABASE_URL")
-            .cloned()
-            .unwrap_or_default();
+        let db_url = env_vars.get("OHC_DATABASE_URL").cloned().unwrap_or_default();
         if db_url.is_empty() {
             config.database_url = "sqlite://local.db".to_string();
         } else {
@@ -85,10 +79,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
 
     if config.mode == "thin_client" {
-        let endpoint = env_vars
-            .get("OHC_API_ENDPOINT")
-            .cloned()
-            .unwrap_or_default();
+        let endpoint = env_vars.get("OHC_API_ENDPOINT").cloned().unwrap_or_default();
         if endpoint.is_empty() {
             return Err("thin_client mode requires OHC_API_ENDPOINT".to_string());
         }
@@ -159,14 +150,8 @@ mod tests {
     #[test]
     fn test_verify_environment_auto_detect_cloud() {
         let mut env = HashMap::new();
-        env.insert(
-            "KUBERNETES_SERVICE_HOST".to_string(),
-            "10.0.0.1".to_string(),
-        );
-        env.insert(
-            "OHC_DATABASE_URL".to_string(),
-            "postgresql://user:pass@localhost/db".to_string(),
-        );
+        env.insert("KUBERNETES_SERVICE_HOST".to_string(), "10.0.0.1".to_string());
+        env.insert("OHC_DATABASE_URL".to_string(), "postgresql://user:pass@localhost/db".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "cloud");
@@ -176,10 +161,7 @@ mod tests {
     #[test]
     fn test_verify_environment_auto_detect_thin_client() {
         let mut env = HashMap::new();
-        env.insert(
-            "OHC_API_ENDPOINT".to_string(),
-            "https://api.ohc.io".to_string(),
-        );
+        env.insert("OHC_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
@@ -199,10 +181,7 @@ mod tests {
     fn test_verify_environment_thin_client() {
         let mut env = HashMap::new();
         env.insert("OHC_SOURCE_MODE".to_string(), "thin_client".to_string());
-        env.insert(
-            "OHC_API_ENDPOINT".to_string(),
-            "https://api.ohc.io".to_string(),
-        );
+        env.insert("OHC_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
@@ -234,10 +213,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("OHC_SOURCE_MODE".to_string(), "cloud".to_string());
         env.insert("OHC_MULTITENANT".to_string(), "true".to_string());
-        env.insert(
-            "OHC_DATABASE_URL".to_string(),
-            "postgresql://user:pass@localhost/db".to_string(),
-        );
+        env.insert("OHC_DATABASE_URL".to_string(), "postgresql://user:pass@localhost/db".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.database_url, "postgresql://user:pass@localhost/db");
@@ -258,10 +234,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
         env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
-        env.insert(
-            "OHC_DATABASE_URL".to_string(),
-            "sqlite://custom.db".to_string(),
-        );
+        env.insert("OHC_DATABASE_URL".to_string(), "sqlite://custom.db".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.database_url, "sqlite://custom.db");

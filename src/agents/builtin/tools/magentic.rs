@@ -30,9 +30,10 @@ impl PydanticToolExecutor<MagenticArgs> for MagenticExecutor {
 
         match action {
             "add" => {
-                let title = args.title.as_deref().ok_or_else(|| {
-                    ToolError::LlmRecoverable("magentic: title is required for add".to_string())
-                })?;
+                let title = args
+                    .title
+                    .as_deref()
+                    .ok_or_else(|| ToolError::LlmRecoverable("magentic: title is required for add".to_string()))?;
                 let description = args.description.unwrap_or_default();
                 let assignee = args.assignee.unwrap_or_default();
 
@@ -53,16 +54,12 @@ impl PydanticToolExecutor<MagenticArgs> for MagenticExecutor {
                 Ok(format!("Added task: {}", id))
             }
             "update" => {
-                let id = args.id.as_deref().ok_or_else(|| {
-                    ToolError::LlmRecoverable("magentic: id is required for update".to_string())
-                })?;
+                let id = args
+                    .id
+                    .as_deref()
+                    .ok_or_else(|| ToolError::LlmRecoverable("magentic: id is required for update".to_string()))?;
 
-                if self
-                    .store
-                    .write()
-                    .await
-                    .update(id, args.status, args.result)
-                {
+                if self.store.write().await.update(id, args.status, args.result) {
                     Ok(format!("Updated task: {}", id))
                 } else {
                     Err(ToolError::LlmRecoverable(format!("Task not found: {}", id)))
@@ -76,9 +73,7 @@ impl PydanticToolExecutor<MagenticArgs> for MagenticExecutor {
                 }
                 Ok(serde_json::to_string_pretty(&tasks).unwrap_or_default())
             }
-            _ => Err(ToolError::LlmRecoverable(
-                "magentic: valid action is required (add, update, list)".to_string(),
-            )),
+            _ => Err(ToolError::LlmRecoverable("magentic: valid action is required (add, update, list)".to_string()))
         }
     }
 }
@@ -130,10 +125,10 @@ pub fn magentic_tool(store: SharedTaskStore) -> Tool {
 
 #[cfg(test)]
 mod tests {
-    use super::super::task::TaskStore;
     use super::*;
-    use crate::ToolExecutor;
+    use super::super::task::TaskStore;
     use tokio::sync::RwLock;
+    use crate::ToolExecutor;
 
     #[tokio::test]
     async fn test_magentic_tool_add() {

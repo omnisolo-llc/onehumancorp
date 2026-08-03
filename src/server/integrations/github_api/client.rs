@@ -388,10 +388,7 @@ impl GitHubClient {
         path: &str,
     ) -> Result<String, String> {
         let token = self.validated_access_token()?;
-        let url = format!(
-            "{}/repos/{}/{}/contents/{}",
-            self.base_url, owner, repo, path
-        );
+        let url = format!("{}/repos/{}/{}/contents/{}", self.base_url, owner, repo, path);
 
         let client = get_client();
         let res = client
@@ -432,9 +429,7 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_github_server(
-        response_body: &'static str,
-    ) -> (String, oneshot::Receiver<String>) {
+    async fn start_github_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -452,7 +447,8 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) =
+                        request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -480,9 +476,7 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx
-                .send(String::from_utf8(request).unwrap())
-                .unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
         });
 
         (base_url, request_rx)
@@ -552,7 +546,9 @@ mod tests {
         assert_eq!(prs[0].number, 42);
 
         let request = request_rx.await.unwrap();
-        assert!(request.starts_with("GET /repos/myorg/myrepo/pulls?state=open HTTP/1.1"));
+        assert!(request.starts_with(
+            "GET /repos/myorg/myrepo/pulls?state=open HTTP/1.1"
+        ));
     }
 
     #[tokio::test]
@@ -587,13 +583,13 @@ mod tests {
     #[tokio::test]
     async fn get_file_contents_decodes_base64() {
         use base64::Engine;
-        let content = base64::engine::general_purpose::STANDARD.encode(b"fn main() {}");
+        let content = base64::engine::general_purpose::STANDARD
+            .encode(b"fn main() {}");
         let response = format!(
             r#"{{"name": "main.rs", "path": "src/main.rs", "content": "{}", "encoding": "base64"}}"#,
             content
         );
-        let (base_url, _request_rx) =
-            start_github_server(Box::leak(response.into_boxed_str())).await;
+        let (base_url, _request_rx) = start_github_server(Box::leak(response.into_boxed_str())).await;
 
         let client = GitHubClient::with_base_url_for_test("ghp_test".to_string(), base_url);
         let file_content = client
@@ -607,7 +603,10 @@ mod tests {
     #[tokio::test]
     async fn blank_token_rejected_before_network() {
         let client = GitHubClient::new("   ".to_string());
-        let err = client.get_repositories("updated", 10).await.unwrap_err();
+        let err = client
+            .get_repositories("updated", 10)
+            .await
+            .unwrap_err();
         assert_eq!(err, "GitHub access token is required");
     }
 }

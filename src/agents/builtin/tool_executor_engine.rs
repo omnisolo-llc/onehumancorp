@@ -1,7 +1,7 @@
 use crate::agent::AgentRunConfig;
-use crate::retry::{ExponentialBackoffWithJitter, RetryStrategy};
 use crate::tools_gating::ToolGater;
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
+use crate::retry::{RetryStrategy, ExponentialBackoffWithJitter};
 use ohc_builtin_agent_tools::Tool;
 /// Master Catalog B.8. Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2. LangGraph Mechanic (4-types): 1) Transient (retry with backoff), 2) LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct), 3) User-fixable (interrupt execution and ask user for input), 4) Unexpected (bubble up to debug).
 use tracing::{error, info, warn};
@@ -101,9 +101,9 @@ mod tests {
     use super::*;
     use ohc_builtin_agent_core::types::{ToolCall, ToolError};
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
-    use serde_json::json;
     use std::sync::Arc;
     use tokio::sync::Mutex;
+    use serde_json::json;
 
     struct MockToolExecutor {
         results: Mutex<Vec<Result<String, ToolError>>>,
@@ -154,8 +154,7 @@ mod tests {
         let tc = create_tool_call();
         let cfg = AgentRunConfig::default();
 
-        let result =
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "success");
     }
@@ -170,8 +169,7 @@ mod tests {
         let tc = create_tool_call();
         let cfg = AgentRunConfig::default();
 
-        let result =
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "success after retry");
     }
@@ -187,8 +185,7 @@ mod tests {
         let tc = create_tool_call();
         let cfg = AgentRunConfig::default();
 
-        let result =
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             ToolError::Unexpected(msg) => assert!(msg.contains("Transient error after retries")),
@@ -198,15 +195,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_tool_llm_recoverable() {
-        let executor = MockToolExecutor::new(vec![Err(ToolError::LlmRecoverable(
-            "bad schema".to_string(),
-        ))]);
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::LlmRecoverable("bad schema".to_string())),
+        ]);
         let tool = create_tool(executor);
         let tc = create_tool_call();
         let cfg = AgentRunConfig::default();
 
-        let result =
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -219,14 +215,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_tool_user_fixable() {
-        let executor =
-            MockToolExecutor::new(vec![Err(ToolError::UserFixable("needs human".to_string()))]);
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::UserFixable("needs human".to_string())),
+        ]);
         let tool = create_tool(executor);
         let tc = create_tool_call();
         let cfg = AgentRunConfig::default();
 
-        let result =
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             ToolError::UserFixable(msg) => assert_eq!(msg, "needs human"),
@@ -236,14 +232,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_tool_fatal() {
-        let executor =
-            MockToolExecutor::new(vec![Err(ToolError::Fatal("system crash".to_string()))]);
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::Fatal("system crash".to_string())),
+        ]);
         let tool = create_tool(executor);
         let tc = create_tool_call();
         let cfg = AgentRunConfig::default();
 
-        let result =
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             ToolError::Fatal(msg) => assert_eq!(msg, "system crash"),
@@ -253,15 +249,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_tool_unexpected() {
-        let executor = MockToolExecutor::new(vec![Err(ToolError::Unexpected(
-            "unknown issue".to_string(),
-        ))]);
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::Unexpected("unknown issue".to_string())),
+        ]);
         let tool = create_tool(executor);
         let tc = create_tool_call();
         let cfg = AgentRunConfig::default();
 
-        let result =
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             ToolError::Unexpected(msg) => assert_eq!(msg, "unknown issue"),
@@ -271,15 +266,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_tool_handoff() {
-        let executor = MockToolExecutor::new(vec![Err(ToolError::HandoffRequested(
-            "other_agent".to_string(),
-        ))]);
+        let executor = MockToolExecutor::new(vec![
+            Err(ToolError::HandoffRequested("other_agent".to_string())),
+        ]);
         let tool = create_tool(executor);
         let tc = create_tool_call();
         let cfg = AgentRunConfig::default();
 
-        let result =
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
+        let result = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &cfg).await;
         assert!(result.is_err());
         match result.unwrap_err() {
             ToolError::HandoffRequested(msg) => assert_eq!(msg, "other_agent"),

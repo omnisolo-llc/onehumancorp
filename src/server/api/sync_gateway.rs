@@ -1,20 +1,17 @@
-use ::server_common::Claims;
-use ::server_ohc::orchestration::sync_service_server::SyncService;
-use ::server_ohc::orchestration::{DeltaItem, SyncMcpDeltasRequest};
 use axum::{
-    Router,
-    extract::{
-        Extension, Json, Query, State,
-        ws::{Message as WsMessage, WebSocket, WebSocketUpgrade},
-    },
-    http::StatusCode,
+    extract::{Extension, Query, State, Json, ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}},
     response::IntoResponse,
+    http::StatusCode,
+    Router,
     routing::get,
 };
-use futures::{sink::SinkExt, stream::StreamExt};
+use ::server_common::Claims;
+use ::server_ohc::orchestration::{SyncMcpDeltasRequest, DeltaItem};
+use ::server_ohc::orchestration::sync_service_server::SyncService;
 use serde::Deserialize;
-use std::sync::OnceLock;
+use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::broadcast;
+use std::sync::OnceLock;
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -25,7 +22,8 @@ static REDIS_SUBSCRIBED: OnceLock<Arc<Mutex<bool>>> = OnceLock::new();
 use axum::routing::post;
 
 pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
-    Router::new().route("/ws", get(ws_sync_handler))
+    Router::new()
+        .route("/ws", get(ws_sync_handler))
 }
 
 pub fn router_with_pool<S: Clone + Send + Sync + 'static>() -> Router<sqlx::PgPool> {
@@ -34,31 +32,23 @@ pub fn router_with_pool<S: Clone + Send + Sync + 'static>() -> Router<sqlx::PgPo
         .route("/power_sync_push", post(power_sync_push_handler))
 }
 
-async fn validate_token_and_get_tenant(
-    pool: &sqlx::PgPool,
-    headers: &axum::http::HeaderMap,
-) -> Result<(String, String), axum::response::Response> {
+
+async fn validate_token_and_get_tenant(pool: &sqlx::PgPool, headers: &axum::http::HeaderMap) -> Result<(String, String), axum::response::Response> {
     let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok());
     let token = match auth_header {
         Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
         _ => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
     };
 
-    let repo = std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(
-        pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(pool.clone()));
     let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
 
     let claims = match store.validate_token(token).await {
         Ok(c) => c,
-        Err(_) => {
-            return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response());
-        }
+        Err(_) => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
     };
 
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let agent_id = claims.sub;
 
     Ok((tenant_id, agent_id))
@@ -70,42 +60,27 @@ pub async fn power_sync_pull_handler(
     Json(_payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
-        Ok((tenant_id, agent_id)) => format!(
-            "spiffe://onehumancorp.io/org/{}/agent/{}",
-            tenant_id, agent_id
-        ),
+        Ok((tenant_id, agent_id)) => format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id),
         Err(e) => return e,
     };
-    let mut tonic_request =
-        tonic::Request::new(::server_ohc::orchestration::PowerSyncPullRequest {});
+    let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPullRequest {});
 
     if let Ok(metadata_value) = spiffe_id_str.parse() {
-        tonic_request
-            .metadata_mut()
-            .insert("x-spiffe-id", metadata_value);
+        tonic_request.metadata_mut().insert("x-spiffe-id", metadata_value);
     }
 
     let service = crate::services::sync::service::MySyncService::new(pool);
     match service.power_sync_pull(tonic_request).await {
         Ok(resp) => {
             let inner = resp.into_inner();
-            (
-                StatusCode::OK,
-                axum::Json(
-                    serde_json::from_str::<serde_json::Value>(&inner.payload)
-                        .unwrap_or_else(|_| serde_json::json!([])),
-                ),
-            )
-                .into_response()
-        }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({
+            (StatusCode::OK, axum::Json(serde_json::from_str::<serde_json::Value>(&inner.payload).unwrap_or_else(|_| serde_json::json!([])))).into_response()
+        },
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
                 "status": "error",
                 "message": e.message(),
-            })),
-        )
-            .into_response(),
+            }))).into_response()
+        }
     }
 }
 
@@ -115,46 +90,33 @@ pub async fn power_sync_push_handler(
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
-        Ok((tenant_id, agent_id)) => format!(
-            "spiffe://onehumancorp.io/org/{}/agent/{}",
-            tenant_id, agent_id
-        ),
+        Ok((tenant_id, agent_id)) => format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id),
         Err(e) => return e,
     };
-    let payload_str = serde_json::to_string(&payload.get("payload").unwrap_or(&payload))
-        .unwrap_or_else(|_| "[]".to_string());
+    let payload_str = serde_json::to_string(&payload.get("payload").unwrap_or(&payload)).unwrap_or_else(|_| "[]".to_string());
 
-    let mut tonic_request =
-        tonic::Request::new(::server_ohc::orchestration::PowerSyncPushRequest {
-            payload: payload_str,
-        });
+    let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPushRequest {
+        payload: payload_str,
+    });
 
     if let Ok(metadata_value) = spiffe_id_str.parse() {
-        tonic_request
-            .metadata_mut()
-            .insert("x-spiffe-id", metadata_value);
+        tonic_request.metadata_mut().insert("x-spiffe-id", metadata_value);
     }
 
     let service = crate::services::sync::service::MySyncService::new(pool);
     match service.power_sync_push(tonic_request).await {
         Ok(resp) => {
             let inner = resp.into_inner();
-            (
-                StatusCode::OK,
-                axum::Json(serde_json::json!({
-                    "status": inner.status,
-                })),
-            )
-                .into_response()
-        }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({
+            (StatusCode::OK, axum::Json(serde_json::json!({
+                "status": inner.status,
+            }))).into_response()
+        },
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
                 "status": "error",
                 "message": e.message(),
-            })),
-        )
-            .into_response(),
+            }))).into_response()
+        }
     }
 }
 
@@ -180,66 +142,47 @@ pub async fn sync_mcp_deltas_handler(
         Ok(t) => t,
         Err(e) => return e,
     };
-    let spiffe_id_str = format!(
-        "spiffe://onehumancorp.io/org/{}/agent/{}",
-        tenant_id, agent_id
-    );
+    let spiffe_id_str = format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id);
 
     if tenant_id.is_empty() {
-        return (
-            StatusCode::UNAUTHORIZED,
-            axum::Json(serde_json::json!({
-                "status": "error",
-                "message": "missing tenant identity in session",
-                "synced_count": 0
-            })),
-        )
-            .into_response();
+        return (StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({
+            "status": "error",
+            "message": "missing tenant identity in session",
+            "synced_count": 0
+        }))).into_response();
     }
 
     let mut tonic_request = tonic::Request::new(SyncMcpDeltasRequest {
         tenant_id: tenant_id.clone(),
-        deltas: payload
-            .deltas
-            .into_iter()
-            .map(|d| DeltaItem {
-                id: d.id,
-                entity_id: d.entity_id,
-                data: d.data,
-                updated_at: d.updated_at,
-            })
-            .collect(),
+        deltas: payload.deltas.into_iter().map(|d| DeltaItem {
+            id: d.id,
+            entity_id: d.entity_id,
+            data: d.data,
+            updated_at: d.updated_at,
+        }).collect(),
     });
 
     if let Ok(metadata_value) = spiffe_id_str.parse() {
-        tonic_request
-            .metadata_mut()
-            .insert("x-spiffe-id", metadata_value);
+        tonic_request.metadata_mut().insert("x-spiffe-id", metadata_value);
     }
 
     let service = crate::services::sync::service::MySyncService::new(pool);
     match service.sync_mcp_deltas(tonic_request).await {
         Ok(resp) => {
             let inner = resp.into_inner();
-            (
-                StatusCode::OK,
-                axum::Json(serde_json::json!({
-                    "status": inner.status,
-                    "message": inner.message,
-                    "synced_count": inner.synced_count
-                })),
-            )
-                .into_response()
-        }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({
+            (StatusCode::OK, axum::Json(serde_json::json!({
+                "status": inner.status,
+                "message": inner.message,
+                "synced_count": inner.synced_count
+            }))).into_response()
+        },
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
                 "status": "error",
                 "message": e.message(),
                 "synced_count": 0
-            })),
-        )
-            .into_response(),
+            }))).into_response()
+        }
     }
 }
 
@@ -249,8 +192,7 @@ pub struct WsQuery {
 }
 
 fn get_redis_client() -> redis::Client {
-    let redis_url =
-        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
     redis::Client::open(redis_url).expect("Invalid Redis URL")
 }
 
@@ -273,8 +215,8 @@ async fn ensure_redis_subscription() {
         };
 
         if let Err(e) = pubsub_conn.psubscribe("*").await {
-            tracing::error!("Failed to psubscribe: {}", e);
-            return;
+             tracing::error!("Failed to psubscribe: {}", e);
+             return;
         }
 
         let mut pubsub_stream = pubsub_conn.on_message();
@@ -285,16 +227,12 @@ async fn ensure_redis_subscription() {
 
         while let Some(msg) = pubsub_stream.next().await {
             let channel_name = msg.get_channel_name().to_string();
-            if channel_name.starts_with("inventory:")
-                || channel_name.starts_with("orders:")
-                || channel_name.starts_with("tenant_events:")
-            {
+            if channel_name.starts_with("inventory:") || channel_name.starts_with("orders:") || channel_name.starts_with("tenant_events:") {
                 if let Ok(payload) = msg.get_payload::<String>() {
                     let wrapped_msg = serde_json::json!({
                         "channel": channel_name,
                         "payload": payload
-                    })
-                    .to_string();
+                    }).to_string();
                     let _ = tx.send(wrapped_msg);
                 }
             }
@@ -312,9 +250,7 @@ pub async fn ws_sync_handler(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let topics = query
-        .topics
-        .unwrap_or_else(|| "default".to_string())
+    let topics = query.topics.unwrap_or_else(|| "default".to_string())
         .split(',')
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
@@ -333,10 +269,7 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String, topics: Vec<St
     });
     let mut rx = tx.subscribe();
 
-    let target_channels: Vec<String> = topics
-        .iter()
-        .map(|t| format!("{}:{}", t, tenant_id))
-        .collect();
+    let target_channels: Vec<String> = topics.iter().map(|t| format!("{}:{}", t, tenant_id)).collect();
 
     loop {
         tokio::select! {

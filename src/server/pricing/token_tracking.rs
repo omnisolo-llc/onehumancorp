@@ -1,5 +1,5 @@
-use opentelemetry::KeyValue;
 use opentelemetry::metrics::Counter;
+use opentelemetry::KeyValue;
 
 /// TokenTracking provides robust backend infrastructure for LLM token efficiency tracking.
 pub struct TokenTracking {
@@ -9,8 +9,7 @@ pub struct TokenTracking {
 impl TokenTracking {
     pub fn new(meter: &opentelemetry::metrics::Meter) -> Self {
         Self {
-            token_usage_total: meter
-                .u64_counter("token_usage_total")
+            token_usage_total: meter.u64_counter("token_usage_total")
                 .with_description("Total tokens consumed by LLMs")
                 .build(),
         }
@@ -18,13 +17,10 @@ impl TokenTracking {
 
     /// Records token tracking metrics.
     pub fn record_tokens(&self, tenant_id: &str, model: &str, tokens: u64) {
-        self.token_usage_total.add(
-            tokens,
-            &[
-                KeyValue::new("tenant_id", tenant_id.to_string()),
-                KeyValue::new("model", model.to_string()),
-            ],
-        );
+        self.token_usage_total.add(tokens, &[
+            KeyValue::new("tenant_id", tenant_id.to_string()),
+            KeyValue::new("model", model.to_string()),
+        ]);
     }
 }
 

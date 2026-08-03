@@ -20,11 +20,8 @@ async fn test_kv_get_set_list_delete_standalone() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (tenant_id, kv_key)
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+            )"
+        ).execute(&pool).await.unwrap();
 
         let db = Arc::new(DB {
             pool: crate::db::get_pool(), // dummy pg pool
@@ -87,8 +84,7 @@ async fn test_kv_get_set_list_delete_standalone() {
         };
         let res = server.invoke_tool(&req).await.unwrap();
         assert!(res.payload.contains("null"));
-    })
-    .await;
+    }).await;
 }
 
 #[tokio::test]
@@ -132,8 +128,7 @@ async fn test_redis_unconfigured() {
         // But since we didn't migrate Postgres, it should return a DB error.
         let result = server.invoke_tool(&req).await;
         assert!(result.is_err());
-    })
-    .await;
+    }).await;
 }
 
 // Since real redis integration tests require a running redis instance,

@@ -1,8 +1,8 @@
-use dashmap::DashMap;
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use dashmap::DashMap;
 use tokio::sync::watch;
+use sha2::{Sha256, Digest};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DeduplicationResult {
@@ -41,23 +41,17 @@ impl RequestDeduplicator {
         hex::encode(hasher.finalize())
     }
 
-    pub async fn deduplicate<F, Fut>(
-        &self,
-        request: &str,
-        fetcher: F,
-    ) -> Result<DeduplicationResult, String>
+    pub async fn deduplicate<F, Fut>(&self, request: &str, fetcher: F) -> Result<DeduplicationResult, String>
     where
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<DeduplicationResult, String>>,
     {
         // 1. Throttle prune via a mutex (do not block execution, use try_lock to lazily prune)
         if let Ok(mut last) = self.last_prune.try_lock()
-            && last.elapsed() > Duration::from_secs(1)
-        {
-            *last = Instant::now();
-            self.in_flight
-                .retain(|_, v| v.created_at.elapsed() <= self.ttl);
-        }
+            && last.elapsed() > Duration::from_secs(1) {
+                *last = Instant::now();
+                self.in_flight.retain(|_, v| v.created_at.elapsed() <= self.ttl);
+            }
 
         let key = self.hash_request(request);
 
@@ -90,9 +84,7 @@ impl RequestDeduplicator {
 
             result
         } else {
-            tracing::info!(
-                "💰 Miser cost optimization: Deduplicated identical concurrent LLM request."
-            );
+            tracing::info!("💰 Miser cost optimization: Deduplicated identical concurrent LLM request.");
 
             // Fast path: maybe already completed?
             let state = rx.borrow().clone();
@@ -127,15 +119,11 @@ mod tests {
             let dedup = deduplicator.clone();
             let count = call_count.clone();
             tokio::spawn(async move {
-                dedup
-                    .deduplicate("test request", || async {
-                        count.fetch_add(1, Ordering::SeqCst);
-                        sleep(Duration::from_millis(50)).await;
-                        Ok(DeduplicationResult {
-                            response: "success".to_string(),
-                        })
-                    })
-                    .await
+                dedup.deduplicate("test request", || async {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    sleep(Duration::from_millis(50)).await;
+                    Ok(DeduplicationResult { response: "success".to_string() })
+                }).await
             })
         };
 
@@ -144,15 +132,11 @@ mod tests {
             let count = call_count.clone();
             tokio::spawn(async move {
                 sleep(Duration::from_millis(10)).await;
-                dedup
-                    .deduplicate("test request", || async {
-                        count.fetch_add(1, Ordering::SeqCst);
-                        sleep(Duration::from_millis(50)).await;
-                        Ok(DeduplicationResult {
-                            response: "success".to_string(),
-                        })
-                    })
-                    .await
+                dedup.deduplicate("test request", || async {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    sleep(Duration::from_millis(50)).await;
+                    Ok(DeduplicationResult { response: "success".to_string() })
+                }).await
             })
         };
 
@@ -161,37 +145,18 @@ mod tests {
             let count = call_count.clone();
             tokio::spawn(async move {
                 sleep(Duration::from_millis(100)).await; // this arrives *after* completion!
-                dedup
-                    .deduplicate("test request", || async {
-                        count.fetch_add(1, Ordering::SeqCst);
-                        Ok(DeduplicationResult {
-                            response: "success 3".to_string(),
-                        })
-                    })
-                    .await
+                dedup.deduplicate("test request", || async {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    Ok(DeduplicationResult { response: "success 3".to_string() })
+                }).await
             })
         };
 
         let (res1, res2, res3) = tokio::join!(req1, req2, req3);
 
-        assert_eq!(
-            res1.expect("failed to unwrap")
-                .expect("failed to unwrap")
-                .response,
-            "success"
-        );
-        assert_eq!(
-            res2.expect("failed to unwrap")
-                .expect("failed to unwrap")
-                .response,
-            "success"
-        );
-        assert_eq!(
-            res3.expect("failed to unwrap")
-                .expect("failed to unwrap")
-                .response,
-            "success 3"
-        ); // Executed again because it was removed!
+        assert_eq!(res1.expect("failed to unwrap").expect("failed to unwrap").response, "success");
+        assert_eq!(res2.expect("failed to unwrap").expect("failed to unwrap").response, "success");
+        assert_eq!(res3.expect("failed to unwrap").expect("failed to unwrap").response, "success 3"); // Executed again because it was removed!
         assert_eq!(call_count.load(Ordering::SeqCst), 2); // Executed twice!
     }
 
@@ -204,15 +169,11 @@ mod tests {
             let dedup = deduplicator.clone();
             let count = call_count.clone();
             tokio::spawn(async move {
-                dedup
-                    .deduplicate("test request 1", || async {
-                        count.fetch_add(1, Ordering::SeqCst);
-                        sleep(Duration::from_millis(50)).await;
-                        Ok(DeduplicationResult {
-                            response: "success 1".to_string(),
-                        })
-                    })
-                    .await
+                dedup.deduplicate("test request 1", || async {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    sleep(Duration::from_millis(50)).await;
+                    Ok(DeduplicationResult { response: "success 1".to_string() })
+                }).await
             })
         };
 
@@ -220,32 +181,18 @@ mod tests {
             let dedup = deduplicator.clone();
             let count = call_count.clone();
             tokio::spawn(async move {
-                dedup
-                    .deduplicate("test request 2", || async {
-                        count.fetch_add(1, Ordering::SeqCst);
-                        sleep(Duration::from_millis(50)).await;
-                        Ok(DeduplicationResult {
-                            response: "success 2".to_string(),
-                        })
-                    })
-                    .await
+                dedup.deduplicate("test request 2", || async {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    sleep(Duration::from_millis(50)).await;
+                    Ok(DeduplicationResult { response: "success 2".to_string() })
+                }).await
             })
         };
 
         let (res1, res2) = tokio::join!(req1, req2);
 
-        assert_eq!(
-            res1.expect("failed to unwrap")
-                .expect("failed to unwrap")
-                .response,
-            "success 1"
-        );
-        assert_eq!(
-            res2.expect("failed to unwrap")
-                .expect("failed to unwrap")
-                .response,
-            "success 2"
-        );
+        assert_eq!(res1.expect("failed to unwrap").expect("failed to unwrap").response, "success 1");
+        assert_eq!(res2.expect("failed to unwrap").expect("failed to unwrap").response, "success 2");
         assert_eq!(call_count.load(Ordering::SeqCst), 2); // Executed twice!
     }
 
@@ -258,13 +205,11 @@ mod tests {
             let dedup = deduplicator.clone();
             let count = call_count.clone();
             tokio::spawn(async move {
-                dedup
-                    .deduplicate("error request", || async {
-                        count.fetch_add(1, Ordering::SeqCst);
-                        sleep(Duration::from_millis(50)).await;
-                        Err("failed".to_string())
-                    })
-                    .await
+                dedup.deduplicate("error request", || async {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    sleep(Duration::from_millis(50)).await;
+                    Err("failed".to_string())
+                }).await
             })
         };
 
@@ -273,13 +218,11 @@ mod tests {
             let count = call_count.clone();
             tokio::spawn(async move {
                 sleep(Duration::from_millis(10)).await;
-                dedup
-                    .deduplicate("error request", || async {
-                        count.fetch_add(1, Ordering::SeqCst);
-                        sleep(Duration::from_millis(50)).await;
-                        Err("failed".to_string())
-                    })
-                    .await
+                dedup.deduplicate("error request", || async {
+                    count.fetch_add(1, Ordering::SeqCst);
+                    sleep(Duration::from_millis(50)).await;
+                    Err("failed".to_string())
+                }).await
             })
         };
 

@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Task {
@@ -355,6 +355,7 @@ pub struct PaymentEvent {
     pub completed_at: Option<DateTime<Utc>>,
 }
 
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Quote {
     pub id: String,
@@ -396,6 +397,7 @@ pub struct ServiceItem {
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LedgerEntry {
+
     pub id: String,
     pub tenant_id: String,
     pub account_id: String,

@@ -3,13 +3,7 @@ use reqwest::Client;
 
 #[async_trait]
 pub trait ResendClientWrapper: Send + Sync {
-    async fn send_email(
-        &self,
-        to: &str,
-        from: &str,
-        subject: &str,
-        html_body: &str,
-    ) -> Result<(), String>;
+    async fn send_email(&self, to: &str, from: &str, subject: &str, html_body: &str) -> Result<(), String>;
 }
 
 pub struct RealResendClient {
@@ -28,13 +22,7 @@ impl RealResendClient {
 
 #[async_trait]
 impl ResendClientWrapper for RealResendClient {
-    async fn send_email(
-        &self,
-        to: &str,
-        from: &str,
-        subject: &str,
-        html_body: &str,
-    ) -> Result<(), String> {
+    async fn send_email(&self, to: &str, from: &str, subject: &str, html_body: &str) -> Result<(), String> {
         let url = "https://api.resend.com/emails";
 
         let payload = serde_json::json!({
@@ -44,9 +32,7 @@ impl ResendClientWrapper for RealResendClient {
             "html": html_body
         });
 
-        let res = self
-            .http_client
-            .post(url)
+        let res = self.http_client.post(url)
             .bearer_auth(&self.api_key)
             .json(&payload)
             .send()

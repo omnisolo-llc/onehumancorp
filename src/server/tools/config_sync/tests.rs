@@ -4,9 +4,7 @@ use serde_json::json;
 
 #[tokio::test]
 async fn test_config_sync_unauthenticated() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
     let pool = crate::db::get_pool();
     let server = ConfigSyncServer::new(pool);
 
@@ -25,9 +23,7 @@ async fn test_config_sync_unauthenticated() {
 
 #[tokio::test]
 async fn test_config_sync_invalid_tool_id() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
     let pool = crate::db::get_pool();
     let server = ConfigSyncServer::new(pool);
 
@@ -47,45 +43,36 @@ async fn test_config_sync_invalid_tool_id() {
 #[test]
 fn test_config_sync_push_too_large() {
     temp_env::with_vars(vec![("MAX_CONFIG_SIZE", Some("100"))], || {
-        tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async {
-                if std::env::var("OHC_DATABASE_URL").is_err() {
-                    return;
-                }
-                let pool = crate::db::get_pool();
-                let server = ConfigSyncServer::new(pool);
+        tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+            if std::env::var("OHC_DATABASE_URL").is_err() { return; }
+            let pool = crate::db::get_pool();
+            let server = ConfigSyncServer::new(pool);
 
-                let large_payload = "x".repeat(200);
+            let large_payload = "x".repeat(200);
 
-                let req = McpInvokeRequest {
-                    tool_id: "mcp_config_sync".to_string(),
-                    action: "".to_string(),
-                    agent_id: "test-agent-123".to_string(),
-                    spiffe_id: "spiffe://test/tenant/test-tenant".to_string(),
-                    params: json!({
-                        "action": "push_config",
-                        "payload": {
-                            "large_data": large_payload
-                        }
-                    })
-                    .to_string(),
-                };
+            let req = McpInvokeRequest {
+                tool_id: "mcp_config_sync".to_string(),
+                action: "".to_string(),
+                agent_id: "test-agent-123".to_string(),
+                spiffe_id: "spiffe://test/tenant/test-tenant".to_string(),
+                params: json!({
+                    "action": "push_config",
+                    "payload": {
+                        "large_data": large_payload
+                    }
+                }).to_string(),
+            };
 
-                let res = server.invoke_tool(&req).await;
-                assert!(res.is_err());
-                assert_eq!(res.unwrap_err().message(), "Config payload too large");
-            });
+            let res = server.invoke_tool(&req).await;
+            assert!(res.is_err());
+            assert_eq!(res.unwrap_err().message(), "Config payload too large");
+        });
     });
 }
 
 #[tokio::test]
 async fn test_config_sync_push_and_get() {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
-        return;
-    }
+    if std::env::var("OHC_DATABASE_URL").is_err() { return; }
     let pool = crate::db::get_pool();
 
     // The table mcp_config_sync_log is created by migrations in DB setup for tests.
@@ -105,8 +92,7 @@ async fn test_config_sync_push_and_get() {
                 "some_setting": "enabled",
                 "local_proxy_password": "my_secret_password"
             }
-        })
-        .to_string(),
+        }).to_string(),
     };
 
     let push_res = server.invoke_tool(&push_req).await.unwrap();
@@ -122,8 +108,7 @@ async fn test_config_sync_push_and_get() {
         spiffe_id: spiffe_id.to_string(),
         params: json!({
             "action": "get_hash"
-        })
-        .to_string(),
+        }).to_string(),
     };
 
     let get_res = server.invoke_tool(&get_req).await.unwrap();

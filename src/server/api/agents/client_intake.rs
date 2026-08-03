@@ -1,14 +1,15 @@
-use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::{ActionRisk, DepartmentType};
 use axum::{
-    Json, Router,
-    extract::{Form, Query, State},
-    http::StatusCode,
+    extract::{State, Query, Form},
     response::IntoResponse,
+    http::StatusCode,
     routing::post,
+    Router,
+    Json,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 
 #[derive(Deserialize)]
 pub struct TenantQuery {
@@ -38,25 +39,23 @@ pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
-    let state = ClientIntakeState { orchestrator };
+    let state = ClientIntakeState {
+        orchestrator,
+    };
     Router::new()
         .route("/", post(handle_client_intake))
         .with_state(state)
 }
 
 use ohc_builtin_agent::gpt_researcher::{PlannerAgent, ResearcherLlmClient};
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
+use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
 
 // Let's use the real LLM here to match the inquiry against the pricing heuristics instead of basic keywords.
 struct LocalLlm;
 #[async_trait::async_trait]
 impl ResearcherLlmClient for LocalLlm {
-    async fn chat(
-        &self,
-        req: ChatRequest,
-    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let is_test_mode =
-            cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
+    async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
         let mut prompt = req.system.clone();
         for msg in &req.messages {
             prompt.push_str("\n\n");
@@ -69,15 +68,9 @@ impl ResearcherLlmClient for LocalLlm {
             match std::env::var("OHC_LLM_PROVIDER").as_deref() {
                 Ok("minimax") => {
                     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                    crate::minimax::MinimaxClient::new(api_key)
-                        .reason(&prompt)
-                        .await?
+                    crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await?
                 }
-                _ => {
-                    crate::minimax::LocalLLMClient::new()
-                        .reason(&prompt)
-                        .await?
-                }
+                _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await?,
             }
         };
 
@@ -107,24 +100,17 @@ async fn handle_client_intake(
     let llm = Arc::new(LocalLlm);
     let planner = Arc::new(PlannerAgent::new(llm.clone(), "default".to_string()));
     if let Ok(plan) = planner.plan_research(&payload.details).await {
-        let heuristics_res = sqlx::query(
-            "SELECT service_category, base_rate_cents FROM pricing_heuristics WHERE tenant_id = $1",
-        )
-        .bind(&tenant_id)
-        .fetch_all(&state.orchestrator.db().pool)
-        .await;
+        let heuristics_res = sqlx::query("SELECT service_category, base_rate_cents FROM pricing_heuristics WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_all(&state.orchestrator.db().pool)
+            .await;
         if let Ok(heuristics) = heuristics_res {
             use sqlx::Row;
             let plan_lower = plan.join(" ").to_lowercase();
             for h in heuristics {
                 let category: String = h.get("service_category");
                 let rate_cents: i64 = h.get("base_rate_cents");
-                if plan_lower.contains(&category.to_lowercase())
-                    || payload
-                        .details
-                        .to_lowercase()
-                        .contains(&category.to_lowercase())
-                {
+                if plan_lower.contains(&category.to_lowercase()) || payload.details.to_lowercase().contains(&category.to_lowercase()) {
                     service_name = category;
                     suggested_price = (rate_cents as f64) / 100.0;
                     break;
@@ -135,10 +121,7 @@ async fn handle_client_intake(
         // Use the LLM actually to generate the message
         let llm_request = ChatRequest {
             model: "default".to_string(),
-            messages: vec![Message::user(format!(
-                "Write a personalized 2 sentence proposal message for {} based on inquiry: {}",
-                service_name, payload.details
-            ))],
+            messages: vec![Message::user(format!("Write a personalized 2 sentence proposal message for {} based on inquiry: {}", service_name, payload.details))],
             system: "You are a professional service agency proposal drafter.".to_string(),
             max_tokens: 500,
             temperature: 0.7,
@@ -146,13 +129,10 @@ async fn handle_client_intake(
         };
 
         if let Ok(response) = llm.chat(llm_request).await {
-            drafted_message = response.message.content;
-            if !drafted_message.contains(&format!("{:.2}", suggested_price)) {
-                drafted_message = format!(
-                    "{} The estimated scope will cost around ${:.2}.",
-                    drafted_message, suggested_price
-                );
-            }
+             drafted_message = response.message.content;
+             if !drafted_message.contains(&format!("{:.2}", suggested_price)) {
+                 drafted_message = format!("{} The estimated scope will cost around ${:.2}.", drafted_message, suggested_price);
+             }
         }
     }
 
@@ -166,16 +146,8 @@ async fn handle_client_intake(
         Ok(tx) => tx,
         Err(e) => {
             tracing::error!("Failed to begin transaction: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ClientIntakeResponse {
-                    success: false,
-                    proposal_drafted: false,
-                    quote_id: None,
-                }),
-            )
-                .into_response();
-        }
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response()
+        },
     };
 
     // Check if customers table exists and insert a dummy customer to satisfy FK, or just use UUID as text if that's the schema.
@@ -235,15 +207,7 @@ async fn handle_client_intake(
 
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ClientIntakeResponse {
-                success: false,
-                proposal_drafted: false,
-                quote_id: None,
-            }),
-        )
-            .into_response();
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response();
     }
 
     let action_payload = serde_json::json!({
@@ -260,35 +224,15 @@ async fn handle_client_intake(
         "quote_id": quote_id.to_string(),
     });
 
-    match state
-        .orchestrator
-        .execute_action(
-            DepartmentType::Sales,
-            format!("Action Required: Approve Estimate for {}", service_name),
-            tenant_id,
-            ActionRisk::DraftForReview,
-            action_payload,
-        )
-        .await
-    {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(ClientIntakeResponse {
-                success: true,
-                proposal_drafted: true,
-                quote_id: Some(quote_id.to_string()),
-            }),
-        )
-            .into_response(),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ClientIntakeResponse {
-                success: false,
-                proposal_drafted: false,
-                quote_id: None,
-            }),
-        )
-            .into_response(),
+    match state.orchestrator.execute_action(
+        DepartmentType::Sales,
+        format!("Action Required: Approve Estimate for {}", service_name),
+        tenant_id,
+        ActionRisk::DraftForReview,
+        action_payload,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(ClientIntakeResponse { success: true, proposal_drafted: true, quote_id: Some(quote_id.to_string()) })).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ClientIntakeResponse { success: false, proposal_drafted: false, quote_id: None })).into_response(),
     }
 }
 

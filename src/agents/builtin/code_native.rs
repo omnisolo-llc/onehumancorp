@@ -1,7 +1,7 @@
 use std::any::Any;
+use tracing::{info, error, debug};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, error, info};
 /// SOTA Harness Patterns (2025-2026): 2. Code-native execution -> preserving execution state and rich data structures
 /// This module implements the `CodeNativeExecution` mechanic. It provides a `RichExecutionEnvironment`
 /// that allows tools to store and retrieve strongly-typed Rust objects (`std::any::Any`) across
@@ -25,13 +25,10 @@ impl RichExecutionEnvironment {
     pub fn snapshot(&mut self) -> usize {
         let id = self.next_snapshot_id;
         self.next_snapshot_id += 1;
-        self.snapshots.insert(
-            id,
-            SnapshotNode {
-                state: self.state.clone(),
-                parent_id: self.current_snapshot_id,
-            },
-        );
+        self.snapshots.insert(id, SnapshotNode {
+            state: self.state.clone(),
+            parent_id: self.current_snapshot_id,
+        });
         self.current_snapshot_id = Some(id);
         id
     }
@@ -147,10 +144,7 @@ impl CodeNativePipeline {
         &self,
         tools: Vec<(Arc<dyn CodeNativeTool>, serde_json::Value)>,
     ) -> Result<Vec<String>, String> {
-        info!(
-            "Starting CodeNativePipeline run_sequence with {} tools",
-            tools.len()
-        );
+        info!("Starting CodeNativePipeline run_sequence with {} tools", tools.len());
         let start_time = std::time::Instant::now();
         let mut env_lock = self.env.write().await;
         let snapshot_id = env_lock.snapshot();
@@ -161,24 +155,19 @@ impl CodeNativePipeline {
                 Ok(res) => {
                     debug!("Tool {} succeeded", i);
                     results.push(res);
-                }
+                },
                 Err(e) => {
-                    error!(
-                        "Tool {} failed with error: {}. Rolling back to snapshot {}",
-                        i, e, snapshot_id
-                    );
+                    error!("Tool {} failed with error: {}. Rolling back to snapshot {}", i, e, snapshot_id);
                     let _ = env_lock.rollback(snapshot_id);
                     return Err(format!("Pipeline failed at step {}: {}", results.len(), e));
                 }
             }
         }
         env_lock.commit(snapshot_id);
-        info!(
-            "CodeNativePipeline run_sequence completed successfully in {:?}",
-            start_time.elapsed()
-        );
+        info!("CodeNativePipeline run_sequence completed successfully in {:?}", start_time.elapsed());
         Ok(results)
     }
+
 }
 #[cfg(test)]
 mod tests {

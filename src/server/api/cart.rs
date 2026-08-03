@@ -1,12 +1,12 @@
-use crate::hub::Hub;
 use axum::{
-    Json,
     extract::{Path, State},
     http::HeaderMap,
     response::IntoResponse,
+    Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::hub::Hub;
 
 #[derive(Deserialize)]
 pub struct CreateCartRequest {
@@ -44,20 +44,12 @@ pub struct AddCartItemRequest {
     pub unit_price_cents: i64,
 }
 
-pub fn router(
-    hub: Arc<Hub>,
-) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/", axum::routing::post(create_cart_handler))
         .route("/{cart_id}", axum::routing::get(get_cart_handler))
-        .route(
-            "/{cart_id}/items",
-            axum::routing::post(add_cart_item_handler),
-        )
-        .route(
-            "/{cart_id}/status",
-            axum::routing::post(update_cart_status_handler),
-        )
+        .route("/{cart_id}/items", axum::routing::post(add_cart_item_handler))
+        .route("/{cart_id}/status", axum::routing::post(update_cart_status_handler))
         .with_state(hub)
 }
 
@@ -70,33 +62,17 @@ pub async fn create_cart_handler(
     let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" })),
-                )
-                    .into_response();
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" }))).into_response();
             } else {
                 auth.org_id.clone()
             }
-        }
-        None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({ "error": "Unauthenticated" })),
-            )
-                .into_response();
-        }
+        },
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
     };
 
     let cart_id = uuid::Uuid::new_v4().to_string();
-    let channel = req_data
-        .channel
-        .clone()
-        .unwrap_or_else(|| "online".to_string());
-    let currency = req_data
-        .currency
-        .clone()
-        .unwrap_or_else(|| "usd".to_string());
+    let channel = req_data.channel.clone().unwrap_or_else(|| "online".to_string());
+    let currency = req_data.currency.clone().unwrap_or_else(|| "usd".to_string());
 
     let pool = crate::db::get_pool();
 
@@ -124,14 +100,10 @@ pub async fn create_cart_handler(
                 items: vec![],
             };
             (axum::http::StatusCode::OK, Json(response)).into_response()
-        }
+        },
         Err(e) => {
             tracing::error!("Failed to create cart: {}", e);
-            (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "Failed to create cart" })),
-            )
-                .into_response()
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Failed to create cart" }))).into_response()
         }
     }
 }
@@ -145,22 +117,12 @@ pub async fn get_cart_handler(
     let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "Unauthenticated" })),
-                )
-                    .into_response();
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response();
             } else {
                 auth.org_id.clone()
             }
-        }
-        None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({ "error": "Unauthenticated" })),
-            )
-                .into_response();
-        }
+        },
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
     };
 
     let pool = crate::db::get_pool();
@@ -184,20 +146,10 @@ pub async fn get_cart_handler(
 
     let cart_row = match cart_res {
         Ok(Some(row)) => row,
-        Ok(None) => {
-            return (
-                axum::http::StatusCode::NOT_FOUND,
-                Json(serde_json::json!({ "error": "Cart not found" })),
-            )
-                .into_response();
-        }
+        Ok(None) => return (axum::http::StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Cart not found" }))).into_response(),
         Err(e) => {
             tracing::error!("Failed to fetch cart: {}", e);
-            return (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "Failed to fetch cart" })),
-            )
-                .into_response();
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Failed to fetch cart" }))).into_response();
         }
     };
 
@@ -209,19 +161,16 @@ pub async fn get_cart_handler(
         }
     };
 
-    let items: Vec<CartItemResponse> = items_rows
-        .into_iter()
-        .map(|row| {
-            use sqlx::Row;
-            CartItemResponse {
-                id: row.get("id"),
-                product_id: row.get("product_id"),
-                variant_id: row.try_get("variant_id").unwrap_or(None),
-                quantity: row.get("quantity"),
-                unit_price_cents: row.get("unit_price_cents"),
-            }
-        })
-        .collect();
+    let items: Vec<CartItemResponse> = items_rows.into_iter().map(|row| {
+        use sqlx::Row;
+        CartItemResponse {
+            id: row.get("id"),
+            product_id: row.get("product_id"),
+            variant_id: row.try_get("variant_id").unwrap_or(None),
+            quantity: row.get("quantity"),
+            unit_price_cents: row.get("unit_price_cents"),
+        }
+    }).collect();
 
     use sqlx::Row;
     let response = CartResponse {
@@ -248,58 +197,29 @@ pub async fn add_cart_item_handler(
     let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "Unauthenticated" })),
-                )
-                    .into_response();
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response();
             } else {
                 auth.org_id.clone()
             }
-        }
-        None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({ "error": "Unauthenticated" })),
-            )
-                .into_response();
-        }
+        },
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
     };
 
     // First check if cart exists and is active
     let pool = crate::db::get_pool();
-    let status: Option<String> =
-        match sqlx::query_scalar("SELECT status FROM carts WHERE id = $1 AND tenant_id = $2")
-            .bind(&cart_id)
-            .bind(&tenant_id)
-            .fetch_optional(&pool)
-            .await
-        {
-            Ok(s) => s,
-            Err(_) => {
-                return (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "error": "Database error" })),
-                )
-                    .into_response();
-            }
-        };
+    let status: Option<String> = match sqlx::query_scalar("SELECT status FROM carts WHERE id = $1 AND tenant_id = $2")
+        .bind(&cart_id)
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await
+    {
+        Ok(s) => s,
+        Err(_) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Database error" }))).into_response()
+    };
 
     match status {
-        Some(s) if s != "active" => {
-            return (
-                axum::http::StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({ "error": "Cart is not active" })),
-            )
-                .into_response();
-        }
-        None => {
-            return (
-                axum::http::StatusCode::NOT_FOUND,
-                Json(serde_json::json!({ "error": "Cart not found" })),
-            )
-                .into_response();
-        }
+        Some(s) if s != "active" => return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "Cart is not active" }))).into_response(),
+        None => return (axum::http::StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Cart not found" }))).into_response(),
         _ => {}
     }
 
@@ -307,26 +227,16 @@ pub async fn add_cart_item_handler(
     // but typically we can do a reserve here if needed.
     // For simplicity, let's just do a reserve
     let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client());
-    let reserve_result = inventory_service
-        .reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, 900)
-        .await;
+    let reserve_result = inventory_service.reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, 900).await;
 
     match reserve_result {
         Ok(res) if !res.success => {
-            return (
-                axum::http::StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({ "error": "Item is currently being checked out" })),
-            )
-                .into_response();
-        }
+            return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "Item is currently being checked out" }))).into_response();
+        },
         Err(e) => {
             tracing::error!("Inventory service error: {}", e);
-            return (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "Inventory check failed" })),
-            )
-                .into_response();
-        }
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Inventory check failed" }))).into_response();
+        },
         _ => {} // Reserved
     }
 
@@ -345,11 +255,7 @@ pub async fn add_cart_item_handler(
     .await;
 
     if res.is_err() {
-        return (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": "Failed to add item to cart" })),
-        )
-            .into_response();
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Failed to add item to cart" }))).into_response();
     }
 
     // Apply Dynamic Pricing
@@ -358,8 +264,7 @@ pub async fn add_cart_item_handler(
         &tenant_id,
         &req_data.product_id,
         req_data.unit_price_cents,
-    )
-    .await;
+    ).await;
 
     // Update cart total
     let _ = sqlx::query(
@@ -371,11 +276,7 @@ pub async fn add_cart_item_handler(
     .execute(&pool)
     .await;
 
-    (
-        axum::http::StatusCode::OK,
-        Json(serde_json::json!({ "success": true, "item_id": item_id })),
-    )
-        .into_response()
+    (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true, "item_id": item_id }))).into_response()
 }
 
 #[derive(Deserialize)]
@@ -393,22 +294,12 @@ pub async fn update_cart_status_handler(
     let tenant_id = match auth_info {
         Some(auth) => {
             if auth.org_id.is_empty() {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "Unauthenticated" })),
-                )
-                    .into_response();
+                return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response();
             } else {
                 auth.org_id.clone()
             }
-        }
-        None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({ "error": "Unauthenticated" })),
-            )
-                .into_response();
-        }
+        },
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
     };
 
     let pool = crate::db::get_pool();
@@ -422,26 +313,14 @@ pub async fn update_cart_status_handler(
     match res {
         Ok(result) => {
             if result.rows_affected() > 0 {
-                (
-                    axum::http::StatusCode::OK,
-                    Json(serde_json::json!({ "success": true })),
-                )
-                    .into_response()
+                (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response()
             } else {
-                (
-                    axum::http::StatusCode::NOT_FOUND,
-                    Json(serde_json::json!({ "error": "Cart not found" })),
-                )
-                    .into_response()
+                (axum::http::StatusCode::NOT_FOUND, Json(serde_json::json!({ "error": "Cart not found" }))).into_response()
             }
-        }
+        },
         Err(e) => {
             tracing::error!("Failed to update cart status: {}", e);
-            (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "Failed to update cart status" })),
-            )
-                .into_response()
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Failed to update cart status" }))).into_response()
         }
     }
 }

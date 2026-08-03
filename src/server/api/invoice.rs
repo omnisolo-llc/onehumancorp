@@ -1,16 +1,10 @@
 use std::sync::Arc;
 
-use ::server_common::Claims;
-use ::server_ohc::invoice::invoice_service_server::InvoiceService;
 use ::server_ohc::invoice::*;
-use axum::{
-    Json, Router,
-    extract::{Extension, Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-    routing::{get, post, put},
-};
+use ::server_ohc::invoice::invoice_service_server::InvoiceService;
+use axum::{extract::{State, Extension, Path}, http::StatusCode, response::IntoResponse, routing::{get, post, put}, Json, Router};
 use serde::Deserialize;
+use ::server_common::Claims;
 use tonic::{Request, Response, Status};
 
 use crate::hub::Hub;
@@ -28,40 +22,20 @@ impl InvoiceService for InvoiceServiceImpl {
         let req = request.into_inner();
 
         let pool = &self.hub.pool;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
-        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let invoice_id = uuid::Uuid::new_v4().to_string();
         let total_amount: f64 = req.line_items.iter().map(|item| item.amount).sum();
         let status = "draft".to_string();
 
-        let stripe_payment_link = format!(
-            "https://checkout.stripe.com/pay/cs_test_{}",
-            uuid::Uuid::new_v4().to_string().replace("-", "")
-        );
+        let stripe_payment_link = format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", ""));
 
-        let base_currency = if req.base_currency.is_empty() {
-            "USD".to_string()
-        } else {
-            req.base_currency.clone()
-        };
-        let transaction_currency = if req.transaction_currency.is_empty() {
-            req.currency.clone()
-        } else {
-            req.transaction_currency.clone()
-        };
-        let exchange_rate = if req.exchange_rate == 0.0 {
-            1.0
-        } else {
-            req.exchange_rate
-        };
+        let base_currency = if req.base_currency.is_empty() { "USD".to_string() } else { req.base_currency.clone() };
+        let transaction_currency = if req.transaction_currency.is_empty() { req.currency.clone() } else { req.transaction_currency.clone() };
+        let exchange_rate = if req.exchange_rate == 0.0 { 1.0 } else { req.exchange_rate };
 
         sqlx::query(
             "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, base_currency, transaction_currency, exchange_rate, total_amount, stripe_payment_link)
@@ -111,9 +85,7 @@ impl InvoiceService for InvoiceServiceImpl {
             });
         }
 
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Invoice {
             id: invoice_id,
@@ -145,15 +117,10 @@ impl InvoiceService for InvoiceServiceImpl {
         let req = request.into_inner();
 
         let pool = &self.hub.pool;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
-        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
 
@@ -166,16 +133,14 @@ impl InvoiceService for InvoiceServiceImpl {
                     li.amount as li_amount
              FROM invoices i
              LEFT JOIN invoice_line_items li ON i.id = li.invoice_id
-             WHERE i.id = $1",
+             WHERE i.id = $1"
         )
-        .bind(&req.invoice_id)
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
-
-        tx.commit()
+            .bind(&req.invoice_id)
+            .fetch_all(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         if rows.is_empty() {
             return Err(Status::not_found("Invoice not found"));
@@ -188,21 +153,15 @@ impl InvoiceService for InvoiceServiceImpl {
         let first_row_due_date: i64 = rows[0].try_get("due_date").unwrap_or_default();
         let first_row_currency: String = rows[0].try_get("currency").unwrap_or_default();
         let first_row_base_currency: String = rows[0].try_get("base_currency").unwrap_or_default();
-        let first_row_transaction_currency: String =
-            rows[0].try_get("transaction_currency").unwrap_or_default();
+        let first_row_transaction_currency: String = rows[0].try_get("transaction_currency").unwrap_or_default();
         let first_row_exchange_rate: f64 = rows[0].try_get("exchange_rate").unwrap_or_default();
         let first_row_total_amount: f64 = rows[0].try_get("total_amount").unwrap_or_default();
-        let first_row_total_amount_cents: i32 =
-            rows[0].try_get("total_amount_cents").unwrap_or_default();
-        let first_row_payment_status: String =
-            rows[0].try_get("payment_status").unwrap_or_default();
+        let first_row_total_amount_cents: i32 = rows[0].try_get("total_amount_cents").unwrap_or_default();
+        let first_row_payment_status: String = rows[0].try_get("payment_status").unwrap_or_default();
         let first_row_view_count: i32 = rows[0].try_get("view_count").unwrap_or_default();
-        let first_row_amount_paid_cents: i32 =
-            rows[0].try_get("amount_paid_cents").unwrap_or_default();
-        let first_row_stripe_invoice_id: String =
-            rows[0].try_get("stripe_invoice_id").unwrap_or_default();
-        let first_row_stripe_payment_link: String =
-            rows[0].try_get("stripe_payment_link").unwrap_or_default();
+        let first_row_amount_paid_cents: i32 = rows[0].try_get("amount_paid_cents").unwrap_or_default();
+        let first_row_stripe_invoice_id: String = rows[0].try_get("stripe_invoice_id").unwrap_or_default();
+        let first_row_stripe_payment_link: String = rows[0].try_get("stripe_payment_link").unwrap_or_default();
 
         let mut line_items = Vec::new();
         for row in rows {
@@ -243,6 +202,7 @@ impl InvoiceService for InvoiceServiceImpl {
         Ok(Response::new(invoice))
     }
 
+
     async fn list_invoices(
         &self,
         request: Request<ListInvoicesRequest>,
@@ -250,15 +210,10 @@ impl InvoiceService for InvoiceServiceImpl {
         let req = request.into_inner();
 
         let pool = &self.hub.pool;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
-        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
 
@@ -267,9 +222,7 @@ impl InvoiceService for InvoiceServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut invoices = Vec::new();
         for row in rows {
@@ -306,26 +259,19 @@ impl InvoiceService for InvoiceServiceImpl {
         let req = request.into_inner();
 
         let pool = &self.hub.pool;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
-        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id)
+        ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query("UPDATE invoices SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
+            .bind(&req.status)
+            .bind(chrono::Utc::now().timestamp())
+            .bind(&req.invoice_id)
+            .bind(&req.tenant_id)
+            .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-
-        sqlx::query(
-            "UPDATE invoices SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4",
-        )
-        .bind(&req.status)
-        .bind(chrono::Utc::now().timestamp())
-        .bind(&req.invoice_id)
-        .bind(&req.tenant_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
 
@@ -341,9 +287,7 @@ impl InvoiceService for InvoiceServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         let mut line_items = Vec::new();
         for item_row in items_rows {
@@ -420,9 +364,7 @@ impl InvoiceService for InvoiceServiceImpl {
             updated_at: chrono::Utc::now().timestamp(),
         };
 
-        Ok(Response::new(DraftInvoiceFromContextResponse {
-            draft: Some(invoice),
-        }))
+        Ok(Response::new(DraftInvoiceFromContextResponse { draft: Some(invoice) }))
     }
 }
 
@@ -455,9 +397,7 @@ async fn generate_invoice_handler(
 ) -> Result<impl IntoResponse, StatusCode> {
     // For offline field service sync, we just acknowledge receipt for now.
     // A real implementation would generate an invoice based on the job ID.
-    let _tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let _tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
 
     // Placeholder response to satisfy the frontend sync manager
     Ok(Json(serde_json::json!({
@@ -473,6 +413,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
         .route("/{id}/status", put(update_invoice_status_handler))
         .with_state(hub)
 }
+
 
 use serde::Serialize;
 
@@ -521,62 +462,48 @@ pub struct InvoiceStandardView {
     pub updated_at: i64,
 }
 
-pub fn map_invoices_for_mobile(
-    invoices: Vec<::server_ohc::invoice::Invoice>,
-) -> Vec<InvoiceMobileView> {
-    invoices
-        .into_iter()
-        .map(|inv| InvoiceMobileView {
-            id: inv.id,
-            client_name: inv.client_name,
-            status: inv.status,
-            due_date: inv.due_date,
-            currency: inv.currency,
-            total_amount: inv.total_amount,
-            total_amount_cents: inv.total_amount_cents,
-            payment_status: inv.payment_status,
-            amount_paid_cents: inv.amount_paid_cents,
-            created_at: inv.created_at,
-            updated_at: inv.updated_at,
-        })
-        .collect()
+pub fn map_invoices_for_mobile(invoices: Vec<::server_ohc::invoice::Invoice>) -> Vec<InvoiceMobileView> {
+    invoices.into_iter().map(|inv| InvoiceMobileView {
+        id: inv.id,
+        client_name: inv.client_name,
+        status: inv.status,
+        due_date: inv.due_date,
+        currency: inv.currency,
+        total_amount: inv.total_amount,
+        total_amount_cents: inv.total_amount_cents,
+        payment_status: inv.payment_status,
+        amount_paid_cents: inv.amount_paid_cents,
+        created_at: inv.created_at,
+        updated_at: inv.updated_at,
+    }).collect()
 }
 
-pub fn map_invoices_standard(
-    invoices: Vec<::server_ohc::invoice::Invoice>,
-) -> Vec<InvoiceStandardView> {
-    invoices
-        .into_iter()
-        .map(|inv| InvoiceStandardView {
-            id: inv.id,
-            client_id: inv.client_id,
-            client_name: inv.client_name,
-            status: inv.status,
-            due_date: inv.due_date,
-            currency: inv.currency,
-            total_amount: inv.total_amount,
-            total_amount_cents: inv.total_amount_cents,
-            payment_status: inv.payment_status,
-            view_count: inv.view_count,
-            amount_paid_cents: inv.amount_paid_cents,
-            stripe_invoice_id: inv.stripe_invoice_id,
-            stripe_payment_link: inv.stripe_payment_link,
-            line_items: inv
-                .line_items
-                .into_iter()
-                .map(|li| InvoiceLineItemView {
-                    id: li.id,
-                    invoice_id: li.invoice_id,
-                    description: li.description,
-                    quantity: li.quantity,
-                    unit_price: li.unit_price,
-                    amount: li.amount,
-                })
-                .collect(),
-            created_at: inv.created_at,
-            updated_at: inv.updated_at,
-        })
-        .collect()
+pub fn map_invoices_standard(invoices: Vec<::server_ohc::invoice::Invoice>) -> Vec<InvoiceStandardView> {
+    invoices.into_iter().map(|inv| InvoiceStandardView {
+        id: inv.id,
+        client_id: inv.client_id,
+        client_name: inv.client_name,
+        status: inv.status,
+        due_date: inv.due_date,
+        currency: inv.currency,
+        total_amount: inv.total_amount,
+        total_amount_cents: inv.total_amount_cents,
+        payment_status: inv.payment_status,
+        view_count: inv.view_count,
+        amount_paid_cents: inv.amount_paid_cents,
+        stripe_invoice_id: inv.stripe_invoice_id,
+        stripe_payment_link: inv.stripe_payment_link,
+        line_items: inv.line_items.into_iter().map(|li| InvoiceLineItemView {
+            id: li.id,
+            invoice_id: li.invoice_id,
+            description: li.description,
+            quantity: li.quantity,
+            unit_price: li.unit_price,
+            amount: li.amount,
+        }).collect(),
+        created_at: inv.created_at,
+        updated_at: inv.updated_at,
+    }).collect()
 }
 
 pub async fn list_invoices_handler(
@@ -584,17 +511,12 @@ pub async fn list_invoices_handler(
     axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
 
     let service = InvoiceServiceImpl { hub: _hub };
     let req = Request::new(ListInvoicesRequest { tenant_id });
 
-    let mobile_optimized = query
-        .get("mobile_optimized")
-        .map(|s| s == "true")
-        .unwrap_or(false);
+    let mobile_optimized = query.get("mobile_optimized").map(|s| s == "true").unwrap_or(false);
     match service.list_invoices(req).await {
         Ok(resp) => {
             let inner = resp.into_inner();
@@ -615,9 +537,7 @@ async fn create_invoice_handler(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateInvoiceHttp>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let service = InvoiceServiceImpl { hub: _hub };
 
     let mut mapped_line_items = Vec::new();
@@ -662,16 +582,10 @@ async fn update_invoice_status_handler(
     Path(id): Path<String>,
     Json(payload): Json<UpdateInvoiceStatusHttp>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let service = InvoiceServiceImpl { hub: _hub };
 
-    let req = Request::new(UpdateInvoiceStatusRequest {
-        tenant_id,
-        invoice_id: id,
-        status: payload.status,
-    });
+    let req = Request::new(UpdateInvoiceStatusRequest { tenant_id, invoice_id: id, status: payload.status });
 
     match service.update_invoice_status(req).await {
         Ok(resp) => Ok(Json(resp.into_inner())),
@@ -684,9 +598,7 @@ mod tests {
     use super::*;
     use crate::db::DB;
     use crate::hub::Hub;
-    use ::server_ohc::invoice::{
-        CreateInvoiceRequest, InvoiceLineItem, UpdateInvoiceStatusRequest,
-    };
+    use ::server_ohc::invoice::{CreateInvoiceRequest, InvoiceLineItem, UpdateInvoiceStatusRequest};
 
     #[tokio::test]
     async fn test_invoice_logic() {
@@ -710,14 +622,16 @@ mod tests {
             base_currency: "USD".to_string(),
             transaction_currency: "USD".to_string(),
             exchange_rate: 1.0,
-            line_items: vec![InvoiceLineItem {
-                id: "".to_string(),
-                invoice_id: "".to_string(),
-                description: "Item 1".to_string(),
-                quantity: 1,
-                unit_price: 100.0,
-                amount: 100.0,
-            }],
+            line_items: vec![
+                InvoiceLineItem {
+                    id: "".to_string(),
+                    invoice_id: "".to_string(),
+                    description: "Item 1".to_string(),
+                    quantity: 1,
+                    unit_price: 100.0,
+                    amount: 100.0,
+                }
+            ],
         };
 
         let create_resp = service.create_invoice(Request::new(create_req)).await;
@@ -734,15 +648,14 @@ mod tests {
             status: "paid".to_string(),
         };
 
-        let update_resp = service
-            .update_invoice_status(Request::new(update_req))
-            .await;
+        let update_resp = service.update_invoice_status(Request::new(update_req)).await;
         assert!(update_resp.is_ok());
 
         let updated_invoice = update_resp.unwrap().into_inner();
         assert_eq!(updated_invoice.status, "paid");
     }
 }
+
 
 #[cfg(test)]
 mod payload_tests {

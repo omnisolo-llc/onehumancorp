@@ -1,12 +1,8 @@
-use serde_json::Value;
 use sqlx::PgPool;
+use serde_json::Value;
 use uuid::Uuid;
 
-pub async fn handle_proposal_action(
-    tenant_id: &str,
-    payload: &Value,
-    pool: &PgPool,
-) -> Result<(), sqlx::Error> {
+pub async fn handle_proposal_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
     if let Some(action) = payload.get("action").and_then(|v| v.as_str()) {
         if action == "approve" {
             if let Some(proposal_id) = payload.get("proposal_id").and_then(|v| v.as_str()) {
@@ -22,6 +18,7 @@ pub async fn handle_proposal_action(
     Ok(())
 }
 
+
 use ohc_builtin_agent::llm::LlmClient;
 use std::sync::Arc;
 
@@ -33,26 +30,15 @@ fn build_estimator_llm_client() -> Option<Arc<dyn LlmClient>> {
     let endpoint = std::env::var("OHC_LLM_ENDPOINT").ok();
 
     let mut config = if let Some(endpoint) = endpoint {
-        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(
-            key,
-            endpoint,
-            Some(model.clone()),
-        )
+        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
     } else {
         ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
     };
     config.default_model = Some(model);
-    Some(Arc::new(
-        ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config),
-    ))
+    Some(Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config)))
 }
 
-pub async fn parse_inquiry_to_proposal(
-    tenant_id: &str,
-    customer_id: Uuid,
-    inquiry_text: &str,
-    pool: &PgPool,
-) -> Result<Uuid, sqlx::Error> {
+pub async fn parse_inquiry_to_proposal(tenant_id: &str, customer_id: Uuid, inquiry_text: &str, pool: &PgPool) -> Result<Uuid, sqlx::Error> {
     // Parse inquiry to proposal using services as the ServiceCatalog
 
     let mut matched_service_name = "Custom Service Base Fee".to_string();
@@ -68,12 +54,10 @@ pub async fn parse_inquiry_to_proposal(
 
     let mut matched_service_item_id: Option<Uuid> = None;
 
-    let services = sqlx::query_as::<_, ServiceItem>(
-        "SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = $1",
-    )
-    .bind(tenant_id)
-    .fetch_all(pool)
-    .await?;
+    let services = sqlx::query_as::<_, ServiceItem>("SELECT id, name, base_price_cents FROM service_items WHERE tenant_id = $1")
+        .bind(tenant_id)
+        .fetch_all(pool)
+        .await?;
 
     let catalog_json = serde_json::to_string(&services).unwrap_or_default();
     let llm_client = build_estimator_llm_client();
@@ -88,6 +72,7 @@ Customer Inquiry: '{1}'
 Task: Extract the scope of work and identify the closest matching service from the catalog based on the inquiry. Respond ONLY in valid JSON format: {{ \"matched_service_title\": \"string\", \"matched_price_cents\": 15000 }}",
             catalog_json, inquiry_text
         );
+
 
         let req = ohc_builtin_agent::types::ChatRequest {
             messages: vec![ohc_builtin_agent::types::Message::user(&prompt)],
@@ -104,10 +89,7 @@ Task: Extract the scope of work and identify the closest matching service from t
                     matched_service_name = title.to_string();
 
                     // Try to find the matched service by title to get the ID
-                    if let Some(matched_service) = services
-                        .iter()
-                        .find(|s| s.name.to_lowercase() == title.to_lowercase())
-                    {
+                    if let Some(matched_service) = services.iter().find(|s| s.name.to_lowercase() == title.to_lowercase()) {
                         matched_service_item_id = Some(matched_service.id);
                     }
                 }
@@ -158,11 +140,7 @@ Task: Extract the scope of work and identify the closest matching service from t
     .execute(pool)
     .await?;
 
-    tracing::info!(
-        "Estimator Agent drafted proposal {} for tenant {}",
-        proposal_id,
-        tenant_id
-    ); // pii-safe
+    tracing::info!("Estimator Agent drafted proposal {} for tenant {}", proposal_id, tenant_id); // pii-safe
 
     Ok(proposal_id)
 }

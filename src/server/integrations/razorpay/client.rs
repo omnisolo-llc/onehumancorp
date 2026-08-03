@@ -13,21 +13,11 @@ impl RazorpayClient {
         }
     }
 
-    pub async fn create_checkout_preference(
-        &self,
-        price_id: &str,
-        tenant_id: &str,
-    ) -> Result<String, String> {
-        self.create_payment(0.0, &format!("Checkout {price_id}"), tenant_id)
-            .await
+    pub async fn create_checkout_preference(&self, price_id: &str, tenant_id: &str) -> Result<String, String> {
+        self.create_payment(0.0, &format!("Checkout {price_id}"), tenant_id).await
     }
 
-    pub async fn create_payment(
-        &self,
-        amount: f64,
-        description: &str,
-        receipt: &str,
-    ) -> Result<String, String> {
+    pub async fn create_payment(&self, amount: f64, description: &str, receipt: &str) -> Result<String, String> {
         if self.api_key.trim().is_empty()
             || self.api_secret.trim().is_empty()
             || self.api_key.contains("test")
@@ -53,8 +43,7 @@ impl RazorpayClient {
             }
         });
 
-        let resp = self
-            .http_client
+        let resp = self.http_client
             .post(format!("{base_url}/orders"))
             .basic_auth(self.api_key.trim(), Some(self.api_secret.trim()))
             .json(&payload)
@@ -63,9 +52,7 @@ impl RazorpayClient {
             .map_err(|e| format!("Razorpay order request failed: {e}"))?;
 
         let status = resp.status();
-        let body: serde_json::Value = resp
-            .json()
-            .await
+        let body: serde_json::Value = resp.json().await
             .map_err(|e| format!("Razorpay order response was not JSON: {e}"))?;
         if !status.is_success() {
             return Err(format!("Razorpay API error {status}: {body}"));
@@ -80,11 +67,7 @@ impl RazorpayClient {
     pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
         let value: serde_json::Value = serde_json::from_str(payload)
             .map_err(|e| format!("Invalid Razorpay webhook JSON: {e}"))?;
-        if value
-            .get("event")
-            .and_then(|event| event.as_str())
-            .is_none()
-        {
+        if value.get("event").and_then(|event| event.as_str()).is_none() {
             return Err("Razorpay webhook missing event".to_string());
         }
         Ok(())
@@ -98,10 +81,7 @@ mod tests {
     #[tokio::test]
     async fn create_payment_requires_real_credentials() {
         let client = RazorpayClient::new("dummy_key".to_string(), "dummy_secret".to_string());
-        let err = client
-            .create_payment(100.0, "Order", "receipt-1")
-            .await
-            .unwrap_err();
+        let err = client.create_payment(100.0, "Order", "receipt-1").await.unwrap_err();
         assert!(err.contains("Razorpay API credentials are required"));
     }
 

@@ -29,7 +29,7 @@ impl MessageBirdProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            },
+            }
         }
     }
 }
@@ -41,10 +41,7 @@ mod tests {
     #[test]
     fn test_messagebird_provider_metadata() {
         let provider = MessageBirdProvider::new("test_token".to_string());
-        assert_eq!(
-            provider.to_integration_provider().metadata.id,
-            "messagebird"
-        );
+        assert_eq!(provider.to_integration_provider().metadata.id, "messagebird");
         assert_eq!(provider.to_integration_provider().metadata.category, "sms");
     }
 }

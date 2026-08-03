@@ -1,6 +1,6 @@
-use async_trait::async_trait;
-use tokio::sync::Mutex;
 use tokio::sync::broadcast;
+use tokio::sync::Mutex;
+use async_trait::async_trait;
 
 #[derive(Clone, prost::Message)]
 pub struct Message {
@@ -12,23 +12,14 @@ pub struct Message {
 
 #[async_trait]
 pub trait DistributedLock: Send + Sync {
-    async fn acquire_lock(
-        &self,
-        resource: &str,
-        owner: &str,
-        ttl_seconds: u64,
-    ) -> Result<bool, String>;
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 }
 
 #[async_trait]
 pub trait Bus: Send + Sync {
     async fn publish(&self, msg: Message) -> Result<(), String>;
-    async fn subscribe(
-        &self,
-        topic: String,
-        handler: Box<dyn Fn(Message) + Send + Sync>,
-    ) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
 pub struct MemoryBus {
@@ -57,11 +48,7 @@ impl Bus for MemoryBus {
         Ok(())
     }
 
-    async fn subscribe(
-        &self,
-        topic: String,
-        handler: Box<dyn Fn(Message) + Send + Sync>,
-    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let mut subs = self.subs.lock().await;
         let tx = subs.entry(topic.clone()).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
@@ -92,12 +79,7 @@ impl Default for MemoryBus {
 
 #[async_trait]
 impl DistributedLock for MemoryBus {
-    async fn acquire_lock(
-        &self,
-        resource: &str,
-        owner: &str,
-        ttl_seconds: u64,
-    ) -> Result<bool, String> {
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut locks = self.locks.lock().await;
         let now = std::time::Instant::now();
 
@@ -136,10 +118,7 @@ pub struct RedisBus {
 impl RedisBus {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
-        let publish_conn = client
-            .get_multiplexed_tokio_connection()
-            .await
-            .map_err(|e| e.to_string())?;
+        let publish_conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
 
         Ok(RedisBus {
             client,
@@ -162,37 +141,25 @@ impl Bus for RedisBus {
                 .arg(&msg.topic)
                 .arg(&buf)
                 .query_async::<()>(&mut *conn)
-                .await
-            {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    if retries >= 3 {
-                        return Err(e.to_string());
+                .await {
+                    Ok(_) => return Ok(()),
+                    Err(e) => {
+                        if retries >= 3 {
+                            return Err(e.to_string());
+                        }
+                        retries += 1;
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100 * retries)).await;
                     }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(100 * retries)).await;
                 }
-            }
         }
     }
 
-    async fn subscribe(
-        &self,
-        topic: String,
-        handler: Box<dyn Fn(Message) + Send + Sync>,
-    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use futures_util::StreamExt;
 
-        let mut pubsub = self
-            .client
-            .get_async_pubsub()
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
         if topic.ends_with(':') {
-            pubsub
-                .psubscribe(format!("{}*", topic))
-                .await
-                .map_err(|e| e.to_string())?;
+            pubsub.psubscribe(format!("{}*", topic)).await.map_err(|e| e.to_string())?;
         } else {
             pubsub.subscribe(&topic).await.map_err(|e| e.to_string())?;
         }
@@ -203,10 +170,7 @@ impl Bus for RedisBus {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
                     use prost::Message as ProstMessage;
                     let topic_name = msg.get_channel_name().to_string();
-                    let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message {
-                        topic: topic_name,
-                        payload: vec![],
-                    });
+                    let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message { topic: topic_name, payload: vec![] });
                     handler(m);
                 }
             }
@@ -222,11 +186,7 @@ impl Bus for RedisBus {
 
 pub struct IpcBus {
     pool: sqlx::SqlitePool,
-    subs: std::sync::Arc<
-        tokio::sync::Mutex<
-            std::collections::HashMap<String, tokio::sync::broadcast::Sender<Message>>,
-        >,
-    >,
+    subs: std::sync::Arc<tokio::sync::Mutex<std::collections::HashMap<String, tokio::sync::broadcast::Sender<Message>>>>,
 }
 
 impl IpcBus {
@@ -266,28 +226,20 @@ impl IpcBus {
                 }
                 #[cfg(not(unix))]
                 {
-                    let _ = std::fs::OpenOptions::new()
-                        .write(true)
-                        .create(true)
-                        .open(db_path);
+                    let _ = std::fs::OpenOptions::new().write(true).create(true).open(db_path);
                 }
             }
         }
 
-        let options: SqliteConnectOptions = db_url
-            .parse()
-            .map_err(|e| format!("Invalid db url: {}", e))?;
+        let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(false);
-        let pool = SqlitePoolOptions::new()
-            .connect_with(options)
-            .await
-            .map_err(|e| e.to_string())?;
+        let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS bus_checkpoints (
                 subscriber_id TEXT PRIMARY KEY,
                 last_id INTEGER NOT NULL
-            );",
+            );"
         )
         .execute(&pool)
         .await
@@ -299,7 +251,7 @@ impl IpcBus {
                 topic TEXT NOT NULL,
                 payload BLOB NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );",
+            );"
         )
         .execute(&pool)
         .await
@@ -310,7 +262,7 @@ impl IpcBus {
                 resource TEXT PRIMARY KEY,
                 owner TEXT NOT NULL,
                 expires_at INTEGER NOT NULL
-            );",
+            );"
         )
         .execute(&pool)
         .await
@@ -328,11 +280,9 @@ impl IpcBus {
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
-                let _ = sqlx::query(
-                    "DELETE FROM bus_messages WHERE created_at < datetime('now', '-1 day')",
-                )
-                .execute(&cleanup_pool)
-                .await;
+                let _ = sqlx::query("DELETE FROM bus_messages WHERE created_at < datetime('now', '-1 day')")
+                    .execute(&cleanup_pool)
+                    .await;
             }
         });
 
@@ -345,17 +295,16 @@ impl IpcBus {
 
         tokio::spawn(async move {
             let subscriber_id = "standalone_node".to_string();
-            let mut last_id: i64 =
-                sqlx::query_scalar("SELECT last_id FROM bus_checkpoints WHERE subscriber_id = ?")
-                    .bind(&subscriber_id)
-                    .fetch_optional(&pool)
-                    .await
-                    .unwrap_or(Some(0))
-                    .unwrap_or(0);
+            let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM bus_checkpoints WHERE subscriber_id = ?")
+                .bind(&subscriber_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap_or(Some(0))
+                .unwrap_or(0);
 
             loop {
                 let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                    "SELECT id, topic, payload FROM bus_messages WHERE id > ? ORDER BY id ASC",
+                    "SELECT id, topic, payload FROM bus_messages WHERE id > ? ORDER BY id ASC"
                 )
                 .bind(last_id)
                 .fetch_all(&pool)
@@ -366,15 +315,9 @@ impl IpcBus {
                     for (id, topic, payload_buf) in &results {
                         last_id = *id;
                         for (sub_topic, tx) in s.iter() {
-                            if topic == sub_topic
-                                || (sub_topic.ends_with(':') && topic.starts_with(sub_topic))
-                            {
+                            if topic == sub_topic || (sub_topic.ends_with(':') && topic.starts_with(sub_topic)) {
                                 use prost::Message as ProstMessage;
-                                let m =
-                                    Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message {
-                                        topic: topic.clone(),
-                                        payload: vec![],
-                                    });
+                                let m = Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
                                 let _ = tx.send(m);
                             }
                         }
@@ -407,25 +350,20 @@ impl Bus for IpcBus {
                 .bind(&msg.topic)
                 .bind(&payload)
                 .execute(&self.pool)
-                .await
-            {
-                Ok(_) => return Ok(()),
-                Err(e) => {
-                    if retries >= 3 {
-                        return Err(e.to_string());
+                .await {
+                    Ok(_) => return Ok(()),
+                    Err(e) => {
+                        if retries >= 3 {
+                            return Err(e.to_string());
+                        }
+                        retries += 1;
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100 * retries)).await;
                     }
-                    retries += 1;
-                    tokio::time::sleep(tokio::time::Duration::from_millis(100 * retries)).await;
                 }
-            }
         }
     }
 
-    async fn subscribe(
-        &self,
-        topic: String,
-        handler: Box<dyn Fn(Message) + Send + Sync>,
-    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let mut s = self.subs.lock().await;
         let tx = s.entry(topic.clone()).or_insert_with(|| {
             let (tx, _) = tokio::sync::broadcast::channel(100);
@@ -455,23 +393,21 @@ pub struct NatsBus {
 
 impl NatsBus {
     pub async fn new(nats_url: &str) -> Result<Self, String> {
-        let client = async_nats::connect(nats_url)
-            .await
-            .map_err(|e| e.to_string())?;
+        let client = async_nats::connect(nats_url).await.map_err(|e| e.to_string())?;
         let js = async_nats::jetstream::new(client.clone());
         let kv = match js.get_key_value("bus_locks").await {
             Ok(store) => store,
-            Err(_) => js
-                .create_key_value(async_nats::jetstream::kv::Config {
-                    bucket: "bus_locks".to_string(),
-                    history: 1,
-                    ..Default::default()
-                })
-                .await
-                .map_err(|e| e.to_string())?,
+            Err(_) => js.create_key_value(async_nats::jetstream::kv::Config {
+                bucket: "bus_locks".to_string(),
+                history: 1,
+                ..Default::default()
+            }).await.map_err(|e| e.to_string())?
         };
 
-        Ok(NatsBus { client, kv })
+        Ok(NatsBus {
+            client,
+            kv,
+        })
     }
 }
 
@@ -486,11 +422,7 @@ impl Bus for NatsBus {
 
         let mut retries = 0;
         loop {
-            match self
-                .client
-                .publish(nats_topic.clone(), buf.clone().into())
-                .await
-            {
+            match self.client.publish(nats_topic.clone(), buf.clone().into()).await {
                 Ok(_) => return Ok(()),
                 Err(e) => {
                     if retries >= 3 {
@@ -503,11 +435,7 @@ impl Bus for NatsBus {
         }
     }
 
-    async fn subscribe(
-        &self,
-        topic: String,
-        handler: Box<dyn Fn(Message) + Send + Sync>,
-    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(&self, topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use futures_util::StreamExt;
 
         let subscribe_topic = if topic.ends_with(':') {
@@ -515,19 +443,12 @@ impl Bus for NatsBus {
         } else {
             topic.replace(":", ".")
         };
-        let mut subscriber = self
-            .client
-            .subscribe(subscribe_topic)
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut subscriber = self.client.subscribe(subscribe_topic).await.map_err(|e| e.to_string())?;
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = subscriber.next().await {
                 use prost::Message as ProstMessage;
-                let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message {
-                    topic: msg.subject.to_string().replace(".", ":"),
-                    payload: vec![],
-                });
+                let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message { topic: msg.subject.to_string().replace(".", ":"), payload: vec![] });
                 handler(m);
             }
         });
@@ -542,12 +463,7 @@ impl Bus for NatsBus {
 
 #[async_trait]
 impl DistributedLock for NatsBus {
-    async fn acquire_lock(
-        &self,
-        resource: &str,
-        owner: &str,
-        ttl_seconds: u64,
-    ) -> Result<bool, String> {
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
         let payload = format!("{}:{}", owner, expires_at);
 
@@ -556,15 +472,7 @@ impl DistributedLock for NatsBus {
             if let Some((stored_owner, stored_exp)) = entry_str.split_once(':') {
                 if let Ok(exp) = stored_exp.parse::<i64>() {
                     if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
-                        match self
-                            .kv
-                            .update(
-                                resource,
-                                payload.clone().into_bytes().into(),
-                                entry.revision,
-                            )
-                            .await
-                        {
+                        match self.kv.update(resource, payload.clone().into_bytes().into(), entry.revision).await {
                             Ok(_) => return Ok(true),
                             Err(_) => return Ok(false),
                         }
@@ -594,10 +502,7 @@ impl DistributedLock for NatsBus {
                 if stored_owner == owner {
                     // Update with immediately expired lock to allow atomic replacement
                     let payload = format!("{}:0", owner);
-                    let _ = self
-                        .kv
-                        .update(resource, payload.into_bytes().into(), entry.revision)
-                        .await;
+                    let _ = self.kv.update(resource, payload.into_bytes().into(), entry.revision).await;
                 }
             }
         }
@@ -607,16 +512,10 @@ impl DistributedLock for NatsBus {
 
 #[async_trait]
 impl DistributedLock for RedisBus {
-    async fn acquire_lock(
-        &self,
-        resource: &str,
-        owner: &str,
-        ttl_seconds: u64,
-    ) -> Result<bool, String> {
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
-        let script = redis::Script::new(
-            r#"
+        let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
                 redis.call("set", KEYS[1], ARGV[1], "EX", ARGV[2])
                 return 1
@@ -625,49 +524,30 @@ impl DistributedLock for RedisBus {
             else
                 return 0
             end
-        "#,
-        );
-        let res: i32 = script
-            .key(&key)
-            .arg(owner)
-            .arg(ttl_seconds)
-            .invoke_async(&mut *conn)
-            .await
-            .map_err(|e| e.to_string())?;
+        "#);
+        let res: i32 = script.key(&key).arg(owner).arg(ttl_seconds).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
         Ok(res == 1)
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
-        let script = redis::Script::new(
-            r#"
+        let script = redis::Script::new(r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
                 return redis.call("del", KEYS[1])
             else
                 return 0
             end
-        "#,
-        );
+        "#);
 
-        let _: i32 = script
-            .key(&key)
-            .arg(owner)
-            .invoke_async(&mut *conn)
-            .await
-            .map_err(|e| e.to_string())?;
+        let _: i32 = script.key(&key).arg(owner).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }
 
 #[async_trait]
 impl DistributedLock for IpcBus {
-    async fn acquire_lock(
-        &self,
-        resource: &str,
-        owner: &str,
-        ttl_seconds: u64,
-    ) -> Result<bool, String> {
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
         let res = sqlx::query("INSERT INTO bus_locks (resource, owner, expires_at) VALUES (?, ?, ?) ON CONFLICT(resource) DO UPDATE SET owner = excluded.owner, expires_at = excluded.expires_at WHERE bus_locks.owner = excluded.owner OR bus_locks.expires_at <= cast(strftime('%s', 'now') as integer) RETURNING resource")
             .bind(resource)
@@ -697,8 +577,9 @@ impl DistributedLock for IpcBus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
+
 
     #[tokio::test]
     async fn test_memory_bus_pub_sub() {
@@ -711,10 +592,7 @@ mod tests {
             received_clone.store(true, Ordering::SeqCst);
         });
 
-        let cancel = bus
-            .subscribe("test_topic".to_string(), handler)
-            .await
-            .unwrap();
+        let cancel = bus.subscribe("test_topic".to_string(), handler).await.unwrap();
 
         let msg = Message {
             topic: "test_topic".to_string(),
@@ -733,14 +611,7 @@ mod tests {
     #[tokio::test]
     async fn test_ipc_bus_pub_sub() {
         let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
-        let db_path = format!(
-            "{}/test_ipc_bus_{}.sqlite",
-            tmp_dir,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        );
+        let db_path = format!("{}/test_ipc_bus_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
         let bus = IpcBus::new(&db_url).await.unwrap();
@@ -754,10 +625,7 @@ mod tests {
             }
         });
 
-        let cancel = bus
-            .subscribe("test_ipc_topic".to_string(), handler)
-            .await
-            .unwrap();
+        let cancel = bus.subscribe("test_ipc_topic".to_string(), handler).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
@@ -791,10 +659,7 @@ mod tests {
             }
         });
 
-        let cancel = bus
-            .subscribe("test_redis_topic".to_string(), handler)
-            .await
-            .unwrap();
+        let cancel = bus.subscribe("test_redis_topic".to_string(), handler).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -829,14 +694,7 @@ mod tests {
     #[tokio::test]
     async fn test_ipc_bus_distributed_lock() {
         let tmp_dir = std::env::var("TEST_TMPDIR").unwrap_or_else(|_| "/tmp".to_string());
-        let db_path = format!(
-            "{}/test_ipc_lock_{}.sqlite",
-            tmp_dir,
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        );
+        let db_path = format!("{}/test_ipc_lock_{}.sqlite", tmp_dir, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
         let db_url = format!("sqlite://{}", db_path);
 
         let bus = IpcBus::new(&db_url).await.unwrap();
@@ -912,8 +770,8 @@ mod tests_ipc {
 #[cfg(test)]
 mod memory_bus_tests {
     use super::*;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_memory_bus_publish_subscribe() {
@@ -927,10 +785,7 @@ mod memory_bus_tests {
             }
         });
 
-        let _cancel = bus
-            .subscribe("test_topic".to_string(), handler)
-            .await
-            .unwrap();
+        let _cancel = bus.subscribe("test_topic".to_string(), handler).await.unwrap();
 
         let msg = Message {
             topic: "test_topic".to_string(),

@@ -45,9 +45,7 @@ pub fn router(
 
     let gateway_r = Router::new()
         .route("/api/v1/gateway/run", post(gateway_run_handler))
-        .layer(axum::middleware::from_fn(
-            ::server_auth::api_key_auth_middleware,
-        ))
+        .layer(axum::middleware::from_fn(::server_auth::api_key_auth_middleware))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
@@ -716,8 +714,8 @@ mod tests {
     #[tokio::test]
     async fn test_gateway_run_auth_and_execution() {
         use axum::{body::Body, http::Request};
-        use sha2::Digest;
         use tower::ServiceExt;
+        use sha2::Digest;
 
         let pool = sqlx::PgPool::connect_lazy("postgres://localhost/unused").unwrap();
         let db = Arc::new(crate::db::DB {
@@ -783,8 +781,7 @@ mod tests {
         // but getting past 401 proves the api_key_auth_middleware successfully authenticated the key.
         let status = response.status();
         assert!(
-            status == axum::http::StatusCode::OK
-                || status == axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            status == axum::http::StatusCode::OK || status == axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             "Expected status OK or INTERNAL_SERVER_ERROR, got {:?}",
             status
         );

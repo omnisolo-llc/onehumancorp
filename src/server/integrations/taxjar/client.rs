@@ -64,8 +64,7 @@ impl TaxJarClient {
             "shipping": params.shipping,
         });
 
-        let resp = self
-            .http_client
+        let resp = self.http_client
             .post(format!("{}/taxes", Self::api_base()))
             .header("Authorization", format!("Bearer {}", self.api_key.trim()))
             .header("Content-Type", "application/json")
@@ -75,25 +74,23 @@ impl TaxJarClient {
             .map_err(|e| format!("TaxJar request failed: {e}"))?;
 
         let status = resp.status();
-        let body: serde_json::Value = resp
-            .json()
-            .await
+        let body: serde_json::Value = resp.json().await
             .map_err(|e| format!("TaxJar response was not JSON: {e}"))?;
 
         if !status.is_success() {
             return Err(format!("TaxJar API error {status}: {body}"));
         }
 
-        let tax = body
-            .get("tax")
+        let tax = body.get("tax")
             .ok_or_else(|| "TaxJar response missing tax object".to_string())?;
 
-        let amount_to_collect = tax
-            .get("amount_to_collect")
+        let amount_to_collect = tax.get("amount_to_collect")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0);
 
-        let rate = tax.get("rate").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let rate = tax.get("rate")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
 
         Ok(TaxRate {
             amount_to_collect,

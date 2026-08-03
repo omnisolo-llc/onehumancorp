@@ -1,17 +1,17 @@
+use axum::{
+    extract::{Extension, Json, State},
+    response::IntoResponse,
+    http::StatusCode,
+    routing::post,
+    Router,
+};
+use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
+use uuid::Uuid;
 use crate::db::get_pool;
 use crate::minimax::{LocalLLMClient, MinimaxClient};
-use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::{ActionRisk, DepartmentType};
-use axum::{
-    Router,
-    extract::{Extension, Json, State},
-    http::StatusCode,
-    response::IntoResponse,
-    routing::post,
-};
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct WebhookPayload {
@@ -45,10 +45,7 @@ async fn analyze_intake_inquiry(inquiry: &str) -> Result<(f64, String, String), 
         inquiry
     );
 
-    let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")
-        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-        .as_deref()
-    {
+    let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.trim().is_empty() {
@@ -56,27 +53,15 @@ async fn analyze_intake_inquiry(inquiry: &str) -> Result<(f64, String, String), 
             } else {
                 MinimaxClient::new(api_key).reason(&prompt).await
             }
-        }
+        },
         _ => LocalLLMClient::new().reason(&prompt).await,
     }?;
 
-    let parsed: serde_json::Value =
-        serde_json::from_str(&raw_response).unwrap_or(serde_json::json!({}));
+    let parsed: serde_json::Value = serde_json::from_str(&raw_response).unwrap_or(serde_json::json!({}));
 
-    let price = parsed
-        .get("suggested_price")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(1500.0);
-    let name = parsed
-        .get("service_name")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Custom Project Scope")
-        .to_string();
-    let scope = parsed
-        .get("scope")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Custom requirements based on inquiry.")
-        .to_string();
+    let price = parsed.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(1500.0);
+    let name = parsed.get("service_name").and_then(|v| v.as_str()).unwrap_or("Custom Project Scope").to_string();
+    let scope = parsed.get("scope").and_then(|v| v.as_str()).unwrap_or("Custom requirements based on inquiry.").to_string();
 
     Ok((price, name, scope))
 }
@@ -89,10 +74,7 @@ async fn handle_webhook(
     if claims.organization_id.as_deref() != Some(payload.tenant_id.as_str()) {
         return (
             StatusCode::FORBIDDEN,
-            Json(WebhookResponse {
-                success: false,
-                request_id: None,
-            }),
+            Json(WebhookResponse { success: false, request_id: None }),
         )
             .into_response();
     }
@@ -100,8 +82,7 @@ async fn handle_webhook(
     if payload.source == "stripe" && payload.message == "order_placed" {
         // Trigger SMS notification for new orders
         tokio::spawn(async move {
-            let _ =
-                crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
+            let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
         });
 
         let event = crate::orchestration::departments::types::DepartmentEvent {
@@ -112,35 +93,12 @@ async fn handle_webhook(
         };
 
         match orchestrator.dispatch_event(event).await {
-            Ok(_) => {
-                return (
-                    StatusCode::OK,
-                    Json(WebhookResponse {
-                        success: true,
-                        request_id: None,
-                    }),
-                )
-                    .into_response();
-            }
+            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
             Err(e) => {
                 if e.contains("AI Budget exhausted") {
-                    return (
-                        StatusCode::TOO_MANY_REQUESTS,
-                        Json(WebhookResponse {
-                            success: false,
-                            request_id: None,
-                        }),
-                    )
-                        .into_response();
+                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
                 } else {
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(WebhookResponse {
-                            success: false,
-                            request_id: None,
-                        }),
-                    )
-                        .into_response();
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
                 }
             }
         }
@@ -149,8 +107,7 @@ async fn handle_webhook(
     if payload.source == "mercadopago" {
         if payload.message == "approved" {
             tokio::spawn(async move {
-                let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!")
-                    .await;
+                let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
             });
 
             let event = crate::orchestration::departments::types::DepartmentEvent {
@@ -161,21 +118,11 @@ async fn handle_webhook(
             };
             let _ = orchestrator.dispatch_event(event).await;
         }
-        return (
-            StatusCode::OK,
-            Json(WebhookResponse {
-                success: true,
-                request_id: None,
-            }),
-        )
-            .into_response();
+        return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
     }
 
     // Client intake flow via email or form webhook
-    if payload.source == "intake_form"
-        || payload.source == "email_inquiry"
-        || payload.source == "work_intake"
-    {
+    if payload.source == "intake_form" || payload.source == "email_inquiry" || payload.source == "work_intake" {
         let tenant_id = payload.tenant_id.clone();
         let inquiry = payload.message.clone();
         let pool = crate::db::get_pool();
@@ -205,43 +152,24 @@ async fn handle_webhook(
 
         let (suggested_price, service_name, scope) = match analyze_intake_inquiry(&inquiry).await {
             Ok(res) => res,
-            Err(_) => (
-                1500.00,
-                "Custom Project Scope".to_string(),
-                "Custom requirements based on inquiry.".to_string(),
-            ),
+            Err(_) => (1500.00, "Custom Project Scope".to_string(), "Custom requirements based on inquiry.".to_string()),
         };
 
         // Generate embedding for memory query
         let prompt_for_embedding = format!("Past proposals for {}", service_name);
-        let query_embedding = match std::env::var("OHC_SALES_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-            .as_deref()
-        {
+        let query_embedding = match std::env::var("OHC_SALES_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                 if api_key.trim().is_empty() {
-                    LocalLLMClient::new()
-                        .generate_embedding(&prompt_for_embedding)
-                        .await
+                    LocalLLMClient::new().generate_embedding(&prompt_for_embedding).await
                 } else {
-                    MinimaxClient::new(api_key)
-                        .generate_embedding(&prompt_for_embedding)
-                        .await
+                    MinimaxClient::new(api_key).generate_embedding(&prompt_for_embedding).await
                 }
-            }
-            _ => {
-                LocalLLMClient::new()
-                    .generate_embedding(&prompt_for_embedding)
-                    .await
-            }
-        }
-        .unwrap_or_else(|_| vec![0.0; 1536]);
+            },
+            _ => LocalLLMClient::new().generate_embedding(&prompt_for_embedding).await,
+        }.unwrap_or_else(|_| vec![0.0; 1536]);
 
-        let context = match orchestrator
-            .query_long_term_memory(&tenant_id, &query_embedding, 5)
-            .await
-        {
+        let context = match orchestrator.query_long_term_memory(&tenant_id, &query_embedding, 5).await {
             Ok(c) => c,
             Err(_) => vec![],
         };
@@ -293,36 +221,15 @@ async fn handle_webhook(
             "customer_name": payload.customer_name.unwrap_or_else(|| "Unknown".to_string()),
         });
 
-        match orchestrator
-            .execute_action(
-                DepartmentType::Sales,
-                format!("Action Required: Approve Estimate for {}", service_name),
-                tenant_id,
-                ActionRisk::DraftForReview,
-                action_payload,
-            )
-            .await
-        {
-            Ok(_) => {
-                return (
-                    StatusCode::OK,
-                    Json(WebhookResponse {
-                        success: true,
-                        request_id: None,
-                    }),
-                )
-                    .into_response();
-            }
-            Err(_) => {
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(WebhookResponse {
-                        success: false,
-                        request_id: None,
-                    }),
-                )
-                    .into_response();
-            }
+        match orchestrator.execute_action(
+            DepartmentType::Sales,
+            format!("Action Required: Approve Estimate for {}", service_name),
+            tenant_id,
+            ActionRisk::DraftForReview,
+            action_payload,
+        ).await {
+            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+            Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
         }
     }
 
@@ -345,9 +252,7 @@ async fn handle_webhook(
     .execute(&pool)
     .await;
 
-    let target_language = payload
-        .target_language
-        .unwrap_or_else(|| "English".to_string());
+    let target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
 
     let event = crate::orchestration::departments::types::DepartmentEvent {
         id: uuid::Uuid::new_v4().to_string(),
@@ -362,33 +267,12 @@ async fn handle_webhook(
     };
 
     match orchestrator.dispatch_event(event).await {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(WebhookResponse {
-                success: true,
-                request_id: Some(id),
-            }),
-        )
-            .into_response(),
+        Ok(_) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(id) })).into_response(),
         Err(e) => {
             if e.contains("AI Budget exhausted") {
-                (
-                    StatusCode::TOO_MANY_REQUESTS,
-                    Json(WebhookResponse {
-                        success: false,
-                        request_id: None,
-                    }),
-                )
-                    .into_response()
+                (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response()
             } else {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(WebhookResponse {
-                        success: false,
-                        request_id: None,
-                    }),
-                )
-                    .into_response()
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response()
             }
         }
     }

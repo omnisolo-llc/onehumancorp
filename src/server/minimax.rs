@@ -1,12 +1,12 @@
-use ::server_pricing::compression::minify_json_prompt;
-use ::server_pricing::deduplication::{DeduplicationResult, RequestDeduplicator};
-use ::server_pricing::prompt_caching::PromptCache;
 use serde::{Deserialize, Serialize};
-use std::pin::Pin;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
+use ::server_pricing::prompt_caching::PromptCache;
+use ::server_pricing::deduplication::{RequestDeduplicator, DeduplicationResult};
+use ::server_pricing::compression::{minify_json_prompt};
 use tokio_stream::Stream;
+use std::pin::Pin;
 
 pub struct CircuitBreaker {
     failures: Mutex<usize>,
@@ -39,6 +39,8 @@ impl CircuitBreaker {
         }
         true
     }
+
+
 
     fn record_success(&self) {
         let mut failures = self.failures.lock().unwrap();
@@ -117,13 +119,9 @@ impl MinimaxClient {
         let prompt_clone = prompt.to_string();
         let deduplicator = self.deduplicator.clone();
 
-        let result = deduplicator
-            .deduplicate(&prompt_clone, || async {
-                self.internal_reason(&prompt_clone)
-                    .await
-                    .map(|resp| DeduplicationResult { response: resp })
-            })
-            .await?;
+        let result = deduplicator.deduplicate(&prompt_clone, || async {
+            self.internal_reason(&prompt_clone).await.map(|resp| DeduplicationResult { response: resp })
+        }).await?;
 
         Ok(result.response)
     }
@@ -137,10 +135,7 @@ impl MinimaxClient {
         };
 
         // 1. Check Cache
-        if let (Some(cached), _cost_cents) = self
-            .cache
-            .get_with_cost_cents(&optimized_prompt, "minimax-text-01")
-        {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, "minimax-text-01") {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count); // pii-safe
             return Ok(cached.text);
         }
@@ -162,8 +157,7 @@ impl MinimaxClient {
                     "categories": ["art"],
                     "initial_products": [{"name": "Painting", "price": "100.00"}],
                     "suggested_features": ["online_store"]
-                }"#
-                .to_string());
+                }"#.to_string());
             } else if lower_prompt.contains("carlos") {
                 return Ok(r#"{
                     "business_name": "Carlos Plumbing",
@@ -171,25 +165,16 @@ impl MinimaxClient {
                     "categories": ["service"],
                     "initial_products": [{"name": "Pipe Fix", "price": "80.00"}],
                     "suggested_features": ["booking"]
-                }"#
-                .to_string());
+                }"#.to_string());
+
             } else if lower_prompt.contains("e2e_mock_trigger_expert_team_analysis") {
                 if lower_prompt.contains("you are an expert in") {
-                    let rand_num = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_nanos();
-                    let role = if lower_prompt.contains("researcher") {
-                        "Chapter 1 Chapter 2 unique words "
-                    } else if lower_prompt.contains("financial") {
-                        "Chapter 3 Chapter 4 unique terms "
-                    } else if lower_prompt.contains("strategic") {
-                        "Chapter 5 Chapter 6 unique ideas "
-                    } else if lower_prompt.contains("process") {
-                        "Chapter 7 unique process "
-                    } else {
-                        "Chapter 8 unique quality "
-                    };
+                    let rand_num = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+                    let role = if lower_prompt.contains("researcher") { "Chapter 1 Chapter 2 unique words " }
+                    else if lower_prompt.contains("financial") { "Chapter 3 Chapter 4 unique terms " }
+                    else if lower_prompt.contains("strategic") { "Chapter 5 Chapter 6 unique ideas " }
+                    else if lower_prompt.contains("process") { "Chapter 7 unique process " }
+                    else { "Chapter 8 unique quality " };
                     return Ok(format!("{}{}", role, rand_num));
                 } else if lower_prompt.contains("synthesize") {
                     return Ok("Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n".to_string() + &" word".repeat(20000));
@@ -197,39 +182,31 @@ impl MinimaxClient {
                 return Ok("Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n".to_string() + &" word".repeat(20000));
             } else if lower_prompt.contains("e2e_mock_trigger_expert_team_failure") {
                 return Ok("Short output".to_string());
-            } else if lower_prompt.contains("marketing_strategist")
-                || lower_prompt.contains("marketing strategist")
-            {
-                return Ok(r#"{
+            } else if lower_prompt.contains("marketing_strategist") || lower_prompt.contains("marketing strategist") {
+                 return Ok(r#"{
                     "agent_id": "marketing_strategist",
                     "role": "Marketing Strategist",
                     "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
                     "handoff_to": ["sales_engineer"],
                     "confidence": 0.95
                 }"#.to_string());
-            } else if lower_prompt.contains("sales_engineer")
-                || lower_prompt.contains("sales engineer")
-            {
-                return Ok(r#"{
+            } else if lower_prompt.contains("sales_engineer") || lower_prompt.contains("sales engineer") {
+                 return Ok(r#"{
                     "agent_id": "sales_engineer",
                     "role": "Sales Engineer",
                     "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
                     "handoff_to": ["operations_planner"],
                     "confidence": 0.95
                 }"#.to_string());
-            } else if lower_prompt.contains("operations_planner")
-                || lower_prompt.contains("operations planner")
-            {
-                return Ok(r#"{
+            } else if lower_prompt.contains("operations_planner") || lower_prompt.contains("operations planner") {
+                 return Ok(r#"{
                     "agent_id": "operations_planner",
                     "role": "Operations Planner",
                     "contribution": "Plan accepted after repair with launch workstreams defined. The operations looks solid.",
                     "handoff_to": ["quality_reviewer"],
                     "confidence": 0.95
                 }"#.to_string());
-            } else if lower_prompt.contains("quality_reviewer")
-                || lower_prompt.contains("quality reviewer")
-            {
+            } else if lower_prompt.contains("quality_reviewer") || lower_prompt.contains("quality reviewer") {
                 return Ok(r#"{
                     "agent_id": "quality_reviewer",
                     "role": "Quality Reviewer",
@@ -249,8 +226,7 @@ impl MinimaxClient {
                     "categories": ["physical"],
                     "initial_products": [{"name": "Item 1", "price": "10.00"}],
                     "suggested_features": ["online_store"]
-                }"#
-                .to_string());
+                }"#.to_string());
             }
         }
 
@@ -272,28 +248,18 @@ impl MinimaxClient {
 
         let mut last_err = String::new();
         for _ in 0..3 {
-            let response_future = client
-                .post(&self.url)
-                .header("Content-Type", "application/json")
-                .header("Authorization", format!("Bearer {}", self.api_key))
-                .json(&request_body)
-                .send();
-            let response = tokio::time::timeout(Duration::from_secs(60), response_future)
-                .await
-                .map_err(|e| e.to_string())
-                .and_then(|r| r.map_err(|e| e.to_string()));
+            let response_future = client.post(&self.url).header("Content-Type", "application/json").header("Authorization", format!("Bearer {}", self.api_key)).json(&request_body).send();
+            let response = tokio::time::timeout(Duration::from_secs(60), response_future).await.map_err(|e| e.to_string()).and_then(|r| r.map_err(|e| e.to_string()));
 
             match response {
                 Ok(resp) => {
                     if resp.status().is_success() {
-                        let result: MinimaxResponse =
-                            resp.json().await.map_err(|e| e.to_string())?;
+                        let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
                         cb.record_success();
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache
-                                .set(&optimized_prompt, &content, optimized_prompt.len() / 4); // rough token estimate
+                            self.cache.set(&optimized_prompt, &content, optimized_prompt.len() / 4); // rough token estimate
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
@@ -327,10 +293,7 @@ impl MinimaxClient {
         Err(format!("failed after 3 retries: {}", last_err))
     }
 
-    pub async fn reason_stream(
-        &self,
-        prompt: &str,
-    ) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
+    pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
         let api_key = self.api_key.clone();
         let url = self.url.clone();
         let optimized_prompt = if prompt.starts_with('{') {
@@ -342,14 +305,8 @@ impl MinimaxClient {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let (Some(cached), _cost_cents) = self
-            .cache
-            .get_with_cost_cents(&optimized_prompt, "minimax-text-01")
-        {
-            tracing::info!(
-                "Prompt cache hit in stream (saved ~{} tokens)",
-                cached.token_count
-            ); // pii-safe
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, "minimax-text-01") {
+            tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count); // pii-safe
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
                 let _ = tx.send(Ok(cached_text)).await;
@@ -406,35 +363,23 @@ impl MinimaxClient {
                                     for line in text.lines() {
                                         if line.starts_with("data: ") {
                                             let json_str = &line[6..];
-                                            if json_str == "[DONE]" {
-                                                break;
-                                            }
-                                            if let Ok(val) =
-                                                serde_json::from_str::<serde_json::Value>(json_str)
-                                            {
-                                                if let Some(content) =
-                                                    val["choices"][0]["delta"]["content"].as_str()
-                                                {
+                                            if json_str == "[DONE]" { break; }
+                                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
+                                                if let Some(content) = val["choices"][0]["delta"]["content"].as_str() {
                                                     let _ = tx.send(Ok(content.to_string())).await;
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                Err(e) => {
-                                    let _ = tx.send(Err(e.to_string())).await;
-                                }
+                                Err(e) => { let _ = tx.send(Err(e.to_string())).await; }
                             }
                         }
                     } else {
-                        let _ = tx
-                            .send(Err(format!("Stream error: {}", resp.status())))
-                            .await;
+                        let _ = tx.send(Err(format!("Stream error: {}", resp.status()))).await;
                     }
                 }
-                Err(e) => {
-                    let _ = tx.send(Err(e.to_string())).await;
-                }
+                Err(e) => { let _ = tx.send(Err(e.to_string())).await; }
             }
         });
 
@@ -461,35 +406,20 @@ impl MinimaxClient {
 
         let mut last_err = String::new();
         for _ in 0..3 {
-            let response_future = client
-                .post("https://api.minimax.chat/v1/embeddings")
-                .header("Content-Type", "application/json")
-                .header("Authorization", format!("Bearer {}", self.api_key))
-                .json(&request_body)
-                .send();
-            let response = tokio::time::timeout(Duration::from_secs(60), response_future)
-                .await
-                .map_err(|e| e.to_string())
-                .and_then(|r| r.map_err(|e| e.to_string()));
+            let response_future = client.post("https://api.minimax.chat/v1/embeddings").header("Content-Type", "application/json").header("Authorization", format!("Bearer {}", self.api_key)).json(&request_body).send();
+            let response = tokio::time::timeout(Duration::from_secs(60), response_future).await.map_err(|e| e.to_string()).and_then(|r| r.map_err(|e| e.to_string()));
 
             match response {
                 Ok(resp) => {
                     if resp.status().is_success() {
-                        let result: serde_json::Value =
-                            resp.json().await.map_err(|e| e.to_string())?;
+                        let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
 
                         // Handle Minimax base_resp envelope
                         if let Some(base_resp) = result.get("base_resp") {
-                            let code = base_resp
-                                .get("status_code")
-                                .and_then(|c| c.as_i64())
-                                .unwrap_or(0);
+                            let code = base_resp.get("status_code").and_then(|c| c.as_i64()).unwrap_or(0);
                             if code != 0 && code != 1000 {
                                 cb.record_failure();
-                                let msg = base_resp
-                                    .get("status_msg")
-                                    .and_then(|m| m.as_str())
-                                    .unwrap_or("unknown error");
+                                let msg = base_resp.get("status_msg").and_then(|m| m.as_str()).unwrap_or("unknown error");
                                 last_err = format!("API error (status {}): {}", code, msg);
                                 tokio::time::sleep(Duration::from_secs(1)).await;
                                 continue;
@@ -500,8 +430,7 @@ impl MinimaxClient {
                         if let Some(vectors) = result["vectors"].as_array() {
                             if let Some(vector) = vectors.first() {
                                 if let Some(array) = vector.as_array() {
-                                    let f32_vec: Vec<f32> =
-                                        array.iter().map(|v| v.as_f64().unwrap() as f32).collect();
+                                    let f32_vec: Vec<f32> = array.iter().map(|v| v.as_f64().unwrap() as f32).collect();
                                     return Ok(f32_vec);
                                 }
                             }
@@ -530,6 +459,7 @@ impl MinimaxClient {
 
         Err(format!("failed after 3 retries: {}", last_err))
     }
+
 }
 
 pub struct LocalLLMClient {
@@ -546,28 +476,19 @@ impl LocalLLMClient {
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
         let embed_endpoint = std::env::var("OHC_LOCAL_LLM_EMBED_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/embeddings".to_string());
-        let model = std::env::var("OHC_LOCAL_MODEL_NAME").unwrap_or_else(|_| "llama3".to_string());
+        let model = std::env::var("OHC_LOCAL_MODEL_NAME")
+            .unwrap_or_else(|_| "llama3".to_string());
 
-        LocalLLMClient {
-            endpoint,
-            embed_endpoint,
-            model,
-            cache: PromptCache::new(Duration::from_secs(300)),
-            deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))),
-        }
+        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)), deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))) }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         let prompt_clone = prompt.to_string();
         let deduplicator = self.deduplicator.clone();
 
-        let result = deduplicator
-            .deduplicate(&prompt_clone, || async {
-                self.internal_reason(&prompt_clone)
-                    .await
-                    .map(|resp| DeduplicationResult { response: resp })
-            })
-            .await?;
+        let result = deduplicator.deduplicate(&prompt_clone, || async {
+            self.internal_reason(&prompt_clone).await.map(|resp| DeduplicationResult { response: resp })
+        }).await?;
 
         Ok(result.response)
     }
@@ -585,10 +506,7 @@ impl LocalLLMClient {
             PromptCache::truncate_context(&reduced, 2000)
         };
 
-        if let (Some(cached), _cost_cents) = self
-            .cache
-            .get_with_cost_cents(&optimized_prompt, &self.model)
-        {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt, &self.model) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count); // pii-safe
             return Ok(cached.text);
         }
@@ -603,24 +521,16 @@ impl LocalLLMClient {
         let mut last_err = String::new();
         for _ in 0..3 {
             let response_future = client.post(&self.endpoint).json(&req_body).send();
-            let response = tokio::time::timeout(Duration::from_secs(60), response_future)
-                .await
-                .map_err(|e| e.to_string())
-                .and_then(|r| r.map_err(|e| e.to_string()));
+            let response = tokio::time::timeout(Duration::from_secs(60), response_future).await.map_err(|e| e.to_string()).and_then(|r| r.map_err(|e| e.to_string()));
 
             match response {
                 Ok(resp) => {
                     if resp.status().is_success() {
-                        let result_res: Result<serde_json::Value, _> =
-                            resp.json().await.map_err(|e| e.to_string());
+                        let result_res: Result<serde_json::Value, _> = resp.json().await.map_err(|e| e.to_string());
                         if let Ok(result) = result_res {
                             if let Some(response) = result["response"].as_str() {
                                 cb.record_success();
-                                self.cache.set(
-                                    &optimized_prompt,
-                                    response,
-                                    optimized_prompt.len() / 4,
-                                );
+                                self.cache.set(&optimized_prompt, response, optimized_prompt.len() / 4);
                                 return Ok(response.to_string());
                             } else {
                                 last_err = "missing response field".to_string();
@@ -655,28 +565,19 @@ impl LocalLLMClient {
             "prompt": text,
         });
 
-        let resp = client
-            .post(&self.embed_endpoint)
+        let resp = client.post(&self.embed_endpoint)
             .json(&req_body)
             .send()
             .await
             .map_err(|e| e.to_string())?;
 
         if !resp.status().is_success() {
-            return Err(format!(
-                "local LLM embedding error (status {})",
-                resp.status()
-            ));
+            return Err(format!("local LLM embedding error (status {})", resp.status()));
         }
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-        let embedding = result["embedding"]
-            .as_array()
-            .ok_or("missing embedding field")?;
-        let f32_vec: Vec<f32> = embedding
-            .iter()
-            .map(|v| v.as_f64().unwrap() as f32)
-            .collect();
+        let embedding = result["embedding"].as_array().ok_or("missing embedding field")?;
+        let f32_vec: Vec<f32> = embedding.iter().map(|v| v.as_f64().unwrap() as f32).collect();
         Ok(f32_vec)
     }
 }

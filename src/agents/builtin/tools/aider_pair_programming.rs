@@ -3,10 +3,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
-use super::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
 
 // SOTA Harness Pattern: Pydantic-first tool schema validation.
 #[derive(Deserialize)]
@@ -66,12 +63,10 @@ mod tests {
     #[tokio::test]
     async fn test_aider_pair_programming() {
         let executor = AiderPairProgrammingExecutor::new();
-        let res = executor
-            .execute_typed(AiderPairProgrammingArgs {
-                prompt: "How does this look?".to_string(),
-                context: Some("fn foo() {}".to_string()),
-            })
-            .await;
+        let res = executor.execute_typed(AiderPairProgrammingArgs {
+            prompt: "How does this look?".to_string(),
+            context: Some("fn foo() {}".to_string()),
+        }).await;
 
         assert!(res.is_err());
         if let Err(ToolError::UserFixable(msg)) = res {

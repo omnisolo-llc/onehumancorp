@@ -1,5 +1,5 @@
-use crate::minimax::LocalLLMClient;
 use sqlx::PgPool;
+use crate::minimax::LocalLLMClient;
 
 pub struct ArchIngester {
     pool: PgPool,
@@ -11,24 +11,10 @@ impl ArchIngester {
         Self { pool, client }
     }
 
-    pub async fn ingest(
-        &self,
-        content: &str,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let embedding = self
-            .client
-            .generate_embedding(content)
-            .await
-            .map_err(|e| e.to_string())?;
+    pub async fn ingest(&self, content: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let embedding = self.client.generate_embedding(content).await.map_err(|e| e.to_string())?;
 
-        let embedding_str = format!(
-            "[{}]",
-            embedding
-                .iter()
-                .map(|f| f.to_string())
-                .collect::<Vec<_>>()
-                .join(",")
-        );
+        let embedding_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
         let id = uuid::Uuid::new_v4().to_string();
 
         sqlx::query(

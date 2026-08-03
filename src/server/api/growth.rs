@@ -1,22 +1,24 @@
-use crate::utils::cache::HybridCache;
+
+
+
 use std::sync::OnceLock;
+use crate::utils::cache::HybridCache;
 
 pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
 pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = OnceLock::new();
 pub static METRICS_CACHE: OnceLock<HybridCache<TeamInvitesMetricsResponse>> = OnceLock::new();
-pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> =
-    OnceLock::new();
+pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> = OnceLock::new();
 pub static TIME_SAVINGS_CACHE: OnceLock<HybridCache<TimeSavingsResponse>> = OnceLock::new();
-use crate::hub::Hub;
 use axum::{
-    Extension, Json, Router,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
+    Json, Router, Extension,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 use std::sync::Arc;
+use sqlx::PgPool;
+use crate::hub::Hub;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
@@ -182,10 +184,8 @@ async fn handle_waitlist(
 
 pub async fn handle_conversational_chat(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-    Json(req): Json<ChatReq>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ChatReq>
 ) -> impl IntoResponse {
     let lower = req.message.to_lowercase();
     let tenant_id = auth_info.org_id.clone();
@@ -210,39 +210,27 @@ pub async fn handle_conversational_chat(
             payload: serde_json::json!({"product": "Custom Vegan Cake", "amount": 5}),
         });
     } else if lower.contains("discount") || lower.contains("promo") {
-        draft_action = Some(ChatDraftAction {
+         draft_action = Some(ChatDraftAction {
             id: "act_promo_789".to_string(),
             title: "Create Discount Code".to_string(),
             description: "Create WEEKEND10 for 10% off".to_string(),
             action_type: "create_discount".to_string(),
             payload: serde_json::json!({"code": "WEEKEND10", "discount_percentage": 10}),
         });
-    } else if lower.contains("growth")
-        || lower.contains("grow")
-        || lower.contains("abandoned")
-        || lower.contains("performance")
-    {
+    } else if lower.contains("growth") || lower.contains("grow") || lower.contains("abandoned") || lower.contains("performance") {
         // Query real metrics for growth advice
-        let abandoned_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM carts WHERE status = 'abandoned' AND tenant_id = $1",
-        )
-        .bind(&tenant_id)
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0);
+        let abandoned_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM carts WHERE status = 'abandoned' AND tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(0);
 
         if abandoned_count > 0 {
-            response_text = format!(
-                "I noticed you have {} abandoned carts. Recovering them could boost your revenue significantly. Would you like me to start an automated recovery campaign?",
-                abandoned_count
-            );
+            response_text = format!("I noticed you have {} abandoned carts. Recovering them could boost your revenue significantly. Would you like me to start an automated recovery campaign?", abandoned_count);
             draft_action = Some(ChatDraftAction {
                 id: "recover_abandoned_carts_action".to_string(),
                 title: "Recover Abandoned Carts".to_string(),
-                description: format!(
-                    "Send personalized recovery emails for {} abandoned carts.",
-                    abandoned_count
-                ),
+                description: format!("Send personalized recovery emails for {} abandoned carts.", abandoned_count),
                 action_type: "recover_abandoned_carts".to_string(),
                 payload: serde_json::json!({"count": abandoned_count}),
             });
@@ -250,20 +238,15 @@ pub async fn handle_conversational_chat(
             response_text = "Your business is performing well! You have no abandoned carts at the moment. We could look into starting a new referral program to reach more customers.\n\n⚡ Powered by OHC".to_string();
         }
     } else if lower.contains("rating") || lower.contains("reputation") || lower.contains("review") {
-        let rating: f64 = sqlx::query_scalar(
-            "SELECT average_rating FROM reputation_profiles WHERE tenant_id = $1",
-        )
-        .bind(&tenant_id)
-        .fetch_one(&state.pool)
-        .await
-        .unwrap_or(0.0);
+        let rating: f64 = sqlx::query_scalar("SELECT average_rating FROM reputation_profiles WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(0.0);
 
-        response_text = format!(
-            "Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.\n\n⚡ Powered by OHC",
-            rating
-        );
+        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.\n\n⚡ Powered by OHC", rating);
         if rating < 4.5 {
-            draft_action = Some(ChatDraftAction {
+             draft_action = Some(ChatDraftAction {
                 id: "start_review_campaign_action".to_string(),
                 title: "Start Review Campaign".to_string(),
                 description: "Invite recent customers to share their feedback.".to_string(),
@@ -286,30 +269,22 @@ pub async fn handle_conversational_chat(
 
     if response_text.is_empty() {
         response_text = if let Some(ref action) = draft_action {
-            format!(
-                "I've drafted an action for you: {}. Please approve it to apply the changes.",
-                action.title
-            )
+            format!("I've drafted an action for you: {}. Please approve it to apply the changes.", action.title)
         } else {
             "I didn't quite catch that. Try asking me about your business growth, abandoned carts, or update your hours and inventory.".to_string()
         };
     }
 
-    (
-        StatusCode::OK,
-        Json(ChatRes {
-            response: response_text,
-            draft_action,
-        }),
-    )
+    (StatusCode::OK, Json(ChatRes {
+        response: response_text,
+        draft_action,
+    }))
 }
 
 pub async fn handle_conversational_execute(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-    Json(req): Json<ExecuteReq>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ExecuteReq>
 ) -> impl IntoResponse {
     let mut message = format!("Successfully executed action: {}", req.action_id);
 
@@ -322,9 +297,7 @@ pub async fn handle_conversational_execute(
             "tenant_id": auth_info.org_id
         }));
         state.hub.append_recent_event(msg).await;
-        message =
-            "Recovery campaign started successfully! I'll notify you as soon as we see results."
-                .to_string();
+        message = "Recovery campaign started successfully! I'll notify you as soon as we see results.".to_string();
     } else if req.action_id == "start_review_campaign_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
             "type": "growth.review_campaign_started",
@@ -332,8 +305,7 @@ pub async fn handle_conversational_execute(
             "source": "conversational_manager"
         }));
         state.hub.append_recent_event(msg).await;
-        message = "Review campaign is now active. We're reaching out to your recent customers."
-            .to_string();
+        message = "Review campaign is now active. We're reaching out to your recent customers.".to_string();
     } else if req.action_id == "generate_social_post_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
             "type": "growth.social_post_published",
@@ -344,32 +316,19 @@ pub async fn handle_conversational_execute(
         message = "Successfully prepared social media post.".to_string();
     }
 
-    (
-        StatusCode::OK,
-        Json(ExecuteRes {
-            success: true,
-            message,
-        }),
-    )
+    (StatusCode::OK, Json(ExecuteRes {
+        success: true,
+        message,
+    }))
 }
 
-pub fn router<S>(
-    pool: PgPool,
-    hub: Arc<Hub>,
-    viral_loop_tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>,
-) -> Router<S>
+pub fn router<S>(pool: PgPool, hub: Arc<Hub>, viral_loop_tracker: std::sync::Arc<crate::services::growth::viral_loop::ViralLoopTracker>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route(
-            "/conversational-manager/chat",
-            post(handle_conversational_chat),
-        )
-        .route(
-            "/conversational-manager/execute",
-            post(handle_conversational_execute),
-        )
+        .route("/conversational-manager/chat", post(handle_conversational_chat))
+        .route("/conversational-manager/execute", post(handle_conversational_execute))
         .route("/waitlist", post(handle_waitlist))
         .route("/secret-menu/embed", get(handle_secret_menu_embed))
         .route("/secret-menu/generate", post(handle_secret_menu_generate))
@@ -378,94 +337,54 @@ where
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/lead-gen", post(handle_create_lead_gen_campaign))
         .route("/lead-magnet/capture", post(handle_lead_magnet_capture))
+
         .route("/campaign/generate-review", post(handle_generate_review))
-        .route(
-            "/campaign/generate-customer-referral",
-            post(handle_generate_customer_referral),
-        )
+        .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
-        .route(
-            "/campaign/generate-win-back",
-            post(handle_generate_win_back),
-        )
-        .route(
-            "/campaign/generate-subscription-offer",
-            post(handle_generate_subscription_offer),
-        )
+        .route("/campaign/generate-win-back", post(handle_generate_win_back))
+        .route("/campaign/generate-subscription-offer", post(handle_generate_subscription_offer))
         .route("/campaign/send-cart", post(handle_send_cart))
-        .route(
-            "/campaign/abandoned-carts-count",
-            get(handle_abandoned_carts_count),
-        )
+        .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/discount-code/embed", get(handle_discount_code_embed))
-        .route(
-            "/footer-branding/embed.js",
-            get(handle_footer_branding_embed),
-        )
+        .route("/footer-branding/embed.js", get(handle_footer_branding_embed))
         .route("/testimonial/embed", get(handle_testimonial_embed))
-        .route(
-            "/customer-referral/embed",
-            get(handle_customer_referral_embed),
-        )
+        .route("/customer-referral/embed", get(handle_customer_referral_embed))
         .route("/post-purchase/embed", get(handle_post_purchase_embed))
-        .route("/storefront/og-card", get(handle_og_card))
+                .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/spin-to-win/embed", get(handle_spin_to_win_embed))
-        .route(
-            "/interactive-poll/embed",
-            get(handle_interactive_poll_embed),
-        )
+        .route("/interactive-poll/embed", get(handle_interactive_poll_embed))
         .route("/milestone", get(handle_get_milestone))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/promoter/generate", post(handle_promoter_generate))
-        .route(
-            "/affiliate/generate-link",
-            post(handle_affiliate_generate_link),
-        )
+        .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
         .route("/affiliate/stats", get(handle_affiliate_stats))
-        .route(
-            "/team-invites",
-            get(handle_get_team_invites).post(handle_create_team_invite),
-        )
+        .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
-        .route(
-            "/team-invites/aggregated-metrics",
-            get(handle_aggregated_team_invites_metrics),
-        )
+        .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
         .route("/referrals/stats", get(handle_referral_stats))
         .route("/referrals/leaderboard", get(handle_referral_leaderboard))
-        .route(
-            "/referrals/click",
-            post(handle_referral_click_post).get(handle_referral_click_get),
-        )
+        .route("/referrals/click", post(handle_referral_click_post).get(handle_referral_click_get))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/waitlist/generate", post(handle_generate_viral_waitlist))
-        .route(
-            "/unboxing-share/generate",
-            post(handle_unboxing_share_generate),
-        )
+        .route("/unboxing-share/generate", post(handle_unboxing_share_generate))
         .route("/waitlist/embed", get(handle_waitlist_embed))
         .route("/community-goal/embed", get(handle_community_goal_embed))
         .route("/countdown/generate", post(handle_countdown_generate))
         .route("/countdown/embed", get(handle_countdown_embed))
         .route("/birthday-club/embed", get(handle_birthday_club_embed))
         .route("/birthday-club/capture", post(handle_birthday_club_capture))
+
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
-        .route(
-            "/viral-before-after/embed",
-            get(handle_viral_before_after_embed),
-        )
+        .route("/viral-before-after/embed", get(handle_viral_before_after_embed))
         .route("/viral-widget/embed", get(handle_viral_widget_embed))
-        .route(
-            "/one-tap-referral/embed",
-            get(handle_one_tap_referral_embed),
-        )
+        .route("/one-tap-referral/embed", get(handle_one_tap_referral_embed))
         .route("/viral-goal-tracker", get(handle_viral_goal_tracker))
         .route("/quiz/generate", post(handle_generate_viral_quiz))
         .route("/review-reward/embed", get(handle_review_reward_embed))
@@ -474,21 +393,13 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/viral-loop/metrics", get(handle_viral_loop_metrics))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
-        .route(
-            "/discount_share/generate",
-            post(handle_generate_discount_share),
-        )
+        .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/seasonal-promo/generate", post(handle_promo_generate))
-        .route(
-            "/referrals/milestones/status",
-            get(handle_get_referral_milestones),
-        )
+        .route("/referrals/milestones/status", get(handle_get_referral_milestones))
+
         .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
-        .route(
-            "/reputation/simulate-referral-checkout",
-            post(handle_simulate_referral_checkout),
-        )
+        .route("/reputation/simulate-referral-checkout", post(handle_simulate_referral_checkout))
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
@@ -496,11 +407,7 @@ where
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .route("/wrapped", get(handle_wrapped))
         .route("/upgrade-paywall", get(handle_upgrade_paywall))
-        .layer(Extension(GrowthState {
-            pool,
-            hub,
-            viral_loop_tracker,
-        }))
+        .layer(Extension(GrowthState { pool, hub, viral_loop_tracker }))
 }
 
 #[derive(Debug, Serialize)]
@@ -511,17 +418,14 @@ pub struct UpgradePaywallResponse {
 
 async fn handle_upgrade_paywall(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<UpgradePaywallResponse>, StatusCode> {
     let parsed_uuid = auth_info.org_id;
 
-    let row =
-        sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
-            .bind(parsed_uuid)
-            .fetch_one(&state.pool)
-            .await;
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(parsed_uuid)
+        .fetch_one(&state.pool)
+        .await;
 
     let mut conversions: i64 = 0;
     if let Ok(r) = row {
@@ -545,15 +449,12 @@ pub struct ReferralTierResponse {
 
 async fn handle_referral_tier(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<ReferralTierResponse>, StatusCode> {
-    let row =
-        sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
-            .bind(&auth_info.org_id)
-            .fetch_one(&state.pool)
-            .await;
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&auth_info.org_id)
+        .fetch_one(&state.pool)
+        .await;
 
     let mut conversions: i64 = 0;
     if let Ok(r) = row {
@@ -617,12 +518,10 @@ async fn fetch_time_savings_data(
     };
 
     let f4 = async {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'",
-        )
-        .bind(tenant_id_str)
-        .fetch_one(pool)
-        .await
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
+            .bind(tenant_id_str)
+            .fetch_one(pool)
+            .await
     };
 
     let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
@@ -632,10 +531,7 @@ async fn fetch_time_savings_data(
     let carts_recovered = res3?;
     let auto_replied = res4?;
 
-    let base_hours = (inquiries_handled as f64 * 0.2)
-        + (appointments_scheduled as f64 * 0.3)
-        + (carts_recovered as f64 * 0.43)
-        + (auto_replied as f64 * 0.1);
+    let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
     let hours_saved = (base_hours * 10.0).round() / 10.0;
 
     Ok(TimeSavingsResponse {
@@ -649,9 +545,7 @@ async fn fetch_time_savings_data(
 
 async fn handle_time_savings(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TimeSavingsResponse>, StatusCode> {
     let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
         Ok(u) => u,
@@ -676,8 +570,7 @@ async fn handle_time_savings(
             match fetch_time_savings_data(&pool_bg, parsed_uuid, &tenant_id_str_bg).await {
                 Ok(response) => {
                     if let Some(c) = TIME_SAVINGS_CACHE.get() {
-                        c.set(&cache_key_bg, response, std::time::Duration::from_secs(60))
-                            .await;
+                        c.set(&cache_key_bg, response, std::time::Duration::from_secs(60)).await;
                     }
                 }
                 Err(e) => {
@@ -691,13 +584,7 @@ async fn handle_time_savings(
 
     match fetch_time_savings_data(&state.pool, parsed_uuid, &tenant_id_str).await {
         Ok(response) => {
-            cache
-                .set(
-                    &cache_key,
-                    response.clone(),
-                    std::time::Duration::from_secs(60),
-                )
-                .await;
+            cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
             Ok(Json(response))
         }
         Err(e) => {
@@ -715,9 +602,7 @@ pub struct TrialExtensionClaimResponse {
 
 async fn handle_trial_extension_claim(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
     let org_id_str = &auth_info.org_id;
     let parsed_uuid = uuid::Uuid::parse_str(org_id_str).ok();
@@ -777,13 +662,8 @@ async fn handle_trial_extension_claim(
                             "tags": [
                                 format!("tenant-id:{}", org_id_str)
                             ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
+                        }).to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                     }
                 }
                 Ok(Json(TrialExtensionClaimResponse {
@@ -793,7 +673,7 @@ async fn handle_trial_extension_claim(
             } else {
                 Err(StatusCode::NOT_FOUND)
             }
-        }
+        },
         Err(e) => {
             tracing::error!("Failed to extend trial: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
@@ -887,6 +767,8 @@ pub struct InviteIdRequest {
     pub id: String,
 }
 
+
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralGenerateResponse {
     pub referral_link: String,
@@ -905,9 +787,7 @@ pub struct JobBoardGenerateResponse {
 
 async fn handle_job_board_generate(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<JobBoardGenerateRequest>,
 ) -> Result<Json<JobBoardGenerateResponse>, StatusCode> {
     let board_id = uuid::Uuid::new_v4().to_string();
@@ -923,6 +803,7 @@ async fn handle_job_board_generate(
         job_board_link: format!("https://ohc.app/jobs/{}", board_id),
     }))
 }
+
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct GrowthMetrics {
@@ -978,6 +859,7 @@ async fn handle_social_post(
         }),
     )
 }
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SimulateEventRequest {
@@ -1061,22 +943,19 @@ async fn handle_promoter_generate(
         });
 
         let base_url = if provider_name == "minimax" {
-            std::env::var("MINIMAX_BASE_URL")
-                .unwrap_or_else(|_| "https://api.minimax.chat/v1".to_string())
+            std::env::var("MINIMAX_BASE_URL").unwrap_or_else(|_| "https://api.minimax.chat/v1".to_string())
         } else if provider_name == "openai" {
-            std::env::var("OPENAI_BASE_URL")
-                .unwrap_or_else(|_| "https://api.openai.com/v1".to_string())
+             std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".to_string())
         } else {
             std::env::var("OHC_LLM_BASE_URL").unwrap_or_default()
         };
 
         let mut url = format!("{}/chat/completions", base_url);
         if base_url.ends_with("/chat/completions") {
-            url = base_url;
+             url = base_url;
         }
 
-        let req_builder = client
-            .post(&url)
+        let req_builder = client.post(&url)
             .header("Content-Type", "application/json")
             .header("Authorization", format!("Bearer {}", api_key))
             .json(&body);
@@ -1085,62 +964,41 @@ async fn handle_promoter_generate(
             Ok(res) => {
                 if res.status().is_success() {
                     if let Ok(json) = res.json::<serde_json::Value>().await {
-                        if let Some(choices) = json.get("choices") {
+                         if let Some(choices) = json.get("choices") {
                             if let Some(choice) = choices.get(0) {
                                 if let Some(message) = choice.get("message") {
-                                    if let Some(content) =
-                                        message.get("content").and_then(|c| c.as_str())
-                                    {
-                                        // Try to parse the content as JSON array
-                                        match serde_json::from_str::<Vec<PromoterVariant>>(content)
-                                        {
-                                            Ok(parsed_variants) => {
-                                                variants = parsed_variants;
-                                            }
-                                            Err(_) => {
-                                                // Fallback parsing if LLM didn't return pure array
-                                                if let Ok(parsed_obj) =
-                                                    serde_json::from_str::<serde_json::Value>(
-                                                        content,
-                                                    )
-                                                {
-                                                    if let Some(arr) = parsed_obj
-                                                        .get("variants")
-                                                        .and_then(|v| v.as_array())
-                                                    {
-                                                        let parsed: Result<
-                                                            Vec<PromoterVariant>,
-                                                            _,
-                                                        > = serde_json::from_value(
-                                                            serde_json::Value::Array(arr.clone()),
-                                                        );
-                                                        if let Ok(parsed) = parsed {
-                                                            variants = parsed;
-                                                        }
-                                                    } else if let Some(arr) = parsed_obj.as_array()
-                                                    {
-                                                        let parsed: Result<
-                                                            Vec<PromoterVariant>,
-                                                            _,
-                                                        > = serde_json::from_value(
-                                                            serde_json::Value::Array(arr.clone()),
-                                                        );
-                                                        if let Ok(parsed) = parsed {
-                                                            variants = parsed;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                    if let Some(content) = message.get("content").and_then(|c| c.as_str()) {
+                                         // Try to parse the content as JSON array
+                                         match serde_json::from_str::<Vec<PromoterVariant>>(content) {
+                                             Ok(parsed_variants) => {
+                                                 variants = parsed_variants;
+                                             }
+                                             Err(_) => {
+                                                  // Fallback parsing if LLM didn't return pure array
+                                                  if let Ok(parsed_obj) = serde_json::from_str::<serde_json::Value>(content) {
+                                                       if let Some(arr) = parsed_obj.get("variants").and_then(|v| v.as_array()) {
+                                                           let parsed: Result<Vec<PromoterVariant>, _> = serde_json::from_value(serde_json::Value::Array(arr.clone()));
+                                                           if let Ok(parsed) = parsed {
+                                                               variants = parsed;
+                                                           }
+                                                       } else if let Some(arr) = parsed_obj.as_array() {
+                                                            let parsed: Result<Vec<PromoterVariant>, _> = serde_json::from_value(serde_json::Value::Array(arr.clone()));
+                                                           if let Ok(parsed) = parsed {
+                                                               variants = parsed;
+                                                           }
+                                                       }
+                                                  }
+                                             }
+                                         }
                                     }
                                 }
                             }
-                        }
+                         }
                     }
                 }
             }
             Err(e) => {
-                tracing::error!("Failed to call LLM: {:?}", e);
+                 tracing::error!("Failed to call LLM: {:?}", e);
             }
         }
     }
@@ -1169,7 +1027,9 @@ async fn handle_generate_customer_referral(
         "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.store/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ Powered by OHC",
         store, store
     );
-    Json(GenerateCustomerReferralResponse { message: generated })
+    Json(GenerateCustomerReferralResponse {
+        message: generated,
+    })
 }
 
 async fn handle_generate_cart(
@@ -1182,23 +1042,17 @@ async fn handle_generate_cart(
     let discount_offer = req.discount_offer.unwrap_or_else(|| "10".to_string());
     let is_pro = req.is_pro.unwrap_or(false);
 
-    let branding = if is_pro {
-        "".to_string()
-    } else {
-        "\n\n⚡ Powered by OHC".to_string()
-    };
-    let cart_worth = if value.is_empty() {
-        "".to_string()
-    } else {
-        format!(" worth {}", value)
-    };
+    let branding = if is_pro { "".to_string() } else { "\n\n⚡ Powered by OHC".to_string() };
+    let cart_worth = if value.is_empty() { "".to_string() } else { format!(" worth {}", value) };
 
     let generated = format!(
         "Subject: We saved your cart!\n\nHi {},\n\nWe noticed you left some great items in your cart{} at {}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to securely finish your checkout: https://ohc.store/checkout/recover\n\nUse code COMEBACK{} for {}% off your entire order!\n\nBest,\nThe {} Team{}",
         name, cart_worth, store_name, discount_offer, discount_offer, store_name, branding
     );
 
-    Json(GenerateCartResponse { message: generated })
+    Json(GenerateCartResponse {
+        message: generated,
+    })
 }
 
 #[derive(Deserialize)]
@@ -1235,10 +1089,7 @@ async fn handle_generate_win_back(
     let offer = req.offer.unwrap_or_else(|| "a special offer".to_string());
     Json(GenerateWinBackResponse {
         subject: format!("We miss you! Here is {}", offer),
-        body: format!(
-            "Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team",
-            offer
-        ),
+        body: format!("Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team", offer),
     })
 }
 
@@ -1246,24 +1097,20 @@ async fn handle_generate_subscription_offer(
     Extension(_state): Extension<GrowthState>,
     Json(req): Json<GenerateSubscriptionOfferRequest>,
 ) -> impl IntoResponse {
-    let product_name = req
-        .product_name
-        .unwrap_or_else(|| "your favorite items".to_string());
+    let product_name = req.product_name.unwrap_or_else(|| "your favorite items".to_string());
     let discount = req.discount_percentage.unwrap_or_else(|| "10".to_string());
     let freq = req.frequency.unwrap_or_else(|| "monthly".to_string());
     let store_name = req.store_name.unwrap_or_else(|| "our store".to_string());
-    let branding = if req.brand_link.unwrap_or(false) {
-        "\n\n⚡ Powered by OHC"
-    } else {
-        ""
-    };
+    let branding = if req.brand_link.unwrap_or(false) { "\n\n⚡ Powered by OHC" } else { "" };
 
     let generated = format!(
         "Subject: Never run out of {} again!\n\nHi there,\n\nWe noticed you recently purchased {}. Did you know you can get it delivered automatically?\n\nSign up for our {} Subscribe & Save plan and get {}% off every order.\n\nReady to subscribe? Click here: https://ohc.store/subscribe\n\nBest,\nThe {} Team{}",
         product_name, product_name, freq, discount, store_name, branding
     );
 
-    Json(GenerateSubscriptionOfferResponse { message: generated })
+    Json(GenerateSubscriptionOfferResponse {
+        message: generated,
+    })
 }
 
 async fn handle_send_cart(
@@ -1275,17 +1122,9 @@ async fn handle_send_cart(
     let cart_value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
 
     // Fallback to "my-store" if tenant_id is not in request and not in token
-    let tenant_id = req
-        .tenant_id
-        .or_else(|| claims.and_then(|c| c.organization_id.clone()))
-        .unwrap_or_else(|| "my-store".to_string());
+    let tenant_id = req.tenant_id.or_else(|| claims.and_then(|c| c.organization_id.clone())).unwrap_or_else(|| "my-store".to_string());
 
-    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(
-        std::sync::Arc::new(crate::db::DB {
-            pool: state.pool.clone(),
-            store: crate::db::DbStore::Postgres,
-        }),
-    );
+    let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: state.pool.clone(), store: crate::db::DbStore::Postgres }));
     let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
         id: uuid::Uuid::new_v4().to_string(),
         tenant_id,
@@ -1301,21 +1140,18 @@ async fn handle_send_cart(
     };
 
     match repo.create(item).await {
-        Ok(_) => Json(SendCartResponse {
-            success: true,
-            message: "Email scheduled to be sent successfully".to_string(),
-        })
-        .into_response(),
+        Ok(_) => {
+            Json(SendCartResponse {
+                success: true,
+                message: "Email scheduled to be sent successfully".to_string(),
+            }).into_response()
+        },
         Err(e) => {
             tracing::error!("Failed to save agent feed item for abandoned cart: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(SendCartResponse {
-                    success: false,
-                    message: "Internal server error".to_string(),
-                }),
-            )
-                .into_response()
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(SendCartResponse {
+                success: false,
+                message: "Internal server error".to_string()
+            })).into_response()
         }
     }
 }
@@ -1324,9 +1160,7 @@ async fn handle_send_receipt(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<SendReceiptRequest>,
 ) -> impl IntoResponse {
-    let email = req
-        .customer_email
-        .unwrap_or_else(|| "customer@example.com".to_string());
+    let email = req.customer_email.unwrap_or_else(|| "customer@example.com".to_string());
     let order_id = req.order_id.unwrap_or_else(|| "unknown_order".to_string());
     let amount = req.amount.unwrap_or_else(|| "$0.00".to_string());
     let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
@@ -1343,10 +1177,7 @@ async fn handle_send_receipt(
     }));
     state.hub.append_recent_event(msg).await;
 
-    Json(SendReceiptResponse {
-        success: true,
-        message: generated,
-    })
+    Json(SendReceiptResponse { success: true, message: generated })
 }
 
 #[derive(Deserialize)]
@@ -1369,8 +1200,7 @@ async fn handle_create_lead_gen_campaign(
 ) -> Result<Json<LeadGenCampaignResponse>, StatusCode> {
     let tenant_id = auth_info.org_id.clone();
 
-    let repo =
-        crate::domain::repository::campaign_repo::CampaignRepository::new(state.pool.clone());
+    let repo = crate::domain::repository::campaign_repo::CampaignRepository::new(state.pool.clone());
 
     let campaign = crate::domain::repository::models::LeadGenCampaign {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1383,12 +1213,10 @@ async fn handle_create_lead_gen_campaign(
         updated_at: Some(chrono::Utc::now()),
     };
 
-    repo.create_lead_gen_campaign(&campaign)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to save lead gen campaign: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    repo.create_lead_gen_campaign(&campaign).await.map_err(|e| {
+        tracing::error!("Failed to save lead gen campaign: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(LeadGenCampaignResponse {
         id: campaign.id,
@@ -1398,9 +1226,7 @@ async fn handle_create_lead_gen_campaign(
 
 async fn handle_send_campaign(
     Extension(_state): Extension<GrowthState>,
-    axum::extract::Extension(_auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(_auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(_req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
     (
@@ -1433,9 +1259,7 @@ async fn handle_track_visitor(
 
 async fn handle_affiliate_generate_link(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<GenerateAffiliateLinkRequest>,
 ) -> Result<Json<GenerateAffiliateLinkResponse>, StatusCode> {
     let affiliate_code = uuid::Uuid::new_v4().to_string().replace("-", "")[..8].to_string();
@@ -1469,8 +1293,8 @@ async fn handle_affiliate_track(
     Extension(_state): Extension<GrowthState>,
     Json(req): Json<TrackAffiliateRequest>,
 ) -> impl IntoResponse {
-    use axum::http::HeaderValue;
     use axum::http::header::SET_COOKIE;
+    use axum::http::HeaderValue;
 
     let cookie_str = format!(
         "affiliate_code={}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000",
@@ -1487,21 +1311,17 @@ async fn handle_affiliate_track(
 
 async fn handle_affiliate_stats(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<AffiliateStatsResponse>, StatusCode> {
     let mut total_affiliates: i64 = 0;
     let mut total_commission_cents: i64 = 0;
 
     let (res_aff_join, res_comm_join) = tokio::join!(
         async {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1",
-            )
-            .bind(&auth_info.org_id)
-            .fetch_one(&state.pool)
-            .await
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM affiliate_links WHERE tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
         },
         async {
             sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
@@ -1519,10 +1339,7 @@ async fn handle_affiliate_stats(
         total_commission_cents = sum;
     }
 
-    Ok(Json(AffiliateStatsResponse {
-        total_affiliates,
-        total_commission_cents,
-    }))
+    Ok(Json(AffiliateStatsResponse { total_affiliates, total_commission_cents }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1532,6 +1349,7 @@ pub struct StorefrontEmbedQuery {
     pub price: Option<String>,
     pub theme: Option<String>,
 }
+
 
 #[derive(Deserialize)]
 pub struct PostPurchaseEmbedQuery {
@@ -1551,16 +1369,17 @@ pub struct CustomerReferralEmbedQuery {
     pub hide_branding: Option<String>,
 }
 
+
 async fn handle_post_purchase_embed(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<PostPurchaseEmbedQuery>,
 ) -> impl IntoResponse {
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
     };
 
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
@@ -1574,31 +1393,17 @@ async fn handle_post_purchase_embed(
         discount.clone()
     };
 
-    let bg_color = if query.theme.as_deref() == Some("dark") {
-        "#111827"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if query.theme.as_deref() == Some("dark") {
-        "#ffffff"
-    } else {
-        "#1f2937"
-    };
-    let border_color = if query.theme.as_deref() == Some("dark") {
-        "#374151"
-    } else {
-        "#e5e7eb"
-    };
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
+    let border_color = if query.theme.as_deref() == Some("dark") { "#374151" } else { "#e5e7eb" };
 
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
         // Validate pro status in DB
-        let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
-        )
-        .bind(&tenant)
-        .fetch_optional(&state.pool)
-        .await;
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
+            .bind(&tenant)
+            .fetch_optional(&state.pool)
+            .await;
 
         if let Ok(Some(plan)) = is_pro_res {
             if plan.to_lowercase() == "pro" {
@@ -1610,10 +1415,7 @@ async fn handle_post_purchase_embed(
     let branding = if has_pro {
         "".to_string()
     } else {
-        format!(
-            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#,
-            tenant
-        )
+        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
     };
 
     let html = format!(
@@ -1699,39 +1501,25 @@ async fn handle_customer_referral_embed(
 ) -> impl IntoResponse {
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("\'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("\'", "&#x27;")
     };
 
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
     let give = escape_html(query.give.as_deref().unwrap_or("10"));
     let get = escape_html(query.get.as_deref().unwrap_or("10"));
-    let bg_color = if query.theme.as_deref() == Some("dark") {
-        "#111827"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if query.theme.as_deref() == Some("dark") {
-        "#ffffff"
-    } else {
-        "#1f2937"
-    };
-    let border_color = if query.theme.as_deref() == Some("dark") {
-        "#374151"
-    } else {
-        "#e5e7eb"
-    };
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
+    let border_color = if query.theme.as_deref() == Some("dark") { "#374151" } else { "#e5e7eb" };
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
         // Validate pro status in DB
-        let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
-        )
-        .bind(&tenant)
-        .fetch_optional(&state.pool)
-        .await;
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
+            .bind(&tenant)
+            .fetch_optional(&state.pool)
+            .await;
 
         if let Ok(Some(plan)) = is_pro_res {
             if plan.to_lowercase() == "pro" {
@@ -1743,10 +1531,7 @@ async fn handle_customer_referral_embed(
     let branding = if has_pro {
         "".to_string()
     } else {
-        format!(
-            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#,
-            tenant
-        )
+        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
     };
 
     let html = format!(
@@ -1838,38 +1623,15 @@ pub async fn handle_one_tap_referral_embed(
 ) -> impl axum::response::IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
     let reward = query.reward.as_deref().unwrap_or("Give $10, Get $10");
-    let desc = query
-        .desc
-        .as_deref()
-        .unwrap_or("Enter your friend's email. They get $10 off, and you get $10 when they buy!");
+    let desc = query.desc.as_deref().unwrap_or("Enter your friend's email. They get $10 off, and you get $10 when they buy!");
     let theme = query.theme.as_deref().unwrap_or("light");
     let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
 
-    let bg_color = if theme == "dark" {
-        "#1d1d1f"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if theme == "dark" {
-        "#f5f5f7"
-    } else {
-        "#1d1d1f"
-    };
-    let muted_color = if theme == "dark" {
-        "#a1a1aa"
-    } else {
-        "#6b7280"
-    };
-    let input_bg = if theme == "dark" {
-        "#2d2d30"
-    } else {
-        "#f9fafb"
-    };
-    let border_color = if theme == "dark" {
-        "#3f3f46"
-    } else {
-        "#e5e7eb"
-    };
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
+    let muted_color = if theme == "dark" { "#a1a1aa" } else { "#6b7280" };
+    let input_bg = if theme == "dark" { "#2d2d30" } else { "#f9fafb" };
+    let border_color = if theme == "dark" { "#3f3f46" } else { "#e5e7eb" };
 
     let safe_tenant = escape_html(tenant);
     let safe_reward = escape_html(reward);
@@ -2039,44 +1801,26 @@ async fn handle_viral_goal_tracker(
 ) -> impl IntoResponse {
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("\'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("\'", "&#x27;")
     };
 
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
     let target = escape_html(query.target.as_deref().unwrap_or("10"));
     let reward = escape_html(query.reward.as_deref().unwrap_or("Reward"));
-    let bg_color = if query.theme.as_deref() == Some("dark") {
-        "#1d1d1f"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if query.theme.as_deref() == Some("dark") {
-        "#f5f5f7"
-    } else {
-        "#1d1d1f"
-    };
-    let secondary_text = if query.theme.as_deref() == Some("dark") {
-        "#a1a1a6"
-    } else {
-        "#666666"
-    };
-    let progress_bg = if query.theme.as_deref() == Some("dark") {
-        "rgba(255,255,255,0.1)"
-    } else {
-        "rgba(0,0,0,0.1)"
-    };
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#f5f5f7" } else { "#1d1d1f" };
+    let secondary_text = if query.theme.as_deref() == Some("dark") { "#a1a1a6" } else { "#666666" };
+    let progress_bg = if query.theme.as_deref() == Some("dark") { "rgba(255,255,255,0.1)" } else { "rgba(0,0,0,0.1)" };
 
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
-        let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
-        )
-        .bind(&tenant)
-        .fetch_optional(&state.pool)
-        .await;
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
+            .bind(&tenant)
+            .fetch_optional(&state.pool)
+            .await;
 
         if let Ok(Some(plan)) = is_pro_res {
             if plan.to_lowercase() == "pro" {
@@ -2088,9 +1832,7 @@ async fn handle_viral_goal_tracker(
     let branding = if has_pro {
         "".to_string()
     } else {
-        format!(
-            r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ Powered by OHC</div>"#
-        )
+        format!(r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ Powered by OHC</div>"#)
     };
 
     // Calculate current progress based on real DB values.
@@ -2098,12 +1840,7 @@ async fn handle_viral_goal_tracker(
     // we'll just show the user's progress if logged in, otherwise just a static display or "0".
     // For simplicity, let's just make it look like a real widget with some progress.
     let current_referrals = 4; // Mock value. In a real app we'd fetch this from the referrals table.
-    let target_num: i32 = query
-        .target
-        .as_deref()
-        .unwrap_or("10")
-        .parse()
-        .unwrap_or(10);
+    let target_num: i32 = query.target.as_deref().unwrap_or("10").parse().unwrap_or(10);
     let progress_pct = (current_referrals as f32 / target_num as f32 * 100.0).min(100.0);
 
     let html = format!(
@@ -2213,76 +1950,47 @@ async fn handle_storefront_embed(
     let tenant = query.tenant.as_deref().unwrap_or("embed");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
-    let bg_color = if query.theme.as_deref() == Some("dark") {
-        "#333"
-    } else {
-        "white"
-    };
-    let text_color = if query.theme.as_deref() == Some("dark") {
-        "white"
-    } else {
-        "black"
-    };
-    let border_color = if query.theme.as_deref() == Some("dark") {
-        "#555"
-    } else {
-        "#eaeaea"
-    };
-    let price_color = if query.theme.as_deref() == Some("dark") {
-        "#ddd"
-    } else {
-        "#555"
-    };
-    let link_color = if query.theme.as_deref() == Some("dark") {
-        "#ddd"
-    } else {
-        "#333"
-    };
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "white" } else { "black" };
+    let border_color = if query.theme.as_deref() == Some("dark") { "#555" } else { "#eaeaea" };
+    let price_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#555" };
+    let link_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#333" };
 
     // Basic HTML escaping
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
     };
 
     let safe_name = escape_html(name);
     let safe_price = escape_html(price);
     // Note: URL encode tenant for the href
-    let safe_tenant = tenant
-        .replace(" ", "%20")
-        .replace("<", "%3C")
-        .replace(">", "%3E")
-        .replace("\"", "%22")
-        .replace("'", "%27");
+    let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
 
     let mut has_pro = false;
     if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
-        let row: Option<String> =
-            sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
-                .bind(tenant)
-                .fetch_optional(&state.pool)
-                .await
-                .unwrap_or_default();
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
+            .bind(tenant)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or_default();
         if let Some(plan) = row {
             has_pro = plan.to_lowercase() == "pro";
         }
     }
 
     let branding = if !has_pro {
-        format!(
-            r#"<div class="footer">
+        format!(r#"<div class="footer">
             <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
-        </div>"#
-        )
+        </div>"#)
     } else {
         "".to_string()
     };
 
-    let html = format!(
-        r##"
+    let html = format!(r##"
 <!DOCTYPE html>
 <html>
 <head>
@@ -2307,10 +2015,10 @@ async fn handle_storefront_embed(
     </div>
 </body>
 </html>
-"##
-    );
+"##);
     axum::response::Html(html)
 }
+
 
 #[derive(Debug, Serialize)]
 pub struct WrappedStats {
@@ -2373,23 +2081,15 @@ async fn handle_flash_sale_embed(
     let code = query.code.as_deref().unwrap_or("CODE");
     let percent = query.percent.as_deref().unwrap_or("0");
     let end = query.end.as_deref().unwrap_or("");
-    let bg_color = if query.theme.as_deref() == Some("dark") {
-        "#111827"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if query.theme.as_deref() == Some("dark") {
-        "#ffffff"
-    } else {
-        "#1f2937"
-    };
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
 
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
     };
 
     let safe_title = escape_html(title);
@@ -2397,8 +2097,7 @@ async fn handle_flash_sale_embed(
     let safe_percent = escape_html(percent);
     let safe_end = escape_html(end);
 
-    let html = format!(
-        r##"<!DOCTYPE html>
+    let html = format!(r##"<!DOCTYPE html>
 <html>
 <head>
     <style>
@@ -2460,10 +2159,10 @@ async fn handle_flash_sale_embed(
     </script>
 </body>
 </html>
-"##
-    );
+"##);
     axum::response::Html(html)
 }
+
 
 async fn handle_og_card(
     Extension(state): Extension<GrowthState>,
@@ -2472,24 +2171,16 @@ async fn handle_og_card(
     let tenant = query.tenant.as_deref().unwrap_or("embed");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
-    let bg_color = if query.theme.as_deref() == Some("dark") {
-        "#1a1a1a"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if query.theme.as_deref() == Some("dark") {
-        "#ffffff"
-    } else {
-        "#000000"
-    };
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#1a1a1a" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#000000" };
     let accent_color = "#0066ff";
 
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
     };
 
     let safe_name = escape_html(name);
@@ -2498,15 +2189,12 @@ async fn handle_og_card(
     if false {
         let escape_xml_local = |s: &str| {
             s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;")
+             .replace("<", "&lt;")
+             .replace(">", "&gt;")
+             .replace("\"", "&quot;")
+             .replace("'", "&apos;")
         };
-        let response_svg = format!(
-            r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##,
-            escape_xml_local(&safe_name)
-        );
+        let response_svg = format!(r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##, escape_xml_local(&safe_name));
         return axum::response::Response::builder()
             .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
             .body(axum::body::Body::from(response_svg))
@@ -2516,28 +2204,23 @@ async fn handle_og_card(
 
     let mut has_pro = false;
     if tenant != "embed" && uuid::Uuid::parse_str(&tenant).is_ok() {
-        let row: Option<String> =
-            sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
-                .bind(tenant)
-                .fetch_optional(&state.pool)
-                .await
-                .unwrap_or_default();
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
+            .bind(tenant)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or_default();
         if let Some(plan) = row {
             has_pro = plan.to_lowercase() == "pro";
         }
     }
 
     let branding = if !has_pro {
-        format!(
-            r#"<text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>"#,
-            text_color
-        )
+        format!(r#"<text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>"#, text_color)
     } else {
         "".to_string()
     };
 
-    let svg = format!(
-        r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <rect width="1200" height="630" fill="{bg_color}" />
   <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
 
@@ -2548,8 +2231,7 @@ async fn handle_og_card(
   <text x="250" y="505" font-family="sans-serif" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="middle">Buy Now</text>
 
   {branding}
-</svg>"##
-    );
+</svg>"##);
 
     axum::response::Response::builder()
         .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
@@ -2562,31 +2244,22 @@ async fn handle_check_milestones(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
-    let tenant_id = query
-        .get("tenant")
-        .and_then(|v| v.as_str())
-        .unwrap_or("DEFAULT");
+
+    let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
     let cache = MILESTONES_CACHE.get_or_init(|| HybridCache::new(None));
     let reached_types = if let Some(cached_types) = cache.get(&cache_key).await {
         cached_types
     } else {
-        let rows =
-            sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
-                .bind(tenant_id)
-                .fetch_all(&state.pool)
-                .await
-                .unwrap_or_default();
+        let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&state.pool)
+            .await
+            .unwrap_or_default();
         use sqlx::Row;
         let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
-        cache
-            .set(
-                &cache_key,
-                types.clone(),
-                std::time::Duration::from_secs(60),
-            )
-            .await;
+        cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
         types
     };
 
@@ -2682,22 +2355,17 @@ async fn handle_get_milestone(
     axum::extract::Query(query): axum::extract::Query<MilestoneQuery>,
 ) -> impl IntoResponse {
     let fallback_tenant = "DEFAULT".to_string();
-    let tenant_id = query
-        .tenant_id
-        .clone()
-        .or_else(|| claims.and_then(|c| c.organization_id.clone()))
-        .unwrap_or(fallback_tenant);
+    let tenant_id = query.tenant_id.clone().or_else(|| claims.and_then(|c| c.organization_id.clone())).unwrap_or(fallback_tenant);
 
     // Check business milestones to find highest achievement
     let mut best_milestone_id = "first_sale".to_string();
 
     if tenant_id != "DEFAULT" {
-        let rows =
-            sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
-                .bind(tenant_id)
-                .fetch_all(&state.pool)
-                .await
-                .unwrap_or_default();
+        let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&state.pool)
+            .await
+            .unwrap_or_default();
 
         use sqlx::Row;
         let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
@@ -2730,61 +2398,61 @@ async fn handle_get_milestone(
             "Six-Figure Club! 🌟",
             "You crossed $100k in revenue. Share to unlock $500 in credits.",
             "I just hit $100k in revenue running my business on OHC! 🚀",
-            "$500 Credit",
+            "$500 Credit"
         ),
         "1000_orders" => (
             "1,000th Order Delivered! 👑",
             "An incredible milestone! Share your success to unlock $100 in credits.",
             "I just hit my 1,000th order using OHC to run my business! 🚀",
-            "$100 Credit",
+            "$100 Credit"
         ),
         "revenue_10k" => (
             "Five-Figure Club! 💎",
             "You crossed $10k in revenue. Share to unlock $75 in credits.",
             "I just hit $10k in revenue running my business on OHC! 🚀",
-            "$75 Credit",
+            "$75 Credit"
         ),
         "100_orders" => (
             "100th Order Delivered! 🎉",
             "You're growing fast. Share your success to unlock $50 in OHC credits.",
             "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
-            "$50 Credit",
+            "$50 Credit"
         ),
         "50th_order" => (
             "50th Order! 🔥",
             "You're halfway to 100! Share your success to unlock $30 in OHC credits.",
             "I just hit my 50th order using OHC! 🚀",
-            "$30 Credit",
+            "$30 Credit"
         ),
         "revenue_1k" => (
             "Four-Figure Club! 💰",
             "You crossed $1k in revenue. Share to unlock $25 in credits.",
             "I just hit my first $1k in revenue running my business on OHC! 🚀",
-            "$25 Credit",
+            "$25 Credit"
         ),
         "10th_order" => (
             "10th Order! 📈",
             "Business is booming. Share your success to unlock $10 in credits.",
             "I just hit my 10th order using OHC! 🚀 Get $50 off your first month:",
-            "$10 Credit",
+            "$10 Credit"
         ),
         "5_referrals" => (
             "High Connector! 🤝",
             "You've referred 5 businesses. Share to unlock $100 in credits.",
             "I just helped 5 other businesses start on OHC! 🚀 Get $50 off your first month:",
-            "$100 Credit",
+            "$100 Credit"
         ),
         "100_visitors" => (
             "100 Visitors! 🚀",
             "Traffic is soaring. Share to unlock $5 in credits.",
             "I just had 100 visitors to my new OHC storefront! 🚀 Check it out and get $50 off your first month:",
-            "$5 Credit",
+            "$5 Credit"
         ),
         _ => (
             "First Sale! 💸",
             "You got your first sale! Share your success to unlock $5 in credits.",
             "I just got my first sale using OHC to run my business! 🚀 Start your business and get $50 off your first month:",
-            "$5 Credit",
+            "$5 Credit"
         ),
     };
 
@@ -2870,13 +2538,11 @@ pub async fn handle_get_milestone_card(
     let mut business_name = "My Awesome Store".to_string();
     let mut has_pro = false;
     if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(&tenant_id).is_ok() {
-        let row: Option<(String, Option<String>)> = sqlx::query_as(
-            "SELECT name as business_name, plan_tier FROM tenants WHERE id = $1::uuid",
-        )
-        .bind(tenant_id)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or_default();
+        let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT name as business_name, plan_tier FROM tenants WHERE id = $1::uuid")
+            .bind(tenant_id)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or_default();
         if let Some((name, plan_tier)) = row {
             business_name = name;
             if let Some(plan) = plan_tier {
@@ -2887,83 +2553,32 @@ pub async fn handle_get_milestone_card(
 
     let escape_xml = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&apos;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&apos;")
     };
 
     let safe_business_name = escape_xml(&business_name);
 
     let (title, sub, icon, grad_start, grad_end) = match milestone_id {
         "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
-        "10th_order" => (
-            "10th Order!",
-            "Business is booming",
-            "📈",
-            "#ff9a9e",
-            "#fecfef",
-        ),
+        "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
         "50th_order" => ("50th Order!", "Halfway to 100", "🔥", "#ff9a9e", "#fecfef"),
-        "100_visitors" => (
-            "100 Visitors!",
-            "Traffic is soaring",
-            "🚀",
-            "#a1c4fd",
-            "#c2e9fb",
-        ),
-        "5_referrals" => (
-            "High Connector!",
-            "Referred 5 businesses",
-            "🤝",
-            "#f6d365",
-            "#fda085",
-        ),
-        "revenue_1k" => (
-            "Four-Figure Club",
-            "Crossed $1k in Revenue!",
-            "💰",
-            "#f43f5e",
-            "#fb923c",
-        ),
-        "revenue_10k" => (
-            "Five-Figure Club",
-            "Crossed $10k in Revenue!",
-            "💎",
-            "#a18cd1",
-            "#fbc2eb",
-        ),
-        "100_orders" => (
-            "Century of Orders",
-            "100 sales fulfilled",
-            "📦",
-            "#ffecd2",
-            "#fcb69f",
-        ),
-        "1000_orders" => (
-            "1,000 Orders!",
-            "A monumental achievement",
-            "👑",
-            "#f6d365",
-            "#fda085",
-        ),
-        _ => (
-            "Success Milestone!",
-            "Built with OHC",
-            "✨",
-            "#667eea",
-            "#764ba2",
-        ),
+        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
+        "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
+        "revenue_1k" => ("Four-Figure Club", "Crossed $1k in Revenue!", "💰", "#f43f5e", "#fb923c"),
+        "revenue_10k" => ("Five-Figure Club", "Crossed $10k in Revenue!", "💎", "#a18cd1", "#fbc2eb"),
+        "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
+        "1000_orders" => ("1,000 Orders!", "A monumental achievement", "👑", "#f6d365", "#fda085"),
+        _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
     let branding = if !has_pro {
-        format!(
-            r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
+        format!(r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
     <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
     <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OHC & get 14 days of Pro free</text>
-  </a>"##,
-            tenant_id
-        )
+  </a>"##, tenant_id)
     } else {
         "".to_string()
     };
@@ -2971,15 +2586,12 @@ pub async fn handle_get_milestone_card(
     if false {
         let escape_xml_local = |s: &str| {
             s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;")
+             .replace("<", "&lt;")
+             .replace(">", "&gt;")
+             .replace("\"", "&quot;")
+             .replace("'", "&apos;")
         };
-        let response_svg = format!(
-            r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##,
-            escape_xml_local(&title)
-        );
+        let response_svg = format!(r##"<svg width="300" height="150" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#667eea"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" fill="white">{}</text></svg>"##, escape_xml_local(&title));
         return axum::response::Response::builder()
             .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
             .body(axum::body::Body::from(response_svg))
@@ -2987,8 +2599,7 @@ pub async fn handle_get_milestone_card(
             .into_response();
     }
 
-    let svg = format!(
-        r##"<svg viewBox="0 0 1200 630" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    let svg = format!(r##"<svg viewBox="0 0 1200 630" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#000000" flood-opacity="0.1"/>
@@ -3029,14 +2640,13 @@ pub async fn handle_get_milestone_card(
 
   {branding}
 </svg>"##,
-        grad_start = grad_start,
-        grad_end = grad_end,
-        icon = icon,
-        title = title,
-        sub = sub,
-        safe_business_name = safe_business_name,
-        branding = branding
-    );
+    grad_start = grad_start,
+    grad_end = grad_end,
+    icon = icon,
+    title = title,
+    sub = sub,
+    safe_business_name = safe_business_name,
+    branding = branding);
 
     axum::response::Response::builder()
         .header(axum::http::header::CONTENT_TYPE, "image/svg+xml")
@@ -3055,31 +2665,21 @@ async fn handle_get_team_invites(
         return Ok(Json(cached_resp));
     }
 
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
-        state.pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     let limit = query.limit.unwrap_or(20);
-    match tracker
-        .get_team_invites(&query.team_id, query.cursor.clone(), limit as i64)
-        .await
-    {
+    match tracker.get_team_invites(&query.team_id, query.cursor.clone(), limit as i64).await {
         Ok(invites) => {
             let next_cursor = if invites.len() == limit {
                 invites.last().map(|i| i.id.clone())
             } else {
                 None
             };
-            let resp = TeamInvitesResponse {
-                invites,
-                next_cursor,
-            };
-            cache
-                .set(&cache_key, resp.clone(), std::time::Duration::from_secs(30))
-                .await;
+            let resp = TeamInvitesResponse { invites, next_cursor };
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(30)).await;
             Ok(Json(resp))
-        }
+        },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -3114,26 +2714,21 @@ async fn handle_team_invites_metrics(
         return Ok(Json(cached_resp));
     }
 
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
-        state.pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     let pool_clone = state.pool.clone();
     let team_id = query.team_id.clone();
     let active_referrals_fut = async {
-        sqlx::query_scalar(
-            "SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1",
-        )
-        .bind(&team_id)
-        .fetch_one(&pool_clone)
-        .await
-        .unwrap_or(0)
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+            .bind(&team_id)
+            .fetch_one(&pool_clone)
+            .await
+            .unwrap_or(0)
     };
 
     let invites_count_fut = tracker.get_team_invites_count(&query.team_id);
-    let (active_referrals, invites_count_res) =
-        tokio::join!(active_referrals_fut, invites_count_fut);
+    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
 
     match invites_count_res {
         Ok(total_invites) => {
@@ -3144,13 +2739,11 @@ async fn handle_team_invites_metrics(
                     active_referrals,
                     revenue: (active_referrals as f64) * 50.0,
                     pending_rewards: (active_referrals as f64) * 10.0,
-                },
+                }
             };
-            cache
-                .set(&cache_key, resp.clone(), std::time::Duration::from_secs(60))
-                .await;
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
             Ok(Json(resp))
-        }
+        },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -3165,28 +2758,18 @@ async fn handle_onboarding_metrics(
     }
 
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&state.pool)
-        .await
+        .fetch_all(&state.pool).await
     {
         Ok(rows) => {
+
             use sqlx::Row;
-            let metrics = rows
-                .into_iter()
-                .map(|r| OnboardingMetric {
-                    step: r.get("step"),
-                    count: r.get::<i64, _>("count") as i32,
-                })
-                .collect();
+            let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
             let resp = OnboardingMetricsResponse { metrics };
-            cache
-                .set(&cache_key, resp.clone(), std::time::Duration::from_secs(60))
-                .await;
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
             Ok(Json(resp))
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to fetch onboarding metrics: {:?}",
-            );
+            ::server_telemetry::record_error_signal("[bug] Failed to fetch onboarding metrics: {:?}");
             tracing::error!("Failed to fetch onboarding metrics: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
@@ -3208,9 +2791,7 @@ async fn handle_referral_click_post(
             }
             state.hub.referral_tracker().record_click(&req.id);
 
-            let msg = state.hub.sanitize_hub_event(
-                serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }),
-            );
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_clicked", "id": req.id }));
             state.hub.append_recent_event(msg).await;
 
             Ok(Json(()).into_response())
@@ -3251,6 +2832,7 @@ async fn handle_referral_click_get(
     Ok(axum::response::Redirect::to(&redirect_url).into_response())
 }
 
+
 #[derive(Debug, Serialize)]
 pub struct LeaderboardEntry {
     pub user_id: String,
@@ -3264,9 +2846,7 @@ pub struct ReferralLeaderboardResponse {
 
 async fn handle_referral_leaderboard(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<ReferralLeaderboardResponse>, StatusCode> {
     let rows = sqlx::query("SELECT user_id, conversions FROM referrals WHERE tenant_id = $1 ORDER BY conversions DESC LIMIT 5")
         .bind(&auth_info.org_id)
@@ -3291,17 +2871,14 @@ async fn handle_referral_leaderboard(
 }
 
 async fn handle_referral_stats(
+
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let mut active_referrals: i64 = 0;
     let mut invites_sent: i64 = 0;
 
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
-        state.pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     if let Ok(count) = tracker.get_total_invites_count(&auth_info.org_id).await {
@@ -3310,11 +2887,10 @@ async fn handle_referral_stats(
     let mut revenue_from_referrals: f64 = 0.0;
     let mut pending_rewards: f64 = 0.0;
 
-    let row =
-        sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
-            .bind(&auth_info.org_id)
-            .fetch_one(&state.pool)
-            .await;
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&auth_info.org_id)
+        .fetch_one(&state.pool)
+        .await;
 
     if let Ok(r) = row {
         use sqlx::Row;
@@ -3332,6 +2908,7 @@ async fn handle_referral_stats(
     })))
 }
 
+
 async fn handle_referral_convert(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
@@ -3347,9 +2924,7 @@ async fn handle_referral_convert(
             }
             state.hub.referral_tracker().record_conversion(&req.id);
 
-            let msg = state.hub.sanitize_hub_event(
-                serde_json::json!({ "type": "growth.referral_converted", "id": req.id }),
-            );
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_converted", "id": req.id }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(()))
         }
@@ -3357,18 +2932,14 @@ async fn handle_referral_convert(
     }
 }
 
+
 async fn handle_referral_generate(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
     let ref_code = uuid::Uuid::new_v4().to_string();
     let ref_id = uuid::Uuid::new_v4().to_string();
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
 
     match sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
         .bind(&ref_id)
@@ -3394,18 +2965,12 @@ async fn handle_team_invite_accept(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<InviteIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
-        state.pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo.clone());
 
     // Before accepting, fetch the invite to get the team_id to invalidate cache
     let (tenant_id_opt, team_id_opt, invitee_id_opt) = match repo.get_invite(&req.id).await {
-        Ok(Some(invite)) => (
-            Some(invite.tenant_id),
-            Some(invite.team_id),
-            Some(invite.invitee_id),
-        ),
+        Ok(Some(invite)) => (Some(invite.tenant_id), Some(invite.team_id), Some(invite.invitee_id)),
         _ => (None, None, None),
     };
 
@@ -3422,17 +2987,13 @@ async fn handle_team_invite_accept(
             }
             if let Some(tenant_id) = tenant_id_opt {
                 let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-                metrics_cache
-                    .invalidate(&format!("aggregated_metrics_{}", tenant_id))
-                    .await;
+                metrics_cache.invalidate(&format!("aggregated_metrics_{}", tenant_id)).await;
             }
 
-            let msg = state.hub.sanitize_hub_event(
-                serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }),
-            );
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(()))
-        }
+        },
         Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -3440,25 +3001,13 @@ async fn handle_team_invite_accept(
 
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CreateTeamInviteRequest>,
 ) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
-        state.pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    match tracker
-        .record_invite(
-            &auth_info.org_id,
-            &req.team_id,
-            &req.inviter_id,
-            &req.invitee_id,
-        )
-        .await
-    {
+    match tracker.record_invite(&auth_info.org_id, &req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(invite) => {
             state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
@@ -3466,21 +3015,21 @@ async fn handle_create_team_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache
-                .invalidate(&format!("aggregated_metrics_{}", auth_info.org_id))
-                .await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", auth_info.org_id)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
             let invite_link = format!("https://ohc.app/invite/{}", invite.id);
             Ok(Json(CreateTeamInviteResponse { invite_link }))
-        }
+        },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
-async fn handle_viral_loop_metrics(Extension(state): Extension<GrowthState>) -> impl IntoResponse {
+async fn handle_viral_loop_metrics(
+    Extension(state): Extension<GrowthState>,
+) -> impl IntoResponse {
     let (invites_sent, invites_accepted) = state.viral_loop_tracker.get_metrics();
     Json(serde_json::json!({
         "invites_sent": invites_sent,
@@ -3502,9 +3051,7 @@ pub struct UnboxingShareGenerateResponse {
 
 pub async fn handle_unboxing_share_generate(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<UnboxingShareGenerateRequest>,
 ) -> Result<Json<UnboxingShareGenerateResponse>, StatusCode> {
     let msg = state.hub.sanitize_hub_event(serde_json::json!({
@@ -3516,14 +3063,16 @@ pub async fn handle_unboxing_share_generate(
     }));
     state.hub.append_recent_event(msg).await;
 
-    Ok(Json(UnboxingShareGenerateResponse { success: true }))
+    Ok(Json(UnboxingShareGenerateResponse {
+        success: true,
+    }))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::Json;
     use axum::extract::Extension;
+    use axum::Json;
     use axum::extract::Query;
     use sqlx::PgPool;
 
@@ -3614,6 +3163,7 @@ mod tests {
         assert_eq!(hub.recent_events(100).await.len(), event_count);
     }
 
+
     #[tokio::test]
     async fn test_unboxing_share_generator() {
         let pool = setup_db().await;
@@ -3653,7 +3203,7 @@ mod tests {
         let json = res.unwrap().0;
         assert_eq!(json.success, true);
     }
-    #[tokio::test]
+#[tokio::test]
     async fn test_handle_one_tap_referral_embed() {
         let query = OneTapReferralEmbedQuery {
             tenant: Some("test_tenant".to_string()),
@@ -3665,9 +3215,7 @@ mod tests {
         let response = super::handle_one_tap_referral_embed(axum::extract::Query(query)).await;
         let response = response.into_response();
 
-        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(bytes.to_vec()).unwrap();
 
         assert!(html.contains("test_tenant"));
@@ -3687,13 +3235,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub,
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = CreateTeamInviteRequest {
             team_id: "team-test-direct".to_string(),
@@ -3708,19 +3250,10 @@ mod tests {
         };
 
         // Call create handler directly
-        let res = handle_create_team_invite(
-            Extension(state.clone()),
-            Extension(auth_info.clone()),
-            Json(req),
-        )
-        .await;
+        let res = handle_create_team_invite(Extension(state.clone()), Extension(auth_info.clone()), Json(req)).await;
         assert!(res.is_ok());
         let create_res_json = res.unwrap().0;
-        assert!(
-            create_res_json
-                .invite_link
-                .starts_with("https://ohc.app/invite/inv-")
-        );
+        assert!(create_res_json.invite_link.starts_with("https://ohc.app/invite/inv-"));
 
         // Call get handler directly
         let query = GetTeamInvitesQuery {
@@ -3746,9 +3279,10 @@ mod tests {
         }
         assert!(found);
 
-        let accept_req = InviteIdRequest { id: invite_id };
-        let accept_res =
-            handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
+        let accept_req = InviteIdRequest {
+            id: invite_id,
+        };
+        let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
         assert!(accept_res.is_ok());
 
         // Call metrics handler directly
@@ -3757,8 +3291,7 @@ mod tests {
             cursor: None,
             limit: None,
         };
-        let metrics_res =
-            handle_team_invites_metrics(Extension(state.clone()), Query(metrics_query)).await;
+        let metrics_res = handle_team_invites_metrics(Extension(state.clone()), Query(metrics_query)).await;
         assert!(metrics_res.is_ok());
         let metrics_res_json = metrics_res.unwrap().0;
         assert_eq!(metrics_res_json.total_invites, 1);
@@ -3767,16 +3300,8 @@ mod tests {
         assert_eq!(metrics_res_json.metrics.pending_rewards, 0.0);
 
         let recent_events = state.hub.recent_events(10).await;
-        assert!(
-            recent_events
-                .iter()
-                .any(|e| e.r#type == "growth.team_invite_created")
-        );
-        assert!(
-            recent_events
-                .iter()
-                .any(|e| e.r#type == "growth.team_invite_accepted")
-        );
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_created"));
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_accepted"));
     }
 
     #[tokio::test]
@@ -3789,13 +3314,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy referral
         let ref_id = "ref-code-123";
@@ -3819,30 +3338,20 @@ mod tests {
         let click_req_not_found = ReferralIdRequest {
             id: "ref-code-123-not-found".to_string(),
         };
-        let res_not_found =
-            handle_referral_click_post(Extension(state.clone()), Json(click_req_not_found)).await;
+        let res_not_found = handle_referral_click_post(Extension(state.clone()), Json(click_req_not_found)).await;
         assert!(res_not_found.is_err());
         assert_eq!(res_not_found.unwrap_err(), StatusCode::NOT_FOUND);
 
         let convert_req_not_found = ReferralIdRequest {
             id: "ref-code-123-not-found".to_string(),
         };
-        let res2_not_found =
-            handle_referral_convert(Extension(state.clone()), Json(convert_req_not_found)).await;
+        let res2_not_found = handle_referral_convert(Extension(state.clone()), Json(convert_req_not_found)).await;
         assert!(res2_not_found.is_err());
         assert_eq!(res2_not_found.unwrap_err(), StatusCode::NOT_FOUND);
 
         let recent_events = state.hub.recent_events(10).await;
-        assert!(
-            recent_events
-                .iter()
-                .any(|e| e.r#type == "growth.referral_clicked")
-        );
-        assert!(
-            recent_events
-                .iter()
-                .any(|e| e.r#type == "growth.referral_converted")
-        );
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_clicked"));
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_converted"));
     }
 
     #[tokio::test]
@@ -3855,13 +3364,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy referral
         let ref_id = "test-ref-123";
@@ -3869,9 +3372,7 @@ mod tests {
             .bind(ref_id)
             .execute(&pool).await.unwrap();
 
-        let req = ReferralIdRequest {
-            id: ref_id.to_string(),
-        };
+        let req = ReferralIdRequest { id: ref_id.to_string() };
 
         // Test Click
         let res = handle_referral_click_post(Extension(state.clone()), Json(req)).await;
@@ -3879,26 +3380,20 @@ mod tests {
 
         let clicks: i32 = sqlx::query_scalar("SELECT clicks FROM referrals WHERE id = $1")
             .bind(ref_id)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+            .fetch_one(&pool).await.unwrap();
         assert_eq!(clicks, 1);
 
-        let req2 = ReferralIdRequest {
-            id: ref_id.to_string(),
-        };
+        let req2 = ReferralIdRequest { id: ref_id.to_string() };
         // Test Convert
         let res2 = handle_referral_convert(Extension(state.clone()), Json(req2)).await;
         assert!(res2.is_ok());
 
-        let conversions: i32 =
-            sqlx::query_scalar("SELECT conversions FROM referrals WHERE id = $1")
-                .bind(ref_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let conversions: i32 = sqlx::query_scalar("SELECT conversions FROM referrals WHERE id = $1")
+            .bind(ref_id)
+            .fetch_one(&pool).await.unwrap();
         assert_eq!(conversions, 1);
     }
+
 
     #[tokio::test]
     async fn test_handle_conversational_chat_growth() {
@@ -3909,13 +3404,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub,
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub, viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let test_tenant = format!("test-org-{}", uuid::Uuid::new_v4());
         let auth_info = ::server_auth::orchestration::AuthInfo {
@@ -3925,58 +3414,26 @@ mod tests {
         };
 
         // Case 1: No abandoned carts
-        let req = ChatReq {
-            message: "How can I grow my business?".to_string(),
-            tenant_id: None,
-        };
-        let res = handle_conversational_chat(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-            Json(req),
-        )
-        .await;
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let req = ChatReq { message: "How can I grow my business?".to_string(), tenant_id: None };
+        let res = handle_conversational_chat(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req)).await;
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
         let res_json: ChatRes = serde_json::from_slice(&body_bytes).unwrap();
-        assert!(
-            res_json.response.contains("performing well")
-                || res_json.response.contains("no abandoned carts")
-        );
+        assert!(res_json.response.contains("performing well") || res_json.response.contains("no abandoned carts"));
 
         // Case 2: Abandoned carts present
         let cart_id = format!("cart-{}", uuid::Uuid::new_v4());
         sqlx::query("INSERT INTO carts (id, tenant_id, status) VALUES ($1, $2, 'abandoned')")
             .bind(&cart_id)
             .bind(&test_tenant)
-            .execute(&pool)
-            .await
-            .expect("Failed to insert test cart");
+            .execute(&pool).await.expect("Failed to insert test cart");
 
-        let req2 = ChatReq {
-            message: "Check my abandoned carts".to_string(),
-            tenant_id: None,
-        };
-        let res2 = handle_conversational_chat(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-            Json(req2),
-        )
-        .await;
-        let body_bytes2 = axum::body::to_bytes(res2.into_response().into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let req2 = ChatReq { message: "Check my abandoned carts".to_string(), tenant_id: None };
+        let res2 = handle_conversational_chat(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req2)).await;
+        let body_bytes2 = axum::body::to_bytes(res2.into_response().into_body(), usize::MAX).await.unwrap();
         let res_json2: ChatRes = serde_json::from_slice(&body_bytes2).unwrap();
 
-        assert!(
-            res_json2.response.contains("noticed you have"),
-            "Response should contain 'noticed you have', but was: {}",
-            res_json2.response
-        );
-        assert_eq!(
-            res_json2.draft_action.unwrap().action_type,
-            "recover_abandoned_carts"
-        );
+        assert!(res_json2.response.contains("noticed you have"), "Response should contain 'noticed you have', but was: {}", res_json2.response);
+        assert_eq!(res_json2.draft_action.unwrap().action_type, "recover_abandoned_carts");
     }
 
     #[tokio::test]
@@ -3992,10 +3449,7 @@ mod tests {
         let json = res.unwrap().0;
         assert_eq!(json.success, true);
         assert_eq!(json.position, 42);
-        assert_eq!(
-            json.referral_link,
-            "https://ohc.app/waitlist?ref=test-tenant"
-        );
+        assert_eq!(json.referral_link, "https://ohc.app/waitlist?ref=test-tenant");
     }
 
     #[tokio::test]
@@ -4008,13 +3462,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://ohc.app/test".to_string(),
@@ -4022,12 +3470,7 @@ mod tests {
             agent_id: "test-agent".to_string(),
         };
 
-        let res = handle_referral_generate(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-        )
-        .await
-        .unwrap();
+        let res = handle_referral_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         let ref_link = res.0.referral_link;
         assert!(ref_link.starts_with("https://ohc.app/ref/"));
 
@@ -4036,12 +3479,9 @@ mod tests {
         assert_eq!(count, 1);
 
         let recent_events = state.hub.recent_events(10).await;
-        assert!(
-            recent_events
-                .iter()
-                .any(|e| e.r#type == "growth.referral_generated")
-        );
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
     }
+
 
     #[tokio::test]
     async fn test_referral_leaderboard() {
@@ -4053,13 +3493,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let tenant_id = "test-org";
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO NOTHING")
@@ -4097,12 +3531,7 @@ mod tests {
             .bind(20)
             .execute(&pool).await.unwrap();
 
-        let res = handle_referral_leaderboard(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-        )
-        .await
-        .unwrap();
+        let res = handle_referral_leaderboard(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         let leaderboard = res.0.leaderboard;
 
         assert_eq!(leaderboard.len(), 3);
@@ -4124,13 +3553,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let tenant_id = "55555555-5555-5555-5555-555555555555";
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
@@ -4143,39 +3566,23 @@ mod tests {
             agent_id: "test-agent".to_string(),
         };
 
-        let res = super::handle_trial_extension_claim(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-        )
-        .await
-        .unwrap();
+        let res = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         assert!(res.0.success);
 
-        let plan_tier: String =
-            sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
-                .bind(tenant_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
+            .bind(tenant_id)
+            .fetch_one(&pool).await.unwrap();
 
         assert_eq!(plan_tier, "pro");
 
-        let has_claimed: bool = sqlx::query_scalar(
-            "SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1::uuid",
-        )
-        .bind(tenant_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
+        let has_claimed: bool = sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1::uuid")
+            .bind(tenant_id)
+            .fetch_one(&pool).await.unwrap();
 
         assert!(has_claimed);
 
         // Try claiming again, it should fail
-        let res_again = super::handle_trial_extension_claim(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-        )
-        .await;
+        let res_again = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await;
         assert!(res_again.is_err());
         assert_eq!(res_again.unwrap_err(), StatusCode::BAD_REQUEST);
     }
@@ -4185,19 +3592,9 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
-        let req = GeneratePromoterRequest {
-            product_id: Some("123".to_string()),
-            name: "Vegan Chocolate Cake".to_string(),
-            description: Some("Delicious and moist".to_string()),
-        };
+        let req = GeneratePromoterRequest { product_id: Some("123".to_string()), name: "Vegan Chocolate Cake".to_string(), description: Some("Delicious and moist".to_string()) };
 
         let res = handle_promoter_generate(Extension(state.clone()), Json(req)).await;
 
@@ -4212,24 +3609,13 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
-        let req = GenerateCustomerReferralRequest {
-            store_name: Some("Maya Cakes".to_string()),
-        };
+        let req = GenerateCustomerReferralRequest { store_name: Some("Maya Cakes".to_string()) };
         let res = handle_generate_customer_referral(Extension(state.clone()), Json(req)).await;
 
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let res_json: GenerateCustomerReferralResponse =
-            serde_json::from_slice(&body_bytes).unwrap();
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: GenerateCustomerReferralResponse = serde_json::from_slice(&body_bytes).unwrap();
 
         assert!(res_json.message.contains("Maya Cakes"));
         assert!(res_json.message.contains("VIP Referral Program"));
@@ -4240,13 +3626,7 @@ mod tests {
         let pool = setup_db().await;
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = GenerateCartRequest {
             customer_name: Some("Bob".to_string()),
@@ -4258,9 +3638,7 @@ mod tests {
         };
         let res = handle_generate_cart(Extension(state.clone()), Json(req)).await;
 
-        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
         let res_json: GenerateCartResponse = serde_json::from_slice(&body_bytes).unwrap();
 
         assert!(res_json.message.contains("Hi Bob"));
@@ -4280,13 +3658,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         // Insert dummy invite
         let invite_id = "test-invite-123";
@@ -4294,26 +3666,19 @@ mod tests {
             .bind(invite_id)
             .execute(&pool).await.unwrap();
 
-        let req = InviteIdRequest {
-            id: invite_id.to_string(),
-        };
+        let req = InviteIdRequest { id: invite_id.to_string() };
 
         let res = handle_team_invite_accept(Extension(state.clone()), Json(req)).await;
         assert!(res.is_ok());
 
         let status: String = sqlx::query_scalar("SELECT status FROM team_invites WHERE id = $1")
             .bind(invite_id)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+            .fetch_one(&pool).await.unwrap();
         assert_eq!(status, "ACCEPTED");
 
         // Test missing invite
-        let missing_req = InviteIdRequest {
-            id: "missing-invite-404".to_string(),
-        };
-        let res_missing =
-            handle_team_invite_accept(Extension(state.clone()), Json(missing_req)).await;
+        let missing_req = InviteIdRequest { id: "missing-invite-404".to_string() };
+        let res_missing = handle_team_invite_accept(Extension(state.clone()), Json(missing_req)).await;
         assert!(res_missing.is_err());
         assert_eq!(res_missing.unwrap_err(), StatusCode::NOT_FOUND);
     }
@@ -4328,13 +3693,7 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         sqlx::query("INSERT INTO onboarding_funnels (id, user_id, step, created_at_unix) VALUES ($1, $2, $3, 0) ON CONFLICT DO NOTHING")
             .bind("funnel-1").bind("user1").bind("step1")
@@ -4343,12 +3702,7 @@ mod tests {
         let res = handle_onboarding_metrics(Extension(state.clone())).await;
         assert!(res.is_ok());
         let metrics_json = res.unwrap().0;
-        let count_step1 = metrics_json
-            .metrics
-            .iter()
-            .find(|m| m.step == "step1")
-            .map(|m| m.count)
-            .unwrap_or(0);
+        let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
     }
 
@@ -4362,31 +3716,16 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Pro', 'pro') ON CONFLICT (id) DO UPDATE SET plan_tier = 'pro'")
             .bind("11111111-1111-1111-1111-111111111111")
             .execute(&pool).await.unwrap();
 
         // Pro plan should not have branding
-        let query = StorefrontEmbedQuery {
-            tenant: Some("11111111-1111-1111-1111-111111111111".to_string()),
-            product_name: None,
-            price: None,
-            theme: None,
-        };
-        let res = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query))
-            .await
-            .into_response();
-        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let query = StorefrontEmbedQuery { tenant: Some("11111111-1111-1111-1111-111111111111".to_string()), product_name: None, price: None, theme: None };
+        let res = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(body_bytes.to_vec()).unwrap();
         assert!(!html.contains("Powered by OHC"));
 
@@ -4395,18 +3734,9 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         // Free plan should have branding
-        let query2 = StorefrontEmbedQuery {
-            tenant: Some("22222222-2222-2222-2222-222222222222".to_string()),
-            product_name: None,
-            price: None,
-            theme: None,
-        };
-        let res2 = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query2))
-            .await
-            .into_response();
-        let body_bytes2 = axum::body::to_bytes(res2.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let query2 = StorefrontEmbedQuery { tenant: Some("22222222-2222-2222-2222-222222222222".to_string()), product_name: None, price: None, theme: None };
+        let res2 = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query2)).await.into_response();
+        let body_bytes2 = axum::body::to_bytes(res2.into_body(), usize::MAX).await.unwrap();
         let html2 = String::from_utf8(body_bytes2.to_vec()).unwrap();
         assert!(html2.contains("Powered by OHC"));
     }
@@ -4414,9 +3744,7 @@ mod tests {
 
 async fn handle_aggregated_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
     let cache_key = format!("aggregated_metrics_{}", auth_info.org_id);
     let cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
@@ -4424,26 +3752,21 @@ async fn handle_aggregated_team_invites_metrics(
         return Ok(Json(cached_resp));
     }
 
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
-        state.pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     let pool_clone = state.pool.clone();
     let org_id_clone = auth_info.org_id.clone();
     let active_referrals_fut = async {
-        sqlx::query_scalar(
-            "SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1",
-        )
-        .bind(&org_id_clone)
-        .fetch_one(&pool_clone)
-        .await
-        .unwrap_or(0)
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+            .bind(&org_id_clone)
+            .fetch_one(&pool_clone)
+            .await
+            .unwrap_or(0)
     };
 
     let invites_count_fut = tracker.get_total_invites_count(&auth_info.org_id);
-    let (active_referrals, invites_count_res) =
-        tokio::join!(active_referrals_fut, invites_count_fut);
+    let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
 
     match invites_count_res {
         Ok(total_invites) => {
@@ -4454,31 +3777,25 @@ async fn handle_aggregated_team_invites_metrics(
                     active_referrals,
                     revenue: (active_referrals as f64) * 50.0,
                     pending_rewards: (active_referrals as f64) * 10.0,
-                },
+                }
             };
-            cache
-                .set(&cache_key, resp.clone(), std::time::Duration::from_secs(60))
-                .await;
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
             Ok(Json(resp))
-        }
+        },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
 async fn handle_abandoned_carts_count(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let pool = &state.pool;
 
-    let count: i64 = match sqlx::query_scalar(
-        "SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1",
-    )
-    .bind(&auth_info.org_id)
-    .fetch_one(pool)
-    .await
+    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+        .bind(&auth_info.org_id)
+        .fetch_one(pool)
+        .await
     {
         Ok(c) => c,
         Err(e) => {
@@ -4504,25 +3821,13 @@ pub struct CloudBridgeInviteResponse {
 
 async fn handle_cloud_bridge_invite(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CloudBridgeInviteRequest>,
 ) -> Result<Json<CloudBridgeInviteResponse>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
-        state.pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    match tracker
-        .record_invite(
-            &auth_info.org_id,
-            &req.team_id,
-            &req.inviter_id,
-            &req.invitee_id,
-        )
-        .await
-    {
+    match tracker.record_invite(&auth_info.org_id, &req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(invite) => {
             state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
@@ -4531,16 +3836,14 @@ async fn handle_cloud_bridge_invite(
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-            metrics_cache
-                .invalidate(&format!("aggregated_metrics_{}", auth_info.org_id))
-                .await;
+            metrics_cache.invalidate(&format!("aggregated_metrics_{}", auth_info.org_id)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
             let invite_link = format!("https://ohc.app/invite/{}", invite.id);
             Ok(Json(CloudBridgeInviteResponse { invite_link }))
-        }
+        },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -4556,27 +3859,12 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
-        let query = super::SpinToWinQuery {
-            tenant: Some("test-tenant".to_string()),
-            campaign: Some("Summer Spin".to_string()),
-            reward: Some("Free Coffee".to_string()),
-        };
-        let res =
-            super::handle_spin_to_win_embed(Extension(state.clone()), axum::extract::Query(query))
-                .await
-                .into_response();
+        let query = super::SpinToWinQuery { tenant: Some("test-tenant".to_string()), campaign: Some("Summer Spin".to_string()), reward: Some("Free Coffee".to_string()) };
+        let res = super::handle_spin_to_win_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
 
-        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         assert!(html.contains("Summer Spin"));
@@ -4593,31 +3881,12 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
-        let query = super::CustomerReferralEmbedQuery {
-            tenant: Some("test-tenant".to_string()),
-            give: Some("15".to_string()),
-            get: Some("20".to_string()),
-            theme: None,
-            hide_branding: None,
-        };
-        let res = super::handle_customer_referral_embed(
-            Extension(state.clone()),
-            axum::extract::Query(query),
-        )
-        .await
-        .into_response();
+        let query = super::CustomerReferralEmbedQuery { tenant: Some("test-tenant".to_string()), give: Some("15".to_string()), get: Some("20".to_string()), theme: None, hide_branding: None };
+        let res = super::handle_customer_referral_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
 
-        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         assert!(html.contains("Give $15, Get $20"));
@@ -4626,7 +3895,7 @@ mod cloud_bridge_tests {
         assert!(html.contains("Powered by OHC"));
     }
 
-    #[tokio::test]
+        #[tokio::test]
     async fn test_birthday_club_embed() {
         let pool = setup_db().await;
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
@@ -4634,13 +3903,7 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let query = super::BirthdayClubEmbedQuery {
             tenant: Some("test-tenant".to_string()),
@@ -4649,17 +3912,10 @@ mod cloud_bridge_tests {
             hide_branding: None,
         };
 
-        let res = super::handle_birthday_club_embed(
-            Extension(state.clone()),
-            axum::extract::Query(query),
-        )
-        .await
-        .into_response();
+        let res = super::handle_birthday_club_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
         assert_eq!(res.status(), StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         assert!(html.contains("25% off"));
@@ -4676,17 +3932,10 @@ mod cloud_bridge_tests {
             hide_branding: Some("true".to_string()),
         };
 
-        let res_no_branding = super::handle_birthday_club_embed(
-            Extension(state.clone()),
-            axum::extract::Query(query_no_branding),
-        )
-        .await
-        .into_response();
+        let res_no_branding = super::handle_birthday_club_embed(Extension(state.clone()), axum::extract::Query(query_no_branding)).await.into_response();
         assert_eq!(res_no_branding.status(), StatusCode::OK);
 
-        let body_bytes_nb = axum::body::to_bytes(res_no_branding.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes_nb = axum::body::to_bytes(res_no_branding.into_body(), usize::MAX).await.unwrap();
         let _html_nb = String::from_utf8(body_bytes_nb.to_vec()).unwrap();
 
         // it may still contain powered by ohc if not pro, so we mock pro
@@ -4701,13 +3950,7 @@ mod cloud_bridge_tests {
         }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = super::BirthdayClubCaptureRequest {
             tenant_id: "test-tenant".to_string(),
@@ -4716,9 +3959,7 @@ mod cloud_bridge_tests {
             birthday: Some("1990-01-01".to_string()),
         };
 
-        let res = super::handle_birthday_club_capture(Extension(state), Json(req))
-            .await
-            .unwrap();
+        let res = super::handle_birthday_club_capture(Extension(state), Json(req)).await.unwrap();
         assert_eq!(res.0.get("success").unwrap(), true);
     }
 
@@ -4727,28 +3968,15 @@ mod cloud_bridge_tests {
         let pool = setup_db().await;
         let (tx, _) = tokio::sync::mpsc::channel(10);
         let hub = Arc::new(Hub::new(tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let query = super::CommunityGoalEmbedQuery {
             tenant: Some("test-tenant".to_string()),
             target: Some("1000".to_string()),
             reward: Some("Free Coffee".to_string()),
         };
-        let res = super::handle_community_goal_embed(
-            Extension(state.clone()),
-            axum::extract::Query(query),
-        )
-        .await
-        .into_response();
-        let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let res = super::handle_community_goal_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+        let bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(bytes.to_vec()).unwrap();
 
         assert!(html.contains("test-tenant"));
@@ -4761,15 +3989,8 @@ mod cloud_bridge_tests {
             target: None,
             reward: None,
         };
-        let res_default = super::handle_community_goal_embed(
-            Extension(state.clone()),
-            axum::extract::Query(query_default),
-        )
-        .await
-        .into_response();
-        let bytes_default = axum::body::to_bytes(res_default.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let res_default = super::handle_community_goal_embed(Extension(state.clone()), axum::extract::Query(query_default)).await.into_response();
+        let bytes_default = axum::body::to_bytes(res_default.into_body(), usize::MAX).await.unwrap();
         let html_default = String::from_utf8(bytes_default.to_vec()).unwrap();
 
         assert!(html_default.contains("embed"));
@@ -4784,52 +4005,25 @@ mod cloud_bridge_tests {
             return;
         }
 
+
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
-        let query = super::ViralWidgetEmbedQuery {
-            tenant: Some("test-tenant".to_string()),
-            theme: None,
-            title: Some("Test Title".to_string()),
-            branding: Some(true),
-        };
-        let res =
-            super::handle_viral_widget_embed(Extension(state.clone()), axum::extract::Query(query))
-                .await
-                .into_response();
+        let query = super::ViralWidgetEmbedQuery { tenant: Some("test-tenant".to_string()), theme: None, title: Some("Test Title".to_string()), branding: Some(true) };
+        let res = super::handle_viral_widget_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
 
-        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         assert!(html.contains("Test Title"));
         assert!(html.contains("test-tenant"));
         assert!(html.contains("Powered by OHC"));
 
-        let query_no_branding = super::ViralWidgetEmbedQuery {
-            tenant: Some("test-tenant-2".to_string()),
-            theme: None,
-            title: Some("Test Title 2".to_string()),
-            branding: Some(false),
-        };
-        let res_no_branding = super::handle_viral_widget_embed(
-            Extension(state.clone()),
-            axum::extract::Query(query_no_branding),
-        )
-        .await
-        .into_response();
+        let query_no_branding = super::ViralWidgetEmbedQuery { tenant: Some("test-tenant-2".to_string()), theme: None, title: Some("Test Title 2".to_string()), branding: Some(false) };
+        let res_no_branding = super::handle_viral_widget_embed(Extension(state.clone()), axum::extract::Query(query_no_branding)).await.into_response();
 
-        let body_bytes_nb = axum::body::to_bytes(res_no_branding.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes_nb = axum::body::to_bytes(res_no_branding.into_body(), usize::MAX).await.unwrap();
         let _html_nb = String::from_utf8(body_bytes_nb.to_vec()).unwrap();
 
         assert!(_html_nb.contains("Test Title 2"));
@@ -4837,8 +4031,8 @@ mod cloud_bridge_tests {
         assert!(!_html_nb.contains("Powered by OHC"));
     }
 
-    use super::tests::setup_db;
     use super::*;
+    use super::tests::setup_db;
     use crate::hub::Hub;
     use std::sync::Arc;
 
@@ -4852,13 +4046,7 @@ mod cloud_bridge_tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone(), viral_loop_tracker: std::sync::Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()) };
 
         let req = CloudBridgeInviteRequest {
             team_id: "test-team-cb".to_string(),
@@ -4872,23 +4060,14 @@ mod cloud_bridge_tests {
             org_id: "org-123".to_string(),
         };
 
-        let res = handle_cloud_bridge_invite(
-            Extension(state.clone()),
-            Extension(auth_info.clone()),
-            Json(req),
-        )
-        .await;
+        let res = handle_cloud_bridge_invite(Extension(state.clone()), Extension(auth_info.clone()), Json(req)).await;
         assert!(res.is_ok());
 
         let res_json = res.unwrap().0;
         assert!(res_json.invite_link.starts_with("https://ohc.app/invite/"));
 
         let recent_events = state.hub.recent_events(10).await;
-        assert!(
-            recent_events
-                .iter()
-                .any(|e| e.r#type == "growth.cloud_bridge_invite_created")
-        );
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
     }
 }
 
@@ -4947,36 +4126,21 @@ async fn handle_interactive_poll_embed(
 ) -> impl IntoResponse {
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("\'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("\'", "&#x27;")
     };
 
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
     let question = escape_html(query.q.as_deref().unwrap_or("Ask a question"));
-    let raw_opts = query
-        .opts
-        .clone()
-        .unwrap_or_else(|| "Option 1,Option 2".to_string());
+    let raw_opts = query.opts.clone().unwrap_or_else(|| "Option 1,Option 2".to_string());
     let opts: Vec<String> = raw_opts.split(',').map(|s| escape_html(s.trim())).collect();
 
     let is_dark = query.theme.as_deref() == Some("dark");
-    let bg_class = if is_dark {
-        "bg-gray-900 text-white"
-    } else {
-        "bg-white text-gray-900"
-    };
-    let border_class = if is_dark {
-        "border-gray-800"
-    } else {
-        "border-gray-200"
-    };
-    let btn_bg_class = if is_dark {
-        "bg-gray-800 hover:bg-gray-700 border-gray-700"
-    } else {
-        "bg-gray-50 hover:bg-gray-100 border-gray-200"
-    };
+    let bg_class = if is_dark { "bg-gray-900 text-white" } else { "bg-white text-gray-900" };
+    let border_class = if is_dark { "border-gray-800" } else { "border-gray-200" };
+    let btn_bg_class = if is_dark { "bg-gray-800 hover:bg-gray-700 border-gray-700" } else { "bg-gray-50 hover:bg-gray-100 border-gray-200" };
 
     let require_email = query.email.unwrap_or(false);
     let hide_branding = query.hide_branding.unwrap_or(false);
@@ -5031,8 +4195,7 @@ async fn handle_interactive_poll_embed(
     );
 
     if !hide_branding {
-        let origin =
-            std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://ohc.app".to_string());
+        let origin = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://ohc.app".to_string());
         html.push_str(&format!(
             r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;">
                 <a href="{}/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
@@ -5052,10 +4215,10 @@ async fn handle_spin_to_win_embed(
 ) -> impl IntoResponse {
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("\'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("\'", "&#x27;")
     };
 
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
@@ -5191,9 +4354,13 @@ async fn handle_spin_to_win_embed(
     axum::response::Html(html)
 }
 
+
+
+
+
 pub async fn handle_community_goal_embed(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<CommunityGoalEmbedQuery>,
+    axum::extract::Query(query): axum::extract::Query<CommunityGoalEmbedQuery>
 ) -> impl IntoResponse {
     let raw_tenant = query.tenant.clone().unwrap_or_else(|| "embed".to_string());
     let tenant_encoded = urlencoding::encode(&raw_tenant);
@@ -5201,11 +4368,10 @@ pub async fn handle_community_goal_embed(
     let target: i64 = target_str.parse().unwrap_or(500);
     let reward = escape_html(query.reward.as_deref().unwrap_or("50% off for everyone!"));
 
-    let row =
-        sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
-            .bind(&raw_tenant)
-            .fetch_one(&state.pool)
-            .await;
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&raw_tenant)
+        .fetch_one(&state.pool)
+        .await;
 
     let mut conversions: i64 = 0;
     if let Ok(r) = row {
@@ -5351,28 +4517,16 @@ pub async fn handle_community_goal_embed(
 
 pub async fn handle_viral_widget_embed(
     Extension(_state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<ViralWidgetEmbedQuery>,
+    axum::extract::Query(query): axum::extract::Query<ViralWidgetEmbedQuery>
 ) -> impl IntoResponse {
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
     let title = escape_html(query.title.as_deref().unwrap_or("Viral Widget"));
     let theme = query.theme.as_deref().unwrap_or("light");
     let show_branding = query.branding.unwrap_or(true);
 
-    let bg_color = if theme == "dark" {
-        "#111827"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if theme == "dark" {
-        "#f3f4f6"
-    } else {
-        "#111827"
-    };
-    let border_color = if theme == "dark" {
-        "#374151"
-    } else {
-        "#e5e7eb"
-    };
+    let bg_color = if theme == "dark" { "#111827" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f3f4f6" } else { "#111827" };
+    let border_color = if theme == "dark" { "#374151" } else { "#e5e7eb" };
 
     let mut html = format!(
         r#"<!DOCTYPE html>
@@ -5470,7 +4624,7 @@ pub async fn handle_viral_widget_embed(
         r#"
     </div>
 </body>
-</html>"#,
+</html>"#
     );
 
     axum::response::Html(html)
@@ -5478,25 +4632,14 @@ pub async fn handle_viral_widget_embed(
 
 pub async fn handle_embed_widget(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>,
+    axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>
 ) -> axum::response::Html<String> {
-    let tenant = query
-        .tenant_id
-        .or(query.tenant)
-        .unwrap_or_else(|| "default-tenant".to_string());
+    let tenant = query.tenant_id.or(query.tenant).unwrap_or_else(|| "default-tenant".to_string());
     let w_type = query.r#type.unwrap_or_else(|| "booking".to_string());
     let theme = query.theme.unwrap_or_else(|| "light".to_string());
 
-    let bg_color = if theme == "dark" {
-        "#1d1d1f"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if theme == "dark" {
-        "#f5f5f7"
-    } else {
-        "#1d1d1f"
-    };
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
 
     let escaped_type = escape_html(&w_type);
     let escaped_tenant = escape_html(&tenant);
@@ -5517,27 +4660,19 @@ pub async fn handle_embed_widget(
                 let user_id: String = row.get(0);
                 let conversions: i32 = row.get(1);
 
-                let _rank_class = if rank <= 3 {
-                    format!("rank-{}", rank)
-                } else {
-                    "".to_string()
-                };
-                let display_name = if user_id.len() > 8 {
-                    format!("User {}", &user_id[..4])
-                } else {
-                    user_id.clone()
-                };
+                let _rank_class = if rank <= 3 { format!("rank-{}", rank) } else { "".to_string() };
+                let display_name = if user_id.len() > 8 { format!("User {}", &user_id[..4]) } else { user_id.clone() };
                 let rank_color = match rank {
                     1 => "#FFD700",
                     2 => "#C0C0C0",
                     3 => "#CD7F32",
-                    _ => "#64748b",
+                    _ => "#64748b"
                 };
                 let rank_size = match rank {
                     1 => "20px",
                     2 => "19px",
                     3 => "18px",
-                    _ => "18px",
+                    _ => "18px"
                 };
 
                 leaderboard_html.push_str(&format!(
@@ -5618,33 +4753,21 @@ pub async fn handle_embed_widget(
   </script>
 </body>
 </html>"#,
-        bg_color,
-        text_color,
-        escaped_type,
-        escaped_tenant,
-        escaped_type,
-        escaped_type,
-        escaped_tenant
+        bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type, escaped_tenant
     );
     axum::response::Html(html)
 }
 
 async fn handle_simulate_event(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<SimulateEventRequest>,
 ) -> Result<Json<SimulateEventResponse>, StatusCode> {
     let tenant_id = auth_info.org_id;
     let customer_id = req.customer_id;
     let order_id = req.order_id.unwrap_or_default();
 
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     let review_id = uuid::Uuid::new_v4().to_string();
@@ -5679,9 +4802,8 @@ async fn handle_simulate_event(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let generated_referral_link =
-        crate::services::growth::referral_api::generate_referral_link(&customer_id)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let generated_referral_link = crate::services::growth::referral_api::generate_referral_link(&customer_id)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let ref_id = uuid::Uuid::new_v4().to_string();
     let _ = sqlx::query("INSERT INTO referral_codes (id, tenant_id, customer_id, referral_code) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
@@ -5692,9 +4814,7 @@ async fn handle_simulate_event(
         .execute(&mut *tx)
         .await;
 
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(SimulateEventResponse {
         message: "Simulated review solicitation SMS. Customer replied with 5. Review inserted and referral code generated.".to_string(),
@@ -5705,19 +4825,13 @@ async fn handle_simulate_event(
 
 async fn handle_reputation_stats(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<ReputationStatsResponse>, StatusCode> {
     let tenant_id = auth_info.org_id;
 
     let (rating_res, credits_res) = tokio::join!(
         async {
-            let mut tx = state
-                .pool
-                .begin()
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
             let res: (f64, i32) = sqlx::query_as("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
                 .bind(&tenant_id)
@@ -5725,17 +4839,11 @@ async fn handle_reputation_stats(
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
                 .unwrap_or((0.0, 0));
-            tx.commit()
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             Ok::<_, StatusCode>(res)
         },
         async {
-            let mut tx = state
-                .pool
-                .begin()
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
             let res: f64 = sqlx::query_scalar(
                 "SELECT COALESCE(SUM(amount), 0.0) FROM ledger_entries WHERE tenant_id = $1 AND direction = 'CREDIT'"
@@ -5745,9 +4853,7 @@ async fn handle_reputation_stats(
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
             .unwrap_or(0.0);
-            tx.commit()
-                .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
             Ok::<_, StatusCode>(res)
         }
     );
@@ -5764,22 +4870,16 @@ async fn handle_reputation_stats(
 
 async fn handle_simulate_referral_checkout(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<SimulateReferralCheckoutRequest>,
 ) -> Result<Json<SimulateReferralCheckoutResponse>, StatusCode> {
     let tenant_id = auth_info.org_id;
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     // find customer_id by referral_code
     let original_customer_id: String = sqlx::query_scalar(
-        "SELECT customer_id FROM referral_codes WHERE tenant_id = $1 AND referral_code = $2",
+        "SELECT customer_id FROM referral_codes WHERE tenant_id = $1 AND referral_code = $2"
     )
     .bind(&tenant_id)
     .bind(&req.referral_code)
@@ -5831,18 +4931,14 @@ async fn handle_simulate_referral_checkout(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(SimulateReferralCheckoutResponse {
-        message: format!(
-            "Friend used referral code. Credited {} to customer {}",
-            credit_amount, original_customer_id
-        ),
+        message: format!("Friend used referral code. Credited {} to customer {}", credit_amount, original_customer_id),
         credit_amount,
     }))
 }
+
 
 #[derive(Debug, serde::Deserialize)]
 pub struct GeneratePromoRequest {
@@ -5859,21 +4955,11 @@ pub async fn handle_promo_generate(
     Extension(_state): Extension<GrowthState>,
     axum::Json(req): axum::Json<GeneratePromoRequest>,
 ) -> impl axum::response::IntoResponse {
-    let occasion_raw = req
-        .occasion
-        .unwrap_or_else(|| "Winter Wonderland".to_string());
-    let occasion = if occasion_raw.trim().is_empty() {
-        "Winter Wonderland".to_string()
-    } else {
-        occasion_raw
-    };
+    let occasion_raw = req.occasion.unwrap_or_else(|| "Winter Wonderland".to_string());
+    let occasion = if occasion_raw.trim().is_empty() { "Winter Wonderland".to_string() } else { occasion_raw };
 
     let discount_raw = req.discount.unwrap_or_else(|| "25".to_string());
-    let discount = if discount_raw.trim().is_empty() {
-        "25".to_string()
-    } else {
-        discount_raw
-    };
+    let discount = if discount_raw.trim().is_empty() { "25".to_string() } else { discount_raw };
 
     let mut generated = format!(
         "{} Special!\n\n{}% OFF\n\nUse code: WINTERW25",
@@ -5884,8 +4970,11 @@ pub async fn handle_promo_generate(
         generated.push_str("\n\n⚡ Powered by OHC");
     }
 
-    axum::Json(GeneratePromoResponse { content: generated })
+    axum::Json(GeneratePromoResponse {
+        content: generated,
+    })
 }
+
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct LinkItem {
@@ -5912,13 +5001,9 @@ pub struct SetLinkInBioConfigReq {
 
 pub async fn handle_get_link_in_bio(
     axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Path(tenant): axum::extract::Path<String>,
+    axum::extract::Path(tenant): axum::extract::Path<String>
 ) -> Result<axum::Json<LinkInBioConfig>, axum::http::StatusCode> {
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant).await;
 
     let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
@@ -5933,17 +5018,9 @@ pub async fn handle_get_link_in_bio(
             bio: "Welcome to my storefront!".to_string(),
             theme: "gradient".to_string(),
             links: vec![
-                LinkItem {
-                    id: "1".to_string(),
-                    title: "Visit My Store".to_string(),
-                    url: "/website-builder".to_string(),
-                },
-                LinkItem {
-                    id: "2".to_string(),
-                    title: "Book an Appointment".to_string(),
-                    url: "/booking".to_string(),
-                },
-            ],
+                LinkItem { id: "1".to_string(), title: "Visit My Store".to_string(), url: "/website-builder".to_string() },
+                LinkItem { id: "2".to_string(), title: "Book an Appointment".to_string(), url: "/booking".to_string() }
+            ]
         })
     } else {
         LinkInBioConfig {
@@ -5951,17 +5028,9 @@ pub async fn handle_get_link_in_bio(
             bio: "Welcome to my storefront!".to_string(),
             theme: "gradient".to_string(),
             links: vec![
-                LinkItem {
-                    id: "1".to_string(),
-                    title: "Visit My Store".to_string(),
-                    url: "/website-builder".to_string(),
-                },
-                LinkItem {
-                    id: "2".to_string(),
-                    title: "Book an Appointment".to_string(),
-                    url: "/booking".to_string(),
-                },
-            ],
+                LinkItem { id: "1".to_string(), title: "Visit My Store".to_string(), url: "/website-builder".to_string() },
+                LinkItem { id: "2".to_string(), title: "Book an Appointment".to_string(), url: "/booking".to_string() }
+            ]
         }
     };
 
@@ -5970,17 +5039,11 @@ pub async fn handle_get_link_in_bio(
 
 pub async fn handle_post_link_in_bio(
     axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
     let tenant_id = auth_info.org_id;
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut tx = state.pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
 
     let config = LinkInBioConfig {
@@ -5990,8 +5053,7 @@ pub async fn handle_post_link_in_bio(
         links: req.links,
     };
 
-    let val = serde_json::to_string(&config)
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let val = serde_json::to_string(&config).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ($1, 'link_in_bio_config', $2) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $2, updated_at = CURRENT_TIMESTAMP")
         .bind(&tenant_id)
@@ -6000,29 +5062,17 @@ pub async fn handle_post_link_in_bio(
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    tx.commit()
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(axum::http::StatusCode::OK)
 }
 
 pub async fn handle_discount_code_embed(
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> impl axum::response::IntoResponse {
-    let tenant = params
-        .get("tenant")
-        .map(|s| s.as_str())
-        .unwrap_or("unknown");
+    let tenant = params.get("tenant").map(|s| s.as_str()).unwrap_or("unknown");
     let discount = params.get("discount").map(|s| s.as_str()).unwrap_or("20%");
-    let code = params
-        .get("code")
-        .map(|s| s.as_str())
-        .unwrap_or("DISCOUNT20");
-    let hide_branding = params
-        .get("hideBranding")
-        .map(|s| s.as_str())
-        .unwrap_or("false")
-        == "true";
+    let code = params.get("code").map(|s| s.as_str()).unwrap_or("DISCOUNT20");
+    let hide_branding = params.get("hideBranding").map(|s| s.as_str()).unwrap_or("false") == "true";
 
     let branding_html = if hide_branding {
         "".to_string()
@@ -6073,9 +5123,7 @@ pub struct WaitlistGenerateResponse {
 
 async fn handle_generate_viral_waitlist(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<WaitlistGenerateRequest>,
 ) -> Result<Json<WaitlistGenerateResponse>, StatusCode> {
     let msg = state.hub.sanitize_hub_event(serde_json::json!({
@@ -6086,8 +5134,11 @@ async fn handle_generate_viral_waitlist(
     }));
     state.hub.append_recent_event(msg).await;
 
-    Ok(Json(WaitlistGenerateResponse { success: true }))
+    Ok(Json(WaitlistGenerateResponse {
+        success: true,
+    }))
 }
+
 
 #[derive(Debug, serde::Deserialize)]
 pub struct QuizGenerateRequest {
@@ -6102,9 +5153,7 @@ pub struct QuizGenerateResponse {
 
 async fn handle_generate_viral_quiz(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<QuizGenerateRequest>,
 ) -> Result<Json<QuizGenerateResponse>, StatusCode> {
     let msg = state.hub.sanitize_hub_event(serde_json::json!({
@@ -6115,8 +5164,11 @@ async fn handle_generate_viral_quiz(
     }));
     state.hub.append_recent_event(msg).await;
 
-    Ok(Json(QuizGenerateResponse { success: true }))
+    Ok(Json(QuizGenerateResponse {
+        success: true,
+    }))
 }
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LeadMagnetCaptureRequest {
@@ -6146,6 +5198,7 @@ async fn handle_lead_magnet_capture(
     })))
 }
 
+
 #[derive(Debug, Deserialize)]
 pub struct FooterBrandingEmbedQuery {
     pub tenant: Option<String>,
@@ -6167,8 +5220,7 @@ pub async fn handle_footer_branding_embed(
     let safe_text = escape_html(text);
     let safe_theme = escape_html(theme);
 
-    let js = format!(
-        r#"
+    let js = format!(r#"
 (function() {{
     var tenant = '{safe_tenant}';
     var style = '{safe_style}';
@@ -6259,13 +5311,9 @@ pub async fn handle_footer_branding_embed(
         }});
     }}
 }})();
-"#
-    );
+"#);
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "application/javascript")],
-        js,
-    )
+    ([(axum::http::header::CONTENT_TYPE, "application/javascript")], js)
 }
 #[derive(Debug, Deserialize)]
 pub struct WaitlistEmbedQuery {
@@ -6294,6 +5342,7 @@ pub struct BirthdayClubCaptureRequest {
     pub birthday: Option<String>,
 }
 
+
 pub async fn handle_waitlist_embed(
     axum::extract::Query(query): axum::extract::Query<WaitlistEmbedQuery>,
 ) -> impl axum::response::IntoResponse {
@@ -6303,31 +5352,11 @@ pub async fn handle_waitlist_embed(
     let theme = query.theme.as_deref().unwrap_or("light");
     let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
 
-    let bg_color = if theme == "dark" {
-        "#1d1d1f"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if theme == "dark" {
-        "#f5f5f7"
-    } else {
-        "#1d1d1f"
-    };
-    let muted_color = if theme == "dark" {
-        "#a1a1aa"
-    } else {
-        "#6b7280"
-    };
-    let input_bg = if theme == "dark" {
-        "#2d2d30"
-    } else {
-        "#f9fafb"
-    };
-    let border_color = if theme == "dark" {
-        "#3f3f46"
-    } else {
-        "#e5e7eb"
-    };
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
+    let muted_color = if theme == "dark" { "#a1a1aa" } else { "#6b7280" };
+    let input_bg = if theme == "dark" { "#2d2d30" } else { "#f9fafb" };
+    let border_color = if theme == "dark" { "#3f3f46" } else { "#e5e7eb" };
 
     let safe_tenant = escape_html(tenant);
     let safe_product = escape_html(product_name);
@@ -6479,16 +5508,17 @@ pub async fn handle_waitlist_embed(
     axum::response::Html(html)
 }
 
+
 pub async fn handle_birthday_club_embed(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<BirthdayClubEmbedQuery>,
 ) -> impl axum::response::IntoResponse {
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
     };
 
     let tenant = query.tenant.as_deref().unwrap_or("embed");
@@ -6496,31 +5526,11 @@ pub async fn handle_birthday_club_embed(
     let theme = query.theme.as_deref().unwrap_or("light");
     let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
 
-    let bg_color = if theme == "dark" {
-        "#1d1d1f"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if theme == "dark" {
-        "#f5f5f7"
-    } else {
-        "#1d1d1f"
-    };
-    let muted_color = if theme == "dark" {
-        "#a1a1aa"
-    } else {
-        "#6b7280"
-    };
-    let input_bg = if theme == "dark" {
-        "#2d2d30"
-    } else {
-        "#f9fafb"
-    };
-    let border_color = if theme == "dark" {
-        "#3f3f46"
-    } else {
-        "#e5e7eb"
-    };
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
+    let muted_color = if theme == "dark" { "#a1a1aa" } else { "#6b7280" };
+    let input_bg = if theme == "dark" { "#2d2d30" } else { "#f9fafb" };
+    let border_color = if theme == "dark" { "#3f3f46" } else { "#e5e7eb" };
 
     let safe_tenant = escape_html(tenant);
     let safe_discount = escape_html(discount);
@@ -6528,12 +5538,10 @@ pub async fn handle_birthday_club_embed(
     let mut has_pro = false;
     if hide_branding {
         // Validate pro status in DB
-        let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
-        )
-        .bind(&safe_tenant)
-        .fetch_optional(&state.pool)
-        .await;
+        let is_pro_res = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1")
+            .bind(&safe_tenant)
+            .fetch_optional(&state.pool)
+            .await;
 
         if let Ok(Some(plan)) = is_pro_res {
             if plan.to_lowercase() == "pro" {
@@ -6697,6 +5705,7 @@ pub async fn handle_birthday_club_embed(
     axum::response::Html(html)
 }
 
+
 pub async fn handle_birthday_club_capture(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<BirthdayClubCaptureRequest>,
@@ -6750,10 +5759,10 @@ async fn handle_countdown_embed(
 ) -> impl IntoResponse {
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#x27;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
     };
 
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
@@ -6842,7 +5851,7 @@ pub struct TestimonialEmbedQuery {
 
 async fn handle_testimonial_embed(
     Extension(_state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<TestimonialEmbedQuery>,
+    axum::extract::Query(query): axum::extract::Query<TestimonialEmbedQuery>
 ) -> impl IntoResponse {
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
     let author_name = escape_html(query.author_name.as_deref().unwrap_or("Anonymous"));
@@ -6851,23 +5860,13 @@ async fn handle_testimonial_embed(
     let theme = escape_html(query.theme.as_deref().unwrap_or("light"));
     let show_branding = query.branding.unwrap_or(true);
 
-    let bg_color = if theme == "dark" {
-        "#1d1d1f"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if theme == "dark" {
-        "#ffffff"
-    } else {
-        "#1d1d1f"
-    };
-    let subtext_color = if theme == "dark" {
-        "#a1a1a6"
-    } else {
-        "#86868b"
-    };
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#ffffff" } else { "#1d1d1f" };
+    let subtext_color = if theme == "dark" { "#a1a1a6" } else { "#86868b" };
 
-    let stars: String = (0..5).map(|i| if i < rating { "★" } else { "☆" }).collect();
+    let stars: String = (0..5)
+        .map(|i| if i < rating { "★" } else { "☆" })
+        .collect();
 
     let mut html = format!(
         r#"<!DOCTYPE html>
@@ -6957,7 +5956,7 @@ async fn handle_testimonial_embed(
         r#"
     </div>
 </body>
-</html>"#,
+</html>"#
     );
 
     axum::response::Html(html)
@@ -6974,7 +5973,7 @@ pub struct ViralBeforeAfterEmbedQuery {
 
 async fn handle_viral_before_after_embed(
     Extension(_state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<ViralBeforeAfterEmbedQuery>,
+    axum::extract::Query(query): axum::extract::Query<ViralBeforeAfterEmbedQuery>
 ) -> impl IntoResponse {
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
     let title = escape_html(query.title.as_deref().unwrap_or("Before & After"));
@@ -7205,7 +6204,7 @@ async fn handle_viral_before_after_embed(
         });
     </script>
 </body>
-</html>"#,
+</html>"#
     );
 
     axum::response::Html(html)
@@ -7225,30 +6224,13 @@ pub async fn handle_review_reward_embed(
     axum::extract::Query(query): axum::extract::Query<ReviewRewardEmbedQuery>,
 ) -> impl axum::response::IntoResponse {
     let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
-    let reward = escape_html(
-        query
-            .reward
-            .as_deref()
-            .unwrap_or("15% Off Your Next Order!"),
-    );
+    let reward = escape_html(query.reward.as_deref().unwrap_or("15% Off Your Next Order!"));
     let theme = query.theme.as_deref().unwrap_or("light");
     let hide_branding = query.hide_branding.as_deref().unwrap_or("false") == "true";
 
-    let bg_color = if theme == "dark" {
-        "#111827"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if theme == "dark" {
-        "#f3f4f6"
-    } else {
-        "#111827"
-    };
-    let border_color = if theme == "dark" {
-        "#374151"
-    } else {
-        "#e5e7eb"
-    };
+    let bg_color = if theme == "dark" { "#111827" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f3f4f6" } else { "#111827" };
+    let border_color = if theme == "dark" { "#374151" } else { "#e5e7eb" };
 
     let mut html = format!(
         r#"<!DOCTYPE html>
@@ -7416,17 +6398,8 @@ pub async fn handle_review_reward_submit(
     }));
     state.hub.append_recent_event(msg).await;
 
-    let mock_customer_id = format!(
-        "review_customer_{}",
-        uuid::Uuid::new_v4()
-            .to_string()
-            .chars()
-            .take(8)
-            .collect::<String>()
-    );
-    let referral_link =
-        crate::services::growth::referral_api::generate_referral_link(&mock_customer_id)
-            .unwrap_or_else(|_| "https://ohc.app/invite/default".to_string());
+    let mock_customer_id = format!("review_customer_{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>());
+    let referral_link = crate::services::growth::referral_api::generate_referral_link(&mock_customer_id).unwrap_or_else(|_| "https://ohc.app/invite/default".to_string());
 
     let msg2 = state.hub.sanitize_hub_event(serde_json::json!({
         "type": "growth.review_reward_generated",
@@ -7455,9 +6428,7 @@ pub async fn handle_secret_menu_embed(
     axum::extract::Query(params): axum::extract::Query<SecretMenuParams>,
 ) -> impl axum::response::IntoResponse {
     let tenant = params.tenant;
-    let item_name = params
-        .item_name
-        .unwrap_or_else(|| "Secret Item".to_string());
+    let item_name = params.item_name.unwrap_or_else(|| "Secret Item".to_string());
     let item_desc = params.item_desc.unwrap_or_else(|| "".to_string());
     let access_code = params.access_code.unwrap_or_else(|| "LOCKED".to_string());
     let shares_req = params.shares_req.unwrap_or_else(|| "3".to_string());
@@ -7565,8 +6536,5 @@ pub async fn handle_secret_menu_generate(
     // publish returning result
     state.hub.append_recent_event(msg).await;
 
-    (
-        axum::http::StatusCode::OK,
-        axum::Json(serde_json::json!({"status": "ok"})),
-    )
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
 }

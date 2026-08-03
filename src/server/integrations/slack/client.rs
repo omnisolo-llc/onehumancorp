@@ -62,11 +62,7 @@ impl SlackClient {
         Self { bot_token }
     }
 
-    pub async fn send_message(
-        &self,
-        channel: &str,
-        text: &str,
-    ) -> Result<SlackMessageResponse, String> {
+    pub async fn send_message(&self, channel: &str, text: &str) -> Result<SlackMessageResponse, String> {
         let url = "https://slack.com/api/chat.postMessage";
         let payload = serde_json::json!({
             "channel": channel,
@@ -74,8 +70,7 @@ impl SlackClient {
         });
 
         let client = get_client();
-        let res = client
-            .post(url)
+        let res = client.post(url)
             .header("Authorization", format!("Bearer {}", self.bot_token))
             .header("Content-Type", "application/json; charset=utf-8")
             .json(&payload)
@@ -84,28 +79,19 @@ impl SlackClient {
             .map_err(|e| format!("reqwest error: {}", e))?;
 
         let status = res.status();
-        let body: SlackMessageResponse = res
-            .json()
-            .await
+        let body: SlackMessageResponse = res.json().await
             .map_err(|e| format!("failed to parse response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("Slack API HTTP error: {}", status));
         }
         if !body.ok {
-            return Err(format!(
-                "Slack API error: {}",
-                body.error.unwrap_or_default()
-            ));
+            return Err(format!("Slack API error: {}", body.error.unwrap_or_default()));
         }
         Ok(body)
     }
 
-    pub async fn send_block_message(
-        &self,
-        channel: &str,
-        blocks: &[serde_json::Value],
-    ) -> Result<SlackMessageResponse, String> {
+    pub async fn send_block_message(&self, channel: &str, blocks: &[serde_json::Value]) -> Result<SlackMessageResponse, String> {
         let url = "https://slack.com/api/chat.postMessage";
         let payload = serde_json::json!({
             "channel": channel,
@@ -113,8 +99,7 @@ impl SlackClient {
         });
 
         let client = get_client();
-        let res = client
-            .post(url)
+        let res = client.post(url)
             .header("Authorization", format!("Bearer {}", self.bot_token))
             .header("Content-Type", "application/json; charset=utf-8")
             .json(&payload)
@@ -123,41 +108,30 @@ impl SlackClient {
             .map_err(|e| format!("reqwest error: {}", e))?;
 
         let status = res.status();
-        let body: SlackMessageResponse = res
-            .json()
-            .await
+        let body: SlackMessageResponse = res.json().await
             .map_err(|e| format!("failed to parse response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("Slack API HTTP error: {}", status));
         }
         if !body.ok {
-            return Err(format!(
-                "Slack API error: {}",
-                body.error.unwrap_or_default()
-            ));
+            return Err(format!("Slack API error: {}", body.error.unwrap_or_default()));
         }
         Ok(body)
     }
 
-    pub async fn upload_file(
-        &self,
-        channel: &str,
-        filename: &str,
-        content: &[u8],
-    ) -> Result<(), String> {
+    pub async fn upload_file(&self, channel: &str, filename: &str, content: &[u8]) -> Result<(), String> {
         let url = "https://slack.com/api/files.upload";
         let client = get_client();
-        let part =
-            reqwest::multipart::Part::bytes(content.to_vec()).file_name(filename.to_string());
+        let part = reqwest::multipart::Part::bytes(content.to_vec())
+            .file_name(filename.to_string());
 
         let form = reqwest::multipart::Form::new()
             .text("channels", channel.to_string())
             .text("filename", filename.to_string())
             .part("file", part);
 
-        let res = client
-            .post(url)
+        let res = client.post(url)
             .header("Authorization", format!("Bearer {}", self.bot_token))
             .multipart(form)
             .send()
@@ -165,19 +139,14 @@ impl SlackClient {
             .map_err(|e| format!("reqwest error: {}", e))?;
 
         let status = res.status();
-        let body: serde_json::Value = res
-            .json()
-            .await
+        let body: serde_json::Value = res.json().await
             .map_err(|e| format!("failed to parse response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("Slack API HTTP error: {}", status));
         }
         if body.get("ok").and_then(|v| v.as_bool()) != Some(true) {
-            let error = body
-                .get("error")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown");
+            let error = body.get("error").and_then(|v| v.as_str()).unwrap_or("unknown");
             return Err(format!("Slack API error: {}", error));
         }
         Ok(())
@@ -190,8 +159,7 @@ impl SlackClient {
         let mut cursor: Option<String> = None;
 
         loop {
-            let mut request = client
-                .get(url)
+            let mut request = client.get(url)
                 .header("Authorization", format!("Bearer {}", self.bot_token))
                 .query(&[("types", "public_channel,private_channel")])
                 .query(&[("limit", "200")]);
@@ -200,25 +168,18 @@ impl SlackClient {
                 request = request.query(&[("cursor", c.as_str())]);
             }
 
-            let res = request
-                .send()
-                .await
+            let res = request.send().await
                 .map_err(|e| format!("reqwest error: {}", e))?;
 
             let status = res.status();
-            let raw: serde_json::Value = res
-                .json()
-                .await
+            let raw: serde_json::Value = res.json().await
                 .map_err(|e| format!("failed to parse response: {}", e))?;
 
             if !status.is_success() {
                 return Err(format!("Slack API HTTP error: {}", status));
             }
             if raw.get("ok").and_then(|v| v.as_bool()) != Some(true) {
-                let error = raw
-                    .get("error")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("unknown");
+                let error = raw.get("error").and_then(|v| v.as_str()).unwrap_or("unknown");
                 return Err(format!("Slack API error: {}", error));
             }
 
@@ -230,8 +191,7 @@ impl SlackClient {
                 }
             }
 
-            let next_cursor = raw
-                .get("response_metadata")
+            let next_cursor = raw.get("response_metadata")
                 .and_then(|m| m.get("next_cursor"))
                 .and_then(|c| c.as_str())
                 .map(|s| s.to_string());
@@ -245,15 +205,10 @@ impl SlackClient {
         Ok(channels)
     }
 
-    pub async fn get_channel_history(
-        &self,
-        channel_id: &str,
-        limit: u32,
-    ) -> Result<Vec<SlackMessage>, String> {
+    pub async fn get_channel_history(&self, channel_id: &str, limit: u32) -> Result<Vec<SlackMessage>, String> {
         let url = "https://slack.com/api/conversations.history";
         let client = get_client();
-        let res = client
-            .get(url)
+        let res = client.get(url)
             .header("Authorization", format!("Bearer {}", self.bot_token))
             .query(&[("channel", channel_id)])
             .query(&[("limit", limit.to_string().as_str())])
@@ -262,29 +217,20 @@ impl SlackClient {
             .map_err(|e| format!("reqwest error: {}", e))?;
 
         let status = res.status();
-        let body: SlackHistoryResponse = res
-            .json()
-            .await
+        let body: SlackHistoryResponse = res.json().await
             .map_err(|e| format!("failed to parse response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("Slack API HTTP error: {}", status));
         }
         if !body.ok {
-            return Err(format!(
-                "Slack API error: {}",
-                body.error.unwrap_or_default()
-            ));
+            return Err(format!("Slack API error: {}", body.error.unwrap_or_default()));
         }
 
         Ok(body.messages.unwrap_or_default())
     }
 
-    pub async fn create_channel(
-        &self,
-        name: &str,
-        is_private: bool,
-    ) -> Result<SlackChannel, String> {
+    pub async fn create_channel(&self, name: &str, is_private: bool) -> Result<SlackChannel, String> {
         let url = "https://slack.com/api/conversations.create";
         let client = get_client();
         let payload = serde_json::json!({
@@ -292,8 +238,7 @@ impl SlackClient {
             "is_private": is_private,
         });
 
-        let res = client
-            .post(url)
+        let res = client.post(url)
             .header("Authorization", format!("Bearer {}", self.bot_token))
             .header("Content-Type", "application/json; charset=utf-8")
             .json(&payload)
@@ -302,23 +247,17 @@ impl SlackClient {
             .map_err(|e| format!("reqwest error: {}", e))?;
 
         let status = res.status();
-        let body: SlackCreateChannelResponse = res
-            .json()
-            .await
+        let body: SlackCreateChannelResponse = res.json().await
             .map_err(|e| format!("failed to parse response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("Slack API HTTP error: {}", status));
         }
         if !body.ok {
-            return Err(format!(
-                "Slack API error: {}",
-                body.error.unwrap_or_default()
-            ));
+            return Err(format!("Slack API error: {}", body.error.unwrap_or_default()));
         }
 
-        body.channel
-            .ok_or_else(|| "no channel in response".to_string())
+        body.channel.ok_or_else(|| "no channel in response".to_string())
     }
 }
 
@@ -350,8 +289,7 @@ mod tests {
                         headers.push(trimmed.to_string());
                     }
 
-                    let content_length = headers
-                        .iter()
+                    let content_length = headers.iter()
                         .find(|h| h.to_lowercase().starts_with("content-length:"))
                         .and_then(|h| h.split(':').nth(1))
                         .and_then(|v| v.trim().parse::<usize>().ok())
@@ -363,8 +301,7 @@ mod tests {
 
                     let response = format!(
                         "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
-                        resp_body.len(),
-                        resp_body
+                        resp_body.len(), resp_body
                     );
                     let _ = stream.write_all(response.as_bytes());
                 }
@@ -380,8 +317,7 @@ mod tests {
             "ok": true,
             "ts": "1234567890.123456",
             "channel": "C1234567890",
-        })
-        .to_string();
+        }).to_string();
 
         let _port = start_mock_server(vec![resp.clone()]);
 
@@ -395,8 +331,7 @@ mod tests {
         let resp = serde_json::json!({
             "ok": false,
             "error": "channel_not_found",
-        })
-        .to_string();
+        }).to_string();
 
         let response: SlackMessageResponse = serde_json::from_str(&resp).unwrap();
         assert!(!response.ok);

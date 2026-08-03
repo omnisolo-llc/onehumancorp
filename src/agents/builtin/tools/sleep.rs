@@ -17,7 +17,10 @@ struct SleepExecutor;
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<SleepArgs> for SleepExecutor {
-    async fn execute_typed(&self, args: SleepArgs) -> Result<String, ToolError> {
+    async fn execute_typed(
+        &self,
+        args: SleepArgs,
+    ) -> Result<String, ToolError> {
         let secs = args.seconds.clamp(0.0, 60.0); // cap at 60s
         tokio::time::sleep(std::time::Duration::from_secs_f64(secs)).await;
         Ok(format!("Slept for {}s.", secs))
@@ -47,8 +50,8 @@ pub fn sleep_tool() -> Tool {
 
 #[cfg(test)]
 mod tests {
-    use super::super::ToolExecutor;
-    use super::*; // Needed for calling .execute() on PydanticAdapter
+    use super::*;
+    use super::super::ToolExecutor; // Needed for calling .execute() on PydanticAdapter
 
     #[tokio::test]
     async fn test_sleep_executor_success() {

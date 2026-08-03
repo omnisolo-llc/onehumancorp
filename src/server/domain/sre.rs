@@ -1,5 +1,7 @@
-use chrono::Utc;
+
+
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Incident {
@@ -34,8 +36,7 @@ pub struct RCAEngine;
 
 impl RCAEngine {
     pub fn evaluate_confidence(&self, confidence: f64) -> String {
-        if confidence < 0.85 {
-            // Stricter confidence threshold for AUTO_REPAIR
+        if confidence < 0.85 { // Stricter confidence threshold for AUTO_REPAIR
             "WARM_HANDOFF".to_string()
         } else {
             "AUTO_REPAIR".to_string()
@@ -74,16 +75,8 @@ mod tests {
 
         let tests = vec![
             ("Low confidence triggers warm handoff", 0.79, "WARM_HANDOFF"),
-            (
-                "Borderline confidence triggers warm handoff",
-                0.84,
-                "WARM_HANDOFF",
-            ),
-            (
-                "Very low confidence triggers warm handoff",
-                0.50,
-                "WARM_HANDOFF",
-            ),
+            ("Borderline confidence triggers warm handoff", 0.84, "WARM_HANDOFF"),
+            ("Very low confidence triggers warm handoff", 0.50, "WARM_HANDOFF"),
             ("Exact threshold allows auto repair", 0.85, "AUTO_REPAIR"),
             ("High confidence allows auto repair", 0.95, "AUTO_REPAIR"),
         ];

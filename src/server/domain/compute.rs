@@ -1,3 +1,5 @@
+
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,12 +19,7 @@ pub struct AffinityScoreResult {
 pub struct AffinityEngine;
 
 impl AffinityEngine {
-    pub fn calculate_score(
-        &self,
-        profile: &ComputeProfile,
-        is_vip: bool,
-        local_weights_cached: bool,
-    ) -> AffinityScoreResult {
+    pub fn calculate_score(&self, profile: &ComputeProfile, is_vip: bool, local_weights_cached: bool) -> AffinityScoreResult {
         let mut score = 0;
         let mut reasons = Vec::new();
 

@@ -1,14 +1,14 @@
-use crate::hub::Hub;
-use crate::utils::cache::HybridCache;
 use axum::{
-    Json, Router,
     extract::{Extension, State},
     response::IntoResponse,
     routing::get,
+    Json, Router,
 };
-use serde_json::{Value, json};
-use sqlx::Row;
+use serde_json::{json, Value};
 use std::sync::Arc;
+use crate::hub::Hub;
+use sqlx::Row;
+use crate::utils::cache::HybridCache;
 use std::sync::OnceLock;
 
 pub static POS_ORDERS_CACHE: OnceLock<HybridCache<Value>> = OnceLock::new();
@@ -52,15 +52,9 @@ where
 {
     Router::new()
         .route("/orders", get(get_orders_handler).post(post_orders_handler))
-        .route(
-            "/inventory",
-            get(get_inventory_handler).post(post_inventory_handler),
-        )
+        .route("/inventory", get(get_inventory_handler).post(post_inventory_handler))
         .route("/auth", axum::routing::post(pos_auth_handler))
-        .route(
-            "/orders/translate",
-            axum::routing::post(translate_order_notes_handler),
-        )
+        .route("/orders/translate", axum::routing::post(translate_order_notes_handler))
         .with_state(hub)
 }
 
@@ -97,10 +91,7 @@ async fn post_orders_handler(
 
             if !order_id.is_empty() && !status.is_empty() {
                 if let Ok(mut tx) = pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                        .await
-                        .is_err()
-                    {
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
                         continue;
                     }
                     if !client_mutation_id.is_empty() {
@@ -123,14 +114,12 @@ async fn post_orders_handler(
                             .await;
                     }
 
-                    let update_res = sqlx::query(
-                        "UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3",
-                    )
-                    .bind(status)
-                    .bind(order_id)
-                    .bind(&tenant_id)
-                    .execute(&mut *tx)
-                    .await;
+                    let update_res = sqlx::query("UPDATE orders SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(status)
+                        .bind(order_id)
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await;
 
                     if update_res.is_ok() {
                         let _ = tx.commit().await;
@@ -169,26 +158,14 @@ async fn post_inventory_handler(
     for payload in payloads {
         if let Some(p) = payload.get("payload") {
             let item_id = p.get("item_id").and_then(|v| v.as_str()).unwrap_or("");
-            let quantity_change = p
-                .get("quantity_change")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0) as i32;
-            let location_id = p
-                .get("location_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("default_loc");
-            let is_sold_out = p
-                .get("is_sold_out")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
+            let quantity_change = p.get("quantity_change").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+            let location_id = p.get("location_id").and_then(|v| v.as_str()).unwrap_or("default_loc");
+            let is_sold_out = p.get("is_sold_out").and_then(|v| v.as_bool()).unwrap_or(false);
             let client_mutation_id = payload.get("id").and_then(|v| v.as_str()).unwrap_or("");
 
             if !item_id.is_empty() {
                 if let Ok(mut tx) = pool.begin().await {
-                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                        .await
-                        .is_err()
-                    {
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
                         continue;
                     }
                     if !client_mutation_id.is_empty() {
@@ -221,11 +198,11 @@ async fn post_inventory_handler(
 
                     let mut inv_lvl_id: String = "".to_string();
                     if let Ok(Some(row)) = &update_res {
-                        inv_lvl_id = sqlx::Row::get(row, "id");
+                         inv_lvl_id = sqlx::Row::get(row, "id");
                     } else if let Ok(None) = &update_res {
-                        // Insert if not exists
-                        inv_lvl_id = uuid::Uuid::new_v4().to_string();
-                        let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count) VALUES ($1, $2, $3, $4, $5)")
+                         // Insert if not exists
+                         inv_lvl_id = uuid::Uuid::new_v4().to_string();
+                         let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count) VALUES ($1, $2, $3, $4, $5)")
                             .bind(&inv_lvl_id)
                             .bind(&tenant_id)
                             .bind(item_id)
@@ -236,8 +213,8 @@ async fn post_inventory_handler(
                     }
 
                     if !inv_lvl_id.is_empty() && quantity_change != 0 {
-                        let t_id = uuid::Uuid::new_v4().to_string();
-                        let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'adjustment', $4)")
+                         let t_id = uuid::Uuid::new_v4().to_string();
+                         let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'adjustment', $4)")
                              .bind(&t_id)
                              .bind(&tenant_id)
                              .bind(&inv_lvl_id)
@@ -267,32 +244,21 @@ async fn post_inventory_handler(
                                         format!("tenant-id:{}", tenant_id),
                                         format!("entity:product:{}", item_id)
                                     ]
-                                })
-                                .to_string();
-                                let _: Result<(), _> = redis::cmd("PUBLISH")
-                                    .arg(invalidation_topic)
-                                    .arg(invalidation_payload)
-                                    .query_async(&mut conn)
-                                    .await;
+                                }).to_string();
+                                let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                             }
                         }
 
                         let edge_cache = crate::builder::edge::get_edge_cache();
-                        edge_cache
-                            .invalidate_by_tag(&format!("entity:product:{}", item_id))
-                            .await;
-                        edge_cache
-                            .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
-                            .await;
+                        edge_cache.invalidate_by_tag(&format!("entity:product:{}", item_id)).await;
+                        edge_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
                         let item_id_owned = item_id.to_string();
                         let tenant_id_owned = tenant_id.to_string();
                         tokio::spawn(async move {
                             let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                            cdn.invalidate_by_tag(&format!("entity:product:{}", item_id_owned))
-                                .await;
-                            cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_owned))
-                                .await;
+                            cdn.invalidate_by_tag(&format!("entity:product:{}", item_id_owned)).await;
+                            cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_owned)).await;
                         });
                     } else {
                         let _ = tx.rollback().await;
@@ -324,8 +290,7 @@ async fn get_orders_handler(
             let orders = fetch_pos_orders(&tenant_id_bg).await.unwrap_or_default();
             let result = json!({ "orders": orders });
             if let Some(c) = POS_ORDERS_CACHE.get() {
-                c.set(&cache_key_bg, result, std::time::Duration::from_secs(5))
-                    .await;
+                c.set(&cache_key_bg, result, std::time::Duration::from_secs(5)).await;
             }
         });
         return Json(cached).into_response();
@@ -334,13 +299,7 @@ async fn get_orders_handler(
     let orders = fetch_pos_orders(&tenant_id).await.unwrap_or_default();
 
     let result = json!({ "orders": orders });
-    cache
-        .set(
-            &cache_key,
-            result.clone(),
-            std::time::Duration::from_secs(5),
-        )
-        .await;
+    cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(5)).await;
 
     Json(result).into_response()
 }
@@ -357,10 +316,7 @@ async fn get_inventory_handler(
         Ok(tx) => tx,
         Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-        .await
-        .is_err()
-    {
+    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
         return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
     let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count, is_subscribable, subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
@@ -416,18 +372,13 @@ mod tests {
         let initial_val = cache.get(&cache_key).await;
         assert!(initial_val.is_none(), "Cache should be empty initially");
 
-        cache
-            .set(
-                &cache_key,
-                json!({"orders": []}),
-                std::time::Duration::from_secs(60),
-            )
-            .await;
+        cache.set(&cache_key, json!({"orders": []}), std::time::Duration::from_secs(60)).await;
 
         let cached_val = cache.get(&cache_key).await;
         assert!(cached_val.is_some(), "Cache should hit after set");
     }
 }
+
 
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -458,8 +409,7 @@ pub async fn pos_auth_handler(
             "role": claims.roles.first().cloned().unwrap_or_else(|| "STAFF".to_string()),
             "tenant_id": tenant_id,
         }
-    }))
-    .into_response()
+    })).into_response()
 }
 
 #[derive(serde::Deserialize)]
@@ -479,13 +429,14 @@ pub async fn translate_order_notes_handler(
 
     // Fetch tenant's preferred language from the database
     let pool = crate::db::get_pool();
-    let preferred_language: String =
-        sqlx::query_scalar("SELECT preferred_language FROM tenants WHERE id = $1")
-            .bind(&tenant_id)
-            .fetch_optional(&pool)
-            .await
-            .unwrap_or(None)
-            .unwrap_or_else(|| "en".to_string());
+    let preferred_language: String = sqlx::query_scalar(
+        "SELECT preferred_language FROM tenants WHERE id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&pool)
+    .await
+    .unwrap_or(None)
+    .unwrap_or_else(|| "en".to_string());
 
     // Call LLM translation helper if available
     let translated = match crate::api::agents::translation::translate_inbox_message_with_llm(
@@ -493,9 +444,7 @@ pub async fn translate_order_notes_handler(
         "kitchen",
         &notes,
         &preferred_language,
-    )
-    .await
-    {
+    ).await {
         Ok(t) => t.translated_content,
         Err(_) => {
             if notes.to_lowercase().contains("no onions") {

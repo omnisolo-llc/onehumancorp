@@ -1,14 +1,11 @@
-use chrono::Utc;
 use ohc_builtin_agent_core::types::ToolError;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::{
-    SharedTaskStore, Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use super::{SharedTaskStore, Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 /// A task in the task store.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,7 +41,12 @@ impl TaskStore {
         self.tasks.values().collect()
     }
 
-    pub fn update(&mut self, id: &str, status: Option<String>, result: Option<String>) -> bool {
+    pub fn update(
+        &mut self,
+        id: &str,
+        status: Option<String>,
+        result: Option<String>,
+    ) -> bool {
         if let Some(task) = self.tasks.get_mut(id) {
             if let Some(s) = status {
                 task.status = s;

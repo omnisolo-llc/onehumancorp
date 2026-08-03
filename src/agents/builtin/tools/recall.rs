@@ -1,13 +1,10 @@
-use dashmap::DashMap;
 use ohc_builtin_agent_core::types::ToolError;
-use serde::Deserialize;
 use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
+use dashmap::DashMap;
 
-use super::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 // Pydantic-first tool schema validation: RecallArgs
 #[derive(Deserialize)]
@@ -26,10 +23,7 @@ impl PydanticToolExecutor<RecallArgs> for RecallObservationExecutor {
 
         match self.observation_store.get(&tool_call_id) {
             Some(content) => Ok(content.clone()),
-            None => Err(ToolError::LlmRecoverable(format!(
-                "recall_observation: Tool call ID '{}' not found in observation store. It may have expired or was never stored.",
-                tool_call_id
-            ))),
+            None => Err(ToolError::LlmRecoverable(format!("recall_observation: Tool call ID '{}' not found in observation store. It may have expired or was never stored.", tool_call_id))),
         }
     }
 }
@@ -82,9 +76,7 @@ mod tests {
 
         assert!(result.is_err());
         match result.unwrap_err() {
-            ToolError::LlmRecoverable(msg) => {
-                assert!(msg.contains("not found in observation store"))
-            }
+            ToolError::LlmRecoverable(msg) => assert!(msg.contains("not found in observation store")),
             _ => panic!("Expected LlmRecoverable error"),
         }
     }

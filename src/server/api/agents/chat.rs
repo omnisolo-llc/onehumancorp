@@ -1,16 +1,17 @@
+use axum::{
+    extract::{Extension, State},
+    response::IntoResponse,
+    http::StatusCode,
+    routing::post,
+    Router,
+    Json,
+};
+use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::{ActionRisk, DepartmentType};
+use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use crate::orchestration::router::{SemanticRouter, SemanticRoutingRequest};
 use ::server_common::Claims;
-use axum::{
-    Json, Router,
-    extract::{Extension, State},
-    http::StatusCode,
-    response::IntoResponse,
-    routing::post,
-};
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct ChatRequest {
@@ -29,10 +30,7 @@ pub struct ChatState {
     pub semantic_router: Arc<SemanticRouter>,
 }
 
-pub fn router<S>(
-    orchestrator: Arc<DepartmentOrchestrator>,
-    semantic_router: Arc<SemanticRouter>,
-) -> Router<S>
+pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>, semantic_router: Arc<SemanticRouter>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -52,16 +50,7 @@ async fn handle_chat(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(ChatResponse {
-                    success: false,
-                    department_assigned: None,
-                }),
-            )
-                .into_response();
-        }
+        None => return (StatusCode::UNAUTHORIZED, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
     };
 
     let req = SemanticRoutingRequest {
@@ -78,32 +67,14 @@ async fn handle_chat(
     let description = format!("Task routed via semantic gateway to {:?}", dept);
     let payload_json = serde_json::json!({ "original_request": payload.message, "action": "semantic_routed_task" });
 
-    match state
-        .orchestrator
-        .execute_action(
-            dept.clone(),
-            description,
-            tenant_id,
-            ActionRisk::DraftForReview,
-            payload_json,
-        )
-        .await
-    {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(ChatResponse {
-                success: true,
-                department_assigned: Some(dept.to_string()),
-            }),
-        )
-            .into_response(),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ChatResponse {
-                success: false,
-                department_assigned: None,
-            }),
-        )
-            .into_response(),
+    match state.orchestrator.execute_action(
+        dept.clone(),
+        description,
+        tenant_id,
+        ActionRisk::DraftForReview,
+        payload_json,
+    ).await {
+        Ok(_) => (StatusCode::OK, Json(ChatResponse { success: true, department_assigned: Some(dept.to_string()) })).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
     }
 }

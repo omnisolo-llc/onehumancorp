@@ -3,10 +3,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
-use super::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 #[derive(Deserialize)]
 struct ScreenshotArgs {
@@ -32,28 +29,13 @@ impl PydanticToolExecutor<ScreenshotArgs> for ScreenshotExecutor {
 
         // Prevent directory traversal and absolute paths on Unix/Windows
         if path.contains("..") || path.starts_with('/') || path.contains(":\\") {
-            return Err(ToolError::LlmRecoverable(
-                "screenshot: path cannot contain '..' or be absolute".to_string(),
-            ));
+            return Err(ToolError::LlmRecoverable("screenshot: path cannot contain '..' or be absolute".to_string()));
         }
 
         let wd_ref = self.working_dir.as_deref();
 
-        let output = self
-            .runner
-            .run(
-                "npx",
-                &["playwright", "screenshot", url, path],
-                wd_ref,
-                vec![("npm_config_yes".to_string(), "true".to_string())],
-            )
-            .await
-            .map_err(|e| {
-                ToolError::LlmRecoverable(format!(
-                    "screenshot: failed to execute playwright: {}",
-                    e
-                ))
-            })?;
+        let output = self.runner.run("npx", &["playwright", "screenshot", url, path], wd_ref, vec![("npm_config_yes".to_string(), "true".to_string())]).await
+            .map_err(|e| ToolError::LlmRecoverable(format!("screenshot: failed to execute playwright: {}", e)))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -67,17 +49,11 @@ impl PydanticToolExecutor<ScreenshotArgs> for ScreenshotExecutor {
             )));
         }
 
-        Ok(format!(
-            "Screenshot of {} successfully saved to {}",
-            url, path
-        ))
+        Ok(format!("Screenshot of {} successfully saved to {}", url, path))
     }
 }
 
-pub fn screenshot_tool(
-    working_dir: Option<std::path::PathBuf>,
-    runner: Arc<dyn crate::runner::CommandRunner>,
-) -> Tool {
+pub fn screenshot_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
         name: "Screenshot".to_string(),
         description: "Takes a screenshot of a web page at the specified URL using Playwright. Use this to visually verify web application functionality. \
@@ -114,10 +90,7 @@ mod tests {
     #[tokio::test]
     async fn test_screenshot_missing_url() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = PydanticAdapter::new(ScreenshotExecutor {
-            working_dir: None,
-            runner,
-        });
+        let executor = PydanticAdapter::new(ScreenshotExecutor { working_dir: None, runner });
         let args = json!({ "path": "test.png" });
         let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
@@ -131,10 +104,7 @@ mod tests {
     #[tokio::test]
     async fn test_screenshot_path_traversal() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = PydanticAdapter::new(ScreenshotExecutor {
-            working_dir: None,
-            runner,
-        });
+        let executor = PydanticAdapter::new(ScreenshotExecutor { working_dir: None, runner });
 
         let args1 = json!({ "url": "https://example.com", "path": "../test.png" });
         let result1 = super::super::ToolExecutor::execute(&executor, args1).await;
@@ -169,10 +139,7 @@ mod tests {
         let args = json!({ "url": "https://example.com", "path": "test.png" });
         let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_ok());
-        assert_eq!(
-            result.unwrap(),
-            "Screenshot of https://example.com successfully saved to test.png"
-        );
+        assert_eq!(result.unwrap(), "Screenshot of https://example.com successfully saved to test.png");
     }
 
     #[tokio::test]
@@ -198,10 +165,7 @@ mod tests {
     async fn test_screenshot_execute_bad_command() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         // Simulate binary missing error
-        runner.push_response(Err(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "not found",
-        )));
+        runner.push_response(Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found")));
 
         let executor = PydanticAdapter::new(ScreenshotExecutor {
             working_dir: None,

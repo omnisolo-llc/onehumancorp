@@ -1,3 +1,4 @@
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -314,10 +315,7 @@ mod tests {
         for j in &journeys {
             assert!(j.steps.len() > 100);
         }
-        let maya = journeys
-            .iter()
-            .find(|j| j.name == "Maya")
-            .expect("Maya persona not found");
+        let maya = journeys.iter().find(|j| j.name == "Maya").expect("Maya persona not found");
         assert_eq!(maya.business_type, "Home Baker");
     }
 }

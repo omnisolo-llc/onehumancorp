@@ -26,7 +26,11 @@ impl TeamsClient {
         }
     }
 
-    async fn post(&self, url: &str, body: serde_json::Value) -> Result<serde_json::Value, String> {
+    async fn post(
+        &self,
+        url: &str,
+        body: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         let res = self
             .http_client
             .post(url)
@@ -92,7 +96,10 @@ impl TeamsClient {
         });
 
         let res = self.post(&url, payload).await?;
-        let join_url = res["joinUrl"].as_str().unwrap_or("").to_string();
+        let join_url = res["joinUrl"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
         Ok(join_url)
     }
 

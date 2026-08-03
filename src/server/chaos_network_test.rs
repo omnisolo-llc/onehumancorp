@@ -2,8 +2,8 @@
 mod chaos_network_tests {
     use crate::db::{DB, DbStore};
     use std::sync::Arc;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     #[tokio::test(start_paused = true)]
     async fn test_network_packet_drops_with_retry() {
@@ -43,9 +43,7 @@ mod chaos_network_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
-                .connect_lazy("postgres://dummy")
-                .unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         });
 
@@ -54,66 +52,52 @@ mod chaos_network_tests {
         let attempt_counter = Arc::new(AtomicUsize::new(0));
         let counter_clone = attempt_counter.clone();
 
-        let res: Result<(), String> = db
-            .execute_with_retry("network_test", move || {
-                let counter = counter_clone.clone();
-                async move {
-                    let attempts = counter.fetch_add(1, Ordering::SeqCst);
+        let res: Result<(), String> = db.execute_with_retry("network_test", move || {
+            let counter = counter_clone.clone();
+            async move {
+                let attempts = counter.fetch_add(1, Ordering::SeqCst);
 
-                    // Simulate connection closed only on the first attempt so that retry loop takes effect.
-                    if attempts == 0 {
-                        return Err("connection reset".to_string());
-                    }
-
-                    match tokio::net::TcpStream::connect(addr).await {
-                        Ok(mut stream) => {
-                            let msg = b"hello";
-                            if let Err(_) = stream.write_all(msg).await {
-                                return Err("broken pipe".to_string());
-                            }
-
-                            let mut buf = vec![0; 5];
-                            if let Err(_) = stream.read_exact(&mut buf).await {
-                                return Err("connection reset".to_string());
-                            }
-
-                            if &buf == msg {
-                                Ok(())
-                            } else {
-                                Err("data mismatch".to_string())
-                            }
-                        }
-                        Err(_) => Err("connection refused".to_string()),
-                    }
+                // Simulate connection closed only on the first attempt so that retry loop takes effect.
+                if attempts == 0 {
+                    return Err("connection reset".to_string());
                 }
-            })
-            .await;
 
-        assert!(
-            res.is_ok(),
-            "Operation should eventually succeed because execute_with_retry retries on failure. Result: {:?}",
-            res
-        );
-        assert!(
-            attempt_counter.load(Ordering::SeqCst) > 1,
-            "It should take more than one attempt since 50% are dropped"
-        );
+                match tokio::net::TcpStream::connect(addr).await {
+                    Ok(mut stream) => {
+                        let msg = b"hello";
+                        if let Err(_) = stream.write_all(msg).await {
+                             return Err("broken pipe".to_string());
+                        }
+
+                        let mut buf = vec![0; 5];
+                        if let Err(_) = stream.read_exact(&mut buf).await {
+                             return Err("connection reset".to_string());
+                        }
+
+                        if &buf == msg {
+                            Ok(())
+                        } else {
+                            Err("data mismatch".to_string())
+                        }
+                    }
+                    Err(_) => Err("connection refused".to_string()),
+                }
+            }
+        }).await;
+
+        assert!(res.is_ok(), "Operation should eventually succeed because execute_with_retry retries on failure. Result: {:?}", res);
+        assert!(attempt_counter.load(Ordering::SeqCst) > 1, "It should take more than one attempt since 50% are dropped");
 
         // Now test explicitly simulating the 60 second ML-Resilience fallback timeout
-        let res_timeout: Result<(), String> = db
-            .execute_with_retry("network_timeout_test", || async {
-                // Sleep longer than the 60s timeout
-                tokio::time::advance(std::time::Duration::from_secs(65)).await;
-                tokio::time::sleep(std::time::Duration::from_millis(1)).await;
-                Err("should not get here".to_string())
-            })
-            .await;
+        let res_timeout: Result<(), String> = db.execute_with_retry("network_timeout_test", || async {
+            // Sleep longer than the 60s timeout
+            tokio::time::advance(std::time::Duration::from_secs(65)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            Err("should not get here".to_string())
+        }).await;
 
         assert!(res_timeout.is_err());
-        assert!(
-            res_timeout.unwrap_err().contains("timed out"),
-            "Must fail with the ML-Resilience fallback timeout error"
-        );
+        assert!(res_timeout.unwrap_err().contains("timed out"), "Must fail with the ML-Resilience fallback timeout error");
     }
 }
 
@@ -132,13 +116,9 @@ mod additional_network_chaos {
         let result = timeout(max_allowed, async {
             tokio::time::sleep(backend_latency).await;
             "Live Data"
-        })
-        .await;
+        }).await;
 
-        assert!(
-            result.is_err(),
-            "Thin client must timeout when backend latency spikes >2s"
-        );
+        assert!(result.is_err(), "Thin client must timeout when backend latency spikes >2s");
 
         // Simulating fail-safe: local queueing and cached reads
         let fallback_state = "Cached Data";
@@ -155,9 +135,6 @@ mod additional_network_chaos {
 
         // Simulating data persistence in local standalone state
         let local_status = "PENDING";
-        assert_eq!(
-            local_status, "PENDING",
-            "Missions correctly persist as PENDING"
-        );
+        assert_eq!(local_status, "PENDING", "Missions correctly persist as PENDING");
     }
 }

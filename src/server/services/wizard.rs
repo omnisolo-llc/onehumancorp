@@ -1,7 +1,7 @@
-use ::server_ohc::orchestration::wizard_service_server::WizardService;
-use ::server_ohc::orchestration::*;
-use std::sync::RwLock;
 use tonic::{Request, Response, Status};
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::wizard_service_server::WizardService;
+use std::sync::RwLock;
 
 pub struct MyWizardService {
     settings: RwLock<WizardConfigureRequest>,
@@ -104,6 +104,7 @@ impl WizardService for MyWizardService {
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
         let is_standalone = crate::is_standalone_runtime();
 
+
         let mut health_checks = Vec::new();
         let mut is_all_healthy = true;
 
@@ -159,9 +160,7 @@ impl WizardService for MyWizardService {
                 health_checks.push(DiagnosticCheckProto {
                     check: "OHC_DATABASE_URL".to_string(),
                     status: "invalid".to_string(),
-                    message:
-                        "OHC_DATABASE_URL must be a sqlite:// connection string in standalone mode"
-                            .to_string(),
+                    message: "OHC_DATABASE_URL must be a sqlite:// connection string in standalone mode".to_string(),
                 });
             } else {
                 health_checks.push(DiagnosticCheckProto {
@@ -172,16 +171,11 @@ impl WizardService for MyWizardService {
             }
         }
 
-        let resp_status = if is_all_healthy {
-            "healthy"
-        } else {
-            "degraded"
-        };
+        let resp_status = if is_all_healthy { "healthy" } else { "degraded" };
         let mode = if is_standalone { "standalone" } else { "cloud" };
 
         // Hybrid mode mission sync health probe check
-        let db_url =
-            std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.is_empty() {
             health_checks.push(DiagnosticCheckProto {
                 check: "LOCAL_TO_CLOUD_SYNC".to_string(),
@@ -205,4 +199,5 @@ impl WizardService for MyWizardService {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+}

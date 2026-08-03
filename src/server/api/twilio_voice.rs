@@ -1,15 +1,19 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse};
-use std::collections::HashMap;
+use axum::{
+    extract::State,
+    response::IntoResponse,
+    http::StatusCode,
+};
 use std::sync::Arc;
 use uuid::Uuid;
+use std::collections::HashMap;
 
 use crate::db::DB;
-use crate::hub::Hub;
+use ::server_utils::url::url_decode;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::hub::Hub;
 use crate::orchestration::identity_resolution::IdentityResolver;
 use crate::voice::{VoiceAIEdgeEngine, VoiceContextRouter};
 use ::server_integrations_twilio::provider::TwilioProvider;
-use ::server_utils::url::url_decode;
 
 #[derive(Clone)]
 pub struct TwilioVoiceWebhookState {
@@ -27,42 +31,31 @@ pub async fn twilio_voice_incoming_handler(
     let body_str = String::from_utf8_lossy(&body_bytes);
     let params = parse_form_urlencoded(&body_str);
 
-    let caller_phone = params
-        .get("From")
-        .cloned()
-        .unwrap_or_else(|| "unknown".to_string());
-    let to_number = params
-        .get("To")
-        .cloned()
-        .unwrap_or_else(|| "unknown".to_string());
-    let call_sid = params
-        .get("CallSid")
-        .cloned()
-        .unwrap_or_else(|| Uuid::new_v4().to_string());
+    let caller_phone = params.get("From").cloned().unwrap_or_else(|| "unknown".to_string());
+    let to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
+    let call_sid = params.get("CallSid").cloned().unwrap_or_else(|| Uuid::new_v4().to_string());
 
     let pool = &state.db.pool;
 
     let tenant_id = match &state.db.store {
         crate::db::DbStore::Postgres => {
             match sqlx::query_scalar::<_, String>(
-                "SELECT tenant_id FROM settings WHERE voice_receptionist_number = $1 LIMIT 1",
+                "SELECT tenant_id FROM settings WHERE voice_receptionist_number = $1 LIMIT 1"
             )
             .bind(&to_number)
             .fetch_optional(pool)
-            .await
-            {
+            .await {
                 Ok(Some(id)) => id,
                 _ => return StatusCode::NOT_FOUND.into_response(),
             }
-        }
+        },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             match sqlx::query_scalar::<_, String>(
-                "SELECT tenant_id FROM settings WHERE voice_receptionist_number = ? LIMIT 1",
+                "SELECT tenant_id FROM settings WHERE voice_receptionist_number = ? LIMIT 1"
             )
             .bind(&to_number)
             .fetch_optional(sqlite_pool)
-            .await
-            {
+            .await {
                 Ok(Some(id)) => id,
                 _ => return StatusCode::NOT_FOUND.into_response(),
             }
@@ -85,14 +78,7 @@ pub async fn twilio_voice_incoming_handler(
     }
     drop(calls);
 
-    state
-        .voice_engine
-        .log_transcript(
-            &call_sid,
-            "AI",
-            "Hello! Thank you for calling. How can I help you today?",
-        )
-        .await;
+    state.voice_engine.log_transcript(&call_sid, "AI", "Hello! Thank you for calling. How can I help you today?").await;
 
     // Return TwiML
     let twiml = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -101,11 +87,7 @@ pub async fn twilio_voice_incoming_handler(
     <Gather input="speech" action="/api/v1/webhooks/twilio_voice/gather" speechTimeout="auto" />
 </Response>"#;
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "application/xml")],
-        twiml,
-    )
-        .into_response()
+    ([(axum::http::header::CONTENT_TYPE, "application/xml")], twiml).into_response()
 }
 
 pub async fn twilio_voice_gather_handler(
@@ -125,35 +107,19 @@ pub async fn twilio_voice_gather_handler(
     <Say>I didn't quite catch that. Could you repeat?</Say>
     <Gather input="speech" action="/api/v1/webhooks/twilio_voice/gather" speechTimeout="auto" />
 </Response>"#;
-        return (
-            [(axum::http::header::CONTENT_TYPE, "application/xml")],
-            twiml.to_string(),
-        )
-            .into_response();
+        return ([(axum::http::header::CONTENT_TYPE, "application/xml")], twiml.to_string()).into_response();
     }
 
     let voice_router = VoiceContextRouter::new(state.voice_engine.clone(), state.twilio.clone());
-    let ai_response = voice_router
-        .process_user_input(&call_sid, &speech_result, &to_number)
-        .await;
+    let ai_response = voice_router.process_user_input(&call_sid, &speech_result, &to_number).await;
 
-    let twiml = format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?>
+    let twiml = format!(r#"<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say>{}</Say>
     <Gather input="speech" action="/api/v1/webhooks/twilio_voice/gather" speechTimeout="auto" />
-</Response>"#,
-        ai_response
-            .replace("<", "")
-            .replace(">", "")
-            .replace("&", "and")
-    );
+</Response>"#, ai_response.replace("<", "").replace(">", "").replace("&", "and"));
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "application/xml")],
-        twiml,
-    )
-        .into_response()
+    ([(axum::http::header::CONTENT_TYPE, "application/xml")], twiml).into_response()
 }
 
 pub async fn twilio_voice_status_handler(
@@ -168,35 +134,21 @@ pub async fn twilio_voice_status_handler(
     let caller_phone = params.get("From").cloned().unwrap_or_default();
     let to_number = params.get("To").cloned().unwrap_or_default();
 
-    if call_status == "completed"
-        || call_status == "failed"
-        || call_status == "busy"
-        || call_status == "no-answer"
-        || call_status == "canceled"
-    {
+    if call_status == "completed" || call_status == "failed" || call_status == "busy" || call_status == "no-answer" || call_status == "canceled" {
         state.voice_engine.end_call(&call_sid).await;
 
         let actions = state.voice_engine.actions.lock().await;
-        let session_actions: Vec<_> = actions
-            .iter()
-            .filter(|a| a.session_id == call_sid)
-            .collect();
-        let has_booking_intent = session_actions
-            .iter()
-            .any(|a| a.intent_type == "BOOK_APPOINTMENT");
-        let has_order_intent = session_actions
-            .iter()
-            .any(|a| a.intent_type == "ORDER_FOOD");
+        let session_actions: Vec<_> = actions.iter().filter(|a| a.session_id == call_sid).collect();
+        let has_booking_intent = session_actions.iter().any(|a| a.intent_type == "BOOK_APPOINTMENT");
+        let has_order_intent = session_actions.iter().any(|a| a.intent_type == "ORDER_FOOD");
 
-        let deposit_link = session_actions
-            .iter()
+        let deposit_link = session_actions.iter()
             .find(|a| a.intent_type == "BOOK_APPOINTMENT")
             .and_then(|a| a.details.get("deposit_link").and_then(|v| v.as_str()))
             .unwrap_or("https://pay.ohc.com/deposit/voice")
             .to_string();
 
-        let order_link = session_actions
-            .iter()
+        let order_link = session_actions.iter()
             .find(|a| a.intent_type == "ORDER_FOOD")
             .and_then(|a| a.details.get("order_link").and_then(|v| v.as_str()))
             .unwrap_or("https://pay.ohc.com/store/voice")
@@ -204,10 +156,7 @@ pub async fn twilio_voice_status_handler(
         drop(actions);
 
         let transcripts = state.voice_engine.transcripts.lock().await;
-        let session_transcripts: Vec<_> = transcripts
-            .iter()
-            .filter(|t| t.session_id == call_sid)
-            .collect();
+        let session_transcripts: Vec<_> = transcripts.iter().filter(|t| t.session_id == call_sid).collect();
 
         if !session_transcripts.is_empty() {
             let mut summary = String::new();
@@ -227,7 +176,7 @@ pub async fn twilio_voice_status_handler(
                         Ok(Some(id)) => id,
                         _ => return StatusCode::NOT_FOUND.into_response(),
                     }
-                }
+                },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     match sqlx::query_scalar::<_, String>(
                         "SELECT tenant_id FROM settings WHERE voice_receptionist_number = ? LIMIT 1"
@@ -243,9 +192,7 @@ pub async fn twilio_voice_status_handler(
 
             let resolver = IdentityResolver::new(state.db.clone());
             let clean_caller = caller_phone.replace("whatsapp:", "").replace("sip:", "");
-            let customer_id_result = resolver
-                .resolve_or_create_customer(&tenant_id, &clean_caller, "voice")
-                .await;
+            let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &clean_caller, "voice").await;
             let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
 
             let inbox_id = Uuid::new_v4().to_string();
@@ -280,10 +227,7 @@ pub async fn twilio_voice_status_handler(
             };
 
             if let Err(e) = insert_result {
-                tracing::error!(
-                    "Failed to insert voice call transcript into omni_inbox_messages: {}",
-                    e
-                );
+                tracing::error!("Failed to insert voice call transcript into omni_inbox_messages: {}", e);
             }
 
             if has_booking_intent {
@@ -293,13 +237,7 @@ pub async fn twilio_voice_status_handler(
                 let title = format!("Voice Booking Request from {}", clean_caller);
                 let priority = "P1".to_string(); // Requires approval
 
-                if let Ok(mut task) = task_manager.create_task(
-                    tenant_id.clone(),
-                    mission_id,
-                    title,
-                    summary.clone(),
-                    priority,
-                ) {
+                if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
                     task.approval_status = Some("PENDING".to_string());
 
                     let proposed_content = serde_json::json!({
@@ -321,13 +259,7 @@ pub async fn twilio_voice_status_handler(
                 let title = format!("Voice Order Request from {}", clean_caller);
                 let priority = "P1".to_string();
 
-                if let Ok(mut task) = task_manager.create_task(
-                    tenant_id.clone(),
-                    mission_id,
-                    title,
-                    summary.clone(),
-                    priority,
-                ) {
+                if let Ok(mut task) = task_manager.create_task(tenant_id.clone(), mission_id, title, summary.clone(), priority) {
                     task.approval_status = Some("PENDING".to_string());
 
                     let proposed_content = serde_json::json!({

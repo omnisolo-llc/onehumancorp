@@ -1,12 +1,12 @@
 #![allow(clippy::collapsible_if)]
-use ohc_builtin_agent_core::types::ToolError;
 use ohc_builtin_agent_llm::LlmClient;
+use ohc_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
-use super::Tool;
 use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
+use super::Tool;
 
 #[derive(Deserialize)]
 struct LlmJudgeArgs {
@@ -57,47 +57,29 @@ impl PydanticToolExecutor<LlmJudgeArgs> for LlmJudgeExecutor {
             async fn chat(
                 &self,
                 req: ChatRequest,
-            ) -> Result<
-                ohc_builtin_agent_core::types::ChatResponse,
-                Box<dyn std::error::Error + Send + Sync>,
-            > {
+            ) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 self.llm.chat(req).await
             }
         }
         let parser_client = Arc::new(ParserAdapter {
             llm: self.llm.clone(),
-        })
-            as Arc<dyn ohc_builtin_agent_core::output_parser::LlmClientForParser>;
+        }) as Arc<dyn ohc_builtin_agent_core::output_parser::LlmClientForParser>;
 
-        match ohc_builtin_agent_core::output_parser::parse_structured_output::<JudgeEvaluation>(
-            &parser_client,
-            req,
-            3,
-        )
-        .await
-        {
+        match ohc_builtin_agent_core::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
             Ok(eval) => {
                 if eval.status.to_uppercase() == "APPROVE" && eval.confidence >= 0.7 {
                     Ok(json!({
                         "status": "APPROVED",
                         "message": "The LLM Judge approved the output."
-                    })
-                    .to_string())
+                    }).to_string())
                 } else {
-                    let mut err_msg =
-                        format!("LLM Judge REJECTED the output.\nReason: {}", eval.reason);
+                    let mut err_msg = format!("LLM Judge REJECTED the output.\nReason: {}", eval.reason);
 
                     if !eval.missing_elements.is_empty() {
-                        err_msg.push_str(&format!(
-                            "\nMissing Elements: {}",
-                            eval.missing_elements.join(", ")
-                        ));
+                        err_msg.push_str(&format!("\nMissing Elements: {}", eval.missing_elements.join(", ")));
                     }
                     if !eval.suggested_fixes.is_empty() {
-                        err_msg.push_str(&format!(
-                            "\nSuggested Fixes:\n- {}",
-                            eval.suggested_fixes.join("\n- ")
-                        ));
+                        err_msg.push_str(&format!("\nSuggested Fixes:\n- {}", eval.suggested_fixes.join("\n- ")));
                     }
 
                     Err(ToolError::LlmRecoverable(err_msg))

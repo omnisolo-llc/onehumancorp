@@ -1,27 +1,24 @@
 use axum::{
-    Json, Router,
-    extract::{
-        Extension, Path, Query, State,
-        ws::{Message as WsMessage, WebSocket, WebSocketUpgrade},
-    },
+    extract::{Extension, Path, Query, State, ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, put},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::domain::repository::agent_feed_repo::{AgentFeedItem, AgentFeedRepository};
-use crate::services::agent_feed::service::AgentFeedService;
-use crate::utils::cache::HybridCache;
-use ::server_common::Claims;
 use chrono::{DateTime, Utc};
-use futures::{sink::SinkExt, stream::StreamExt};
-use redis::AsyncCommands;
+use ::server_common::Claims;
+use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
+use crate::services::agent_feed::service::AgentFeedService;
 use sqlx::PgPool;
-use std::collections::VecDeque;
+use crate::utils::cache::HybridCache;
 use std::sync::{Arc, OnceLock};
+use std::collections::VecDeque;
 use std::time::Duration;
 use tokio::sync::{Mutex, Notify};
+use futures::{sink::SinkExt, stream::StreamExt};
+use redis::AsyncCommands;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct MobileAgentFeedItem {
@@ -50,7 +47,8 @@ pub enum AnyAgentFeedListResponse {
 pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AnyAgentFeedListResponse>>> = OnceLock::new();
 
 pub fn get_redis_client() -> redis::Client {
-    crate::redis_pool::get_redis_client().expect("Failed to get Redis client from pool")
+    crate::redis_pool::get_redis_client()
+        .expect("Failed to get Redis client from pool")
 }
 
 pub fn get_agent_feed_cache() -> Arc<HybridCache<AnyAgentFeedListResponse>> {
@@ -132,11 +130,7 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
         Ok(conn) => conn,
         Err(e) => {
             tracing::error!("Failed to get async pubsub for ws: {}", e);
-            let _ = sender
-                .send(WsMessage::Text(
-                    "{\"error\":\"Failed to connect to pubsub\"}".into(),
-                ))
-                .await;
+            let _ = sender.send(WsMessage::Text("{\"error\":\"Failed to connect to pubsub\"}".into())).await;
             return;
         }
     };
@@ -144,11 +138,7 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
     let topic = format!("agent_feed:{}", tenant_id);
     if let Err(e) = pubsub_conn.subscribe(&topic).await {
         tracing::error!("Failed to subscribe to topic {}: {}", topic, e);
-        let _ = sender
-            .send(WsMessage::Text(
-                "{\"error\":\"Failed to subscribe\"}".into(),
-            ))
-            .await;
+        let _ = sender.send(WsMessage::Text("{\"error\":\"Failed to subscribe\"}".into())).await;
         return;
     }
 
@@ -251,27 +241,21 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
     };
 }
 
-async fn flush_batch(
-    sender: &mut futures::stream::SplitSink<WebSocket, WsMessage>,
-    batch: &mut Vec<String>,
-) {
+async fn flush_batch(sender: &mut futures::stream::SplitSink<WebSocket, WsMessage>, batch: &mut Vec<String>) {
     if batch.len() == 1 {
         // Single message — send directly for backwards compatibility
         let msg = batch.remove(0);
         let _ = sender.send(WsMessage::Text(msg.into())).await;
     } else {
         // Multiple messages — send as batch
-        let items: Vec<serde_json::Value> = batch
-            .drain(..)
+        let items: Vec<serde_json::Value> = batch.drain(..)
             .map(|m| serde_json::Value::String(m))
             .collect();
         let batch_msg = serde_json::json!({
             "type": "batch",
             "items": items
         });
-        let _ = sender
-            .send(WsMessage::Text(batch_msg.to_string().into()))
-            .await;
+        let _ = sender.send(WsMessage::Text(batch_msg.to_string().into())).await;
     }
 }
 
@@ -286,21 +270,9 @@ async fn list_feed_items(
         Some(org_id) => org_id.to_string(),
         None => {
             if mobile_optimized {
-                return (
-                    StatusCode::UNAUTHORIZED,
-                    Json(AnyAgentFeedListResponse::Mobile(
-                        MobileAgentFeedListResponse { items: vec![] },
-                    )),
-                )
-                    .into_response();
+                return (StatusCode::UNAUTHORIZED, Json(AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: vec![] }))).into_response();
             } else {
-                return (
-                    StatusCode::UNAUTHORIZED,
-                    Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse {
-                        items: vec![],
-                    })),
-                )
-                    .into_response();
+                return (StatusCode::UNAUTHORIZED, Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items: vec![] }))).into_response();
             }
         }
     };
@@ -308,73 +280,48 @@ async fn list_feed_items(
     let limit = query.limit.unwrap_or(20);
     let offset = query.offset.unwrap_or(0);
 
-    let cache_key = format!(
-        "agent_feed:{}:{}:{}:{}",
-        tenant_id, limit, offset, mobile_optimized
-    );
+    let cache_key = format!("agent_feed:{}:{}:{}:{}", tenant_id, limit, offset, mobile_optimized);
     let cache = get_agent_feed_cache();
     let tag = format!("agent_feed_tenant:{}", tenant_id);
 
-    let result = cache
-        .get_or_fetch_with_tags_swr(
-            &cache_key,
-            vec![tag],
-            std::time::Duration::from_secs(60),
-            move || async move {
-                let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
-                    pool: pool.clone(),
-                    store: crate::db::DbStore::Postgres,
-                }));
-                match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
-                    Ok(items) => {
-                        let any_response = if mobile_optimized {
-                            let mobile_items = items
-                                .into_iter()
-                                .map(|item| MobileAgentFeedItem {
-                                    id: item.id,
-                                    event_source: item.event_source,
-                                    context_payload: None,
-                                    proposed_action: None,
-                                    lifecycle_state: item.lifecycle_state,
-                                    created_at: item.created_at,
-                                })
-                                .collect();
-                            AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse {
-                                items: mobile_items,
-                            })
-                        } else {
-                            AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
-                        };
-                        Some(any_response)
-                    }
-                    Err(e) => {
-                        tracing::error!("Failed to list agent feed items: {}", e);
-                        None
-                    }
+    let result = cache.get_or_fetch_with_tags_swr(
+        &cache_key,
+        vec![tag],
+        std::time::Duration::from_secs(60),
+        move || async move {
+            let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
+            match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
+                Ok(items) => {
+                    let any_response = if mobile_optimized {
+                        let mobile_items = items.into_iter().map(|item| MobileAgentFeedItem {
+                            id: item.id,
+                            event_source: item.event_source,
+                            context_payload: None,
+                            proposed_action: None,
+                            lifecycle_state: item.lifecycle_state,
+                            created_at: item.created_at,
+                        }).collect();
+                        AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: mobile_items })
+                    } else {
+                        AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
+                    };
+                    Some(any_response)
+                },
+                Err(e) => {
+                    tracing::error!("Failed to list agent feed items: {}", e);
+                    None
                 }
-            },
-        )
-        .await;
+            }
+        }
+    ).await;
 
     match result {
         Some(any_response) => (StatusCode::OK, Json(any_response)).into_response(),
         None => {
             if mobile_optimized {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AnyAgentFeedListResponse::Mobile(
-                        MobileAgentFeedListResponse { items: vec![] },
-                    )),
-                )
-                    .into_response()
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse { items: vec![] }))).into_response()
             } else {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse {
-                        items: vec![],
-                    })),
-                )
-                    .into_response()
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items: vec![] }))).into_response()
             }
         }
     }
@@ -398,10 +345,7 @@ async fn create_feed_item(
         value_payload = cp.clone();
     }
 
-    match service
-        .process_event(&tenant_id, &payload.event_source, &value_payload)
-        .await
-    {
+    match service.process_event(&tenant_id, &payload.event_source, &value_payload).await {
         Ok(item) => {
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
@@ -420,7 +364,7 @@ async fn create_feed_item(
             }
 
             (StatusCode::CREATED, Json(item)).into_response()
-        }
+        },
         Err(e) => {
             tracing::error!("Failed to create agent feed item: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -439,29 +383,17 @@ async fn update_feed_item_state(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
-        pool: pool.clone(),
-        store: crate::db::DbStore::Postgres,
-    }));
+    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
 
-    if payload.proposed_action.is_some()
-        || payload.context_payload.is_some()
-        || payload.edited_payload.is_some()
-    {
+    if payload.proposed_action.is_some() || payload.context_payload.is_some() || payload.edited_payload.is_some() {
         let mut proposed = payload.proposed_action.clone();
 
         if let (Some(edited), Some(prop)) = (&payload.edited_payload, proposed.as_mut()) {
             if let Some(obj) = prop.as_object_mut() {
                 if obj.contains_key("draft_reply") {
-                    obj.insert(
-                        "draft_reply".to_string(),
-                        serde_json::Value::String(edited.clone()),
-                    );
+                    obj.insert("draft_reply".to_string(), serde_json::Value::String(edited.clone()));
                 } else {
-                    obj.insert(
-                        "message".to_string(),
-                        serde_json::Value::String(edited.clone()),
-                    );
+                    obj.insert("message".to_string(), serde_json::Value::String(edited.clone()));
                 }
             } else {
                 proposed = Some(serde_json::json!({
@@ -479,20 +411,12 @@ async fn update_feed_item_state(
 
         let proposed_json = proposed.map(sqlx::types::Json);
         let context_json = payload.context_payload.clone().map(sqlx::types::Json);
-        let _ = repo
-            .update_payloads(&tenant_id, &id, context_json, proposed_json)
-            .await;
+        let _ = repo.update_payloads(&tenant_id, &id, context_json, proposed_json).await;
     }
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
         Ok(updated_item) => {
-            let _ = crate::domain::agent_approvals::sync_legacy_approval_status(
-                &tenant_id,
-                &id,
-                &payload.state,
-                &pool,
-            )
-            .await;
+            let _ = crate::domain::agent_approvals::sync_legacy_approval_status(&tenant_id, &id, &payload.state, &pool).await;
 
             // Notify via Redis Pub/Sub for WebSockets
             if let Some(client) = Some(get_redis_client()) {
@@ -504,14 +428,12 @@ async fn update_feed_item_state(
                             "status": payload.state,
                             "department": updated_item.event_source
                         }
-                    })
-                    .to_string();
+                    }).to_string();
                     let topic = format!("agent_feed:{}", tenant_id);
                     let _: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
                         .arg(topic)
                         .arg(payload_str)
-                        .query_async(&mut conn)
-                        .await;
+                        .query_async(&mut conn).await;
                 }
             }
 
@@ -522,17 +444,13 @@ async fn update_feed_item_state(
                     let mut dispatch_payload = None;
 
                     if item.event_source == "incident_resolution" {
-                        is_incident = true;
-                        dispatch_payload = item.context_payload.clone().map(|p| p.0);
-                    } else if let Some(ref pl) = item
-                        .proposed_action
-                        .clone()
-                        .or(item.context_payload.clone())
-                    {
-                        if let Some(ft) = pl.get("feature_type").and_then(|v| v.as_str()) {
-                            feature_type = Some(ft.to_string());
-                            dispatch_payload = Some(pl.0.clone());
-                        }
+                         is_incident = true;
+                         dispatch_payload = item.context_payload.clone().map(|p| p.0);
+                    } else if let Some(ref pl) = item.proposed_action.clone().or(item.context_payload.clone()) {
+                         if let Some(ft) = pl.get("feature_type").and_then(|v| v.as_str()) {
+                             feature_type = Some(ft.to_string());
+                             dispatch_payload = Some(pl.0.clone());
+                         }
                     }
 
                     if is_incident || feature_type.is_some() {
@@ -546,9 +464,7 @@ async fn update_feed_item_state(
                         });
                         let pool_arc = std::sync::Arc::new(pool.clone());
                         let job_queue = crate::orchestration::queue::OHCJobQueue::new(pool_arc);
-                        let _ = job_queue
-                            .enqueue(&tenant_id, "agent_feed_action", &job_payload)
-                            .await;
+                        let _ = job_queue.enqueue(&tenant_id, "agent_feed_action", &job_payload).await;
                     }
                 }
             }
@@ -557,7 +473,7 @@ async fn update_feed_item_state(
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;
             (StatusCode::OK, Json(updated_item)).into_response()
-        }
+        },
         Err(e) => {
             tracing::error!("Failed to update agent feed item state: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -567,17 +483,15 @@ async fn update_feed_item_state(
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        AgentFeedListResponse, AnyAgentFeedListResponse, get_agent_feed_cache, ws_feed_handler,
-    };
     use crate::api::agent_feed;
-    use ::server_common::Claims;
-    use axum::{Router, extract::Extension, routing::get};
-    use futures::StreamExt;
     use sqlx::PgPool;
+    use super::{get_agent_feed_cache, AgentFeedListResponse, AnyAgentFeedListResponse, ws_feed_handler};
+    use axum::{Router, routing::get, extract::Extension};
+    use ::server_common::Claims;
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
     use tokio_tungstenite::connect_async;
+    use futures::StreamExt;
 
     #[tokio::test]
     async fn test_agent_feed_router_compiles() {
@@ -595,26 +509,24 @@ mod tests {
         let result = cache.get(cache_key).await;
         assert!(result.is_none());
 
-        let response = AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items: vec![] });
+        let response = AnyAgentFeedListResponse::Standard(AgentFeedListResponse {
+            items: vec![],
+        });
 
         // Set cache with tag
-        cache
-            .set_with_tags(
-                cache_key,
-                response.clone(),
-                vec!["agent_feed_tenant:test_tenant".to_string()],
-                std::time::Duration::from_secs(60),
-            )
-            .await;
+        cache.set_with_tags(
+            cache_key,
+            response.clone(),
+            vec!["agent_feed_tenant:test_tenant".to_string()],
+            std::time::Duration::from_secs(60),
+        ).await;
 
         // Verify cache hit
         let hit = cache.get(cache_key).await;
         assert!(hit.is_some());
 
         // Invalidate by tag
-        cache
-            .invalidate_by_tag("agent_feed_tenant:test_tenant")
-            .await;
+        cache.invalidate_by_tag("agent_feed_tenant:test_tenant").await;
 
         let miss = cache.get(cache_key).await;
         assert!(miss.is_none());
@@ -652,8 +564,7 @@ mod tests {
         });
 
         // Use standard redis logic locally to simulate pubsub
-        let redis_url =
-            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             // Attempt to connect to local redis, if redis is unavailable (e.g. CI), skip the connection test
             if client.get_connection().is_ok() {
@@ -667,12 +578,7 @@ mod tests {
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let topic = "agent_feed:test_ws_tenant";
                 let payload = "{\"mock\":\"data\"}";
-                let _: () = redis::cmd("PUBLISH")
-                    .arg(topic)
-                    .arg(payload)
-                    .query_async(&mut conn)
-                    .await
-                    .unwrap();
+                let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
 
                 // Expect to receive the message over websocket
                 let msg = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
@@ -717,8 +623,7 @@ mod tests {
             .unwrap();
         });
 
-        let redis_url =
-            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             if client.get_connection().is_ok() {
                 let ws_url = format!("ws://{}/ws", addr);
@@ -732,12 +637,7 @@ mod tests {
                 // Publish 5 messages rapidly — they should be batched
                 for i in 0..5 {
                     let payload = format!("{{\"seq\":{}}}", i);
-                    let _: () = redis::cmd("PUBLISH")
-                        .arg(topic)
-                        .arg(payload)
-                        .query_async(&mut conn)
-                        .await
-                        .unwrap();
+                    let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
                 }
 
                 let msg = tokio::time::timeout(std::time::Duration::from_secs(3), ws_stream.next())

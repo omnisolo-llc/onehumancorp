@@ -1,26 +1,19 @@
 use ::server_ohc::app::dashboard_service_server::DashboardService;
 use ::server_ohc::app::*;
-use ::server_utils::cache::HybridCache;
 use std::sync::Arc;
-use std::sync::OnceLock;
 use tonic::{Request, Response, Status};
+use ::server_utils::cache::HybridCache;
+use std::sync::OnceLock;
 
-static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> =
-    OnceLock::new();
+static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static BOOKINGS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Booking>>> = OnceLock::new();
-static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> =
-    OnceLock::new();
-static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> =
-    OnceLock::new();
-static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> =
-    OnceLock::new();
-static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> =
-    OnceLock::new();
+static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
+static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> = OnceLock::new();
+static COST_CACHE: OnceLock<HybridCache<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>)>> = OnceLock::new();
 pub static DASHBOARD_SNAPSHOT_CACHE: OnceLock<HybridCache<DashboardSnapshot>> = OnceLock::new();
-pub static ONBOARDING_STATE_CACHE: OnceLock<
-    HybridCache<::server_ohc::app::GetOnboardingStateResponse>,
-> = OnceLock::new();
+pub static ONBOARDING_STATE_CACHE: OnceLock<HybridCache<::server_ohc::app::GetOnboardingStateResponse>> = OnceLock::new();
 
 #[derive(Clone)]
 pub struct MyDashboardService {
@@ -31,24 +24,16 @@ pub struct MyDashboardService {
 
 impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
-        Self {
-            db,
-            hub,
-            is_multitenant: ::server_config::get().multitenant,
-        }
+        Self { db, hub, is_multitenant: ::server_config::get().multitenant }
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_agents_impl(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+    async fn fetch_agents_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
         let hub = self.hub.clone();
         let org_id_clone = org_id.to_string();
-        let mut agents = tokio::spawn(async move { hub.get_agents_by_org(&org_id_clone).await })
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut agents = tokio::spawn(async move {
+            hub.get_agents_by_org(&org_id_clone).await
+        }).await.map_err(|e| e.to_string())?;
 
         if mobile_optimized {
             for agent in agents.iter_mut() {
@@ -60,37 +45,21 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_agents(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+    async fn fetch_agents(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
         let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
         let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
-        let agents = cache
-            .get_or_fetch_with_swr(
-                &cache_key,
-                std::time::Duration::from_secs(30),
-                move || async move {
-                    s.fetch_agents_impl(&org_id_clone, mobile_optimized)
-                        .await
-                        .ok()
-                },
-            )
-            .await;
+        let agents = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(30), move || async move {
+            s.fetch_agents_impl(&org_id_clone, mobile_optimized).await.ok()
+        }).await;
 
         agents.ok_or_else(|| "Failed to fetch agents".to_string())
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_meetings_impl(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
+    async fn fetch_meetings_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
         let org_meetings = self.hub.get_meetings_by_org(org_id).await;
 
         if !mobile_optimized {
@@ -110,37 +79,21 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_meetings(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
+    async fn fetch_meetings(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
         let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
         let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
-        let meetings = cache
-            .get_or_fetch_with_swr(
-                &cache_key,
-                std::time::Duration::from_secs(15),
-                move || async move {
-                    s.fetch_meetings_impl(&org_id_clone, mobile_optimized)
-                        .await
-                        .ok()
-                },
-            )
-            .await;
+        let meetings = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(15), move || async move {
+            s.fetch_meetings_impl(&org_id_clone, mobile_optimized).await.ok()
+        }).await;
 
         meetings.ok_or_else(|| "Failed to fetch meetings".to_string())
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_cost_summary_impl(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+    async fn fetch_cost_summary_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
         let hub_clone = self.hub.clone();
         let cost_data = tokio::task::spawn_blocking(move || {
             let cost_auditor = hub_clone.get_cost_auditor();
@@ -156,44 +109,26 @@ impl MyDashboardService {
                 cost_auditor.get_total_tokens(),
                 snapshot,
             )
-        })
-        .await
-        .unwrap_or_else(|_| (0.0, 0, vec![]));
+        }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
         Ok(cost_data)
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_cost_summary(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+    async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
         let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
         let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
-        let cost = cache
-            .get_or_fetch_with_swr(
-                &cache_key,
-                std::time::Duration::from_secs(60),
-                move || async move {
-                    s.fetch_cost_summary_impl(&org_id_clone, mobile_optimized)
-                        .await
-                        .ok()
-                },
-            )
-            .await;
+        let cost = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(60), move || async move {
+            s.fetch_cost_summary_impl(&org_id_clone, mobile_optimized).await.ok()
+        }).await;
 
         cost.ok_or_else(|| "Failed to fetch cost summary".to_string())
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_products_impl(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::organization::Product>, String> {
+    async fn fetch_products_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
         let q = if mobile_optimized {
             "SELECT id, '' as organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
         } else {
@@ -212,26 +147,18 @@ impl MyDashboardService {
                             description: r.try_get("description").unwrap_or_default(),
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                            fulfillment_strategy: r
-                                .try_get("fulfillment_strategy")
-                                .unwrap_or_default(),
+                            fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
                             metadata_json: if mobile_optimized {
                                 String::new()
                             } else {
                                 match r.try_get::<serde_json::Value, _>("metadata") {
                                     Ok(v) => v.to_string(),
-                                    Err(_) => r
-                                        .try_get::<String, _>("metadata")
-                                        .unwrap_or_else(|_| "{}".to_string()),
+                                    Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                                 }
                             },
                             is_subscribable: r.try_get("is_subscribable").unwrap_or(false),
-                            subscription_frequency: r
-                                .try_get("subscription_frequency")
-                                .unwrap_or_default(),
-                            subscription_discount_percent: r
-                                .try_get("subscription_discount_percent")
-                                .unwrap_or(0),
+                            subscription_frequency: r.try_get("subscription_frequency").unwrap_or_default(),
+                            subscription_discount_percent: r.try_get("subscription_discount_percent").unwrap_or(0),
                         };
                         results.push(p);
                     }
@@ -247,26 +174,18 @@ impl MyDashboardService {
                             description: r.try_get("description").unwrap_or_default(),
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                            fulfillment_strategy: r
-                                .try_get("fulfillment_strategy")
-                                .unwrap_or_default(),
+                            fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
                             metadata_json: if mobile_optimized {
                                 String::new()
                             } else {
                                 match r.try_get::<serde_json::Value, _>("metadata") {
                                     Ok(v) => v.to_string(),
-                                    Err(_) => r
-                                        .try_get::<String, _>("metadata")
-                                        .unwrap_or_else(|_| "{}".to_string()),
+                                    Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                                 }
                             },
                             is_subscribable: r.try_get("is_subscribable").unwrap_or(false),
-                            subscription_frequency: r
-                                .try_get("subscription_frequency")
-                                .unwrap_or_default(),
-                            subscription_discount_percent: r
-                                .try_get("subscription_discount_percent")
-                                .unwrap_or(0),
+                            subscription_frequency: r.try_get("subscription_frequency").unwrap_or_default(),
+                            subscription_discount_percent: r.try_get("subscription_discount_percent").unwrap_or(0),
                         };
                         results.push(p);
                     }
@@ -278,37 +197,21 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_products(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::organization::Product>, String> {
+    async fn fetch_products(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
         let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
         let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
-        let products = cache
-            .get_or_fetch_with_swr(
-                &cache_key,
-                std::time::Duration::from_secs(3600),
-                move || async move {
-                    s.fetch_products_impl(&org_id_clone, mobile_optimized)
-                        .await
-                        .ok()
-                },
-            )
-            .await;
+        let products = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(3600), move || async move {
+            s.fetch_products_impl(&org_id_clone, mobile_optimized).await.ok()
+        }).await;
 
         products.ok_or_else(|| "Failed to fetch products".to_string())
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_orders_impl(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::app::Order>, String> {
+    async fn fetch_orders_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
         let q = if mobile_optimized {
             "SELECT id, '' as tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
         } else {
@@ -323,18 +226,10 @@ impl MyDashboardService {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized {
-                                String::new()
-                            } else {
-                                r.try_get("tenant_id").unwrap_or_default()
-                            },
+                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                             service_id: String::new(),
                             amount_cents: (amount_real * 100.0) as i64,
-                            status: if mobile_optimized {
-                                String::new()
-                            } else {
-                                r.try_get("status").unwrap_or_default()
-                            },
+                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                             created_at_unix: 0,
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                         };
@@ -348,18 +243,10 @@ impl MyDashboardService {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized {
-                                String::new()
-                            } else {
-                                r.try_get("tenant_id").unwrap_or_default()
-                            },
+                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                             service_id: String::new(),
                             amount_cents: (amount_real * 100.0) as i64,
-                            status: if mobile_optimized {
-                                String::new()
-                            } else {
-                                r.try_get("status").unwrap_or_default()
-                            },
+                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                             created_at_unix: 0,
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                         };
@@ -373,69 +260,44 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_orders(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::app::Order>, String> {
+    async fn fetch_orders(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Order>, String> {
         let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
         let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
-        let orders = cache
-            .get_or_fetch_with_swr(
-                &cache_key,
-                std::time::Duration::from_secs(5),
-                move || async move {
-                    s.fetch_orders_impl(&org_id_clone, mobile_optimized)
-                        .await
-                        .ok()
-                },
-            )
-            .await;
+        let orders = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), move || async move {
+            s.fetch_orders_impl(&org_id_clone, mobile_optimized).await.ok()
+        }).await;
 
         orders.ok_or_else(|| "Failed to fetch orders".to_string())
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_bookings_impl(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::app::Booking>, String> {
+    async fn fetch_bookings_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
         let q = if mobile_optimized {
             "SELECT id, '' as tenant_id, customer_id, product_id, start_time, end_time, '' as status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
         } else {
             "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
         };
 
-        use chrono::{DateTime, Utc};
         use sqlx::Row;
+        use chrono::{DateTime, Utc};
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
                     for r in rows {
-                        let start_time: DateTime<Utc> =
-                            r.try_get("start_time").unwrap_or_else(|_| Utc::now());
+                        let start_time: DateTime<Utc> = r.try_get("start_time").unwrap_or_else(|_| Utc::now());
                         let end_time: Option<DateTime<Utc>> = r.try_get("end_time").ok();
                         let b = ::server_ohc::app::Booking {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized {
-                                String::new()
-                            } else {
-                                r.try_get("tenant_id").unwrap_or_default()
-                            },
+                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                             customer_id: r.try_get("customer_id").unwrap_or_default(),
                             service_id: r.try_get("product_id").unwrap_or_default(),
                             start_time_unix: start_time.timestamp(),
                             end_time_unix: end_time.map(|t| t.timestamp()).unwrap_or(0),
-                            status: if mobile_optimized {
-                                String::new()
-                            } else {
-                                r.try_get("status").unwrap_or_default()
-                            },
+                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                         };
                         results.push(b);
                     }
@@ -448,32 +310,18 @@ impl MyDashboardService {
                         // Assuming it matches what orders table handles, which doesn't query dates in sqlite branch for some reason.
                         // For safety we'll use a string fallback and parse
                         let start_time_str: String = r.try_get("start_time").unwrap_or_default();
-                        let start_time = DateTime::parse_from_rfc3339(&start_time_str)
-                            .map(|d| d.with_timezone(&Utc))
-                            .unwrap_or_else(|_| Utc::now());
+                        let start_time = DateTime::parse_from_rfc3339(&start_time_str).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now());
                         let end_time_str: Option<String> = r.try_get("end_time").ok();
-                        let end_time = end_time_str.and_then(|s| {
-                            DateTime::parse_from_rfc3339(&s)
-                                .map(|d| d.with_timezone(&Utc))
-                                .ok()
-                        });
+                        let end_time = end_time_str.and_then(|s| DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&Utc)).ok());
 
                         let b = ::server_ohc::app::Booking {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized {
-                                String::new()
-                            } else {
-                                r.try_get("tenant_id").unwrap_or_default()
-                            },
+                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                             customer_id: r.try_get("customer_id").unwrap_or_default(),
                             service_id: r.try_get("product_id").unwrap_or_default(),
                             start_time_unix: start_time.timestamp(),
                             end_time_unix: end_time.map(|t| t.timestamp()).unwrap_or(0),
-                            status: if mobile_optimized {
-                                String::new()
-                            } else {
-                                r.try_get("status").unwrap_or_default()
-                            },
+                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                         };
                         results.push(b);
                     }
@@ -485,37 +333,21 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_bookings(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<::server_ohc::app::Booking>, String> {
+    async fn fetch_bookings(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
         let cache_key = format!("hub:bookings:{}:{}", org_id, mobile_optimized);
         let cache = BOOKINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
-        let bookings = cache
-            .get_or_fetch_with_swr(
-                &cache_key,
-                std::time::Duration::from_secs(5),
-                move || async move {
-                    s.fetch_bookings_impl(&org_id_clone, mobile_optimized)
-                        .await
-                        .ok()
-                },
-            )
-            .await;
+        let bookings = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), move || async move {
+            s.fetch_bookings_impl(&org_id_clone, mobile_optimized).await.ok()
+        }).await;
 
         bookings.ok_or_else(|| "Failed to fetch bookings".to_string())
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_org_impl(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Option<::server_ohc::organization::Organization>, String> {
+    async fn fetch_org_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
         let q = if mobile_optimized {
             "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
         } else {
@@ -525,11 +357,7 @@ impl MyDashboardService {
         let mut org = None;
         match &self.db.store {
             crate::db::DbStore::Postgres => {
-                if let Ok(Some(row)) = sqlx::query(q)
-                    .bind(&org_id)
-                    .fetch_optional(&self.db.pool)
-                    .await
-                {
+                if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&self.db.pool).await {
                     org = Some(::server_ohc::organization::Organization {
                         id: row.try_get("tenant_id").unwrap_or_default(),
                         name: row.try_get("business_name").unwrap_or_default(),
@@ -562,23 +390,15 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_org(
-        &self,
-        org_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Option<::server_ohc::organization::Organization>, String> {
+    async fn fetch_org(&self, org_id: &str, mobile_optimized: bool) -> Result<Option<::server_ohc::organization::Organization>, String> {
         let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
         let cache = ORG_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         let s = self.clone();
         let org_id_clone = org_id.to_string();
-        let org = cache
-            .get_or_fetch_with_swr(
-                &cache_key,
-                std::time::Duration::from_secs(3600),
-                move || async move { s.fetch_org_impl(&org_id_clone, mobile_optimized).await.ok() },
-            )
-            .await;
+        let org = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(3600), move || async move {
+            s.fetch_org_impl(&org_id_clone, mobile_optimized).await.ok()
+        }).await;
 
         org.ok_or_else(|| "Failed to fetch org".to_string())
     }
@@ -614,12 +434,8 @@ impl DashboardService for MyDashboardService {
         }
 
         let org_id = std::sync::Arc::new(req.organization_id);
-        let cache_key = format!(
-            "dashboard_snapshot:{}:mobile:{}",
-            org_id, req.mobile_optimized
-        );
-        let cache =
-            DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+        let cache_key = format!("dashboard_snapshot:{}:mobile:{}", org_id, req.mobile_optimized);
+        let cache = DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
             if !is_stale {
                 return Ok(Response::new(cached));
@@ -641,13 +457,7 @@ impl DashboardService for MyDashboardService {
             },
             {
                 if mobile_optimized {
-                    tokio::spawn(async move {
-                        Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((
-                            0.0,
-                            0,
-                            vec![],
-                        ))
-                    })
+                    tokio::spawn(async move { Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, vec![])) })
                 } else {
                     let s = self.clone();
                     let o = org_id.clone();
@@ -676,60 +486,38 @@ impl DashboardService for MyDashboardService {
             }
         );
 
-        let agents = agents_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let bookings = bookings_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
 
-        let final_meetings = _meetings
-            .iter()
-            .map(|m| {
-                let transcript = if req.mobile_optimized {
-                    Vec::new()
-                } else {
-                    m.transcript
-                        .iter()
-                        .map(|msg| ::server_ohc::agent::AgentMessage {
-                            id: msg.id.clone(),
-                            from_agent_id: msg.from_agent.clone(),
-                            to_agent_id: msg.to_agent.clone(),
-                            message_type: msg.r#type.clone(),
-                            content: msg.content.clone(),
-                            meeting_id: m.id.clone(),
-                            occurred_at_unix: msg.occurred_at_unix,
-                        })
-                        .collect()
-                };
+        let final_meetings = _meetings.iter().map(|m| {
+            let transcript = if req.mobile_optimized {
+                Vec::new()
+            } else {
+                m.transcript.iter().map(|msg| ::server_ohc::agent::AgentMessage {
+                    id: msg.id.clone(),
+                    from_agent_id: msg.from_agent.clone(),
+                    to_agent_id: msg.to_agent.clone(),
+                    message_type: msg.r#type.clone(),
+                    content: msg.content.clone(),
+                    meeting_id: m.id.clone(),
+                    occurred_at_unix: msg.occurred_at_unix,
+                }).collect()
+            };
 
-                ::server_ohc::app::MeetingRoom {
-                    id: m.id.clone(),
-                    participants: m.participants.clone(),
-                    transcript,
-                }
-            })
-            .collect::<Vec<_>>();
+            ::server_ohc::app::MeetingRoom {
+                id: m.id.clone(),
+                participants: m.participants.clone(),
+                transcript,
+            }
+        }).collect::<Vec<_>>();
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
-        if req.mobile_optimized {
-            final_statuses.clear();
-        }
+        if req.mobile_optimized { final_statuses.clear(); }
 
         let mut original_prompts_len = 0;
         let mut compressed_prompts_len = 0;
@@ -772,11 +560,7 @@ impl DashboardService for MyDashboardService {
                     name,
                     role: role_val,
                     status: status_val,
-                    organization_id: if req.mobile_optimized {
-                        String::new()
-                    } else {
-                        a.organization_id.clone()
-                    },
+                    organization_id: if req.mobile_optimized { String::new() } else { a.organization_id.clone() },
                 }
             })
             .collect::<Vec<_>>();
@@ -815,11 +599,7 @@ impl DashboardService for MyDashboardService {
                     token_used: tokens_used,
                     roi,
                     efficiency,
-                    pct: if total_cost > 0.0 {
-                        (cost_usd / total_cost) as f32
-                    } else {
-                        0.0
-                    },
+                    pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
                     storage_usage_bytes: _storage,
                 });
             }
@@ -831,6 +611,8 @@ impl DashboardService for MyDashboardService {
                 projected_monthly_usd: 0.0,
                 agents: agent_summaries,
             });
+
+
         }
 
         let org = if req.mobile_optimized {
@@ -860,14 +642,7 @@ impl DashboardService for MyDashboardService {
         if let Some(c) = DASHBOARD_SNAPSHOT_CACHE.get() {
             let cache_key_set = cache_key.clone();
             let result_set = result.clone();
-            tokio::spawn(async move {
-                c.set(
-                    &cache_key_set,
-                    result_set,
-                    std::time::Duration::from_secs(5),
-                )
-                .await;
-            });
+            tokio::spawn(async move { c.set(&cache_key_set, result_set, std::time::Duration::from_secs(5)).await; });
         }
 
         Ok(Response::new(result))
@@ -898,8 +673,7 @@ impl DashboardService for MyDashboardService {
         }
 
         let cache_key = format!("onboarding_state_{}", org_id);
-        let cache =
-            ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+        let cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
         if let Some(cached) = cache.get(&cache_key).await {
             return Ok(Response::new(cached));
         }
@@ -924,13 +698,7 @@ impl DashboardService for MyDashboardService {
                     state_json: state_json.to_string(),
                 }),
             };
-            cache
-                .set(
-                    &cache_key,
-                    response.clone(),
-                    std::time::Duration::from_secs(60),
-                )
-                .await;
+            cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
             Ok(Response::new(response))
         } else {
             Err(Status::not_found("Onboarding state not found"))
@@ -1010,70 +778,29 @@ impl DashboardService for MyDashboardService {
 
         match update_res {
             Ok(Ok(_)) => {
-                let state_cache = ONBOARDING_STATE_CACHE
-                    .get_or_init(|| HybridCache::new(self.hub.redis_client()));
-                state_cache
-                    .invalidate(&format!("onboarding_state_{}", state.organization_id))
-                    .await;
-                let agent_cache =
-                    crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE
-                        .get_or_init(|| HybridCache::new(self.hub.redis_client()));
-                agent_cache
-                    .invalidate(&format!(
-                        "agent_onboarding_state_{}_{}",
-                        state.organization_id, state.user_id
-                    ))
-                    .await;
-                Ok(Response::new(UpdateOnboardingStateResponse {
-                    success: true,
-                }))
-            }
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+                agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
+                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+            },
             Ok(Err(e)) => {
-                tracing::warn!(
-                    "DB error updating onboarding state: {}. Write operation queued locally for retry.",
-                    e
-                );
+                tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
-                let state_cache = ONBOARDING_STATE_CACHE
-                    .get_or_init(|| HybridCache::new(self.hub.redis_client()));
-                state_cache
-                    .invalidate(&format!("onboarding_state_{}", state.organization_id))
-                    .await;
-                let agent_cache =
-                    crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE
-                        .get_or_init(|| HybridCache::new(self.hub.redis_client()));
-                agent_cache
-                    .invalidate(&format!(
-                        "agent_onboarding_state_{}_{}",
-                        state.organization_id, state.user_id
-                    ))
-                    .await;
-                Ok(Response::new(UpdateOnboardingStateResponse {
-                    success: true,
-                }))
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+                agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
+                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
             Err(_) => {
-                tracing::warn!(
-                    "Timeout updating onboarding state. Write operation queued locally for retry."
-                );
-                let state_cache = ONBOARDING_STATE_CACHE
-                    .get_or_init(|| HybridCache::new(self.hub.redis_client()));
-                state_cache
-                    .invalidate(&format!("onboarding_state_{}", state.organization_id))
-                    .await;
-                let agent_cache =
-                    crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE
-                        .get_or_init(|| HybridCache::new(self.hub.redis_client()));
-                agent_cache
-                    .invalidate(&format!(
-                        "agent_onboarding_state_{}_{}",
-                        state.organization_id, state.user_id
-                    ))
-                    .await;
-                Ok(Response::new(UpdateOnboardingStateResponse {
-                    success: true,
-                }))
+                tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
+                let state_cache = ONBOARDING_STATE_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+                state_cache.invalidate(&format!("onboarding_state_{}", state.organization_id)).await;
+                let agent_cache = crate::services::onboarding::onboarding_agent::ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+                agent_cache.invalidate(&format!("agent_onboarding_state_{}_{}", state.organization_id, state.user_id)).await;
+                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
             }
         }
     }
@@ -1082,29 +809,22 @@ impl DashboardService for MyDashboardService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_auth::orchestration::AuthInfo;
     use ::server_ohc::app::GetDashboardRequest;
     use ::server_ohc::app::dashboard_service_server::DashboardService;
-    use std::sync::Arc;
+    use ::server_auth::orchestration::AuthInfo;
     use tonic::Request;
+    use std::sync::Arc;
     use uuid::Uuid;
 
     async fn setup_test_dashboard_service() -> MyDashboardService {
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(database_url)
-            .await
-            .expect("Failed");
+            .connect(database_url).await.expect("Failed");
 
         sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.expect("Failed");
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.expect("Failed");
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)",
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed");
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.expect("Failed");
 
         // Add dummy data for tests
         sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'test_org', 'Test Product', 'physical', 100.0)").execute(&pool).await.expect("Failed");
@@ -1112,10 +832,7 @@ mod tests {
         sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('test_org', 'Test Org', 'free')").execute(&pool).await.expect("Failed");
 
         let pg_pool = crate::db::get_pool();
-        let db = Arc::new(crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(pool.clone()),
-        });
+        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
@@ -1132,24 +849,16 @@ mod tests {
 
         // Add meetings
         let meeting_id = format!("meeting-{}", Uuid::new_v4());
-        hub.open_meeting(
-            meeting_id.clone(),
-            vec!["agent_1".to_string()],
-            "Test Agenda".to_string(),
-        )
-        .await;
-        let _ = hub
-            .clone()
-            .publish(::server_ohc::orchestration::Message {
-                id: "msg_1".to_string(),
-                from_agent: "agent_1".to_string(),
-                to_agent: "all".to_string(),
-                r#type: "chat".to_string(),
-                content: "This is a transcript".to_string(),
-                occurred_at_unix: chrono::Utc::now().timestamp(),
-                meeting_id: meeting_id.clone(),
-            })
-            .await;
+        hub.open_meeting(meeting_id.clone(), vec!["agent_1".to_string()], "Test Agenda".to_string()).await;
+        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
+            id: "msg_1".to_string(),
+            from_agent: "agent_1".to_string(),
+            to_agent: "all".to_string(),
+            r#type: "chat".to_string(),
+            content: "This is a transcript".to_string(),
+            occurred_at_unix: chrono::Utc::now().timestamp(),
+            meeting_id: meeting_id.clone(),
+        }).await;
 
         MyDashboardService::new(db, hub)
     }
@@ -1158,10 +867,7 @@ mod tests {
     async fn test_dashboard_mobile_payload_optimization() {
         let service = setup_test_dashboard_service().await;
 
-        let req_mobile = GetDashboardRequest {
-            organization_id: "test_org".to_string(),
-            mobile_optimized: true,
-        };
+        let req_mobile = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
         let mut request_mobile = Request::new(req_mobile);
         request_mobile.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1169,72 +875,31 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_mobile = service
-            .get_dashboard(request_mobile)
-            .await
-            .expect("Failed")
-            .into_inner();
-        assert_eq!(
-            res_mobile.agents[0].name, "",
-            "Mobile optimization should clear agent names"
-        );
+        let res_mobile = service.get_dashboard(request_mobile).await.expect("Failed").into_inner();
+        assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
         if let Some(org) = res_mobile.organization {
-            assert_eq!(
-                org.domain, "",
-                "Mobile optimization should clear org domain"
-            );
-            assert!(
-                org.members.is_empty(),
-                "Mobile optimization should clear org members"
-            );
+            assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
+            assert!(org.members.is_empty(), "Mobile optimization should clear org members");
             assert_eq!(org.ceo_id, "", "Mobile optimization should clear ceo_id");
-            assert_eq!(
-                org.created_at_unix, 0,
-                "Mobile optimization should clear created_at_unix"
-            );
+            assert_eq!(org.created_at_unix, 0, "Mobile optimization should clear created_at_unix");
         }
         if !res_mobile.meetings.is_empty() {
-            assert_eq!(
-                res_mobile.meetings[0].transcript.len(),
-                0,
-                "Mobile optimization should clear meeting transcripts"
-            );
+            assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
         }
         if !res_mobile.products.is_empty() {
-            assert_ne!(
-                res_mobile.products[0].currency, "",
-                "Mobile payload should include product currency"
-            );
-            assert_eq!(
-                res_mobile.products[0].fulfillment_strategy, "",
-                "Mobile optimization should clear fulfillment_strategy"
-            );
+            assert_ne!(res_mobile.products[0].currency, "", "Mobile payload should include product currency");
+            assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
         }
         if !res_mobile.orders.is_empty() {
-            assert_eq!(
-                res_mobile.orders[0].organization_id, "",
-                "Mobile optimization should clear order organization_id"
-            );
+            assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
         }
         if !res_mobile.bookings.is_empty() {
-            assert_eq!(
-                res_mobile.bookings[0].organization_id, "",
-                "Mobile optimization should clear booking organization_id"
-            );
+            assert_eq!(res_mobile.bookings[0].organization_id, "", "Mobile optimization should clear booking organization_id");
         }
         if !res_mobile.products.is_empty() {
-            assert_eq!(
-                res_mobile.products[0].organization_id, "",
-                "Mobile optimization should clear product organization_id"
-            );
-            assert_eq!(
-                res_mobile.products[0].description, "",
-                "Mobile optimization should clear product description"
-            );
-            assert_eq!(
-                res_mobile.products[0].metadata_json, "",
-                "Mobile optimization should clear product metadata_json"
-            );
+            assert_eq!(res_mobile.products[0].organization_id, "", "Mobile optimization should clear product organization_id");
+            assert_eq!(res_mobile.products[0].description, "", "Mobile optimization should clear product description");
+            assert_eq!(res_mobile.products[0].metadata_json, "", "Mobile optimization should clear product metadata_json");
         }
     }
 
@@ -1242,10 +907,7 @@ mod tests {
     async fn test_dashboard_desktop_payload() {
         let service = setup_test_dashboard_service().await;
 
-        let req_desktop = GetDashboardRequest {
-            organization_id: "test_org".to_string(),
-            mobile_optimized: false,
-        };
+        let req_desktop = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request_desktop = Request::new(req_desktop);
         request_desktop.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1253,30 +915,17 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_desktop = service
-            .get_dashboard(request_desktop)
-            .await
-            .expect("Failed")
-            .into_inner();
-        assert_ne!(
-            res_desktop.agents[0].name, "",
-            "Desktop should preserve agent names"
-        );
+        let res_desktop = service.get_dashboard(request_desktop).await.expect("Failed").into_inner();
+        assert_ne!(res_desktop.agents[0].name, "", "Desktop should preserve agent names");
         if !res_desktop.meetings.is_empty() {
-            assert!(
-                res_desktop.meetings[0].transcript.len() > 0,
-                "Desktop should preserve meeting transcripts"
-            );
+            assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop should preserve meeting transcripts");
         }
     }
 
     #[tokio::test]
     async fn test_dashboard_ai_token_efficiency() {
         let service = setup_test_dashboard_service().await;
-        let req = GetDashboardRequest {
-            organization_id: "test_org".to_string(),
-            mobile_optimized: false,
-        };
+        let req = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1284,11 +933,7 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res = service
-            .get_dashboard(request)
-            .await
-            .expect("Failed")
-            .into_inner();
+        let res = service.get_dashboard(request).await.expect("Failed").into_inner();
         let cost_summary = res.cost_summary.expect("Failed");
         // Since original text is long with stop words ("a", "is", "and", "about", "of"),
         // the tokens should be mathematically reduced (compressed < original).
@@ -1301,10 +946,7 @@ mod tests {
     async fn test_dashboard_caching() {
         let service = setup_test_dashboard_service().await;
 
-        let req1 = GetDashboardRequest {
-            organization_id: "test_org".to_string(),
-            mobile_optimized: false,
-        };
+        let req1 = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request1 = Request::new(req1);
         request1.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1312,17 +954,10 @@ mod tests {
             agent_id: "test".to_string(),
         });
         let start1 = std::time::Instant::now();
-        let _res1 = service
-            .get_dashboard(request1)
-            .await
-            .expect("Failed")
-            .into_inner();
+        let _res1 = service.get_dashboard(request1).await.expect("Failed").into_inner();
         let _elapsed1 = start1.elapsed();
 
-        let req2 = GetDashboardRequest {
-            organization_id: "test_org".to_string(),
-            mobile_optimized: false,
-        };
+        let req2 = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request2 = Request::new(req2);
         request2.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1330,11 +965,7 @@ mod tests {
             agent_id: "test".to_string(),
         });
         let start2 = std::time::Instant::now();
-        let _res2 = service
-            .get_dashboard(request2)
-            .await
-            .expect("Failed")
-            .into_inner();
+        let _res2 = service.get_dashboard(request2).await.expect("Failed").into_inner();
         let _elapsed2 = start2.elapsed();
 
         // The second call might be faster, but we just verify it works properly via caching
@@ -1346,10 +977,7 @@ mod tests {
         let service = setup_test_dashboard_service().await;
 
         // Missing AuthInfo should return Unauthenticated
-        let req = GetDashboardRequest {
-            organization_id: "test_org".to_string(),
-            mobile_optimized: false,
-        };
+        let req = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let request = Request::new(req);
 
         let res = service.get_dashboard(request).await;
@@ -1362,10 +990,7 @@ mod tests {
         let mut service = setup_test_dashboard_service().await;
         service.is_multitenant = true;
 
-        let req = GetDashboardRequest {
-            organization_id: "test_org".to_string(),
-            mobile_optimized: false,
-        };
+        let req = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1393,19 +1018,14 @@ mod tests {
             provider_type: "test".to_string(),
         }];
 
-        cache
-            .set("test_key", agents, std::time::Duration::from_secs(30))
-            .await;
+        cache.set("test_key", agents, std::time::Duration::from_secs(30)).await;
         assert!(cache.get("test_key").await.is_some());
     }
 
     #[tokio::test]
     async fn test_dashboard_hybrid_latency_benchmark() {
         let service = setup_test_dashboard_service().await;
-        let req = GetDashboardRequest {
-            organization_id: "test_org".to_string(),
-            mobile_optimized: false,
-        };
+        let req = GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1414,18 +1034,10 @@ mod tests {
         });
 
         let start = std::time::Instant::now();
-        let _res = service
-            .get_dashboard(request)
-            .await
-            .expect("Failed")
-            .into_inner();
+        let _res = service.get_dashboard(request).await.expect("Failed").into_inner();
         let elapsed = start.elapsed();
         tracing::debug!("Hybrid benchmark completed in {} ms", elapsed.as_millis());
-        assert!(
-            elapsed.as_millis() < 500,
-            "Dashboard fetch took too long: {}ms",
-            elapsed.as_millis()
-        );
+        assert!(elapsed.as_millis() < 500, "Dashboard fetch took too long: {}ms", elapsed.as_millis());
     }
 
     #[tokio::test]
@@ -1433,10 +1045,7 @@ mod tests {
         let mut service = setup_test_dashboard_service().await;
         service.is_multitenant = true;
 
-        let req = GetDashboardRequest {
-            organization_id: "".to_string(),
-            mobile_optimized: false,
-        };
+        let req = GetDashboardRequest { organization_id: "".to_string(), mobile_optimized: false };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -1456,11 +1065,7 @@ mod tests {
             mobile_optimized: true,
         });
 
-        let response = service
-            .get_video_tutorials(request)
-            .await
-            .unwrap()
-            .into_inner();
+        let response = service.get_video_tutorials(request).await.unwrap().into_inner();
         assert!(!response.videos.is_empty());
         assert_eq!(response.videos[0].description, ""); // Omitted for mobile
         assert_eq!(response.videos[0].duration_sec, 0); // Omitted for mobile

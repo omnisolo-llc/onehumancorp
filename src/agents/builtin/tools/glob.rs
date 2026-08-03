@@ -1,13 +1,10 @@
 #![allow(clippy::comparison_to_empty)]
 use ohc_builtin_agent_core::types::ToolError;
-use serde::Deserialize;
 use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 #[derive(Deserialize)]
 struct GlobArgs {
@@ -16,9 +13,7 @@ struct GlobArgs {
     path: String,
 }
 
-fn default_path() -> String {
-    ".".to_string()
-}
+fn default_path() -> String { ".".to_string() }
 
 struct GlobExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -26,7 +21,10 @@ struct GlobExecutor {
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
-    async fn execute_typed(&self, args: GlobArgs) -> Result<String, ToolError> {
+    async fn execute_typed(
+        &self,
+        args: GlobArgs,
+    ) -> Result<String, ToolError> {
         let pattern = &args.pattern;
         let base_dir = &args.path;
 
@@ -48,9 +46,7 @@ impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
             .filter_map(|r| r.ok())
             .map(|p| {
                 let mut p_str = p.display().to_string();
-                if let Some(wd) = &self.working_dir
-                    && let Ok(rel) = p.strip_prefix(wd)
-                {
+                if let Some(wd) = &self.working_dir && let Ok(rel) = p.strip_prefix(wd) {
                     p_str = rel.display().to_string();
                 }
                 p_str

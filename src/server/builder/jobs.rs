@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use tracing::info;
 use uuid::Uuid;
+use tracing::info;
+use serde::{Deserialize, Serialize};
 
 pub async fn enqueue_publish_site_job(
     pool: &PgPool,
@@ -48,12 +48,7 @@ async fn execute_publish_site_job(
             .await
             .map_err(|e| e.to_string())?;
 
-        let should_generate_seo = page.seo_metadata.get("name").is_none()
-            || page
-                .seo_metadata
-                .as_object()
-                .map(|o| o.is_empty())
-                .unwrap_or(true);
+        let should_generate_seo = page.seo_metadata.get("name").is_none() || page.seo_metadata.as_object().map(|o| o.is_empty()).unwrap_or(true);
 
         if should_generate_seo {
             info!("Generating SEO metadata for page {}...", page.id);
@@ -67,45 +62,30 @@ async fn execute_publish_site_job(
                 }
             }
 
-            let prompt = format!(
-                "You are an expert SEO AI. Based on the following page content, generate a JSON object with SEO metadata for Generative Engine Optimization (GEO). The JSON must include 'name' (title), 'keywords', and a rich 'description' acting as a natural language summary optimized for AI search engines like ChatGPT and Gemini. Only return the JSON object. Content: {}",
-                block_texts.join(" ")
-            );
+            let prompt = format!("You are an expert SEO AI. Based on the following page content, generate a JSON object with SEO metadata for Generative Engine Optimization (GEO). The JSON must include 'name' (title), 'keywords', and a rich 'description' acting as a natural language summary optimized for AI search engines like ChatGPT and Gemini. Only return the JSON object. Content: {}", block_texts.join(" "));
 
             let mut attempts = 0;
             let mut ai_call_succeeded = false;
             let mut ai_res = String::new();
             while attempts < 3 {
-                match tokio::time::timeout(
-                    std::time::Duration::from_secs(60),
-                    minimax.reason(&prompt),
-                )
-                .await
-                {
+                match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await {
                     Ok(Ok(res)) => {
                         ai_res = res;
                         ai_call_succeeded = true;
                         break;
-                    }
+                    },
                     _ => {
                         attempts += 1;
-                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts)))
-                            .await;
+                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
                     }
                 }
             }
 
             if ai_call_succeeded {
-                let cleaned = ai_res
-                    .trim()
-                    .trim_start_matches("```json")
-                    .trim_start_matches("```")
-                    .trim_end_matches("```")
-                    .trim();
+                let cleaned = ai_res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
                 if let Ok(mut seo_json) = serde_json::from_str::<serde_json::Value>(cleaned) {
                     if seo_json.get("@context").is_none() {
-                        seo_json["@context"] =
-                            serde_json::Value::String("https://schema.org".to_string());
+                        seo_json["@context"] = serde_json::Value::String("https://schema.org".to_string());
                         seo_json["@type"] = serde_json::Value::String("LocalBusiness".to_string());
                     }
 
@@ -130,9 +110,7 @@ async fn execute_publish_site_job(
     .map_err(|e| e.to_string())?;
 
     let cache = crate::builder::edge::get_edge_cache();
-    cache
-        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
-        .await;
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
     let cache_key = format!("edge_site_{}_{}", tenant_id, site_id); // Keeping old var for notify to not break it
     sqlx::query("NOTIFY edge_cache_invalidation, $1")
@@ -144,24 +122,9 @@ async fn execute_publish_site_job(
 
     // Agentic SEO Pre-rendering: Proactively regenerate cache and push directly to edge
     let cache_key_full = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
-    match crate::builder::edge::regenerate_cache(
-        pool.clone(),
-        tenant_id,
-        site_id,
-        cache_key_full.clone(),
-        cache.clone(),
-    )
-    .await
-    {
-        Ok(_) => info!(
-            "Agentic SEO Pre-rendering: Successfully pre-rendered and pushed to edge cache: {}",
-            cache_key_full
-        ),
-        Err(e) => tracing::error!(
-            "Agentic SEO Pre-rendering: Failed to pre-render edge cache for {}: {}",
-            cache_key_full,
-            e
-        ),
+    match crate::builder::edge::regenerate_cache(pool.clone(), tenant_id, site_id, cache_key_full.clone(), cache.clone()).await {
+        Ok(_) => info!("Agentic SEO Pre-rendering: Successfully pre-rendered and pushed to edge cache: {}", cache_key_full),
+        Err(e) => tracing::error!("Agentic SEO Pre-rendering: Failed to pre-render edge cache for {}: {}", cache_key_full, e),
     }
 
     let site = super::db::list_sites(pool, tenant_id)
@@ -276,9 +239,7 @@ async fn provision_cdn_and_ssl(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(format!(
-            "CDN publish API failed with status {status}: {body}"
-        ));
+        return Err(format!("CDN publish API failed with status {status}: {body}"));
     }
 
     response
@@ -315,10 +276,6 @@ mod publish_tests {
     #[test]
     fn required_env_fails_closed_when_key_is_absent() {
         let result = required_env("OHC_TEST_CDN_KEY_THAT_SHOULD_NOT_EXIST");
-        assert!(
-            result
-                .unwrap_err()
-                .contains("OHC_TEST_CDN_KEY_THAT_SHOULD_NOT_EXIST")
-        );
+        assert!(result.unwrap_err().contains("OHC_TEST_CDN_KEY_THAT_SHOULD_NOT_EXIST"));
     }
 }

@@ -1,14 +1,11 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde::Deserialize;
 use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
-use tokio::fs::File;
 use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::fs::File;
 
-use super::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 // Pydantic-first tool schema validation: HeadArgs
 #[derive(Deserialize)]
@@ -28,30 +25,19 @@ impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
 
         // Basic path sanitization: disallow relative path traversal
         if path.contains("..") {
-            return Err(ToolError::LlmRecoverable(
-                "head: path traversal via '..' is not allowed".to_string(),
-            ));
+            return Err(ToolError::LlmRecoverable("head: path traversal via '..' is not allowed".to_string()));
         }
 
-        let safe_path = std::path::Path::new(&path)
-            .strip_prefix("/")
-            .unwrap_or(std::path::Path::new(&path));
-        let actual_path = if let Some(wd) = &self.working_dir {
-            wd.join(safe_path)
-        } else {
-            std::path::PathBuf::from(&path)
-        };
+        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
 
         let file = File::open(&actual_path)
             .await
-            .map_err(|e| format!("head: {}: {}", path, e))
-            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("head: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let lines_to_read = args.lines.unwrap_or(10) as usize;
         if lines_to_read > 1000 {
-            return Err(ToolError::LlmRecoverable(
-                "JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string(),
-            ));
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
         }
 
         let mut reader = BufReader::new(file);
@@ -60,9 +46,7 @@ impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
 
         for _ in 0..lines_to_read {
             buffer.clear();
-            let bytes_read = reader
-                .read_line(&mut buffer)
-                .await
+            let bytes_read = reader.read_line(&mut buffer).await
                 .map_err(|e| ToolError::LlmRecoverable(format!("head: read error: {}", e)))?;
             if bytes_read == 0 {
                 break;
@@ -107,9 +91,7 @@ mod tests {
     async fn test_head_basic() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
-        fs::write(&file_path, "line1\nline2\nline3\nline4\n")
-            .await
-            .unwrap();
+        fs::write(&file_path, "line1\nline2\nline3\nline4\n").await.unwrap();
 
         let tool = head_tool(Some(dir.path().to_path_buf()));
 
@@ -122,10 +104,7 @@ mod tests {
     async fn test_head_default_lines() {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
-        let content = (1..=15)
-            .map(|i| format!("line{}", i))
-            .collect::<Vec<_>>()
-            .join("\n");
+        let content = (1..=15).map(|i| format!("line{}", i)).collect::<Vec<_>>().join("\n");
         fs::write(&file_path, content).await.unwrap();
 
         let tool = head_tool(Some(dir.path().to_path_buf()));
@@ -161,11 +140,7 @@ mod tests {
         let result = tool.execute.execute(args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(
-                msg.contains("Cannot read more than 1000 lines"),
-                "msg was: {}",
-                msg
-            );
+            assert!(msg.contains("Cannot read more than 1000 lines"), "msg was: {}", msg);
         } else {
             panic!("Expected LlmRecoverable error");
         }

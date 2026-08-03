@@ -21,17 +21,11 @@ mod tests {
         );
 
         // Agent 1 grabs lock
-        let acquired1 = transport
-            .acquire_lock(&resource, "agent_1", 2)
-            .await
-            .unwrap_or_else(|e| panic!("Error: {:?}", e));
+        let acquired1 = transport.acquire_lock(&resource, "agent_1", 2).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
         assert!(acquired1);
 
         // Agent 2 attempts, but fails
-        let acquired2 = transport
-            .acquire_lock(&resource, "agent_2", 2)
-            .await
-            .unwrap_or_else(|e| panic!("Error: {:?}", e));
+        let acquired2 = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap_or_else(|e| panic!("Error: {:?}", e));
         assert!(!acquired2);
 
         // Simulate lag / timeout -> wait for TTL to pass.
@@ -41,16 +35,10 @@ mod tests {
         tokio::task::yield_now().await;
         tokio::task::yield_now().await;
 
-        let acquired2_retry = transport
-            .acquire_lock(&resource, "agent_2", 2)
-            .await
-            .unwrap_or(false);
+        let acquired2_retry = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap_or(false);
         assert!(acquired2_retry, "Agent 2 failed to acquire lock after wait");
 
-        transport
-            .release_lock(&resource, "agent_2")
-            .await
-            .unwrap_or_else(|e| panic!("Error: {:?}", e));
+        transport.release_lock(&resource, "agent_2").await.unwrap_or_else(|e| panic!("Error: {:?}", e));
     }
 
     #[tokio::test]
@@ -58,8 +46,8 @@ mod tests {
         // Simulating packet loss/retry loop for TeammateMesh events
         // Using Mock Mesh behavior
         use crate::orchestration::mesh::TeammateMesh;
+        use ohc_builtin_agent::mesh::transport::{Message, InProcessTransport, MeshTransport};
         use async_trait::async_trait;
-        use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport, Message};
 
         struct FaultyMesh {
             transport: InProcessTransport,
@@ -79,70 +67,34 @@ mod tests {
                 }
 
                 // On success, emulate transport
-                let _ = self
-                    .transport
-                    .publish(
-                        topic,
-                        Message {
-                            agent_id: "agent".to_string(),
-                            action: topic.to_string(),
-                            status: "pending".to_string(),
-                            payload: payload.clone(),
-                            msg_id: "test".to_string(),
-                        },
-                    )
-                    .await;
+                let _ = self.transport.publish(topic, Message {
+                    agent_id: "agent".to_string(),
+                    action: topic.to_string(),
+                    status: "pending".to_string(),
+                    payload: payload.clone(),
+                    msg_id: "test".to_string(),
+                }).await;
 
                 Ok(())
             }
 
-            async fn subscribe(
-                &self,
-                _topic: &str,
-                _handler: Box<dyn Fn(Message) + Send + Sync>,
-            ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
-            async fn acquire_lock(
-                &self,
-                resource: &str,
-                owner: &str,
-                ttl_seconds: u64,
-            ) -> Result<bool, String> {
-                self.transport
-                    .acquire_lock(resource, owner, ttl_seconds)
-                    .await
+            async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+                self.transport.acquire_lock(resource, owner, ttl_seconds).await
             }
             async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
                 self.transport.release_lock(resource, owner).await
             }
 
-            async fn register_presence(
-                &self,
-                _agent_id: &str,
-                _status: &str,
-                _ttl_seconds: u64,
-            ) -> Result<(), String> {
-                Ok(())
-            }
-            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
-                Ok(vec![])
-            }
-            async fn ping(&self) -> Result<(), String> {
-                Ok(())
-            }
-            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-                Ok(Box::new(|| {}))
-            }
-            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> {
-                Ok(())
-            }
-            async fn subscribe_state_handoff(
-                &self,
-                _handler: Box<dyn Fn(Message) + Send + Sync>,
-            ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-                Ok(Box::new(|| {}))
-            }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+
         }
 
         let faulty_mesh = FaultyMesh {
@@ -178,8 +130,7 @@ mod tests {
         let result = timeout(Duration::from_millis(500), async {
             std::future::pending::<()>().await;
             "ok"
-        })
-        .await;
+        }).await;
         assert!(result.is_err()); // Timeout triggers
     }
 
@@ -208,10 +159,7 @@ mod tests {
     async fn test_ai_agent_timeout_enforcement() {
         // Agent timeout rule: must have 60-second timeout.
         let timeout_ms = ohc_builtin_agent::agent::agent_task_timeout().as_millis();
-        assert_eq!(
-            timeout_ms, 60000,
-            "Agent jobs must have a 60-second timeout"
-        );
+        assert_eq!(timeout_ms, 60000, "Agent jobs must have a 60-second timeout");
     }
 
     #[tokio::test]

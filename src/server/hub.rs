@@ -1,20 +1,18 @@
-use crate::billing::Tracker;
-use crate::scheduler::Scheduler;
-use crate::services::billing::auditor::CostAuditor;
-use crate::tasks::TaskManager;
-use ::server_ohc::orchestration::{
-    Agent, AgentCapabilities, MeetingRoom, MeshEvent, Message, TeammateMeshEvent,
-};
-use ::server_pricing::calculator::CostConfig;
-use chrono::{DateTime, Utc};
-use regex::Regex;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::OnceLock;
-use tokio::sync::RwLock;
+use regex::Regex;
+use ::server_ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
+use tokio::sync::RwLock;
+use crate::billing::Tracker;
+use crate::tasks::TaskManager;
+use crate::scheduler::Scheduler;
+use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
+use std::sync::Arc;
+use crate::services::billing::auditor::CostAuditor;
+use ::server_pricing::calculator::CostConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HubEvent {
@@ -48,6 +46,7 @@ pub struct Hub {
 }
 
 impl Hub {
+
     pub fn set_db(&self, db: std::sync::Arc<crate::db::DB>) {
         *self.task_manager.db.write().unwrap() = Some(db);
     }
@@ -56,8 +55,7 @@ impl Hub {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
 
-        let (telemetry_tx, mut telemetry_rx) =
-            tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::AuditEvent>();
+        let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::AuditEvent>();
         let pool_clone = pool.clone();
         let cost_auditor = Arc::new({
             let mut a = CostAuditor::new(CostConfig::default());
@@ -80,36 +78,15 @@ impl Hub {
                     "cost_usd": cost,
                 });
 
-                let _ = ::server_telemetry::buffer_metric(
-                    &pool_clone,
-                    "ohc_token_usage_total",
-                    "counter",
-                    event.output_tokens as f32,
-                    labels.clone(),
-                )
-                .await;
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_token_usage_total", "counter", event.output_tokens as f32, labels.clone()).await;
 
                 let total_tokens = event.input_tokens + event.output_tokens;
-                let _ = ::server_telemetry::buffer_metric(
-                    &pool_clone,
-                    "ohc_tenant_token_usage_total",
-                    "counter",
-                    total_tokens as f32,
-                    labels.clone(),
-                )
-                .await;
+                let _ = ::server_telemetry::buffer_metric(&pool_clone, "ohc_tenant_token_usage_total", "counter", total_tokens as f32, labels.clone()).await;
 
                 // Blueprint: track cost in cents
                 let cost_cents = (cost * 100.0).round() as i64;
                 let labels_cents = labels.clone();
-                let _ = ::server_telemetry::buffer_metric_i64(
-                    &pool_clone,
-                    "ohc_llm_cost_total_cents",
-                    "counter",
-                    cost_cents,
-                    labels_cents,
-                )
-                .await;
+                let _ = ::server_telemetry::buffer_metric_i64(&pool_clone, "ohc_llm_cost_total_cents", "counter", cost_cents, labels_cents).await;
             }
         });
 
@@ -128,11 +105,7 @@ impl Hub {
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: {
-                let mut t = if let Ok(url) = std::env::var("REDIS_URL") {
-                    Tracker::new_with_redis(&url).with_db(pool.clone())
-                } else {
-                    Tracker::new()
-                };
+                let mut t = if let Ok(url) = std::env::var("REDIS_URL") { Tracker::new_with_redis(&url).with_db(pool.clone()) } else { Tracker::new() };
                 t.set_auditor(cost_auditor.clone());
                 t
             },
@@ -158,10 +131,7 @@ impl Hub {
         *self.agent_cache.write().await = None;
         if let Some(pool) = crate::redis_pool::get_redis_pool() {
             if let Ok(mut conn) = pool.get_async_connection().await {
-                let _: Result<(), _> = redis::cmd("DEL")
-                    .arg("hub:agents")
-                    .query_async(&mut conn)
-                    .await;
+                let _: Result<(), _> = redis::cmd("DEL").arg("hub:agents").query_async(&mut conn).await;
             }
         }
     }
@@ -170,10 +140,7 @@ impl Hub {
         *self.meetings_cache.write().await = None;
         if let Some(pool) = crate::redis_pool::get_redis_pool() {
             if let Ok(mut conn) = pool.get_async_connection().await {
-                let _: Result<(), _> = redis::cmd("DEL")
-                    .arg("hub:meetings")
-                    .query_async(&mut conn)
-                    .await;
+                let _: Result<(), _> = redis::cmd("DEL").arg("hub:meetings").query_async(&mut conn).await;
             }
         }
     }
@@ -182,9 +149,7 @@ impl Hub {
         self.cost_auditor.clone()
     }
 
-    pub fn get_telemetry_tx(
-        &self,
-    ) -> tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent> {
+    pub fn get_telemetry_tx(&self) -> tokio::sync::mpsc::UnboundedSender<crate::services::billing::auditor::AuditEvent> {
         self.telemetry_tx.clone()
     }
 
@@ -231,8 +196,7 @@ impl Hub {
                 let data: Option<String> = conn.get("hub:agents").await.ok()?;
                 let agents: Vec<Agent> = serde_json::from_str(&data?).ok()?;
                 Some(Arc::new(agents))
-            }
-            .await;
+            }.await;
             if let Some(arc) = res {
                 *self.agent_cache.write().await = Some(Arc::clone(&arc));
                 return arc;
@@ -259,8 +223,7 @@ impl Hub {
 
     pub async fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
         let agents = self.agents.read().await;
-        let mut agents_vec: Vec<Agent> = agents
-            .values()
+        let mut agents_vec: Vec<Agent> = agents.values()
             .filter(|a| a.organization_id == org_id)
             .cloned()
             .collect();
@@ -268,12 +231,7 @@ impl Hub {
         agents_vec
     }
 
-    pub async fn open_meeting(
-        &self,
-        id: String,
-        participants: Vec<String>,
-        agenda: String,
-    ) -> MeetingRoom {
+    pub async fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
         let mut meetings = self.meetings.write().await;
         let mut agents = self.agents.write().await;
 
@@ -303,12 +261,7 @@ impl Hub {
     pub async fn publish(self: std::sync::Arc<Self>, msg: Message) -> Result<(), String> {
         // Check rate limiting BEFORE acquiring locks, since the warning publish recurses into publish()
         if msg.from_agent != "system-scheduler" && msg.r#type != "warning" {
-            let tenant_id = msg
-                .to_agent
-                .split("-")
-                .next()
-                .unwrap_or("default")
-                .to_string();
+            let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
             let agent_id = msg.to_agent.clone();
             let meeting_id = msg.meeting_id.clone();
             let tracker = self.tracker.clone();
@@ -330,10 +283,7 @@ impl Hub {
                             let mut inbox = hub_clone.inbox.write().await;
                             let subs = hub_clone.subs.read().await;
                             let to = warning_msg.to_agent.clone();
-                            inbox
-                                .entry(to.clone())
-                                .or_insert_with(Vec::new)
-                                .push(warning_msg.clone());
+                            inbox.entry(to.clone()).or_insert_with(Vec::new).push(warning_msg.clone());
                             if let Some(tx) = subs.get(&to) {
                                 let _ = tx.send(warning_msg);
                             }
@@ -394,12 +344,7 @@ impl Hub {
                                         }];
 
                                         if mtg.transcript.len() > 3 {
-                                            new_transcript.extend(
-                                                mtg.transcript
-                                                    .iter()
-                                                    .cloned()
-                                                    .skip(mtg.transcript.len() - 3),
-                                            );
+                                            new_transcript.extend(mtg.transcript.iter().cloned().skip(mtg.transcript.len() - 3));
                                         } else {
                                             new_transcript.extend(mtg.transcript.iter().cloned());
                                         }
@@ -430,11 +375,7 @@ impl Hub {
         for m in all_meetings.iter() {
             if m.id.starts_with(org_id) || m.id.contains(org_id) {
                 filtered.push(m.clone());
-            } else if m
-                .participants
-                .iter()
-                .any(|p| p.starts_with(org_id) || p.contains(org_id))
-            {
+            } else if m.participants.iter().any(|p| p.starts_with(org_id) || p.contains(org_id)) {
                 filtered.push(m.clone());
             }
         }
@@ -456,8 +397,7 @@ impl Hub {
                 let data: Option<String> = conn.get("hub:meetings").await.ok()?;
                 let meetings: Vec<MeetingRoom> = serde_json::from_str(&data?).ok()?;
                 Some(Arc::new(meetings))
-            }
-            .await;
+            }.await;
             if let Some(arc) = res {
                 *self.meetings_cache.write().await = Some(Arc::clone(&arc));
                 return arc;
@@ -496,12 +436,7 @@ impl Hub {
         tx.subscribe()
     }
 
-    pub async fn delegate_task(
-        self: std::sync::Arc<Self>,
-        from_agent_id: String,
-        to_agent_id: String,
-        mut task: Message,
-    ) -> Result<(), String> {
+    pub async fn delegate_task(self: std::sync::Arc<Self>, from_agent_id: String, to_agent_id: String, mut task: Message) -> Result<(), String> {
         check_documentation_gate(&task.content)?;
 
         if !self.agents.read().await.contains_key(&from_agent_id) {
@@ -537,11 +472,7 @@ impl Hub {
             tracing::warn!("VRAM quota limit exceeded, but soft limit allows sub-agent creation");
         }
 
-        let sub_agent_id = format!(
-            "sub-agent-{}-{}",
-            target_role,
-            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
-        );
+        let sub_agent_id = format!("sub-agent-{}-{}", target_role, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
         let sub_agent = Agent {
             id: sub_agent_id.clone(),
             name: format!("Specialized {} Agent", target_role),
@@ -579,10 +510,7 @@ impl Hub {
             from_agent: from_agent_id.to_string(),
             to_agent: sub_agent_id.clone(),
             r#type: "TaskDelegation".to_string(),
-            content: format!(
-                "Execute Task: {}\nContext: {}\nK8sPod: {}\nAggregatedResult: {}",
-                instruction, parent_thread_id, pod_id, k8s_result
-            ),
+            content: format!("Execute Task: {}\nContext: {}\nK8sPod: {}\nAggregatedResult: {}", instruction, parent_thread_id, pod_id, k8s_result),
             occurred_at_unix: chrono::Utc::now().timestamp(),
             meeting_id: String::new(),
         };
@@ -624,11 +552,7 @@ impl Hub {
         tx.subscribe()
     }
 
-    pub async fn publish_teammate_event(
-        &self,
-        channel: String,
-        event: TeammateMeshEvent,
-    ) -> Result<(), String> {
+    pub async fn publish_teammate_event(&self, channel: String, event: TeammateMeshEvent) -> Result<(), String> {
         let mut teammate_events = self.teammate_events.write().await;
         let tx = teammate_events.entry(channel).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
@@ -638,10 +562,7 @@ impl Hub {
         Ok(())
     }
 
-    pub async fn subscribe_teammate_mesh(
-        &self,
-        channel: String,
-    ) -> broadcast::Receiver<TeammateMeshEvent> {
+    pub async fn subscribe_teammate_mesh(&self, channel: String) -> broadcast::Receiver<TeammateMeshEvent> {
         let mut teammate_events = self.teammate_events.write().await;
         let tx = teammate_events.entry(channel).or_insert_with(|| {
             let (tx, _) = broadcast::channel(100);
@@ -690,12 +611,7 @@ impl Hub {
         }
     }
 
-    pub fn tool_parameter_auto_correction(
-        &self,
-        event_id: &str,
-        agent_id: &str,
-        payload: &[u8],
-    ) -> Result<(), String> {
+    pub fn tool_parameter_auto_correction(&self, event_id: &str, agent_id: &str, payload: &[u8]) -> Result<(), String> {
         {
             let mut auto_cor_track = self.auto_cor_track.blocking_write();
             if auto_cor_track.contains(event_id) {
@@ -713,8 +629,7 @@ impl Hub {
         }
         let _guard = Guard(&self.auto_cor_track, event_id);
 
-        let mut temp: HashMap<String, serde_json::Value> =
-            serde_json::from_slice(payload).map_err(|e| e.to_string())?;
+        let mut temp: HashMap<String, serde_json::Value> = serde_json::from_slice(payload).map_err(|e| e.to_string())?;
 
         let mut corrected = false;
         for (_k, v) in temp.iter_mut() {
@@ -739,17 +654,10 @@ impl Hub {
         Ok(())
     }
 
-    pub async fn fork_agent(
-        self: std::sync::Arc<Self>,
-        parent_id: &str,
-        directive: &str,
-    ) -> Result<String, String> {
+    pub async fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
         let mut agents = self.agents.write().await;
 
-        let parent = agents
-            .get(parent_id)
-            .ok_or_else(|| format!("parent agent not found: {}", parent_id))?
-            .clone();
+        let parent = agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.clone();
 
         let child_id = format!("{}-fork-{}", parent_id, uuid::Uuid::new_v4());
         let child = Agent {
@@ -784,10 +692,7 @@ impl Hub {
             from_agent: "SYSTEM".to_string(),
             to_agent: child_id.clone(),
             r#type: "TaskAssignment".to_string(),
-            content: format!(
-                "<task-notification>\nDirective: {}\n</task-notification>",
-                directive
-            ),
+            content: format!("<task-notification>\nDirective: {}\n</task-notification>", directive),
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
         };
@@ -823,26 +728,16 @@ impl Hub {
 
         let pool5 = self.pool.clone();
         let stuck_missions_future = tokio::task::spawn(async move {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT count(*) FROM agent_missions WHERE status = 'STUCK'",
-            )
-            .fetch_one(&pool5)
-            .await
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'").fetch_one(&pool5).await
         });
 
-        let (db_ping_res, sync_queue_res_res, sync_errors_res_res, stuck_missions_res_res) = tokio::join!(
-            ping_future,
-            sync_queue_future,
-            sync_errors_future,
-            stuck_missions_future
-        );
+        let (db_ping_res, sync_queue_res_res, sync_errors_res_res, stuck_missions_res_res) = tokio::join!(ping_future, sync_queue_future, sync_errors_future, stuck_missions_future);
 
         let db_ping = db_ping_res.unwrap_or(0);
         let sync_queue_res = sync_queue_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
         let sync_errors_res = sync_errors_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-        let stuck_missions_res =
-            stuck_missions_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+        let stuck_missions_res = stuck_missions_res_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
         let sync_error_count = sync_errors_res.unwrap_or(0);
         let stuck_missions = stuck_missions_res.unwrap_or(0);
@@ -864,21 +759,13 @@ impl Hub {
         };
 
         let mut checklist = Vec::new();
-        if std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_default()
-            .starts_with("postgres")
-        {
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("postgres") {
             checklist.push("PostgreSQL Connected");
         }
         if std::env::var("REDIS_URL").is_ok() {
             checklist.push("Redis Available");
         }
-        if mode == "standalone"
-            && (std::env::var("OHC_DATABASE_URL").is_err()
-                || std::env::var("OHC_DATABASE_URL")
-                    .unwrap_or_default()
-                    .starts_with("sqlite"))
-        {
+        if mode == "standalone" && (std::env::var("OHC_DATABASE_URL").is_err() || std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("sqlite")) {
             checklist.push("SQLite Standalone Enabled");
         }
 
@@ -897,6 +784,8 @@ impl Hub {
     }
 }
 
+
+
 fn get_feature_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
     REGEX.get_or_init(|| Regex::new(r"\[Feature:\s*([^\]]+)\]").unwrap())
@@ -913,10 +802,7 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
         for file in &required_files {
             let path = std::path::Path::new(&base_dir).join(file);
             if !path.exists() {
-                return Err(format!(
-                    "missing required documentation: {}",
-                    path.display()
-                ));
+                return Err(format!("missing required documentation: {}", path.display()));
             }
         }
     }
@@ -928,6 +814,7 @@ pub fn check_documentation_gate(content: &str) -> Result<(), String> {
 mod tests {
     use super::*;
     use tokio::sync::mpsc;
+
 
     #[tokio::test]
     async fn test_publish_mesh_event() {
@@ -999,10 +886,7 @@ mod tests {
         assert_eq!(payload["mixed_array"][0]["nested_ip_address"], "[REDACTED]");
         assert_eq!(payload["mixed_array"][1]["S_S_N"], "[REDACTED]");
         assert_eq!(payload["nested"]["auth_token"], "[REDACTED]");
-        assert_eq!(
-            payload["nested"]["nested_again"]["credit_card"],
-            "[REDACTED]"
-        );
+        assert_eq!(payload["nested"]["nested_again"]["credit_card"], "[REDACTED]");
     }
 
     #[tokio::test]
@@ -1033,8 +917,7 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "IDLE".to_string(),
             provider_type: "test".to_string(),
-        })
-        .await;
+        }).await;
         assert!(hub.agent_cache.read().await.is_none());
 
         // 3. Get agents caches again
@@ -1051,8 +934,7 @@ mod tests {
         assert_eq!(meetings.await.len(), 0);
         assert!(hub.meetings_cache.read().await.is_some());
 
-        hub.open_meeting("meeting1".to_string(), vec![], "agenda".to_string())
-            .await;
+        hub.open_meeting("meeting1".to_string(), vec![], "agenda".to_string()).await;
         assert!(hub.meetings_cache.read().await.is_none());
         assert!(hub.agent_cache.read().await.is_none());
 
@@ -1061,18 +943,15 @@ mod tests {
         assert_eq!(meetings.await.len(), 1);
         assert!(hub.meetings_cache.read().await.is_some());
 
-        let _ = hub
-            .clone()
-            .publish(Message {
-                id: "msg1".to_string(),
-                from_agent: "sys".to_string(),
-                to_agent: "all".to_string(),
-                r#type: "test".to_string(),
-                content: "test".to_string(),
-                occurred_at_unix: 0,
-                meeting_id: "meeting1".to_string(),
-            })
-            .await;
+        let _ = hub.clone().publish(Message {
+            id: "msg1".to_string(),
+            from_agent: "sys".to_string(),
+            to_agent: "all".to_string(),
+            r#type: "test".to_string(),
+            content: "test".to_string(),
+            occurred_at_unix: 0,
+            meeting_id: "meeting1".to_string(),
+        }).await;
         assert!(hub.meetings_cache.read().await.is_none());
     }
     #[tokio::test]
@@ -1089,14 +968,12 @@ mod tests {
         let (tx, _) = mpsc::channel(100);
         let hub = std::sync::Arc::new(Hub::new(tx, pool));
 
-        let res = hub
-            .delegate_sub_task(
-                "non_existent_agent",
-                "developer",
-                "fix the bug",
-                "thread123",
-            )
-            .await;
+        let res = hub.delegate_sub_task(
+            "non_existent_agent",
+            "developer",
+            "fix the bug",
+            "thread123",
+        ).await;
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "sender agent is not registered");
     }
@@ -1109,13 +986,7 @@ mod tests {
 
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -1129,12 +1000,14 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        })
-        .await;
+        }).await;
 
-        let res = hub
-            .delegate_sub_task("manager_agent", "developer", "fix the bug", "thread123")
-            .await;
+        let res = hub.delegate_sub_task(
+            "manager_agent",
+            "developer",
+            "fix the bug",
+            "thread123",
+        ).await;
 
         assert!(res.is_ok());
         let spawned_id = res.unwrap();
@@ -1149,6 +1022,7 @@ mod tests {
 
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
+
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -1165,8 +1039,7 @@ mod tests {
             organization_id: "org1".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        })
-        .await;
+        }).await;
 
         let msg1 = Message {
             id: "msg1".to_string(),
@@ -1256,8 +1129,7 @@ mod tests {
     #[tokio::test]
     async fn test_concurrent_publish_does_not_block_runtime() {
         let pool = crate::db::secure_pg_pool_options()
-            .connect_lazy("postgres://localhost/test")
-            .unwrap();
+            .connect_lazy("postgres://localhost/test").unwrap();
         let (tx, _) = mpsc::channel(100);
         let hub = std::sync::Arc::new(Hub::new(tx, pool));
 
@@ -1276,9 +1148,7 @@ mod tests {
                     content: format!("concurrent message {}", i),
                     occurred_at_unix: i,
                     meeting_id: String::new(),
-                })
-                .await
-                .unwrap();
+                }).await.unwrap();
             }));
         }
 
@@ -1292,9 +1162,6 @@ mod tests {
         }
         assert_eq!(count, 20, "all 20 concurrent publishes should be received");
 
-        assert!(
-            rx2.try_recv().is_err(),
-            "agent-b should not receive agent-a messages"
-        );
+        assert!(rx2.try_recv().is_err(), "agent-b should not receive agent-a messages");
     }
 }

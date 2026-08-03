@@ -1,20 +1,18 @@
-use ::server_ohc::orchestration::growth_service_server::GrowthService;
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::{CreateReferralRequest, EmptyRequest, GrowthIdRequest};
 use tonic::{Request, Response, Status};
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::growth_service_server::GrowthService;
+use ::server_ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
 
-use ::server_ohc::orchestration::{
-    GetReputationRequest, GetReputationResponse, SubmitReviewRequest, SubmitReviewResponse,
-};
+use ::server_ohc::orchestration::{SubmitReviewRequest, SubmitReviewResponse, GetReputationRequest, GetReputationResponse};
 use uuid::Uuid;
 
-use crate::services::growth::referral_api;
-use ::server_common::auth_utils::set_org_context;
-use chrono::Utc;
-use sqlx::{PgPool, Row};
+use std::sync::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::RwLock;
+use chrono::Utc;
+use sqlx::{PgPool, Row};
+use crate::services::growth::referral_api;
+use ::server_common::auth_utils::set_org_context;
 
 use ::server_utils::cache::HybridCache;
 
@@ -47,8 +45,7 @@ impl MyGrowthService {
     }
 
     async fn get_org_id(&self, metadata: &tonic::metadata::MetadataMap) -> Result<String, Status> {
-        let spiffe_id_str = metadata
-            .get("x-spiffe-id")
+        let spiffe_id_str = metadata.get("x-spiffe-id")
             .ok_or_else(|| Status::unauthenticated("missing x-spiffe-id header"))?
             .to_str()
             .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?;
@@ -68,14 +65,8 @@ impl GrowthService for MyGrowthService {
         let tenant_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &tenant_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let review_id = Uuid::new_v4().to_string();
 
@@ -123,9 +114,7 @@ impl GrowthService for MyGrowthService {
             }
         }
 
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(SubmitReviewResponse {
             review_id,
@@ -139,26 +128,16 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<GetReputationResponse>, Status> {
         let tenant_id = self.get_org_id(request.metadata()).await?;
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &tenant_id)
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let _row = sqlx::query("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_optional(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let _row = sqlx::query(
-            "SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1",
-        )
-        .bind(&tenant_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
-
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         if let Some(r) = _row {
             use sqlx::Row;
@@ -220,44 +199,26 @@ impl GrowthService for MyGrowthService {
 
         let (rows_res, business_name_res) = tokio::join!(
             async {
-                let mut tx = pool1
-                    .begin()
+                let mut tx = pool1.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                set_org_context(&mut *tx, &org_id_clone1).await.map_err(|e| Status::internal(e.to_string()))?;
+                let rows = sqlx::query("SELECT clicks, conversions FROM referrals WHERE organization_id = $1")
+                    .bind(&org_id_clone1)
+                    .fetch_all(&mut *tx)
                     .await
                     .map_err(|e| Status::internal(e.to_string()))?;
-                set_org_context(&mut *tx, &org_id_clone1)
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
-                let rows = sqlx::query(
-                    "SELECT clicks, conversions FROM referrals WHERE organization_id = $1",
-                )
-                .bind(&org_id_clone1)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
-                tx.commit()
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
                 Ok::<_, Status>(rows)
             },
             async {
-                let mut tx = pool2
-                    .begin()
+                let mut tx = pool2.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                set_org_context(&mut *tx, &org_id_clone2).await.map_err(|e| Status::internal(e.to_string()))?;
+                let name: String = sqlx::query_scalar("SELECT business_name FROM tenants WHERE tenant_id = $1::uuid")
+                    .bind(&org_id_clone2)
+                    .fetch_optional(&mut *tx)
                     .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
-                set_org_context(&mut *tx, &org_id_clone2)
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
-                let name: String = sqlx::query_scalar(
-                    "SELECT business_name FROM tenants WHERE tenant_id = $1::uuid",
-                )
-                .bind(&org_id_clone2)
-                .fetch_optional(&mut *tx)
-                .await
-                .unwrap_or(None)
-                .unwrap_or_else(|| "My Awesome Store".to_string());
-                tx.commit()
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
+                    .unwrap_or(None)
+                    .unwrap_or_else(|| "My Awesome Store".to_string());
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
                 Ok::<_, Status>(name)
             }
         );
@@ -313,14 +274,8 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<ReferralsResponse>, Status> {
         let org_id = self.get_org_id(request.metadata()).await?;
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let rows = sqlx::query("SELECT id, user_id, referral_code, clicks, conversions, created_at_unix FROM referrals WHERE organization_id = $1")
             .bind(&org_id)
@@ -328,23 +283,22 @@ impl GrowthService for MyGrowthService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
-        let referrals = rows
-            .into_iter()
-            .map(|row| Referral {
+        let referrals = rows.into_iter().map(|row| {
+            Referral {
                 id: row.get("id"),
                 user_id: row.get("user_id"),
                 referral_code: row.get("referral_code"),
                 clicks: row.get("clicks"),
                 conversions: row.get("conversions"),
                 created_at_unix: row.get("created_at_unix"),
-            })
-            .collect();
+            }
+        }).collect();
 
-        Ok(Response::new(ReferralsResponse { referrals }))
+        Ok(Response::new(ReferralsResponse {
+            referrals,
+        }))
     }
 
     async fn create_referral(
@@ -376,14 +330,8 @@ impl GrowthService for MyGrowthService {
         let id = format!("ref-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
         let created_at = Utc::now().timestamp();
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, created_at_unix) VALUES ($1, $2, $3, $4, $5)")
             .bind(&id)
@@ -395,9 +343,7 @@ impl GrowthService for MyGrowthService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
             id,
@@ -416,14 +362,8 @@ impl GrowthService for MyGrowthService {
         let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let _row = sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
             .bind(&req.id)
@@ -431,9 +371,7 @@ impl GrowthService for MyGrowthService {
             .await
             .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
 
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
             id: _row.get("id"),
@@ -452,14 +390,8 @@ impl GrowthService for MyGrowthService {
         let org_id = self.get_org_id(request.metadata()).await?;
         let req = request.into_inner();
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let _row = sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1 RETURNING id, user_id, referral_code, clicks, conversions, created_at_unix")
             .bind(&req.id)
@@ -491,9 +423,7 @@ impl GrowthService for MyGrowthService {
             .execute(&mut *tx)
             .await;
 
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(Referral {
             id: _row.get("id"),
@@ -553,9 +483,7 @@ impl GrowthService for MyGrowthService {
     ) -> Result<Response<TeamInviteProto>, Status> {
         let req = request.into_inner();
         if req.inviter_id.is_empty() || req.invitee_id.is_empty() {
-            return Err(Status::invalid_argument(
-                "inviterId and inviteeId are required",
-            ));
+            return Err(Status::invalid_argument("inviterId and inviteeId are required"));
         }
 
         let invite = TeamInviteProto {
@@ -599,25 +527,16 @@ impl GrowthService for MyGrowthService {
             return Ok(Response::new(cached_response));
         }
 
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        set_org_context(&mut *tx, &org_id)
+        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        set_org_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let rows = sqlx::query("SELECT user_id, conversions FROM referrals WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let rows =
-            sqlx::query("SELECT user_id, conversions FROM referrals WHERE organization_id = $1")
-                .bind(&org_id)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
-
-        tx.commit()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
         let total_referrals = rows.len() as i32;
         let mut total_conversions = 0;
@@ -644,13 +563,7 @@ impl GrowthService for MyGrowthService {
             score,
         };
 
-        self.referral_score_cache
-            .set(
-                &cache_key,
-                response.clone(),
-                std::time::Duration::from_secs(60),
-            )
-            .await;
+        self.referral_score_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(Response::new(response))
     }
@@ -725,10 +638,7 @@ impl GrowthService for MyGrowthService {
             } else {
                 step
             };
-            metrics.push(OnboardingMetric {
-                step: optimized_step,
-                count,
-            });
+            metrics.push(OnboardingMetric { step: optimized_step, count });
         }
 
         Ok(Response::new(OnboardingMetricsResponse { metrics }))
@@ -758,65 +668,37 @@ impl GrowthService for MyGrowthService {
 
         let (referral_res, product_res, tier_res) = tokio::join!(
             async {
-                let mut tx = pool1
-                    .begin()
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
-                set_org_context(&mut *tx, &org_id_clone1)
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
+                let mut tx = pool1.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                set_org_context(&mut *tx, &org_id_clone1).await.map_err(|e| Status::internal(e.to_string()))?;
 
-                let mut query =
-                    "SELECT SUM(conversions) FROM referrals WHERE organization_id = $1".to_string();
+                let mut query = "SELECT SUM(conversions) FROM referrals WHERE organization_id = $1".to_string();
                 if !user_id_clone.is_empty() {
                     query.push_str(" AND user_id = $2");
                 }
                 let row = if user_id_clone.is_empty() {
-                    sqlx::query(&query)
-                        .bind(&org_id_clone1)
-                        .fetch_one(&mut *tx)
-                        .await
+                    sqlx::query(&query).bind(&org_id_clone1).fetch_one(&mut *tx).await
                 } else {
-                    sqlx::query(&query)
-                        .bind(&org_id_clone1)
-                        .bind(&user_id_clone)
-                        .fetch_one(&mut *tx)
-                        .await
-                }
-                .map_err(|e| Status::internal(e.to_string()))?;
+                    sqlx::query(&query).bind(&org_id_clone1).bind(&user_id_clone).fetch_one(&mut *tx).await
+                }.map_err(|e| Status::internal(e.to_string()))?;
 
                 let total_conversions: i64 = row.try_get(0).unwrap_or(0);
-                tx.commit()
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
                 Ok::<_, Status>(total_conversions)
             },
             async {
-                let mut tx = pool2
-                    .begin()
+                let mut tx = pool2.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+                set_org_context(&mut *tx, &org_id_clone2).await.map_err(|e| Status::internal(e.to_string()))?;
+                let product_count_row = sqlx::query("SELECT COUNT(*)::BIGINT FROM products WHERE tenant_id = $1")
+                    .bind(&org_id_clone2)
+                    .fetch_one(&mut *tx)
                     .await
                     .map_err(|e| Status::internal(e.to_string()))?;
-                set_org_context(&mut *tx, &org_id_clone2)
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
-                let product_count_row =
-                    sqlx::query("SELECT COUNT(*)::BIGINT FROM products WHERE tenant_id = $1")
-                        .bind(&org_id_clone2)
-                        .fetch_one(&mut *tx)
-                        .await
-                        .map_err(|e| Status::internal(e.to_string()))?;
                 let product_count: i64 = product_count_row.try_get(0).unwrap_or(0);
-                tx.commit()
-                    .await
-                    .map_err(|e| Status::internal(e.to_string()))?;
+                tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
                 Ok::<_, Status>(product_count)
             },
             async {
-                hub_clone
-                    .tracker()
-                    .get_tenant_tier(&org_id_clone3)
-                    .await
-                    .unwrap_or(::server_pricing::rate_limit::PlanTier::Free)
+                hub_clone.tracker().get_tenant_tier(&org_id_clone3).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free)
             }
         );
 
@@ -825,10 +707,7 @@ impl GrowthService for MyGrowthService {
         let _referral_quota = 50 + (total_conversions as i32) * 10;
         let tier = tier_res;
         let product_limit = tier.max_products().map(|limit| limit as i32).unwrap_or(0);
-        let soft_limit_reached = tier
-            .max_products()
-            .map(|limit| product_count >= limit as i64)
-            .unwrap_or(false);
+        let soft_limit_reached = tier.max_products().map(|limit| product_count >= limit as i64).unwrap_or(false);
         let upgrade_message = if mobile_optimized {
             String::new()
         } else if soft_limit_reached {
@@ -853,13 +732,7 @@ impl GrowthService for MyGrowthService {
             upgrade_message,
             is_allowed: !soft_limit_reached,
         };
-        self.quota_cache
-            .set(
-                &cache_key,
-                response.clone(),
-                std::time::Duration::from_secs(60),
-            )
-            .await;
+        self.quota_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(Response::new(response))
     }
@@ -902,21 +775,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_referral_flow() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool_opts = crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(500))
-            .max_connections(1);
-        let pool = match pool_opts.connect_lazy(&database_url) {
-            Ok(p) => p,
-            Err(_) => return,
-        };
-        if database_url.contains("localhost") {
-            return;
-        }
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            return;
-        }
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
+        if database_url.contains("localhost") { return; }
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let service = MyGrowthService::new(pool, hub);
@@ -925,10 +788,7 @@ mod tests {
             user_id: "test_user".to_string(),
             referral_code: "TESTCODE".to_string(),
         });
-        req.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org1/agent1".parse().unwrap(),
-        );
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
 
         let resp = service.create_referral(req).await.unwrap().into_inner();
         assert_eq!(resp.user_id, "test_user");
@@ -937,210 +797,83 @@ mod tests {
         let _ = sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ('00000000-0000-0000-0000-000000000001'::uuid, 'Test Org', 'free') ON CONFLICT DO NOTHING")
             .execute(&service.pool).await;
 
-        let mut click_req = Request::new(GrowthIdRequest {
-            id: resp.id.clone(),
-        });
-        click_req.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/00000000-0000-0000-0000-000000000001/agent1"
-                .parse()
-                .unwrap(),
-        );
-        let click_resp = service
-            .click_referral(click_req)
-            .await
-            .unwrap()
-            .into_inner();
+        let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        click_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/00000000-0000-0000-0000-000000000001/agent1".parse().unwrap());
+        let click_resp = service.click_referral(click_req).await.unwrap().into_inner();
         assert_eq!(click_resp.clicks, 1);
 
         // Verify plan is still free after click
-        let org_tier: String = sqlx::query_scalar(
-            "SELECT plan_tier FROM tenants WHERE id = '00000000-0000-0000-0000-000000000001'::uuid",
-        )
-        .fetch_one(&service.pool)
-        .await
-        .unwrap_or_else(|_| "free".to_string());
+        let org_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = '00000000-0000-0000-0000-000000000001'::uuid")
+            .fetch_one(&service.pool).await.unwrap_or_else(|_| "free".to_string());
         assert_eq!(org_tier, "free", "Plan should not upgrade on click");
 
-        let mut conv_req = Request::new(GrowthIdRequest {
-            id: resp.id.clone(),
-        });
-        conv_req.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/00000000-0000-0000-0000-000000000001/agent1"
-                .parse()
-                .unwrap(),
-        );
-        let conv_resp = service
-            .convert_referral(conv_req)
-            .await
-            .unwrap()
-            .into_inner();
+        let mut conv_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
+        conv_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/00000000-0000-0000-0000-000000000001/agent1".parse().unwrap());
+        let conv_resp = service.convert_referral(conv_req).await.unwrap().into_inner();
         assert_eq!(conv_resp.conversions, 1);
 
         // Verify plan is upgraded to pro after conversion
-        let upgraded_tier: String = sqlx::query_scalar(
-            "SELECT plan_tier FROM tenants WHERE id = '00000000-0000-0000-0000-000000000001'::uuid",
-        )
-        .fetch_one(&service.pool)
-        .await
-        .unwrap_or_else(|_| "free".to_string());
+        let upgraded_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = '00000000-0000-0000-0000-000000000001'::uuid")
+            .fetch_one(&service.pool).await.unwrap_or_else(|_| "free".to_string());
         assert_eq!(upgraded_tier, "pro", "Plan should upgrade on conversion");
 
         let mut list_req = Request::new(EmptyRequest {});
-        list_req.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org1/agent1".parse().unwrap(),
-        );
+        list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
         assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
     }
 
     #[tokio::test]
     async fn test_referral_score_caching() {
-        let pool_opts = crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(500))
-            .max_connections(1);
-        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-        {
-            Ok(p) => p,
-            Err(_) => return,
-        };
-        if std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_default()
-            .contains("localhost")
-        {
-            return;
-        }
-        if !matches!(
-            tokio::time::timeout(
-                std::time::Duration::from_millis(500),
-                sqlx::query("SELECT 1").execute(&pool)
-            )
-            .await,
-            Ok(Ok(_))
-        ) {
-            return;
-        }
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
         let service = MyGrowthService::new(pool, hub);
 
         let mut req1 = Request::new(EmptyRequest {});
-        req1.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-test-cache/agent1"
-                .parse()
-                .unwrap(),
-        );
+        req1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
         let res1 = service.get_referral_score(req1).await;
-        assert!(
-            res1.is_ok(),
-            "First referral score request should succeed and cache the result"
-        );
+        assert!(res1.is_ok(), "First referral score request should succeed and cache the result");
 
         let mut req2 = Request::new(EmptyRequest {});
-        req2.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-test-cache/agent1"
-                .parse()
-                .unwrap(),
-        );
+        req2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
         let res2 = service.get_referral_score(req2).await;
-        assert!(
-            res2.is_ok(),
-            "Second referral score request should succeed by returning cached value"
-        );
-        assert_eq!(
-            res1.unwrap().into_inner().score,
-            res2.unwrap().into_inner().score
-        );
+        assert!(res2.is_ok(), "Second referral score request should succeed by returning cached value");
+        assert_eq!(res1.unwrap().into_inner().score, res2.unwrap().into_inner().score);
     }
 
     #[tokio::test]
     async fn test_quota_caching() {
-        let pool_opts = crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(500))
-            .max_connections(1);
-        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-        {
-            Ok(p) => p,
-            Err(_) => return,
-        };
-        if std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_default()
-            .contains("localhost")
-        {
-            return;
-        }
-        if !matches!(
-            tokio::time::timeout(
-                std::time::Duration::from_millis(500),
-                sqlx::query("SELECT 1").execute(&pool)
-            )
-            .await,
-            Ok(Ok(_))
-        ) {
-            return;
-        }
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
+        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
         let service = MyGrowthService::new(pool, hub);
 
-        let mut req1 = Request::new(GetQuotaRequest {
-            user_id: "user1".to_string(),
-            mobile_optimized: false,
-        });
-        req1.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-test-cache/agent1"
-                .parse()
-                .unwrap(),
-        );
+        let mut req1 = Request::new(GetQuotaRequest { user_id: "user1".to_string(), mobile_optimized: false });
+        req1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
         let res1 = service.get_quota(req1).await;
-        assert!(
-            res1.is_ok(),
-            "First quota request should succeed and cache the result"
-        );
+        assert!(res1.is_ok(), "First quota request should succeed and cache the result");
 
-        let mut req2 = Request::new(GetQuotaRequest {
-            user_id: "user1".to_string(),
-            mobile_optimized: false,
-        });
-        req2.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org-test-cache/agent1"
-                .parse()
-                .unwrap(),
-        );
+        let mut req2 = Request::new(GetQuotaRequest { user_id: "user1".to_string(), mobile_optimized: false });
+        req2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
         let res2 = service.get_quota(req2).await;
-        assert!(
-            res2.is_ok(),
-            "Second quota request should succeed by returning cached value"
-        );
-        assert_eq!(
-            res1.unwrap().into_inner().max,
-            res2.unwrap().into_inner().max
-        );
+        assert!(res2.is_ok(), "Second quota request should succeed by returning cached value");
+        assert_eq!(res1.unwrap().into_inner().max, res2.unwrap().into_inner().max);
     }
 
     #[tokio::test]
     async fn test_submit_review_and_reputation_flow() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool_opts = crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(500))
-            .max_connections(1);
-        let pool = match pool_opts.connect_lazy(&database_url) {
-            Ok(p) => p,
-            Err(_) => return,
-        };
-        if database_url.contains("localhost") {
-            return;
-        }
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            return;
-        }
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
+        let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
+        if database_url.contains("localhost") { return; }
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let service = MyGrowthService::new(pool, hub);
@@ -1152,15 +885,10 @@ mod tests {
             rating: 5,
             comment: "Excellent!".to_string(),
         });
-        req.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org1/agent1".parse().unwrap(),
-        );
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
 
         // Ensure tenant isolation
-        let _ = sqlx::query("SET app.current_tenant = 'org1'")
-            .execute(&service.pool)
-            .await;
+        let _ = sqlx::query("SET app.current_tenant = 'org1'").execute(&service.pool).await;
 
         let res = service.submit_review(req).await;
         if let Ok(resp) = res {
@@ -1171,10 +899,7 @@ mod tests {
 
         // Get reputation
         let mut get_req = Request::new(GetReputationRequest {});
-        get_req.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/org1/agent1".parse().unwrap(),
-        );
+        get_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
         let get_res = service.get_reputation(get_req).await;
         if let Ok(resp) = get_res {
             let inner = resp.into_inner();
@@ -1190,11 +915,7 @@ mod tests {
         }
 
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = crate::db::secure_pg_pool_options()
-            .max_connections(5)
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
@@ -1207,28 +928,19 @@ mod tests {
         };
 
         let mut request = Request::new(req);
-        request
-            .extensions_mut()
-            .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "test".to_string(),
-                org_id: "test_org".to_string(),
-                agent_id: "test".to_string(),
-            });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
 
         let start = std::time::Instant::now();
         let _res = service.get_quota(request).await.unwrap().into_inner();
         let elapsed = start.elapsed();
-        tracing::debug!(
-            "get_quota Hybrid benchmark completed in {} ms",
-            elapsed.as_millis()
-        );
+        tracing::debug!("get_quota Hybrid benchmark completed in {} ms", elapsed.as_millis());
 
         // Assert that the optimization keeps latency under an acceptable threshold (e.g. 500ms)
-        assert!(
-            elapsed.as_millis() < 500,
-            "get_quota fetch took too long: {}ms",
-            elapsed.as_millis()
-        );
+        assert!(elapsed.as_millis() < 500, "get_quota fetch took too long: {}ms", elapsed.as_millis());
     }
 
     #[tokio::test]
@@ -1238,11 +950,7 @@ mod tests {
         }
 
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = crate::db::secure_pg_pool_options()
-            .max_connections(5)
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
@@ -1255,21 +963,16 @@ mod tests {
         };
 
         let mut request = Request::new(req);
-        request
-            .extensions_mut()
-            .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "test".to_string(),
-                org_id: "test_org".to_string(),
-                agent_id: "test".to_string(),
-            });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
 
         let res = service.get_quota(request).await.unwrap().into_inner();
 
         // When mobile optimized, upgrade_message should be empty
-        assert_eq!(
-            res.upgrade_message, "",
-            "Mobile payload should omit the upgrade message"
-        );
+        assert_eq!(res.upgrade_message, "", "Mobile payload should omit the upgrade message");
     }
 
     #[tokio::test]
@@ -1279,11 +982,7 @@ mod tests {
         }
 
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = crate::db::secure_pg_pool_options()
-            .max_connections(5)
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
@@ -1305,27 +1004,17 @@ mod tests {
         };
 
         let mut request = Request::new(req);
-        request
-            .extensions_mut()
-            .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "test".to_string(),
-                org_id: "test_org".to_string(),
-                agent_id: "test".to_string(),
-            });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "test_org".to_string(),
+            agent_id: "test".to_string(),
+        });
 
-        let res = service
-            .get_onboarding_metrics(request)
-            .await
-            .unwrap()
-            .into_inner();
+        let res = service.get_onboarding_metrics(request).await.unwrap().into_inner();
 
         assert!(!res.metrics.is_empty(), "Metrics should not be empty");
         for metric in res.metrics {
-            assert!(
-                metric.step.len() <= 13,
-                "Mobile payload should truncate step name. Found length: {}",
-                metric.step.len()
-            );
+            assert!(metric.step.len() <= 13, "Mobile payload should truncate step name. Found length: {}", metric.step.len());
         }
     }
 }

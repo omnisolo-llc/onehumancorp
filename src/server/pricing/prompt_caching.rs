@@ -225,9 +225,7 @@ impl PromptCache {
             }
 
             // Clean up trailing whitespace and punctuation before appending ellipsis
-            let trimmed_len = result
-                .trim_end_matches(|c: char| c.is_whitespace() || c.is_ascii_punctuation())
-                .len();
+            let trimmed_len = result.trim_end_matches(|c: char| c.is_whitespace() || c.is_ascii_punctuation()).len();
             result.truncate(trimmed_len);
 
             result.push_str("...");
@@ -336,18 +334,15 @@ mod tests {
         assert_eq!(cost_4o, 250);
 
         // gpt-4o-mini: cached_cost = 0.075 per 1M -> 0.075 * 100 = 7.5 cents -> rounded 8 cents
-        let (_, cost_mini) =
-            cache.get_with_cost_cents("What is the capital of France?", "gpt-4o-mini");
+        let (_, cost_mini) = cache.get_with_cost_cents("What is the capital of France?", "gpt-4o-mini");
         assert_eq!(cost_mini, 8);
 
         // claude-3-opus: cached_cost = 0.0
-        let (_, cost_opus) =
-            cache.get_with_cost_cents("What is the capital of France?", "claude-3-opus");
+        let (_, cost_opus) = cache.get_with_cost_cents("What is the capital of France?", "claude-3-opus");
         assert_eq!(cost_opus, 0);
 
         // claude-3.5-sonnet: cached_cost = 0.30 per 1M
-        let (_, cost_sonnet) =
-            cache.get_with_cost_cents("What is the capital of France?", "claude-3.5-sonnet");
+        let (_, cost_sonnet) = cache.get_with_cost_cents("What is the capital of France?", "claude-3.5-sonnet");
         assert_eq!(cost_sonnet, 30);
     }
 
@@ -407,11 +402,7 @@ mod tests {
         // Verify the oldest 10 items were removed (prompt-key-0 to prompt-key-9)
         for i in 0..10 {
             let key = format!("prompt-key-{}", i);
-            assert!(
-                cache.get(&key).is_none(),
-                "Old key {} was not evicted!",
-                key
-            );
+            assert!(cache.get(&key).is_none(), "Old key {} was not evicted!", key);
         }
 
         // Verify the newly inserted item is there

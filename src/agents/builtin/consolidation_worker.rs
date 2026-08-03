@@ -39,21 +39,8 @@ impl ConsolidationWorker {
     /// Run a single consolidation pass manually. Useful for testing.
     pub async fn run_once(&self) -> Result<(usize, bool), String> {
         let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
-        let pruning_source_types_refs: Vec<&str> = self
-            .pruning_source_types
-            .iter()
-            .map(|s| s.as_str())
-            .collect();
-        let pruning_success = match self
-            .repository
-            .prune_stale(
-                threshold_date,
-                self.pruning_min_reliability,
-                self.pruning_max_reference_count,
-                &pruning_source_types_refs,
-            )
-            .await
-        {
+        let pruning_source_types_refs: Vec<&str> = self.pruning_source_types.iter().map(|s| s.as_str()).collect();
+        let pruning_success = match self.repository.prune_stale(threshold_date, self.pruning_min_reliability, self.pruning_max_reference_count, &pruning_source_types_refs).await {
             Ok(_) => true,
             Err(e) => {
                 tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
@@ -136,15 +123,7 @@ mod tests {
     #[tokio::test]
     async fn test_consolidation_worker_run_once() {
         let repo = setup_sqlite_repo().await;
-        let worker = ConsolidationWorker::new(
-            repo.clone(),
-            Duration::from_secs(1),
-            180,
-            20,
-            2,
-            vec!["TASK_SUMMARY".to_string()],
-            None,
-        );
+        let worker = ConsolidationWorker::new(repo.clone(), Duration::from_secs(1), 180, 20, 2, vec!["TASK_SUMMARY".to_string()], None);
 
         // Insert a stale record that should be pruned
         let mut v1 = vec![0.0; 10];
@@ -212,10 +191,7 @@ mod tests {
         );
 
         let result = worker.run_once().await;
-        assert!(
-            result.is_err(),
-            "Expected run_once to fail due to closed connection"
-        );
+        assert!(result.is_err(), "Expected run_once to fail due to closed connection");
 
         let invoked = callback_invoked.load(std::sync::atomic::Ordering::SeqCst);
         assert!(invoked, "Telemetry error callback should have been invoked");

@@ -29,7 +29,7 @@ impl TeamsProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            },
+            }
         }
     }
 }
@@ -42,9 +42,6 @@ mod tests {
     fn test_teams_provider_metadata() {
         let provider = TeamsProvider::new("test_token".to_string());
         assert_eq!(provider.to_integration_provider().metadata.id, "teams");
-        assert_eq!(
-            provider.to_integration_provider().metadata.category,
-            "video"
-        );
+        assert_eq!(provider.to_integration_provider().metadata.category, "video");
     }
 }

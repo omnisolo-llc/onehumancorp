@@ -1,11 +1,11 @@
-use super::engine::VoiceAIEdgeEngine;
-use ::server_integrations_twilio::provider::TwilioProvider;
 use std::sync::Arc;
+use ::server_integrations_twilio::provider::TwilioProvider;
+use super::engine::VoiceAIEdgeEngine;
 
-#[cfg(not(ohc_bazel_package))]
-use crate::minimax::{LocalLLMClient, MinimaxClient};
 #[cfg(ohc_bazel_package)]
-use ::minimax::{LocalLLMClient, MinimaxClient};
+use ::minimax::{MinimaxClient, LocalLLMClient};
+#[cfg(not(ohc_bazel_package))]
+use crate::minimax::{MinimaxClient, LocalLLMClient};
 
 pub struct VoiceContextRouter {
     engine: Arc<VoiceAIEdgeEngine>,
@@ -60,29 +60,16 @@ impl VoiceContextRouter {
         twilio: Arc<TwilioProvider>,
         planner: Arc<dyn VoiceTurnPlanner>,
     ) -> Self {
-        Self {
-            engine,
-            twilio,
-            planner,
-        }
+        Self { engine, twilio, planner }
     }
 
-    pub async fn process_user_input(
-        &self,
-        session_id: &str,
-        user_text: &str,
-        merchant_phone: &str,
-    ) -> String {
-        self.engine
-            .log_transcript(session_id, "USER", user_text)
-            .await;
+    pub async fn process_user_input(&self, session_id: &str, user_text: &str, merchant_phone: &str) -> String {
+        self.engine.log_transcript(session_id, "USER", user_text).await;
 
         let plan = match self.planner.plan_turn(session_id, user_text).await {
             Ok(plan) => plan,
             Err(err) => {
-                ::server_telemetry::record_error_signal(
-                    "[bug] VoiceContextRouter LLM planning failed",
-                );
+                ::server_telemetry::record_error_signal("[bug] VoiceContextRouter LLM planning failed");
                 tracing::error!("VoiceContextRouter LLM planning failed: {}", err);
                 VoiceTurnPlan {
                     intent_type: None,
@@ -106,22 +93,14 @@ impl VoiceContextRouter {
             let calls = self.engine.active_calls.lock().await;
             if let Some(call) = calls.iter().find(|c| c.session_id == session_id) {
                 let caller_phone = call.caller_phone.clone();
-                if let Err(err) = self
-                    .twilio
-                    .send_sms(&caller_phone, merchant_phone, sms_body)
-                    .await
-                {
-                    ::server_telemetry::record_error_signal(
-                        "[bug] VoiceContextRouter SMS dispatch failed",
-                    );
+                if let Err(err) = self.twilio.send_sms(&caller_phone, merchant_phone, sms_body).await {
+                    ::server_telemetry::record_error_signal("[bug] VoiceContextRouter SMS dispatch failed");
                     tracing::error!("VoiceContextRouter SMS dispatch failed: {}", err);
                 }
             }
         }
 
-        self.engine
-            .log_transcript(session_id, "AI", &plan.ai_response)
-            .await;
+        self.engine.log_transcript(session_id, "AI", &plan.ai_response).await;
         plan.ai_response
     }
 }
@@ -130,12 +109,8 @@ fn parse_voice_turn_plan(raw: &str) -> Result<VoiceTurnPlan, String> {
     let value: serde_json::Value = match serde_json::from_str(raw) {
         Ok(value) => value,
         Err(_) => {
-            let start = raw
-                .find('{')
-                .ok_or_else(|| "voice planner response missing JSON object".to_string())?;
-            let end = raw
-                .rfind('}')
-                .ok_or_else(|| "voice planner response missing JSON object".to_string())?;
+            let start = raw.find('{').ok_or_else(|| "voice planner response missing JSON object".to_string())?;
+            let end = raw.rfind('}').ok_or_else(|| "voice planner response missing JSON object".to_string())?;
             serde_json::from_str(&raw[start..=end])
                 .map_err(|e| format!("failed to parse voice planner JSON: {e}"))?
         }
@@ -206,11 +181,7 @@ mod tests {
 
     #[async_trait]
     impl VoiceTurnPlanner for ScriptedVoiceTurnPlanner {
-        async fn plan_turn(
-            &self,
-            _session_id: &str,
-            _user_text: &str,
-        ) -> Result<VoiceTurnPlan, String> {
+        async fn plan_turn(&self, _session_id: &str, _user_text: &str) -> Result<VoiceTurnPlan, String> {
             Ok(self.plans.lock().await.remove(0))
         }
     }
@@ -224,69 +195,45 @@ mod tests {
 
         assert_eq!(plan.intent_type.as_deref(), Some("BOOK_APPOINTMENT"));
         assert_eq!(plan.ai_response, "I sent the confirmation link.");
-        assert_eq!(
-            plan.sms_body.as_deref(),
-            Some("Confirm here: https://ohc.example/confirm")
-        );
+        assert_eq!(plan.sms_body.as_deref(), Some("Confirm here: https://ohc.example/confirm"));
 
         let plan2 = parse_voice_turn_plan(
             r#"{"intent_type":"ORDER_FOOD","ai_response":"I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!","sms_body":"Order here: https://pay.ohc.com/store/voice"}"#,
         )
         .unwrap();
         assert_eq!(plan2.intent_type.as_deref(), Some("ORDER_FOOD"));
-        assert_eq!(
-            plan2.ai_response,
-            "I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!"
-        );
-        assert_eq!(
-            plan2.sms_body.as_deref(),
-            Some("Order here: https://pay.ohc.com/store/voice")
-        );
+        assert_eq!(plan2.ai_response, "I am an automated assistant. I'm texting you a link to our online menu right now so you can place your order. Please check your messages!");
+        assert_eq!(plan2.sms_body.as_deref(), Some("Order here: https://pay.ohc.com/store/voice"));
     }
 
     #[tokio::test]
     async fn test_voice_context_router_booking_flow() {
         let engine = Arc::new(VoiceAIEdgeEngine::new());
         let sent = Arc::new(AtomicUsize::new(0));
-        let mock_twilio = Arc::new(TwilioProvider::with_client(Arc::new(MockTwilioClient {
-            sent_messages: sent.clone(),
-        })));
+        let mock_twilio = Arc::new(TwilioProvider::with_client(Arc::new(MockTwilioClient { sent_messages: sent.clone() })));
         let planner = Arc::new(ScriptedVoiceTurnPlanner {
             plans: tokio::sync::Mutex::new(vec![
                 VoiceTurnPlan {
                     intent_type: Some("CHECK_AVAILABILITY".to_string()),
-                    ai_response: "I can check availability for you. What day works best?"
-                        .to_string(),
+                    ai_response: "I can check availability for you. What day works best?".to_string(),
                     sms_body: None,
                 },
                 VoiceTurnPlan {
                     intent_type: Some("BOOK_APPOINTMENT".to_string()),
                     ai_response: "All set. I texted you the secure confirmation link.".to_string(),
-                    sms_body: Some(
-                        "Confirm your booking: https://pay.ohc.com/book/session".to_string(),
-                    ),
+                    sms_body: Some("Confirm your booking: https://pay.ohc.com/book/session".to_string()),
                 },
             ]),
         });
 
         let router = VoiceContextRouter::with_planner(engine.clone(), mock_twilio, planner);
 
-        let session_id = engine
-            .handle_incoming_call("merchant_123", "+1234567890")
-            .await;
+        let session_id = engine.handle_incoming_call("merchant_123", "+1234567890").await;
 
-        let response1 = router
-            .process_user_input(
-                &session_id,
-                "Do you have an opening tomorrow?",
-                "+0987654321",
-            )
-            .await;
+        let response1 = router.process_user_input(&session_id, "Do you have an opening tomorrow?", "+0987654321").await;
         assert!(response1.contains("check availability"));
 
-        let response2 = router
-            .process_user_input(&session_id, "Yes, please.", "+0987654321")
-            .await;
+        let response2 = router.process_user_input(&session_id, "Yes, please.", "+0987654321").await;
         assert!(response2.contains("secure confirmation"));
 
         // Ensure SMS was sent
@@ -303,9 +250,7 @@ mod tests {
     async fn test_voice_context_router_ordering_flow() {
         let engine = Arc::new(VoiceAIEdgeEngine::new());
         let sent = Arc::new(AtomicUsize::new(0));
-        let mock_twilio = Arc::new(TwilioProvider::with_client(Arc::new(MockTwilioClient {
-            sent_messages: sent.clone(),
-        })));
+        let mock_twilio = Arc::new(TwilioProvider::with_client(Arc::new(MockTwilioClient { sent_messages: sent.clone() })));
         let planner = Arc::new(ScriptedVoiceTurnPlanner {
             plans: tokio::sync::Mutex::new(vec![
                 VoiceTurnPlan {
@@ -317,17 +262,9 @@ mod tests {
         });
 
         let router = VoiceContextRouter::with_planner(engine.clone(), mock_twilio, planner);
-        let session_id = engine
-            .handle_incoming_call("merchant_456", "+1122334455")
-            .await;
+        let session_id = engine.handle_incoming_call("merchant_456", "+1122334455").await;
 
-        let response = router
-            .process_user_input(
-                &session_id,
-                "I want to place an order for pickup",
-                "+0987654321",
-            )
-            .await;
+        let response = router.process_user_input(&session_id, "I want to place an order for pickup", "+0987654321").await;
         assert!(response.contains("texting you a link"));
 
         // Ensure SMS was sent

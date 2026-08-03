@@ -1,20 +1,17 @@
 use axum::{
-    Json, Router,
-    extract::{
-        Extension,
-        ws::{Message as WsMessage, WebSocket, WebSocketUpgrade},
-    },
+    extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Extension},
     response::IntoResponse,
-    routing::{get, post},
+    routing::{post, get},
+    Json, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::broadcast;
 use uuid::Uuid;
+use jsonwebtoken::{encode, decode, EncodingKey, DecodingKey, Header, Validation};
 
 // Unique single-use tracker for tickets (used JTIs) to prevent replay attacks.
 static CONSUMED_JTIS: std::sync::LazyLock<Arc<RwLock<HashSet<String>>>> =
@@ -63,15 +60,9 @@ pub enum RealtimeClientMessage {
 #[serde(tag = "action")]
 pub enum RealtimeServerMessage {
     #[serde(rename = "subscribed")]
-    Subscribed {
-        conversation_id: String,
-        status: String,
-    },
+    Subscribed { conversation_id: String, status: String },
     #[serde(rename = "unsubscribed")]
-    Unsubscribed {
-        conversation_id: String,
-        status: String,
-    },
+    Unsubscribed { conversation_id: String, status: String },
     #[serde(rename = "error")]
     Error { message: String },
     #[serde(rename = "presence")]
@@ -116,13 +107,11 @@ pub async fn realtime_ticket_handler(
                 "ticket": ticket,
                 "expires_at": expires_at
             })),
-        )
-            .into_response(),
+        ).into_response(),
         Err(_) => (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": "Failed to generate ticket" })),
-        )
-            .into_response(),
+        ).into_response(),
     }
 }
 
@@ -151,25 +140,22 @@ pub async fn realtime_ws_handler(
         return (
             axum::http::StatusCode::UNAUTHORIZED,
             "Missing single-use ticket in WebSocket subprotocol",
-        )
-            .into_response();
+        ).into_response();
     };
 
     let key = DecodingKey::from_secret(&get_jwt_secret());
     let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
     validation.validate_exp = true;
 
-    let claims: RealtimeTicketClaims =
-        match decode::<RealtimeTicketClaims>(&ticket_str, &key, &validation) {
-            Ok(token_data) => token_data.claims,
-            Err(_) => {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    "Invalid or expired ticket signature",
-                )
-                    .into_response();
-            }
-        };
+    let claims: RealtimeTicketClaims = match decode::<RealtimeTicketClaims>(&ticket_str, &key, &validation) {
+        Ok(token_data) => token_data.claims,
+        Err(_) => {
+            return (
+                axum::http::StatusCode::UNAUTHORIZED,
+                "Invalid or expired ticket signature",
+            ).into_response();
+        }
+    };
 
     // Verify single-use of jti
     {
@@ -178,8 +164,7 @@ pub async fn realtime_ws_handler(
             return (
                 axum::http::StatusCode::UNAUTHORIZED,
                 "Ticket has already been consumed",
-            )
-                .into_response();
+            ).into_response();
         }
         consumed.insert(claims.jti.clone());
     }
@@ -190,8 +175,7 @@ pub async fn realtime_ws_handler(
 }
 
 // Global broadcast channel for presence and routing across connected sessions
-static REALTIME_BROADCAST: std::sync::OnceLock<broadcast::Sender<String>> =
-    std::sync::OnceLock::new();
+static REALTIME_BROADCAST: std::sync::OnceLock<broadcast::Sender<String>> = std::sync::OnceLock::new();
 
 fn get_realtime_broadcast_tx() -> &'static broadcast::Sender<String> {
     REALTIME_BROADCAST.get_or_init(|| {
@@ -294,13 +278,9 @@ async fn handle_realtime_socket(socket: WebSocket, claims: RealtimeTicketClaims)
 
                                 if !valid {
                                     let err_msg = RealtimeServerMessage::Error {
-                                        message:
-                                            "Subscription denied: Unauthorized conversation access"
-                                                .to_string(),
+                                        message: "Subscription denied: Unauthorized conversation access".to_string(),
                                     };
-                                    let _ = ws_tx_recv
-                                        .send(serde_json::to_string(&err_msg).unwrap_or_default())
-                                        .await;
+                                    let _ = ws_tx_recv.send(serde_json::to_string(&err_msg).unwrap_or_default()).await;
                                     continue;
                                 }
 
@@ -313,9 +293,7 @@ async fn handle_realtime_socket(socket: WebSocket, claims: RealtimeTicketClaims)
                                     conversation_id,
                                     status: "ok".to_string(),
                                 };
-                                let _ = ws_tx_recv
-                                    .send(serde_json::to_string(&response).unwrap_or_default())
-                                    .await;
+                                let _ = ws_tx_recv.send(serde_json::to_string(&response).unwrap_or_default()).await;
                             }
                             RealtimeClientMessage::Unsubscribe { conversation_id } => {
                                 {
@@ -326,9 +304,7 @@ async fn handle_realtime_socket(socket: WebSocket, claims: RealtimeTicketClaims)
                                     conversation_id,
                                     status: "ok".to_string(),
                                 };
-                                let _ = ws_tx_recv
-                                    .send(serde_json::to_string(&response).unwrap_or_default())
-                                    .await;
+                                let _ = ws_tx_recv.send(serde_json::to_string(&response).unwrap_or_default()).await;
                             }
                             RealtimeClientMessage::Presence(event) => {
                                 // Validate subscription before broadcasting to prevent spoofing
@@ -344,9 +320,7 @@ async fn handle_realtime_socket(socket: WebSocket, claims: RealtimeTicketClaims)
                                         user_id: user_id_recv.clone(),
                                         ts: chrono::Utc::now().timestamp_millis(),
                                     };
-                                    if let Ok(serialized) =
-                                        serde_json::to_string(&broadcast_payload)
-                                    {
+                                    if let Ok(serialized) = serde_json::to_string(&broadcast_payload) {
                                         let _ = tx.send(serialized);
                                     }
                                 }
@@ -368,7 +342,8 @@ async fn handle_realtime_socket(socket: WebSocket, claims: RealtimeTicketClaims)
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
-    Router::new().route("/api/v1/realtime/ws", get(realtime_ws_handler))
+    Router::new()
+        .route("/api/v1/realtime/ws", get(realtime_ws_handler))
 }
 
 #[cfg(test)]
@@ -409,19 +384,14 @@ mod tests {
         };
 
         let app = Router::new()
-            .route(
-                "/api/v1/auth/realtime-ticket",
-                post(realtime_ticket_handler),
-            )
-            .layer(axum::middleware::from_fn(
-                move |mut req: Request<Body>, next: axum::middleware::Next| {
-                    let cl = claims.clone();
-                    async move {
-                        req.extensions_mut().insert(cl);
-                        Ok::<_, StatusCode>(next.run(req).await)
-                    }
-                },
-            ));
+            .route("/api/v1/auth/realtime-ticket", post(realtime_ticket_handler))
+            .layer(axum::middleware::from_fn(move |mut req: Request<Body>, next: axum::middleware::Next| {
+                let cl = claims.clone();
+                async move {
+                    req.extensions_mut().insert(cl);
+                    Ok::<_, StatusCode>(next.run(req).await)
+                }
+            }));
 
         let response = app
             .oneshot(
@@ -435,9 +405,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let parsed: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert!(parsed.get("ticket").is_some());
         assert!(parsed.get("expires_at").is_some());
@@ -448,8 +416,7 @@ mod tests {
         let app = Router::new().route("/api/v1/realtime/ws", get(realtime_ws_handler));
 
         // 1. Missing header
-        let res1 = app
-            .clone()
+        let res1 = app.clone()
             .oneshot(
                 Request::builder()
                     .uri("/api/v1/realtime/ws")
@@ -462,8 +429,7 @@ mod tests {
         assert_eq!(res1.status(), StatusCode::UNAUTHORIZED);
 
         // 2. Invalid ticket string
-        let res2 = app
-            .clone()
+        let res2 = app.clone()
             .oneshot(
                 Request::builder()
                     .uri("/api/v1/realtime/ws")
@@ -483,11 +449,7 @@ mod tests {
             jti: Uuid::new_v4().to_string(),
             user_id: "user-123".to_string(),
             tenant_id: "tenant-abc".to_string(),
-            exp: (SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                + 60) as i64,
+            exp: (SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() + 60) as i64,
         };
 
         let key = EncodingKey::from_secret(&get_jwt_secret());
@@ -498,16 +460,12 @@ mod tests {
 
         // First attempt - since axum `oneshot` upgrades, we test the WebSocket upgrade route rejection logic.
         // Handshake validation:
-        let res1 = app
-            .clone()
+        let res1 = app.clone()
             .oneshot(
                 Request::builder()
                     .uri("/api/v1/realtime/ws")
                     .method("GET")
-                    .header(
-                        "sec-websocket-protocol",
-                        format!("ohc-rt-ticket-{}", ticket_str),
-                    )
+                    .header("sec-websocket-protocol", format!("ohc-rt-ticket-{}", ticket_str))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -519,16 +477,12 @@ mod tests {
         assert_ne!(status1, StatusCode::UNAUTHORIZED);
 
         // Second attempt with the SAME consumed ticket
-        let res2 = app
-            .clone()
+        let res2 = app.clone()
             .oneshot(
                 Request::builder()
                     .uri("/api/v1/realtime/ws")
                     .method("GET")
-                    .header(
-                        "sec-websocket-protocol",
-                        format!("ohc-rt-ticket-{}", ticket_str),
-                    )
+                    .header("sec-websocket-protocol", format!("ohc-rt-ticket-{}", ticket_str))
                     .body(Body::empty())
                     .unwrap(),
             )

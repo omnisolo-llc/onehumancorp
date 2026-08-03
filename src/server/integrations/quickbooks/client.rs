@@ -75,7 +75,10 @@ pub struct QuickBooksClient {
 
 impl QuickBooksClient {
     pub fn new(access_token: String, realm_id: String) -> Self {
-        let base_url = format!("https://quickbooks.api.intuit.com/v3/company/{}", realm_id);
+        let base_url = format!(
+            "https://quickbooks.api.intuit.com/v3/company/{}",
+            realm_id
+        );
         Self {
             base_url,
             access_token,
@@ -105,10 +108,7 @@ impl QuickBooksClient {
         &self.base_url
     }
 
-    async fn check_error_response(
-        &self,
-        resp: reqwest::Response,
-    ) -> Result<reqwest::Response, String> {
+    async fn check_error_response(&self, resp: reqwest::Response) -> Result<reqwest::Response, String> {
         if !resp.status().is_success() {
             let status = resp.status();
             let text = resp
@@ -124,7 +124,10 @@ impl QuickBooksClient {
 
     pub async fn get_customers(&self, max_results: u32) -> Result<Vec<QuickBooksCustomer>, String> {
         let token = self.validated_access_token()?;
-        let query = format!("SELECT * FROM Customer MAXRESULTS {}", max_results);
+        let query = format!(
+            "SELECT * FROM Customer MAXRESULTS {}",
+            max_results
+        );
         let url = format!("{}/query", self.api_base());
         let resp = self
             .http_client
@@ -188,8 +191,7 @@ impl QuickBooksClient {
             .await
             .map_err(|e| format!("Failed to parse create customer response: {}", e))?;
 
-        let customer_val = body
-            .get("Customer")
+        let customer_val = body.get("Customer")
             .ok_or_else(|| "Response missing Customer field".to_string())?;
 
         serde_json::from_value(customer_val.clone())
@@ -200,7 +202,10 @@ impl QuickBooksClient {
 
     pub async fn get_invoices(&self, max_results: u32) -> Result<Vec<QuickBooksInvoice>, String> {
         let token = self.validated_access_token()?;
-        let query = format!("SELECT * FROM Invoice MAXRESULTS {}", max_results);
+        let query = format!(
+            "SELECT * FROM Invoice MAXRESULTS {}",
+            max_results
+        );
         let url = format!("{}/query", self.api_base());
         let resp = self
             .http_client
@@ -272,8 +277,7 @@ impl QuickBooksClient {
             .await
             .map_err(|e| format!("Failed to parse create invoice response: {}", e))?;
 
-        let inv_val = body
-            .get("Invoice")
+        let inv_val = body.get("Invoice")
             .ok_or_else(|| "Response missing Invoice field".to_string())?;
 
         serde_json::from_value(inv_val.clone())
@@ -284,7 +288,10 @@ impl QuickBooksClient {
 
     pub async fn get_products(&self, max_results: u32) -> Result<Vec<QuickBooksProduct>, String> {
         let token = self.validated_access_token()?;
-        let query = format!("SELECT * FROM Item MAXRESULTS {}", max_results);
+        let query = format!(
+            "SELECT * FROM Item MAXRESULTS {}",
+            max_results
+        );
         let url = format!("{}/query", self.api_base());
         let resp = self
             .http_client
@@ -356,7 +363,9 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
+    async fn start_server(
+        response_body: &'static str,
+    ) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -374,7 +383,8 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) =
+                        request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -402,9 +412,7 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx
-                .send(String::from_utf8(request).unwrap())
-                .unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
         });
 
         (base_url, request_rx)
@@ -434,7 +442,8 @@ mod tests {
             }
         }"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client = QuickBooksClient::with_base_url_for_test(base_url, "valid-token".to_string());
+        let client =
+            QuickBooksClient::with_base_url_for_test(base_url, "valid-token".to_string());
 
         let customers = client.get_customers(10).await.unwrap();
         assert_eq!(customers.len(), 2);
@@ -461,7 +470,8 @@ mod tests {
             }
         }"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client = QuickBooksClient::with_base_url_for_test(base_url, "test-token".to_string());
+        let client =
+            QuickBooksClient::with_base_url_for_test(base_url, "test-token".to_string());
 
         let customer = client
             .create_customer("New Customer", "new@test.com", "555-0000", "Test Co")
@@ -491,7 +501,8 @@ mod tests {
             }
         }"#;
         let (base_url, _request_rx) = start_server(response).await;
-        let client = QuickBooksClient::with_base_url_for_test(base_url, "test-token".to_string());
+        let client =
+            QuickBooksClient::with_base_url_for_test(base_url, "test-token".to_string());
 
         let invoices = client.get_invoices(5).await.unwrap();
         assert_eq!(invoices.len(), 1);
@@ -513,7 +524,8 @@ mod tests {
             }
         }"#;
         let (base_url, _request_rx) = start_server(response).await;
-        let client = QuickBooksClient::with_base_url_for_test(base_url, "test-token".to_string());
+        let client =
+            QuickBooksClient::with_base_url_for_test(base_url, "test-token".to_string());
 
         let products = client.get_products(10).await.unwrap();
         assert_eq!(products.len(), 1);
@@ -523,8 +535,7 @@ mod tests {
 
     #[tokio::test]
     async fn handles_quickbooks_error_response() {
-        let error_body =
-            r#"{"Fault": {"Error": [{"Message": "Invalid token"}], "type": "AUTHENTICATION"}}"#;
+        let error_body = r#"{"Fault": {"Error": [{"Message": "Invalid token"}], "type": "AUTHENTICATION"}}"#;
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
@@ -549,7 +560,8 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
-        let client = QuickBooksClient::with_base_url_for_test(base_url, "   ".to_string());
+        let client =
+            QuickBooksClient::with_base_url_for_test(base_url, "   ".to_string());
         let error = client.get_customers(10).await.unwrap_err();
         assert_eq!(error, "QuickBooks access token is required");
     }

@@ -41,21 +41,11 @@ pub trait TaskQueue: Send + Sync {
     async fn enqueue(&self, job: Job) -> Result<(), String>;
 
     /// Adds multiple jobs to the queue in a single operation. Defaults to a naive loop but can be optimized.
-    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
-        for job in jobs {
-            self.enqueue(job).await?;
-        }
-        Ok(())
-    }
+    async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> { for job in jobs { self.enqueue(job).await?; } Ok(()) }
 
     /// Attempts to claim the next available pending job that matches the provided worker `roles`.
     /// The job will be locked (status updated to 'PROCESSING') to prevent other workers from claiming it.
-    async fn dequeue(
-        &self,
-        roles: Vec<String>,
-        estimated_vram: i64,
-        estimated_tokens: i64,
-    ) -> Result<Option<Job>, String>;
+    async fn dequeue(&self, roles: Vec<String>, estimated_vram: i64, estimated_tokens: i64) -> Result<Option<Job>, String>;
 
     /// Marks a job as successfully finished.
     async fn complete(&self, job_id: &str) -> Result<(), String>;

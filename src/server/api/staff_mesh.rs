@@ -1560,9 +1560,7 @@ mod tests {
         request.extensions_mut().insert(signed_claims.clone());
         let response = app.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let body_json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         let staff_id = body_json.get("id").unwrap().as_str().unwrap().to_string();
 

@@ -1,5 +1,5 @@
-use super::User;
 use async_trait::async_trait;
+use super::User;
 use chrono::{DateTime, Utc};
 
 #[async_trait]
@@ -17,11 +17,6 @@ pub trait UserRepository: Send + Sync {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String>;
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String>;
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String>;
-    async fn revoke_token(
-        &self,
-        jti: String,
-        exp: DateTime<Utc>,
-        org_id: &str,
-    ) -> Result<(), String>;
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String>;
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String>;
 }

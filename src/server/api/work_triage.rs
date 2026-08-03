@@ -1,7 +1,7 @@
 use axum::{
-    Json,
-    extract::{Path, Query, State},
+    extract::{Query, State, Path},
     response::IntoResponse,
+    Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -73,7 +73,7 @@ pub async fn simulate_inbound_signal_handler(
             .bind(sqlx::types::Json(&customer_info))
             .bind(sqlx::types::Json(&suggested_actions))
             .execute(&db.pool).await;
-        }
+        },
         crate::db::DbStore::Sqlite(pool) => {
             let _ = sqlx::query(
                 "INSERT INTO inbound_signals (id, tenant_id, source, raw_payload, status) VALUES (?, ?, ?, ?, 'PROCESSED')"
@@ -97,11 +97,7 @@ pub async fn simulate_inbound_signal_handler(
         }
     }
 
-    (
-        axum::http::StatusCode::OK,
-        Json(serde_json::json!({"id": work_item_id, "success": true})),
-    )
-        .into_response()
+    (axum::http::StatusCode::OK, Json(serde_json::json!({"id": work_item_id, "success": true}))).into_response()
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -114,9 +110,8 @@ pub struct DailyWorkItemRow {
     pub status: String,
 }
 
-static DAILY_WORK_CACHE: std::sync::OnceLock<
-    ::server_utils::cache::HybridCache<Vec<serde_json::Value>>,
-> = std::sync::OnceLock::new();
+
+static DAILY_WORK_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
 pub async fn get_daily_work_handler(
     State(db): State<Arc<DB>>,
@@ -128,8 +123,7 @@ pub async fn get_daily_work_handler(
     };
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
     let cache_key = format!("daily_work:{}:mobile:{}", tenant_id, mobile_optimized);
-    let cache = DAILY_WORK_CACHE
-        .get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+    let cache = DAILY_WORK_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
 
     let items_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(10), {
         let db = db.clone();
@@ -449,19 +443,13 @@ pub async fn get_daily_work_handler(
     let res = items_opt.ok_or_else(|| sqlx::Error::RowNotFound);
 
     match res {
-        Ok(items) => (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({"items": items})),
-        )
-            .into_response(),
+        Ok(items) => {
+            (axum::http::StatusCode::OK, Json(serde_json::json!({"items": items}))).into_response()
+        },
         Err(error) => {
             ::server_telemetry::record_error_signal("[bug] Failed to load daily work");
             tracing::error!("Failed to load daily work: {error:?}");
-            (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": "Daily work unavailable"})),
-            )
-                .into_response()
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Daily work unavailable"}))).into_response()
         }
     }
 }
@@ -490,10 +478,7 @@ pub async fn approve_daily_work_handler(
                 Ok(tx) => tx,
                 Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             };
-            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .is_err()
-            {
+            if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
                 return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
             let res = sqlx::query(
@@ -520,22 +505,14 @@ pub async fn approve_daily_work_handler(
             }
             if rows_affected > 0 {
                 if let Some(cache) = DAILY_WORK_CACHE.get() {
-                    cache
-                        .invalidate(&format!("daily_work:{}:mobile:false", tenant_id))
-                        .await;
-                    cache
-                        .invalidate(&format!("daily_work:{}:mobile:true", tenant_id))
-                        .await;
+                    cache.invalidate(&format!("daily_work:{}:mobile:false", tenant_id)).await;
+                    cache.invalidate(&format!("daily_work:{}:mobile:true", tenant_id)).await;
                 }
-                (
-                    axum::http::StatusCode::OK,
-                    Json(serde_json::json!({"success": true})),
-                )
-                    .into_response()
+                (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
             } else {
                 axum::http::StatusCode::NOT_FOUND.into_response()
             }
-        }
+        },
         crate::db::DbStore::Sqlite(pool) => {
             let mut tx = match pool.begin().await {
                 Ok(tx) => tx,
@@ -565,23 +542,16 @@ pub async fn approve_daily_work_handler(
             }
             if rows_affected > 0 {
                 if let Some(cache) = DAILY_WORK_CACHE.get() {
-                    cache
-                        .invalidate(&format!("daily_work:{}:mobile:false", tenant_id))
-                        .await;
-                    cache
-                        .invalidate(&format!("daily_work:{}:mobile:true", tenant_id))
-                        .await;
+                    cache.invalidate(&format!("daily_work:{}:mobile:false", tenant_id)).await;
+                    cache.invalidate(&format!("daily_work:{}:mobile:true", tenant_id)).await;
                 }
-                (
-                    axum::http::StatusCode::OK,
-                    Json(serde_json::json!({"success": true})),
-                )
-                    .into_response()
+                (axum::http::StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
             } else {
                 axum::http::StatusCode::NOT_FOUND.into_response()
             }
         }
     }
+
 }
 
 #[cfg(test)]

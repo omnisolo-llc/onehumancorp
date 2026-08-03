@@ -1,16 +1,11 @@
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, OwnedMutexGuard};
+use std::collections::HashMap;
 
 #[async_trait::async_trait]
 pub trait DistributedLock: Send + Sync {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String>;
-    async fn acquire_resource(
-        &self,
-        tenant_id: &str,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<LockGuard, String>;
+    async fn acquire_resource(&self, tenant_id: &str, resource_type: &str, resource_id: &str) -> Result<LockGuard, String>;
 }
 
 pub struct LockGuard {
@@ -28,9 +23,7 @@ impl LockGuard {
             return;
         }
         self.released = true;
-        if let (Some(client), Some(key), Some(val)) =
-            (&self.redis_client, &self.redis_key, &self.redis_val)
-        {
+        if let (Some(client), Some(key), Some(val)) = (&self.redis_client, &self.redis_key, &self.redis_val) {
             if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
                 let script = redis::Script::new(
                     r#"
@@ -43,9 +36,7 @@ impl LockGuard {
                 );
                 let _ = script.key(key).arg(val).invoke_async::<()>(&mut conn).await;
             }
-        } else if let (Some(pool), Some(key), Some(val)) =
-            (&self.sqlite_pool, &self.redis_key, &self.redis_val)
-        {
+        } else if let (Some(pool), Some(key), Some(val)) = (&self.sqlite_pool, &self.redis_key, &self.redis_val) {
             let _ = sqlx::query("DELETE FROM distributed_locks WHERE id = $1 AND lock_val = $2")
                 .bind(key)
                 .bind(val)
@@ -91,10 +82,9 @@ impl StandaloneLock {
 
         if let Some(pool) = &self.pool {
             // First cleanup expired locks
-            let _ =
-                sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
-                    .execute(pool)
-                    .await;
+            let _ = sqlx::query("DELETE FROM distributed_locks WHERE expires_at < CURRENT_TIMESTAMP")
+                .execute(pool)
+                .await;
 
             let result = sqlx::query("INSERT INTO distributed_locks (id, tenant_id, lock_val, expires_at) VALUES ($1, $2, $3, datetime('now', '+15 seconds'))")
                 .bind(key)
@@ -120,8 +110,7 @@ impl StandaloneLock {
         // Fallback to local memory lock if no pool is provided
         let task_mutex = {
             let mut locks = self.local_locks.lock().await;
-            locks
-                .entry(key.to_string())
+            locks.entry(key.to_string())
                 .or_insert_with(|| Arc::new(Mutex::new(())))
                 .clone()
         };
@@ -141,21 +130,11 @@ impl StandaloneLock {
 #[async_trait::async_trait]
 impl DistributedLock for StandaloneLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
-        self.do_acquire(&format!("ohc:lock:task:{}", task_id), "system")
-            .await
+        self.do_acquire(&format!("ohc:lock:task:{}", task_id), "system").await
     }
 
-    async fn acquire_resource(
-        &self,
-        tenant_id: &str,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<LockGuard, String> {
-        self.do_acquire(
-            &format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id),
-            tenant_id,
-        )
-        .await
+    async fn acquire_resource(&self, tenant_id: &str, resource_type: &str, resource_id: &str) -> Result<LockGuard, String> {
+        self.do_acquire(&format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id), tenant_id).await
     }
 }
 
@@ -172,11 +151,7 @@ impl RedisLock {
 #[async_trait::async_trait]
 impl DistributedLock for RedisLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
-        let mut conn = self
-            .client
-            .get_multiplexed_async_connection()
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let key = format!("ohc:lock:task:{}", task_id);
         let val = uuid::Uuid::new_v4().to_string();
 
@@ -204,17 +179,8 @@ impl DistributedLock for RedisLock {
         })
     }
 
-    async fn acquire_resource(
-        &self,
-        tenant_id: &str,
-        resource_type: &str,
-        resource_id: &str,
-    ) -> Result<LockGuard, String> {
-        let mut conn = self
-            .client
-            .get_multiplexed_async_connection()
-            .await
-            .map_err(|e| e.to_string())?;
+    async fn acquire_resource(&self, tenant_id: &str, resource_type: &str, resource_id: &str) -> Result<LockGuard, String> {
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
 
         let key = format!("ohc:lock:{}:{}:{}", tenant_id, resource_type, resource_id);
         let val = uuid::Uuid::new_v4().to_string();

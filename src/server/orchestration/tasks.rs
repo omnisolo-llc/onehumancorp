@@ -30,6 +30,7 @@ impl TaskDecompositionService {
         }
     }
 
+
     pub async fn get_handoff_payload(&self, task_id: &str) -> Result<Option<String>, String> {
         let payload: Option<String> = match &self.db.store {
             crate::db::DbStore::Postgres => {
@@ -41,10 +42,9 @@ impl TaskDecompositionService {
                     .map_err(|e| e.to_string())?;
                 match row_opt {
                     Some(row) => {
-                        let val: Option<serde_json::Value> =
-                            row.try_get("handoff_payload").unwrap_or(None);
+                        let val: Option<serde_json::Value> = row.try_get("handoff_payload").unwrap_or(None);
                         val.map(|v| v.to_string())
-                    }
+                    },
                     None => None,
                 }
             }
@@ -188,10 +188,7 @@ impl TaskDecompositionService {
                 Ok(Err(e)) => {
                     tracing::warn!("Error claiming task on attempt {}: {}", attempt, e);
                     if attempt > max_attempts {
-                        tracing::warn!(
-                            "Fail-safing task claim after {} attempts due to error.",
-                            max_attempts
-                        );
+                        tracing::warn!("Fail-safing task claim after {} attempts due to error.", max_attempts);
                         return Ok(None);
                     }
                 }
@@ -203,10 +200,7 @@ impl TaskDecompositionService {
                     }
                     tracing::warn!("Timeout claiming task on attempt {}", attempt);
                     if attempt > max_attempts {
-                        tracing::warn!(
-                            "Fail-safing task claim after {} attempts due to timeout.",
-                            max_attempts
-                        );
+                        tracing::warn!("Fail-safing task claim after {} attempts due to timeout.", max_attempts);
                         return Ok(None);
                     }
                 }
@@ -544,9 +538,7 @@ impl TaskDecompositionService {
 
                         let task_id: String = row.get("id");
                         if let Ok(Some(handoff)) = self.get_handoff_payload(&task_id).await {
-                            if let Ok(handoff_val) =
-                                serde_json::from_str::<serde_json::Value>(&handoff)
-                            {
+                            if let Ok(handoff_val) = serde_json::from_str::<serde_json::Value>(&handoff) {
                                 obj.insert("handoff_context".to_string(), handoff_val);
                             }
                         }
@@ -629,15 +621,10 @@ impl TaskDecompositionService {
                     payload: {
                         let task_id: String = row.get("id");
                         let payload_str: String = row.get("payload");
-                        let mut obj = serde_json::from_str::<
-                            serde_json::Map<String, serde_json::Value>,
-                        >(&payload_str)
-                        .unwrap_or_default();
+                        let mut obj = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&payload_str).unwrap_or_default();
 
                         if let Ok(Some(handoff)) = self.get_handoff_payload(&task_id).await {
-                            if let Ok(handoff_val) =
-                                serde_json::from_str::<serde_json::Value>(&handoff)
-                            {
+                            if let Ok(handoff_val) = serde_json::from_str::<serde_json::Value>(&handoff) {
                                 obj.insert("handoff_context".to_string(), handoff_val);
                             }
                         }
@@ -701,16 +688,11 @@ impl TaskDecompositionService {
                     }
                 };
 
-                let old_status: String = old_status_row
-                    .try_get("status")
-                    .unwrap_or("PENDING".to_string());
+                let old_status: String = old_status_row.try_get("status").unwrap_or("PENDING".to_string());
                 let tokens_consumed: i32 = old_status_row.try_get("tokens_consumed").unwrap_or(0);
-                let agent_role: Option<String> =
-                    old_status_row.try_get("agent_role").unwrap_or(None);
+                let agent_role: Option<String> = old_status_row.try_get("agent_role").unwrap_or(None);
                 let model: Option<String> = old_status_row.try_get("model").unwrap_or(None);
-                let org_id: String = old_status_row
-                    .try_get("organization_id")
-                    .unwrap_or_else(|_| organization_id_opt.unwrap_or_default());
+                let org_id: String = old_status_row.try_get("organization_id").unwrap_or_else(|_| organization_id_opt.unwrap_or_default());
 
                 let payload_update = serde_json::to_string(&serde_json::json!({"error": reason}))
                     .unwrap_or_else(|_| "{}".to_string());
@@ -1815,8 +1797,7 @@ mod tasks_resilience_tests {
             Err::<(), String>("Rate limited".to_string())
         };
 
-        let result =
-            tokio::time::timeout(std::time::Duration::from_millis(60), failing_api_call).await;
+        let result = tokio::time::timeout(std::time::Duration::from_millis(60), failing_api_call).await;
 
         // Assert that the error is caught and wrapped without panicking
         assert!(result.is_ok());
@@ -1827,28 +1808,16 @@ mod tasks_resilience_tests {
     async fn test_ml_resilience_corrupt_data() {
         // Test idempotency by ensuring a failed task update does not corrupt existing data
         let database_url = "sqlite::memory:";
-        let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .connect(database_url)
-            .await
-            .unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect(database_url).await.unwrap();
 
-        sqlx::query("CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, status TEXT, payload TEXT)")
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query("CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, status TEXT, payload TEXT)").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO shared_tasks (id, status, payload) VALUES ('task_1', 'PENDING', '{\"data\":\"important\"}')").execute(&pool).await.unwrap();
 
         // Simulate a failed update
-        let _ = sqlx::query("UPDATE shared_tasks SET status = 'FAILED' WHERE id = 'task_1'")
-            .execute(&pool)
-            .await
-            .unwrap();
+        let _ = sqlx::query("UPDATE shared_tasks SET status = 'FAILED' WHERE id = 'task_1'").execute(&pool).await.unwrap();
 
         // Assert data is intact
-        let row: (String,) = sqlx::query_as("SELECT payload FROM shared_tasks WHERE id = 'task_1'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let row: (String,) = sqlx::query_as("SELECT payload FROM shared_tasks WHERE id = 'task_1'").fetch_one(&pool).await.unwrap();
         assert_eq!(row.0, "{\"data\":\"important\"}");
     }
 }

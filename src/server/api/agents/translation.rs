@@ -47,12 +47,9 @@ pub async fn translate_inbox_message_with_llm(
         .as_deref()
     {
         Ok("minimax") => {
-            let api_key = std::env::var("MINIMAX_API_KEY").map_err(|_| {
-                "MINIMAX_API_KEY is required for minimax inbox translation".to_string()
-            })?;
-            crate::minimax::MinimaxClient::new(api_key)
-                .reason(&prompt)
-                .await
+            let api_key = std::env::var("MINIMAX_API_KEY")
+                .map_err(|_| "MINIMAX_API_KEY is required for minimax inbox translation".to_string())?;
+            crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
         }
         _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
     }?;
@@ -68,12 +65,8 @@ pub fn parse_inbox_translation(
     let value: serde_json::Value = match serde_json::from_str(raw) {
         Ok(value) => value,
         Err(_) => {
-            let start = raw
-                .find('{')
-                .ok_or_else(|| "translation response missing JSON object".to_string())?;
-            let end = raw
-                .rfind('}')
-                .ok_or_else(|| "translation response missing JSON object".to_string())?;
+            let start = raw.find('{').ok_or_else(|| "translation response missing JSON object".to_string())?;
+            let end = raw.rfind('}').ok_or_else(|| "translation response missing JSON object".to_string())?;
             serde_json::from_str(&raw[start..=end])
                 .map_err(|e| format!("failed to parse translation JSON: {e}"))?
         }
@@ -117,10 +110,7 @@ mod tests {
 
         assert_eq!(parsed.original_content, "¿Tienes pastel vegano mañana?");
         assert_eq!(parsed.source_language.as_deref(), Some("es"));
-        assert_eq!(
-            parsed.translated_content,
-            "Do you have vegan cake tomorrow?"
-        );
+        assert_eq!(parsed.translated_content, "Do you have vegan cake tomorrow?");
         assert_eq!(parsed.target_language, "en");
     }
 }
@@ -132,7 +122,8 @@ pub async fn generate_inbox_draft_reply(
 ) -> Result<String, String> {
     let prompt = format!(
         "Write one concise, warm customer-service reply in {} for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Tenant: {tenant_id}. Source: {source}. Customer message: {}",
-        translation.target_language, translation.translated_content
+        translation.target_language,
+        translation.translated_content
     );
     let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
@@ -141,17 +132,10 @@ pub async fn generate_inbox_draft_reply(
         .as_deref()
     {
         Ok("minimax") => {
-            let api_key = std::env::var("MINIMAX_API_KEY").map_err(|_| {
-                "MINIMAX_API_KEY is required for minimax inbox draft generation".to_string()
-            })?;
-            crate::minimax::MinimaxClient::new(api_key)
-                .reason(&compressed_prompt)
-                .await
+            let api_key = std::env::var("MINIMAX_API_KEY")
+                .map_err(|_| "MINIMAX_API_KEY is required for minimax inbox draft generation".to_string())?;
+            crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
         }
-        _ => {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&compressed_prompt)
-                .await
-        }
+        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
     }
 }

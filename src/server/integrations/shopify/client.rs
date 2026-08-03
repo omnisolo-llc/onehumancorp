@@ -191,7 +191,9 @@ impl ShopifyClient {
 
         let errors = &data["productCreate"]["userErrors"];
         if errors.is_array() && errors.as_array().unwrap().len() > 0 {
-            let msg = errors[0]["message"].as_str().unwrap_or("unknown error");
+            let msg = errors[0]["message"]
+                .as_str()
+                .unwrap_or("unknown error");
             return Err(format!("Product creation error: {}", msg));
         }
 
@@ -304,7 +306,9 @@ impl ShopifyClient {
 
         let errors = &data["inventoryAdjustment"]["userErrors"];
         if errors.is_array() && errors.as_array().unwrap().len() > 0 {
-            let msg = errors[0]["message"].as_str().unwrap_or("unknown error");
+            let msg = errors[0]["message"]
+                .as_str()
+                .unwrap_or("unknown error");
             return Err(format!("Inventory adjustment error: {}", msg));
         }
 
@@ -349,7 +353,9 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
+    async fn start_server(
+        response_body: &'static str,
+    ) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -367,7 +373,8 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) =
+                        request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -395,9 +402,7 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx
-                .send(String::from_utf8(request).unwrap())
-                .unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
         });
 
         (base_url, request_rx)
@@ -421,7 +426,8 @@ mod tests {
             }
         }"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client = ShopifyClient::with_base_url_for_test(base_url, "valid-token".to_string());
+        let client =
+            ShopifyClient::with_base_url_for_test(base_url, "valid-token".to_string());
 
         let products = client.get_products(10).await.unwrap();
         assert_eq!(products.len(), 2);
@@ -453,7 +459,8 @@ mod tests {
             }
         }"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client = ShopifyClient::with_base_url_for_test(base_url, "test-token".to_string());
+        let client =
+            ShopifyClient::with_base_url_for_test(base_url, "test-token".to_string());
 
         let product = client
             .create_product("New Product", "A new product", "29.99")
@@ -480,7 +487,8 @@ mod tests {
             }
         }"##;
         let (base_url, _request_rx) = start_server(response).await;
-        let client = ShopifyClient::with_base_url_for_test(base_url, "test-token".to_string());
+        let client =
+            ShopifyClient::with_base_url_for_test(base_url, "test-token".to_string());
 
         let orders = client.get_orders(10, None).await.unwrap();
         assert_eq!(orders.len(), 1);
@@ -500,7 +508,8 @@ mod tests {
             }
         }"#;
         let (base_url, _request_rx) = start_server(response).await;
-        let client = ShopifyClient::with_base_url_for_test(base_url, "test-token".to_string());
+        let client =
+            ShopifyClient::with_base_url_for_test(base_url, "test-token".to_string());
 
         let customers = client.get_customers(10).await.unwrap();
         assert_eq!(customers.len(), 1);
@@ -523,7 +532,8 @@ mod tests {
             stream.write_all(response.as_bytes()).await.unwrap();
         });
 
-        let client = ShopifyClient::with_base_url_for_test(base_url, "expired-token".to_string());
+        let client =
+            ShopifyClient::with_base_url_for_test(base_url, "expired-token".to_string());
         let error = client.get_products(10).await.unwrap_err();
         assert!(error.contains("Shopify API error"));
     }
@@ -534,7 +544,8 @@ mod tests {
             "errors": [{ "message": "Cannot query field 'invalid' on type 'QueryRoot'" }]
         }"#;
         let (base_url, _request_rx) = start_server(response).await;
-        let client = ShopifyClient::with_base_url_for_test(base_url, "test-token".to_string());
+        let client =
+            ShopifyClient::with_base_url_for_test(base_url, "test-token".to_string());
 
         let error = client.get_products(10).await.unwrap_err();
         assert!(error.contains("GraphQL errors"));
@@ -545,7 +556,8 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
-        let client = ShopifyClient::with_base_url_for_test(base_url, "   ".to_string());
+        let client =
+            ShopifyClient::with_base_url_for_test(base_url, "   ".to_string());
         let error = client.get_products(10).await.unwrap_err();
         assert_eq!(error, "Shopify access token is required");
     }

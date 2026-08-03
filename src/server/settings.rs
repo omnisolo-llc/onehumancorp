@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::RwLock;
+use serde::{Serialize, Deserialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiProvider {
@@ -75,17 +75,12 @@ static GLOBAL_STORE: OnceLock<Arc<Store>> = OnceLock::new();
 
 impl Store {
     pub fn global() -> Arc<Store> {
-        GLOBAL_STORE
-            .get_or_init(|| {
-                let path = crate::config::get_safe_user_dir().join("settings.json");
-                let store = Store::from_file(path).unwrap_or_else(|_| Store::new());
-                ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(
-                    store.get().product_telemetry_enabled,
-                    std::sync::atomic::Ordering::Relaxed,
-                );
-                Arc::new(store)
-            })
-            .clone()
+        GLOBAL_STORE.get_or_init(|| {
+            let path = crate::config::get_safe_user_dir().join("settings.json");
+            let store = Store::from_file(path).unwrap_or_else(|_| Store::new());
+            ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(store.get().product_telemetry_enabled, std::sync::atomic::Ordering::Relaxed);
+            Arc::new(store)
+        }).clone()
     }
 
     pub fn new() -> Self {
@@ -105,10 +100,7 @@ impl Store {
 
         let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
         let data: AppSettings = serde_json::from_str(&content).map_err(|e| e.to_string())?;
-        ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(
-            data.product_telemetry_enabled,
-            std::sync::atomic::Ordering::Relaxed,
-        );
+        ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(data.product_telemetry_enabled, std::sync::atomic::Ordering::Relaxed);
 
         Ok(Store {
             data: RwLock::new(data),
@@ -124,7 +116,7 @@ impl Store {
         };
 
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
 
         let content = serde_json::to_string_pretty(&*data).map_err(|e| e.to_string())?;
@@ -146,13 +138,7 @@ impl Store {
         self.save()
     }
 
-    pub fn set_sms_preferences(
-        &self,
-        phone: String,
-        urgent_booking: bool,
-        failed_payment: bool,
-        new_order: bool,
-    ) -> Result<(), String> {
+    pub fn set_sms_preferences(&self, phone: String, urgent_booking: bool, failed_payment: bool, new_order: bool) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.sms_critical_phone = Some(phone);
         data.sms_alert_urgent_booking = urgent_booking;
@@ -162,12 +148,7 @@ impl Store {
         self.save()
     }
 
-    pub fn set_delivery_settings(
-        &self,
-        enabled: bool,
-        radius: Option<f64>,
-        fee: Option<f64>,
-    ) -> Result<(), String> {
+    pub fn set_delivery_settings(&self, enabled: bool, radius: Option<f64>, fee: Option<f64>) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.delivery_enabled = enabled;
         data.delivery_radius = radius;
@@ -176,13 +157,7 @@ impl Store {
         self.save()
     }
 
-    pub fn set_voice_settings(
-        &self,
-        enabled: bool,
-        number: Option<String>,
-        persona: Option<String>,
-        instructions: Option<String>,
-    ) -> Result<(), String> {
+    pub fn set_voice_settings(&self, enabled: bool, number: Option<String>, persona: Option<String>, instructions: Option<String>) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.voice_receptionist_enabled = enabled;
         data.voice_receptionist_number = number;
@@ -195,8 +170,7 @@ impl Store {
     pub fn set_product_telemetry(&self, enabled: bool) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.product_telemetry_enabled = enabled;
-        ::server_config::DYNAMIC_TELEMETRY_ENABLED
-            .store(enabled, std::sync::atomic::Ordering::Relaxed);
+        ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
         drop(data);
         self.save()
     }
@@ -219,10 +193,7 @@ mod tests {
         assert_eq!(settings.db_path, Some("ohc.db".to_string()));
         assert_eq!(settings.voice_receptionist_enabled, false);
         assert_eq!(settings.voice_receptionist_number, None);
-        assert_eq!(
-            settings.voice_receptionist_persona,
-            Some("Friendly".to_string())
-        );
+        assert_eq!(settings.voice_receptionist_persona, Some("Friendly".to_string()));
         assert_eq!(settings.voice_receptionist_instructions, None);
     }
 
@@ -236,9 +207,7 @@ mod tests {
         }
 
         let store = Store::from_file(file_path.clone()).unwrap();
-        store
-            .set_extra("key1".to_string(), "value1".to_string())
-            .unwrap();
+        store.set_extra("key1".to_string(), "value1".to_string()).unwrap();
 
         assert!(file_path.exists());
 

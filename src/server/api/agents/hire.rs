@@ -1,13 +1,13 @@
-use crate::hub::Hub;
 use axum::{
-    Router,
-    extract::{Json, Query, State},
-    http::StatusCode,
+    extract::{State, Json, Query},
     response::IntoResponse,
+    http::StatusCode,
     routing::{get, post},
+    Router,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::hub::Hub;
+use serde::{Deserialize, Serialize};
 #[derive(Deserialize, Debug)]
 pub struct HireAgentRequest {
     pub name: String,
@@ -62,30 +62,17 @@ async fn hire_handler(
                     message: "Authentication required".to_string(),
                 }),
             )
-                .into_response();
+                .into_response()
         }
     };
 
     let (parts, body) = req.into_parts();
     let req2 = axum::extract::Request::from_parts(parts, body);
 
-    let payload: HireAgentRequest =
-        match axum::extract::Json::<HireAgentRequest>::from_request(req2, &()).await {
-            Ok(Json(payload)) => payload,
-            Err(_) => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(HireAgentResponse {
-                        id: "".to_string(),
-                        status: "error".to_string(),
-                        agent_id: "".to_string(),
-                        workflow_id: "".to_string(),
-                        message: "Invalid payload".to_string(),
-                    }),
-                )
-                    .into_response();
-            }
-        };
+    let payload: HireAgentRequest = match axum::extract::Json::<HireAgentRequest>::from_request(req2, &()).await {
+        Ok(Json(payload)) => payload,
+        Err(_) => return (StatusCode::BAD_REQUEST, Json(HireAgentResponse { id: "".to_string(), status: "error".to_string(), agent_id: "".to_string(), workflow_id: "".to_string(), message: "Invalid payload".to_string() })).into_response(),
+    };
 
     let now = chrono::Utc::now().timestamp();
     let agent_id = format!("agent-{}-{}", now, uuid::Uuid::new_v4().simple());
@@ -127,11 +114,7 @@ async fn hire_handler(
         workflow: "ohc_business_swarm".to_string(),
         task: workflow_task,
         status: "running".to_string(),
-        command: format!(
-            "{} --task {}",
-            binary,
-            serde_json::to_string(&agent_task).unwrap_or_default()
-        ),
+        command: format!("{} --task {}", binary, serde_json::to_string(&agent_task).unwrap_or_default()),
         created_at: chrono::Utc::now().to_rfc3339(),
         output: None,
         error: None,
@@ -146,10 +129,7 @@ async fn hire_handler(
         status: "running".to_string(),
         agent_id,
         workflow_id,
-        message: format!(
-            "Hired {} as {} and started a real MiniMax business swarm",
-            payload.name, payload.role
-        ),
+        message: format!("Hired {} as {} and started a real MiniMax business swarm", payload.name, payload.role),
     };
 
     (StatusCode::CREATED, Json(response)).into_response()
@@ -165,26 +145,18 @@ pub struct MarketplaceQuery {
 }
 
 pub async fn list_marketplace_agents(Query(query): Query<MarketplaceQuery>) -> impl IntoResponse {
-    let provider = Box::new(
-        ohc_builtin_agent::tools::marketplace::HttpMarketplaceProvider::new(
-            &std::env::var("AGENT_MARKETPLACE_URL")
-                .unwrap_or_else(|_| "https://marketplace.example.com".to_string()),
-        ),
-    );
+    let provider = Box::new(ohc_builtin_agent::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string())));
     let marketplace = ohc_builtin_agent::tools::marketplace::MarketplaceClient::new(provider);
 
     let q = query.q.unwrap_or_default();
 
     match marketplace.search(&q).await {
         Ok(agents) => {
-            let json_agents =
-                serde_json::to_value(agents).unwrap_or_else(|_| serde_json::json!([]));
+            let json_agents = serde_json::to_value(agents).unwrap_or_else(|_| serde_json::json!([]));
             (StatusCode::OK, Json(json_agents)).into_response()
+        },
+        Err(_) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!([]))).into_response()
         }
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!([])),
-        )
-            .into_response(),
     }
 }

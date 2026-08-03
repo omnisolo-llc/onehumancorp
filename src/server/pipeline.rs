@@ -1,10 +1,10 @@
+use std::collections::HashMap;
+use std::sync::RwLock;
+use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
+use std::sync::Arc;
 use crate::hub::Hub;
 use ::server_ohc::orchestration::Message;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::RwLock;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PipelineState {
@@ -28,6 +28,7 @@ pub struct SpecApprovedEvent {
     pub details: String,
 }
 
+
 pub struct Orchestrator {
     hub: Arc<Hub>,
     pipelines: RwLock<HashMap<String, Pipeline>>,
@@ -46,14 +47,14 @@ impl Orchestrator {
         let mut details = String::new();
 
         for part in content.split(',') {
-            let kv: Vec<&str> = part.split('=').collect();
-            if kv.len() == 2 {
-                match kv[0] {
-                    "branch" => branch = kv[1].to_string(),
-                    "details" => details = kv[1].to_string(),
-                    _ => {}
-                }
-            }
+             let kv: Vec<&str> = part.split('=').collect();
+             if kv.len() == 2 {
+                 match kv[0] {
+                     "branch" => branch = kv[1].to_string(),
+                     "details" => details = kv[1].to_string(),
+                     _ => {}
+                 }
+             }
         }
 
         if branch.is_empty() {
@@ -68,20 +69,14 @@ impl Orchestrator {
 
         let swe_agent_id = "swe-1".to_string();
 
-        let mut pipelines = self
-            .pipelines
-            .write()
-            .expect("RwLock write lock should not be poisoned");
-        pipelines.insert(
-            event.branch.clone(),
-            Pipeline {
-                id: format!("pipeline-{}", event.branch),
-                branch: event.branch.clone(),
-                state: PipelineState::Implementing,
-                agent_id: swe_agent_id.clone(),
-                created_at: Utc::now(),
-            },
-        );
+        let mut pipelines = self.pipelines.write().expect("RwLock write lock should not be poisoned");
+        pipelines.insert(event.branch.clone(), Pipeline {
+            id: format!("pipeline-{}", event.branch),
+            branch: event.branch.clone(),
+            state: PipelineState::Implementing,
+            agent_id: swe_agent_id.clone(),
+            created_at: Utc::now(),
+        });
         drop(pipelines);
 
         let task_msg = Message {
@@ -94,25 +89,16 @@ impl Orchestrator {
             meeting_id: String::new(),
         };
 
-        self.hub
-            .clone()
-            .publish(task_msg)
-            .await
-            .map_err(|e| e.to_string())?;
+        self.hub.clone().publish(task_msg).await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
 
     pub fn get_pipeline_state(&self, branch: &str) -> Result<PipelineState, String> {
-        let pipelines = self
-            .pipelines
-            .read()
-            .expect("RwLock read lock should not be poisoned");
-        pipelines
-            .get(branch)
-            .map(|p| p.state.clone())
-            .ok_or_else(|| "pipeline not found".to_string())
+        let pipelines = self.pipelines.read().expect("RwLock read lock should not be poisoned");
+        pipelines.get(branch).map(|p| p.state.clone()).ok_or_else(|| "pipeline not found".to_string())
     }
+
 }
 
 #[cfg(test)]
@@ -130,8 +116,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_spec_approved() {
         let (tx, _) = tokio::sync::mpsc::channel(100);
-        let pool =
-            sqlx::PgPool::connect_lazy("postgres://localhost/test").expect("failed to unwrap");
+        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/test").expect("failed to unwrap");
         let hub = Arc::new(Hub::new(tx, pool));
         let orchestrator = Orchestrator::new(hub.clone());
 
@@ -145,14 +130,9 @@ mod tests {
             meeting_id: String::new(),
         };
 
-        orchestrator
-            .handle_spec_approved(msg)
-            .await
-            .expect("failed to unwrap");
+        orchestrator.handle_spec_approved(msg).await.expect("failed to unwrap");
 
-        let state = orchestrator
-            .get_pipeline_state("feature-2")
-            .expect("failed to unwrap");
+        let state = orchestrator.get_pipeline_state("feature-2").expect("failed to unwrap");
         assert_eq!(state, PipelineState::Implementing);
     }
 }

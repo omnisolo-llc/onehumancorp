@@ -18,11 +18,9 @@ impl RedisTaskQueue {
     }
 
     async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        let conn = self
-            .connection
-            .get_or_try_init(|| async { self.client.get_multiplexed_tokio_connection().await })
-            .await
-            .map_err(|e| e.to_string())?;
+        let conn = self.connection.get_or_try_init(|| async {
+            self.client.get_multiplexed_tokio_connection().await
+        }).await.map_err(|e| e.to_string())?;
         Ok(conn.clone())
     }
 }
@@ -30,22 +28,14 @@ impl RedisTaskQueue {
 #[async_trait]
 impl TaskQueue for RedisTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
-        if jobs.is_empty() {
-            return Ok(());
-        }
+        if jobs.is_empty() { return Ok(()); }
         let mut conn = self.get_connection().await?;
         let mut pipe = redis::pipe();
         for job in jobs {
             let payload_json = serde_json::to_string(&job).map_err(|e| e.to_string())?;
-            pipe.cmd("ZADD")
-                .arg(&self.queue_name)
-                .arg(job.next_retry_at.timestamp_millis())
-                .arg(payload_json);
+            pipe.cmd("ZADD").arg(&self.queue_name).arg(job.next_retry_at.timestamp_millis()).arg(payload_json);
         }
-        let _: () = pipe
-            .query_async(&mut conn)
-            .await
-            .map_err(|e| e.to_string())?;
+        let _: () = pipe.query_async(&mut conn).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -64,12 +54,7 @@ impl TaskQueue for RedisTaskQueue {
         Ok(())
     }
 
-    async fn dequeue(
-        &self,
-        roles: Vec<String>,
-        _estimated_vram: i64,
-        _estimated_tokens: i64,
-    ) -> Result<Option<Job>, String> {
+    async fn dequeue(&self, roles: Vec<String>, _estimated_vram: i64, _estimated_tokens: i64) -> Result<Option<Job>, String> {
         let mut conn = self.get_connection().await?;
         let now = chrono::Utc::now().timestamp_millis();
 
@@ -105,9 +90,7 @@ impl TaskQueue for RedisTaskQueue {
                 }
             } else {
                 // Corrupted data - log error and gracefully discard the bad payload.
-                tracing::warn!(
-                    "Redis mailbox corruption detected: Dropping malformed JSON payload."
-                );
+                tracing::warn!("Redis mailbox corruption detected: Dropping malformed JSON payload.");
                 // Since ZPOPMIN already removed it, doing nothing drops the bad message.
             }
         }

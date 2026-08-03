@@ -29,7 +29,7 @@ impl BufferProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            },
+            }
         }
     }
 }
@@ -42,9 +42,6 @@ mod tests {
     fn test_buffer_provider_metadata() {
         let provider = BufferProvider::new("test_token".to_string());
         assert_eq!(provider.to_integration_provider().metadata.id, "buffer");
-        assert_eq!(
-            provider.to_integration_provider().metadata.category,
-            "social"
-        );
+        assert_eq!(provider.to_integration_provider().metadata.category, "social");
     }
 }

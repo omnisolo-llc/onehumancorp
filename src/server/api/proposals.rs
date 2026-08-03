@@ -319,9 +319,9 @@ async fn get_proposal(
             .bind(tenant_id)
             .fetch_optional(&pool),
         sqlx::query_as::<_, ProposalLineItem>(GET_LINE_ITEMS_SQL)
-            .bind(&id)
-            .bind(tenant_id)
-            .fetch_all(&pool)
+        .bind(&id)
+        .bind(tenant_id)
+        .fetch_all(&pool)
     );
 
     let proposal = match proposal_res {
@@ -369,10 +369,10 @@ async fn approve_proposal(
     };
 
     let proposal = match sqlx::query_as::<_, Proposal>(APPROVE_PROPOSAL_SQL)
-        .bind(&id)
-        .bind(&tenant_id)
-        .fetch_optional(&mut *tx)
-        .await
+    .bind(&id)
+    .bind(&tenant_id)
+    .fetch_optional(&mut *tx)
+    .await
     {
         Ok(Some(p)) => p,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
@@ -382,11 +382,13 @@ async fn approve_proposal(
         }
     };
 
-    let line_items = match sqlx::query_as::<_, ProposalLineItem>(GET_LINE_ITEMS_SQL)
-        .bind(&id)
-        .bind(&tenant_id)
-        .fetch_all(&mut *tx)
-        .await
+    let line_items = match sqlx::query_as::<_, ProposalLineItem>(
+        GET_LINE_ITEMS_SQL,
+    )
+    .bind(&id)
+    .bind(&tenant_id)
+    .fetch_all(&mut *tx)
+    .await
     {
         Ok(items) => items,
         Err(e) => {
@@ -418,13 +420,12 @@ async fn approve_proposal(
     };
 
     if !checkout_url.is_empty() {
-        let _ =
-            sqlx::query("UPDATE proposals SET checkout_url = $1 WHERE id = $2 AND tenant_id = $3")
-                .bind(&checkout_url)
-                .bind(&proposal.id)
-                .bind(&tenant_id)
-                .execute(&mut *tx)
-                .await;
+        let _ = sqlx::query("UPDATE proposals SET checkout_url = $1 WHERE id = $2 AND tenant_id = $3")
+            .bind(&checkout_url)
+            .bind(&proposal.id)
+            .bind(&tenant_id)
+            .execute(&mut *tx)
+            .await;
     }
 
     let invoice_id = Uuid::new_v4().to_string();
@@ -552,20 +553,11 @@ mod tests {
 
     #[test]
     fn proposal_access_is_scoped_to_authenticated_tenant() {
-        assert_eq!(
-            authenticated_tenant(&claims(Some("tenant-a"))).unwrap(),
-            "tenant-a"
-        );
-        assert_eq!(
-            authenticated_tenant(&claims(None)),
-            Err(StatusCode::UNAUTHORIZED)
-        );
+        assert_eq!(authenticated_tenant(&claims(Some("tenant-a"))).unwrap(), "tenant-a");
+        assert_eq!(authenticated_tenant(&claims(None)), Err(StatusCode::UNAUTHORIZED));
 
         for sql in [GET_PROPOSAL_SQL, GET_LINE_ITEMS_SQL, APPROVE_PROPOSAL_SQL] {
-            assert!(
-                sql.contains("tenant_id"),
-                "query must predicate authenticated tenant: {sql}"
-            );
+            assert!(sql.contains("tenant_id"), "query must predicate authenticated tenant: {sql}");
         }
         assert!(GET_LINE_ITEMS_SQL.contains("JOIN proposals"));
         assert!(APPROVE_PROPOSAL_SQL.contains("tenant_id = $2"));

@@ -1,6 +1,6 @@
 use crate::integrations::mercadopago::client::MercadoPagoClient;
+use ::server_pricing::rate_limit::{RedisRateLimiter, RateLimitStatus};
 use crate::integrations::stripe::client::StripeClient;
-use ::server_pricing::rate_limit::{RateLimitStatus, RedisRateLimiter};
 use redis::Client;
 use std::sync::Arc;
 
@@ -14,18 +14,11 @@ pub struct Tracker {
 
 impl Tracker {
     pub fn new() -> Self {
-        Tracker {
-            rate_limiter: None,
-            stripe_client: None,
-            mercadopago_client: None,
-            auditor: None,
-        }
+        Tracker { rate_limiter: None, stripe_client: None, mercadopago_client: None, auditor: None }
     }
 
     pub fn new_with_redis(redis_url: &str) -> Self {
-        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN")
-            .ok()
-            .map(|token| Arc::new(MercadoPagoClient::new(token)));
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| Arc::new(MercadoPagoClient::new(token)));
         let stripe_client = std::env::var("STRIPE_API_KEY")
             .ok()
             .map(|key| Arc::new(StripeClient::new(key)));
@@ -37,12 +30,7 @@ impl Tracker {
                 auditor: None,
             }
         } else {
-            Tracker {
-                rate_limiter: None,
-                stripe_client,
-                mercadopago_client,
-                auditor: None,
-            }
+            Tracker { rate_limiter: None, stripe_client, mercadopago_client, auditor: None }
         }
     }
 
@@ -77,12 +65,7 @@ impl Tracker {
         }
     }
 
-    pub async fn track_storage_usage(
-        &self,
-        tenant_id: &str,
-        delta_bytes: i64,
-        agent_id: Option<&str>,
-    ) -> Result<RateLimitStatus, String> {
+    pub async fn track_storage_usage(&self, tenant_id: &str, delta_bytes: i64, agent_id: Option<&str>) -> Result<RateLimitStatus, String> {
         if let Some(auditor) = &self.auditor {
             if let Some(aid) = agent_id {
                 auditor.record_agent_storage(aid, delta_bytes);
@@ -123,11 +106,7 @@ impl Tracker {
         }
     }
 
-    pub async fn check_rate_limit(
-        &self,
-        tenant_id: &str,
-        agent_id: &str,
-    ) -> Result<RateLimitStatus, String> {
+    pub async fn check_rate_limit(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.record_action(tenant_id, agent_id).await {
                 Ok(status) => Ok(status),
@@ -163,10 +142,7 @@ impl Tracker {
         }
     }
 
-    pub async fn get_tenant_tier(
-        &self,
-        tenant_id: &str,
-    ) -> Result<::server_pricing::rate_limit::PlanTier, String> {
+    pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<::server_pricing::rate_limit::PlanTier, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.get_tenant_tier(tenant_id).await
         } else {
@@ -182,11 +158,7 @@ impl Tracker {
         }
     }
 
-    pub async fn get_agent_actions_used(
-        &self,
-        tenant_id: &str,
-        agent_id: &str,
-    ) -> Result<u32, String> {
+    pub async fn get_agent_actions_used(&self, tenant_id: &str, agent_id: &str) -> Result<u32, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.get_agent_actions_used(tenant_id, agent_id).await
         } else {
@@ -202,10 +174,7 @@ impl Tracker {
         }
     }
 
-    pub async fn get_subscription(
-        &self,
-        subscription_id: &str,
-    ) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
+    pub async fn get_subscription(&self, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
         if let Some(ref client) = self.stripe_client {
             client.get_subscription(subscription_id).await
         } else {
@@ -258,18 +227,8 @@ impl Tracker {
     }
 
     pub fn get_storage_cost_cents(&self, bytes: i64) -> i64 {
-        let cost_per_gb = if let Some(ref auditor) = self.auditor {
-            auditor.get_cost_per_gb_month()
-        } else {
-            0.10
-        };
-        crate::pricing::calculator::calculate_storage_cost_cents(
-            bytes,
-            &crate::pricing::calculator::CostConfig {
-                cost_per_gb_month: cost_per_gb,
-                ..Default::default()
-            },
-        )
+        let cost_per_gb = if let Some(ref auditor) = self.auditor { auditor.get_cost_per_gb_month() } else { 0.10 };
+        crate::pricing::calculator::calculate_storage_cost_cents(bytes, &crate::pricing::calculator::CostConfig { cost_per_gb_month: cost_per_gb, ..Default::default() })
     }
 
     pub fn get_total_cost_cents(&self) -> i64 {
@@ -281,32 +240,20 @@ impl Tracker {
     }
 
     pub fn track_outbound_api_call(&self, tenant_id: &str, endpoint: &str) {
-        tracing::info!(
-            "💰 Miser telemetry: Recording outbound API call for tenant: {}, endpoint: {}",
-            tenant_id,
-            endpoint
-        ); // pii-safe
+        tracing::info!("💰 Miser telemetry: Recording outbound API call for tenant: {}, endpoint: {}", tenant_id, endpoint); // pii-safe
         if let Some(ref auditor) = self.auditor {
             auditor.record_api_call(tenant_id, endpoint);
         }
     }
 
     pub fn track_email_send(&self, tenant_id: &str) {
-        tracing::info!(
-            "💰 Miser telemetry: Recording communication metric for tenant: {}",
-            tenant_id
-        ); // pii-safe
+        tracing::info!("💰 Miser telemetry: Recording communication metric for tenant: {}", tenant_id); // pii-safe
         if let Some(ref auditor) = self.auditor {
             auditor.record_email_send(tenant_id);
         }
     }
 
-    pub fn record_bandwidth_compression(
-        &self,
-        tenant_id: &str,
-        original_bytes: i64,
-        compressed_bytes: i64,
-    ) {
+    pub fn record_bandwidth_compression(&self, tenant_id: &str, original_bytes: i64, compressed_bytes: i64) {
         if let Some(ref auditor) = self.auditor {
             auditor.record_bandwidth_compression(tenant_id, original_bytes, compressed_bytes);
         }
@@ -323,10 +270,7 @@ impl Tracker {
         } else {
             0
         };
-        TokenSummary {
-            total_tokens,
-            total_cached_tokens,
-        }
+        TokenSummary { total_tokens, total_cached_tokens }
     }
 }
 

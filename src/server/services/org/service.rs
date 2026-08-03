@@ -1,8 +1,8 @@
-use ::server_ohc::orchestration::org_service_server::OrgService;
-use ::server_ohc::orchestration::*;
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 use tonic::{Request, Response, Status};
+use ::server_ohc::orchestration::*;
+use ::server_ohc::orchestration::org_service_server::OrgService;
+use std::sync::{Arc, RwLock};
+use std::collections::HashMap;
 
 use ::server_utils::cache::HybridCache;
 use std::sync::OnceLock;
@@ -25,9 +25,7 @@ impl MyOrgService {
                 minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
             }),
-            analytics_cache: std::sync::Arc::new(::server_utils::cache::HybridCache::new(
-                redis_client,
-            )),
+            analytics_cache: std::sync::Arc::new(::server_utils::cache::HybridCache::new(redis_client)),
         }
     }
 }
@@ -46,30 +44,12 @@ impl OrgService for MyOrgService {
         }
 
         let domains = vec![
-            DomainInfoProto {
-                id: "software_company".to_string(),
-                name: "Software Company".to_string(),
-                description: "Full-stack engineering org...".to_string(),
-            },
-            DomainInfoProto {
-                id: "digital_marketing_agency".to_string(),
-                name: "Digital Marketing Agency".to_string(),
-                description: "Full-service agency...".to_string(),
-            },
-            DomainInfoProto {
-                id: "accounting_firm".to_string(),
-                name: "Accounting Firm".to_string(),
-                description: "Financial services firm...".to_string(),
-            },
+            DomainInfoProto { id: "software_company".to_string(), name: "Software Company".to_string(), description: "Full-stack engineering org...".to_string() },
+            DomainInfoProto { id: "digital_marketing_agency".to_string(), name: "Digital Marketing Agency".to_string(), description: "Full-service agency...".to_string() },
+            DomainInfoProto { id: "accounting_firm".to_string(), name: "Accounting Firm".to_string(), description: "Financial services firm...".to_string() },
         ];
 
-        cache
-            .set(
-                &cache_key,
-                domains.clone(),
-                std::time::Duration::from_secs(3600),
-            )
-            .await;
+        cache.set(&cache_key, domains.clone(), std::time::Duration::from_secs(3600)).await;
 
         Ok(Response::new(DomainsResponse { domains }))
     }
@@ -98,31 +78,17 @@ impl OrgService for MyOrgService {
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<MarketplaceItemsResponse>, Status> {
         let cache_key = "org_marketplace_items".to_string();
-        let cache =
-            MARKETPLACE_ITEMS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+        let cache = MARKETPLACE_ITEMS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
 
         if let Some(items) = cache.get(&cache_key).await {
             return Ok(Response::new(MarketplaceItemsResponse { items }));
         }
 
-        let items = vec![MarketplaceItemProto {
-            id: "git-mcp".to_string(),
-            name: "Git".to_string(),
-            r#type: "tool".to_string(),
-            author: "system".to_string(),
-            description: "Git operations".to_string(),
-            downloads: 100,
-            rating: 4.5,
-            tags: vec!["code".to_string()],
-        }];
+        let items = vec![
+            MarketplaceItemProto { id: "git-mcp".to_string(), name: "Git".to_string(), r#type: "tool".to_string(), author: "system".to_string(), description: "Git operations".to_string(), downloads: 100, rating: 4.5, tags: vec!["code".to_string()] },
+        ];
 
-        cache
-            .set(
-                &cache_key,
-                items.clone(),
-                std::time::Duration::from_secs(3600),
-            )
-            .await;
+        cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(3600)).await;
 
         Ok(Response::new(MarketplaceItemsResponse { items }))
     }
@@ -131,13 +97,7 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
-        let org_id = _request
-            .metadata()
-            .get("x-spiffe-id")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| ::server_auth::parse_spiffe_id(v).ok())
-            .map(|(id, _)| id)
-            .unwrap_or_else(|| "default".to_string());
+        let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
 
         let analytics_cache_clone = self.analytics_cache.clone();
@@ -160,38 +120,21 @@ impl OrgService for MyOrgService {
                 let org_id_for_summary = org_id_bg.clone();
                 let org_id_for_meetings = org_id_bg.clone();
                 let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
-                    tokio::spawn(async move {
-                        hub_for_agents.get_agents_by_org(&org_id_for_agents).await
-                    }),
-                    tokio::spawn({
-                        let h = hub_bg.clone();
-                        async move { h.get_meetings_by_org(&org_id_for_meetings).await }
-                    }),
-                    tokio::task::spawn_blocking(move || hub_for_summary
-                        .tracker()
-                        .summary(&org_id_for_summary)),
-                    tokio::spawn({
-                        let h = hub_bg.clone();
-                        async move { h.tracker().check_agent_quota(&org_id_clone).await }
-                    })
+                    tokio::spawn(async move { hub_for_agents.get_agents_by_org(&org_id_for_agents).await }),
+                    tokio::spawn({ let h = hub_bg.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings).await } }),
+                    tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
+                    tokio::spawn({ let h = hub_bg.clone(); async move { h.tracker().check_agent_quota(&org_id_clone).await } })
                 );
 
-                let Ok(agents) = agents_res else {
-                    return;
-                };
-                let Ok(all_meetings) = all_meetings_res else {
-                    return;
-                };
-                let Ok(summary) = summary_res else {
-                    return;
-                };
+                let Ok(agents) = agents_res else { return; };
+                let Ok(all_meetings) = all_meetings_res else { return; };
+                let Ok(summary) = summary_res else { return; };
                 let quota_result = quota_res.unwrap_or(Err("Spawn error".to_string()));
-                let quota_result =
-                    quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
-                        is_allowed: true,
-                        soft_limit_reached: false,
-                        user_message: None,
-                    });
+                let quota_result = quota_result.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+                    is_allowed: true,
+                    soft_limit_reached: false,
+                    user_message: None,
+                });
 
                 let total_agents = agents.len() as i32;
                 let (total_msgs, audited_msgs) = {
@@ -243,13 +186,7 @@ impl OrgService for MyOrgService {
                     is_allowed: status.is_allowed,
                 };
 
-                cache_bg
-                    .set(
-                        &cache_key_bg,
-                        response.clone(),
-                        std::time::Duration::from_secs(60),
-                    )
-                    .await;
+                cache_bg.set(&cache_key_bg, response.clone(), std::time::Duration::from_secs(60)).await;
             });
 
             return Ok(Response::new(cached));
@@ -267,29 +204,18 @@ impl OrgService for MyOrgService {
         let org_id_for_meetings = org_id.clone();
         let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
             tokio::spawn(async move { hub_for_agents.get_agents_by_org(&org_id_for_agents).await }),
-            tokio::spawn({
-                let h = self.hub.clone();
-                async move { h.get_meetings_by_org(&org_id_for_meetings).await }
-            }),
-            tokio::task::spawn_blocking(move || hub_for_summary
-                .tracker()
-                .summary(&org_id_for_summary)),
-            tokio::spawn({
-                let h = self.hub.clone();
-                let o = org_id_clone.clone();
-                async move { h.tracker().check_agent_quota(&o).await }
-            })
+            tokio::spawn({ let h = self.hub.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings).await } }),
+            tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
+            tokio::spawn({ let h = self.hub.clone(); let o = org_id_clone.clone(); async move { h.tracker().check_agent_quota(&o).await } })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let all_meetings = all_meetings_res.map_err(|e| Status::internal(e.to_string()))?;
         let summary = summary_res.map_err(|e| Status::internal(e.to_string()))?;
-        let quota_result = quota_res
-            .map_err(|e| Status::internal(e.to_string()))?
-            .unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
-                is_allowed: true,
-                soft_limit_reached: false,
-                user_message: None,
-            });
+        let quota_result = quota_res.map_err(|e| Status::internal(e.to_string()))?.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        });
 
         let total_agents = agents.len() as i32;
         let (total_msgs, audited_msgs) = {
@@ -342,13 +268,7 @@ impl OrgService for MyOrgService {
             is_allowed: status.is_allowed,
         };
 
-        self.analytics_cache
-            .set(
-                &cache_key,
-                response.clone(),
-                std::time::Duration::from_secs(60),
-            )
-            .await;
+        self.analytics_cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
 
         Ok(Response::new(response))
     }
@@ -363,34 +283,20 @@ mod tests {
     async fn test_get_analytics_caching() {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let pg_pool = crate::db::get_pool();
-        let db_arc = Arc::new(crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(
-                sqlx::sqlite::SqlitePoolOptions::new()
-                    .connect("sqlite::memory:")
-                    .await
-                    .unwrap(),
-            ),
-        });
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
         let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
 
         let service = MyOrgService::new(hub);
 
         let mut request1 = Request::new(::server_ohc::orchestration::EmptyRequest {});
-        request1.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/system/test".parse().unwrap(),
-        );
+        request1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start = std::time::Instant::now();
         let _res1 = service.get_analytics(request1).await.unwrap().into_inner();
         let _elapsed1 = start.elapsed();
 
         let mut request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
-        request2.metadata_mut().insert(
-            "x-spiffe-id",
-            "spiffe://onehumancorp.io/system/test".parse().unwrap(),
-        );
+        request2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start2 = std::time::Instant::now();
         let _res2 = service.get_analytics(request2).await.unwrap().into_inner();
@@ -404,15 +310,7 @@ mod tests {
     async fn test_get_domains() {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let pg_pool = crate::db::get_pool();
-        let db_arc = Arc::new(crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(
-                sqlx::sqlite::SqlitePoolOptions::new()
-                    .connect("sqlite::memory:")
-                    .await
-                    .unwrap(),
-            ),
-        });
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
         let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
 
         let service = MyOrgService::new(hub);
@@ -431,15 +329,7 @@ mod tests {
     async fn test_get_and_update_settings() {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let pg_pool = crate::db::get_pool();
-        let db_arc = Arc::new(crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(
-                sqlx::sqlite::SqlitePoolOptions::new()
-                    .connect("sqlite::memory:")
-                    .await
-                    .unwrap(),
-            ),
-        });
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
         let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
 
         let service = MyOrgService::new(hub);
@@ -453,11 +343,7 @@ mod tests {
             minimax_api_key: "new_key".to_string(),
             extras: extras.clone(),
         });
-        let updated_res = service
-            .update_settings(update_req)
-            .await
-            .unwrap()
-            .into_inner();
+        let updated_res = service.update_settings(update_req).await.unwrap().into_inner();
         assert_eq!(updated_res.minimax_api_key, "new_key");
         assert_eq!(updated_res.extras.get("key1").unwrap(), "val1");
 
@@ -471,33 +357,17 @@ mod tests {
     async fn test_get_marketplace_items() {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let pg_pool = crate::db::get_pool();
-        let db_arc = Arc::new(crate::db::DB {
-            pool: pg_pool,
-            store: crate::db::DbStore::Sqlite(
-                sqlx::sqlite::SqlitePoolOptions::new()
-                    .connect("sqlite::memory:")
-                    .await
-                    .unwrap(),
-            ),
-        });
+        let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
         let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
 
         let service = MyOrgService::new(hub);
 
         let request = Request::new(::server_ohc::orchestration::EmptyRequest {});
-        let res = service
-            .get_marketplace_items(request)
-            .await
-            .unwrap()
-            .into_inner();
+        let res = service.get_marketplace_items(request).await.unwrap().into_inner();
         assert!(!res.items.is_empty());
         assert_eq!(res.items[0].id, "git-mcp");
 
         let request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
-        let _res2 = service
-            .get_marketplace_items(request2)
-            .await
-            .unwrap()
-            .into_inner();
+        let _res2 = service.get_marketplace_items(request2).await.unwrap().into_inner();
     }
 }

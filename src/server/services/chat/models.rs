@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 use uuid::Uuid;
+use sqlx::FromRow;
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct ChatInbox {

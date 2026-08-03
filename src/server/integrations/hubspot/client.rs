@@ -102,10 +102,7 @@ impl HubSpotClient {
             request = request.json(&body);
         }
 
-        request
-            .send()
-            .await
-            .map_err(|e| format!("reqwest error: {}", e))
+        request.send().await.map_err(|e| format!("reqwest error: {}", e))
     }
 
     async fn parse_response<T: serde::de::DeserializeOwned>(
@@ -113,10 +110,7 @@ impl HubSpotClient {
         resp: reqwest::Response,
     ) -> Result<T, String> {
         let status = resp.status();
-        let text = resp
-            .text()
-            .await
-            .map_err(|e| format!("failed to read response: {}", e))?;
+        let text = resp.text().await.map_err(|e| format!("failed to read response: {}", e))?;
 
         if !status.is_success() {
             if let Ok(err) = serde_json::from_str::<HubSpotError>(&text) {
@@ -167,11 +161,7 @@ impl HubSpotClient {
         });
 
         let resp = self
-            .send_request(
-                reqwest::Method::POST,
-                "/crm/v3/objects/contacts",
-                Some(body),
-            )
+            .send_request(reqwest::Method::POST, "/crm/v3/objects/contacts", Some(body))
             .await?;
         self.parse_response(resp).await
     }
@@ -283,7 +273,11 @@ impl HubSpotClient {
         Ok(data.results)
     }
 
-    pub async fn create_company(&self, name: &str, domain: &str) -> Result<HubSpotCompany, String> {
+    pub async fn create_company(
+        &self,
+        name: &str,
+        domain: &str,
+    ) -> Result<HubSpotCompany, String> {
         let body = serde_json::json!({
             "properties": {
                 "name": name,
@@ -292,11 +286,7 @@ impl HubSpotClient {
         });
 
         let resp = self
-            .send_request(
-                reqwest::Method::POST,
-                "/crm/v3/objects/companies",
-                Some(body),
-            )
+            .send_request(reqwest::Method::POST, "/crm/v3/objects/companies", Some(body))
             .await?;
         self.parse_response(resp).await
     }
@@ -419,7 +409,10 @@ mod tests {
         let data: HubSpotListResponse<HubSpotContact> = serde_json::from_str(&resp).unwrap();
         assert_eq!(data.results.len(), 1);
         assert_eq!(data.results[0].id, "123");
-        assert_eq!(data.paging.unwrap().next.unwrap().after, "cursor123");
+        assert_eq!(
+            data.paging.unwrap().next.unwrap().after,
+            "cursor123"
+        );
     }
 
     #[tokio::test]

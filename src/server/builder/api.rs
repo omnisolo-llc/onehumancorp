@@ -1,13 +1,13 @@
-use ::server_common::Claims;
 use axum::{
-    Json, Router,
     extract::Extension,
     extract::{Path, State},
     middleware::{self, Next},
     response::Response,
     routing::{get, post, put},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use ::server_common::Claims;
 use serde_json::Value;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -171,11 +171,13 @@ pub struct BrandToolboxResponse {
     pub export_formats: Vec<String>,
 }
 
+
 use super::db;
 use super::jobs;
 
 fn default_builder_tenant_id() -> Uuid {
-    let raw = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "e2e-tenant".to_string());
+    let raw = std::env::var("OHC_DEFAULT_TENANT_ID")
+        .unwrap_or_else(|_| "e2e-tenant".to_string());
     Uuid::parse_str(&raw).unwrap_or_else(|_| {
         // Keep string tenant defaults stable across requests so generate/publish
         // flows can read the same records under Bazel and local dev.
@@ -183,7 +185,10 @@ fn default_builder_tenant_id() -> Uuid {
     })
 }
 
-async fn ensure_builder_claims(mut req: axum::extract::Request, next: Next) -> Response {
+async fn ensure_builder_claims(
+    mut req: axum::extract::Request,
+    next: Next,
+) -> Response {
     if req.extensions().get::<Claims>().is_none() {
         let now = chrono::Utc::now().timestamp();
         let tenant_id = default_builder_tenant_id();
@@ -204,31 +209,34 @@ async fn ensure_builder_claims(mut req: axum::extract::Request, next: Next) -> R
 
 fn validate_block(block_type: &str, content: &Value) -> bool {
     match block_type {
-        "HeroBlock" => content.get("headline").is_some() && content.get("subtitle").is_some(),
-        "ProductGridBlock" => content.get("items").and_then(|v| v.as_array()).is_some(),
+        "HeroBlock" => {
+            content.get("headline").is_some() && content.get("subtitle").is_some()
+        },
+        "ProductGridBlock" => {
+            content.get("items").and_then(|v| v.as_array()).is_some()
+        },
         "ServiceBookingBlock" => {
             content.get("title").is_some() && content.get("availability").is_some()
-        }
-        "TestimonialBlock" => content.get("quotes").and_then(|v| v.as_array()).is_some(),
-        "ContactFormBlock" | "BookingCalendarBlock" => content.is_object(),
+        },
+        "TestimonialBlock" => {
+            content.get("quotes").and_then(|v| v.as_array()).is_some()
+        },
+        "ContactFormBlock" | "BookingCalendarBlock" => {
+            content.is_object()
+        },
         _ => false,
     }
 }
+
 
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone() });
 
     Router::new()
-        .route(
-            "/edge/{tenant_id}/{site_id}",
-            get(super::edge::StorefrontRouter::handle_edge_request).layer(
-                axum::middleware::from_fn(
-                    crate::utils::edge_caching_middleware::edge_caching_middleware,
-                ),
-            ),
-        )
+        .route("/edge/{tenant_id}/{site_id}", get(super::edge::StorefrontRouter::handle_edge_request).layer(axum::middleware::from_fn(crate::utils::edge_caching_middleware::edge_caching_middleware)))
         .route("/sites", get(list_sites).post(create_site))
         .route("/sites/{site_id}", get(get_site))
+
         .route("/sites/{site_id}/pages", get(list_pages).post(create_page))
         .route(
             "/pages/{page_id}/blocks",
@@ -241,10 +249,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route("/brand_toolbox", get(list_brand_toolboxes))
         .route("/brand_toolbox/generate", post(generate_brand_toolbox))
         .route("/brand_toolbox/{toolbox_id}", get(get_brand_toolbox))
-        .route(
-            "/brand_toolbox/{toolbox_id}/publish_website",
-            post(publish_brand_toolbox_website),
-        )
+        .route("/brand_toolbox/{toolbox_id}/publish_website", post(publish_brand_toolbox_website))
         .route("/publish_draft", post(publish_draft))
         .route("/geo_score", post(geo_score))
         .route("/auto_seo", post(auto_seo))
@@ -285,8 +290,7 @@ async fn list_sites(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<SiteResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let sites = db::list_sites(&pool, tenant_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -306,8 +310,7 @@ async fn create_site(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateSiteRequest>,
 ) -> Result<Json<SiteResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let site = db::create_site(&pool, tenant_id, payload.domain)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -324,8 +327,7 @@ async fn get_site(
 ) -> Result<Json<SiteStructureResponse>, axum::http::StatusCode> {
     use std::collections::BTreeMap;
 
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
     let rows = db::get_site_structure_rows(&pool, tenant_id, site_id)
         .await
@@ -343,10 +345,7 @@ async fn get_site(
             id: page_id,
             path: row.page_path.clone().unwrap_or_default(),
             title: row.page_title.clone().unwrap_or_default(),
-            seo_metadata: row
-                .page_seo_metadata
-                .clone()
-                .unwrap_or_else(|| serde_json::json!({})),
+            seo_metadata: row.page_seo_metadata.clone().unwrap_or_else(|| serde_json::json!({})),
             blocks: Vec::new(),
         });
         if let Some(block_id) = row.block_id {
@@ -378,12 +377,8 @@ async fn geo_score(
         "url": payload.url.unwrap_or_default(),
     });
 
-    let res_str = executor
-        .execute(args)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let parsed: serde_json::Value = serde_json::from_str(&res_str)
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let res_str = executor.execute(args).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let parsed: serde_json::Value = serde_json::from_str(&res_str).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let score = parsed["generative_score"].as_i64().unwrap_or(50) as i32;
     let recs: Vec<String> = parsed["recommendations"]
@@ -415,7 +410,8 @@ async fn auto_seo(
     Ok(Json(schema_json))
 }
 
-#[derive(Serialize, serde::Deserialize)]
+#[derive(Serialize)]
+#[derive(serde::Deserialize)]
 pub struct PageResponse {
     pub id: Uuid,
     pub path: String,
@@ -434,8 +430,7 @@ async fn list_pages(
     Path(site_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<PageResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let pages = db::list_pages(&pool, tenant_id, site_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -458,18 +453,13 @@ async fn create_page(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreatePageRequest>,
 ) -> Result<Json<PageResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let page = db::create_page(&pool, tenant_id, site_id, payload.path, payload.title)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if let Err(err) = jobs::enqueue_publish_site_job(&pool, tenant_id, site_id).await {
-        tracing::error!(
-            "Failed to enqueue publish job for site {}: {}",
-            site_id,
-            err
-        );
+        tracing::error!("Failed to enqueue publish job for site {}: {}", site_id, err);
     }
 
     Ok(Json(PageResponse {
@@ -516,8 +506,7 @@ async fn list_blocks(
     Path(page_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Vec<BlockResponse>>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let blocks = db::list_blocks(&pool, tenant_id, page_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -543,8 +532,7 @@ async fn create_block(
     if !validate_block(&payload.block_type, &payload.content) {
         return Err(axum::http::StatusCode::BAD_REQUEST);
     }
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let block = db::create_block(
         &pool,
         tenant_id,
@@ -557,38 +545,21 @@ async fn create_block(
     .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let cache = crate::builder::edge::get_edge_cache();
-    cache
-        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
-        .await;
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
     let pool_clone = pool.clone();
     tokio::spawn(async move {
-        let site_id_query =
-            sqlx::query_scalar::<_, Uuid>("SELECT site_id FROM builder_pages WHERE id = $1")
-                .bind(page_id)
-                .fetch_optional(&pool_clone)
-                .await;
+        let site_id_query = sqlx::query_scalar::<_, Uuid>("SELECT site_id FROM builder_pages WHERE id = $1")
+            .bind(page_id)
+            .fetch_optional(&pool_clone)
+            .await;
 
         if let Ok(Some(site_id)) = site_id_query {
             let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
-            let _ = crate::builder::edge::regenerate_cache(
-                pool_clone.clone(),
-                tenant_id,
-                site_id,
-                cache_key,
-                cache.clone(),
-            )
-            .await;
+            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
 
-            if let Err(err) =
-                crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id, site_id)
-                    .await
-            {
-                tracing::error!(
-                    "Failed to enqueue publish job for site {}: {}",
-                    site_id,
-                    err
-                );
+            if let Err(err) = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id, site_id).await {
+                tracing::error!("Failed to enqueue publish job for site {}: {}", site_id, err);
             }
         }
     });
@@ -612,13 +583,10 @@ async fn update_block(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<UpdateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
 
     // Fetch block to check its type for validation
-    let existing_block = db::get_block(&pool, tenant_id, block_id)
-        .await
-        .map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
+    let existing_block = db::get_block(&pool, tenant_id, block_id).await.map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
     if !validate_block(&existing_block.block_type, &payload.content) {
         return Err(axum::http::StatusCode::BAD_REQUEST);
     }
@@ -628,39 +596,22 @@ async fn update_block(
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let cache = crate::builder::edge::get_edge_cache();
-    cache
-        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
-        .await;
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
     let pool_clone = pool.clone();
     let page_id = existing_block.page_id;
     tokio::spawn(async move {
-        let site_id_query =
-            sqlx::query_scalar::<_, Uuid>("SELECT site_id FROM builder_pages WHERE id = $1")
-                .bind(page_id)
-                .fetch_optional(&pool_clone)
-                .await;
+        let site_id_query = sqlx::query_scalar::<_, Uuid>("SELECT site_id FROM builder_pages WHERE id = $1")
+            .bind(page_id)
+            .fetch_optional(&pool_clone)
+            .await;
 
         if let Ok(Some(site_id)) = site_id_query {
             let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
-            let _ = crate::builder::edge::regenerate_cache(
-                pool_clone.clone(),
-                tenant_id,
-                site_id,
-                cache_key,
-                cache.clone(),
-            )
-            .await;
+            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
 
-            if let Err(err) =
-                crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id, site_id)
-                    .await
-            {
-                tracing::error!(
-                    "Failed to enqueue publish job for site {}: {}",
-                    site_id,
-                    err
-                );
+            if let Err(err) = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id, site_id).await {
+                tracing::error!("Failed to enqueue publish job for site {}: {}", site_id, err);
             }
         }
     });
@@ -684,8 +635,7 @@ async fn reorder_blocks(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ReorderBlocksRequest>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     db::reorder_blocks(&pool, tenant_id, page_id, payload.block_ids)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -697,8 +647,7 @@ async fn publish_site(
     Path(site_id): Path<Uuid>,
     Extension(claims): Extension<Claims>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
-        .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     jobs::enqueue_publish_site_job(&pool, tenant_id, site_id)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -719,41 +668,18 @@ fn infer_business_context(description: &str, brand_dna: Option<&BrandDna>) -> Bu
         return BusinessContext {
             name: dna.name.clone(),
             business_type: dna.business_type.clone(),
-            vibe: dna
-                .tone_of_voice
-                .first()
-                .cloned()
-                .unwrap_or_else(|| dna.positioning.clone()),
+            vibe: dna.tone_of_voice.first().cloned().unwrap_or_else(|| dna.positioning.clone()),
         };
     }
 
     let lower = description.to_lowercase();
-    let business_type = if lower.contains("bakery")
-        || lower.contains("cake")
-        || lower.contains("coffee")
-        || lower.contains("restaurant")
-        || lower.contains("food")
-    {
+    let business_type = if lower.contains("bakery") || lower.contains("cake") || lower.contains("coffee") || lower.contains("restaurant") || lower.contains("food") {
         "Restaurant / Food"
-    } else if lower.contains("handyman")
-        || lower.contains("plumb")
-        || lower.contains("repair")
-        || lower.contains("consult")
-        || lower.contains("coach")
-        || lower.contains("tutor")
-    {
+    } else if lower.contains("handyman") || lower.contains("plumb") || lower.contains("repair") || lower.contains("consult") || lower.contains("coach") || lower.contains("tutor") {
         "Service Business"
-    } else if lower.contains("boutique")
-        || lower.contains("shop")
-        || lower.contains("jewelry")
-        || lower.contains("product")
-    {
+    } else if lower.contains("boutique") || lower.contains("shop") || lower.contains("jewelry") || lower.contains("product") {
         "Online Store"
-    } else if lower.contains("artist")
-        || lower.contains("portfolio")
-        || lower.contains("creator")
-        || lower.contains("designer")
-    {
+    } else if lower.contains("artist") || lower.contains("portfolio") || lower.contains("creator") || lower.contains("designer") {
         "Creative / Portfolio"
     } else {
         "Local Business"
@@ -779,11 +705,7 @@ fn infer_business_context(description: &str, brand_dna: Option<&BrandDna>) -> Bu
     };
 
     BusinessContext {
-        name: if name.is_empty() {
-            "New Business".to_string()
-        } else {
-            name
-        },
+        name: if name.is_empty() { "New Business".to_string() } else { name },
         business_type: business_type.to_string(),
         vibe: vibe.to_string(),
     }
@@ -803,10 +725,7 @@ fn synthesize_brand_dna(
     let asset_hint = if uploaded_asset_names.is_empty() {
         "Use future product photos as primary visual references.".to_string()
     } else {
-        format!(
-            "Use uploaded references: {}.",
-            uploaded_asset_names.join(", ")
-        )
+        format!("Use uploaded references: {}.", uploaded_asset_names.join(", "))
     };
 
     BrandDna {
@@ -843,11 +762,7 @@ fn synthesize_brand_dna(
 fn synthesize_store_profile(description: &str, brand_dna: Option<&BrandDna>) -> StoreProfile {
     let context = infer_business_context(description, brand_dna);
     let is_service = context.business_type.contains("Service");
-    let primary_offer = if is_service {
-        "Book a consultation"
-    } else {
-        "Shop the latest"
-    };
+    let primary_offer = if is_service { "Book a consultation" } else { "Shop the latest" };
 
     StoreProfile {
         theme: Some("Glassmorphism".to_string()),
@@ -856,9 +771,7 @@ fn synthesize_store_profile(description: &str, brand_dna: Option<&BrandDna>) -> 
             serde_json::json!({"name": "Premium Bundle", "price": 120.0}),
             serde_json::json!({"name": "Basic Package", "price": 25.0}),
         ],
-        shipping_settings: Some(
-            serde_json::json!({"default_rate": 5.0, "free_shipping_threshold": 50.0}),
-        ),
+        shipping_settings: Some(serde_json::json!({"default_rate": 5.0, "free_shipping_threshold": 50.0})),
         tax_settings: Some(serde_json::json!({"default_tax_rate": 0.08})),
         domain: None,
         pages: vec![DraftPage {
@@ -939,16 +852,8 @@ fn brand_initials(name: &str) -> String {
 }
 
 fn synthesize_logo_concepts(brand_dna: &BrandDna) -> Vec<LogoConcept> {
-    let primary = brand_dna
-        .colors
-        .get(1)
-        .map(String::as_str)
-        .unwrap_or("#2563EB");
-    let ink = brand_dna
-        .colors
-        .first()
-        .map(String::as_str)
-        .unwrap_or("#0F172A");
+    let primary = brand_dna.colors.get(1).map(String::as_str).unwrap_or("#2563EB");
+    let ink = brand_dna.colors.first().map(String::as_str).unwrap_or("#0F172A");
     let initials = brand_initials(&brand_dna.name);
     let name = xml_escape(&brand_dna.name);
     vec![
@@ -980,12 +885,7 @@ fn synthesize_catalog(brand_dna: &BrandDna) -> Vec<CatalogItem> {
     let is_service = brand_dna.business_type.contains("Service");
     vec![
         CatalogItem {
-            name: if is_service {
-                "Signature Service"
-            } else {
-                "Signature Product"
-            }
-            .to_string(),
+            name: if is_service { "Signature Service" } else { "Signature Product" }.to_string(),
             price: if is_service { "From $99" } else { "$29" }.to_string(),
             description: format!(
                 "The first offer customers should understand from {}: clear, useful, and easy to act on.",
@@ -997,24 +897,13 @@ fn synthesize_catalog(brand_dna: &BrandDna) -> Vec<CatalogItem> {
                 brand_dna.name,
                 brand_dna.colors.join(", ")
             ),
-            seo_title: format!(
-                "{} | {}",
-                if is_service { "Book" } else { "Buy" },
-                brand_dna.name
-            ),
+            seo_title: format!("{} | {}", if is_service { "Book" } else { "Buy" }, brand_dna.name),
         },
         CatalogItem {
-            name: if is_service {
-                "Quick Consult"
-            } else {
-                "Starter Bundle"
-            }
-            .to_string(),
+            name: if is_service { "Quick Consult" } else { "Starter Bundle" }.to_string(),
             price: if is_service { "$49" } else { "$59" }.to_string(),
-            description: "A lower-friction entry point designed for first-time customers."
-                .to_string(),
-            photo_prompt: "Lifestyle shot showing the customer outcome, not a generic stock scene."
-                .to_string(),
+            description: "A lower-friction entry point designed for first-time customers.".to_string(),
+            photo_prompt: "Lifestyle shot showing the customer outcome, not a generic stock scene.".to_string(),
             seo_title: format!("{} starter offer", brand_dna.name),
         },
     ]
@@ -1037,9 +926,7 @@ fn synthesize_social_calendar(brand_dna: &BrandDna) -> Vec<SocialCalendarItem> {
             channel: (*channel).to_string(),
             caption: format!(
                 "{} from {}: a {} update with one clear next step.",
-                theme,
-                brand_dna.name,
-                brand_dna.tone_of_voice.join(", ")
+                theme, brand_dna.name, brand_dna.tone_of_voice.join(", ")
             ),
             visual_prompt: format!(
                 "{} visual for {}, using {}.",
@@ -1233,8 +1120,8 @@ async fn generate_brand_toolbox(
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default())
         .map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let mut toolbox = synthesize_brand_toolbox(&payload);
-    let toolbox_json = serde_json::to_value(&toolbox)
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let toolbox_json =
+        serde_json::to_value(&toolbox).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     let record = db::create_brand_toolbox(
         &pool,
         tenant_id,
@@ -1340,6 +1227,13 @@ async fn load_latest_brand_dna(pool: &PgPool, tenant_id: Uuid) -> Option<BrandDn
         .map(|toolbox| toolbox.brand_dna)
 }
 
+
+
+
+
+
+
+
 async fn generate_storefront(
     State(pool): State<PgPool>,
     Extension(claims): Extension<Claims>,
@@ -1352,7 +1246,10 @@ async fn generate_storefront(
     } else {
         None
     };
-    let active_brand_dna = payload.brand_dna.as_ref().or(persisted_brand_dna.as_ref());
+    let active_brand_dna = payload
+        .brand_dna
+        .as_ref()
+        .or(persisted_brand_dna.as_ref());
 
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     if api_key.trim().is_empty() {
@@ -1381,17 +1278,12 @@ Only return the JSON. No markdown formatting, no explanations."#,
     let mut ai_res_advisor = String::new();
     let mut ai_call_succeeded = false;
     while attempts < 3 {
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(60),
-            minimax.reason(&advisor_prompt),
-        )
-        .await
-        {
+        match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&advisor_prompt)).await {
             Ok(Ok(res)) => {
                 ai_res_advisor = res;
                 ai_call_succeeded = true;
                 break;
-            }
+            },
             _ => {
                 attempts += 1;
                 tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
@@ -1402,10 +1294,7 @@ Only return the JSON. No markdown formatting, no explanations."#,
     let business_context: BusinessContext = if ai_call_succeeded {
         let cleaned_advisor = clean_model_json(&ai_res_advisor);
         serde_json::from_str(cleaned_advisor).unwrap_or_else(|e| {
-            tracing::error!(
-                "Failed to parse JSON from Advisor AI, using heuristic context: {}",
-                e
-            );
+            tracing::error!("Failed to parse JSON from Advisor AI, using heuristic context: {}", e);
             infer_business_context(&payload.description, active_brand_dna.clone())
         })
     } else {
@@ -1414,24 +1303,10 @@ Only return the JSON. No markdown formatting, no explanations."#,
     };
 
     let source_context = [
-        payload
-            .website_url
-            .as_ref()
-            .map(|url| format!("Website URL: {}", url)),
-        payload
-            .product_url
-            .as_ref()
-            .map(|url| format!("Product URL: {}", url)),
-        payload
-            .campaign_prompt
-            .as_ref()
-            .map(|prompt| format!("Campaign prompt: {}", prompt)),
-        (!payload.uploaded_asset_names.is_empty()).then(|| {
-            format!(
-                "Uploaded assets: {}",
-                payload.uploaded_asset_names.join(", ")
-            )
-        }),
+        payload.website_url.as_ref().map(|url| format!("Website URL: {}", url)),
+        payload.product_url.as_ref().map(|url| format!("Product URL: {}", url)),
+        payload.campaign_prompt.as_ref().map(|prompt| format!("Campaign prompt: {}", prompt)),
+        (!payload.uploaded_asset_names.is_empty()).then(|| format!("Uploaded assets: {}", payload.uploaded_asset_names.join(", "))),
     ]
     .into_iter()
     .flatten()
@@ -1516,13 +1391,10 @@ Only return the JSON. No markdown formatting, no explanations. Make sure the blo
         Ok(promoter_response) => {
             let cleaned_response = clean_model_json(&promoter_response);
             serde_json::from_str(cleaned_response).unwrap_or_else(|e| {
-                tracing::error!(
-                    "Failed to parse JSON from Promoter AI, using heuristic storefront: {}",
-                    e
-                );
+                tracing::error!("Failed to parse JSON from Promoter AI, using heuristic storefront: {}", e);
                 synthesize_store_profile(&payload.description, active_brand_dna)
             })
-        }
+        },
         Err(e) => {
             tracing::error!("Promoter AI unavailable, using heuristic storefront: {}", e);
             synthesize_store_profile(&payload.description, active_brand_dna)
@@ -1608,11 +1480,7 @@ async fn publish_store_profile(
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if let Err(err) = jobs::enqueue_publish_site_job(pool, tenant_id, site.id).await {
-        tracing::error!(
-            "Failed to enqueue publish job for site {}: {}",
-            site.id,
-            err
-        );
+        tracing::error!("Failed to enqueue publish job for site {}: {}", site.id, err);
     }
 
     Ok(site)

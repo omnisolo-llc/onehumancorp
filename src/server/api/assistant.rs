@@ -1,16 +1,17 @@
-use crate::db::{DB, DbStore};
-use ::server_common::Claims;
 use axum::{
-    Json, Router,
     extract::{Extension, Path, Query},
     http::StatusCode,
     routing::get,
+    Router,
+    Json,
 };
-use chrono::Utc;
-use serde::{Deserialize, Serialize};
-use sqlx::Row;
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use crate::db::{DB, DbStore};
+use ::server_common::Claims;
 use uuid::Uuid;
+use chrono::Utc;
+use sqlx::Row;
 
 #[derive(serde::Deserialize)]
 pub struct AssistantQuery {
@@ -22,31 +23,17 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+
         .route("/workspaces", get(list_workspaces).post(create_workspace))
         .route("/workspaces/{id}", get(get_workspace))
         .route("/tasks", get(list_tasks).post(create_task))
         .route("/tasks/{id}", get(get_task).patch(mutate_task))
-        .route(
-            "/tasks/{id}/messages",
-            get(list_messages).post(create_message),
-        )
-        .route(
-            "/tasks/{id}/artifacts",
-            get(list_artifacts).post(create_artifact),
-        )
-        .route(
-            "/tasks/{id}/file_changes",
-            get(list_file_changes).post(create_file_change),
-        )
+        .route("/tasks/{id}/messages", get(list_messages).post(create_message))
+        .route("/tasks/{id}/artifacts", get(list_artifacts).post(create_artifact))
+        .route("/tasks/{id}/file_changes", get(list_file_changes).post(create_file_change))
         .route("/memory", get(list_memory).patch(mutate_memory))
-        .route(
-            "/memory/cross-session-search",
-            axum::routing::post(search_cross_session_memory),
-        )
-        .route(
-            "/memory/customer/{customer_id}",
-            get(synthesize_customer_memory),
-        )
+        .route("/memory/cross-session-search", axum::routing::post(search_cross_session_memory))
+        .route("/memory/customer/{customer_id}", get(synthesize_customer_memory))
         .route("/skills", get(list_skills).patch(mutate_skill))
         .route("/connectors", get(list_connectors).patch(mutate_connector))
         .layer(Extension(db))
@@ -204,14 +191,11 @@ fn tenant_id_from(claims: &Claims) -> Result<String, (StatusCode, String)> {
         .organization_id
         .as_deref()
         .map(str::trim)
-        .filter(|tenant_id| !tenant_id.is_empty() && !tenant_id.eq_ignore_ascii_case("system"))
-        .map(str::to_string)
-        .ok_or_else(|| {
-            (
-                StatusCode::UNAUTHORIZED,
-                "organization claim is required".to_string(),
-            )
+        .filter(|tenant_id| {
+            !tenant_id.is_empty() && !tenant_id.eq_ignore_ascii_case("system")
         })
+        .map(str::to_string)
+        .ok_or_else(|| (StatusCode::UNAUTHORIZED, "organization claim is required".to_string()))
 }
 
 fn require_text(value: Option<String>, field: &str) -> Result<String, (StatusCode, String)> {
@@ -254,9 +238,7 @@ async fn list_workspaces(
     Extension(claims): Extension<Claims>,
     Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<Workspace>>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let workspaces = match &db.store {
@@ -273,39 +255,24 @@ async fn list_workspaces(
                  FROM assistant_workspaces WHERE tenant_id = ?"
             };
             let rows = sqlx::query(query_str)
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<Workspace> = rows
-                .into_iter()
-                .map(|row| Workspace {
-                    id: row.get("id"),
-                    name: row.get("name"),
-                    default_work_dir: row.get("default_work_dir"),
-                    default_model: row.get("default_model"),
-                    created_at_unix: row
-                        .get::<Option<String>, _>("c_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                    updated_at_unix: row
-                        .get::<Option<String>, _>("u_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                })
-                .collect();
+            let list: Vec<Workspace> = rows.into_iter().map(|row| Workspace {
+                id: row.get("id"),
+                name: row.get("name"),
+                default_work_dir: row.get("default_work_dir"),
+                default_model: row.get("default_model"),
+                created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+                updated_at_unix: row.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+            }).collect();
             Ok(list)
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let query_str = if mobile_optimized {
                 "SELECT id, name, NULL::text as default_work_dir, NULL::text as default_model,
@@ -319,24 +286,19 @@ async fn list_workspaces(
                  FROM assistant_workspaces"
             };
             let rows = sqlx::query(query_str)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<Workspace> = rows
-                .into_iter()
-                .map(|row| Workspace {
-                    id: row.get("id"),
-                    name: row.get("name"),
-                    default_work_dir: row.get("default_work_dir"),
-                    default_model: row.get("default_model"),
-                    created_at_unix: row.get("c_unix"),
-                    updated_at_unix: row.get("u_unix"),
-                })
-                .collect();
+            let list: Vec<Workspace> = rows.into_iter().map(|row| Workspace {
+                id: row.get("id"),
+                name: row.get("name"),
+                default_work_dir: row.get("default_work_dir"),
+                default_model: row.get("default_model"),
+                created_at_unix: row.get("c_unix"),
+                updated_at_unix: row.get("u_unix"),
+            }).collect();
             Ok(list)
         }
     };
@@ -351,15 +313,9 @@ async fn create_workspace(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<Workspace>,
 ) -> Result<Json<Workspace>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mut ws = payload;
-    ws.id = if ws.id.is_empty() {
-        Uuid::new_v4().to_string()
-    } else {
-        ws.id
-    };
+    ws.id = if ws.id.is_empty() { Uuid::new_v4().to_string() } else { ws.id };
     ws.created_at_unix = Utc::now().timestamp();
     ws.updated_at_unix = Utc::now().timestamp();
 
@@ -378,14 +334,8 @@ async fn create_workspace(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             sqlx::query(
                 "INSERT INTO assistant_workspaces (id, tenant_id, name, default_work_dir, default_model) VALUES ($1, $2, $3, $4, $5)"
@@ -398,9 +348,7 @@ async fn create_workspace(
             .execute(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
     }
 
@@ -412,9 +360,7 @@ async fn get_workspace(
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Workspace>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
 
     match &db.store {
         DbStore::Sqlite(pool) => {
@@ -422,7 +368,7 @@ async fn get_workspace(
                 "SELECT id, name, default_work_dir, default_model, 
                         strftime('%s', created_at) as c_unix, 
                         strftime('%s', updated_at) as u_unix 
-                 FROM assistant_workspaces WHERE tenant_id = ? AND id = ?",
+                 FROM assistant_workspaces WHERE tenant_id = ? AND id = ?"
             )
             .bind(&tenant_id)
             .bind(&id)
@@ -436,42 +382,28 @@ async fn get_workspace(
                     name: r.get("name"),
                     default_work_dir: r.get("default_work_dir"),
                     default_model: r.get("default_model"),
-                    created_at_unix: r
-                        .get::<Option<String>, _>("c_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                    updated_at_unix: r
-                        .get::<Option<String>, _>("u_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
+                    created_at_unix: r.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+                    updated_at_unix: r.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
                 }))
             } else {
                 Err((StatusCode::NOT_FOUND, "Workspace not found".to_string()))
             }
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let row = sqlx::query(
                 "SELECT id, name, default_work_dir, default_model, 
                         EXTRACT(EPOCH FROM created_at)::BIGINT as c_unix, 
                         EXTRACT(EPOCH FROM updated_at)::BIGINT as u_unix 
-                 FROM assistant_workspaces WHERE id = $1",
+                 FROM assistant_workspaces WHERE id = $1"
             )
             .bind(&id)
             .fetch_optional(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             if let Some(r) = row {
                 Ok(Json(Workspace {
@@ -494,9 +426,7 @@ async fn list_tasks(
     Extension(claims): Extension<Claims>,
     Query(query): Query<AssistantQuery>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let tasks = match &db.store {
@@ -514,10 +444,10 @@ async fn list_tasks(
             };
 
             let rows = sqlx::query(query_str)
-                .bind(&tenant_id)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let list: Vec<serde_json::Value> = rows.into_iter().map(|row| {
                 if mobile_optimized {
@@ -554,14 +484,8 @@ async fn list_tasks(
             Ok(list)
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let query_str = if mobile_optimized {
                 "SELECT id, workspace_id, title, '' as prompt, status, mode, permission_profile, NULL as model_config, current_step, archived,
@@ -576,48 +500,43 @@ async fn list_tasks(
             };
 
             let rows = sqlx::query(query_str)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<serde_json::Value> = rows
-                .into_iter()
-                .map(|row| {
-                    if mobile_optimized {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "workspace_id": row.get::<String, _>("workspace_id"),
-                            "title": row.get::<String, _>("title"),
-                            "status": row.get::<String, _>("status"),
-                            "mode": row.get::<Option<String>, _>("mode"),
-                            "permission_profile": row.get::<String, _>("permission_profile"),
-                            "current_step": row.get::<Option<String>, _>("current_step"),
-                            "archived": row.get::<bool, _>("archived"),
-                            "created_at_unix": row.get::<Option<i64>, _>("c_unix").unwrap_or(0),
-                            "updated_at_unix": row.get::<Option<i64>, _>("u_unix").unwrap_or(0),
-                        })
-                    } else {
-                        let task = Task {
-                            id: row.get("id"),
-                            workspace_id: row.get("workspace_id"),
-                            title: row.get("title"),
-                            prompt: row.get("prompt"),
-                            status: row.get("status"),
-                            mode: row.get("mode"),
-                            permission_profile: row.get("permission_profile"),
-                            model_config_json: row.get("model_config"),
-                            current_step: row.get("current_step"),
-                            archived: row.get("archived"),
-                            created_at_unix: row.get::<Option<i64>, _>("c_unix").unwrap_or(0),
-                            updated_at_unix: row.get::<Option<i64>, _>("u_unix").unwrap_or(0),
-                        };
-                        serde_json::to_value(task).unwrap_or(serde_json::json!({}))
-                    }
-                })
-                .collect();
+            let list: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+                if mobile_optimized {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "workspace_id": row.get::<String, _>("workspace_id"),
+                        "title": row.get::<String, _>("title"),
+                        "status": row.get::<String, _>("status"),
+                        "mode": row.get::<Option<String>, _>("mode"),
+                        "permission_profile": row.get::<String, _>("permission_profile"),
+                        "current_step": row.get::<Option<String>, _>("current_step"),
+                        "archived": row.get::<bool, _>("archived"),
+                        "created_at_unix": row.get::<Option<i64>, _>("c_unix").unwrap_or(0),
+                        "updated_at_unix": row.get::<Option<i64>, _>("u_unix").unwrap_or(0),
+                    })
+                } else {
+                    let task = Task {
+                        id: row.get("id"),
+                        workspace_id: row.get("workspace_id"),
+                        title: row.get("title"),
+                        prompt: row.get("prompt"),
+                        status: row.get("status"),
+                        mode: row.get("mode"),
+                        permission_profile: row.get("permission_profile"),
+                        model_config_json: row.get("model_config"),
+                        current_step: row.get("current_step"),
+                        archived: row.get("archived"),
+                        created_at_unix: row.get::<Option<i64>, _>("c_unix").unwrap_or(0),
+                        updated_at_unix: row.get::<Option<i64>, _>("u_unix").unwrap_or(0),
+                    };
+                    serde_json::to_value(task).unwrap_or(serde_json::json!({}))
+                }
+            }).collect();
             Ok(list)
         }
     };
@@ -632,38 +551,29 @@ async fn create_task(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<Task>,
 ) -> Result<Json<Task>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mut task = payload;
-    task.id = if task.id.is_empty() {
-        Uuid::new_v4().to_string()
-    } else {
-        task.id
-    };
+    task.id = if task.id.is_empty() { Uuid::new_v4().to_string() } else { task.id };
     task.created_at_unix = Utc::now().timestamp();
     task.updated_at_unix = Utc::now().timestamp();
 
     // Verify workspace exists or create a default one
     match &db.store {
         DbStore::Sqlite(pool) => {
-            let ws_exists: (i64,) =
-                sqlx::query_as("SELECT count(*) FROM assistant_workspaces WHERE id = ?")
-                    .bind(&task.workspace_id)
-                    .fetch_one(pool)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-            if ws_exists.0 == 0 {
-                sqlx::query(
-                    "INSERT INTO assistant_workspaces (id, tenant_id, name) VALUES (?, ?, ?)",
-                )
+            let ws_exists: (i64,) = sqlx::query_as("SELECT count(*) FROM assistant_workspaces WHERE id = ?")
                 .bind(&task.workspace_id)
-                .bind(&tenant_id)
-                .bind("Default Workspace")
-                .execute(pool)
+                .fetch_one(pool)
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+            if ws_exists.0 == 0 {
+                sqlx::query("INSERT INTO assistant_workspaces (id, tenant_id, name) VALUES (?, ?, ?)")
+                    .bind(&task.workspace_id)
+                    .bind(&tenant_id)
+                    .bind("Default Workspace")
+                    .execute(pool)
+                    .await
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             }
 
             sqlx::query(
@@ -685,32 +595,23 @@ async fn create_task(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let ws_exists: (i64,) =
-                sqlx::query_as("SELECT count(*) FROM assistant_workspaces WHERE id = $1")
-                    .bind(&task.workspace_id)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let ws_exists: (i64,) = sqlx::query_as("SELECT count(*) FROM assistant_workspaces WHERE id = $1")
+                .bind(&task.workspace_id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             if ws_exists.0 == 0 {
-                sqlx::query(
-                    "INSERT INTO assistant_workspaces (id, tenant_id, name) VALUES ($1, $2, $3)",
-                )
-                .bind(&task.workspace_id)
-                .bind(&tenant_id)
-                .bind("Default Workspace")
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("INSERT INTO assistant_workspaces (id, tenant_id, name) VALUES ($1, $2, $3)")
+                    .bind(&task.workspace_id)
+                    .bind(&tenant_id)
+                    .bind("Default Workspace")
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             }
 
             sqlx::query(
@@ -731,9 +632,7 @@ async fn create_task(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
     }
 
@@ -746,9 +645,7 @@ async fn mutate_task(
     Path(id): Path<String>,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let action = payload.get("action").and_then(|a| a.as_str()).unwrap_or("");
 
     match &db.store {
@@ -770,10 +667,7 @@ async fn mutate_task(
                 sqlx::query("UPDATE assistant_tasks SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                     .bind(title).bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "save_to_workspace" {
-                let workspace = payload
-                    .get("workspace")
-                    .and_then(|w| w.as_str())
-                    .unwrap_or("");
+                let workspace = payload.get("workspace").and_then(|w| w.as_str()).unwrap_or("");
                 sqlx::query("UPDATE assistant_tasks SET workspace_id = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                     .bind(workspace).bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "approve_changes" {
@@ -794,39 +688,12 @@ async fn mutate_task(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "hard_delete" {
-                let mut tx = pool
-                    .begin()
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = ? AND task_id = ?")
-                    .bind(&tenant_id)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                sqlx::query("DELETE FROM assistant_artifacts WHERE tenant_id = ? AND task_id = ?")
-                    .bind(&tenant_id)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                sqlx::query(
-                    "DELETE FROM assistant_file_changes WHERE tenant_id = ? AND task_id = ?",
-                )
-                .bind(&tenant_id)
-                .bind(&id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                sqlx::query("DELETE FROM assistant_tasks WHERE tenant_id = ? AND id = ?")
-                    .bind(&tenant_id)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                tx.commit()
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                let mut tx = pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = ? AND task_id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_artifacts WHERE tenant_id = ? AND task_id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_file_changes WHERE tenant_id = ? AND task_id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_tasks WHERE tenant_id = ? AND id = ?").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 return Ok(Json(serde_json::json!({ "deletedTask": { "id": id } })));
             } else if action == "pin" || action == "unpin" {
                 // Ignore pin/unpin for now or implement if needed
@@ -835,14 +702,8 @@ async fn mutate_task(
             }
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             if action == "stop" {
                 sqlx::query("UPDATE assistant_tasks SET status = 'blocked', current_step = 'Stopped by user', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
@@ -861,10 +722,7 @@ async fn mutate_task(
                 sqlx::query("UPDATE assistant_tasks SET title = $1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND id = $3")
                     .bind(title).bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "save_to_workspace" {
-                let workspace = payload
-                    .get("workspace")
-                    .and_then(|w| w.as_str())
-                    .unwrap_or("");
+                let workspace = payload.get("workspace").and_then(|w| w.as_str()).unwrap_or("");
                 sqlx::query("UPDATE assistant_tasks SET workspace_id = $1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND id = $3")
                     .bind(workspace).bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "approve_changes" {
@@ -885,46 +743,18 @@ async fn mutate_task(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "hard_delete" {
-                sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = $1 AND task_id = $2")
-                    .bind(&tenant_id)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                sqlx::query(
-                    "DELETE FROM assistant_artifacts WHERE tenant_id = $1 AND task_id = $2",
-                )
-                .bind(&tenant_id)
-                .bind(&id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                sqlx::query(
-                    "DELETE FROM assistant_file_changes WHERE tenant_id = $1 AND task_id = $2",
-                )
-                .bind(&tenant_id)
-                .bind(&id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                sqlx::query("DELETE FROM assistant_tasks WHERE tenant_id = $1 AND id = $2")
-                    .bind(&tenant_id)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                tx.commit()
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_messages WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_artifacts WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_file_changes WHERE tenant_id = $1 AND task_id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                sqlx::query("DELETE FROM assistant_tasks WHERE tenant_id = $1 AND id = $2").bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 return Ok(Json(serde_json::json!({ "deletedTask": { "id": id } })));
             } else if action == "pin" || action == "unpin" {
                 // Ignore pin/unpin for now or implement if needed
             } else {
                 return Err((StatusCode::BAD_REQUEST, "Unsupported action".to_string()));
             }
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
     }
 
@@ -952,36 +782,20 @@ async fn mutate_task(
                     status: row.get("status"),
                     mode: row.get("mode"),
                     permission_profile: row.get("permission_profile"),
-                    model_config_json: row
-                        .get::<Option<String>, _>("model_config")
-                        .and_then(|s| serde_json::from_str(&s).ok()),
+                    model_config_json: row.get::<Option<String>, _>("model_config").and_then(|s| serde_json::from_str(&s).ok()),
                     current_step: row.get("current_step"),
                     archived: row.get::<i32, _>("archived") != 0,
-                    created_at_unix: row
-                        .get::<Option<String>, _>("c_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                    updated_at_unix: row
-                        .get::<Option<String>, _>("u_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
+                    created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+                    updated_at_unix: row.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
                 };
-                Ok(Json(
-                    serde_json::to_value(task).unwrap_or(serde_json::json!({})),
-                ))
+                Ok(Json(serde_json::to_value(task).unwrap_or(serde_json::json!({}))))
             } else {
                 Err((StatusCode::NOT_FOUND, "Task not found".to_string()))
             }
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let row = sqlx::query(
                 "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived,
@@ -995,9 +809,7 @@ async fn mutate_task(
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             if let Some(row) = row {
                 let task = Task {
@@ -1014,9 +826,7 @@ async fn mutate_task(
                     created_at_unix: row.get::<Option<i64>, _>("c_unix").unwrap_or(0),
                     updated_at_unix: row.get::<Option<i64>, _>("u_unix").unwrap_or(0),
                 };
-                Ok(Json(
-                    serde_json::to_value(task).unwrap_or(serde_json::json!({})),
-                ))
+                Ok(Json(serde_json::to_value(task).unwrap_or(serde_json::json!({}))))
             } else {
                 Err((StatusCode::NOT_FOUND, "Task not found".to_string()))
             }
@@ -1029,9 +839,7 @@ async fn get_task(
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> Result<Json<Task>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
 
     match &db.store {
         DbStore::Sqlite(pool) => {
@@ -1056,36 +864,19 @@ async fn get_task(
                     status: r.get("status"),
                     mode: r.get("mode"),
                     permission_profile: r.get("permission_profile"),
-                    model_config_json: r
-                        .get::<Option<String>, _>("model_config")
-                        .and_then(|s| serde_json::from_str(&s).ok()),
+                    model_config_json: r.get::<Option<String>, _>("model_config").and_then(|s| serde_json::from_str(&s).ok()),
                     current_step: r.get("current_step"),
-                    archived: r
-                        .get::<Option<i32>, _>("archived")
-                        .map(|v| v != 0)
-                        .unwrap_or(false),
-                    created_at_unix: r
-                        .get::<Option<String>, _>("c_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                    updated_at_unix: r
-                        .get::<Option<String>, _>("u_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
+                    archived: r.get::<Option<i32>, _>("archived").map(|v| v != 0).unwrap_or(false),
+                    created_at_unix: r.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+                    updated_at_unix: r.get::<Option<String>, _>("u_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
                 }))
             } else {
                 Err((StatusCode::NOT_FOUND, "Task not found".to_string()))
             }
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let row = sqlx::query(
                 "SELECT id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived, 
@@ -1097,9 +888,7 @@ async fn get_task(
             .fetch_optional(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             if let Some(r) = row {
                 Ok(Json(Task {
@@ -1129,9 +918,7 @@ async fn list_messages(
     Path(task_id): Path<String>,
     Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<Message>>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let messages = match &db.store {
@@ -1147,39 +934,25 @@ async fn list_messages(
             };
 
             let rows = sqlx::query(query_str)
-                .bind(&tenant_id)
-                .bind(&task_id)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(&tenant_id)
+            .bind(&task_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<Message> = rows
-                .into_iter()
-                .map(|row| Message {
-                    id: row.get("id"),
-                    task_id: row.get("task_id"),
-                    role: row.get("role"),
-                    content: row.get("content"),
-                    tool_metadata_json: row
-                        .get::<Option<String>, _>("tool_metadata")
-                        .and_then(|s| serde_json::from_str(&s).ok()),
-                    created_at_unix: row
-                        .get::<Option<String>, _>("c_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                })
-                .collect();
+            let list: Vec<Message> = rows.into_iter().map(|row| Message {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                role: row.get("role"),
+                content: row.get("content"),
+                tool_metadata_json: row.get::<Option<String>, _>("tool_metadata").and_then(|s| serde_json::from_str(&s).ok()),
+                created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+            }).collect();
             Ok(list)
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let query_str = if mobile_optimized {
                 "SELECT id, task_id, role, content, NULL::text as tool_metadata,
@@ -1192,25 +965,20 @@ async fn list_messages(
             };
 
             let rows = sqlx::query(query_str)
-                .bind(&task_id)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(&task_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<Message> = rows
-                .into_iter()
-                .map(|row| Message {
-                    id: row.get("id"),
-                    task_id: row.get("task_id"),
-                    role: row.get("role"),
-                    content: row.get("content"),
-                    tool_metadata_json: row.get("tool_metadata"),
-                    created_at_unix: row.get("c_unix"),
-                })
-                .collect();
+            let list: Vec<Message> = rows.into_iter().map(|row| Message {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                role: row.get("role"),
+                content: row.get("content"),
+                tool_metadata_json: row.get("tool_metadata"),
+                created_at_unix: row.get("c_unix"),
+            }).collect();
             Ok(list)
         }
     }?;
@@ -1224,16 +992,10 @@ async fn create_message(
     Path(task_id): Path<String>,
     Json(payload): Json<Message>,
 ) -> Result<Json<Message>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mut msg = payload;
     msg.task_id = task_id;
-    msg.id = if msg.id.is_empty() {
-        Uuid::new_v4().to_string()
-    } else {
-        msg.id
-    };
+    msg.id = if msg.id.is_empty() { Uuid::new_v4().to_string() } else { msg.id };
     msg.created_at_unix = Utc::now().timestamp();
 
     match &db.store {
@@ -1252,14 +1014,8 @@ async fn create_message(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             sqlx::query(
                 "INSERT INTO assistant_messages (id, tenant_id, task_id, role, content, tool_metadata) VALUES ($1, $2, $3, $4, $5, $6)"
@@ -1273,9 +1029,7 @@ async fn create_message(
             .execute(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
     }
 
@@ -1288,9 +1042,7 @@ async fn list_artifacts(
     Path(task_id): Path<String>,
     Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<Artifact>>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let artifacts = match &db.store {
@@ -1305,40 +1057,28 @@ async fn list_artifacts(
                  FROM assistant_artifacts WHERE tenant_id = ? AND task_id = ?"
             };
             let rows = sqlx::query(query_str)
-                .bind(&tenant_id)
-                .bind(&task_id)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(&tenant_id)
+            .bind(&task_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<Artifact> = rows
-                .into_iter()
-                .map(|row| Artifact {
-                    id: row.get("id"),
-                    task_id: row.get("task_id"),
-                    type_: row.get("type"),
-                    filename: row.get("filename"),
-                    path: row.get("path"),
-                    mime_type: row.get("mime_type"),
-                    size: row.get("size"),
-                    preview_ref: row.get("preview_ref"),
-                    created_at_unix: row
-                        .get::<Option<String>, _>("c_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                })
-                .collect();
+            let list: Vec<Artifact> = rows.into_iter().map(|row| Artifact {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                type_: row.get("type"),
+                filename: row.get("filename"),
+                path: row.get("path"),
+                mime_type: row.get("mime_type"),
+                size: row.get("size"),
+                preview_ref: row.get("preview_ref"),
+                created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+            }).collect();
             Ok(list)
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let query_str = if mobile_optimized {
                 "SELECT id, task_id, type, filename, '' as path, mime_type, size, preview_ref,
@@ -1350,28 +1090,23 @@ async fn list_artifacts(
                  FROM assistant_artifacts WHERE task_id = $1"
             };
             let rows = sqlx::query(query_str)
-                .bind(&task_id)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(&task_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<Artifact> = rows
-                .into_iter()
-                .map(|row| Artifact {
-                    id: row.get("id"),
-                    task_id: row.get("task_id"),
-                    type_: row.get("type"),
-                    filename: row.get("filename"),
-                    path: row.get("path"),
-                    mime_type: row.get("mime_type"),
-                    size: row.get("size"),
-                    preview_ref: row.get("preview_ref"),
-                    created_at_unix: row.get("c_unix"),
-                })
-                .collect();
+            let list: Vec<Artifact> = rows.into_iter().map(|row| Artifact {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                type_: row.get("type"),
+                filename: row.get("filename"),
+                path: row.get("path"),
+                mime_type: row.get("mime_type"),
+                size: row.get("size"),
+                preview_ref: row.get("preview_ref"),
+                created_at_unix: row.get("c_unix"),
+            }).collect();
             Ok(list)
         }
     }?;
@@ -1385,16 +1120,10 @@ async fn create_artifact(
     Path(task_id): Path<String>,
     Json(payload): Json<Artifact>,
 ) -> Result<Json<Artifact>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mut artifact = payload;
     artifact.task_id = task_id;
-    artifact.id = if artifact.id.is_empty() {
-        Uuid::new_v4().to_string()
-    } else {
-        artifact.id
-    };
+    artifact.id = if artifact.id.is_empty() { Uuid::new_v4().to_string() } else { artifact.id };
     artifact.created_at_unix = Utc::now().timestamp();
 
     match &db.store {
@@ -1416,14 +1145,8 @@ async fn create_artifact(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             sqlx::query(
                 "INSERT INTO assistant_artifacts (id, tenant_id, task_id, type, filename, path, mime_type, size, preview_ref) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
@@ -1440,9 +1163,7 @@ async fn create_artifact(
             .execute(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
     }
 
@@ -1455,9 +1176,7 @@ async fn list_file_changes(
     Path(task_id): Path<String>,
     Query(query): Query<AssistantQuery>,
 ) -> Result<Json<Vec<FileChange>>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let file_changes = match &db.store {
@@ -1472,38 +1191,26 @@ async fn list_file_changes(
                  FROM assistant_file_changes WHERE tenant_id = ? AND task_id = ?"
             };
             let rows = sqlx::query(query_str)
-                .bind(&tenant_id)
-                .bind(&task_id)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(&tenant_id)
+            .bind(&task_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<FileChange> = rows
-                .into_iter()
-                .map(|row| FileChange {
-                    id: row.get("id"),
-                    task_id: row.get("task_id"),
-                    path: row.get("path"),
-                    change_type: row.get("change_type"),
-                    summary: row.get("summary"),
-                    approval_status: row.get("approval_status"),
-                    created_at_unix: row
-                        .get::<Option<String>, _>("c_unix")
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                })
-                .collect();
+            let list: Vec<FileChange> = rows.into_iter().map(|row| FileChange {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                path: row.get("path"),
+                change_type: row.get("change_type"),
+                summary: row.get("summary"),
+                approval_status: row.get("approval_status"),
+                created_at_unix: row.get::<Option<String>, _>("c_unix").and_then(|s| s.parse().ok()).unwrap_or(0),
+            }).collect();
             Ok(list)
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let query_str = if mobile_optimized {
                 "SELECT id, task_id, path, change_type, NULL::text as summary, approval_status,
@@ -1515,26 +1222,21 @@ async fn list_file_changes(
                  FROM assistant_file_changes WHERE task_id = $1"
             };
             let rows = sqlx::query(query_str)
-                .bind(&task_id)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(&task_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            let list: Vec<FileChange> = rows
-                .into_iter()
-                .map(|row| FileChange {
-                    id: row.get("id"),
-                    task_id: row.get("task_id"),
-                    path: row.get("path"),
-                    change_type: row.get("change_type"),
-                    summary: row.get("summary"),
-                    approval_status: row.get("approval_status"),
-                    created_at_unix: row.get("c_unix"),
-                })
-                .collect();
+            let list: Vec<FileChange> = rows.into_iter().map(|row| FileChange {
+                id: row.get("id"),
+                task_id: row.get("task_id"),
+                path: row.get("path"),
+                change_type: row.get("change_type"),
+                summary: row.get("summary"),
+                approval_status: row.get("approval_status"),
+                created_at_unix: row.get("c_unix"),
+            }).collect();
             Ok(list)
         }
     }?;
@@ -1548,16 +1250,10 @@ async fn create_file_change(
     Path(task_id): Path<String>,
     Json(payload): Json<FileChange>,
 ) -> Result<Json<FileChange>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let mut change = payload;
     change.task_id = task_id;
-    change.id = if change.id.is_empty() {
-        Uuid::new_v4().to_string()
-    } else {
-        change.id
-    };
+    change.id = if change.id.is_empty() { Uuid::new_v4().to_string() } else { change.id };
     change.created_at_unix = Utc::now().timestamp();
 
     match &db.store {
@@ -1577,14 +1273,8 @@ async fn create_file_change(
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             sqlx::query(
                 "INSERT INTO assistant_file_changes (id, tenant_id, task_id, path, change_type, summary, approval_status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
@@ -1599,9 +1289,7 @@ async fn create_file_change(
             .execute(&mut *tx)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
         }
     }
 
@@ -1655,11 +1343,7 @@ async fn mutate_memory(
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
                 DbStore::Postgres => {
-                    let mut tx = db
-                        .pool
-                        .begin()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1676,9 +1360,7 @@ async fn mutate_memory(
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                    tx.commit()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
             }
         }
@@ -1699,11 +1381,7 @@ async fn mutate_memory(
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
                 DbStore::Postgres => {
-                    let mut tx = db
-                        .pool
-                        .begin()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1717,9 +1395,7 @@ async fn mutate_memory(
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                    tx.commit()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
             }
         }
@@ -1728,45 +1404,30 @@ async fn mutate_memory(
 
             match &db.store {
                 DbStore::Sqlite(pool) => {
-                    sqlx::query(
-                        "DELETE FROM assistant_memory_records WHERE tenant_id = ? AND id = ?",
-                    )
-                    .bind(&tenant_id)
-                    .bind(&id)
-                    .execute(pool)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                }
-                DbStore::Postgres => {
-                    let mut tx = db
-                        .pool
-                        .begin()
+                    sqlx::query("DELETE FROM assistant_memory_records WHERE tenant_id = ? AND id = ?")
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(pool)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                }
+                DbStore::Postgres => {
+                    let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-                    sqlx::query(
-                        "DELETE FROM assistant_memory_records WHERE tenant_id = $1 AND id = $2",
-                    )
-                    .bind(&tenant_id)
-                    .bind(&id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                    tx.commit()
+                    sqlx::query("DELETE FROM assistant_memory_records WHERE tenant_id = $1 AND id = $2")
+                        .bind(&tenant_id)
+                        .bind(&id)
+                        .execute(&mut *tx)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
             }
         }
-        _ => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                "unsupported memory action".to_string(),
-            ));
-        }
+        _ => return Err((StatusCode::BAD_REQUEST, "unsupported memory action".to_string())),
     }
 
     let memories = fetch_memory_records(db.as_ref(), &tenant_id, false).await?;
@@ -1808,10 +1469,7 @@ async fn search_cross_session_memory(
     let tenant_id = tenant_id_from(&claims)?;
     let query = payload.query.trim();
     if query.is_empty() || query.chars().count() > 500 || !(1..=20).contains(&payload.limit) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "invalid memory search request".to_string(),
-        ));
+        return Err((StatusCode::BAD_REQUEST, "invalid memory search request".to_string()));
     }
     let pattern = literal_like_pattern(query);
 
@@ -1840,7 +1498,11 @@ async fn search_cross_session_memory(
                 .collect::<Vec<_>>()
         }
         DbStore::Postgres => {
-            let mut tx = db.pool.begin().await.map_err(memory_search_failure)?;
+            let mut tx = db
+                .pool
+                .begin()
+                .await
+                .map_err(memory_search_failure)?;
             ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                 .await
                 .map_err(memory_search_failure)?;
@@ -1858,7 +1520,9 @@ async fn search_cross_session_memory(
             .fetch_all(&mut *tx)
             .await
             .map_err(memory_search_failure)?;
-            tx.commit().await.map_err(memory_search_failure)?;
+            tx.commit()
+                .await
+                .map_err(memory_search_failure)?;
             rows.into_iter()
                 .map(|row| {
                     format!(
@@ -1939,11 +1603,7 @@ async fn mutate_skill(
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
                 DbStore::Postgres => {
-                    let mut tx = db
-                        .pool
-                        .begin()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1972,9 +1632,7 @@ async fn mutate_skill(
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                    tx.commit()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
             }
         }
@@ -1994,11 +1652,7 @@ async fn mutate_skill(
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
                 DbStore::Postgres => {
-                    let mut tx = db
-                        .pool
-                        .begin()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -2012,9 +1666,7 @@ async fn mutate_skill(
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                    tx.commit()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
             }
         }
@@ -2031,11 +1683,7 @@ async fn mutate_skill(
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
                 DbStore::Postgres => {
-                    let mut tx = db
-                        .pool
-                        .begin()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -2046,18 +1694,11 @@ async fn mutate_skill(
                         .execute(&mut *tx)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                    tx.commit()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
             }
         }
-        _ => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                "unsupported skill action".to_string(),
-            ));
-        }
+        _ => return Err((StatusCode::BAD_REQUEST, "unsupported skill action".to_string())),
     }
 
     let skills = fetch_skill_records(db.as_ref(), &tenant_id, false).await?;
@@ -2121,11 +1762,7 @@ async fn mutate_connector(
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
                 DbStore::Postgres => {
-                    let mut tx = db
-                        .pool
-                        .begin()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -2152,9 +1789,7 @@ async fn mutate_connector(
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                    tx.commit()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
             }
         }
@@ -2174,11 +1809,7 @@ async fn mutate_connector(
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
                 DbStore::Postgres => {
-                    let mut tx = db
-                        .pool
-                        .begin()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
                         .await
                         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -2192,18 +1823,11 @@ async fn mutate_connector(
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-                    tx.commit()
-                        .await
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+                    tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
                 }
             }
         }
-        _ => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                "unsupported connector action".to_string(),
-            ));
-        }
+        _ => return Err((StatusCode::BAD_REQUEST, "unsupported connector action".to_string())),
     }
 
     let connectors = fetch_connector_records(db.as_ref(), &tenant_id, false).await?;
@@ -2233,10 +1857,10 @@ async fn fetch_memory_records(
                  ORDER BY updated_at DESC, created_at DESC, id ASC"
             };
             let rows = sqlx::query(query_str)
-                .bind(tenant_id)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(tenant_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             Ok(rows
                 .into_iter()
@@ -2245,10 +1869,7 @@ async fn fetch_memory_records(
                     content: row.get("content"),
                     scope: row.get("scope"),
                     source: row.get("source"),
-                    enabled: row
-                        .get::<Option<i64>, _>("enabled")
-                        .map(|value| value != 0)
-                        .unwrap_or(false),
+                    enabled: row.get::<Option<i64>, _>("enabled").map(|value| value != 0).unwrap_or(false),
                     created_at_unix: row
                         .get::<Option<String>, _>("c_unix")
                         .and_then(|value| value.parse().ok())
@@ -2261,11 +1882,7 @@ async fn fetch_memory_records(
                 .collect())
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -2286,13 +1903,11 @@ async fn fetch_memory_records(
                  ORDER BY updated_at DESC, created_at DESC, id ASC"
             };
             let rows = sqlx::query(query_str)
-                .bind(tenant_id)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(tenant_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             Ok(rows
                 .into_iter()
@@ -2333,10 +1948,10 @@ async fn fetch_skill_records(
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
             };
             let rows = sqlx::query(query_str)
-                .bind(tenant_id)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(tenant_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             Ok(rows
                 .into_iter()
@@ -2363,11 +1978,7 @@ async fn fetch_skill_records(
                 .collect())
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -2386,12 +1997,10 @@ async fn fetch_skill_records(
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
             };
             let rows = sqlx::query(query_str)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             Ok(rows
                 .into_iter()
@@ -2435,10 +2044,10 @@ async fn fetch_connector_records(
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
             };
             let rows = sqlx::query(query_str)
-                .bind(tenant_id)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .bind(tenant_id)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             Ok(rows
                 .into_iter()
@@ -2447,10 +2056,7 @@ async fn fetch_connector_records(
                     name: row.get("name"),
                     kind: row.get("kind"),
                     status: row.get("status"),
-                    oauth: row
-                        .get::<Option<i64>, _>("oauth")
-                        .map(|value| value != 0)
-                        .unwrap_or(false),
+                    oauth: row.get::<Option<i64>, _>("oauth").map(|value| value != 0).unwrap_or(false),
                     config: row
                         .get::<Option<String>, _>("config")
                         .and_then(|value| serde_json::from_str(&value).ok()),
@@ -2467,11 +2073,7 @@ async fn fetch_connector_records(
                 .collect())
         }
         DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -2490,12 +2092,10 @@ async fn fetch_connector_records(
                  ORDER BY updated_at DESC, created_at DESC, name ASC, id ASC"
             };
             let rows = sqlx::query(query_str)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            tx.commit().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             Ok(rows
                 .into_iter()
@@ -2518,9 +2118,9 @@ async fn fetch_connector_records(
 #[cfg(test)]
 mod real_feature_state_tests {
     use super::*;
-    use axum::Extension;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use axum::Extension;
     use serde_json::json;
     use std::sync::Arc;
     use tower::ServiceExt;
@@ -2636,12 +2236,7 @@ mod real_feature_state_tests {
         })
     }
 
-    async fn request_json(
-        db: Arc<DB>,
-        method: &str,
-        uri: &str,
-        body: serde_json::Value,
-    ) -> (StatusCode, serde_json::Value) {
+    async fn request_json(db: Arc<DB>, method: &str, uri: &str, body: serde_json::Value) -> (StatusCode, serde_json::Value) {
         let app = router::<()>(db).layer(Extension(claims()));
         let request = Request::builder()
             .method(method)
@@ -2651,9 +2246,7 @@ mod real_feature_state_tests {
             .unwrap();
         let response = app.oneshot(request).await.unwrap();
         let status = response.status();
-        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let value = serde_json::from_slice(&bytes).unwrap_or_else(|error| {
             panic!(
                 "expected JSON response for {} {} but got status {} parse error {} with body: {}",
@@ -2671,18 +2264,12 @@ mod real_feature_state_tests {
     async fn memory_import_edit_and_forget_uses_database() {
         let db = test_db().await;
 
-        let (status, value) = request_json(
-            db.clone(),
-            "PATCH",
-            "/memory",
-            json!({
-                "action": "import",
-                "content": "Real persisted memory",
-                "scope": "global",
-                "source": "policy.md"
-            }),
-        )
-        .await;
+        let (status, value) = request_json(db.clone(), "PATCH", "/memory", json!({
+            "action": "import",
+            "content": "Real persisted memory",
+            "scope": "global",
+            "source": "policy.md"
+        })).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(value["memories"][0]["source"], "policy.md");
         let memory_id = value["memories"][0]["id"].as_str().unwrap().to_string();
@@ -2690,29 +2277,17 @@ mod real_feature_state_tests {
         let (_, listed) = request_json(db.clone(), "GET", "/memory", json!({})).await;
         assert_eq!(listed["memories"][0]["content"], "Real persisted memory");
 
-        let (_, edited) = request_json(
-            db.clone(),
-            "PATCH",
-            "/memory",
-            json!({
-                "action": "edit",
-                "id": memory_id,
-                "content": "Edited real memory"
-            }),
-        )
-        .await;
+        let (_, edited) = request_json(db.clone(), "PATCH", "/memory", json!({
+            "action": "edit",
+            "id": memory_id,
+            "content": "Edited real memory"
+        })).await;
         assert_eq!(edited["memories"][0]["content"], "Edited real memory");
 
-        let (_, forgotten) = request_json(
-            db,
-            "PATCH",
-            "/memory",
-            json!({
-                "action": "forget",
-                "id": memory_id
-            }),
-        )
-        .await;
+        let (_, forgotten) = request_json(db, "PATCH", "/memory", json!({
+            "action": "forget",
+            "id": memory_id
+        })).await;
         assert_eq!(forgotten["memories"].as_array().unwrap().len(), 0);
     }
 
@@ -2720,15 +2295,9 @@ mod real_feature_state_tests {
     fn memory_tenant_never_falls_back_to_a_shared_default() {
         let mut invalid = claims();
         invalid.organization_id = None;
-        assert_eq!(
-            tenant_id_from(&invalid).unwrap_err().0,
-            StatusCode::UNAUTHORIZED
-        );
+        assert_eq!(tenant_id_from(&invalid).unwrap_err().0, StatusCode::UNAUTHORIZED);
         invalid.organization_id = Some("system".to_string());
-        assert_eq!(
-            tenant_id_from(&invalid).unwrap_err().0,
-            StatusCode::UNAUTHORIZED
-        );
+        assert_eq!(tenant_id_from(&invalid).unwrap_err().0, StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
@@ -2739,16 +2308,8 @@ mod real_feature_state_tests {
             DbStore::Postgres => unreachable!(),
         };
         for (id, tenant, content) in [
-            (
-                "message-visible",
-                "tenant-real",
-                "Customer prefers vegan options",
-            ),
-            (
-                "message-hidden",
-                "tenant-other",
-                "Private vegan account note",
-            ),
+            ("message-visible", "tenant-real", "Customer prefers vegan options"),
+            ("message-hidden", "tenant-other", "Private vegan account note"),
         ] {
             sqlx::query(
                 "INSERT INTO assistant_messages (id, tenant_id, task_id, role, content) VALUES (?, ?, 'task-a', 'user', ?)",
@@ -2770,12 +2331,10 @@ mod real_feature_state_tests {
         .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(response["results"].as_array().unwrap().len(), 1);
-        assert!(
-            response["results"][0]
-                .as_str()
-                .unwrap()
-                .contains("Customer prefers vegan options")
-        );
+        assert!(response["results"][0]
+            .as_str()
+            .unwrap()
+            .contains("Customer prefers vegan options"));
         assert!(!response.to_string().contains("Private vegan account note"));
     }
 
@@ -2838,16 +2397,8 @@ mod real_feature_state_tests {
         .unwrap();
         tenant_other_tx.commit().await.unwrap();
         for (id, tenant, content) in [
-            (
-                "visible-message",
-                "tenant-real",
-                "Customer prefers vegan options",
-            ),
-            (
-                "hidden-message",
-                "tenant-other",
-                "Private vegan account note",
-            ),
+            ("visible-message", "tenant-real", "Customer prefers vegan options"),
+            ("hidden-message", "tenant-other", "Private vegan account note"),
         ] {
             let mut tx = pool.begin().await.unwrap();
             ::server_common::auth_utils::set_org_context(&mut *tx, tenant)
@@ -2924,11 +2475,7 @@ mod real_feature_state_tests {
         .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(response["results"].as_array().unwrap().len(), 1);
-        assert!(
-            response
-                .to_string()
-                .contains("Customer prefers vegan options")
-        );
+        assert!(response.to_string().contains("Customer prefers vegan options"));
         assert!(!response.to_string().contains("Private vegan account note"));
 
         pool.close().await;
@@ -2946,30 +2493,18 @@ mod real_feature_state_tests {
     #[tokio::test]
     async fn skill_enable_disable_uses_database() {
         let db = test_db().await;
-        let (status, installed) = request_json(
-            db.clone(),
-            "PATCH",
-            "/skills",
-            json!({
-                "action": "install",
-                "name": "Real Skill",
-                "category": "Testing"
-            }),
-        )
-        .await;
+        let (status, installed) = request_json(db.clone(), "PATCH", "/skills", json!({
+            "action": "install",
+            "name": "Real Skill",
+            "category": "Testing"
+        })).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(installed["skills"][0]["status"], "installed");
 
-        let (_, disabled) = request_json(
-            db.clone(),
-            "PATCH",
-            "/skills",
-            json!({
-                "action": "disable",
-                "name": "Real Skill"
-            }),
-        )
-        .await;
+        let (_, disabled) = request_json(db.clone(), "PATCH", "/skills", json!({
+            "action": "disable",
+            "name": "Real Skill"
+        })).await;
         assert_eq!(disabled["skills"][0]["status"], "disabled");
 
         let (_, listed) = request_json(db, "GET", "/skills", json!({})).await;
@@ -2980,30 +2515,18 @@ mod real_feature_state_tests {
     #[tokio::test]
     async fn connector_connect_disconnect_uses_database() {
         let db = test_db().await;
-        let (status, connected) = request_json(
-            db.clone(),
-            "PATCH",
-            "/connectors",
-            json!({
-                "action": "connect",
-                "name": "Real Connector",
-                "kind": "repository"
-            }),
-        )
-        .await;
+        let (status, connected) = request_json(db.clone(), "PATCH", "/connectors", json!({
+            "action": "connect",
+            "name": "Real Connector",
+            "kind": "repository"
+        })).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(connected["connectors"][0]["status"], "connected");
 
-        let (_, disconnected) = request_json(
-            db.clone(),
-            "PATCH",
-            "/connectors",
-            json!({
-                "action": "disconnect",
-                "name": "Real Connector"
-            }),
-        )
-        .await;
+        let (_, disconnected) = request_json(db.clone(), "PATCH", "/connectors", json!({
+            "action": "disconnect",
+            "name": "Real Connector"
+        })).await;
         assert_eq!(disconnected["connectors"][0]["status"], "disconnected");
 
         let (_, listed) = request_json(db, "GET", "/connectors", json!({})).await;
@@ -3017,83 +2540,49 @@ mod real_feature_state_tests {
 
         // 1. Create a task via POST /tasks
         let task_id = "test-task-1".to_string();
-        let (status, _created) = request_json(
-            db.clone(),
-            "POST",
-            "/tasks",
-            json!({
-                "id": task_id,
-                "workspace_id": "test-ws",
-                "title": "Test Task",
-                "prompt": "Do something",
-                "status": "running",
-                "permission_profile": "Guarded",
-                "archived": false,
-                "created_at_unix": 0,
-                "updated_at_unix": 0
-            }),
-        )
-        .await;
+        let (status, _created) = request_json(db.clone(), "POST", "/tasks", json!({
+            "id": task_id,
+            "workspace_id": "test-ws",
+            "title": "Test Task",
+            "prompt": "Do something",
+            "status": "running",
+            "permission_profile": "Guarded",
+            "archived": false,
+            "created_at_unix": 0,
+            "updated_at_unix": 0
+        })).await;
         assert_eq!(status, StatusCode::OK);
 
         // 2. Archive the task via PATCH /tasks/{id}
-        let (status, archived) = request_json(
-            db.clone(),
-            "PATCH",
-            &format!("/tasks/{}", task_id),
-            json!({
-                "action": "archive"
-            }),
-        )
-        .await;
+        let (status, archived) = request_json(db.clone(), "PATCH", &format!("/tasks/{}", task_id), json!({
+            "action": "archive"
+        })).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(archived["status"], "archived");
         assert_eq!(archived["archived"], true);
 
         // 3. Rename the task
-        let (_, renamed) = request_json(
-            db.clone(),
-            "PATCH",
-            &format!("/tasks/{}", task_id),
-            json!({
-                "action": "rename",
-                "title": "Renamed Task"
-            }),
-        )
-        .await;
+        let (_, renamed) = request_json(db.clone(), "PATCH", &format!("/tasks/{}", task_id), json!({
+            "action": "rename",
+            "title": "Renamed Task"
+        })).await;
         assert_eq!(renamed["title"], "Renamed Task");
 
         // 4. Hard delete
-        let (status, deleted) = request_json(
-            db.clone(),
-            "PATCH",
-            &format!("/tasks/{}", task_id),
-            json!({
-                "action": "hard_delete"
-            }),
-        )
-        .await;
+        let (status, deleted) = request_json(db.clone(), "PATCH", &format!("/tasks/{}", task_id), json!({
+            "action": "hard_delete"
+        })).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(deleted["deletedTask"]["id"], task_id);
 
         // Verify it's gone by checking the DB directly to avoid text response panic in request_json
         match &db.store {
             DbStore::Sqlite(pool) => {
-                let count: (i64,) =
-                    sqlx::query_as("SELECT COUNT(*) FROM assistant_tasks WHERE id = ?")
-                        .bind(&task_id)
-                        .fetch_one(pool)
-                        .await
-                        .unwrap();
+                let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM assistant_tasks WHERE id = ?").bind(&task_id).fetch_one(pool).await.unwrap();
                 assert_eq!(count.0, 0);
             }
             DbStore::Postgres => {
-                let count: (i64,) =
-                    sqlx::query_as("SELECT COUNT(*) FROM assistant_tasks WHERE id = $1")
-                        .bind(&task_id)
-                        .fetch_one(&db.pool)
-                        .await
-                        .unwrap();
+                let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM assistant_tasks WHERE id = $1").bind(&task_id).fetch_one(&db.pool).await.unwrap();
                 assert_eq!(count.0, 0);
             }
         }
@@ -3117,23 +2606,11 @@ async fn synthesize_customer_memory(
     let mut history_items = Vec::new();
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let mut tx = db.pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
             let query_str = "SELECT content FROM consolidated_memory WHERE tenant_id = $1 AND metadata->>'customer_id' = $2 ORDER BY last_referenced_at DESC LIMIT $3";
-            let rows = sqlx::query(query_str)
-                .bind(&tenant_id)
-                .bind(&customer_id)
-                .bind(limit)
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let rows = sqlx::query(query_str).bind(&tenant_id).bind(&customer_id).bind(limit).fetch_all(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             tx.commit().await.unwrap();
             for row in rows {
                 use sqlx::Row;
@@ -3144,13 +2621,7 @@ async fn synthesize_customer_memory(
         }
         crate::db::DbStore::Sqlite(pool) => {
             let query_str = "SELECT content FROM consolidated_memory WHERE tenant_id = ? AND json_extract(metadata, '$.customer_id') = ? ORDER BY last_referenced_at DESC LIMIT ?";
-            let rows = sqlx::query(query_str)
-                .bind(&tenant_id)
-                .bind(&customer_id)
-                .bind(limit)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let rows = sqlx::query(query_str).bind(&tenant_id).bind(&customer_id).bind(limit).fetch_all(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             for row in rows {
                 use sqlx::Row;
                 if let Ok(c) = row.try_get::<String, _>("content") {
@@ -3168,36 +2639,23 @@ async fn synthesize_customer_memory(
     }
 
     let combined_history = history_items.join("; ");
-    let prompt = format!(
-        "Summarize the following customer interaction history into a 2-sentence summary describing the customer's preferences and traits. Customer history: {}",
-        combined_history
-    );
+    let prompt = format!("Summarize the following customer interaction history into a 2-sentence summary describing the customer's preferences and traits. Customer history: {}", combined_history);
 
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
         Ok("gemini") => {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&compressed_prompt)
-                .await
+            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
         }
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.is_empty() {
-                crate::minimax::LocalLLMClient::new()
-                    .reason(&compressed_prompt)
-                    .await
+                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
             } else {
-                crate::minimax::MinimaxClient::new(api_key)
-                    .reason(&compressed_prompt)
-                    .await
+                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
             }
         }
-        _ => {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&compressed_prompt)
-                .await
-        }
+        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
     };
 
     let summary = match llm_res {

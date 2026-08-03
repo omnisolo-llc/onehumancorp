@@ -100,6 +100,7 @@ impl ComputationalGuide for CargoTestGuide {
     }
 }
 
+
 use ohc_builtin_agent_core::types::Role;
 
 pub struct LlmJudgeInferentialSensor {
@@ -138,10 +139,7 @@ impl InferentialSensor for LlmJudgeInferentialSensor {
                     let reason = content_str.trim().trim_start_matches("FAIL:").trim();
                     Err(format!("LLM Judge verification failed: {}", reason))
                 } else {
-                    Err(format!(
-                        "LLM Judge verification failed: output did not match expected 'PASS' or 'FAIL: <reason>' format. Output: {}",
-                        content_str
-                    ))
+                    Err(format!("LLM Judge verification failed: output did not match expected 'PASS' or 'FAIL: <reason>' format. Output: {}", content_str))
                 }
             }
             Err(e) => Err(format!("LLM Judge verification failed with error: {}", e)),
@@ -150,6 +148,7 @@ impl InferentialSensor for LlmJudgeInferentialSensor {
 }
 
 pub struct BashVisualVerifier {
+
     pub command: String,
     pub workspace_path: Option<String>,
 }
@@ -246,18 +245,12 @@ impl VerificationManager {
 
     /// Architectural Decision C.4: Guides (steer before action) vs Sensors (observe after action)
     /// Run sensors *after* an action is taken to observe its result.
-    pub async fn run_sensors_after_action(
-        &self,
-        output: &str,
-        task: &str,
-        ui_state_path: Option<&str>,
-    ) -> Result<(), String> {
+    pub async fn run_sensors_after_action(&self, output: &str, task: &str, ui_state_path: Option<&str>) -> Result<(), String> {
         let mut errors = Vec::new();
         if let Some(path) = ui_state_path
-            && let Err(e) = self.run_visual_verifiers(path).await
-        {
-            errors.push(e);
-        }
+            && let Err(e) = self.run_visual_verifiers(path).await {
+                errors.push(e);
+            }
         if let Err(e) = self.run_inferential_sensors(output, task).await {
             errors.push(e);
         }
@@ -433,13 +426,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl crate::output_parser::LlmClientForParser for MockLlmClientForSensor {
-        async fn chat(
-            &self,
-            _req: ohc_builtin_agent_core::types::ChatRequest,
-        ) -> Result<
-            ohc_builtin_agent_core::types::ChatResponse,
-            Box<dyn std::error::Error + Send + Sync>,
-        > {
+        async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Ok(ohc_builtin_agent_core::types::ChatResponse {
                 message: ohc_builtin_agent_core::types::Message {
                     role: ohc_builtin_agent_core::types::Role::Assistant,
@@ -488,17 +475,13 @@ mod tests {
         use super::InferentialSensor;
         let result = judge.verify_inferential("5", "What is 2+2?").await;
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "LLM Judge verification failed: The answer is wrong. 2+2 is 4, not 5."
-        );
+        assert_eq!(result.unwrap_err(), "LLM Judge verification failed: The answer is wrong. 2+2 is 4, not 5.");
     }
 
     #[tokio::test]
     async fn test_llm_judge_inferential_sensor_invalid_format() {
         let client = std::sync::Arc::new(MockLlmClientForSensor {
-            response_content: "I think the answer is mostly correct but could be better."
-                .to_string(),
+            response_content: "I think the answer is mostly correct but could be better.".to_string(),
         });
 
         let judge = super::LlmJudgeInferentialSensor {
@@ -510,11 +493,7 @@ mod tests {
         use super::InferentialSensor;
         let result = judge.verify_inferential("4.0", "What is 2+2?").await;
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("output did not match expected 'PASS' or 'FAIL: <reason>' format")
-        );
+        assert!(result.unwrap_err().contains("output did not match expected 'PASS' or 'FAIL: <reason>' format"));
     }
 
     use ohc_builtin_agent_core::types::Usage;
@@ -667,9 +646,7 @@ mod tests {
                 tracing::info!("Skipping test: cargo binary not found in PATH");
                 return;
             }
-            res => {
-                res.unwrap();
-            }
+            res => { res.unwrap(); }
         }
 
         let guide = CargoTestGuide {
@@ -855,46 +832,20 @@ mod c4_architectural_mechanics_tests {
         let guide_called = Arc::new(Mutex::new(false));
         let sensor_called = Arc::new(Mutex::new(false));
 
-        manager.add_computational(Arc::new(MockC4Guide {
-            called: guide_called.clone(),
-        }));
-        manager.add_inferential(Arc::new(MockC4Sensor {
-            called: sensor_called.clone(),
-        }));
+        manager.add_computational(Arc::new(MockC4Guide { called: guide_called.clone() }));
+        manager.add_inferential(Arc::new(MockC4Sensor { called: sensor_called.clone() }));
 
         // 1. Run Guides BEFORE action
-        assert!(
-            manager
-                .run_guides_before_action("code", "context")
-                .await
-                .is_ok()
-        );
-        assert!(
-            *guide_called.lock().await,
-            "Guides must be called before action to steer LLM"
-        );
-        assert!(
-            !*sensor_called.lock().await,
-            "Sensors must NOT be called before action"
-        );
+        assert!(manager.run_guides_before_action("code", "context").await.is_ok());
+        assert!(*guide_called.lock().await, "Guides must be called before action to steer LLM");
+        assert!(!*sensor_called.lock().await, "Sensors must NOT be called before action");
 
         // Reset state
         *guide_called.lock().await = false;
 
         // 2. Run Sensors AFTER action
-        assert!(
-            manager
-                .run_sensors_after_action("output", "task", None)
-                .await
-                .is_ok()
-        );
-        assert!(
-            !*guide_called.lock().await,
-            "Guides must NOT be called after action"
-        );
-        assert!(
-            *sensor_called.lock().await,
-            "Sensors must be called after action to observe result"
-        );
+        assert!(manager.run_sensors_after_action("output", "task", None).await.is_ok());
+        assert!(!*guide_called.lock().await, "Guides must NOT be called after action");
+        assert!(*sensor_called.lock().await, "Sensors must be called after action to observe result");
     }
 }

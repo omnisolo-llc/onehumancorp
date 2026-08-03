@@ -17,15 +17,11 @@ fn test_hybrid_telemetry_drift() {
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
             let filename = path.file_name().unwrap().to_str().unwrap();
 
-            let canonical_content =
-                fs::read_to_string(&path).expect(&format!("Failed to read canonical {:?}", path));
+            let canonical_content = fs::read_to_string(&path).expect(&format!("Failed to read canonical {:?}", path));
 
             let mirror_paths = vec![
                 root.join(format!("deploy/grafana/dashboards/{}", filename)),
-                root.join(format!(
-                    "deploy/docker/grafana/provisioning/dashboards/{}",
-                    filename
-                )),
+                root.join(format!("deploy/docker/grafana/provisioning/dashboards/{}", filename)),
                 root.join(format!("deploy/helm/ohc/dashboards/{}", filename)),
             ];
 

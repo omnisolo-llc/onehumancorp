@@ -1,7 +1,7 @@
-use super::User;
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use sqlx::SqlitePool;
+use super::User;
+use chrono::{DateTime, Utc};
 
 fn is_multitenant_mode() -> bool {
     #[cfg(test)]
@@ -13,8 +13,9 @@ fn is_multitenant_mode() -> bool {
     ::server_config::get().multitenant
 }
 
-use super::user_repository::UserRepository;
 use sqlx::Row;
+use super::user_repository::UserRepository;
+
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
@@ -41,7 +42,7 @@ impl SqliteUserRepository {
 
 #[async_trait]
 impl UserRepository for SqliteUserRepository {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+            async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = is_multitenant_mode();
@@ -53,19 +54,19 @@ impl UserRepository for SqliteUserRepository {
         "#;
 
         sqlx::query(query)
-            .bind(&user.id)
-            .bind(&user.username)
-            .bind(&user.email)
-            .bind(&user.password_hash)
-            .bind(roles_json)
-            .bind(user.active)
-            .bind(org_id)
-            .bind(&user.oidc_subject)
-            .bind(user.created_at)
-            .bind(user.updated_at)
-            .execute(&self.pool)
-            .await
-            .map_err(|e: sqlx::Error| e.to_string())?;
+        .bind(&user.id)
+        .bind(&user.username)
+        .bind(&user.email)
+        .bind(&user.password_hash)
+        .bind(roles_json)
+        .bind(user.active)
+        .bind(org_id)
+        .bind(&user.oidc_subject)
+        .bind(user.created_at)
+        .bind(user.updated_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e: sqlx::Error| e.to_string())?;
 
         Ok(())
     }
@@ -73,21 +74,14 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2";
-        let row_opt = sqlx::query(query)
-            .bind(id)
-            .bind(org_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row
-            .try_get("roles")
-            .unwrap_or_else(|_| serde_json::Value::Null);
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
         let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
@@ -107,21 +101,14 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2";
-        let row_opt = sqlx::query(query)
-            .bind(username)
-            .bind(org_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query).bind(username).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row
-            .try_get("roles")
-            .unwrap_or_else(|_| serde_json::Value::Null);
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
         let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
@@ -141,21 +128,14 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2";
-        let row_opt = sqlx::query(query)
-            .bind(email)
-            .bind(org_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query).bind(email).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row
-            .try_get("roles")
-            .unwrap_or_else(|_| serde_json::Value::Null);
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
         let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
@@ -213,21 +193,14 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2";
-        let row_opt = sqlx::query(query)
-            .bind(sub)
-            .bind(org_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query).bind(sub).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row
-            .try_get("roles")
-            .unwrap_or_else(|_| serde_json::Value::Null);
+        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
         let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
@@ -247,17 +220,11 @@ impl UserRepository for SqliteUserRepository {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at";
-        let rows = sqlx::query(query)
-            .bind(org_id)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let rows = sqlx::query(query).bind(org_id).fetch_all(&self.pool).await.map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
         for row in rows {
-            let roles_json: serde_json::Value = row
-                .try_get("roles")
-                .unwrap_or_else(|_| serde_json::Value::Null);
+            let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
             let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
             users.push(User {
@@ -309,12 +276,7 @@ impl UserRepository for SqliteUserRepository {
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let query = "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id";
-        let res = sqlx::query(query)
-            .bind(id)
-            .bind(org_id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e: sqlx::Error| e.to_string())?;
+        let res = sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -322,12 +284,7 @@ impl UserRepository for SqliteUserRepository {
         Ok(())
     }
 
-    async fn revoke_token(
-        &self,
-        jti: String,
-        exp: DateTime<Utc>,
-        org_id: &str,
-    ) -> Result<(), String> {
+    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -336,7 +293,7 @@ impl UserRepository for SqliteUserRepository {
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
             ON CONFLICT (jti, tenant_id) DO NOTHING
-            "#,
+            "#
         )
         .bind(jti)
         .bind(exp)
@@ -345,13 +302,9 @@ impl UserRepository for SqliteUserRepository {
         .await
         .map_err(|e: sqlx::Error| e.to_string())?;
 
+
         let now = chrono::Utc::now();
-        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2")
-            .bind(now)
-            .bind(org_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e: sqlx::Error| e.to_string())?;
+        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e: sqlx::Error| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
@@ -379,8 +332,8 @@ mod tests {
     use super::*;
     use std::sync::Mutex;
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
-    use chrono::Utc;
     use sqlx::sqlite::SqlitePoolOptions;
+    use chrono::Utc;
 
     async fn login_lookup_repo() -> SqliteUserRepository {
         let pool = SqlitePoolOptions::new()
@@ -491,7 +444,7 @@ mod tests {
                 oidc_subject TEXT,
                 created_at TIMESTAMPTZ,
                 updated_at TIMESTAMPTZ
-            )",
+            )"
         )
         .execute(&_pool)
         .await
@@ -536,7 +489,7 @@ mod tests {
                 tenant_id TEXT,
                 expires_at TIMESTAMPTZ,
                 PRIMARY KEY (jti, tenant_id)
-            )",
+            )"
         )
         .execute(&pool)
         .await
@@ -560,30 +513,23 @@ mod tests {
             .unwrap();
 
         // Perform GC explicitly via our isolated function structure for tenant-1
-        let _ = repo
-            .revoke_token("jti-3".to_string(), exp2, "tenant-1")
-            .await;
+        let _ = repo.revoke_token("jti-3".to_string(), exp2, "tenant-1").await;
 
         // tenant-2 token should remain untouched.
-        let count: i64 =
-            sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE tenant_id = 'tenant-2'")
-                .fetch_one(&pool)
-                .await
-                .unwrap()
-                .get(0);
+        let count: i64 = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE tenant_id = 'tenant-2'")
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+            .get(0);
         assert_eq!(count, 1, "GC leak across tenants");
 
-        let count_tenant_1: i64 = sqlx::query(
-            "SELECT COUNT(*) FROM revoked_tokens WHERE tenant_id = 'tenant-1' AND jti != 'jti-3'",
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap()
-        .get(0);
-        assert_eq!(
-            count_tenant_1, 0,
-            "The expired token for tenant-1 should be garbage collected"
-        );
+        let count_tenant_1: i64 = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE tenant_id = 'tenant-1' AND jti != 'jti-3'")
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+            .get(0);
+        assert_eq!(count_tenant_1, 0, "The expired token for tenant-1 should be garbage collected");
+
     }
 
     #[tokio::test]
@@ -597,21 +543,13 @@ mod tests {
         let repo = SqliteUserRepository::new(_pool.clone());
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let is_multitenant = is_multitenant_mode();
-            let _org_id = "system";
-            let should_bypass = !is_multitenant;
-            assert!(
-                !should_bypass,
-                "Cloud mode should NEVER bypass tenant filters when org_id is 'system'"
-            );
+            let _org_id = "system"; let should_bypass = !is_multitenant;
+            assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
             let res = repo.get_by_id("dummy_id", "system").await;
             assert!(res.is_err(), "Must reject system id in multitenant mode");
-            assert_eq!(
-                res.unwrap_err(),
-                "tenant_id 'system' cannot be queried in multi-tenant mode"
-            );
-        })
-        .await;
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+        }).await;
     }
 
     #[tokio::test]
@@ -641,19 +579,12 @@ mod tests {
         temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
             let res = repo.update_user(dummy_user, "system").await;
             assert!(res.is_err(), "Must reject system org_id");
-            assert_eq!(
-                res.unwrap_err(),
-                "tenant_id 'system' cannot be queried in multi-tenant mode"
-            );
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
 
             // Wait, also check `get_by_id` here
             let res2 = repo.get_by_id("dummy_id", "system").await;
             assert!(res2.is_err(), "Must reject system id in multitenant mode");
-            assert_eq!(
-                res2.unwrap_err(),
-                "tenant_id 'system' cannot be queried in multi-tenant mode"
-            );
-        })
-        .await;
+            assert_eq!(res2.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+        }).await;
     }
 }

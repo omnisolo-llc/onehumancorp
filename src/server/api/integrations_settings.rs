@@ -1,7 +1,7 @@
-use crate::integrations::registry::IntegrationsRegistry;
-use axum::{Json, extract::State, response::IntoResponse};
+use axum::{extract::State, Json, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::integrations::registry::IntegrationsRegistry;
 
 #[derive(Deserialize)]
 pub struct ConnectWhatsAppCloudApiReq {
@@ -55,9 +55,7 @@ pub async fn connect_whatsapp(
     State(registry): State<Arc<IntegrationsRegistry>>,
     Json(payload): Json<ConnectWhatsAppReq>,
 ) -> impl IntoResponse {
-    let integration_id = payload
-        .integration_id
-        .unwrap_or_else(|| "whatsapp".to_string());
+    let integration_id = payload.integration_id.unwrap_or_else(|| "whatsapp".to_string());
     let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
         integration_id: integration_id.clone(),
         base_url: payload.base_url.unwrap_or_default(),

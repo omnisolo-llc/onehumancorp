@@ -94,7 +94,10 @@ impl AsanaClient {
         Ok(envelope.data)
     }
 
-    pub async fn get_projects(&self, workspace_id: &str) -> Result<Vec<AsanaProject>, String> {
+    pub async fn get_projects(
+        &self,
+        workspace_id: &str,
+    ) -> Result<Vec<AsanaProject>, String> {
         let url = format!("{}/workspaces/{}/projects", BASE_URL, workspace_id);
         let client = get_client();
         let res = client
@@ -174,10 +177,7 @@ impl AsanaClient {
             req = req.query(&[("completed_since", since)]);
         }
 
-        let res = req
-            .send()
-            .await
-            .map_err(|e| format!("reqwest error: {}", e))?;
+        let res = req.send().await.map_err(|e| format!("reqwest error: {}", e))?;
 
         let status = res.status();
         if !status.is_success() {
@@ -298,7 +298,10 @@ impl AsanaClient {
         Ok(())
     }
 
-    pub async fn get_task_comments(&self, task_id: &str) -> Result<Vec<AsanaComment>, String> {
+    pub async fn get_task_comments(
+        &self,
+        task_id: &str,
+    ) -> Result<Vec<AsanaComment>, String> {
         let url = format!("{}/tasks/{}/stories", BASE_URL, task_id);
         let client = get_client();
         let res = client
@@ -322,7 +325,11 @@ impl AsanaClient {
         Ok(envelope.data)
     }
 
-    pub async fn add_comment(&self, task_id: &str, text: &str) -> Result<AsanaComment, String> {
+    pub async fn add_comment(
+        &self,
+        task_id: &str,
+        text: &str,
+    ) -> Result<AsanaComment, String> {
         let url = format!("{}/tasks/{}/stories", BASE_URL, task_id);
         let client = get_client();
         let payload = serde_json::json!({

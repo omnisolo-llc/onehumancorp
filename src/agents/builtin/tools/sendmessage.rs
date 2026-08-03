@@ -4,10 +4,8 @@ use serde_json::json;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use super::{
-    SharedMailbox, Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+
+use super::{SharedMailbox, Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 /// A message in the mailbox.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +37,7 @@ struct SendMessageArgs {
     to: Option<String>,
     message: String,
 }
+
 
 struct SendMessageExecutor {
     mailbox: SharedMailbox,

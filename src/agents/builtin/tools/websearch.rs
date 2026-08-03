@@ -1,13 +1,10 @@
 use ohc_builtin_agent_core::types::ToolError;
 use reqwest::Client;
-use serde::Deserialize;
 use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 #[derive(Deserialize)]
 struct WebSearchArgs {
@@ -20,7 +17,10 @@ struct WebSearchExecutor {
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<WebSearchArgs> for WebSearchExecutor {
-    async fn execute_typed(&self, args: WebSearchArgs) -> Result<String, ToolError> {
+    async fn execute_typed(
+        &self,
+        args: WebSearchArgs,
+    ) -> Result<String, ToolError> {
         let query = &args.query;
 
         // Use DuckDuckGo HTML endpoint (no API key required).
@@ -35,8 +35,7 @@ impl PydanticToolExecutor<WebSearchArgs> for WebSearchExecutor {
             .header("User-Agent", "OHC-Agent/1.0")
             .send()
             .await
-            .map_err(|e| format!("websearch: {}", e))
-            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|e| format!("websearch: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if !resp.status().is_success() {
             return Ok(format!(
@@ -104,8 +103,7 @@ fn strip_tags(s: &str) -> String {
 pub fn websearch_tool() -> Tool {
     Tool {
         name: "WebSearch".to_string(),
-        description: "Search the web for information. Returns a list of result snippets."
-            .to_string(),
+        description: "Search the web for information. Returns a list of result snippets.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",

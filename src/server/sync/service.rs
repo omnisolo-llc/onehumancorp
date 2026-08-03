@@ -1,6 +1,8 @@
-use crate::db::{DB, DbStore};
-use serde::{Deserialize, Serialize};
+
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use crate::db::{DB, DbStore};
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncDelta {
@@ -33,9 +35,7 @@ impl SyncDeltas for CloudSyncService {
         let telemetry_enabled = ::server_config::is_telemetry_enabled();
 
         if is_standalone && !telemetry_enabled {
-            tracing::debug!(
-                "Standalone mode, telemetry disabled, skipping cloud delta sync entirely to enforce local sovereignty."
-            );
+            tracing::debug!("Standalone mode, telemetry disabled, skipping cloud delta sync entirely to enforce local sovereignty.");
             return Ok(());
         }
 
@@ -94,6 +94,7 @@ impl SyncDeltas for CloudSyncService {
         Ok(())
     }
 }
+
 
 #[cfg(test)]
 mod tests {

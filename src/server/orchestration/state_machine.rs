@@ -1,9 +1,9 @@
-use crate::db::{DB, DbStore};
-use chrono::Utc;
-use sqlx::Row;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use crate::db::{DB, DbStore};
+use sqlx::Row;
+use chrono::Utc;
 use uuid::Uuid;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TaskStatus {
@@ -44,10 +44,7 @@ pub struct StateMachine {
 
 impl StateMachine {
     pub fn new(db: Arc<DB>) -> Self {
-        Self {
-            db,
-            sqlite_mutex: Mutex::new(()),
-        }
+        Self { db, sqlite_mutex: Mutex::new(()) }
     }
 
     fn increment_transition_metric(status: &TaskStatus) {
@@ -63,14 +60,7 @@ impl StateMachine {
         }
     }
 
-    pub async fn create_task(
-        &self,
-        task_id: Option<String>,
-        organization_id: &str,
-        title: &str,
-        description: Option<&str>,
-        dependencies: Vec<String>,
-    ) -> Result<String, String> {
+    pub async fn create_task(&self, task_id: Option<String>, organization_id: &str, title: &str, description: Option<&str>, dependencies: Vec<String>) -> Result<String, String> {
         let tid = task_id.unwrap_or_else(|| Uuid::new_v4().to_string());
         let now = Utc::now();
 
@@ -148,7 +138,7 @@ impl StateMachine {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row = sqlx::query(
-                    "SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE SKIP LOCKED",
+                    "SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE SKIP LOCKED"
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
@@ -167,7 +157,7 @@ impl StateMachine {
                         SELECT COUNT(*) FROM shared_task_dependencies std
                         JOIN shared_tasks st ON std.depends_on_task_id = st.id
                         WHERE std.task_id = $1 AND st.status != 'COMPLETED'
-                        "#,
+                        "#
                     )
                     .bind(task_id)
                     .fetch_one(&mut *tx)
@@ -200,11 +190,13 @@ impl StateMachine {
                 let _lock = self.sqlite_mutex.lock().await;
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-                let row = sqlx::query("SELECT status FROM shared_tasks WHERE id = ?")
-                    .bind(task_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let row = sqlx::query(
+                    "SELECT status FROM shared_tasks WHERE id = ?"
+                )
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
                 if let Some(r) = row {
                     let status: String = r.get("status");
@@ -218,7 +210,7 @@ impl StateMachine {
                         SELECT COUNT(*) FROM shared_task_dependencies std
                         JOIN shared_tasks st ON std.depends_on_task_id = st.id
                         WHERE std.task_id = ? AND st.status != 'COMPLETED'
-                        "#,
+                        "#
                     )
                     .bind(task_id)
                     .fetch_one(&mut *tx)
@@ -257,7 +249,7 @@ impl StateMachine {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
                 let row = sqlx::query(
-                    "SELECT status, organization_id FROM shared_tasks WHERE id = $1 FOR UPDATE",
+                    "SELECT status, organization_id FROM shared_tasks WHERE id = $1 FOR UPDATE"
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
@@ -305,11 +297,13 @@ impl StateMachine {
                 let _lock = self.sqlite_mutex.lock().await;
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-                let row = sqlx::query("SELECT status FROM shared_tasks WHERE id = ?")
-                    .bind(task_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let row = sqlx::query(
+                    "SELECT status FROM shared_tasks WHERE id = ?"
+                )
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
                 if let Some(r) = row {
                     let status: String = r.get("status");
@@ -318,7 +312,7 @@ impl StateMachine {
                     }
 
                     sqlx::query(
-                        "UPDATE shared_tasks SET status = 'COMPLETED', updated_at = ? WHERE id = ?",
+                        "UPDATE shared_tasks SET status = 'COMPLETED', updated_at = ? WHERE id = ?"
                     )
                     .bind(now.to_rfc3339())
                     .bind(task_id)
@@ -342,11 +336,13 @@ impl StateMachine {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
-                let row = sqlx::query("SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE")
-                    .bind(task_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let row = sqlx::query(
+                    "SELECT status FROM shared_tasks WHERE id = $1 FOR UPDATE"
+                )
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
                 if let Some(r) = row {
                     let status: String = r.get("status");
@@ -355,7 +351,7 @@ impl StateMachine {
                     }
 
                     sqlx::query(
-                        "UPDATE shared_tasks SET status = 'BLOCKED', updated_at = $1 WHERE id = $2",
+                        "UPDATE shared_tasks SET status = 'BLOCKED', updated_at = $1 WHERE id = $2"
                     )
                     .bind(now)
                     .bind(task_id)
@@ -374,11 +370,13 @@ impl StateMachine {
                 let _lock = self.sqlite_mutex.lock().await;
                 let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
-                let row = sqlx::query("SELECT status FROM shared_tasks WHERE id = ?")
-                    .bind(task_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let row = sqlx::query(
+                    "SELECT status FROM shared_tasks WHERE id = ?"
+                )
+                .bind(task_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
                 if let Some(r) = row {
                     let status: String = r.get("status");
@@ -387,7 +385,7 @@ impl StateMachine {
                     }
 
                     sqlx::query(
-                        "UPDATE shared_tasks SET status = 'BLOCKED', updated_at = ? WHERE id = ?",
+                        "UPDATE shared_tasks SET status = 'BLOCKED', updated_at = ? WHERE id = ?"
                     )
                     .bind(now.to_rfc3339())
                     .bind(task_id)

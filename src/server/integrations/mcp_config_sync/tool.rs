@@ -1,7 +1,7 @@
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, Row};
 use std::collections::HashMap;
+use sqlx::{PgPool, Row};
+use async_trait::async_trait;
 use tracing::{info, instrument};
 
 #[derive(Debug)]
@@ -46,17 +46,8 @@ pub struct ConfigResponse {
 
 #[async_trait]
 pub trait ConfigSyncTool: Send + Sync {
-    async fn sync_config_to_cloud(
-        &self,
-        spiffe_id: &str,
-        payload: ConfigSyncPayload,
-    ) -> Result<(), McpConfigSyncError>;
-    async fn get_config(
-        &self,
-        spiffe_id: &str,
-        tenant_id: &str,
-        key: &str,
-    ) -> Result<ConfigResponse, McpConfigSyncError>;
+    async fn sync_config_to_cloud(&self, spiffe_id: &str, payload: ConfigSyncPayload) -> Result<(), McpConfigSyncError>;
+    async fn get_config(&self, spiffe_id: &str, tenant_id: &str, key: &str) -> Result<ConfigResponse, McpConfigSyncError>;
 }
 
 pub struct PgConfigSyncTool {
@@ -65,16 +56,12 @@ pub struct PgConfigSyncTool {
 
 pub fn verify_spiffe_id(spiffe_id: &str, tenant_id: &str) -> Result<(), McpConfigSyncError> {
     if !spiffe_id.starts_with("spiffe://") {
-        return Err(McpConfigSyncError::Unauthorized(
-            "Invalid SPIFFE ID format".to_string(),
-        ));
+        return Err(McpConfigSyncError::Unauthorized("Invalid SPIFFE ID format".to_string()));
     }
 
     let expected_prefix = format!("spiffe://{}/", tenant_id);
     if !spiffe_id.starts_with(&expected_prefix) && spiffe_id != "spiffe://admin" {
-        return Err(McpConfigSyncError::Unauthorized(
-            "SPIFFE ID does not match tenant context".to_string(),
-        ));
+        return Err(McpConfigSyncError::Unauthorized("SPIFFE ID does not match tenant context".to_string()));
     }
     Ok(())
 }
@@ -88,11 +75,7 @@ impl PgConfigSyncTool {
 #[async_trait]
 impl ConfigSyncTool for PgConfigSyncTool {
     #[instrument(skip(self))]
-    async fn sync_config_to_cloud(
-        &self,
-        spiffe_id: &str,
-        payload: ConfigSyncPayload,
-    ) -> Result<(), McpConfigSyncError> {
+    async fn sync_config_to_cloud(&self, spiffe_id: &str, payload: ConfigSyncPayload) -> Result<(), McpConfigSyncError> {
         verify_spiffe_id(spiffe_id, &payload.tenant_id)?;
 
         let metadata_json = serde_json::to_value(&payload.metadata)
@@ -133,12 +116,7 @@ impl ConfigSyncTool for PgConfigSyncTool {
     }
 
     #[instrument(skip(self))]
-    async fn get_config(
-        &self,
-        spiffe_id: &str,
-        tenant_id: &str,
-        key: &str,
-    ) -> Result<ConfigResponse, McpConfigSyncError> {
+    async fn get_config(&self, spiffe_id: &str, tenant_id: &str, key: &str) -> Result<ConfigResponse, McpConfigSyncError> {
         verify_spiffe_id(spiffe_id, tenant_id)?;
 
         let mut tx = self.pool.begin().await?;
@@ -149,7 +127,7 @@ impl ConfigSyncTool for PgConfigSyncTool {
             .await?;
 
         let row = sqlx::query(
-            "SELECT config_value FROM mcp_config_sync_log WHERE tenant_id = $1 AND config_key = $2",
+            "SELECT config_value FROM mcp_config_sync_log WHERE tenant_id = $1 AND config_key = $2"
         )
         .bind(tenant_id)
         .bind(key)
@@ -232,11 +210,7 @@ mod mock_tests {
 
     #[async_trait]
     impl ConfigSyncTool for MockConfigSyncTool {
-        async fn sync_config_to_cloud(
-            &self,
-            spiffe_id: &str,
-            payload: ConfigSyncPayload,
-        ) -> Result<(), McpConfigSyncError> {
+        async fn sync_config_to_cloud(&self, spiffe_id: &str, payload: ConfigSyncPayload) -> Result<(), McpConfigSyncError> {
             verify_spiffe_id(spiffe_id, &payload.tenant_id)?;
             if payload.key == "error" {
                 return Err(McpConfigSyncError::Unauthorized("Mock Error".to_string()));
@@ -244,12 +218,7 @@ mod mock_tests {
             Ok(())
         }
 
-        async fn get_config(
-            &self,
-            spiffe_id: &str,
-            tenant_id: &str,
-            key: &str,
-        ) -> Result<ConfigResponse, McpConfigSyncError> {
+        async fn get_config(&self, spiffe_id: &str, tenant_id: &str, key: &str) -> Result<ConfigResponse, McpConfigSyncError> {
             verify_spiffe_id(spiffe_id, tenant_id)?;
             if key == "not_found" {
                 return Err(McpConfigSyncError::NotFound(key.to_string()));
@@ -272,22 +241,14 @@ mod mock_tests {
             metadata: HashMap::new(),
         };
 
-        assert!(
-            tool.sync_config_to_cloud("spiffe://tenant1/agent1", payload)
-                .await
-                .is_ok()
-        );
+        assert!(tool.sync_config_to_cloud("spiffe://tenant1/agent1", payload).await.is_ok());
 
-        let res = tool
-            .get_config("spiffe://tenant1/agent1", "tenant1", "test_key")
-            .await
-            .unwrap();
+        let res = tool.get_config("spiffe://tenant1/agent1", "tenant1", "test_key").await.unwrap();
         assert_eq!(res.key, "test_key");
         assert_eq!(res.value, "mock_value");
 
         assert!(matches!(
-            tool.get_config("spiffe://tenant1/agent1", "tenant1", "not_found")
-                .await,
+            tool.get_config("spiffe://tenant1/agent1", "tenant1", "not_found").await,
             Err(McpConfigSyncError::NotFound(_))
         ));
     }
@@ -303,10 +264,7 @@ mod db_tests {
         if !url.starts_with("postgres") {
             return;
         }
-        let pool = match ::server_lib::db::secure_pg_pool_options()
-            .connect(&url)
-            .await
-        {
+        let pool = match ::server_lib::db::secure_pg_pool_options().connect(&url).await {
             Ok(p) => p,
             Err(_) => return, // Skip test if database is not available to keep it hermetic
         };
@@ -320,14 +278,9 @@ mod db_tests {
             metadata: HashMap::new(),
         };
 
-        tool.sync_config_to_cloud("spiffe://tenant1/agent1", payload)
-            .await
-            .unwrap();
+        tool.sync_config_to_cloud("spiffe://tenant1/agent1", payload).await.unwrap();
 
-        let response = tool
-            .get_config("spiffe://tenant1/agent1", "tenant1", "test_key")
-            .await
-            .unwrap();
+        let response = tool.get_config("spiffe://tenant1/agent1", "tenant1", "test_key").await.unwrap();
         assert_eq!(response.key, "test_key");
         assert_eq!(response.value, "test_value");
     }

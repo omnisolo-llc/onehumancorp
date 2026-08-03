@@ -117,4 +117,5 @@ mod tests {
         assert_eq!(decision.action, BudgetAction::Stop);
         assert!(decision.diminishing);
     }
+
 }

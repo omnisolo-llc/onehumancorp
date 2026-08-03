@@ -1,14 +1,14 @@
-use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use axum::{
-    Router,
     extract::{Extension, Json, State},
-    http::StatusCode,
     response::IntoResponse,
+    http::StatusCode,
     routing::post,
+    Router,
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct OmnichannelPayload {
@@ -31,12 +31,7 @@ pub struct AppState {
     pub db: Arc<crate::db::DB>,
 }
 
-pub async fn resolve_identity(
-    db: &crate::db::DB,
-    tenant_id: &str,
-    channel: &str,
-    sender_id: &str,
-) -> String {
+pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str, sender_id: &str) -> String {
     let pool = &db.pool;
 
     // 1. Check if identity exists in customer_identities
@@ -66,41 +61,29 @@ pub async fn resolve_identity(
     // 2. If not found, try to resolve by phone or email in customers table (basic resolution)
     // Assume sender_id might be a phone number or email depending on channel
     let potential_customer_id: Option<String> = match &db.store {
-        crate::db::DbStore::Postgres => sqlx::query_scalar(
-            "SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2) LIMIT 1",
-        )
-        .bind(tenant_id)
-        .bind(sender_id)
-        .fetch_optional(pool)
-        .await
-        .ok()
-        .flatten(),
-        crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query_scalar(
-            "SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ?) LIMIT 1",
-        )
-        .bind(tenant_id)
-        .bind(sender_id)
-        .bind(sender_id)
-        .fetch_optional(sqlite_pool)
-        .await
-        .ok()
-        .flatten(),
+        crate::db::DbStore::Postgres => {
+             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2) LIMIT 1")
+                .bind(tenant_id)
+                .bind(sender_id)
+                .fetch_optional(pool)
+                .await.ok().flatten()
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ?) LIMIT 1")
+                .bind(tenant_id)
+                .bind(sender_id)
+                .bind(sender_id)
+                .fetch_optional(sqlite_pool)
+                .await.ok().flatten()
+        }
     };
 
     let id = if let Some(found_id) = potential_customer_id {
         found_id
     } else {
         let new_id = Uuid::new_v4().to_string();
-        let email = if sender_id.contains('@') {
-            sender_id
-        } else {
-            ""
-        };
-        let phone = if !sender_id.contains('@') && sender_id.chars().any(|c| c.is_digit(10)) {
-            sender_id
-        } else {
-            ""
-        };
+        let email = if sender_id.contains('@') { sender_id } else { "" };
+        let phone = if !sender_id.contains('@') && sender_id.chars().any(|c| c.is_digit(10)) { sender_id } else { "" };
         let name = "Unknown Customer";
 
         match &db.store {
@@ -113,7 +96,7 @@ pub async fn resolve_identity(
                     .bind(if phone.is_empty() { None } else { Some(phone) })
                     .execute(pool)
                     .await;
-            }
+            },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone) VALUES (?, ?, ?, ?, ?)")
                     .bind(&new_id)
@@ -140,7 +123,7 @@ pub async fn resolve_identity(
                 .bind(sender_id)
                 .execute(pool)
                 .await;
-        }
+        },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let _ = sqlx::query("INSERT OR IGNORE INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES (?, ?, ?, ?, ?)")
                 .bind(&identity_id)
@@ -170,10 +153,7 @@ pub async fn handle_omnichannel_webhook(
     if claims.organization_id.as_deref() != Some(payload.tenant_id.as_str()) {
         return (
             StatusCode::FORBIDDEN,
-            Json(WebhookResponse {
-                success: false,
-                message_id: None,
-            }),
+            Json(WebhookResponse { success: false, message_id: None }),
         )
             .into_response();
     }
@@ -187,13 +167,7 @@ pub async fn handle_omnichannel_webhook(
 
     // Create ServiceLead if applicable
     let service_lead_id = uuid::Uuid::new_v4().to_string();
-    if channel == "intake_form"
-        || channel == "email_inquiry"
-        || channel == "work_intake"
-        || channel == "instagram_dm"
-        || channel == "sms"
-        || channel == "booking_form"
-    {
+    if channel == "intake_form" || channel == "email_inquiry" || channel == "work_intake" || channel == "instagram_dm" || channel == "sms" || channel == "booking_form" {
         let _ = match &state.db.store {
             crate::db::DbStore::Postgres => {
                 let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'new', NOW(), NOW())")
@@ -204,7 +178,7 @@ pub async fn handle_omnichannel_webhook(
                     .bind(channel)
                     .execute(&state.db.pool)
                     .await;
-            }
+            },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let _ = sqlx::query("INSERT INTO service_leads (id, tenant_id, customer_id, description, source, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'new', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&service_lead_id)
@@ -271,7 +245,7 @@ pub async fn handle_omnichannel_webhook(
                 }
             }
             res.map(|_| ())
-        }
+        },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let res = sqlx::query(
                 "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, '', 'unread', ?, CURRENT_TIMESTAMP)"
@@ -307,14 +281,7 @@ pub async fn handle_omnichannel_webhook(
 
     if let Err(e) = insert_result {
         tracing::error!("Failed to insert omnichannel inbox message: {}", e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(WebhookResponse {
-                success: false,
-                message_id: None,
-            }),
-        )
-            .into_response();
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
     }
 
     // 3. Enqueue message_triage job
@@ -366,14 +333,7 @@ pub async fn handle_omnichannel_webhook(
         let _ = orchestrator_clone.dispatch_event(event).await;
     });
 
-    (
-        StatusCode::OK,
-        Json(WebhookResponse {
-            success: true,
-            message_id: Some(inbox_id),
-        }),
-    )
-        .into_response()
+    (StatusCode::OK, Json(WebhookResponse { success: true, message_id: Some(inbox_id) })).into_response()
 }
 
 #[cfg(test)]
@@ -443,10 +403,10 @@ mod tests {
         assert_ne!(resolved_id4, "cust-1");
     }
 
-    use axum::Json;
     use axum::extract::State;
-    use axum::http::StatusCode;
+    use axum::Json;
     use axum::response::IntoResponse;
+    use axum::http::StatusCode;
 
     #[tokio::test]
     async fn test_handle_omnichannel_webhook() {
@@ -458,20 +418,11 @@ mod tests {
             store: crate::db::DbStore::Sqlite(pool.clone()),
         };
 
-        let transport =
-            std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
-        let orchestrator = std::sync::Arc::new(
-            crate::orchestration::departments::DepartmentOrchestrator::new(
-                std::sync::Arc::new(db.clone()),
-                mesh,
-            ),
-        );
+        let orchestrator = std::sync::Arc::new(crate::orchestration::departments::DepartmentOrchestrator::new(std::sync::Arc::new(db.clone()), mesh));
 
-        let app_state = AppState {
-            db: std::sync::Arc::new(db),
-            orchestrator,
-        };
+        let app_state = AppState { db: std::sync::Arc::new(db), orchestrator };
 
         let payload = OmnichannelPayload {
             tenant_id: "t-1".into(),
@@ -492,9 +443,7 @@ mod tests {
             jti: "test".into(),
         };
 
-        let res = handle_omnichannel_webhook(State(app_state), Extension(claims), Json(payload))
-            .await
-            .into_response();
+        let res = handle_omnichannel_webhook(State(app_state), Extension(claims), Json(payload)).await.into_response();
 
         assert_eq!(res.status(), StatusCode::OK);
     }

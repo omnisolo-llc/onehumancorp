@@ -29,7 +29,7 @@ impl ConvertKitProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            },
+            }
         }
     }
 }
@@ -42,9 +42,6 @@ mod tests {
     fn test_convertkit_provider_metadata() {
         let provider = ConvertKitProvider::new("test_token".to_string());
         assert_eq!(provider.to_integration_provider().metadata.id, "convertkit");
-        assert_eq!(
-            provider.to_integration_provider().metadata.category,
-            "marketing"
-        );
+        assert_eq!(provider.to_integration_provider().metadata.category, "marketing");
     }
 }

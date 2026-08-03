@@ -1,17 +1,17 @@
 use axum::{
-    body::Body,
     extract::{Json, Request, State},
     http::StatusCode,
-    middleware::Next,
     response::{IntoResponse, Response},
+    middleware::Next,
+    body::Body,
 };
 use serde::Deserialize;
-use serde_json::Value;
 use std::sync::Arc;
+use serde_json::Value;
 
+use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 
 #[derive(Clone)]
 pub struct WebhookState {
@@ -46,20 +46,12 @@ pub struct StripeEventData {
 
 #[async_trait::async_trait]
 pub trait PaymentFailureNotifier: Send + Sync {
-    async fn send_payment_failure_sms(
-        &self,
-        subscriber_id: &str,
-        message: &str,
-    ) -> Result<(), String>;
+    async fn send_payment_failure_sms(&self, subscriber_id: &str, message: &str) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 pub trait PaymentFailureMessageGenerator: Send + Sync {
-    async fn generate_payment_failure_message(
-        &self,
-        subscriber_id: &str,
-        business_name: &str,
-    ) -> String;
+    async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String;
 }
 
 pub struct CriticalSmsPaymentFailureNotifier;
@@ -67,29 +59,22 @@ pub struct LlmPaymentFailureMessageGenerator;
 
 #[async_trait::async_trait]
 impl PaymentFailureNotifier for CriticalSmsPaymentFailureNotifier {
-    async fn send_payment_failure_sms(
-        &self,
-        _subscriber_id: &str,
-        message: &str,
-    ) -> Result<(), String> {
+    async fn send_payment_failure_sms(&self, _subscriber_id: &str, message: &str) -> Result<(), String> {
         crate::dispatch_critical_sms("failed_payment", message).await
     }
 }
 
 #[async_trait::async_trait]
 impl PaymentFailureMessageGenerator for LlmPaymentFailureMessageGenerator {
-    async fn generate_payment_failure_message(
-        &self,
-        subscriber_id: &str,
-        business_name: &str,
-    ) -> String {
+    async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String {
         let fallback = format!(
             "{} subscription payment could not be processed. Please update the saved payment method to keep the subscription active.",
             business_name
         );
         let prompt = format!(
             "Write a concise, helpful SMS for subscription payment recovery. Business: {}. Subscriber id: {}. Mention the payment could not be processed and ask them to update their saved payment method. Avoid blame and keep it under 240 characters.",
-            business_name, subscriber_id
+            business_name,
+            subscriber_id
         );
 
         match std::env::var("OHC_LLM_PROVIDER").as_deref() {
@@ -118,12 +103,8 @@ where
     N: PaymentFailureNotifier,
     G: PaymentFailureMessageGenerator,
 {
-    let message = generator
-        .generate_payment_failure_message(subscriber_id, business_name)
-        .await;
-    notifier
-        .send_payment_failure_sms(subscriber_id, &message)
-        .await
+    let message = generator.generate_payment_failure_message(subscriber_id, business_name).await;
+    notifier.send_payment_failure_sms(subscriber_id, &message).await
 }
 
 pub fn inventory_locks_for_payment_success(object: &Value) -> Vec<String> {
@@ -136,10 +117,7 @@ pub fn inventory_locks_for_payment_success(object: &Value) -> Vec<String> {
             locks.push(lock_id.to_string());
         }
     }
-    if let Some(lock_ids) = metadata
-        .get("inventory_lock_ids")
-        .and_then(|v| v.as_array())
-    {
+    if let Some(lock_ids) = metadata.get("inventory_lock_ids").and_then(|v| v.as_array()) {
         for lock_id in lock_ids.iter().filter_map(|v| v.as_str()) {
             if !lock_id.trim().is_empty() && !locks.iter().any(|existing| existing == lock_id) {
                 locks.push(lock_id.to_string());
@@ -161,9 +139,7 @@ async fn release_inventory_locks_for_payment(webhook_state: &WebhookState, objec
             }
         }
         Err(err) => {
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to get redis connection for payment inventory lock release",
-            );
+            ::server_telemetry::record_error_signal("[bug] Failed to get redis connection for payment inventory lock release");
             tracing::warn!("Failed to release payment inventory locks: {}", err);
         }
     }
@@ -284,8 +260,7 @@ where
     G: PaymentFailureMessageGenerator,
 {
     let lookup = payment_failure_lookup(object);
-    let Some(subscriber_id) = find_subscriber_for_payment_failure(webhook_state, &lookup).await?
-    else {
+    let Some(subscriber_id) = find_subscriber_for_payment_failure(webhook_state, &lookup).await? else {
         return Ok(None);
     };
 
@@ -313,10 +288,7 @@ pub async fn webhook_security_middleware(
     };
 
     // Extract timestamp and check signature
-    let sig_header = parts
-        .headers
-        .get("X-Signature")
-        .or_else(|| parts.headers.get("Stripe-Signature"));
+    let sig_header = parts.headers.get("X-Signature").or_else(|| parts.headers.get("Stripe-Signature"));
     let mut valid_signature = false;
     let mut timestamp_valid = false;
 
@@ -351,19 +323,9 @@ pub async fn webhook_security_middleware(
     if let Ok(json_value) = serde_json::from_slice::<serde_json::Value>(&bytes) {
         if let Some(id) = json_value.get("id").and_then(|id| id.as_str()) {
             event_id = Some(id.to_string());
-        } else if let Some(uid) = json_value
-            .get("payload")
-            .and_then(|p| p.get("uid"))
-            .and_then(|uid| uid.as_str())
-        {
+        } else if let Some(uid) = json_value.get("payload").and_then(|p| p.get("uid")).and_then(|uid| uid.as_str()) {
             event_id = Some(uid.to_string());
-        } else if let Some(entity_id) = json_value
-            .get("payload")
-            .and_then(|p| p.get("payment"))
-            .and_then(|p| p.get("entity"))
-            .and_then(|e| e.get("id"))
-            .and_then(|id| id.as_str())
-        {
+        } else if let Some(entity_id) = json_value.get("payload").and_then(|p| p.get("payment")).and_then(|p| p.get("entity")).and_then(|e| e.get("id")).and_then(|id| id.as_str()) {
             event_id = Some(entity_id.to_string());
         }
     }
@@ -387,9 +349,7 @@ pub async fn webhook_security_middleware(
                 return Ok(StatusCode::OK.into_response());
             }
         } else {
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to get redis connection for webhook idempotency check",
-            );
+            ::server_telemetry::record_error_signal("[bug] Failed to get redis connection for webhook idempotency check");
             tracing::error!("Failed to get redis connection for webhook idempotency check");
         }
     }
@@ -409,29 +369,25 @@ pub async fn stripe_webhook_handler(
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<StripeEvent>,
 ) -> impl IntoResponse {
+
     match payload.r#type.as_str() {
         "terminal.reader.action.succeeded" | "pos_transaction" | "payment_intent.succeeded" => {
             let obj = &payload.data.object;
 
             // Only handle POS payment intents (where source is in_person) here, ignore online intents
             if payload.r#type == "payment_intent.succeeded" {
-                let source = obj
-                    .get("metadata")
-                    .and_then(|m| m.get("source"))
-                    .and_then(|s| s.as_str());
+                let source = obj.get("metadata").and_then(|m| m.get("source")).and_then(|s| s.as_str());
                 if source != Some("in_person") {
                     // It's a normal online payment intent, handled elsewhere or ignored here
                     return StatusCode::OK.into_response();
                 }
             }
 
-            let tenant_id_opt = obj
-                .get("metadata")
+            let tenant_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("tenant_id"))
                 .and_then(|id| id.as_str());
 
-            let product_id_opt = obj
-                .get("metadata")
+            let product_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("product_id"))
                 .and_then(|id| id.as_str());
 
@@ -501,8 +457,7 @@ pub async fn stripe_webhook_handler(
                 }
 
                 if let Some(product_id) = product_id_opt {
-                    let quantity = obj
-                        .get("metadata")
+                    let quantity = obj.get("metadata")
                         .and_then(|m| m.get("quantity"))
                         .and_then(|q| q.as_str())
                         .and_then(|q| q.parse::<i32>().ok())
@@ -510,9 +465,7 @@ pub async fn stripe_webhook_handler(
 
                     let inventory_service = crate::services::inventory::InventoryService::new(None);
 
-                    let _ = inventory_service
-                        .commit_inventory(tenant_id, product_id, quantity, "")
-                        .await;
+                    let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
                 }
 
                 // Notify KAIROS Orchestrator for Sales and Operations AI agents
@@ -540,8 +493,7 @@ pub async fn stripe_webhook_handler(
             }
 
             // Also try to update the order status to Paid if order_id is present
-            let order_id_opt = obj
-                .get("metadata")
+            let order_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("order_id"))
                 .and_then(|id| id.as_str());
 
@@ -564,19 +516,12 @@ pub async fn stripe_webhook_handler(
                 };
 
                 if let Err(e) = res {
-                    ::server_telemetry::record_error_signal(
-                        "[bug] Failed to update order status for order : {:?}",
-                    );
-                    tracing::error!(
-                        "Failed to update order status for order {}: {:?}",
-                        order_id,
-                        e
-                    );
+                    ::server_telemetry::record_error_signal("[bug] Failed to update order status for order : {:?}");
+                    tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
                 }
             }
 
-            let booking_id_opt = obj
-                .get("metadata")
+            let booking_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("booking_id"))
                 .and_then(|id| id.as_str());
 
@@ -618,42 +563,33 @@ pub async fn stripe_webhook_handler(
             }
 
             StatusCode::OK.into_response()
-        }
-        "checkout.session.completed"
-        | "customer.subscription.updated"
-        | "customer.subscription.created" => {
+        },
+        "checkout.session.completed" | "customer.subscription.updated" | "customer.subscription.created" => {
             let obj = &payload.data.object;
             if payload.r#type == "checkout.session.completed" {
-                let tenant_id_opt = obj
-                    .get("metadata")
+                let tenant_id_opt = obj.get("metadata")
                     .and_then(|m| m.get("tenant_id"))
                     .and_then(|id| id.as_str());
 
-                let product_id_opt = obj
-                    .get("metadata")
+                let product_id_opt = obj.get("metadata")
                     .and_then(|m| m.get("product_id"))
                     .and_then(|id| id.as_str());
 
-                let conversational_intake_opt = obj
-                    .get("metadata")
+                let conversational_intake_opt = obj.get("metadata")
                     .and_then(|m| m.get("conversational_intake_id"))
                     .and_then(|id| id.as_str());
 
                 // Field service deposit requirements
-                let service_lead_opt = obj
-                    .get("metadata")
+                let service_lead_opt = obj.get("metadata")
                     .and_then(|m| m.get("service_lead_id"))
                     .and_then(|id| id.as_str());
-                let estimate_opt = obj
-                    .get("metadata")
+                let estimate_opt = obj.get("metadata")
                     .and_then(|m| m.get("estimate_id"))
                     .and_then(|id| id.as_str());
-                let deposit_req_opt = obj
-                    .get("metadata")
+                let deposit_req_opt = obj.get("metadata")
                     .and_then(|m| m.get("deposit_requirement_id"))
                     .and_then(|id| id.as_str());
-                let proposed_slot_opt = obj
-                    .get("metadata")
+                let proposed_slot_opt = obj.get("metadata")
                     .and_then(|m| m.get("proposed_slot_id"))
                     .and_then(|id| id.as_str());
 
@@ -715,23 +651,19 @@ pub async fn stripe_webhook_handler(
                 }
 
                 if let (Some(tenant_id), Some(product_id)) = (tenant_id_opt, product_id_opt) {
-                    let quantity = obj
-                        .get("metadata")
+                    let quantity = obj.get("metadata")
                         .and_then(|m| m.get("quantity"))
                         .and_then(|q| q.as_str())
                         .and_then(|q| q.parse::<i32>().ok())
                         .unwrap_or(1);
 
-                    let lock_id = obj
-                        .get("metadata")
+                    let lock_id = obj.get("metadata")
                         .and_then(|m| m.get("inventory_lock_id"))
                         .and_then(|id| id.as_str())
                         .unwrap_or("");
 
                     let inventory_service = crate::services::inventory::InventoryService::new(None);
-                    let _ = inventory_service
-                        .commit_inventory(tenant_id, product_id, quantity, lock_id)
-                        .await;
+                    let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, lock_id).await;
                 } else {
                     release_inventory_locks_for_payment(&webhook_state, obj).await;
                 }
@@ -753,38 +685,30 @@ pub async fn stripe_webhook_handler(
                 }
             }
 
-            let tenant_id_opt = obj
-                .get("metadata")
+            let tenant_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("tenant_id"))
                 .and_then(|id| id.as_str())
                 .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
 
-            let customer_id_opt = obj
-                .get("client_reference_id")
+            let customer_id_opt = obj.get("client_reference_id")
                 .and_then(|id| id.as_str())
                 .or_else(|| obj.get("customer").and_then(|id| id.as_str()));
 
-            let product_id_opt = obj
-                .get("metadata")
+            let product_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("product_id"))
                 .and_then(|id| id.as_str());
 
             if let Some(tenant_id) = tenant_id_opt {
                 // If this is a product subscription
                 if let (Some(product_id), Some(customer_id)) = (product_id_opt, customer_id_opt) {
-                    if payload.r#type == "checkout.session.completed"
-                        && obj.get("mode").and_then(|m| m.as_str()) == Some("subscription")
-                    {
+                    if payload.r#type == "checkout.session.completed" && obj.get("mode").and_then(|m| m.as_str()) == Some("subscription") {
                         let mut transaction = match webhook_state.db.pool.begin().await {
                             Ok(transaction) => transaction,
                             Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
                         };
-                        if ::server_common::auth_utils::set_org_context(
-                            &mut *transaction,
-                            tenant_id,
-                        )
-                        .await
-                        .is_err()
+                        if ::server_common::auth_utils::set_org_context(&mut *transaction, tenant_id)
+                            .await
+                            .is_err()
                         {
                             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                         }
@@ -817,10 +741,7 @@ pub async fn stripe_webhook_handler(
 
                         if let Some(plan_id) = plan_id_res {
                             let subscription_id = uuid::Uuid::new_v4().to_string();
-                            let stripe_subscription_id = obj
-                                .get("subscription")
-                                .and_then(|s| s.as_str())
-                                .unwrap_or("");
+                            let stripe_subscription_id = obj.get("subscription").and_then(|s| s.as_str()).unwrap_or("");
 
                             if sqlx::query(
                                 "INSERT INTO subscriptions (id, tenant_id, customer_id, plan_id, status, current_period_end)
@@ -855,10 +776,7 @@ pub async fn stripe_webhook_handler(
 
                             // Create an order for the Manager agent
                             let order_id = uuid::Uuid::new_v4().to_string();
-                            let amount_total = obj
-                                .get("amount_total")
-                                .and_then(|a| a.as_i64())
-                                .unwrap_or(0);
+                            let amount_total = obj.get("amount_total").and_then(|a| a.as_i64()).unwrap_or(0);
                             let total_amount = amount_total as f64 / 100.0;
                             if sqlx::query(
                                 "INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'paid')"
@@ -886,13 +804,12 @@ pub async fn stripe_webhook_handler(
                             });
                             let tenant_id_val = tenant_id.to_string();
                             tokio::spawn(async move {
-                                let evt =
-                                    crate::orchestration::departments::types::DepartmentEvent {
-                                        id: uuid::Uuid::new_v4().to_string(),
-                                        tenant_id: tenant_id_val,
-                                        event_type: "tenant.order.created".to_string(),
-                                        payload: payload_val,
-                                    };
+                                let evt = crate::orchestration::departments::types::DepartmentEvent {
+                                    id: uuid::Uuid::new_v4().to_string(),
+                                    tenant_id: tenant_id_val,
+                                    event_type: "tenant.order.created".to_string(),
+                                    payload: payload_val,
+                                };
                                 let _ = orch.dispatch_event(evt).await;
                             });
                         }
@@ -900,8 +817,7 @@ pub async fn stripe_webhook_handler(
                 }
 
                 // Normal tenant tier update logic
-                let tier_str = obj
-                    .get("metadata")
+                let tier_str = obj.get("metadata")
                     .and_then(|m| m.get("tier"))
                     .and_then(|t| t.as_str())
                     .unwrap_or("Starter");
@@ -914,11 +830,7 @@ pub async fn stripe_webhook_handler(
                 };
 
                 // Update Redis Rate Limiter
-                if let Err(_e) = webhook_state
-                    .rate_limiter
-                    .set_tenant_tier(tenant_id, tier.clone())
-                    .await
-                {
+                if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -961,13 +873,8 @@ pub async fn stripe_webhook_handler(
                             "tags": [
                                 format!("tenant-id:{}", tenant_id)
                             ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
+                        }).to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                     }
                 }
 
@@ -975,22 +882,18 @@ pub async fn stripe_webhook_handler(
             } else {
                 StatusCode::BAD_REQUEST.into_response()
             }
-        }
+        },
         "customer.subscription.deleted" => {
             let obj = &payload.data.object;
-            let tenant_id_opt = obj
-                .get("metadata")
+            let tenant_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("tenant_id"))
                 .and_then(|id| id.as_str())
                 .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
 
             if let Some(tenant_id) = tenant_id_opt {
+
                 // Update Redis
-                if let Err(_e) = webhook_state
-                    .rate_limiter
-                    .set_tenant_tier(tenant_id, PlanTier::Free)
-                    .await
-                {
+                if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -1026,13 +929,8 @@ pub async fn stripe_webhook_handler(
                             "tags": [
                                 format!("tenant-id:{}", tenant_id)
                             ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
+                        }).to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
                     }
                 }
 
@@ -1040,40 +938,21 @@ pub async fn stripe_webhook_handler(
             } else {
                 StatusCode::BAD_REQUEST.into_response()
             }
-        }
+        },
         "invoice.payment_succeeded" | "invoice.paid" => {
-            let stripe_invoice_id = payload
-                .data
-                .object
-                .get("id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
+            let stripe_invoice_id = payload.data.object.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
             if !stripe_invoice_id.is_empty() {
                 match &webhook_state.db.store {
                     crate::db::DbStore::Postgres => {
-                        if let Ok(internal_invoice) = sqlx::query_scalar::<_, String>(
-                            "SELECT id FROM invoices WHERE stripe_invoice_id = $1 OR id = $1",
-                        )
-                        .bind(&stripe_invoice_id)
-                        .fetch_optional(&webhook_state.db.pool)
-                        .await
-                        {
+                        if let Ok(internal_invoice) = sqlx::query_scalar::<_, String>("SELECT id FROM invoices WHERE stripe_invoice_id = $1 OR id = $1").bind(&stripe_invoice_id).fetch_optional(&webhook_state.db.pool).await {
                             if let Some(id) = internal_invoice {
                                 let _ = sqlx::query("UPDATE invoices SET payment_status = 'paid', status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = $1").bind(&id).execute(&webhook_state.db.pool).await;
                                 let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE action_type = 'Approve Draft' AND action_payload LIKE '%' || $1 || '%'").bind(&id).execute(&webhook_state.db.pool).await;
                             }
                         }
-                    }
+                    },
                     crate::db::DbStore::Sqlite(_) => {
-                        if let Ok(internal_invoice) = sqlx::query_scalar::<_, String>(
-                            "SELECT id FROM invoices WHERE stripe_invoice_id = ? OR id = ?",
-                        )
-                        .bind(&stripe_invoice_id)
-                        .bind(&stripe_invoice_id)
-                        .fetch_optional(&webhook_state.db.pool)
-                        .await
-                        {
+                        if let Ok(internal_invoice) = sqlx::query_scalar::<_, String>("SELECT id FROM invoices WHERE stripe_invoice_id = ? OR id = ?").bind(&stripe_invoice_id).bind(&stripe_invoice_id).fetch_optional(&webhook_state.db.pool).await {
                             if let Some(id) = internal_invoice {
                                 let _ = sqlx::query("UPDATE invoices SET payment_status = 'paid', status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(&id).execute(&webhook_state.db.pool).await;
                                 let _ = sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE action_type = 'Approve Draft' AND action_payload LIKE '%' || ? || '%'").bind(&id).execute(&webhook_state.db.pool).await;
@@ -1095,24 +974,19 @@ pub async fn stripe_webhook_handler(
             .await
             {
                 Ok(Some(subscriber_id)) => {
-                    tracing::info!(
-                        "Processed Stripe failed-payment dunning for subscriber {}",
-                        subscriber_id
-                    ); // pii-safe
+                    tracing::info!("Processed Stripe failed-payment dunning for subscriber {}", subscriber_id); // pii-safe
                 }
                 Ok(None) => {
                     tracing::warn!("Stripe invoice.payment_failed did not match an OHC subscriber");
                 }
                 Err(err) => {
-                    ::server_telemetry::record_error_signal(
-                        "[bug] Failed to process Stripe failed-payment dunning",
-                    );
+                    ::server_telemetry::record_error_signal("[bug] Failed to process Stripe failed-payment dunning");
                     tracing::error!("Failed to process Stripe failed-payment dunning: {}", err); // pii-safe
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
             }
             StatusCode::OK.into_response()
-        }
+        },
         _ => {
             // Unhandled event types are ignored successfully
             StatusCode::OK.into_response()
@@ -1150,10 +1024,11 @@ pub async fn mercadopago_webhook_handler(
             // For mock purposes, assume we process it similarly to Stripe.
             // We just return OK.
             StatusCode::OK.into_response()
-        }
-        _ => StatusCode::OK.into_response(),
+        },
+        _ => StatusCode::OK.into_response()
     }
 }
+
 
 #[derive(Debug, Deserialize, serde::Serialize)]
 pub struct RazorpayEvent {
@@ -1178,11 +1053,16 @@ pub struct RazorpayEntity {
     pub order_id: String,
 }
 
+
+
+
+
 pub async fn razorpay_webhook_handler(
     _headers: axum::http::HeaderMap,
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<RazorpayEvent>,
 ) -> impl IntoResponse {
+
     match payload.event.as_str() {
         "payment.captured" => {
             let order_id = &payload.payload.payment.entity.order_id;
@@ -1210,26 +1090,27 @@ pub async fn razorpay_webhook_handler(
                         .await
                         .map(|_| ())
                 }
-                DbStore::Postgres => sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = $1")
-                    .bind(order_id)
-                    .execute(&webhook_state.db.pool)
-                    .await
-                    .map(|_| ()),
+                DbStore::Postgres => {
+                    sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = $1")
+                        .bind(order_id)
+                        .execute(&webhook_state.db.pool)
+                        .await
+                        .map(|_| ())
+                }
             };
 
             if let Err(e) = res {
-                ::server_telemetry::record_error_signal(
-                    "[bug] Failed to update order status: {:?}",
-                );
+                ::server_telemetry::record_error_signal("[bug] Failed to update order status: {:?}");
                 tracing::error!("Failed to update order status: {:?}", e);
                 return StatusCode::INTERNAL_SERVER_ERROR.into_response();
             }
 
             StatusCode::OK.into_response()
-        }
-        _ => StatusCode::OK.into_response(),
+        },
+        _ => StatusCode::OK.into_response()
     }
 }
+
 
 #[derive(Debug, Deserialize)]
 pub struct CalComEvent {
@@ -1264,10 +1145,11 @@ pub async fn calcom_webhook_handler(
             // and auto-generate meeting links (e.g., Zoom).
             tracing::info!("Created booking: {}", booking_uid);
             StatusCode::OK.into_response()
-        }
-        _ => StatusCode::OK.into_response(),
+        },
+        _ => StatusCode::OK.into_response()
     }
 }
+
 
 #[derive(Debug, Deserialize)]
 pub struct ResendEvent {
@@ -1291,10 +1173,11 @@ pub async fn resend_webhook_handler(
             // Automatically clean the tenant's mailing list
             tracing::info!("Message bounced/complained: [REDACTED]");
             StatusCode::OK.into_response()
-        }
-        _ => StatusCode::OK.into_response(),
+        },
+        _ => StatusCode::OK.into_response()
     }
 }
+
 
 #[derive(Debug, Deserialize)]
 pub struct AyrshareEvent {
@@ -1313,8 +1196,8 @@ pub async fn ayrshare_webhook_handler(
             // Ingest inbound messages into a unified OHC inbox table
             tracing::info!("Incoming notification from integration: [REDACTED]");
             StatusCode::OK.into_response()
-        }
-        _ => StatusCode::OK.into_response(),
+        },
+        _ => StatusCode::OK.into_response()
     }
 }
 
@@ -1336,7 +1219,7 @@ pub async fn manychat_webhook_handler(
 ) -> impl IntoResponse {
     match payload.status.as_str() {
         "ok" => StatusCode::OK.into_response(),
-        _ => StatusCode::OK.into_response(),
+        _ => StatusCode::OK.into_response()
     }
 }
 

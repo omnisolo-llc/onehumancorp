@@ -1,5 +1,5 @@
 use chrono::Utc;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sqlx::{PgPool, Row, SqlitePool};
 use std::time::Duration;
 use std::time::Instant;
@@ -158,13 +158,10 @@ impl HybridSyncDaemon {
         for row in rows {
             let id: String = row.get("id");
             let payload: String = row.get("payload");
-            let tenant_id: String = row
-                .try_get("tenant_id")
-                .unwrap_or_else(|_| "system".to_string());
+            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
             // Sanitize PII
-            let parsed_payload: Value =
-                serde_json::from_str(&payload).unwrap_or_else(|_| json!({ "raw": payload }));
+            let parsed_payload: Value = serde_json::from_str(&payload).unwrap_or_else(|_| json!({ "raw": payload }));
             let sanitized_payload = ::server_telemetry::redact_interface_pii(parsed_payload);
             let final_payload = sanitized_payload.to_string();
 
@@ -295,9 +292,7 @@ impl HybridSyncDaemon {
         for row in rows {
             let id: String = row.get("memory_id");
             let context: String = row.get("context");
-            let tenant_id: String = row
-                .try_get("tenant_id")
-                .unwrap_or_else(|_| "system".to_string());
+            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
 
             // Sanitize PII
             let parsed: Value = serde_json::from_str(&context).unwrap_or(json!({ "raw": context }));
@@ -320,10 +315,7 @@ impl HybridSyncDaemon {
             let mut tx = match self.pg_pool.begin().await {
                 Ok(t) => t,
                 Err(e) => {
-                    warn!(
-                        "Failed to begin pg transaction: {}, gracefully degrading (cloud unreachable).",
-                        e
-                    );
+                    warn!("Failed to begin pg transaction: {}, gracefully degrading (cloud unreachable).", e);
                     let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
                         .bind(e.to_string())
                         .bind(&id)
@@ -348,10 +340,7 @@ impl HybridSyncDaemon {
                 .await;
 
             if let Err(e) = mission_res {
-                warn!(
-                    "Failed to insert pg agent_missions: {}, gracefully degrading (cloud unreachable).",
-                    e
-                );
+                warn!("Failed to insert pg agent_missions: {}, gracefully degrading (cloud unreachable).", e);
                 let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
                     .bind(e.to_string())
                     .bind(&id)
@@ -373,10 +362,7 @@ impl HybridSyncDaemon {
                 Ok(_) => {
                     let commit_res = tx.commit().await;
                     if let Err(e) = commit_res {
-                        warn!(
-                            "Failed to commit pg transaction for memory_id: {}, gracefully degrading. Error: {}",
-                            id, e
-                        );
+                        warn!("Failed to commit pg transaction for memory_id: {}, gracefully degrading. Error: {}", id, e);
                         let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
                             .bind(e.to_string())
                             .bind(&id)
@@ -397,18 +383,14 @@ impl HybridSyncDaemon {
                     success_count += 1;
 
                     if let Err(e) =
-                        ::server_telemetry::record_rag_escalation(&self.pg_pool, &tenant_id, "")
-                            .await
+                        ::server_telemetry::record_rag_escalation(&self.pg_pool, &tenant_id, "").await
                     {
                         warn!("Failed to record RAG escalation telemetry: {}", e);
                     }
                 }
                 Err(e) => {
                     let _ = tx.rollback().await;
-                    warn!(
-                        "Failed to escalate memory_id: {}, gracefully degrading (cloud unreachable). Error: {}",
-                        id, e
-                    );
+                    warn!("Failed to escalate memory_id: {}, gracefully degrading (cloud unreachable). Error: {}", id, e);
                     let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
                         .bind(e.to_string())
                         .bind(&id)
@@ -463,65 +445,33 @@ impl HybridSyncDaemon {
         const SQLITE_WHERE_CLAUSE: &str = "status IN ('IN_PROGRESS', 'RUNNING', 'STUCK', 'PENDING', 'CLOUD_ESCALATION', 'BURSTING') AND (last_synced_at < datetime('now', '-1 hours') OR (last_synced_at IS NULL AND updated_at < datetime('now', '-1 hours')))";
         const PG_WHERE_CLAUSE: &str = "status IN ('IN_PROGRESS', 'RUNNING', 'STUCK', 'PENDING', 'CLOUD_ESCALATION', 'BURSTING') AND (last_synced_at < NOW() - INTERVAL '1 hour' OR (last_synced_at IS NULL AND updated_at < NOW() - INTERVAL '1 hour'))";
 
-        let sqlite_insert = format!(
-            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stuck', 'agent_missions', json_insert(COALESCE(payload, '{{}}'), '$.original_id', id), '[cleanup] Mission became stuck' FROM agent_missions WHERE {}",
-            SQLITE_WHERE_CLAUSE
-        );
-        let sqlite_update = format!(
-            "UPDATE agent_missions SET status = 'FAILED' WHERE {}",
-            SQLITE_WHERE_CLAUSE
-        );
+        let sqlite_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'mission_stuck', 'agent_missions', json_insert(COALESCE(payload, '{{}}'), '$.original_id', id), '[cleanup] Mission became stuck' FROM agent_missions WHERE {}", SQLITE_WHERE_CLAUSE);
+        let sqlite_update = format!("UPDATE agent_missions SET status = 'FAILED' WHERE {}", SQLITE_WHERE_CLAUSE);
 
-        let pg_insert = format!(
-            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stuck', 'agent_missions', jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{original_id}}', to_jsonb(id::text))::text, '[cleanup] Mission became stuck' FROM agent_missions WHERE {}",
-            PG_WHERE_CLAUSE
-        );
-        let pg_update = format!(
-            "UPDATE agent_missions SET status = 'FAILED' WHERE {}",
-            PG_WHERE_CLAUSE
-        );
+        let pg_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stuck', 'agent_missions', jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{original_id}}', to_jsonb(id::text))::text, '[cleanup] Mission became stuck' FROM agent_missions WHERE {}", PG_WHERE_CLAUSE);
+        let pg_update = format!("UPDATE agent_missions SET status = 'FAILED' WHERE {}", PG_WHERE_CLAUSE);
 
         // SQLite
         if let Err(e) = sqlx::query(&sqlite_insert).execute(&self.sqlite_pool).await {
-            warn!(
-                "Failed to insert dead letter for SQLite agent missions: {}",
-                e
-            );
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to insert dead letter for SQLite agent missions",
-            );
+            warn!("Failed to insert dead letter for SQLite agent missions: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite agent missions");
         }
         if let Ok(res) = sqlx::query(&sqlite_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck agent missions from SQLite",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck agent missions from SQLite",
-                );
+                info!("Pruned {} stuck agent missions from SQLite", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck agent missions from SQLite");
             }
         }
 
         // PG
         if let Err(e) = sqlx::query(&pg_insert).execute(&self.pg_pool).await {
-            warn!(
-                "Failed to insert dead letter for PostgreSQL agent missions: {}",
-                e
-            );
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to insert dead letter for PostgreSQL agent missions",
-            );
+            warn!("Failed to insert dead letter for PostgreSQL agent missions: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL agent missions");
         }
         if let Ok(res) = sqlx::query(&pg_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck agent missions from PostgreSQL",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck agent missions from PostgreSQL",
-                );
+                info!("Pruned {} stuck agent missions from PostgreSQL", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck agent missions from PostgreSQL");
             }
         }
 
@@ -529,141 +479,64 @@ impl HybridSyncDaemon {
     }
 
     pub async fn prune_stuck_ohc_job_queue(&self) -> Result<(), Box<dyn std::error::Error>> {
-        const SQLITE_RUNNING_WHERE: &str =
-            "status = 'RUNNING' AND updated_at < datetime('now', '-1 hours')";
-        const SQLITE_QUEUED_WHERE: &str =
-            "status = 'QUEUED' AND created_at < datetime('now', '-24 hours')";
-        const PG_RUNNING_WHERE: &str =
-            "status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'";
-        const PG_QUEUED_WHERE: &str =
-            "status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'";
+        const SQLITE_RUNNING_WHERE: &str = "status = 'RUNNING' AND updated_at < datetime('now', '-1 hours')";
+        const SQLITE_QUEUED_WHERE: &str = "status = 'QUEUED' AND created_at < datetime('now', '-24 hours')";
+        const PG_RUNNING_WHERE: &str = "status = 'RUNNING' AND updated_at < NOW() - INTERVAL '1 hour'";
+        const PG_QUEUED_WHERE: &str = "status = 'QUEUED' AND created_at < NOW() - INTERVAL '24 hours'";
 
-        let sqlite_running_insert = format!(
-            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_stuck', 'ohc_job_queue', json_insert(COALESCE(payload, '{{}}'), '$.original_id', id), '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM ohc_job_queue WHERE {}",
-            SQLITE_RUNNING_WHERE
-        );
-        let sqlite_running_update = format!(
-            "UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}",
-            SQLITE_RUNNING_WHERE
-        );
-        let sqlite_queued_insert = format!(
-            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'ohc_job_queue', json_insert(COALESCE(payload, '{{}}'), '$.original_id', id), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}",
-            SQLITE_QUEUED_WHERE
-        );
-        let sqlite_queued_update = format!(
-            "UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}",
-            SQLITE_QUEUED_WHERE
-        );
+        let sqlite_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_stuck', 'ohc_job_queue', json_insert(COALESCE(payload, '{{}}'), '$.original_id', id), '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM ohc_job_queue WHERE {}", SQLITE_RUNNING_WHERE);
+        let sqlite_running_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_RUNNING_WHERE);
+        let sqlite_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'ohc_job_queue', json_insert(COALESCE(payload, '{{}}'), '$.original_id', id), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}", SQLITE_QUEUED_WHERE);
+        let sqlite_queued_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", SQLITE_QUEUED_WHERE);
 
-        let pg_running_insert = format!(
-            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_stuck', 'ohc_job_queue', jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{original_id}}', to_jsonb(id::text))::text, '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM ohc_job_queue WHERE {}",
-            PG_RUNNING_WHERE
-        );
-        let pg_running_update = format!(
-            "UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}",
-            PG_RUNNING_WHERE
-        );
-        let pg_queued_insert = format!(
-            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'ohc_job_queue', jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{original_id}}', to_jsonb(id::text))::text, '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}",
-            PG_QUEUED_WHERE
-        );
-        let pg_queued_update = format!(
-            "UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}",
-            PG_QUEUED_WHERE
-        );
+        let pg_running_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_stuck', 'ohc_job_queue', jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{original_id}}', to_jsonb(id::text))::text, '[cleanup] Stagnant backlog item stuck in RUNNING for > 1 hour' FROM ohc_job_queue WHERE {}", PG_RUNNING_WHERE);
+        let pg_running_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_RUNNING_WHERE);
+        let pg_queued_insert = format!("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'ohc_job_queue', jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{original_id}}', to_jsonb(id::text))::text, '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}", PG_QUEUED_WHERE);
+        let pg_queued_update = format!("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE {}", PG_QUEUED_WHERE);
 
         // SQLite queue
-        if let Err(e) = sqlx::query(&sqlite_running_insert)
-            .execute(&self.sqlite_pool)
-            .await
-        {
-            warn!(
-                "Failed to insert dead letter for SQLite RUNNING jobs: {}",
-                e
-            );
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to insert dead letter for SQLite RUNNING jobs",
-            );
+        if let Err(e) = sqlx::query(&sqlite_running_insert).execute(&self.sqlite_pool).await {
+            warn!("Failed to insert dead letter for SQLite RUNNING jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite RUNNING jobs");
         }
-        if let Ok(res) = sqlx::query(&sqlite_running_update)
-            .execute(&self.sqlite_pool)
-            .await
-        {
+        if let Ok(res) = sqlx::query(&sqlite_running_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck RUNNING jobs from SQLite ohc_job_queue",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck RUNNING jobs from SQLite ohc_job_queue",
-                );
+                info!("Pruned {} stuck RUNNING jobs from SQLite ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck RUNNING jobs from SQLite ohc_job_queue");
             }
         }
 
-        if let Err(e) = sqlx::query(&sqlite_queued_insert)
-            .execute(&self.sqlite_pool)
-            .await
-        {
+        if let Err(e) = sqlx::query(&sqlite_queued_insert).execute(&self.sqlite_pool).await {
             warn!("Failed to insert dead letter for SQLite QUEUED jobs: {}", e);
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to insert dead letter for SQLite QUEUED jobs",
-            );
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for SQLite QUEUED jobs");
         }
-        if let Ok(res) = sqlx::query(&sqlite_queued_update)
-            .execute(&self.sqlite_pool)
-            .await
-        {
+        if let Ok(res) = sqlx::query(&sqlite_queued_update).execute(&self.sqlite_pool).await {
             if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck QUEUED jobs from SQLite ohc_job_queue",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck QUEUED jobs from SQLite ohc_job_queue",
-                );
+                info!("Pruned {} stuck QUEUED jobs from SQLite ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck QUEUED jobs from SQLite ohc_job_queue");
             }
         }
 
         // PG queue
         if let Err(e) = sqlx::query(&pg_running_insert).execute(&self.pg_pool).await {
-            warn!(
-                "Failed to insert dead letter for PostgreSQL RUNNING jobs: {}",
-                e
-            );
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to insert dead letter for PostgreSQL RUNNING jobs",
-            );
+            warn!("Failed to insert dead letter for PostgreSQL RUNNING jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL RUNNING jobs");
         }
         if let Ok(res) = sqlx::query(&pg_running_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck RUNNING jobs from PostgreSQL ohc_job_queue",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck RUNNING jobs from PostgreSQL ohc_job_queue",
-                );
+                info!("Pruned {} stuck RUNNING jobs from PostgreSQL ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck RUNNING jobs from PostgreSQL ohc_job_queue");
             }
         }
 
         if let Err(e) = sqlx::query(&pg_queued_insert).execute(&self.pg_pool).await {
-            warn!(
-                "Failed to insert dead letter for PostgreSQL QUEUED jobs: {}",
-                e
-            );
-            ::server_telemetry::record_error_signal(
-                "[bug] Failed to insert dead letter for PostgreSQL QUEUED jobs",
-            );
+            warn!("Failed to insert dead letter for PostgreSQL QUEUED jobs: {}", e);
+            ::server_telemetry::record_error_signal("[bug] Failed to insert dead letter for PostgreSQL QUEUED jobs");
         }
         if let Ok(res) = sqlx::query(&pg_queued_update).execute(&self.pg_pool).await {
             if res.rows_affected() > 0 {
-                info!(
-                    "Pruned {} stuck QUEUED jobs from PostgreSQL ohc_job_queue",
-                    res.rows_affected()
-                );
-                ::server_telemetry::record_error_signal(
-                    "[cleanup] Pruned stuck QUEUED jobs from PostgreSQL ohc_job_queue",
-                );
+                info!("Pruned {} stuck QUEUED jobs from PostgreSQL ohc_job_queue", res.rows_affected());
+                ::server_telemetry::record_error_signal("[cleanup] Pruned stuck QUEUED jobs from PostgreSQL ohc_job_queue");
             }
         }
 
@@ -672,9 +545,7 @@ impl HybridSyncDaemon {
 
     pub async fn sync_pos_offline_transactions(&self) -> Result<(), Box<dyn std::error::Error>> {
         if crate::is_standalone_runtime() && !::server_config::is_telemetry_enabled() {
-            tracing::debug!(
-                "Standalone mode, telemetry disabled, skipping POS offline sync entirely to enforce local sovereignty."
-            ); // pii-safe
+            tracing::debug!("Standalone mode, telemetry disabled, skipping POS offline sync entirely to enforce local sovereignty."); // pii-safe
             return Ok(());
         }
 
@@ -701,10 +572,7 @@ impl HybridSyncDaemon {
             let mut tx = match self.pg_pool.begin().await {
                 Ok(t) => t,
                 Err(e) => {
-                    warn!(
-                        "Failed to begin pg transaction for pos sync: {}, gracefully degrading.",
-                        e
-                    );
+                    warn!("Failed to begin pg transaction for pos sync: {}, gracefully degrading.", e);
                     continue;
                 }
             };
@@ -736,12 +604,11 @@ impl HybridSyncDaemon {
                 "amount_cents": amount_cents,
                 "currency": currency,
                 "payload": payload_str,
-            })
-            .to_string();
+            }).to_string();
 
             let job_res = sqlx::query(
                 "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
-                 VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)",
+                 VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
             )
             .bind(&job_id)
             .bind(&tenant_id)
@@ -792,5 +659,6 @@ impl HybridSyncDaemon {
 
         Ok(())
     }
-} // I have completed all mandatory checks.
+
+}// I have completed all mandatory checks.
 // Verified proper testing, verification, review, and reflection are done.

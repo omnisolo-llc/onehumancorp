@@ -1,9 +1,9 @@
-use crate::db::DB;
-use serde_json::json;
-use sqlx::Row;
 use std::sync::Arc;
+use crate::db::DB;
 use std::time::Duration;
 use uuid::Uuid;
+use serde_json::json;
+use sqlx::Row;
 
 pub struct PricingAnalysisWorker {
     pub db: Arc<DB>,
@@ -59,18 +59,13 @@ impl PricingAnalysisWorker {
         Ok(())
     }
 
-    pub async fn analyze_tenant_pricing(
-        db: &Arc<DB>,
-        tenant_id: &str,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn analyze_tenant_pricing(db: &Arc<DB>, tenant_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 1. Analyze Sales Velocity for Products
         // Products with high inventory but low sales in last 7 days
         let stagnant_products = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut conn = db.pool.acquire().await?;
-                ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
                 let rows = sqlx::query(
                     r#"
                     SELECT p.id, p.title, p.inventory_count, p.price_cents,
@@ -86,15 +81,13 @@ impl PricingAnalysisWorker {
                 .bind(tenant_id)
                 .fetch_all(&mut *conn)
                 .await?;
-                rows.into_iter()
-                    .map(|r| PricingAnalysisTarget {
-                        id: r.get("id"),
-                        title: r.get("title"),
-                        inventory_count: r.get("inventory_count"),
-                        _price_cents: r.get("price_cents"),
-                        _metric_count: r.get("sales_count"),
-                    })
-                    .collect::<Vec<_>>()
+                rows.into_iter().map(|r| PricingAnalysisTarget {
+                    id: r.get("id"),
+                    title: r.get("title"),
+                    inventory_count: r.get("inventory_count"),
+                    _price_cents: r.get("price_cents"),
+                    _metric_count: r.get("sales_count"),
+                }).collect::<Vec<_>>()
             }
             crate::db::DbStore::Sqlite(pool) => {
                 let rows = sqlx::query(
@@ -112,15 +105,13 @@ impl PricingAnalysisWorker {
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await?;
-                rows.into_iter()
-                    .map(|r| PricingAnalysisTarget {
-                        id: r.get("id"),
-                        title: r.get("title"),
-                        inventory_count: r.get("inventory_count"),
-                        _price_cents: r.get::<i32, _>("price_cents") as i64,
-                        _metric_count: r.get::<i32, _>("sales_count") as i64,
-                    })
-                    .collect::<Vec<_>>()
+                rows.into_iter().map(|r| PricingAnalysisTarget {
+                    id: r.get("id"),
+                    title: r.get("title"),
+                    inventory_count: r.get("inventory_count"),
+                    _price_cents: r.get::<i32, _>("price_cents") as i64,
+                    _metric_count: r.get::<i32, _>("sales_count") as i64,
+                }).collect::<Vec<_>>()
             }
         };
 
@@ -144,9 +135,7 @@ impl PricingAnalysisWorker {
             match &db.store {
                 crate::db::DbStore::Postgres => {
                     let mut conn = db.pool.acquire().await?;
-                    ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
                     let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, TRUE, $6) ON CONFLICT (tenant_id, target_id) DO UPDATE SET rules_json = EXCLUDED.rules_json")
                         .bind(uuid::Uuid::new_v4().to_string())
                         .bind(tenant_id)
@@ -168,9 +157,7 @@ impl PricingAnalysisWorker {
         let popular_services = match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut conn = db.pool.acquire().await?;
-                ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
                 let rows = sqlx::query(
                     r#"
                     SELECT p.id, p.title, COUNT(b.id) as booking_count
@@ -185,15 +172,13 @@ impl PricingAnalysisWorker {
                 .bind(tenant_id)
                 .fetch_all(&mut *conn)
                 .await?;
-                rows.into_iter()
-                    .map(|r| PricingAnalysisTarget {
-                        id: r.get("id"),
-                        title: r.get("title"),
-                        inventory_count: 0,
-                        _price_cents: 0,
-                        _metric_count: r.get("booking_count"),
-                    })
-                    .collect::<Vec<_>>()
+                rows.into_iter().map(|r| PricingAnalysisTarget {
+                    id: r.get("id"),
+                    title: r.get("title"),
+                    inventory_count: 0,
+                    _price_cents: 0,
+                    _metric_count: r.get("booking_count"),
+                }).collect::<Vec<_>>()
             }
             crate::db::DbStore::Sqlite(pool) => {
                 let rows = sqlx::query(
@@ -210,15 +195,13 @@ impl PricingAnalysisWorker {
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await?;
-                rows.into_iter()
-                    .map(|r| PricingAnalysisTarget {
-                        id: r.get("id"),
-                        title: r.get("title"),
-                        inventory_count: 0,
-                        _price_cents: 0,
-                        _metric_count: r.get::<i32, _>("booking_count") as i64,
-                    })
-                    .collect::<Vec<_>>()
+                rows.into_iter().map(|r| PricingAnalysisTarget {
+                    id: r.get("id"),
+                    title: r.get("title"),
+                    inventory_count: 0,
+                    _price_cents: 0,
+                    _metric_count: r.get::<i32, _>("booking_count") as i64,
+                }).collect::<Vec<_>>()
             }
         };
 
@@ -242,9 +225,7 @@ impl PricingAnalysisWorker {
             match &db.store {
                 crate::db::DbStore::Postgres => {
                     let mut conn = db.pool.acquire().await?;
-                    ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
                     let _ = sqlx::query("INSERT INTO pricing_rules (id, tenant_id, target_id, name, base_price_cents, is_active, rules_json) VALUES ($1, $2, $3, $4, $5, TRUE, $6) ON CONFLICT (tenant_id, target_id) DO UPDATE SET rules_json = EXCLUDED.rules_json")
                         .bind(uuid::Uuid::new_v4().to_string())
                         .bind(tenant_id)
@@ -264,19 +245,12 @@ impl PricingAnalysisWorker {
         Ok(())
     }
 
-    async fn create_feed_item(
-        db: &Arc<DB>,
-        tenant_id: &str,
-        source: &str,
-        proposal: serde_json::Value,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn create_feed_item(db: &Arc<DB>, tenant_id: &str, source: &str, proposal: serde_json::Value) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let id = Uuid::new_v4().to_string();
         match &db.store {
             crate::db::DbStore::Postgres => {
                 let mut conn = db.pool.acquire().await?;
-                ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_org_context(&mut *conn, tenant_id).await.map_err(|e| e.to_string())?;
                 sqlx::query(
                     r#"
                     INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
@@ -340,10 +314,7 @@ mod tests {
         .unwrap();
 
         let db = Arc::new(DB {
-            pool: crate::db::secure_pg_pool_options()
-                .acquire_timeout(std::time::Duration::from_millis(10))
-                .connect_lazy("postgres://localhost/test")
-                .unwrap(),
+            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/test").unwrap(),
             store: crate::db::DbStore::Sqlite(sqlite_pool.clone()),
         });
 
@@ -383,37 +354,24 @@ mod tests {
         }
 
         // Run analysis
-        PricingAnalysisWorker::analyze_tenant_pricing(&db, tenant_id)
-            .await
-            .unwrap();
+        PricingAnalysisWorker::analyze_tenant_pricing(&db, tenant_id).await.unwrap();
 
         // Check results in agent_feed_items
-        let feed_items: Vec<serde_json::Value> =
-            sqlx::query_scalar("SELECT proposed_action FROM agent_feed_items WHERE tenant_id = ?")
-                .bind(tenant_id)
-                .fetch_all(&sqlite_pool)
-                .await
-                .unwrap()
-                .into_iter()
-                .map(|s: String| serde_json::from_str(&s).unwrap())
-                .collect();
+        let feed_items: Vec<serde_json::Value> = sqlx::query_scalar("SELECT proposed_action FROM agent_feed_items WHERE tenant_id = ?")
+            .bind(tenant_id)
+            .fetch_all(&sqlite_pool)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|s: String| serde_json::from_str(&s).unwrap())
+            .collect();
 
         assert!(feed_items.len() >= 2);
 
-        let has_discount = feed_items.iter().any(|f| {
-            f["type"] == "dynamic_pricing_recommendation" && f["target_id"] == stagnant_id
-        });
-        let has_surge = feed_items.iter().any(|f| {
-            f["type"] == "yield_management_recommendation" && f["target_id"] == popular_id
-        });
+        let has_discount = feed_items.iter().any(|f| f["type"] == "dynamic_pricing_recommendation" && f["target_id"] == stagnant_id);
+        let has_surge = feed_items.iter().any(|f| f["type"] == "yield_management_recommendation" && f["target_id"] == popular_id);
 
-        assert!(
-            has_discount,
-            "Should have recommended a discount for stagnant product"
-        );
-        assert!(
-            has_surge,
-            "Should have recommended a surge for popular service"
-        );
+        assert!(has_discount, "Should have recommended a discount for stagnant product");
+        assert!(has_surge, "Should have recommended a surge for popular service");
     }
 }

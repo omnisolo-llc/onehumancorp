@@ -1,10 +1,11 @@
-use crate::domain::repository::agent_feed_repo::{AgentFeedItem, AgentFeedRepository};
-use chrono::Utc;
-use serde_json::Value;
+use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
 use sqlx::PgPool;
 use uuid::Uuid;
+use chrono::Utc;
+use serde_json::Value;
 
 pub struct AgentFeedService {
+
     _pool: PgPool,
     repo: AgentFeedRepository,
 }
@@ -12,20 +13,12 @@ pub struct AgentFeedService {
 impl AgentFeedService {
     pub fn new(pool: PgPool) -> Self {
         Self {
-            repo: AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
-                pool: pool.clone(),
-                store: crate::db::DbStore::Postgres,
-            })),
+            repo: AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres })),
             _pool: pool,
         }
     }
 
-    pub async fn process_event(
-        &self,
-        tenant_id: &str,
-        event_source: &str,
-        payload: &Value,
-    ) -> Result<AgentFeedItem, String> {
+    pub async fn process_event(&self, tenant_id: &str, event_source: &str, payload: &Value) -> Result<AgentFeedItem, String> {
         // Build context via LLM/Minimax
         let prompt = format!(
             "Analyze the following event and provide a concise JSON object. If the user's intent is to create a product or service, include 'feature_type': 'create_product', along with a 'payload' object containing 'title', 'description', 'price', and 'item_type' (Product or Service). Otherwise, provide a 'draft_action' containing a suggested response or action, and 'intent' summarizing the reason. Tenant: {}. Source: {}. Payload: {}",
@@ -34,13 +27,13 @@ impl AgentFeedService {
         let prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
         let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
-            Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+            Ok("gemini") => {
+                crate::minimax::LocalLLMClient::new().reason(&prompt).await
+            }
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY")
                     .map_err(|_| "MINIMAX_API_KEY is required for minimax".to_string())?;
-                crate::minimax::MinimaxClient::new(api_key)
-                    .reason(&prompt)
-                    .await
+                crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
             }
             _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
         }?;
@@ -51,10 +44,7 @@ impl AgentFeedService {
                 proposed_action = parsed;
             }
             Err(e) => {
-                tracing::warn!(
-                    "Failed to parse LLM response as JSON: {}. Using fallback.",
-                    e
-                );
+                tracing::warn!("Failed to parse LLM response as JSON: {}. Using fallback.", e);
                 proposed_action = serde_json::json!({"draft_action": llm_res, "intent": "unknown"});
             }
         }
@@ -70,11 +60,7 @@ impl AgentFeedService {
             updated_at: Some(Utc::now()),
         };
 
-        let created_item = self
-            .repo
-            .create(item.clone())
-            .await
-            .map_err(|e| e.to_string())?;
+        let created_item = self.repo.create(item.clone()).await.map_err(|e| e.to_string())?;
 
         // Notify via Redis Pub/Sub for WebSockets
         if let Some(client) = crate::get_redis_client() {
@@ -82,14 +68,12 @@ impl AgentFeedService {
                 let payload_str = serde_json::json!({
                     "event_type": "approval_request",
                     "data": created_item
-                })
-                .to_string();
+                }).to_string();
                 let topic = format!("agent_feed:{}", tenant_id);
                 let _: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
                     .arg(topic)
                     .arg(payload_str)
-                    .query_async(&mut conn)
-                    .await;
+                    .query_async(&mut conn).await;
             }
         }
 
@@ -104,8 +88,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_event() {
-        let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
         let maybe_pool = PgPool::connect(&database_url).await;
         if maybe_pool.is_err() {
@@ -124,9 +107,7 @@ mod tests {
             "customer": "Maya"
         });
 
-        let result = service
-            .process_event("test-tenant", "instagram_dm", &payload)
-            .await;
+        let result = service.process_event("test-tenant", "instagram_dm", &payload).await;
         assert!(result.is_ok());
         let item = result.unwrap();
         assert_eq!(item.tenant_id, "test-tenant");
@@ -136,8 +117,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_event_malformed_json() {
-        let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
         let maybe_pool = PgPool::connect(&database_url).await;
         if maybe_pool.is_err() {
@@ -154,9 +134,7 @@ mod tests {
         // Set provider to something that won't actually call out, or rely on the local LLM which we know works.
         // We're mainly testing the fallback if the LLM returned non-JSON.
         // For a true hermetic test of the parsing, we'd mock the LLM client, but here we just test the flow works.
-        let result = service
-            .process_event("test-tenant", "instagram_dm", &payload)
-            .await;
+        let result = service.process_event("test-tenant", "instagram_dm", &payload).await;
         assert!(result.is_ok());
         let item = result.unwrap();
         assert_eq!(item.tenant_id, "test-tenant");

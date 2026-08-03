@@ -11,11 +11,7 @@ pub struct BudgetManager {
 
 impl BudgetManager {
     pub fn new(limit: f64) -> Self {
-        let total_limit_cents = if limit == f64::MAX {
-            i64::MAX
-        } else {
-            (limit * 100.0).round() as i64
-        };
+        let total_limit_cents = if limit == f64::MAX { i64::MAX } else { (limit * 100.0).round() as i64 };
         BudgetManager {
             total_limit: limit,
             current: AtomicI64::new(0),
@@ -31,11 +27,7 @@ impl BudgetManager {
         self
     }
 
-    pub fn with_telemetry(
-        mut self,
-        tenant_id: String,
-        store: std::sync::Arc<::server_harness::telemetry::ViolationStore>,
-    ) -> Self {
+    pub fn with_telemetry(mut self, tenant_id: String, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
         self.tenant_id = Some(tenant_id);
         self.telemetry_store = Some(store);
         self
@@ -55,18 +47,13 @@ impl BudgetManager {
         }
 
         if let (Some(_store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
-            tracing::info!(
-                "💰 Miser telemetry: Recording budget spend for tenant {}",
-                tid
-            ); // pii-safe
+            tracing::info!("💰 Miser telemetry: Recording budget spend for tenant {}", tid); // pii-safe
         }
 
         let previous_current = self.current.fetch_add(amount_cents, Ordering::SeqCst);
         let final_current = previous_current + amount_cents;
 
-        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id)
-            && amount_cents > 0
-        {
+        if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) && amount_cents > 0 {
             store.llm_cost_counter.add(
                 amount_cents as u64,
                 &[opentelemetry::KeyValue::new("tenant_id", tid.to_string())],
@@ -107,11 +94,8 @@ impl BudgetManager {
         if self.total_limit_cents <= 0 {
             return projected_cost_cents > 0 || self.current.load(Ordering::SeqCst) > 0;
         }
-        let limit_threshold_cents = ((self.total_limit_cents as f64)
-            * (self.alert_threshold_percent / 100.0))
-            .round() as i64;
-        projected_cost_cents >= limit_threshold_cents
-            || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
+        let limit_threshold_cents = ((self.total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
+        projected_cost_cents >= limit_threshold_cents || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
     }
 
     pub fn check_alert_threshold_cents(&self, total_limit_cents: i64) -> bool {
@@ -119,22 +103,16 @@ impl BudgetManager {
             return false;
         }
         let current = self.current.load(Ordering::SeqCst);
-        let limit_threshold_cents =
-            ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
+        let limit_threshold_cents = ((total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         current >= limit_threshold_cents
     }
 
-    pub fn is_spend_rate_too_high(
-        &self,
-        time_elapsed: std::time::Duration,
-        total_duration: std::time::Duration,
-    ) -> bool {
+    pub fn is_spend_rate_too_high(&self, time_elapsed: std::time::Duration, total_duration: std::time::Duration) -> bool {
         if self.total_limit_cents <= 0 || total_duration.as_secs() == 0 {
             return false;
         }
         let current = self.current.load(Ordering::SeqCst);
-        let expected_spend = (self.total_limit_cents as f64)
-            * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
+        let expected_spend = (self.total_limit_cents as f64) * (time_elapsed.as_secs() as f64 / total_duration.as_secs() as f64);
         current as f64 > expected_spend * 1.5 // 50% higher than expected rate
     }
 }
@@ -314,10 +292,7 @@ mod tests {
         let one_day = std::time::Duration::from_secs(86400);
         let thirty_days = std::time::Duration::from_secs(30 * 86400);
         assert!(manager.is_spend_rate_too_high(one_day, thirty_days)); // 20% in 1 day is way too high
-        assert!(
-            !manager
-                .is_spend_rate_too_high(std::time::Duration::from_secs(10 * 86400), thirty_days)
-        ); // 20% in 10 days is fine
+        assert!(!manager.is_spend_rate_too_high(std::time::Duration::from_secs(10 * 86400), thirty_days)); // 20% in 10 days is fine
     }
 
     #[test]

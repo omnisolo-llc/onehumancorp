@@ -1,13 +1,10 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde::Deserialize;
 use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 use tracing::info;
 
-use super::{
-    Tool,
-    pydantic::{PydanticAdapter, PydanticToolExecutor},
-};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 // Pydantic-first tool schema validation: FinanceArgs
 #[derive(Deserialize)]
@@ -36,20 +33,13 @@ impl PydanticToolExecutor<FinanceArgs> for FinanceReportExecutor {
 
         // Semi-functional financial report generation.
         // In a full implementation, this would query the database for orders and revenue.
-        info!(
-            "Generating {} financial report starting from {}",
-            report_type, start_date
-        );
+        info!("Generating {} financial report starting from {}", report_type, start_date);
 
         // Simulating some dynamic data generation based on input.
         let seed = report_type.len() as f64 * 100.0;
         let revenue = seed + (start_date.len() as f64 * 5.5);
         let orders = (revenue / 20.0) as i32;
-        let avg_order_value = if orders > 0 {
-            revenue / orders as f64
-        } else {
-            0.0
-        };
+        let avg_order_value = if orders > 0 { revenue / orders as f64 } else { 0.0 };
 
         Ok(json!({
             "status": "success",
@@ -68,8 +58,7 @@ impl PydanticToolExecutor<FinanceArgs> for FinanceReportExecutor {
 pub fn finance_report_tool() -> Tool {
     Tool {
         name: "finance_report".to_string(),
-        description: "Generate a plain-language financial report or summary for the business."
-            .to_string(),
+        description: "Generate a plain-language financial report or summary for the business.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",

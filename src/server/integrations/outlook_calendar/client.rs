@@ -329,7 +329,11 @@ impl OutlookCalendarClient {
         }
     }
 
-    pub async fn get_free_busy(&self, start: &str, end: &str) -> Result<Vec<FreeBusySlot>, String> {
+    pub async fn get_free_busy(
+        &self,
+        start: &str,
+        end: &str,
+    ) -> Result<Vec<FreeBusySlot>, String> {
         let token = self.validated_access_token()?;
         let url = self.url("/me/calendar/getSchedule");
 
@@ -402,9 +406,7 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_outlook_server(
-        response_body: &'static str,
-    ) -> (String, oneshot::Receiver<String>) {
+    async fn start_outlook_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -422,7 +424,8 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) =
+                        request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -450,9 +453,7 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx
-                .send(String::from_utf8(request).unwrap())
-                .unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
         });
 
         (base_url, request_rx)
@@ -476,7 +477,8 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) =
+                        request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -502,17 +504,12 @@ mod tests {
             let response = format!(
                 "HTTP/1.1 {} {}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
                 status,
-                match status {
-                    204 => "No Content",
-                    _ => "OK",
-                },
+                match status { 204 => "No Content", _ => "OK" },
                 body_str.len(),
                 body_str
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx
-                .send(String::from_utf8(request).unwrap())
-                .unwrap();
+            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
         });
 
         (base_url, request_rx)
@@ -536,8 +533,7 @@ mod tests {
         }"#;
         let (base_url, request_rx) = start_outlook_server(response).await;
 
-        let client =
-            OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
+        let client = OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
         let events = client
             .get_events(None, "2026-01-15T00:00:00Z", "2026-01-15T23:59:59Z")
             .await
@@ -556,14 +552,9 @@ mod tests {
         let response = r#"{"value": []}"#;
         let (base_url, request_rx) = start_outlook_server(response).await;
 
-        let client =
-            OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
+        let client = OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
         let _ = client
-            .get_events(
-                Some("cal-123"),
-                "2026-01-15T00:00:00Z",
-                "2026-01-15T23:59:59Z",
-            )
+            .get_events(Some("cal-123"), "2026-01-15T00:00:00Z", "2026-01-15T23:59:59Z")
             .await
             .unwrap();
 
@@ -583,8 +574,7 @@ mod tests {
         }"#;
         let (base_url, request_rx) = start_outlook_server(response).await;
 
-        let client =
-            OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
+        let client = OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
         let event = client
             .create_event(
                 "Design review",
@@ -606,18 +596,14 @@ mod tests {
         let body = request_body(&request);
         assert_eq!(body["subject"], "Design review");
         assert_eq!(body["isOnlineMeeting"], true);
-        assert_eq!(
-            body["attendees"][0]["emailAddress"]["address"],
-            "alice@example.com"
-        );
+        assert_eq!(body["attendees"][0]["emailAddress"]["address"], "alice@example.com");
     }
 
     #[tokio::test]
     async fn delete_event_returns_ok() {
         let (base_url, request_rx) = start_outlook_server_status(204).await;
 
-        let client =
-            OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
+        let client = OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
         client.delete_event("evt-789").await.unwrap();
 
         let request = request_rx.await.unwrap();
@@ -634,8 +620,7 @@ mod tests {
         }"#;
         let (base_url, _request_rx) = start_outlook_server(response).await;
 
-        let client =
-            OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
+        let client = OutlookCalendarClient::with_base_url_for_test("ms_token".to_string(), base_url);
         let calendars = client.get_calendars().await.unwrap();
 
         assert_eq!(calendars.len(), 2);

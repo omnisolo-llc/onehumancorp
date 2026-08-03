@@ -7,11 +7,7 @@ pub struct NativeMemoryStashTool;
 
 #[async_trait::async_trait]
 impl CodeNativeTool for NativeMemoryStashTool {
-    async fn execute_native(
-        &self,
-        env: &mut RichExecutionEnvironment,
-        args: serde_json::Value,
-    ) -> Result<String, String> {
+    async fn execute_native(&self, env: &mut RichExecutionEnvironment, args: serde_json::Value) -> Result<String, String> {
         let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("");
 
         match action {
@@ -29,11 +25,8 @@ impl CodeNativeTool for NativeMemoryStashTool {
 
                 // Store natively as a String (but it could be a native HashMap or other rich object)
                 env.set_variable(key, value_str);
-                Ok(format!(
-                    "Successfully stored native memory under key '{}'.",
-                    key
-                ))
-            }
+                Ok(format!("Successfully stored native memory under key '{}'.", key))
+            },
             "get" => {
                 let key = args.get("key").and_then(|v| v.as_str()).unwrap_or("");
                 if key.is_empty() {
@@ -45,7 +38,7 @@ impl CodeNativeTool for NativeMemoryStashTool {
                 } else {
                     Err(format!("Key '{}' not found in native memory stash.", key))
                 }
-            }
+            },
             "remove" => {
                 let key = args.get("key").and_then(|v| v.as_str()).unwrap_or("");
                 if key.is_empty() {
@@ -53,22 +46,17 @@ impl CodeNativeTool for NativeMemoryStashTool {
                 }
 
                 if env.remove_variable(key).is_some() {
-                    Ok(format!(
-                        "Successfully removed key '{}' from native memory stash.",
-                        key
-                    ))
+                    Ok(format!("Successfully removed key '{}' from native memory stash.", key))
                 } else {
                     Err(format!("Key '{}' not found in native memory stash.", key))
                 }
-            }
+            },
             _ => Err("Invalid action. Must be 'set', 'get', or 'remove'.".to_string()),
         }
     }
 }
 
-pub fn native_memory_stash_tool(
-    env: std::sync::Arc<tokio::sync::RwLock<RichExecutionEnvironment>>,
-) -> super::Tool {
+pub fn native_memory_stash_tool(env: std::sync::Arc<tokio::sync::RwLock<RichExecutionEnvironment>>) -> super::Tool {
     super::Tool {
         name: "NativeMemoryStash".to_string(),
         description: "Stores and retrieves arbitrary large text or JSON natively in RAM, bypassing the LLM context window limits. \
@@ -117,10 +105,7 @@ mod tests {
             "value": "This is a large native payload"
         });
         let set_res = tool.execute.execute(set_args).await.unwrap();
-        assert_eq!(
-            set_res,
-            "Successfully stored native memory under key 'test_key'."
-        );
+        assert_eq!(set_res, "Successfully stored native memory under key 'test_key'.");
 
         // Test Get
         let get_args = json!({
@@ -136,10 +121,7 @@ mod tests {
             "key": "test_key"
         });
         let rm_res = tool.execute.execute(rm_args).await.unwrap();
-        assert_eq!(
-            rm_res,
-            "Successfully removed key 'test_key' from native memory stash."
-        );
+        assert_eq!(rm_res, "Successfully removed key 'test_key' from native memory stash.");
 
         // Test Get Missing
         let get_missing_args = json!({

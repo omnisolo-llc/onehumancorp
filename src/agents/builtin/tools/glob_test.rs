@@ -12,11 +12,7 @@ async fn test_glob_success() {
         "path": "."
     });
 
-    let result = tool
-        .execute
-        .execute(args)
-        .await
-        .expect("Execution should succeed");
+    let result = tool.execute.execute(args).await.expect("Execution should succeed");
 
     assert!(result.contains("src/agents/builtin/tools/glob.rs") || result.contains("glob.rs"));
 }

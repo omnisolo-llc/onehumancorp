@@ -3852,7 +3852,7 @@ mod tests_added_for_coverage {
             source_type: "NOTE".to_string(),
             created_at: old_time,
             last_referenced_at: old_time, // old, low reliability
-            reference_count: 10,          // high ref count, but low reliability
+            reference_count: 10,     // high ref count, but low reliability
             reliability_score: 19,
             owner_override: false,
             metadata: None,

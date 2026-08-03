@@ -20,7 +20,9 @@ impl RedisPool {
         self.client.get_multiplexed_tokio_connection().await
     }
 
-    pub async fn get_pubsub(&self) -> Result<redis::aio::PubSub, redis::RedisError> {
+    pub async fn get_pubsub(
+        &self,
+    ) -> Result<redis::aio::PubSub, redis::RedisError> {
         self.client.get_async_pubsub().await
     }
 }
@@ -32,8 +34,8 @@ pub fn get_redis_pool() -> Option<&'static Arc<RedisPool>> {
         return None;
     }
     Some(REDIS_POOL.get_or_init(|| {
-        let url =
-            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let url = std::env::var("REDIS_URL")
+            .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         Arc::new(RedisPool::new(&url).expect("Failed to create Redis pool"))
     }))
 }

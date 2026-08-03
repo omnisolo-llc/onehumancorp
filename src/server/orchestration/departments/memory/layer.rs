@@ -1,16 +1,15 @@
 #[cfg(test)]
 mod tests {
     use ohc_builtin_agent::memory_store::{EmbeddingRecord, VectorRepository};
-    use sqlx::Row;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use sqlx::Row;
     use std::str::FromStr;
     use std::sync::Arc;
 
     #[tokio::test]
     async fn test_cross_department_context_sharing() {
         // Safe database initialization
-        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
-            .expect("Failed to parse connection string");
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
         let pool = SqlitePoolOptions::new()
             .connect_with(conn_opts)
             .await
@@ -31,7 +30,7 @@ mod tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );",
+            );"
         )
         .execute(&pool)
         .await
@@ -61,9 +60,7 @@ mod tests {
             owner_override: false,
             metadata: None,
         };
-        repo.upsert(&rec1)
-            .await
-            .expect("Failed to upsert Dept A record");
+        repo.upsert(&rec1).await.expect("Failed to upsert Dept A record");
 
         // Dept B: Operations
         let rec2 = EmbeddingRecord {
@@ -80,9 +77,7 @@ mod tests {
             owner_override: false,
             metadata: None,
         };
-        repo.upsert(&rec2)
-            .await
-            .expect("Failed to upsert Dept B record");
+        repo.upsert(&rec2).await.expect("Failed to upsert Dept B record");
 
         // Prove that context is cross-departmental by checking directly against the database
         // to bypass the SQLite vector extension requirement for `semantic_search` in test environments.
@@ -92,49 +87,29 @@ mod tests {
             .await
             .expect("Failed to query consolidated_memory");
 
-        assert_eq!(
-            rows.len(),
-            2,
-            "Both records should be successfully stored for cross-department context sharing"
-        );
+        assert_eq!(rows.len(), 2, "Both records should be successfully stored for cross-department context sharing");
 
-        let agent_ids: Vec<String> = rows
-            .into_iter()
-            .map(|row| row.try_get("agent_id").expect("Failed to get agent_id"))
-            .collect();
+        let agent_ids: Vec<String> = rows.into_iter().map(|row| row.try_get("agent_id").expect("Failed to get agent_id")).collect();
 
-        assert!(
-            agent_ids.contains(&"cs_agent_1".to_string()),
-            "Customer Success agent record should exist"
-        );
-        assert!(
-            agent_ids.contains(&"ops_agent_1".to_string()),
-            "Operations agent record should exist"
-        );
+        assert!(agent_ids.contains(&"cs_agent_1".to_string()), "Customer Success agent record should exist");
+        assert!(agent_ids.contains(&"ops_agent_1".to_string()), "Operations agent record should exist");
 
         // Dept C: Business Advisory tries to retrieve context about delays
         // In Cloud mode with Postgres, `semantic_search` would be called.
         // We will call it here, handling the Result safely if the SQLite vector extension is missing.
         let query_embedding = vec![0.5, 0.5, 0.5];
         // The fallback mechanism ensures the query always succeeds
-        let results = repo
-            .semantic_search("org1", &query_embedding, 5)
-            .await
-            .expect("Semantic search should successfully fallback to memory sorting");
+        let results = repo.semantic_search("org1", &query_embedding, 5).await.expect("Semantic search should successfully fallback to memory sorting");
         let cs_found = results.iter().any(|r| r.agent_id == "cs_agent_1");
         let ops_found = results.iter().any(|r| r.agent_id == "ops_agent_1");
 
         // The query succeeds and fetches items across different departments
-        assert!(
-            cs_found || ops_found,
-            "Cross-department context sharing should return records from other agents."
-        );
+        assert!(cs_found || ops_found, "Cross-department context sharing should return records from other agents.");
     }
 
     #[tokio::test]
     async fn test_sqlite_fallback_conflict_resolution() {
-        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
-            .expect("Failed to parse connection string");
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
         let pool = SqlitePoolOptions::new()
             .connect_with(conn_opts)
             .await
@@ -154,7 +129,7 @@ mod tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );",
+            );"
         )
         .execute(&pool)
         .await
@@ -177,9 +152,7 @@ mod tests {
             owner_override: false,
             metadata: None,
         };
-        repo.upsert(&rec1)
-            .await
-            .expect("Failed to upsert first record");
+        repo.upsert(&rec1).await.expect("Failed to upsert first record");
 
         let rec2 = EmbeddingRecord {
             id: "fallback_conflict_2".to_string(),
@@ -195,41 +168,25 @@ mod tests {
             owner_override: false,
             metadata: None,
         };
-        repo.upsert(&rec2)
-            .await
-            .expect("Failed to upsert second record");
+        repo.upsert(&rec2).await.expect("Failed to upsert second record");
 
         // Verify that auto_resolve_conflicts successfully discovers and resolves it
-        let resolved_count = repo
-            .auto_resolve_conflicts()
-            .await
-            .expect("Auto resolve conflicts should succeed");
-        assert_eq!(
-            resolved_count, 1,
-            "Should resolve exactly 1 conflict using fallback method"
-        );
+        let resolved_count = repo.auto_resolve_conflicts().await.expect("Auto resolve conflicts should succeed");
+        assert_eq!(resolved_count, 1, "Should resolve exactly 1 conflict using fallback method");
 
         let results = sqlx::query("SELECT id FROM consolidated_memory")
             .fetch_all(&pool)
             .await
             .expect("Failed to query DB");
 
-        assert_eq!(
-            results.len(),
-            1,
-            "Only one record should remain after conflict resolution"
-        );
+        assert_eq!(results.len(), 1, "Only one record should remain after conflict resolution");
         let remaining_id: String = results[0].try_get("id").expect("Failed to get ID");
-        assert_eq!(
-            remaining_id, "fallback_conflict_2",
-            "The record with the higher reliability score should win"
-        );
+        assert_eq!(remaining_id, "fallback_conflict_2", "The record with the higher reliability score should win");
     }
 
     #[tokio::test]
     async fn test_cross_department_context_sharing_fallback_edge_case() {
-        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
-            .expect("Failed to parse connection string");
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").expect("Failed to parse connection string");
         let pool = SqlitePoolOptions::new()
             .connect_with(conn_opts)
             .await
@@ -249,7 +206,7 @@ mod tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );",
+            );"
         )
         .execute(&pool)
         .await
@@ -272,9 +229,7 @@ mod tests {
             owner_override: false,
             metadata: None,
         };
-        repo.upsert(&rec1)
-            .await
-            .expect("Failed to upsert Dept A record");
+        repo.upsert(&rec1).await.expect("Failed to upsert Dept A record");
 
         let query_embedding = vec![0.9, 0.1, 0.9];
         // Query should still succeed gracefully even if vector match might be low or fallback executes
@@ -284,4 +239,5 @@ mod tests {
         assert_eq!(results.len(), 1, "Fallback should return the single record");
         assert_eq!(results[0].id, "dept_a_edge");
     }
+
 }

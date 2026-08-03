@@ -74,10 +74,7 @@ pub fn shape_value(val: Value, tree: &std::collections::HashMap<String, FieldNod
             Value::Object(new_map)
         }
         Value::Array(arr) => {
-            let new_arr = arr
-                .into_iter()
-                .map(|item| shape_value(item, tree))
-                .collect();
+            let new_arr = arr.into_iter().map(|item| shape_value(item, tree)).collect();
             Value::Array(new_arr)
         }
         _ => val,
@@ -126,15 +123,12 @@ mod tests {
         });
 
         let shaped = shape_payload(payload, Some("metrics(total),orders(id)"));
-        assert_eq!(
-            shaped,
-            json!({
-                "metrics": {"total": 100},
-                "orders": [
-                    {"id": "1"},
-                    {"id": "2"}
-                ]
-            })
-        );
+        assert_eq!(shaped, json!({
+            "metrics": {"total": 100},
+            "orders": [
+                {"id": "1"},
+                {"id": "2"}
+            ]
+        }));
     }
 }

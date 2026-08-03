@@ -1,14 +1,13 @@
-use axum::{Router, body::Body, http::Request, routing::get};
+use axum::{body::Body, http::Request, routing::get, Router};
 use std::sync::Arc;
 use tower::ServiceExt;
 
-use crate::api::health::health_handler;
 use crate::hub::Hub;
+use crate::api::health::health_handler;
 
 #[tokio::test]
 async fn test_health_handler_success() {
-    let db_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
         return;
     }
@@ -30,20 +29,13 @@ async fn test_health_handler_success() {
         .with_state(hub);
 
     let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/health")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
     assert_eq!(response.status(), axum::http::StatusCode::OK);
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
     assert!(body.get("mode").is_some());
@@ -58,8 +50,7 @@ async fn test_health_handler_success() {
 async fn test_setup_health_check_endpoint() {
     use crate::services::onboarding::onboarding_agent::OnboardingAgent;
 
-    let db_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
         return;
     }
@@ -104,29 +95,19 @@ async fn test_setup_health_check_endpoint() {
         })
         .unwrap();
 
-    let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
-        Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+    let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
 
     // We need to provide the MeshTransport state because the router expects it
     let app = crate::api::onboarding::router(agent, auth_store).with_state(transport);
 
     // Test standalone (should pass since we provisioned it)
-    let response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/setup-health?mode=standalone")
-                .header("authorization", format!("Bearer {token}"))
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let response = app.clone()
+        .oneshot(Request::builder().uri("/setup-health?mode=standalone").header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap())
         .await
         .unwrap();
 
     assert_eq!(response.status(), axum::http::StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(body.get("status").unwrap(), "ready");
 
@@ -136,22 +117,13 @@ async fn test_setup_health_check_endpoint() {
     std::fs::write(".ohc-cloud-data", "dummy file").unwrap();
 
     // Test cloud (should fail since it cannot write directories)
-    let response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/setup-health?mode=cloud")
-                .header("authorization", format!("Bearer {token}"))
-                .body(Body::empty())
-                .unwrap(),
-        )
+    let response = app.clone()
+        .oneshot(Request::builder().uri("/setup-health?mode=cloud").header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap())
         .await
         .unwrap();
 
     assert_eq!(response.status(), axum::http::StatusCode::OK); // Handler returns 200 OK with error JSON
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(body.get("status").unwrap(), "error");
 

@@ -75,9 +75,7 @@ impl OutlookCalendarProvider {
         start: Option<&str>,
         end: Option<&str>,
     ) -> Result<super::client::OutlookEvent, String> {
-        self.client
-            .update_event(event_id, subject, start, end)
-            .await
+        self.client.update_event(event_id, subject, start, end).await
     }
 
     pub async fn delete_event(&self, event_id: &str) -> Result<(), String> {

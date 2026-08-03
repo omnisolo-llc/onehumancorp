@@ -1,6 +1,6 @@
 use futures::StreamExt;
 use serde::Deserialize;
-use tracing::{error, info, warn};
+use tracing::{info, error, warn};
 
 #[derive(Deserialize, Debug)]
 pub struct InvalidationEvent {
@@ -65,8 +65,7 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                     if tag.starts_with("tenant-id:") {
                         tenant_id_str = Some(tag.trim_start_matches("tenant-id:").to_string());
                     } else if tag.starts_with("entity:product:") {
-                        product_id_str =
-                            Some(tag.trim_start_matches("entity:product:").to_string());
+                        product_id_str = Some(tag.trim_start_matches("entity:product:").to_string());
                     }
                 }
 
@@ -82,30 +81,21 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                         cdn_cache_clone.invalidate_by_tag(&tag_clone).await;
 
                         // Send purge request to NGINX Edge Cache
-                        if let Err(e) = client_clone
-                            .post("http://edge-cache/purge")
+                        if let Err(e) = client_clone.post("http://edge-cache/purge")
                             .body(tag_clone.clone())
                             .send()
                             .await
                         {
-                            warn!(
-                                "Failed to send purge request to NGINX for tag {}: {}",
-                                tag_clone, e
-                            );
+                            warn!("Failed to send purge request to NGINX for tag {}: {}", tag_clone, e);
                         } else {
-                            info!(
-                                "Successfully sent purge request to NGINX for tag {}",
-                                tag_clone
-                            );
+                            info!("Successfully sent purge request to NGINX for tag {}", tag_clone);
                         }
                     }
                 });
                 futures::future::join_all(futures).await;
 
                 if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str) {
-                    if let (Ok(tenant_id), Ok(product_id)) =
-                        (uuid::Uuid::parse_str(&t_str), uuid::Uuid::parse_str(&p_str))
-                    {
+                    if let (Ok(tenant_id), Ok(product_id)) = (uuid::Uuid::parse_str(&t_str), uuid::Uuid::parse_str(&p_str)) {
                         let site_id_res = sqlx::query_scalar::<_, uuid::Uuid>(
                             "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
                         )
@@ -114,20 +104,9 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
                         .await;
 
                         if let Ok(_site_id) = site_id_res {
-                            info!(
-                                "Pre-warming cache for product: {} tenant: {}",
-                                product_id, tenant_id
-                            );
-                            let cache_key =
-                                format!("storefront:product:{}:{}", tenant_id, product_id);
-                            let _ = crate::builder::edge::regenerate_product_cache(
-                                pool.clone(),
-                                tenant_id,
-                                product_id,
-                                cache_key,
-                                edge_cache.clone(),
-                            )
-                            .await;
+                            info!("Pre-warming cache for product: {} tenant: {}", product_id, tenant_id);
+                            let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
+                            let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_id, product_id, cache_key, edge_cache.clone()).await;
                         }
                     }
                 }
@@ -146,8 +125,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_invalidator_event_parsing() {
-        let payload =
-            r#"{"event": "inventory.updated", "tags": ["tenant-id:123", "entity:product:456"]}"#;
+        let payload = r#"{"event": "inventory.updated", "tags": ["tenant-id:123", "entity:product:456"]}"#;
         let event: Result<InvalidationEvent, _> = serde_json::from_str(payload);
         assert!(event.is_ok());
         let event = event.unwrap();
@@ -163,19 +141,9 @@ mod tests {
         let edge_cache = crate::builder::edge::get_edge_cache();
 
         let tag = "test_tag_123";
-        edge_cache
-            .set_with_tags(
-                "test_key",
-                "test_val".to_string(),
-                vec![tag.to_string()],
-                Duration::from_secs(60),
-            )
-            .await;
+        edge_cache.set_with_tags("test_key", "test_val".to_string(), vec![tag.to_string()], Duration::from_secs(60)).await;
 
-        assert_eq!(
-            edge_cache.get("test_key").await,
-            Some("test_val".to_string())
-        );
+        assert_eq!(edge_cache.get("test_key").await, Some("test_val".to_string()));
 
         let event = InvalidationEvent {
             event: "test.event".to_string(),

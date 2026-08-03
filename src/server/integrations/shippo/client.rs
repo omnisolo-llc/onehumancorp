@@ -283,10 +283,7 @@ mod tests {
         );
         assert!(trusted_label_url("https://app.goshippo.com/labels/label.pdf").is_some());
         assert!(trusted_label_url("https://attacker.example/label.pdf").is_none());
-        assert!(
-            trusted_label_url("https://shippo-delivery-attacker.s3.amazonaws.com/label.pdf")
-                .is_none()
-        );
+        assert!(trusted_label_url("https://shippo-delivery-attacker.s3.amazonaws.com/label.pdf").is_none());
         assert!(trusted_label_url("https://user:password@app.goshippo.com/label.pdf").is_none());
         assert!(trusted_label_url("http://app.goshippo.com/label.pdf").is_none());
     }

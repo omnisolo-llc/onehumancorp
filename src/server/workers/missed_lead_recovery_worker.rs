@@ -1,7 +1,7 @@
-use crate::db::DB;
-use sqlx::Row;
 use std::sync::Arc;
 use tokio::time::Duration;
+use crate::db::DB;
+use sqlx::Row;
 use uuid::Uuid;
 
 pub struct MissedLeadRecoveryWorker {
@@ -84,28 +84,27 @@ impl MissedLeadRecoveryWorker {
             }
         };
 
-        if let Some((message_id, tenant_id, source, original_content, customer_id, tone)) = row_data
-        {
+        if let Some((message_id, tenant_id, source, original_content, customer_id, tone)) = row_data {
             let customer_name = if let Some(cid) = &customer_id {
                 match &self.db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar::<_, String>(
-                        "SELECT name FROM customers WHERE id = $1 AND tenant_id = $2",
-                    )
-                    .bind(cid)
-                    .bind(&tenant_id)
-                    .fetch_optional(&self.db.pool)
-                    .await
-                    .unwrap_or_default()
-                    .unwrap_or_else(|| "Customer".to_string()),
-                    crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, String>(
-                        "SELECT name FROM customers WHERE id = ? AND tenant_id = ?",
-                    )
-                    .bind(cid)
-                    .bind(&tenant_id)
-                    .fetch_optional(pool)
-                    .await
-                    .unwrap_or_default()
-                    .unwrap_or_else(|| "Customer".to_string()),
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query_scalar::<_, String>("SELECT name FROM customers WHERE id = $1 AND tenant_id = $2")
+                            .bind(cid)
+                            .bind(&tenant_id)
+                            .fetch_optional(&self.db.pool)
+                            .await
+                            .unwrap_or_default()
+                            .unwrap_or_else(|| "Customer".to_string())
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query_scalar::<_, String>("SELECT name FROM customers WHERE id = ? AND tenant_id = ?")
+                            .bind(cid)
+                            .bind(&tenant_id)
+                            .fetch_optional(pool)
+                            .await
+                            .unwrap_or_default()
+                            .unwrap_or_else(|| "Customer".to_string())
+                    }
                 }
             } else {
                 "Customer".to_string()
@@ -152,20 +151,12 @@ impl MissedLeadRecoveryWorker {
                         Ok("minimax") => {
                             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                             if !api_key.is_empty() {
-                                crate::minimax::MinimaxClient::new(api_key)
-                                    .reason(&compressed_prompt_clone)
-                                    .await
+                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt_clone).await
                             } else {
-                                crate::minimax::LocalLLMClient::new()
-                                    .reason(&compressed_prompt_clone)
-                                    .await
+                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt_clone).await
                             }
                         }
-                        _ => {
-                            crate::minimax::LocalLLMClient::new()
-                                .reason(&compressed_prompt_clone)
-                                .await
-                        }
+                        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt_clone).await,
                     }
                 };
 
@@ -179,9 +170,7 @@ impl MissedLeadRecoveryWorker {
 
                             if start_idx <= end_idx {
                                 let clean_json = &json_str[start_idx..=end_idx];
-                                if let Ok(parsed) =
-                                    serde_json::from_str::<IntentResponse>(clean_json)
-                                {
+                                if let Ok(parsed) = serde_json::from_str::<IntentResponse>(clean_json) {
                                     is_safe = parsed.is_safe;
                                     follow_up_msg = parsed.draft_reply;
                                     break;
@@ -205,7 +194,7 @@ impl MissedLeadRecoveryWorker {
                             .bind(&tenant_id)
                             .execute(&self.db.pool)
                             .await;
-                    }
+                    },
                     crate::db::DbStore::Sqlite(pool) => {
                         let _ = sqlx::query("UPDATE omni_inbox_messages SET status = 'skipped_auto_reply' WHERE id = ? AND tenant_id = ?")
                             .bind(&message_id)
@@ -276,7 +265,7 @@ impl MissedLeadRecoveryWorker {
                         .map_err(|e| e.to_string())?;
 
                     tx.commit().await.map_err(|e| e.to_string())?;
-                }
+                },
                 crate::db::DbStore::Sqlite(pool) => {
                     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
@@ -376,12 +365,11 @@ mod tests {
             assert!(processed, "Worker should process the stale message");
 
             // Verify the status was updated to auto_replied and draft_reply is set
-            let (status, draft): (String, Option<String>) =
-                sqlx::query_as("SELECT status, draft_reply FROM omni_inbox_messages WHERE id = ?")
-                    .bind(&msg_id)
-                    .fetch_one(pool)
-                    .await
-                    .unwrap();
+            let (status, draft): (String, Option<String>) = sqlx::query_as("SELECT status, draft_reply FROM omni_inbox_messages WHERE id = ?")
+                .bind(&msg_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
 
             assert_eq!(status, "auto_replied");
             assert!(draft.is_some());

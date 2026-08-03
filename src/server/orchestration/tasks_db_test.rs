@@ -1,5 +1,5 @@
-use crate::db::DB;
 use crate::orchestration::tasks_db::TaskDbService;
+use crate::db::DB;
 use std::sync::Arc;
 
 #[tokio::test]
@@ -26,7 +26,7 @@ async fn test_tasks_db_claim_task_sqlite() {
             _sync_status TEXT DEFAULT 'pending',
             version INTEGER DEFAULT 1
         );
-        "#,
+        "#
     )
     .execute(&pool)
     .await
@@ -85,7 +85,7 @@ async fn test_tasks_db_claim_task_sqlite_null_dates() {
             _sync_status TEXT DEFAULT 'pending',
             version INTEGER DEFAULT 1
         );
-        "#,
+        "#
     )
     .execute(&pool)
     .await
@@ -137,7 +137,7 @@ async fn test_tasks_db_claim_task_sqlite_with_locked_until() {
             _sync_status TEXT DEFAULT 'pending',
             version INTEGER DEFAULT 1
         );
-        "#,
+        "#
     )
     .execute(&pool)
     .await

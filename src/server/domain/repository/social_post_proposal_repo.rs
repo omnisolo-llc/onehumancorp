@@ -1,5 +1,5 @@
+use sqlx::{PgPool, Error};
 use super::models::SocialPostProposal;
-use sqlx::{Error, PgPool};
 
 pub struct SocialPostProposalRepository {
     pool: PgPool,
@@ -31,13 +31,9 @@ impl SocialPostProposalRepository {
         Ok(())
     }
 
-    pub async fn list_proposals(
-        &self,
-        tenant_id: &str,
-        status: &str,
-    ) -> Result<Vec<SocialPostProposal>, Error> {
+    pub async fn list_proposals(&self, tenant_id: &str, status: &str) -> Result<Vec<SocialPostProposal>, Error> {
         let proposals = sqlx::query_as::<_, SocialPostProposal>(
-            "SELECT * FROM social_post_proposals WHERE tenant_id = $1 AND status = $2",
+            "SELECT * FROM social_post_proposals WHERE tenant_id = $1 AND status = $2"
         )
         .bind(tenant_id)
         .bind(status)
@@ -47,13 +43,9 @@ impl SocialPostProposalRepository {
         Ok(proposals)
     }
 
-    pub async fn get_proposal(
-        &self,
-        tenant_id: &str,
-        proposal_id: &str,
-    ) -> Result<Option<SocialPostProposal>, Error> {
+    pub async fn get_proposal(&self, tenant_id: &str, proposal_id: &str) -> Result<Option<SocialPostProposal>, Error> {
         let proposal = sqlx::query_as::<_, SocialPostProposal>(
-            "SELECT * FROM social_post_proposals WHERE tenant_id = $1 AND id = $2",
+            "SELECT * FROM social_post_proposals WHERE tenant_id = $1 AND id = $2"
         )
         .bind(tenant_id)
         .bind(proposal_id)
@@ -63,13 +55,7 @@ impl SocialPostProposalRepository {
         Ok(proposal)
     }
 
-    pub async fn update_status(
-        &self,
-        tenant_id: &str,
-        proposal_id: &str,
-        new_status: &str,
-        updated_at_unix: i64,
-    ) -> Result<(), Error> {
+    pub async fn update_status(&self, tenant_id: &str, proposal_id: &str, new_status: &str, updated_at_unix: i64) -> Result<(), Error> {
         sqlx::query(
             "UPDATE social_post_proposals SET status = $1, updated_at_unix = $2 WHERE tenant_id = $3 AND id = $4"
         )

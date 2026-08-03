@@ -23,10 +23,7 @@ mod chaos_db_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
-                .acquire_timeout(std::time::Duration::from_millis(10))
-                .connect_lazy("postgres://dummy")
-                .unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         });
 
@@ -35,30 +32,24 @@ mod chaos_db_tests {
             let db_clone = db.clone();
             handles.push(tokio::spawn(async move {
                 // execute_with_retry requires the error type E to implement From<String>
-                db_clone
-                    .execute_with_retry::<_, _, _, String>("chaos_write", || async {
-                        if let DbStore::Sqlite(pool) = &db_clone.store {
-                            sqlx::query("INSERT INTO chaos_test (id, val) VALUES (?, ?)")
-                                .bind(format!("id_{}", i))
-                                .bind("val")
-                                .execute(pool)
-                                .await
-                                .map_err(|e| e.to_string())
-                        } else {
-                            panic!("Expected SQLite store");
-                        }
-                    })
-                    .await
+                db_clone.execute_with_retry::<_, _, _, String>("chaos_write", || async {
+                    if let DbStore::Sqlite(pool) = &db_clone.store {
+                        sqlx::query("INSERT INTO chaos_test (id, val) VALUES (?, ?)")
+                            .bind(format!("id_{}", i))
+                            .bind("val")
+                            .execute(pool)
+                            .await
+                            .map_err(|e| e.to_string())
+                    } else {
+                        panic!("Expected SQLite store");
+                    }
+                }).await
             }));
         }
 
         for h in handles {
             let res = h.await.unwrap();
-            assert!(
-                res.is_ok(),
-                "Write should eventually succeed despite lock contention: {:?}",
-                res.err()
-            );
+            assert!(res.is_ok(), "Write should eventually succeed despite lock contention: {:?}", res.err());
         }
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM chaos_test")
@@ -89,31 +80,24 @@ mod chaos_db_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
-                .acquire_timeout(std::time::Duration::from_millis(10))
-                .connect_lazy("postgres://dummy")
-                .unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         });
 
         // Insert a row with NULL
         db.execute_with_retry::<_, _, _, String>("insert_null", || async {
             if let DbStore::Sqlite(pool) = &db.store {
-                sqlx::query(
-                    "INSERT INTO isolation_test (id, val) VALUES (?, ?) \
-                     ON CONFLICT(id) DO UPDATE SET val = excluded.val",
-                )
-                .bind("row1")
-                .bind::<Option<String>>(None)
-                .execute(pool)
-                .await
-                .map_err(|e| e.to_string())
+                sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?) \
+                     ON CONFLICT(id) DO UPDATE SET val = excluded.val")
+                    .bind("row1")
+                    .bind::<Option<String>>(None)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())
             } else {
                 panic!("Expected SQLite store");
             }
-        })
-        .await
-        .unwrap();
+        }).await.unwrap();
 
         // Read the row back and verify NULL handling parity
         let val: Option<String> = sqlx::query_scalar("SELECT val FROM isolation_test WHERE id = ?")
@@ -127,21 +111,19 @@ mod chaos_db_tests {
         // Concurrent isolation check
         let db_clone = db.clone();
         let handle = tokio::spawn(async move {
-            db_clone
-                .execute_with_retry::<_, _, _, String>("isolation_write", || async {
-                    if let DbStore::Sqlite(pool) = &db_clone.store {
-                        // Try inserting another row while the main thread might be reading
-                        sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?)")
-                            .bind("row2")
-                            .bind(Some("test_val"))
-                            .execute(pool)
-                            .await
-                            .map_err(|e| e.to_string())
-                    } else {
-                        panic!("Expected SQLite store");
-                    }
-                })
-                .await
+            db_clone.execute_with_retry::<_, _, _, String>("isolation_write", || async {
+                if let DbStore::Sqlite(pool) = &db_clone.store {
+                    // Try inserting another row while the main thread might be reading
+                    sqlx::query("INSERT INTO isolation_test (id, val) VALUES (?, ?)")
+                        .bind("row2")
+                        .bind(Some("test_val"))
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())
+                } else {
+                    panic!("Expected SQLite store");
+                }
+            }).await
         });
 
         // While the spawn is running, let's do a read
@@ -150,10 +132,7 @@ mod chaos_db_tests {
             .await
             .unwrap();
 
-        assert!(
-            count >= 1,
-            "Count should reflect at least the first inserted row"
-        );
+        assert!(count >= 1, "Count should reflect at least the first inserted row");
 
         handle.await.unwrap().unwrap();
 
@@ -180,29 +159,19 @@ mod chaos_db_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
-                .connect_lazy("postgres://dummy")
-                .unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         });
 
         // Test the actual execute_with_retry timeout logic
-        let res: Result<(), String> = db
-            .execute_with_retry("slow_query", || async {
-                // Simulate a query that takes longer than the timeout
-                tokio::time::sleep(std::time::Duration::from_secs(65)).await;
-                Ok(())
-            })
-            .await;
+        let res: Result<(), String> = db.execute_with_retry("slow_query", || async {
+            // Simulate a query that takes longer than the timeout
+            tokio::time::sleep(std::time::Duration::from_secs(65)).await;
+            Ok(())
+        }).await;
 
-        assert!(
-            res.is_err(),
-            "Sync operation should time out to prevent cascading failures"
-        );
-        assert!(
-            res.unwrap_err().to_string().contains("timed out"),
-            "Must be explicitly timed out by ML-Resilience rule"
-        );
+        assert!(res.is_err(), "Sync operation should time out to prevent cascading failures");
+        assert!(res.unwrap_err().to_string().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
     }
 
     #[tokio::test]
@@ -221,9 +190,7 @@ mod chaos_db_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
-                .connect_lazy("postgres://dummy")
-                .unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         });
 
@@ -237,20 +204,14 @@ mod chaos_db_tests {
             } else {
                 panic!("Expected SQLite");
             }
-        })
-        .await
-        .unwrap();
+        }).await.unwrap();
 
-        let created_at: chrono::DateTime<chrono::Utc> =
-            sqlx::query_scalar("SELECT created_at FROM timezone_test WHERE id = 'row1'")
-                .fetch_one(&sqlite_pool)
-                .await
-                .unwrap();
+        let created_at: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT created_at FROM timezone_test WHERE id = 'row1'")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
 
-        assert!(
-            created_at.timestamp() > 0,
-            "Timezone query should return valid UTC timestamp"
-        );
+        assert!(created_at.timestamp() > 0, "Timezone query should return valid UTC timestamp");
     }
 
     #[tokio::test]
@@ -272,9 +233,7 @@ mod chaos_db_tests {
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new()
-                .connect_lazy("postgres://dummy")
-                .unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(sqlite_pool.clone()),
         });
 
@@ -282,29 +241,24 @@ mod chaos_db_tests {
         for i in 0..50 {
             let db_clone = db.clone();
             handles.push(tokio::spawn(async move {
-                db_clone
-                    .execute_with_retry::<_, _, _, String>("stress_write", || async {
-                        if let DbStore::Sqlite(pool) = &db_clone.store {
-                            sqlx::query("INSERT INTO stress_test (id, val) VALUES (?, ?)")
-                                .bind(format!("stress_{}", i))
-                                .bind("data")
-                                .execute(pool)
-                                .await
-                                .map_err(|e| e.to_string())
-                        } else {
-                            panic!("Expected SQLite store");
-                        }
-                    })
-                    .await
+                db_clone.execute_with_retry::<_, _, _, String>("stress_write", || async {
+                    if let DbStore::Sqlite(pool) = &db_clone.store {
+                        sqlx::query("INSERT INTO stress_test (id, val) VALUES (?, ?)")
+                            .bind(format!("stress_{}", i))
+                            .bind("data")
+                            .execute(pool)
+                            .await
+                            .map_err(|e| e.to_string())
+                    } else {
+                        panic!("Expected SQLite store");
+                    }
+                }).await
             }));
         }
 
         for h in handles {
             let res = h.await.unwrap();
-            assert!(
-                res.is_ok(),
-                "Stress write should eventually succeed using execute_with_retry"
-            );
+            assert!(res.is_ok(), "Stress write should eventually succeed using execute_with_retry");
         }
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM stress_test")
@@ -321,16 +275,10 @@ mod chaos_db_tests {
         let invalid_path = "/invalid/path/to/agent-lock/";
         let read_result = std::fs::read_dir(invalid_path);
 
-        assert!(
-            read_result.is_err(),
-            "Invalid directory should fail to read"
-        );
+        assert!(read_result.is_err(), "Invalid directory should fail to read");
         // Simulate graceful fallback without panic
         let graceful_recovery = true;
-        assert!(
-            graceful_recovery,
-            "System must recover gracefully without panic"
-        );
+        assert!(graceful_recovery, "System must recover gracefully without panic");
     }
     #[tokio::test]
     async fn test_chaos_parity_audit_sqlite_postgres_identical_queries() {
@@ -391,21 +339,16 @@ mod chaos_db_tests {
             .unwrap();
 
         // Parity read check
-        let pg_count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM parity_audit WHERE val = 'test_val'")
-                .fetch_one(&pg_pool)
-                .await
-                .unwrap();
-        let sqlite_count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM parity_audit WHERE val = 'test_val'")
-                .fetch_one(&sqlite_pool)
-                .await
-                .unwrap();
+        let pg_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM parity_audit WHERE val = 'test_val'")
+            .fetch_one(&pg_pool)
+            .await
+            .unwrap();
+        let sqlite_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM parity_audit WHERE val = 'test_val'")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
 
-        assert_eq!(
-            pg_count, sqlite_count,
-            "Identical queries should yield identical row counts between Postgres and SQLite"
-        );
+        assert_eq!(pg_count, sqlite_count, "Identical queries should yield identical row counts between Postgres and SQLite");
     }
 
     #[tokio::test]
@@ -470,20 +413,10 @@ mod chaos_db_tests {
             .bind(&task_id_swarm).bind(tenant_id).bind("payload_swarm")
             .execute(&pg_pool).await.unwrap();
 
-        let sqlite_tasks: Vec<_> = sqlite_db
-            .get_completed_tasks()
-            .await
-            .unwrap()
-            .into_iter()
-            .filter(|t| t.1 == tenant_id)
-            .collect();
-        let pg_tasks: Vec<_> = pg_db
-            .get_completed_tasks()
-            .await
-            .unwrap()
-            .into_iter()
-            .filter(|t| t.1 == tenant_id)
-            .collect();
+
+        let sqlite_tasks: Vec<_> = sqlite_db.get_completed_tasks().await.unwrap().into_iter().filter(|t| t.1 == tenant_id).collect();
+        let pg_tasks: Vec<_> = pg_db.get_completed_tasks().await.unwrap().into_iter().filter(|t| t.1 == tenant_id).collect();
+
 
         // Validate parity
         let mut sqlite_sorted = sqlite_tasks.clone();
@@ -491,11 +424,7 @@ mod chaos_db_tests {
         let mut pg_sorted = pg_tasks.clone();
         pg_sorted.sort_by(|a, b| a.0.cmp(&b.0));
 
-        assert_eq!(
-            sqlite_sorted.len(),
-            pg_sorted.len(),
-            "Task count parity failed"
-        );
+        assert_eq!(sqlite_sorted.len(), pg_sorted.len(), "Task count parity failed");
         for (sq, pg) in sqlite_sorted.iter().zip(pg_sorted.iter()) {
             assert_eq!(sq.0, pg.0, "Task ID parity failed");
             assert_eq!(sq.1, pg.1, "Tenant ID parity failed");
@@ -509,47 +438,19 @@ mod chaos_db_tests {
         let content = "Parity content";
 
         // We use string representation for vector in pg since it expects pgvector
-        sqlite_db
-            .insert_knowledge_embedding(
-                &embedding_id,
-                tenant_id,
-                "agent1",
-                "task1",
-                content,
-                vector,
-                "text",
-            )
-            .await
-            .unwrap();
-        pg_db
-            .insert_knowledge_embedding(
-                &embedding_id,
-                tenant_id,
-                "agent1",
-                "task1",
-                content,
-                vector,
-                "text",
-            )
-            .await
-            .unwrap();
+        sqlite_db.insert_knowledge_embedding(&embedding_id, tenant_id, "agent1", "task1", content, vector, "text").await.unwrap();
+        pg_db.insert_knowledge_embedding(&embedding_id, tenant_id, "agent1", "task1", content, vector, "text").await.unwrap();
 
-        let sq_row: (String, String) =
-            sqlx::query_as("SELECT id, content FROM knowledge_embeddings WHERE id = ?")
-                .bind(&embedding_id)
-                .fetch_one(&sqlite_pool)
-                .await
-                .unwrap();
+        let sq_row: (String, String) = sqlx::query_as("SELECT id, content FROM knowledge_embeddings WHERE id = ?")
+            .bind(&embedding_id)
+            .fetch_one(&sqlite_pool).await.unwrap();
 
-        let pg_row: (String, String) = sqlx::query_as(
-            "SELECT id::text, content FROM knowledge_embeddings WHERE id = $1::uuid",
-        )
-        .bind(&embedding_id)
-        .fetch_one(&pg_pool)
-        .await
-        .unwrap();
+        let pg_row: (String, String) = sqlx::query_as("SELECT id::text, content FROM knowledge_embeddings WHERE id = $1::uuid")
+            .bind(&embedding_id)
+            .fetch_one(&pg_pool).await.unwrap();
 
         assert_eq!(sq_row.0, pg_row.0, "UUID string parity failed");
         assert_eq!(sq_row.1, pg_row.1, "Content string parity failed");
     }
+
 }

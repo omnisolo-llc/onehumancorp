@@ -1,8 +1,5 @@
 use axum::{
-    extract::{
-        Extension, Query,
-        ws::{Message as WsMessage, WebSocket, WebSocketUpgrade},
-    },
+    extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Extension, Query},
     response::IntoResponse,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -19,9 +16,15 @@ pub struct UnifiedWsQuery {
 #[serde(tag = "action")]
 enum ClientMessage {
     #[serde(rename = "subscribe")]
-    Subscribe { channel: String, topic: String },
+    Subscribe {
+        channel: String,
+        topic: String,
+    },
     #[serde(rename = "unsubscribe")]
-    Unsubscribe { channel: String, topic: String },
+    Unsubscribe {
+        channel: String,
+        topic: String,
+    },
     #[serde(rename = "replay")]
     Replay {
         channel: String,
@@ -50,8 +53,7 @@ struct ChannelState {
 #[allow(dead_code)]
 static GLOBAL_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 
-static GLOBAL_BROADCAST: std::sync::OnceLock<broadcast::Sender<String>> =
-    std::sync::OnceLock::new();
+static GLOBAL_BROADCAST: std::sync::OnceLock<broadcast::Sender<String>> = std::sync::OnceLock::new();
 
 fn get_broadcast_tx() -> &'static broadcast::Sender<String> {
     GLOBAL_BROADCAST.get_or_init(|| {
@@ -146,19 +148,11 @@ async fn replay_from_redis(
                                 if kv.len() == 2 {
                                     if let redis::Value::BulkString(key_bytes) = &kv[0] {
                                         if key_bytes == b"payload" {
-                                            if let redis::Value::BulkString(payload_bytes) = &kv[1]
-                                            {
-                                                if let Ok(payload) =
-                                                    String::from_utf8(payload_bytes.clone())
-                                                {
-                                                    if let Some((ch, topic, data, seq)) =
-                                                        parse_envelope(&payload)
-                                                    {
-                                                        if topic_filter.map_or(true, |t| topic == t)
-                                                        {
-                                                            messages.push(build_envelope(
-                                                                &ch, &topic, data, seq,
-                                                            ));
+                                            if let redis::Value::BulkString(payload_bytes) = &kv[1] {
+                                                if let Ok(payload) = String::from_utf8(payload_bytes.clone()) {
+                                                    if let Some((ch, topic, data, seq)) = parse_envelope(&payload) {
+                                                        if topic_filter.map_or(true, |t| topic == t) {
+                                                            messages.push(build_envelope(&ch, &topic, data, seq));
                                                         }
                                                     }
                                                 }
@@ -176,11 +170,7 @@ async fn replay_from_redis(
     messages
 }
 
-async fn handle_unified_socket(
-    socket: WebSocket,
-    tenant_id: String,
-    initial_channels: Vec<String>,
-) {
+async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_channels: Vec<String>) {
     let (mut sender, mut receiver) = socket.split();
 
     let mut state = ChannelState {
@@ -251,7 +241,9 @@ async fn handle_unified_socket(
                     let t = tenant_id_ps.clone();
                     ["inventory", "orders", "tenant_events", "agent_feed"]
                         .iter()
-                        .map(move |topic| format!("unified:{}:{}:{}", ch, t, topic))
+                        .map(move |topic| {
+                            format!("unified:{}:{}:{}", ch, t, topic)
+                        })
                 })
                 .collect();
 
@@ -297,11 +289,7 @@ async fn handle_unified_socket(
                                     });
                                     let _ = ws_tx_rt.send(envelope.to_string()).await;
                                 }
-                                ClientMessage::Replay {
-                                    channel,
-                                    from_seq,
-                                    topic,
-                                } => {
+                                ClientMessage::Replay { channel, from_seq, topic } => {
                                     if let Some(client) = redis_client_opt.clone() {
                                         let count = {
                                             let msgs = replay_from_redis(
@@ -441,11 +429,7 @@ mod tests {
         let json = r#"{"action": "replay", "channel": "sync", "from_seq": 12340, "topic": "inventory:tenant-123"}"#;
         let msg: ClientMessage = serde_json::from_str(json).unwrap();
         match msg {
-            ClientMessage::Replay {
-                channel,
-                from_seq,
-                topic,
-            } => {
+            ClientMessage::Replay { channel, from_seq, topic } => {
                 assert_eq!(channel, "sync");
                 assert_eq!(from_seq, 12340);
                 assert_eq!(topic, Some("inventory:tenant-123".to_string()));
@@ -459,11 +443,7 @@ mod tests {
         let json = r#"{"action": "replay", "channel": "feed", "from_seq": 50}"#;
         let msg: ClientMessage = serde_json::from_str(json).unwrap();
         match msg {
-            ClientMessage::Replay {
-                channel,
-                from_seq,
-                topic,
-            } => {
+            ClientMessage::Replay { channel, from_seq, topic } => {
                 assert_eq!(channel, "feed");
                 assert_eq!(from_seq, 50);
                 assert!(topic.is_none());
@@ -534,16 +514,7 @@ mod tests {
         let sub_msg: ClientMessage = serde_json::from_str(sub).unwrap();
         let unsub_msg: ClientMessage = serde_json::from_str(unsub).unwrap();
         match (sub_msg, unsub_msg) {
-            (
-                ClientMessage::Subscribe {
-                    channel: c1,
-                    topic: t1,
-                },
-                ClientMessage::Unsubscribe {
-                    channel: c2,
-                    topic: t2,
-                },
-            ) => {
+            (ClientMessage::Subscribe { channel: c1, topic: t1 }, ClientMessage::Unsubscribe { channel: c2, topic: t2 }) => {
                 assert_eq!(c1, c2);
                 assert_eq!(t1, t2);
             }

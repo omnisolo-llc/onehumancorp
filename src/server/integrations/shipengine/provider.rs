@@ -29,7 +29,7 @@ impl ShipengineProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            },
+            }
         }
     }
 }
@@ -42,9 +42,6 @@ mod tests {
     fn test_shipengine_provider_metadata() {
         let provider = ShipengineProvider::new("test_token".to_string());
         assert_eq!(provider.to_integration_provider().metadata.id, "shipengine");
-        assert_eq!(
-            provider.to_integration_provider().metadata.category,
-            "logistics"
-        );
+        assert_eq!(provider.to_integration_provider().metadata.category, "logistics");
     }
 }

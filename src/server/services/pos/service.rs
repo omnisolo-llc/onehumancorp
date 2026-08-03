@@ -4,36 +4,28 @@ use ::server_ohc::app::{
     StartTerminalSessionResponse, SyncOfflineTransactionsRequest, SyncOfflineTransactionsResponse,
     UpdateTerminalSessionStatusRequest, UpdateTerminalSessionStatusResponse,
 };
-use prost::Message;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
+use prost::Message;
 
 pub struct MyPosService {}
 
 impl MyPosService {
     pub fn new(_db: Arc<crate::db::DB>) -> Self {
-        Self {}
+        Self { }
     }
 
-    pub async fn reconcile_crdt_payloads(
-        &self,
-        payloads: Vec<::server_ohc::orchestration::PosCrdtPayload>,
-        tenant_id: &str,
-    ) -> Result<(), String> {
+    pub async fn reconcile_crdt_payloads(&self, payloads: Vec<::server_ohc::orchestration::PosCrdtPayload>, tenant_id: &str) -> Result<(), String> {
         let pool = crate::db::get_pool();
         let mut db_tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *db_tx, tenant_id)
-            .await
-            .map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         for payload in payloads {
             if payload.r#type == "inventory" {
                 if payload.quantity_delta < 0 {
                     let inventory_service = crate::services::inventory::InventoryService::new(None);
-                    let _ = inventory_service
-                        .commit_inventory(tenant_id, &payload.item_id, -payload.quantity_delta, "")
-                        .await;
+                    let _ = inventory_service.commit_inventory(tenant_id, &payload.item_id, -payload.quantity_delta, "").await;
                 } else {
                     let _res = sqlx::query(
                         "UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1) WHERE id = $2 AND tenant_id = $3"
@@ -67,23 +59,17 @@ impl MyPosService {
             }),
         };
 
-        let _ = hub
-            .publish_mesh_event(::server_ohc::orchestration::MeshEvent {
-                event_id: uuid::Uuid::new_v4().to_string(),
-                topic: "pos_sales".to_string(),
-                payload: serde_json::to_vec(&evt).unwrap_or_default(),
-                timestamp: chrono::Utc::now().timestamp(),
-            })
-            .await;
+        let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+            event_id: uuid::Uuid::new_v4().to_string(),
+            topic: "pos_sales".to_string(),
+            payload: serde_json::to_vec(&evt).unwrap_or_default(),
+            timestamp: chrono::Utc::now().timestamp(),
+        }).await;
 
         Ok(())
     }
 
-    pub async fn handle_incoming_crdt_delta(
-        &self,
-        delta: ::server_ohc::orchestration::CrdtDelta,
-        peer_spiffe_id: &str,
-    ) -> Result<(), String> {
+    pub async fn handle_incoming_crdt_delta(&self, delta: ::server_ohc::orchestration::CrdtDelta, peer_spiffe_id: &str) -> Result<(), String> {
         // Validate SPIFFE ID and extract tenant context to ensure Zero-Trust Mesh Security
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(peer_spiffe_id)
             .map_err(|_| "invalid spiffe id".to_string())?;
@@ -97,8 +83,7 @@ impl MyPosService {
 
         if let Ok(payloads_msg) = payloads_result {
             // Reconcile the decoded CRDT payloads into the verified tenant context
-            self.reconcile_crdt_payloads(vec![payloads_msg], &tenant_id)
-                .await?;
+            self.reconcile_crdt_payloads(vec![payloads_msg], &tenant_id).await?;
         }
 
         Ok(())
@@ -111,28 +96,17 @@ impl PosService for MyPosService {
         &self,
         request: Request<SyncOfflineTransactionsRequest>,
     ) -> Result<Response<SyncOfflineTransactionsResponse>, Status> {
-        let auth_info = request
-            .extensions()
-            .get::<::server_auth::orchestration::AuthInfo>()
-            .cloned();
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request
-                    .metadata()
-                    .get("x-spiffe-id")
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str)
-                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
-                    .0
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated(
-                "missing tenant identity in session",
-            ));
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let mut req = request.into_inner();
@@ -144,10 +118,7 @@ impl PosService for MyPosService {
 
         let pool = crate::db::get_pool();
 
-        let session_id = req
-            .session_id
-            .clone()
-            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        let session_id = req.session_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
         let _ = sqlx::query(
             "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
              VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
@@ -166,11 +137,7 @@ impl PosService for MyPosService {
             let pool_clone = pool.clone();
             let tenant_id_clone = tenant_id.clone();
             let client_id_clone = client_id.clone();
-            let tx_id = if tx.id.is_empty() {
-                Uuid::new_v4().to_string()
-            } else {
-                tx.id.clone()
-            };
+            let tx_id = if tx.id.is_empty() { Uuid::new_v4().to_string() } else { tx.id.clone() };
 
             let terminal_id_clone = tx.terminal_id.clone();
             futures.push(tokio::spawn(async move {
@@ -285,28 +252,17 @@ impl PosService for MyPosService {
         &self,
         request: Request<StartTerminalSessionRequest>,
     ) -> Result<Response<StartTerminalSessionResponse>, Status> {
-        let auth_info = request
-            .extensions()
-            .get::<::server_auth::orchestration::AuthInfo>()
-            .cloned();
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
         let auth_tenant = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request
-                    .metadata()
-                    .get("x-spiffe-id")
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str)
-                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
-                    .0
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
             }
         };
 
         if auth_tenant.is_empty() {
-            return Err(Status::unauthenticated(
-                "missing tenant identity in session",
-            ));
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let req = request.into_inner();
@@ -314,13 +270,8 @@ impl PosService for MyPosService {
 
         let session_id = uuid::Uuid::new_v4().to_string();
         let pool = crate::db::get_pool();
-        let mut db_tx = pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut db_tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let res = sqlx::query(
             "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
@@ -366,41 +317,25 @@ impl PosService for MyPosService {
         &self,
         request: Request<UpdateTerminalSessionStatusRequest>,
     ) -> Result<Response<UpdateTerminalSessionStatusResponse>, Status> {
-        let auth_info = request
-            .extensions()
-            .get::<::server_auth::orchestration::AuthInfo>()
-            .cloned();
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
         let auth_tenant = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request
-                    .metadata()
-                    .get("x-spiffe-id")
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str)
-                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
-                    .0
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
             }
         };
 
         if auth_tenant.is_empty() {
-            return Err(Status::unauthenticated(
-                "missing tenant identity in session",
-            ));
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let req = request.into_inner();
         let tenant_id = auth_tenant;
 
         let pool = crate::db::get_pool();
-        let mut db_tx = pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut db_tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let res = sqlx::query(
             "UPDATE pos_terminal_sessions SET status = $1, last_synced_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3"
@@ -447,41 +382,25 @@ impl PosService for MyPosService {
         &self,
         request: Request<EndTerminalSessionRequest>,
     ) -> Result<Response<EndTerminalSessionResponse>, Status> {
-        let auth_info = request
-            .extensions()
-            .get::<::server_auth::orchestration::AuthInfo>()
-            .cloned();
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
         let auth_tenant = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request
-                    .metadata()
-                    .get("x-spiffe-id")
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str)
-                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
-                    .0
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
             }
         };
 
         if auth_tenant.is_empty() {
-            return Err(Status::unauthenticated(
-                "missing tenant identity in session",
-            ));
+            return Err(Status::unauthenticated("missing tenant identity in session"));
         }
 
         let req = request.into_inner();
         let tenant_id = auth_tenant;
 
         let pool = crate::db::get_pool();
-        let mut db_tx = pool
-            .begin()
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
+        let mut db_tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *db_tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
 
         let res = sqlx::query(
             "UPDATE pos_terminal_sessions SET status = 'RECONCILED', last_synced_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
@@ -527,8 +446,8 @@ impl PosService for MyPosService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DbStore;
     use tonic::Request;
+    use crate::db::DbStore;
 
     #[tokio::test]
     async fn test_sync_offline_transactions() {
@@ -546,28 +465,28 @@ mod tests {
         let req = SyncOfflineTransactionsRequest {
             tenant_id: "test_tenant".to_string(),
             client_id: "test_client".to_string(),
-            transactions: vec![::server_ohc::app::PosOfflineTransaction {
-                id: "tx_1".to_string(),
-                tenant_id: "test_tenant".to_string(),
-                client_id: "test_client".to_string(),
-                amount_cents: 1000,
-                currency: "USD".to_string(),
-                payload: "{}".to_string(),
-                status: "PENDING".to_string(),
-                created_at_unix: 0,
-                terminal_id: None,
-            }],
+            transactions: vec![
+                ::server_ohc::app::PosOfflineTransaction {
+                    id: "tx_1".to_string(),
+                    tenant_id: "test_tenant".to_string(),
+                    client_id: "test_client".to_string(),
+                    amount_cents: 1000,
+                    currency: "USD".to_string(),
+                    payload: "{}".to_string(),
+                    status: "PENDING".to_string(),
+                    created_at_unix: 0,
+                    terminal_id: None,
+                }
+            ],
             session_id: Some("test_session".to_string()),
         };
 
         let mut request = Request::new(req);
-        request
-            .extensions_mut()
-            .insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "test".to_string(),
-                org_id: "test_tenant".to_string(),
-                agent_id: "test".to_string(),
-            });
+        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "test_tenant".to_string(),
+            agent_id: "test".to_string(),
+        });
 
         let response = service.sync_offline_transactions(request).await;
         // Depending on whether DB contains proper tables (migrated), this might fail gracefully but shouldn't panic.
@@ -609,18 +528,15 @@ mod tests {
             transaction_id: "tx_1".to_string(),
         };
 
-        let result = service
-            .reconcile_crdt_payloads(vec![payload], &tenant_id)
-            .await;
+        let result = service.reconcile_crdt_payloads(vec![payload], &tenant_id).await;
         assert!(result.is_ok());
 
-        let count: (i32,) =
-            sqlx::query_as("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
-                .bind(&item_id)
-                .bind(&tenant_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+            .bind(&item_id)
+            .bind(&tenant_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
         // Initial was 10, delta is -3, result should be 7
         assert_eq!(count.0, 7);
@@ -644,26 +560,17 @@ mod tests {
         };
 
         // Test invalid SPIFFE
-        let result = service
-            .handle_incoming_crdt_delta(delta.clone(), "invalid_spiffe")
-            .await;
+        let result = service.handle_incoming_crdt_delta(delta.clone(), "invalid_spiffe").await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "invalid spiffe id");
 
         // Test valid SPIFFE with missing tenant (using wrong format to test the parse fail)
-        let result_missing = service
-            .handle_incoming_crdt_delta(delta.clone(), "spiffe://trust/agent")
-            .await;
+        let result_missing = service.handle_incoming_crdt_delta(delta.clone(), "spiffe://trust/agent").await;
         assert!(result_missing.is_err());
         assert_eq!(result_missing.unwrap_err(), "invalid spiffe id");
 
         // Test valid SPIFFE format
-        let result_valid = service
-            .handle_incoming_crdt_delta(
-                delta.clone(),
-                "spiffe://trust_domain/ns/default/org/test_org/agent/test_agent",
-            )
-            .await;
+        let result_valid = service.handle_incoming_crdt_delta(delta.clone(), "spiffe://trust_domain/ns/default/org/test_org/agent/test_agent").await;
         // This will succeed parsing, then fail on protobuf decode since payload is empty, but that proves it passes the auth check
         assert!(result_valid.is_ok() || result_valid.is_err());
     }

@@ -1,6 +1,6 @@
 pub mod blob;
-pub mod client;
 pub mod server;
+pub mod client;
 
 #[cfg(test)]
 pub mod tests;

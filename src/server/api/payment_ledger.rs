@@ -1,9 +1,9 @@
 use axum::{
-    Json, Router,
     extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -81,9 +81,7 @@ pub fn router() -> Router<AppState> {
 
 async fn create_payment_intent(
     State(_state): State<AppState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<CreatePaymentIntentRequest>,
 ) -> impl IntoResponse {
     let tenant_id = auth_info.org_id;
@@ -91,10 +89,7 @@ async fn create_payment_intent(
         return (StatusCode::UNAUTHORIZED, "Missing tenant ID").into_response();
     }
 
-    let idempotency_key = payload
-        .idempotency_key
-        .clone()
-        .unwrap_or_else(|| Uuid::new_v4().to_string());
+    let idempotency_key = payload.idempotency_key.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
 
     let pool = crate::db::get_pool();
 
@@ -108,15 +103,11 @@ async fn create_payment_intent(
     .await.unwrap_or(None);
 
     if let Some((existing_payment_id, existing_status)) = existing {
-        return (
-            StatusCode::OK,
-            Json(PaymentIntentResponse {
-                payment_id: existing_payment_id,
-                idempotency_key,
-                status: existing_status,
-            }),
-        )
-            .into_response();
+        return (StatusCode::OK, Json(PaymentIntentResponse {
+            payment_id: existing_payment_id,
+            idempotency_key,
+            status: existing_status,
+        })).into_response();
     }
 
     let payment_id = Uuid::new_v4().to_string();
@@ -137,16 +128,12 @@ async fn create_payment_intent(
     .await;
 
     match res {
-        Ok(_) => (
-            StatusCode::CREATED,
-            Json(PaymentIntentResponse {
-                payment_id,
-                idempotency_key,
-                status: "pending".to_string(),
-            }),
-        )
-            .into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+        Ok(_) => (StatusCode::CREATED, Json(PaymentIntentResponse {
+            payment_id,
+            idempotency_key,
+            status: "pending".to_string()
+        })).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
     }
 }
 
@@ -160,16 +147,8 @@ async fn stripe_webhook(
 
     let payment_intent = payload.data.object;
 
-    let tenant_id = payment_intent
-        .metadata
-        .get("tenant_id")
-        .cloned()
-        .unwrap_or_default();
-    let idempotency_key = payment_intent
-        .metadata
-        .get("idempotency_key")
-        .cloned()
-        .unwrap_or_default();
+    let tenant_id = payment_intent.metadata.get("tenant_id").cloned().unwrap_or_default();
+    let idempotency_key = payment_intent.metadata.get("idempotency_key").cloned().unwrap_or_default();
 
     if tenant_id.is_empty() || idempotency_key.is_empty() {
         return StatusCode::BAD_REQUEST.into_response();
@@ -177,14 +156,11 @@ async fn stripe_webhook(
 
     let pool = crate::db::get_pool();
 
-    let existing: Option<(String,)> = sqlx::query_as(
-        "SELECT status FROM payment_intents WHERE idempotency_key = $1 AND tenant_id = $2",
-    )
-    .bind(&idempotency_key)
-    .bind(&tenant_id)
-    .fetch_optional(&pool)
-    .await
-    .unwrap_or(None);
+    let existing: Option<(String,)> = sqlx::query_as("SELECT status FROM payment_intents WHERE idempotency_key = $1 AND tenant_id = $2")
+        .bind(&idempotency_key)
+        .bind(&tenant_id)
+        .fetch_optional(&pool)
+        .await.unwrap_or(None);
 
     if let Some((status,)) = existing {
         if status == "succeeded" {
@@ -211,12 +187,10 @@ async fn stripe_webhook(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    let payment_info_res = sqlx::query_as::<_, (f64, String)>(
-        "SELECT amount, currency FROM payment_intents WHERE idempotency_key = $1",
-    )
-    .bind(&idempotency_key)
-    .fetch_one(&mut *tx)
-    .await;
+    let payment_info_res = sqlx::query_as::<_, (f64, String)>("SELECT amount, currency FROM payment_intents WHERE idempotency_key = $1")
+        .bind(&idempotency_key)
+        .fetch_one(&mut *tx)
+        .await;
 
     let payment_info = match payment_info_res {
         Ok(info) => info,
@@ -319,9 +293,7 @@ async fn stripe_webhook(
 
 async fn get_balance(
     State(_state): State<AppState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let tenant_id = auth_info.org_id;
     if tenant_id.is_empty() {
@@ -336,24 +308,18 @@ async fn get_balance(
 
     let total_revenue = match balance {
         Some((b,)) => b,
-        None => 0.0,
+        None => 0.0
     };
 
-    (
-        StatusCode::OK,
-        Json(BalanceResponse {
-            tenant_id,
-            total_revenue,
-        }),
-    )
-        .into_response()
+    (StatusCode::OK, Json(BalanceResponse {
+        tenant_id,
+        total_revenue,
+    })).into_response()
 }
 
 async fn get_safe_to_spend(
     State(_state): State<AppState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let tenant_id = auth_info.org_id;
     if tenant_id.is_empty() {
@@ -385,28 +351,24 @@ async fn get_safe_to_spend(
 
     let money_in = match credit_res {
         Some((b,)) => b,
-        None => 0.0,
+        None => 0.0
     };
 
     let money_out = match debit_res {
         Some((b,)) => b,
-        None => 0.0,
+        None => 0.0
     };
 
     let tax_safe = match tax_res {
         Some((b,)) => b,
-        None => 0.0,
+        None => 0.0
     };
 
-    (
-        StatusCode::OK,
-        Json(SafeToSpendResponse {
-            money_in,
-            money_out,
-            tax_safe,
-        }),
-    )
-        .into_response()
+    (StatusCode::OK, Json(SafeToSpendResponse {
+        money_in,
+        money_out,
+        tax_safe,
+    })).into_response()
 }
 
 #[derive(Serialize)]
@@ -418,9 +380,7 @@ pub struct ReceiptProcessedResponse {
 
 async fn process_receipt(
     State(_state): State<AppState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<SnapReceiptRequest>,
 ) -> impl IntoResponse {
     let tenant_id = auth_info.org_id;
@@ -443,12 +403,11 @@ async fn process_receipt(
     let vendor = payload.vendor;
 
     // Simple mock logic for categorization instead of LLM
-    let category =
-        if vendor.to_lowercase().contains("depot") || vendor.to_lowercase().contains("hardware") {
-            "Supplies".to_string()
-        } else {
-            "General Expense".to_string()
-        };
+    let category = if vendor.to_lowercase().contains("depot") || vendor.to_lowercase().contains("hardware") {
+        "Supplies".to_string()
+    } else {
+        "General Expense".to_string()
+    };
 
     if sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, $4)")
         .bind(&tenant_id)
@@ -537,15 +496,11 @@ async fn process_receipt(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    (
-        StatusCode::OK,
-        Json(ReceiptProcessedResponse {
-            vendor,
-            amount,
-            category,
-        }),
-    )
-        .into_response()
+    (StatusCode::OK, Json(ReceiptProcessedResponse {
+        vendor,
+        amount,
+        category,
+    })).into_response()
 }
 
 #[cfg(test)]

@@ -1,11 +1,7 @@
-use crate::orchestration::departments::marketing_seo::{RuntimeSeoClient, SeoClient};
-use crate::orchestration::departments::orchestrator::{
-    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
-};
-use crate::orchestration::departments::types::{
-    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
-};
+use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
+use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use std::sync::Arc;
+use crate::orchestration::departments::marketing_seo::{SeoClient, RuntimeSeoClient};
 
 #[async_trait::async_trait]
 pub trait MarketingCopyClient: Send + Sync {
@@ -123,9 +119,7 @@ impl MarketingImageOptimizer for RuntimeMarketingImageOptimizer {
             .map_err(|e| format!("Vision image optimization response was not JSON: {e}"))?;
 
         if !status.is_success() {
-            return Err(format!(
-                "Vision image optimization API error {status}: {body}"
-            ));
+            return Err(format!("Vision image optimization API error {status}: {body}"));
         }
 
         body.get("optimized_image_url")
@@ -135,9 +129,7 @@ impl MarketingImageOptimizer for RuntimeMarketingImageOptimizer {
             .map(str::trim)
             .filter(|value| !value.is_empty())
             .map(ToString::to_string)
-            .ok_or_else(|| {
-                "Vision image optimization response missing optimized image URL".to_string()
-            })
+            .ok_or_else(|| "Vision image optimization response missing optimized image URL".to_string())
     }
 }
 
@@ -196,15 +188,8 @@ impl MarketingAgent {
     }
 
     #[cfg(test)]
-    fn new_for_test(
-        copy_client: Arc<dyn MarketingCopyClient>,
-        seo_client: Arc<dyn SeoClient>,
-    ) -> Self {
-        Self::new_for_test_with_optimizer(
-            copy_client,
-            Arc::new(PassthroughImageOptimizer),
-            seo_client,
-        )
+    fn new_for_test(copy_client: Arc<dyn MarketingCopyClient>, seo_client: Arc<dyn SeoClient>) -> Self {
+        Self::new_for_test_with_optimizer(copy_client, Arc::new(PassthroughImageOptimizer), seo_client)
     }
 
     #[cfg(test)]
@@ -228,10 +213,7 @@ impl MarketingAgent {
     }
 
     pub async fn draft_product_caption(&self, product_name: &str, description: &str) -> String {
-        let prompt = format!(
-            "Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.",
-            product_name, description
-        );
+        let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
         let fallback = format!("Check out our new {}!", product_name);
         self.copy_client.draft_caption(&prompt, &fallback).await
     }
@@ -266,41 +248,15 @@ impl Department for MarketingAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.product.created"
-            || event.event_type == "tenant.product.updated"
-        {
-            let product_id = event
-                .payload
-                .get("product_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let name = event
-                .payload
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("New Product");
-            let description = event
-                .payload
-                .get("description")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let item_type = event
-                .payload
-                .get("item_type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Product");
-            let price = event
-                .payload
-                .get("price")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.0);
+        if event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
+            let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+            let item_type = event.payload.get("item_type").and_then(|v| v.as_str()).unwrap_or("Product");
+            let price = event.payload.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
 
             if !product_id.is_empty() {
-                if let Ok((seo_title, seo_desc, seo_schema)) = self
-                    .seo_client
-                    .generate_seo_metadata(name, description, item_type, price)
-                    .await
-                {
+                if let Ok((seo_title, seo_desc, seo_schema)) = self.seo_client.generate_seo_metadata(name, description, item_type, price).await {
                     if let Ok(orchestrator) = self.orchestrator() {
                         let pool = orchestrator.db().pool.clone();
                         let tenant_id_str = event.tenant_id.clone();
@@ -330,67 +286,30 @@ impl Department for MarketingAgent {
                                 });
 
                                 if let Some(redis_client) = crate::get_redis_client() {
-                                    if let Ok(mut conn) =
-                                        redis_client.get_multiplexed_async_connection().await
-                                    {
+                                    if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
                                         use redis::AsyncCommands;
-                                        let _: Result<(), _> = conn
-                                            .publish(
-                                                "cache_invalidation_events",
-                                                invalidation_event.to_string(),
-                                            )
-                                            .await;
+                                        let _: Result<(), _> = conn.publish("cache_invalidation_events", invalidation_event.to_string()).await;
                                     }
                                 } else {
                                     let cache = crate::builder::edge::get_edge_cache();
-                                    cache
-                                        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str))
-                                        .await;
-                                    cache
-                                        .invalidate_by_tag(&format!(
-                                            "entity:product:{}",
-                                            product_id_str
-                                        ))
-                                        .await;
-                                    let cdn_cache =
-                                        crate::utils::edge_caching_middleware::get_cdn_cache();
-                                    cdn_cache
-                                        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str))
-                                        .await;
-                                    cdn_cache
-                                        .invalidate_by_tag(&format!(
-                                            "entity:product:{}",
-                                            product_id_str
-                                        ))
-                                        .await;
+                                    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
+                                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
+                                    let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                                    cdn_cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_str)).await;
+                                    cdn_cache.invalidate_by_tag(&format!("entity:product:{}", product_id_str)).await;
                                 }
 
                                 // Proactively pre-render the product cache
                                 if let Ok(product_uuid) = uuid::Uuid::parse_str(&product_id_str) {
-                                    let cache_key = format!(
-                                        "storefront:product:{}:{}",
-                                        tenant_id, product_uuid
-                                    );
+                                    let cache_key = format!("storefront:product:{}:{}", tenant_id, product_uuid);
                                     let cache = crate::builder::edge::get_edge_cache();
-                                    let _ = crate::builder::edge::regenerate_product_cache(
-                                        pool.clone(),
-                                        tenant_id,
-                                        product_uuid,
-                                        cache_key,
-                                        cache.clone(),
-                                    )
-                                    .await;
+                                    let _ = crate::builder::edge::regenerate_product_cache(pool.clone(), tenant_id, product_uuid, cache_key, cache.clone()).await;
                                 }
 
                                 // Trigger site publish job for all sites for the tenant
-                                if let Ok(sites) =
-                                    crate::builder::db::list_sites(&pool, tenant_id).await
-                                {
+                                if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_id).await {
                                     for site in sites {
-                                        let _ = crate::builder::jobs::enqueue_publish_site_job(
-                                            &pool, tenant_id, site.id,
-                                        )
-                                        .await;
+                                        let _ = crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_id, site.id).await;
                                     }
                                 }
                             }
@@ -400,15 +319,8 @@ impl Department for MarketingAgent {
             }
         }
 
-        if event.event_type == "tenant.website.updated"
-            || event.event_type == "tenant.product.created"
-            || event.event_type == "tenant.product.updated"
-        {
-            let site_id = event
-                .payload
-                .get("site_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown");
+        if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
+            let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let payload = serde_json::json!({
                 "site_id": site_id,
             });
@@ -422,19 +334,11 @@ impl Department for MarketingAgent {
                 tokio::spawn(async move {
                     if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str) {
                         if let Ok(s_id) = uuid::Uuid::parse_str(&site_id_str) {
-                            let _ = crate::builder::jobs::enqueue_publish_site_job(
-                                &pool, tenant_id, s_id,
-                            )
-                            .await;
+                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_id, s_id).await;
                         } else {
-                            if let Ok(sites) =
-                                crate::builder::db::list_sites(&pool, tenant_id).await
-                            {
+                            if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_id).await {
                                 for site in sites {
-                                    let _ = crate::builder::jobs::enqueue_publish_site_job(
-                                        &pool, tenant_id, site.id,
-                                    )
-                                    .await;
+                                    let _ = crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_id, site.id).await;
                                 }
                             }
                         }
@@ -454,12 +358,10 @@ impl Department for MarketingAgent {
                         // Gather product info to generate SEO metadata
                         let mut products_desc = String::new();
                         let mut price = 0.0;
-                        if let Ok(products) = sqlx::query(
-                            "SELECT name, description, price FROM products WHERE tenant_id = $1",
-                        )
-                        .bind(tenant_id.to_string())
-                        .fetch_all(&pool)
-                        .await
+                        if let Ok(products) = sqlx::query("SELECT name, description, price FROM products WHERE tenant_id = $1")
+                            .bind(tenant_id.to_string())
+                            .fetch_all(&pool)
+                            .await
                         {
                             use sqlx::Row;
                             for p in products {
@@ -468,61 +370,33 @@ impl Department for MarketingAgent {
                                 // Price could be i32, i64, f64. Often it's stored as numeric/decimal or integer cents.
                                 // In this DB, let's try i32 first, fallback to 0.
                                 let p_price: i32 = p.try_get("price").unwrap_or(0);
-                                products_desc.push_str(&format!(
-                                    "{} - {}. ",
-                                    name,
-                                    desc.unwrap_or_default()
-                                ));
+                                products_desc.push_str(&format!("{} - {}. ", name, desc.unwrap_or_default()));
                                 if price == 0.0 {
                                     price = p_price as f64;
                                 }
                             }
                         }
 
-                        let (_seo_title, _seo_desc, seo_schema) = match seo_client
-                            .generate_seo_metadata("Store", &products_desc, "Store", price)
-                            .await
-                        {
+                        let (_seo_title, _seo_desc, seo_schema) = match seo_client.generate_seo_metadata("Store", &products_desc, "Store", price).await {
                             Ok(res) => res,
                             Err(e) => {
                                 tracing::warn!("Failed to generate SEO metadata: {}", e);
-                                (
-                                    "Store".to_string(),
-                                    "A great store".to_string(),
-                                    serde_json::json!({}),
-                                )
-                            }
+                                ("Store".to_string(), "A great store".to_string(), serde_json::json!({}))
+                            },
                         };
 
                         let sites = if let Ok(s_id) = uuid::Uuid::parse_str(&site_id_str) {
                             vec![s_id]
                         } else {
-                            crate::builder::db::list_sites(&pool, tenant_id)
-                                .await
-                                .unwrap_or_default()
-                                .into_iter()
-                                .map(|s| s.id)
-                                .collect()
+                            crate::builder::db::list_sites(&pool, tenant_id).await.unwrap_or_default().into_iter().map(|s| s.id).collect()
                         };
 
                         for s_id in sites {
                             // Update pages with SEO metadata
-                            if let Ok(pages) =
-                                crate::builder::db::list_pages(&pool, tenant_id, s_id).await
-                            {
+                            if let Ok(pages) = crate::builder::db::list_pages(&pool, tenant_id, s_id).await {
                                 for page in pages {
-                                    if let Err(e) = crate::builder::db::update_page_seo_metadata(
-                                        &pool,
-                                        tenant_id,
-                                        page.id,
-                                        seo_schema.clone(),
-                                    )
-                                    .await
-                                    {
-                                        tracing::error!(
-                                            "Failed to update page SEO metadata: {}",
-                                            e
-                                        );
+                                    if let Err(e) = crate::builder::db::update_page_seo_metadata(&pool, tenant_id, page.id, seo_schema.clone()).await {
+                                        tracing::error!("Failed to update page SEO metadata: {}", e);
                                     }
                                 }
                             }
@@ -531,15 +405,7 @@ impl Department for MarketingAgent {
                             let cache = crate::builder::edge::get_edge_cache();
                             let locale = "en-US"; // Simple assumption, robust logic could query site locale
                             let cache_key = format!("edge_site_{}_{}_{}", tenant_id, s_id, locale);
-                            if let Err(e) = crate::builder::edge::regenerate_cache(
-                                pool.clone(),
-                                tenant_id,
-                                s_id,
-                                cache_key,
-                                cache,
-                            )
-                            .await
-                            {
+                            if let Err(e) = crate::builder::edge::regenerate_cache(pool.clone(), tenant_id, s_id, cache_key, cache).await {
                                 tracing::error!("Failed to regenerate edge cache: {:?}", e);
                             }
                         }
@@ -547,37 +413,27 @@ impl Department for MarketingAgent {
                 });
             }
 
-            return self
-                .orchestrator()?
-                .execute_action(
-                    DepartmentType::Marketing,
-                    "Trigger Agentic SEO Pre-rendering".to_string(),
-                    event.tenant_id.clone(),
-                    ActionRisk::AutoExecute,
-                    payload,
-                )
-                .await
-                .map(|_| ());
+            return self.orchestrator()?.execute_action(
+                DepartmentType::Marketing,
+                "Trigger Agentic SEO Pre-rendering".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                payload,
+            ).await.map(|_| ());
         }
 
         let risk = ActionRisk::DraftForReview;
 
+
         if event.event_type == "tenant.job.completed" {
-            let service_name = event
-                .payload
-                .get("service_name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Service");
+            let service_name = event.payload.get("service_name").and_then(|v| v.as_str()).unwrap_or("Service");
             let media = event.payload.get("media").and_then(|v| v.as_array());
 
             if let Some(media_array) = media {
                 if !media_array.is_empty() {
                     let media_url = media_array[0].as_str().unwrap_or("");
 
-                    let draft_copy = format!(
-                        "Beautiful new {} completed recently. Completed on time and on budget.",
-                        service_name.to_lowercase()
-                    );
+                    let draft_copy = format!("Beautiful new {} completed recently. Completed on time and on budget.", service_name.to_lowercase());
 
                     let payload = serde_json::json!({
                         "feature_type": "case_study",
@@ -588,32 +444,20 @@ impl Department for MarketingAgent {
 
                     let description = format!("Draft portfolio case study for {}", service_name);
 
-                    return self
-                        .orchestrator()?
-                        .execute_action(
-                            DepartmentType::Marketing,
-                            description,
-                            event.tenant_id.clone(),
-                            risk,
-                            payload,
-                        )
-                        .await
-                        .map(|_| ());
+                    return self.orchestrator()?.execute_action(
+                        DepartmentType::Marketing,
+                        description,
+                        event.tenant_id.clone(),
+                        risk,
+                        payload,
+                    ).await.map(|_| ());
                 }
             }
         }
 
         if event.event_type == "tenant.inventory.updated" {
-            let product_name = event
-                .payload
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("New Product");
-            let description = event
-                .payload
-                .get("description")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
+            let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());
 
             let image_url = if let Some(imgs) = images {
@@ -638,42 +482,17 @@ impl Department for MarketingAgent {
             });
 
             let action_desc = format!("Draft Instagram post for {}", product_name);
-            return self
-                .orchestrator()?
-                .execute_action(
-                    DepartmentType::Marketing,
-                    action_desc,
-                    event.tenant_id.clone(),
-                    risk,
-                    payload,
-                )
-                .await
-                .map(|_| ());
+            return self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
         }
 
         if event.event_type == "loyalty.points_awarded" {
-            let customer_id = event
-                .payload
-                .get("customer_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Customer");
-            let points = event
-                .payload
-                .get("points")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
-            let total_points = event
-                .payload
-                .get("total_points")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0);
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let points = event.payload.get("points").and_then(|v| v.as_i64()).unwrap_or(0);
+            let total_points = event.payload.get("total_points").and_then(|v| v.as_i64()).unwrap_or(0);
 
             // Mock threshold logic: check if total points reached a certain tier (e.g. 50, 100)
             if total_points >= 50 && total_points - points < 50 {
-                let draft_copy = format!(
-                    "Hey {}! You just earned a free coffee (or equivalent reward)! Reply 'Claim' to use it on your next pre-order.",
-                    customer_id
-                );
+                let draft_copy = format!("Hey {}! You just earned a free coffee (or equivalent reward)! Reply 'Claim' to use it on your next pre-order.", customer_id);
 
                 let payload = serde_json::json!({
                     "feature_type": "loyalty_reward_notification",
@@ -686,57 +505,38 @@ impl Department for MarketingAgent {
                 let description = format!("Send reward notification to customer {}", customer_id);
 
                 // Auto execute the sending of the notification for zero-friction loyalty
-                return self
-                    .orchestrator()?
-                    .execute_action(
-                        DepartmentType::Marketing,
-                        description,
-                        event.tenant_id.clone(),
-                        ActionRisk::DraftForReview,
-                        payload,
-                    )
-                    .await
-                    .map(|_| ());
+                return self.orchestrator()?.execute_action(
+                    DepartmentType::Marketing,
+                    description,
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    payload,
+                ).await.map(|_| ());
             }
 
             return Ok(());
         }
 
-        self.orchestrator()?
-            .execute_action(
-                DepartmentType::Marketing,
-                "Draft social media campaign for trending item".to_string(),
-                event.tenant_id.clone(),
-                risk,
-                event.payload.clone(),
-            )
-            .await
-            .map(|_| ())
+        self.orchestrator()?.execute_action(
+            DepartmentType::Marketing,
+            "Draft social media campaign for trending item".to_string(),
+            event.tenant_id.clone(),
+            risk,
+            event.payload.clone(),
+        ).await.map(|_| ())
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
         None
     }
 
+
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
 
-    async fn request_approval(
-        &self,
-        description: String,
-        tenant_id: String,
-        risk: ActionRisk,
-    ) -> Result<ApprovalRequest, String> {
-        self.orchestrator()?
-            .execute_action(
-                self.department_type(),
-                description.clone(),
-                tenant_id.clone(),
-                risk,
-                serde_json::json!({}),
-            )
-            .await
+    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
+        self.orchestrator()?.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
     }
 }
 
@@ -749,13 +549,14 @@ impl BaseAgent for MarketingAgent {
     fn trigger_type(&self) -> AgentTriggerType {
         AgentTriggerType::EventDriven
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::orchestration::departments::marketing_seo::{RuntimeSeoClient, SeoClient};
     use std::sync::Arc;
+use crate::orchestration::departments::marketing_seo::{SeoClient, RuntimeSeoClient};
 
     struct FixedCopyClient;
     struct FixedImageOptimizer;
@@ -776,8 +577,7 @@ mod tests {
 
     #[tokio::test]
     async fn marketing_agent_uses_injected_copy_client_for_product_captions() {
-        let agent =
-            MarketingAgent::new_for_test(Arc::new(FixedCopyClient), Arc::new(RuntimeSeoClient));
+        let agent = MarketingAgent::new_for_test(Arc::new(FixedCopyClient), Arc::new(RuntimeSeoClient));
 
         let caption = agent
             .draft_product_caption("Ceramic Mug", "Handmade stoneware")
@@ -789,32 +589,21 @@ mod tests {
     struct MockSeoClient;
     #[async_trait::async_trait]
     impl SeoClient for MockSeoClient {
-        async fn generate_seo_metadata(
-            &self,
-            name: &str,
-            description: &str,
-            _item_type: &str,
-            _price: f64,
-        ) -> Result<(String, String, serde_json::Value), String> {
+        async fn generate_seo_metadata(&self, name: &str, description: &str, _item_type: &str, _price: f64) -> Result<(String, String, serde_json::Value), String> {
             Ok((
                 format!("Mock SEO Title for {}", name),
                 format!("Mock SEO Desc for {}", description),
-                serde_json::json!({"mock": true}),
+                serde_json::json!({"mock": true})
             ))
         }
     }
 
     #[tokio::test]
     async fn marketing_agent_uses_injected_seo_client() {
-        let agent =
-            MarketingAgent::new_for_test(Arc::new(FixedCopyClient), Arc::new(MockSeoClient));
+        let agent = MarketingAgent::new_for_test(Arc::new(FixedCopyClient), Arc::new(MockSeoClient));
 
         // Test SEO client exists and can be called directly
-        let res = agent
-            .seo_client
-            .generate_seo_metadata("Cake", "Tasty cake", "Product", 10.0)
-            .await
-            .unwrap();
+        let res = agent.seo_client.generate_seo_metadata("Cake", "Tasty cake", "Product", 10.0).await.unwrap();
         assert_eq!(res.0, "Mock SEO Title for Cake");
     }
 
@@ -843,10 +632,7 @@ mod tests {
             std::env::remove_var("MINIMAX_API_KEY");
         }
 
-        assert_eq!(
-            MarketingCopyBackend::from_env(),
-            MarketingCopyBackend::Local
-        );
+        assert_eq!(MarketingCopyBackend::from_env(), MarketingCopyBackend::Local);
 
         unsafe {
             match old_provider {

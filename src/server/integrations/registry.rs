@@ -1,5 +1,5 @@
-use chrono::Utc;
 use std::sync::RwLock;
+use chrono::Utc;
 
 pub struct IntegrationCredentials {
     pub bot_token: String,
@@ -10,174 +10,40 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
-    messages:
-        RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::ChatMessage>>>,
-    instances:
-        RwLock<std::collections::HashMap<String, ::server_ohc::orchestration::IntegrationInstance>>,
-    pull_requests:
-        RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::PullRequest>>>,
+    messages: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::ChatMessage>>>,
+    instances: RwLock<std::collections::HashMap<String, ::server_ohc::orchestration::IntegrationInstance>>,
+    pull_requests: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::PullRequest>>>,
     issues: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
-    twilio_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>,
-        >,
-    >,
-    nats_clients: std::sync::Arc<
-        std::sync::RwLock<
-            std::collections::HashMap<
-                String,
-                std::sync::Arc<crate::integrations::nats::provider::NatsProvider>,
-            >,
-        >,
-    >,
-    meta_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::meta::provider::MetaProvider>,
-        >,
-    >,
-    calendly_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>,
-        >,
-    >,
-    cal_com_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>,
-        >,
-    >,
-    google_calendar_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>,
-        >,
-    >,
-    mailchimp_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>,
-        >,
-    >,
-    mercadopago_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>,
-        >,
-    >,
-    alipay_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>,
-        >,
-    >,
-    pub razorpay_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::razorpay::provider::RazorpayProvider>,
-        >,
-    >,
-    pub manychat_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>,
-        >,
-    >,
-    shippo_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>,
-        >,
-    >,
-    zoom_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>,
-        >,
-    >,
-    jitsi_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>,
-        >,
-    >,
-    ayrshare_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>,
-        >,
-    >,
-    listmonk_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>,
-        >,
-    >,
-    doordash_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::doordash::provider::DoorDashProvider>,
-        >,
-    >,
-    easypost_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>,
-        >,
-    >,
-    resend_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::resend::provider::ResendProvider>,
-        >,
-    >,
-    sendgrid_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>,
-        >,
-    >,
-    taxjar_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::taxjar::provider::TaxJarProvider>,
-        >,
-    >,
+    twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
+    nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
+    meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
+    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
+    google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
+    mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
+    mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
+    alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
+    pub razorpay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::razorpay::provider::RazorpayProvider>>>,
+    pub manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
+    shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
+    zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
+    jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
+    ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
+    listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
+    doordash_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::doordash::provider::DoorDashProvider>>>,
+    easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
+    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
+    sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
+    taxjar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::taxjar::provider::TaxJarProvider>>>,
     #[cfg(not(ohc_bazel))]
-    slack_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::slack::provider::SlackProvider>,
-        >,
-    >,
+    slack_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::slack::provider::SlackProvider>>>,
     #[cfg(not(ohc_bazel))]
-    google_analytics_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<
-                crate::integrations::google_analytics::provider::GoogleAnalyticsProvider,
-            >,
-        >,
-    >,
+    google_analytics_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_analytics::provider::GoogleAnalyticsProvider>>>,
     #[cfg(not(ohc_bazel))]
-    github_api_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<crate::integrations::github_api::provider::GitHubProvider>,
-        >,
-    >,
+    github_api_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::github_api::provider::GitHubProvider>>>,
     #[cfg(not(ohc_bazel))]
-    outlook_calendar_clients: std::sync::RwLock<
-        std::collections::HashMap<
-            String,
-            std::sync::Arc<
-                crate::integrations::outlook_calendar::provider::OutlookCalendarProvider,
-            >,
-        >,
-    >,
+    outlook_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::outlook_calendar::provider::OutlookCalendarProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -185,16 +51,13 @@ impl IntegrationsRegistry {
         let mut instances = std::collections::HashMap::new();
         for provider in crate::integrations::catalog::get_catalog() {
             let id = provider.metadata.id.clone();
-            instances.insert(
-                id.clone(),
-                ::server_ohc::orchestration::IntegrationInstance {
-                    id: id.clone(),
-                    name: provider.metadata.name.clone(),
-                    category: provider.metadata.category.clone(),
-                    status: "disconnected".to_string(),
-                    base_url: provider.metadata.base_url.clone(),
-                },
-            );
+            instances.insert(id.clone(), ::server_ohc::orchestration::IntegrationInstance {
+                id: id.clone(),
+                name: provider.metadata.name.clone(),
+                category: provider.metadata.category.clone(),
+                status: "disconnected".to_string(),
+                base_url: provider.metadata.base_url.clone(),
+            });
         }
 
         IntegrationsRegistry {
@@ -204,9 +67,7 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            nats_clients: std::sync::Arc::new(std::sync::RwLock::new(
-                std::collections::HashMap::new(),
-            )),
+            nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -238,33 +99,19 @@ impl IntegrationsRegistry {
     }
 
     // Chat methods
-    pub fn test_connection(
-        &self,
-        integration_id: &str,
-        _creds: ::server_ohc::orchestration::ChatTestRequest,
-    ) -> Result<(), String> {
+    pub fn test_connection(&self, integration_id: &str, _creds: ::server_ohc::orchestration::ChatTestRequest) -> Result<(), String> {
         if integration_id.is_empty() {
             return Err("integrationId is required".to_string());
         }
         Ok(())
     }
 
-    pub fn chat_messages(
-        &self,
-        integration_id: &str,
-    ) -> Vec<::server_ohc::orchestration::ChatMessage> {
+    pub fn chat_messages(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::ChatMessage> {
         let msgs = self.messages.read().unwrap();
         msgs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn send_chat_message(
-        &self,
-        integration_id: &str,
-        channel: &str,
-        from_agent: &str,
-        content: &str,
-        thread_id: &str,
-    ) -> Result<::server_ohc::orchestration::ChatMessage, String> {
+    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<::server_ohc::orchestration::ChatMessage, String> {
         let msg = ::server_ohc::orchestration::ChatMessage {
             id: format!("msg-{}", Utc::now().timestamp()),
             channel: channel.to_string(),
@@ -275,133 +122,92 @@ impl IntegrationsRegistry {
         };
 
         let mut msgs = self.messages.write().unwrap();
-        msgs.entry(integration_id.to_string())
-            .or_insert_with(Vec::new)
-            .push(msg.clone());
+        msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(msg.clone());
 
         // Attempt real delivery
         let creds_map = self.credentials.read().unwrap();
         if let Some(creds) = creds_map.get(integration_id) {
-            let text = format!("[{}] {}", from_agent, content);
-            match integration_id {
-                "telegram" => {
-                    if !creds.bot_token.is_empty() {
-                        let chat_id = if !creds.chat_id.is_empty() {
-                            creds.chat_id.clone()
-                        } else {
-                            channel.to_string()
-                        };
-                        tokio::spawn(send_telegram_message(
-                            creds.bot_token.clone(),
-                            chat_id,
-                            text,
-                        ));
-                    }
-                }
-                "discord" => {
-                    if !creds.webhook_url.is_empty() {
-                        tokio::spawn(send_discord_webhook(
-                            creds.webhook_url.clone(),
-                            from_agent.to_string(),
-                            content.to_string(),
-                        ));
-                    }
-                }
-                "slack" => {
-                    if !creds.bot_token.is_empty() {
-                        #[cfg(not(ohc_bazel))]
-                        {
-                            let channel_id = if !creds.chat_id.is_empty() {
-                                creds.chat_id.clone()
-                            } else {
-                                channel.to_string()
-                            };
-                            let text = format!("[{}] {}", from_agent, content);
-                            let clients = self.slack_clients.read().unwrap();
-                            if let Some(client) = clients.get(integration_id) {
-                                let client = client.clone();
-                                tokio::spawn(async move {
-                                    if let Err(e) = client.send_message(&channel_id, &text).await {
-                                        ::server_telemetry::record_error_signal(
-                                            "[bug] Failed to send Slack message",
-                                        );
-                                        tracing::warn!("Failed to send Slack message: {}", e);
-                                    }
-                                });
-                            }
-                        }
-                    }
-                }
-                "twilio" => {
-                    if !creds.from_phone.is_empty() {
-                        let to = if !creds.chat_id.is_empty() {
-                            creds.chat_id.clone()
-                        } else {
-                            channel.to_string()
-                        };
-                        let from = creds.from_phone.clone();
-                        let text = content.to_string();
+             let text = format!("[{}] {}", from_agent, content);
+             match integration_id {
+                 "telegram" => {
+                     if !creds.bot_token.is_empty() {
+                         let chat_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         tokio::spawn(send_telegram_message(creds.bot_token.clone(), chat_id, text));
+                     }
+                 }
+                  "discord" => {
+                      if !creds.webhook_url.is_empty() {
+                           tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
+                      }
+                  }
+                  "slack" => {
+                      if !creds.bot_token.is_empty() {
+                          #[cfg(not(ohc_bazel))]
+                          {
+                              let channel_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                              let text = format!("[{}] {}", from_agent, content);
+                              let clients = self.slack_clients.read().unwrap();
+                              if let Some(client) = clients.get(integration_id) {
+                                  let client = client.clone();
+                                  tokio::spawn(async move {
+                                      if let Err(e) = client.send_message(&channel_id, &text).await {
+                                          ::server_telemetry::record_error_signal("[bug] Failed to send Slack message");
+                                          tracing::warn!("Failed to send Slack message: {}", e);
+                                      }
+                                  });
+                              }
+                          }
+                      }
+                  }
+                 "twilio" => {
+                     if !creds.from_phone.is_empty() {
+                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         let from = creds.from_phone.clone();
+                         let text = content.to_string();
 
-                        let clients = self.twilio_clients.read().unwrap();
-                        if let Some(client) = clients.get(integration_id) {
-                            let client = client.clone();
-                            tokio::spawn(async move {
-                                let result = if to.starts_with("whatsapp:")
-                                    || from.starts_with("whatsapp:")
-                                {
+                         let clients = self.twilio_clients.read().unwrap();
+                         if let Some(client) = clients.get(integration_id) {
+                             let client = client.clone();
+                             tokio::spawn(async move {
+                                let result = if to.starts_with("whatsapp:") || from.starts_with("whatsapp:") {
                                     client.send_whatsapp(&to, &from, &text).await
                                 } else {
                                     client.send_sms(&to, &from, &text).await
                                 };
                                 if let Err(e) = result {
-                                    ::server_telemetry::record_error_signal(
-                                        "[bug] Failed to send Twilio SMS",
-                                    );
-                                    tracing::warn!("Failed to send Twilio SMS: {}", e);
-                                }
-                            });
-                        }
-                    }
-                }
-                "meta" | "whatsapp" | "whatsapp_cloud_api" => {
-                    if !creds.api_token.is_empty() {
-                        let to = if !creds.chat_id.is_empty() {
-                            creds.chat_id.clone()
-                        } else {
-                            channel.to_string()
-                        };
-                        let text = content.to_string();
+                                     ::server_telemetry::record_error_signal("[bug] Failed to send Twilio SMS");
+                                     tracing::warn!("Failed to send Twilio SMS: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
+                 "meta" | "whatsapp" | "whatsapp_cloud_api" => {
+                     if !creds.api_token.is_empty() {
+                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         let text = content.to_string();
 
-                        let client = {
-                            let clients = self.meta_clients.read().unwrap();
-                            clients.get(integration_id).cloned()
-                        };
-                        if let Some(client) = client {
-                            let client = client.clone();
-                            let is_whatsapp = integration_id == "whatsapp"
-                                || integration_id == "whatsapp_cloud_api";
-                            tokio::spawn(async move {
-                                // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
-                                // Otherwise we default to whatsapp
-                                let platform = if is_whatsapp || to.contains("whatsapp") {
-                                    "whatsapp"
-                                } else if to.contains("instagram") {
-                                    "instagram"
-                                } else {
-                                    "facebook"
-                                };
-                                if let Err(e) = client.send_message(platform, &to, &text).await {
-                                    ::server_telemetry::record_error_signal(
-                                        "[bug] Failed to send Meta message",
-                                    );
-                                    tracing::warn!("Failed to send Meta message: {}", e);
-                                }
-                            });
-                        }
-                    }
-                }
-                _ => {}
-            }
+                         let client = {
+                             let clients = self.meta_clients.read().unwrap();
+                             clients.get(integration_id).cloned()
+                         };
+                         if let Some(client) = client {
+                             let client = client.clone();
+                             let is_whatsapp = integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api";
+                             tokio::spawn(async move {
+                                 // For this naive integration, we assume channel might specify the platform like "whatsapp", "instagram"
+                                 // Otherwise we default to whatsapp
+                                 let platform = if is_whatsapp || to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
+                                 if let Err(e) = client.send_message(platform, &to, &text).await {
+                                     ::server_telemetry::record_error_signal("[bug] Failed to send Meta message");
+                                     tracing::warn!("Failed to send Meta message: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
+                 _ => {}
+             }
         }
 
         Ok(msg)
@@ -413,24 +219,12 @@ impl IntegrationsRegistry {
         insts.values().cloned().collect()
     }
 
-    pub fn instances_by_category(
-        &self,
-        category: &str,
-    ) -> Vec<::server_ohc::orchestration::IntegrationInstance> {
+    pub fn instances_by_category(&self, category: &str) -> Vec<::server_ohc::orchestration::IntegrationInstance> {
         let insts = self.instances.read().unwrap();
-        insts
-            .values()
-            .filter(|i| i.category == category)
-            .cloned()
-            .collect()
+        insts.values().filter(|i| i.category == category).cloned().collect()
     }
 
-    pub fn connect(
-        &self,
-        integration_id: &str,
-        base_url: &str,
-        creds: ::server_ohc::orchestration::ConnectIntegrationRequest,
-    ) -> Result<::server_ohc::orchestration::IntegrationInstance, String> {
+    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ::server_ohc::orchestration::ConnectIntegrationRequest) -> Result<::server_ohc::orchestration::IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
         let inst = ::server_ohc::orchestration::IntegrationInstance {
             id: integration_id.to_string(),
@@ -442,34 +236,23 @@ impl IntegrationsRegistry {
         insts.insert(integration_id.to_string(), inst.clone());
 
         let mut credentials = self.credentials.write().unwrap();
-        credentials.insert(
-            integration_id.to_string(),
-            IntegrationCredentials {
-                bot_token: creds.bot_token.clone(),
-                chat_id: creds.chat_id.clone(),
-                webhook_url: creds.webhook_url.clone(),
-                api_token: creds.api_token.clone(),
-                from_phone: creds.from_phone.clone(),
-            },
-        );
+        credentials.insert(integration_id.to_string(), IntegrationCredentials {
+            bot_token: creds.bot_token.clone(),
+            chat_id: creds.chat_id.clone(),
+            webhook_url: creds.webhook_url.clone(),
+            api_token: creds.api_token.clone(),
+            from_phone: creds.from_phone.clone(),
+        });
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(
-                    creds.bot_token.clone(),
-                    creds.api_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();
             let nats_clients = std::sync::Arc::clone(&self.nats_clients);
             let integration_id_clone = integration_id.to_string();
             tokio::spawn(async move {
-                if let Ok(provider) =
-                    crate::integrations::nats::provider::NatsProvider::new(&base_url_clone).await
-                {
+                if let Ok(provider) = crate::integrations::nats::provider::NatsProvider::new(&base_url_clone).await {
                     let mut clients = nats_clients.write().unwrap();
                     clients.insert(integration_id_clone, std::sync::Arc::new(provider));
                 }
@@ -477,278 +260,121 @@ impl IntegrationsRegistry {
         }
         if integration_id == "meta" {
             let mut clients = self.meta_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                    creds.api_token.clone(),
-                    Some(if !creds.chat_id.is_empty() {
-                        creds.chat_id.clone()
-                    } else {
-                        creds.from_phone.clone()
-                    }),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
+                creds.api_token.clone(),
+                Some(if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { creds.from_phone.clone() })
+            )));
         }
         if integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
             let mut clients = self.meta_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                    creds.api_token.clone(),
-                    Some(if !creds.chat_id.is_empty() {
-                        creds.chat_id.clone()
-                    } else {
-                        creds.from_phone.clone()
-                    }),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
+                creds.api_token.clone(),
+                Some(if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { creds.from_phone.clone() })
+            )));
         }
         if integration_id == "calendly" {
             let mut clients = self.calendly_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::calendly::provider::CalendlyProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::calendly::provider::CalendlyProvider::new(creds.api_token.clone())));
         }
         if integration_id == "cal_com" {
             let mut clients = self.cal_com_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(
-                    creds.api_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
         }
         if integration_id == "google_calendar" {
             let mut clients = self.google_calendar_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(creds.api_token.clone())));
         }
         if integration_id == "mailchimp" {
             let mut clients = self.mailchimp_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::mailchimp::provider::MailchimpProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mailchimp::provider::MailchimpProvider::new(creds.api_token.clone())));
         }
         if integration_id == "alipay" {
             let mut clients = self.alipay_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::alipay::provider::AlipayProvider::new(
-                    creds.api_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::alipay::provider::AlipayProvider::new(creds.api_token.clone())));
         }
         if integration_id == "mercadopago" {
             let mut clients = self.mercadopago_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::mercadopago::provider::MercadoPagoProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mercadopago::provider::MercadoPagoProvider::new(creds.api_token.clone())));
         }
 
         if integration_id == "razorpay" {
             let mut clients = self.razorpay_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::razorpay::provider::RazorpayProvider::new(
-                        creds.api_token.clone(),
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::razorpay::provider::RazorpayProvider::new(creds.api_token.clone(), creds.api_token.clone())));
         }
         if integration_id == "shippo" {
             let mut clients = self.shippo_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(
-                    creds.api_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(creds.api_token.clone())));
         }
         if integration_id == "taxjar" {
             let mut clients = self.taxjar_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::taxjar::provider::TaxJarProvider::new(
-                    creds.api_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::taxjar::provider::TaxJarProvider::new(creds.api_token.clone())));
         }
         if integration_id == "zoom" {
             let mut clients = self.zoom_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::zoom::provider::ZoomProvider::new(
-                    creds.api_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::zoom::provider::ZoomProvider::new(creds.api_token.clone())));
         }
         if integration_id == "jitsi" {
             let mut clients = self.jitsi_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(
-                    creds.api_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(creds.api_token.clone())));
         }
         if integration_id == "ayrshare" {
             let mut clients = self.ayrshare_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::ayrshare::provider::AyrshareProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::ayrshare::provider::AyrshareProvider::new(creds.api_token.clone())));
         }
         if integration_id == "listmonk" {
             let mut clients = self.listmonk_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::listmonk::provider::ListmonkProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::listmonk::provider::ListmonkProvider::new(creds.api_token.clone())));
         }
         if integration_id == "doordash" {
             let mut clients = self.doordash_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::doordash::provider::DoorDashProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::doordash::provider::DoorDashProvider::new(creds.api_token.clone())));
         }
         if integration_id == "easypost" {
             let mut clients = self.easypost_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::easypost::provider::EasyPostProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::easypost::provider::EasyPostProvider::new(creds.api_token.clone())));
         }
 
         if integration_id == "manychat" {
             let mut clients = self.manychat_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::manychat::provider::ManychatProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
         }
 
         if integration_id == "resend" {
             let mut clients = self.resend_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(
-                    creds.api_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
         }
 
         if integration_id == "sendgrid" {
             let mut clients = self.sendgrid_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::sendgrid::provider::SendGridProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
         }
 
         #[cfg(not(ohc_bazel))]
         if integration_id == "slack" {
             let mut clients = self.slack_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(crate::integrations::slack::provider::SlackProvider::new(
-                    creds.bot_token.clone(),
-                )),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::slack::provider::SlackProvider::new(creds.bot_token.clone())));
         }
 
         #[cfg(not(ohc_bazel))]
         if integration_id == "google_analytics" {
             let mut clients = self.google_analytics_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::google_analytics::provider::GoogleAnalyticsProvider::new(
-                        creds.api_token.clone(),
-                        creds.chat_id.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_analytics::provider::GoogleAnalyticsProvider::new(creds.api_token.clone(), creds.chat_id.clone())));
         }
         #[cfg(not(ohc_bazel))]
         if integration_id == "github_api" {
             let mut clients = self.github_api_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::github_api::provider::GitHubProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::github_api::provider::GitHubProvider::new(creds.api_token.clone())));
         }
         #[cfg(not(ohc_bazel))]
         if integration_id == "outlook_calendar" {
             let mut clients = self.outlook_calendar_clients.write().unwrap();
-            clients.insert(
-                integration_id.to_string(),
-                std::sync::Arc::new(
-                    crate::integrations::outlook_calendar::provider::OutlookCalendarProvider::new(
-                        creds.api_token.clone(),
-                    ),
-                ),
-            );
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::outlook_calendar::provider::OutlookCalendarProvider::new(creds.api_token.clone())));
         }
 
         Ok(inst)
     }
 
-    pub fn disconnect(
-        &self,
-        integration_id: &str,
-    ) -> Result<::server_ohc::orchestration::IntegrationInstance, String> {
+    pub fn disconnect(&self, integration_id: &str) -> Result<::server_ohc::orchestration::IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
         if let Some(inst) = insts.get_mut(integration_id) {
             inst.status = "disconnected".to_string();
@@ -757,24 +383,12 @@ impl IntegrationsRegistry {
         Err("integration not found".to_string())
     }
 
-    pub fn pull_requests(
-        &self,
-        integration_id: &str,
-    ) -> Vec<::server_ohc::orchestration::PullRequest> {
+    pub fn pull_requests(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::PullRequest> {
         let prs = self.pull_requests.read().unwrap();
         prs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn create_pull_request(
-        &self,
-        integration_id: &str,
-        _repository: &str,
-        title: &str,
-        body: &str,
-        source_branch: &str,
-        target_branch: &str,
-        created_by: &str,
-    ) -> Result<::server_ohc::orchestration::PullRequest, String> {
+    pub fn create_pull_request(&self, integration_id: &str, _repository: &str, title: &str, body: &str, source_branch: &str, target_branch: &str, created_by: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
         let pr = ::server_ohc::orchestration::PullRequest {
             id: format!("pr-{}", Utc::now().timestamp()),
             title: title.to_string(),
@@ -787,17 +401,12 @@ impl IntegrationsRegistry {
         };
 
         let mut prs = self.pull_requests.write().unwrap();
-        prs.entry(integration_id.to_string())
-            .or_insert_with(Vec::new)
-            .push(pr.clone());
+        prs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(pr.clone());
 
         Ok(pr)
     }
 
-    pub fn merge_pull_request(
-        &self,
-        pr_id: &str,
-    ) -> Result<::server_ohc::orchestration::PullRequest, String> {
+    pub fn merge_pull_request(&self, pr_id: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
         let mut prs = self.pull_requests.write().unwrap();
         for v in prs.values_mut() {
             if let Some(pr) = v.iter_mut().find(|p| p.id == pr_id) {
@@ -808,10 +417,7 @@ impl IntegrationsRegistry {
         Err("pr not found".to_string())
     }
 
-    pub fn close_pull_request(
-        &self,
-        pr_id: &str,
-    ) -> Result<::server_ohc::orchestration::PullRequest, String> {
+    pub fn close_pull_request(&self, pr_id: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
         let mut prs = self.pull_requests.write().unwrap();
         for v in prs.values_mut() {
             if let Some(pr) = v.iter_mut().find(|p| p.id == pr_id) {
@@ -827,16 +433,7 @@ impl IntegrationsRegistry {
         issues.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn create_issue(
-        &self,
-        integration_id: &str,
-        _project: &str,
-        title: &str,
-        description: &str,
-        created_by: &str,
-        priority: &str,
-        labels: Vec<String>,
-    ) -> Result<::server_ohc::orchestration::Issue, String> {
+    pub fn create_issue(&self, integration_id: &str, _project: &str, title: &str, description: &str, created_by: &str, priority: &str, labels: Vec<String>) -> Result<::server_ohc::orchestration::Issue, String> {
         let issue = ::server_ohc::orchestration::Issue {
             id: format!("issue-{}", Utc::now().timestamp()),
             title: title.to_string(),
@@ -850,19 +447,12 @@ impl IntegrationsRegistry {
         };
 
         let mut issues = self.issues.write().unwrap();
-        issues
-            .entry(integration_id.to_string())
-            .or_insert_with(Vec::new)
-            .push(issue.clone());
+        issues.entry(integration_id.to_string()).or_insert_with(Vec::new).push(issue.clone());
 
         Ok(issue)
     }
 
-    pub fn update_issue_status(
-        &self,
-        issue_id: &str,
-        status: &str,
-    ) -> Result<::server_ohc::orchestration::Issue, String> {
+    pub fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<::server_ohc::orchestration::Issue, String> {
         let mut issues = self.issues.write().unwrap();
         for v in issues.values_mut() {
             if let Some(issue) = v.iter_mut().find(|i| i.id == issue_id) {
@@ -873,11 +463,7 @@ impl IntegrationsRegistry {
         Err("issue not found".to_string())
     }
 
-    pub fn assign_issue(
-        &self,
-        issue_id: &str,
-        assignee: &str,
-    ) -> Result<::server_ohc::orchestration::Issue, String> {
+    pub fn assign_issue(&self, issue_id: &str, assignee: &str) -> Result<::server_ohc::orchestration::Issue, String> {
         let mut issues = self.issues.write().unwrap();
         for v in issues.values_mut() {
             if let Some(issue) = v.iter_mut().find(|i| i.id == issue_id) {
@@ -888,12 +474,7 @@ impl IntegrationsRegistry {
         Err("issue not found".to_string())
     }
 
-    pub async fn get_free_busy(
-        &self,
-        integration_id: &str,
-        time_min: &str,
-        time_max: &str,
-    ) -> Result<String, String> {
+    pub async fn get_free_busy(&self, integration_id: &str, time_min: &str, time_max: &str) -> Result<String, String> {
         let client = {
             if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
@@ -921,12 +502,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn generate_meeting_for_booking(
-        &self,
-        integration_id: &str,
-        booking_id: &str,
-        topic: &str,
-    ) -> Result<String, String> {
+    pub async fn generate_meeting_for_booking(&self, integration_id: &str, booking_id: &str, topic: &str) -> Result<String, String> {
         let client_zoom = {
             if integration_id == "zoom" {
                 let clients = self.zoom_clients.read().unwrap();
@@ -941,13 +517,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn send_whatsapp(
-        &self,
-        integration_id: &str,
-        to: &str,
-        from: &str,
-        body: &str,
-    ) -> Result<(), String> {
+    pub async fn send_whatsapp(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
         if integration_id == "twilio" {
             let client = {
                 let clients = self.twilio_clients.read().unwrap();
@@ -956,10 +526,7 @@ impl IntegrationsRegistry {
             if let Some(c) = client {
                 return c.send_whatsapp(to, from, body).await;
             }
-        } else if integration_id == "meta"
-            || integration_id == "whatsapp"
-            || integration_id == "whatsapp_cloud_api"
-        {
+        } else if integration_id == "meta" || integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
             let client = {
                 let clients = self.meta_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -971,12 +538,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn get_delivery_quote(
-        &self,
-        integration_id: &str,
-        pickup_address: &str,
-        dropoff_address: &str,
-    ) -> Result<crate::integrations::doordash::client::DeliveryQuote, String> {
+    pub async fn get_delivery_quote(&self, integration_id: &str, pickup_address: &str, dropoff_address: &str) -> Result<crate::integrations::doordash::client::DeliveryQuote, String> {
         let client = {
             if integration_id == "doordash" {
                 let clients = self.doordash_clients.read().unwrap();
@@ -991,13 +553,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn dispatch_delivery(
-        &self,
-        integration_id: &str,
-        pickup_address: &str,
-        dropoff_address: &str,
-        order_id: &str,
-    ) -> Result<String, String> {
+    pub async fn dispatch_delivery(&self, integration_id: &str, pickup_address: &str, dropoff_address: &str, order_id: &str) -> Result<String, String> {
         let client = {
             if integration_id == "doordash" {
                 let clients = self.doordash_clients.read().unwrap();
@@ -1007,12 +563,11 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c
-                .dispatch_delivery(pickup_address, dropoff_address, order_id)
-                .await;
+            return c.dispatch_delivery(pickup_address, dropoff_address, order_id).await;
         }
         Err("integration not found or not supported".to_string())
     }
+
 
     pub async fn fetch_conversations(&self, integration_id: &str) -> Result<Vec<String>, String> {
         let client = {
@@ -1044,12 +599,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn sync_customer(
-        &self,
-        integration_id: &str,
-        email: &str,
-        tag: &str,
-    ) -> Result<(), String> {
+    pub async fn sync_customer(&self, integration_id: &str, email: &str, tag: &str) -> Result<(), String> {
         let client = {
             if integration_id == "mailchimp" {
                 let clients = self.mailchimp_clients.read().unwrap();
@@ -1064,12 +614,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn send_campaign(
-        &self,
-        integration_id: &str,
-        audience: &str,
-        body: &str,
-    ) -> Result<(), String> {
+    pub async fn send_campaign(&self, integration_id: &str, audience: &str, body: &str) -> Result<(), String> {
         let client = {
             if integration_id == "mailchimp" {
                 let clients = self.mailchimp_clients.read().unwrap();
@@ -1084,18 +629,9 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn send_message(
-        &self,
-        integration_id: &str,
-        platform: &str,
-        to: &str,
-        body: &str,
-    ) -> Result<(), String> {
+    pub async fn send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
         let client = {
-            if integration_id == "meta"
-                || integration_id == "whatsapp"
-                || integration_id == "whatsapp_cloud_api"
-            {
+            if integration_id == "meta" || integration_id == "whatsapp" || integration_id == "whatsapp_cloud_api" {
                 let clients = self.meta_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
@@ -1108,13 +644,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn send_sms(
-        &self,
-        integration_id: &str,
-        to: &str,
-        from: &str,
-        body: &str,
-    ) -> Result<(), String> {
+    pub async fn send_sms(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
         let client = {
             if integration_id == "twilio" {
                 let clients = self.twilio_clients.read().unwrap();
@@ -1124,30 +654,16 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            let res = if integration_id == "twilio"
-                && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:"))
-            {
+            let res = if integration_id == "twilio" && (to.starts_with("whatsapp:") || from.starts_with("whatsapp:")) {
                 let r = c.send_whatsapp(to, from, body).await;
                 if r.is_ok() {
-                    let _ = ::server_telemetry::record_api_call_cost(
-                        &crate::db::get_pool(),
-                        "unknown",
-                        "twilio_whatsapp",
-                        0.015,
-                    )
-                    .await;
+                    let _ = ::server_telemetry::record_api_call_cost(&crate::db::get_pool(), "unknown", "twilio_whatsapp", 0.015).await;
                 }
                 r
             } else {
                 let r = c.send_sms(to, from, body).await;
                 if r.is_ok() {
-                    let _ = ::server_telemetry::record_api_call_cost(
-                        &crate::db::get_pool(),
-                        "unknown",
-                        "twilio_sms",
-                        0.01,
-                    )
-                    .await;
+                    let _ = ::server_telemetry::record_api_call_cost(&crate::db::get_pool(), "unknown", "twilio_sms", 0.01).await;
                 }
                 r
             };
@@ -1156,13 +672,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn mercadopago_create_payment(
-        &self,
-        integration_id: &str,
-        amount: f64,
-        description: &str,
-        payer_email: &str,
-    ) -> Result<String, String> {
+    pub async fn mercadopago_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
         let client = {
             if integration_id == "mercadopago" {
                 let clients = self.mercadopago_clients.read().unwrap();
@@ -1192,12 +702,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn alipay_create_checkout_preference(
-        &self,
-        integration_id: &str,
-        price_id: &str,
-        tenant_id: &str,
-    ) -> Result<String, String> {
+    pub async fn alipay_create_checkout_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
         let client = {
             if integration_id == "alipay" {
                 let clients = self.alipay_clients.read().unwrap();
@@ -1212,12 +717,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn mercadopago_create_checkout_preference(
-        &self,
-        integration_id: &str,
-        price_id: &str,
-        tenant_id: &str,
-    ) -> Result<String, String> {
+    pub async fn mercadopago_create_checkout_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
         let client = {
             if integration_id == "mercadopago" {
                 let clients = self.mercadopago_clients.read().unwrap();
@@ -1232,12 +732,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn razorpay_create_checkout_preference(
-        &self,
-        integration_id: &str,
-        price_id: &str,
-        tenant_id: &str,
-    ) -> Result<String, String> {
+    pub async fn razorpay_create_checkout_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
         let client = {
             if integration_id == "razorpay" {
                 let clients = self.razorpay_clients.read().unwrap();
@@ -1251,12 +746,7 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
-    pub async fn fetch_rates(
-        &self,
-        integration_id: &str,
-        weight: f64,
-        dimensions: &str,
-    ) -> Result<Vec<crate::integrations::shippo::client::ShippoRate>, String> {
+    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<crate::integrations::shippo::client::ShippoRate>, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();
@@ -1271,11 +761,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn purchase_label(
-        &self,
-        integration_id: &str,
-        rate_id: &str,
-    ) -> Result<crate::integrations::shippo::client::PurchaseLabelResponse, String> {
+    pub async fn purchase_label(&self, integration_id: &str, rate_id: &str) -> Result<crate::integrations::shippo::client::PurchaseLabelResponse, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();
@@ -1290,12 +776,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn ayrshare_post_message(
-        &self,
-        integration_id: &str,
-        message: &str,
-        platforms: Vec<&str>,
-    ) -> Result<(), String> {
+    pub async fn ayrshare_post_message(&self, integration_id: &str, message: &str, platforms: Vec<&str>) -> Result<(), String> {
         let client = {
             if integration_id == "ayrshare" {
                 let clients = self.ayrshare_clients.read().unwrap();
@@ -1310,14 +791,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn listmonk_send_campaign(
-        &self,
-        integration_id: &str,
-        list_id: &str,
-        template_id: &str,
-        subject: &str,
-        body: &str,
-    ) -> Result<(), String> {
+    pub async fn listmonk_send_campaign(&self, integration_id: &str, list_id: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
         let client = {
             if integration_id == "listmonk" {
                 let clients = self.listmonk_clients.read().unwrap();
@@ -1332,11 +806,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn mercadopago_handle_webhook(
-        &self,
-        integration_id: &str,
-        payload: &str,
-    ) -> Result<(), String> {
+    pub async fn mercadopago_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
         let client = {
             if integration_id == "mercadopago" {
                 let clients = self.mercadopago_clients.read().unwrap();
@@ -1351,13 +821,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn easypost_create_shipment(
-        &self,
-        integration_id: &str,
-        to_address: &str,
-        from_address: &str,
-        parcel_details: &str,
-    ) -> Result<String, String> {
+    pub async fn easypost_create_shipment(&self, integration_id: &str, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
         let client = {
             if integration_id == "easypost" {
                 let clients = self.easypost_clients.read().unwrap();
@@ -1367,18 +831,12 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c
-                .create_shipment(to_address, from_address, parcel_details)
-                .await;
+            return c.create_shipment(to_address, from_address, parcel_details).await;
         }
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn create_meeting(
-        &self,
-        integration_id: &str,
-        topic: &str,
-    ) -> Result<String, String> {
+    pub async fn create_meeting(&self, integration_id: &str, topic: &str) -> Result<String, String> {
         let client_zoom = {
             if integration_id == "zoom" {
                 let clients = self.zoom_clients.read().unwrap();
@@ -1406,13 +864,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn create_event(
-        &self,
-        integration_id: &str,
-        summary: &str,
-        start_time: &str,
-        end_time: &str,
-    ) -> Result<String, String> {
+    pub async fn create_event(&self, integration_id: &str, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
         let client = {
             if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
@@ -1440,11 +892,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn get_booking_link(
-        &self,
-        integration_id: &str,
-        event_type: &str,
-    ) -> Result<String, String> {
+    pub async fn get_booking_link(&self, integration_id: &str, event_type: &str) -> Result<String, String> {
         let client = {
             if integration_id == "cal_com" {
                 let clients = self.cal_com_clients.read().unwrap();
@@ -1459,13 +907,7 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn send_email(
-        &self,
-        integration_id: &str,
-        to: &str,
-        subject: &str,
-        body: &str,
-    ) -> Result<(), String> {
+    pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
         let resend_client = {
             if integration_id == "resend" {
                 let clients = self.resend_clients.read().unwrap();
@@ -1475,9 +917,7 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = resend_client {
-            return c
-                .send_email(to, "noreply@yourdomain.com", subject, body)
-                .await;
+            return c.send_email(to, "noreply@yourdomain.com", subject, body).await;
         }
 
         let client = {
@@ -1491,25 +931,14 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             let res = c.send_email(to, subject, body).await;
             if res.is_ok() {
-                let _ = ::server_telemetry::record_email_send_cost(
-                    &crate::db::get_pool(),
-                    "unknown",
-                    1,
-                )
-                .await;
+                let _ = ::server_telemetry::record_email_send_cost(&crate::db::get_pool(), "unknown", 1).await;
             }
             return res;
         }
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn create_shipment(
-        &self,
-        integration_id: &str,
-        to_address: &str,
-        from_address: &str,
-        parcel_details: &str,
-    ) -> Result<String, String> {
+    pub async fn create_shipment(&self, integration_id: &str, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
         let client = {
             if integration_id == "easypost" {
                 let clients = self.easypost_clients.read().unwrap();
@@ -1519,9 +948,7 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c
-                .create_shipment(to_address, from_address, parcel_details)
-                .await;
+            return c.create_shipment(to_address, from_address, parcel_details).await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -1530,8 +957,7 @@ impl IntegrationsRegistry {
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {
     let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
     let client = reqwest::Client::new();
-    let res = client
-        .post(&url)
+    let res = client.post(&url)
         .json(&serde_json::json!({
             "chat_id": chat_id,
             "text": text,
@@ -1547,8 +973,7 @@ async fn send_telegram_message(bot_token: String, chat_id: String, text: String)
 
 async fn send_discord_webhook(webhook_url: String, username: String, content: String) {
     let client = reqwest::Client::new();
-    let res = client
-        .post(&webhook_url)
+    let res = client.post(&webhook_url)
         .json(&serde_json::json!({
             "username": username,
             "content": content,
@@ -1576,13 +1001,10 @@ mod tests {
             api_token: "test_token".to_string(),
             from_phone: "+1234567890".to_string(),
         };
-        registry
-            .connect("twilio", "https://api.twilio.com", creds)
-            .unwrap();
+        registry.connect("twilio", "https://api.twilio.com", creds).unwrap();
 
-        let msg = registry
-            .send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1")
-            .unwrap();
+        let msg = registry.send_chat_message("twilio", "+0987654321", "agent1", "Hello World", "thread1").unwrap();
         assert_eq!(msg.content, "Hello World");
+
     }
 }

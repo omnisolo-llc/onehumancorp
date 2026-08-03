@@ -51,8 +51,7 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
         for row in &mission_rows {
             let id: String = row.try_get("id")?;
             let payload_str: String = row.try_get("payload")?;
-            let parsed_payload: serde_json::Value =
-                serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+            let parsed_payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
             payloads.push(AutoDream {
                 id,
                 entity_type: "agent_mission".to_string(),
@@ -64,8 +63,7 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
             return Ok(());
         }
 
-        let cloud_url = std::env::var("OHC_CLOUD_URL")
-            .unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let sync_url = format!("{}/api/v1/sync/autodream", cloud_url);
 
         let client = reqwest::Client::new();
@@ -98,11 +96,10 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
             for row in embedding_rows {
                 let id: String = row.try_get("id")?;
                 embedding_updates.push(async move {
-                    let res =
-                        sqlx::query("UPDATE embedding_cache SET synced_to_cloud = 1 WHERE id = $1")
-                            .bind(&id)
-                            .execute(pool)
-                            .await;
+                    let res = sqlx::query("UPDATE embedding_cache SET synced_to_cloud = 1 WHERE id = $1")
+                        .bind(&id)
+                        .execute(pool)
+                        .await;
                     res.is_ok()
                 });
             }
@@ -111,31 +108,22 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
             for row in mission_rows {
                 let id: String = row.try_get("id")?;
                 mission_updates.push(async move {
-                    let res =
-                        sqlx::query("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id = $1")
-                            .bind(&id)
-                            .execute(pool)
-                            .await;
+                    let res = sqlx::query("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id = $1")
+                        .bind(&id)
+                        .execute(pool)
+                        .await;
                     res.is_ok()
                 });
             }
 
             let embedding_results = futures::future::join_all(embedding_updates).await;
             for ok in embedding_results {
-                if ok {
-                    synced_embeddings += 1;
-                } else {
-                    failed_embeddings += 1;
-                }
+                if ok { synced_embeddings += 1; } else { failed_embeddings += 1; }
             }
 
             let mission_results = futures::future::join_all(mission_updates).await;
             for ok in mission_results {
-                if ok {
-                    synced_missions += 1;
-                } else {
-                    failed_missions += 1;
-                }
+                if ok { synced_missions += 1; } else { failed_missions += 1; }
             }
         } else {
             failed_embeddings += embedding_rows.len();
@@ -204,9 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_autodream_sync_process_forecast_tick() {
-        unsafe {
-            std::env::set_var("OHC_TEST_BYPASS_HTTP", "1");
-        }
+        unsafe { std::env::set_var("OHC_TEST_BYPASS_HTTP", "1"); }
 
         let pool = SqlitePoolOptions::new()
             .connect("sqlite::memory:")
@@ -290,38 +276,32 @@ mod tests {
         });
 
         // Run sync
-        process_forecast_tick(db)
-            .await
-            .expect("Database URL or operation failed in test");
+        process_forecast_tick(db).await.expect("Database URL or operation failed in test");
 
         // Verify embeddings
-        let unsynced_embeddings: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM embedding_cache WHERE synced_to_cloud = 0")
-                .fetch_one(&pool)
-                .await
-                .expect("Database URL or operation failed in test");
+        let unsynced_embeddings: i64 = sqlx::query_scalar("SELECT count(*) FROM embedding_cache WHERE synced_to_cloud = 0")
+            .fetch_one(&pool)
+            .await
+            .expect("Database URL or operation failed in test");
         assert_eq!(unsynced_embeddings, 0);
 
-        let synced_embeddings: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM embedding_cache WHERE synced_to_cloud = 1")
-                .fetch_one(&pool)
-                .await
-                .expect("Database URL or operation failed in test");
+        let synced_embeddings: i64 = sqlx::query_scalar("SELECT count(*) FROM embedding_cache WHERE synced_to_cloud = 1")
+            .fetch_one(&pool)
+            .await
+            .expect("Database URL or operation failed in test");
         assert_eq!(synced_embeddings, 2);
 
         // Verify missions
-        let unsynced_missions: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = 0")
-                .fetch_one(&pool)
-                .await
-                .expect("Database URL or operation failed in test");
+        let unsynced_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = 0")
+            .fetch_one(&pool)
+            .await
+            .expect("Database URL or operation failed in test");
         assert_eq!(unsynced_missions, 0);
 
-        let synced_missions: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = 1")
-                .fetch_one(&pool)
-                .await
-                .expect("Database URL or operation failed in test");
+        let synced_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE synced_to_cloud = 1")
+            .fetch_one(&pool)
+            .await
+            .expect("Database URL or operation failed in test");
         assert_eq!(synced_missions, 1);
     }
 }

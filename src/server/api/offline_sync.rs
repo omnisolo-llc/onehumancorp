@@ -1,4 +1,4 @@
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{Json, response::IntoResponse, http::StatusCode, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -30,48 +30,34 @@ pub struct OfflineSyncResponse {
     pub failed_count: i32,
 }
 
-async fn validate_token_and_get_tenant(
-    pool: &sqlx::PgPool,
-    headers: &axum::http::HeaderMap,
-) -> Result<(String, String), axum::response::Response> {
+
+async fn validate_token_and_get_tenant(pool: &sqlx::PgPool, headers: &axum::http::HeaderMap) -> Result<(String, String), axum::response::Response> {
     let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok());
     let token = match auth_header {
         Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
         _ => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
     };
 
-    let repo = std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(
-        pool.clone(),
-    ));
+    let repo = std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(pool.clone()));
     let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
 
     let claims = match store.validate_token(token).await {
         Ok(c) => c,
-        Err(_) => {
-            return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response());
-        }
+        Err(_) => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
     };
 
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "default".to_string());
     let agent_id = claims.sub;
 
     Ok((tenant_id, agent_id))
 }
 
 pub async fn offline_sync_handler(
-    State((db, mesh)): State<(
-        sqlx::PgPool,
-        Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>,
-    )>,
+    State((db, mesh)): State<(sqlx::PgPool, Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>)>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<OfflineSyncRequest>,
 ) -> impl IntoResponse {
-    tracing::info!(
-        "Received {} offline mutations for edge sync.",
-        payload.mutations.len()
-    ); // pii-safe
+    tracing::info!("Received {} offline mutations for edge sync.", payload.mutations.len()); // pii-safe
 
     let (tenant_id, _) = match validate_token_and_get_tenant(&db, &headers).await {
         Ok(t) => t,
@@ -81,25 +67,14 @@ pub async fn offline_sync_handler(
     if tenant_id.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(OfflineSyncResponse {
-                success: false,
-                failed_count: 0,
-                pending_reconciliation: None,
-            }),
-        )
-            .into_response();
+            Json(OfflineSyncResponse { success: false, failed_count: 0, pending_reconciliation: None }),
+        ).into_response();
     }
 
     let cache = crate::builder::edge::get_edge_cache();
-    cache
-        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
-        .await;
+    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    let mut futures: Vec<
-        std::pin::Pin<
-            Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>,
-        >,
-    > = Vec::new();
+    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>> = Vec::new();
     for mutation in &payload.mutations {
         let mutation = mutation.clone();
         let cache_clone = cache.clone();
@@ -579,14 +554,10 @@ pub async fn offline_sync_handler(
 
     (
         StatusCode::OK,
-        Json(OfflineSyncResponse {
-            success: true,
-            failed_count,
-            pending_reconciliation,
-        }),
-    )
-        .into_response()
+        Json(OfflineSyncResponse { success: true, failed_count, pending_reconciliation }),
+    ).into_response()
 }
+
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct SyncEvent {
@@ -598,7 +569,8 @@ pub struct SyncEvent {
     pub base_version: i64,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug)]
+#[derive(Clone)]
 pub struct SyncEventsRequest {
     pub events: Vec<SyncEvent>,
 }
@@ -625,13 +597,8 @@ pub async fn sync_events_handler(
     if tenant_id.is_empty() {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(SyncEventsResponse {
-                success: false,
-                applied_count: 0,
-                conflict_count: 0,
-            }),
-        )
-            .into_response();
+            Json(SyncEventsResponse { success: false, applied_count: 0, conflict_count: 0 }),
+        ).into_response();
     }
 
     let mut futures = Vec::new();
@@ -782,138 +749,98 @@ pub async fn sync_events_handler(
 
     (
         StatusCode::OK,
-        Json(SyncEventsResponse {
-            success: true,
-            applied_count,
-            conflict_count,
-        }),
-    )
-        .into_response()
+        Json(SyncEventsResponse { success: true, applied_count, conflict_count }),
+    ).into_response()
 }
+
 
 #[cfg(test)]
 mod tests {
 
     #[tokio::test]
     async fn test_sync_events_success() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options()
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         // Setup test data
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-sync-1', 'Sync Test Tenant 1') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-1'")
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-1'")
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-1'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-1'").execute(&pool).await.unwrap();
 
         let req = SyncEventsRequest {
-            events: vec![SyncEvent {
-                id: "se1".to_string(),
-                entity_id: "test-ent-1".to_string(),
-                entity_type: "test_sync_entity".to_string(),
-                action_type: "update_status".to_string(),
-                payload: serde_json::json!({"status": "completed"}),
-                base_version: 1,
-            }],
+            events: vec![
+                SyncEvent {
+                    id: "se1".to_string(),
+                    entity_id: "test-ent-1".to_string(),
+                    entity_type: "test_sync_entity".to_string(),
+                    action_type: "update_status".to_string(),
+                    payload: serde_json::json!({"status": "completed"}),
+                    base_version: 1,
+                },
+            ],
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert(
-            "x-spiffe-id",
-            "spiffe://ohc/org/tenant-sync-1/agent/x".parse().unwrap(),
-        );
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-1/agent/x".parse().unwrap());
 
-        let response = sync_events_handler(State(pool.clone()), headers.clone(), Json(req))
-            .await
-            .into_response();
+        let response = sync_events_handler(State(pool.clone()), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(body_json["success"], true);
         assert_eq!(body_json["applied_count"], 1);
         assert_eq!(body_json["conflict_count"], 0);
 
-        let (ver,): (i64,) =
-            sqlx::query_as("SELECT version FROM test_sync_entities WHERE id = 'test-ent-1'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let (ver,): (i64,) = sqlx::query_as("SELECT version FROM test_sync_entities WHERE id = 'test-ent-1'")
+            .fetch_one(&pool).await.unwrap();
         assert_eq!(ver, 2);
     }
 
     #[tokio::test]
     async fn test_sync_events_idempotent() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options()
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-sync-2', 'Sync Test Tenant 2') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-2'")
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-2'")
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-2'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-2'").execute(&pool).await.unwrap();
 
         let req = SyncEventsRequest {
-            events: vec![SyncEvent {
-                id: "se2".to_string(),
-                entity_id: "test-ent-2".to_string(),
-                entity_type: "test_sync_entity".to_string(),
-                action_type: "update_status".to_string(),
-                payload: serde_json::json!({"status": "completed"}),
-                base_version: 1,
-            }],
+            events: vec![
+                SyncEvent {
+                    id: "se2".to_string(),
+                    entity_id: "test-ent-2".to_string(),
+                    entity_type: "test_sync_entity".to_string(),
+                    action_type: "update_status".to_string(),
+                    payload: serde_json::json!({"status": "completed"}),
+                    base_version: 1,
+                },
+            ],
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert(
-            "x-spiffe-id",
-            "spiffe://ohc/org/tenant-sync-2/agent/x".parse().unwrap(),
-        );
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-2/agent/x".parse().unwrap());
 
         // First call
-        let response1 =
-            sync_events_handler(State(pool.clone()), headers.clone(), Json(req.clone()))
-                .await
-                .into_response();
+        let response1 = sync_events_handler(State(pool.clone()), headers.clone(), Json(req.clone())).await.into_response();
         assert_eq!(response1.status(), StatusCode::OK);
 
         // Second call
-        let response2 = sync_events_handler(State(pool.clone()), headers.clone(), Json(req))
-            .await
-            .into_response();
+        let response2 = sync_events_handler(State(pool.clone()), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response2.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(response2.into_body(), usize::MAX).await.unwrap();
         let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(body_json["success"], true);
         assert_eq!(body_json["applied_count"], 0);
@@ -922,71 +849,50 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_events_conflict() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options()
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-sync-3', 'Sync Test Tenant 3') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-3'")
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-3'")
-            .execute(&pool)
-            .await
-            .unwrap();
-        sqlx::query("DELETE FROM sync_conflict_queue WHERE tenant_id = 'tenant-sync-3'")
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query("DELETE FROM sync_events WHERE tenant_id = 'tenant-sync-3'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM test_sync_entities WHERE tenant_id = 'tenant-sync-3'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM sync_conflict_queue WHERE tenant_id = 'tenant-sync-3'").execute(&pool).await.unwrap();
 
         // Preset entity with version 5
         sqlx::query("INSERT INTO test_sync_entities (id, tenant_id, version) VALUES ('test-ent-3', 'tenant-sync-3', 5)")
             .execute(&pool).await.unwrap();
 
         let req = SyncEventsRequest {
-            events: vec![SyncEvent {
-                id: "se3".to_string(),
-                entity_id: "test-ent-3".to_string(),
-                entity_type: "test_sync_entity".to_string(),
-                action_type: "update_status".to_string(),
-                payload: serde_json::json!({"status": "completed"}),
-                base_version: 1, // Conflict! DB has 5
-            }],
+            events: vec![
+                SyncEvent {
+                    id: "se3".to_string(),
+                    entity_id: "test-ent-3".to_string(),
+                    entity_type: "test_sync_entity".to_string(),
+                    action_type: "update_status".to_string(),
+                    payload: serde_json::json!({"status": "completed"}),
+                    base_version: 1, // Conflict! DB has 5
+                },
+            ],
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert(
-            "x-spiffe-id",
-            "spiffe://ohc/org/tenant-sync-3/agent/x".parse().unwrap(),
-        );
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-sync-3/agent/x".parse().unwrap());
 
-        let response = sync_events_handler(State(pool.clone()), headers.clone(), Json(req))
-            .await
-            .into_response();
+        let response = sync_events_handler(State(pool.clone()), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(body_json["success"], true);
         assert_eq!(body_json["applied_count"], 0);
         assert_eq!(body_json["conflict_count"], 1);
 
-        let (c_count,): (i64,) =
-            sqlx::query_as("SELECT COUNT(*) FROM sync_conflict_queue WHERE event_id = 'se3'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let (c_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sync_conflict_queue WHERE event_id = 'se3'")
+            .fetch_one(&pool).await.unwrap();
         assert_eq!(c_count, 1);
     }
     use super::*;
@@ -995,36 +901,28 @@ mod tests {
     #[allow(unused_imports)]
     use sqlx::postgres::PgPoolOptions;
 
+
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
-        let pool = crate::db::secure_pg_pool_options()
-            .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://localhost/dummy")
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool, mesh));
 
         let req = OfflineSyncRequest { mutations: vec![] };
         let headers = HeaderMap::new();
 
-        let response = offline_sync_handler(state, headers, Json(req))
-            .await
-            .into_response();
+        let response = offline_sync_handler(state, headers, Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
     async fn test_offline_sync_success_and_negative_guard() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options()
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         // Setup test data
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-offline', 'Offline Test Tenant') ON CONFLICT DO NOTHING")
@@ -1039,11 +937,8 @@ mod tests {
                 device_id TEXT NOT NULL,
                 sync_status TEXT NOT NULL DEFAULT 'SYNCED',
                 pending_reconciliation JSONB DEFAULT '[]'::jsonb
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+            )"
+        ).execute(&pool).await.unwrap();
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS pos_offline_transactions (
@@ -1057,88 +952,71 @@ mod tests {
                 created_at TIMESTAMPTZ,
                 updated_at TIMESTAMPTZ,
                 _sync_status TEXT
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+            )"
+        ).execute(&pool).await.unwrap();
 
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool.clone(), mesh.clone()));
 
         let req = OfflineSyncRequest {
-            mutations: vec![OfflineMutation {
-                timestamp: Some(chrono::Utc::now().to_rfc3339()),
-                transaction_id: "tx1".to_string(),
-                product_id: "prod-offline-1".to_string(),
-                quantity_deducted: 3,
-                amount: Some(1000),
-                payment_method: None,
-                payment_intent_id: None,
-                currency: Some("USD".to_string()),
-                mutation_type: None,
-                payload: None,
-                client_mutation_id: Some("mut1".to_string()),
-            }],
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx1".to_string(),
+                    product_id: "prod-offline-1".to_string(),
+                    quantity_deducted: 3,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: Some("mut1".to_string()),
+                },
+            ],
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert(
-            "x-spiffe-id",
-            "spiffe://ohc/org/tenant-offline/agent/x".parse().unwrap(),
-        );
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline/agent/x".parse().unwrap());
 
-        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req))
-            .await
-            .into_response();
+        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
         let req_over = OfflineSyncRequest {
-            mutations: vec![OfflineMutation {
-                timestamp: Some(chrono::Utc::now().to_rfc3339()),
-                transaction_id: "tx2".to_string(),
-                product_id: "prod-offline-1".to_string(),
-                quantity_deducted: 10,
-                amount: Some(1000),
-                payment_method: None,
-                payment_intent_id: None,
-                currency: Some("USD".to_string()),
-                mutation_type: None,
-                payload: None,
-                client_mutation_id: Some("mut2".to_string()),
-            }],
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx2".to_string(),
+                    product_id: "prod-offline-1".to_string(),
+                    quantity_deducted: 10,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: Some("mut2".to_string()),
+                },
+            ],
         };
 
-        let response2 = offline_sync_handler(state.clone(), headers.clone(), Json(req_over))
-            .await
-            .into_response();
+        let response2 = offline_sync_handler(state.clone(), headers.clone(), Json(req_over)).await.into_response();
         assert_eq!(response2.status(), StatusCode::OK);
 
         // Test with a non-existent product which should fail
         let req_fail = OfflineSyncRequest {
-            mutations: vec![OfflineMutation {
-                timestamp: Some(chrono::Utc::now().to_rfc3339()),
-                transaction_id: "tx3".to_string(),
-                product_id: "prod-offline-nonexistent".to_string(),
-                quantity_deducted: 1,
-                amount: Some(1000),
-                payment_method: None,
-                payment_intent_id: None,
-                currency: Some("USD".to_string()),
-                mutation_type: None,
-                payload: None,
-                client_mutation_id: Some("mut3".to_string()),
-            }],
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx3".to_string(),
+                    product_id: "prod-offline-nonexistent".to_string(),
+                    quantity_deducted: 1,
+                    amount: Some(1000),
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None, client_mutation_id: Some("mut3".to_string()),
+                },
+            ],
         };
 
-        let response_fail = offline_sync_handler(state, headers, Json(req_fail))
-            .await
-            .into_response();
+        let response_fail = offline_sync_handler(state, headers, Json(req_fail)).await.into_response();
         assert_eq!(response_fail.status(), StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response_fail.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(response_fail.into_body(), usize::MAX).await.unwrap();
         let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(body_json["success"], true);
         assert_eq!(body_json["failed_count"], 1);
@@ -1146,16 +1024,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_field_service_mutations() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options()
-            .connect(&database_url)
-            .await
-            .unwrap();
+        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
 
         // Setup test data
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-field-service', 'Field Service Tenant') ON CONFLICT DO NOTHING")
@@ -1166,11 +1040,8 @@ mod tests {
                 client_mutation_id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
                 applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+            )"
+        ).execute(&pool).await.unwrap();
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS department_tasks (
@@ -1180,11 +1051,8 @@ mod tests {
                 event_type TEXT NOT NULL,
                 payload JSONB,
                 status TEXT NOT NULL
-            )",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
+            )"
+        ).execute(&pool).await.unwrap();
 
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
         let state = State((pool.clone(), mesh.clone()));
@@ -1201,15 +1069,12 @@ mod tests {
                     payment_intent_id: None,
                     currency: None,
                     mutation_type: Some("draft_quote".to_string()),
-                    payload: Some(
-                        serde_json::json!({
-                            "customer_name": "John Doe",
-                            "customer_email": "john@example.com",
-                            "total_amount": 5000,
-                            "description": "Pipe fixing"
-                        })
-                        .to_string(),
-                    ),
+                    payload: Some(serde_json::json!({
+                        "customer_name": "John Doe",
+                        "customer_email": "john@example.com",
+                        "total_amount": 5000,
+                        "description": "Pipe fixing"
+                    }).to_string()),
                     client_mutation_id: Some("mut-quote-1".to_string()),
                 },
                 OfflineMutation {
@@ -1222,67 +1087,51 @@ mod tests {
                     payment_intent_id: None,
                     currency: None,
                     mutation_type: Some("agent_intent".to_string()),
-                    payload: Some(
-                        serde_json::json!({
-                            "intent": "update_booking_status",
-                            "booking_id": "booking1",
-                            "status": "COMPLETED"
-                        })
-                        .to_string(),
-                    ),
+                    payload: Some(serde_json::json!({
+                        "intent": "update_booking_status",
+                        "booking_id": "booking1",
+                        "status": "COMPLETED"
+                    }).to_string()),
                     client_mutation_id: Some("mut-intent-1".to_string()),
                 },
             ],
         };
 
         let mut headers = HeaderMap::new();
-        headers.insert(
-            "x-spiffe-id",
-            "spiffe://ohc/org/tenant-field-service/agent/x"
-                .parse()
-                .unwrap(),
-        );
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-field-service/agent/x".parse().unwrap());
 
-        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req))
-            .await
-            .into_response();
+        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
         let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert_eq!(body_json["success"], true);
         assert_eq!(body_json["failed_count"], 0);
 
         // Verify that the idempotency check worked by repeating the same request
         let req_duplicate = OfflineSyncRequest {
-            mutations: vec![OfflineMutation {
-                timestamp: Some(chrono::Utc::now().to_rfc3339()),
-                transaction_id: "tx-quote-1".to_string(),
-                product_id: "".to_string(),
-                quantity_deducted: 0,
-                amount: None,
-                payment_method: None,
-                payment_intent_id: None,
-                currency: None,
-                mutation_type: Some("draft_quote".to_string()),
-                payload: Some(
-                    serde_json::json!({
+            mutations: vec![
+                OfflineMutation {
+                    timestamp: Some(chrono::Utc::now().to_rfc3339()),
+                    transaction_id: "tx-quote-1".to_string(),
+                    product_id: "".to_string(),
+                    quantity_deducted: 0,
+                    amount: None,
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: None,
+                    mutation_type: Some("draft_quote".to_string()),
+                    payload: Some(serde_json::json!({
                         "customer_name": "John Doe",
                         "customer_email": "john@example.com",
                         "total_amount": 5000,
                         "description": "Pipe fixing"
-                    })
-                    .to_string(),
-                ),
-                client_mutation_id: Some("mut-quote-1".to_string()),
-            }],
+                    }).to_string()),
+                    client_mutation_id: Some("mut-quote-1".to_string()),
+                },
+            ],
         };
-        let response_dup =
-            offline_sync_handler(state.clone(), headers.clone(), Json(req_duplicate))
-                .await
-                .into_response();
+        let response_dup = offline_sync_handler(state.clone(), headers.clone(), Json(req_duplicate)).await.into_response();
         assert_eq!(response_dup.status(), StatusCode::OK); // Dup gets skipped but doesn't fail
     }
 }
@@ -1313,24 +1162,14 @@ pub async fn operation_intents_handler(
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<OperationIntentRequest>,
 ) -> impl axum::response::IntoResponse {
-    let spiffe_id_str = headers
-        .get("x-spiffe-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    let (tenant_id, _) =
-        crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let (tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
     if tenant_id.is_empty() {
         return (
             axum::http::StatusCode::UNAUTHORIZED,
-            axum::Json(OperationIntentResponse {
-                success: false,
-                applied_count: 0,
-                conflict_count: 0,
-                failed_count: 0,
-            }),
-        )
-            .into_response();
+            axum::Json(OperationIntentResponse { success: false, applied_count: 0, conflict_count: 0, failed_count: 0 }),
+        ).into_response();
     }
 
     let mut applied_count = 0;
@@ -1349,7 +1188,7 @@ pub async fn operation_intents_handler(
 
         // Check idempotency (does the event id already exist?)
         let exists: Result<(i64,), sqlx::Error> = sqlx::query_as(
-            "SELECT COUNT(*) FROM operation_intents WHERE id = $1 AND tenant_id = $2",
+            "SELECT COUNT(*) FROM operation_intents WHERE id = $1 AND tenant_id = $2"
         )
         .bind(&intent.id)
         .bind(&tenant_id)
@@ -1368,7 +1207,7 @@ pub async fn operation_intents_handler(
         // Insert into operation_intents
         let insert_res = sqlx::query(
             "INSERT INTO operation_intents (id, tenant_id, action_type, payload, status)
-             VALUES ($1, $2, $3, $4, 'SYNCED')",
+             VALUES ($1, $2, $3, $4, 'SYNCED')"
         )
         .bind(&intent.id)
         .bind(&tenant_id)
@@ -1396,12 +1235,6 @@ pub async fn operation_intents_handler(
 
     (
         axum::http::StatusCode::OK,
-        axum::Json(OperationIntentResponse {
-            success: true,
-            applied_count,
-            conflict_count,
-            failed_count,
-        }),
-    )
-        .into_response()
+        axum::Json(OperationIntentResponse { success: true, applied_count, conflict_count, failed_count }),
+    ).into_response()
 }

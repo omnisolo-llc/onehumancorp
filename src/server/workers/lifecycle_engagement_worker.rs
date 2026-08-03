@@ -1,6 +1,6 @@
+use std::sync::Arc;
 use crate::db::DB;
 use serde_json::json;
-use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct LifecycleEngagementWorker {
@@ -117,10 +117,7 @@ impl LifecycleEngagementWorker {
 
             let draft = match provider.reason(&prompt).await {
                 Ok(response) => response,
-                Err(_) => format!(
-                    "Hi {}, it's been a while! We wanted to check in and see how you're doing. Let us know if you need anything.",
-                    name
-                ),
+                Err(_) => format!("Hi {}, it's been a while! We wanted to check in and see how you're doing. Let us know if you need anything.", name),
             };
 
             let task_id = format!("task-lifecycle-{}", Uuid::new_v4());
@@ -141,7 +138,7 @@ impl LifecycleEngagementWorker {
                     .execute(&pool)
                     .await
                     .unwrap_or_default();
-                }
+                },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     sqlx::query(
                         "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
@@ -168,8 +165,8 @@ impl LifecycleEngagementWorker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DbStore;
     use serde_json::json;
+    use crate::db::DbStore;
 
     async fn setup_test_db() -> Option<Arc<DB>> {
         let sqlite_pool = crate::db::create_sqlite_pool_for_test().await;
@@ -179,11 +176,7 @@ mod tests {
             store: DbStore::Sqlite(sqlite_pool.clone()),
         };
 
-        let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);",
-        )
-        .execute(&sqlite_pool)
-        .await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(&sqlite_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS customers (id UUID PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT, phone TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, action_type TEXT, state_change TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(&sqlite_pool).await;
         let _ = sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, description TEXT, status TEXT, priority TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT);").execute(&sqlite_pool).await;
@@ -221,9 +214,7 @@ mod tests {
             .bind(state_change)
             .execute(&pool).await;
 
-        let _processed = LifecycleEngagementWorker::poll(&db)
-            .await
-            .unwrap_or_default();
+        let _processed = LifecycleEngagementWorker::poll(&db).await.unwrap_or_default();
         // Since we are mocking/ignoring DB errors, let's just make sure it runs without panicking.
         // If it successfully processed, great. If not, it means the inserts above didn't take because of locking.
 
@@ -236,8 +227,6 @@ mod tests {
             assert!(task.2.contains("Sarah"));
         }
 
-        let _processed_again = LifecycleEngagementWorker::poll(&db)
-            .await
-            .unwrap_or_default();
+        let _processed_again = LifecycleEngagementWorker::poll(&db).await.unwrap_or_default();
     }
 }

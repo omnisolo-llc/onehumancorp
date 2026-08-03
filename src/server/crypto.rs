@@ -1,22 +1,18 @@
 use aes_gcm::{
-    Aes256Gcm, Nonce,
     aead::{Aead, KeyInit},
+    Aes256Gcm, Nonce
 };
-use base64::{Engine as _, engine::general_purpose};
 use hmac::{Hmac, Mac};
-use sha2::{Digest, Sha256};
+use sha2::{Sha256, Digest};
+use base64::{Engine as _, engine::general_purpose};
 
 fn get_crypto_key() -> [u8; 32] {
     let key = std::env::var("OHC_SQLITE_KEY")
         .or_else(|_| std::env::var("OHC_SQLITE_ENCRYPTION_KEY"))
         .unwrap_or_else(|_| {
             let is_standalone = ::server_config::get().standalone
-                || std::env::var("OHC_STANDALONE_MODE")
-                    .map(|v| v == "true")
-                    .unwrap_or(false)
-                || std::env::var("OHC_STANDALONE")
-                    .map(|v| v == "true")
-                    .unwrap_or(false);
+                || std::env::var("OHC_STANDALONE_MODE").map(|v| v == "true").unwrap_or(false)
+                || std::env::var("OHC_STANDALONE").map(|v| v == "true").unwrap_or(false);
             if is_standalone {
                 tracing::warn!(
                     "No OHC_SQLITE_KEY configured for standalone mode. \
@@ -63,9 +59,7 @@ pub fn encrypt_deterministic(plaintext: &str) -> String {
     // Nonce size for AES-GCM is 12 bytes
     let nonce = Nonce::from_slice(&mac_bytes[..12]);
 
-    let ciphertext = cipher
-        .encrypt(nonce, plaintext.as_bytes())
-        .expect("Encryption failed");
+    let ciphertext = cipher.encrypt(nonce, plaintext.as_bytes()).expect("Encryption failed");
 
     let mut final_msg = Vec::new();
     final_msg.extend_from_slice(&mac_bytes[..12]);
@@ -95,9 +89,7 @@ pub fn decrypt_deterministic(ciphertext_b64: &str) -> String {
     let ciphertext_data = &ciphertext[12..];
 
     match cipher.decrypt(nonce, ciphertext_data) {
-        Ok(plaintext) => {
-            String::from_utf8(plaintext).unwrap_or_else(|_| ciphertext_b64.to_string())
-        }
+        Ok(plaintext) => String::from_utf8(plaintext).unwrap_or_else(|_| ciphertext_b64.to_string()),
         Err(_) => ciphertext_b64.to_string(), // Fallback
     }
 }
@@ -137,43 +129,34 @@ mod tests {
 
     #[test]
     fn test_cloud_mode_panics_without_key() {
-        temp_env::with_vars(
-            vec![
-                ("OHC_SQLITE_KEY", None::<&str>),
-                ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
-            ],
-            || {
-                let result = std::panic::catch_unwind(|| {
-                    temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
-                        let _key = get_crypto_key();
-                    });
+        temp_env::with_vars(vec![
+            ("OHC_SQLITE_KEY", None::<&str>),
+            ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
+        ], || {
+            let result = std::panic::catch_unwind(|| {
+                temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test_key"))], || {
+                    let _key = get_crypto_key();
                 });
-                assert!(
-                    result.is_ok(),
-                    "Should not panic when OHC_SQLITE_KEY is set"
-                );
-            },
-        );
+            });
+            assert!(result.is_ok(), "Should not panic when OHC_SQLITE_KEY is set");
+        });
     }
 
     #[test]
     fn test_standalone_mode_generates_ephemeral_key() {
-        temp_env::with_vars(
-            vec![
-                ("OHC_STANDALONE_MODE", Some("true")),
-                ("OHC_SQLITE_KEY", None::<&str>),
-                ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
-                ("OHC_STANDALONE_MODE", Some("true")),
-            ],
-            || {
-                // Ephemeral key includes PID+timestamp, so each call generates a different key.
-                // We just verify it doesn't panic and produces valid 32-byte keys.
-                let key1 = get_crypto_key();
-                let key2 = get_crypto_key();
-                assert_eq!(key1.len(), 32);
-                assert_eq!(key2.len(), 32);
-            },
-        );
+        temp_env::with_vars(vec![
+            ("OHC_STANDALONE_MODE", Some("true")),
+            ("OHC_SQLITE_KEY", None::<&str>),
+            ("OHC_SQLITE_ENCRYPTION_KEY", None::<&str>),
+            ("OHC_STANDALONE_MODE", Some("true")),
+        ], || {
+            // Ephemeral key includes PID+timestamp, so each call generates a different key.
+            // We just verify it doesn't panic and produces valid 32-byte keys.
+            let key1 = get_crypto_key();
+            let key2 = get_crypto_key();
+            assert_eq!(key1.len(), 32);
+            assert_eq!(key2.len(), 32);
+        });
     }
 
     #[test]
@@ -182,10 +165,7 @@ mod tests {
             let key_a = get_crypto_key();
             temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("key_b"))], || {
                 let key_b = get_crypto_key();
-                assert_ne!(
-                    key_a, key_b,
-                    "Different env keys must produce different crypto keys"
-                );
+                assert_ne!(key_a, key_b, "Different env keys must produce different crypto keys");
             });
         });
     }
