@@ -618,6 +618,23 @@
       </div>
     </div>
 
+    <!-- Global Offline Edge State Indicator (375px Target) -->
+    <div id="offline-indicator" style="display:none; position: fixed; top: 0; left: 0; width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); z-index: 9999; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);">
+        <span style="font-size: 14px; font-weight: 600; color: #86868b; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><line x1="22" y1="2" x2="2" y2="22"/></svg>
+            Offline - Changes saved locally
+        </span>
+    </div>
+
+    <script>
+      function setOfflineIndicator(isOffline) {
+        document.getElementById('offline-indicator').style.display = isOffline ? 'block' : 'none';
+      }
+      window.addEventListener('offline', () => setOfflineIndicator(true));
+      window.addEventListener('online', () => setOfflineIndicator(false));
+      if (!navigator.onLine) setOfflineIndicator(true);
+    </script>
+
     <div class="container glassmorphism app-panel">
       <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
 

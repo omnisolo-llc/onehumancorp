@@ -125,6 +125,53 @@ pub async fn offline_sync_handler(
             continue;
         }
 
+        if mutation.mutation_type.as_deref() == Some("transaction") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = match db_clone.begin().await { Ok(tx) => tx, Err(e) => return Err(e.to_string()) };
+
+                if let Some(ref mutation_id) = mutation.client_mutation_id {
+                    let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
+                        .bind(mutation_id)
+                        .bind(&tenant_id_clone)
+                        .fetch_one(&mut *db_tx)
+                        .await
+                        .unwrap_or((0,));
+
+                    if exists.0 > 0 {
+                        let _ = db_tx.rollback().await;
+                        return Ok(None);
+                    }
+
+                    let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
+                        .bind(mutation_id)
+                        .bind(&tenant_id_clone)
+                        .execute(&mut *db_tx)
+                        .await;
+                }
+
+                // AI Ops Conflict Resolution
+                // Log the sync event and trigger the Ops AI agent to resolve CRDT inventory conflicts
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                     VALUES ($1, $2, 'operations', 'tenant.offline.sync.conflict_resolution', $3::jsonb, 'PENDING')"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(serde_json::json!({
+                    "source": "offline_edge_sync",
+                    "transaction_id": mutation.transaction_id,
+                    "product_id": mutation.product_id,
+                    "payload": mutation.payload.unwrap_or_default()
+                }).to_string())
+                .execute(&mut *db_tx)
+                .await;
+
+                if let Err(e) = db_tx.commit().await { return Err(e.to_string()); }
+                Ok(None)
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<serde_json::Value>, String>> + Send>>);
+            continue;
+        }
+
         if mutation.mutation_type.as_deref() == Some("agent_intent") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.map_err(|e| e.to_string())?;
