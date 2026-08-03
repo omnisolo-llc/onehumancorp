@@ -23,7 +23,7 @@ test.describe('Documentation Features CUJ', () => {
 
     // Verify chat tabs exist
     await expect(chatInterface.locator('text=Articles')).toBeVisible();
-    await expect(chatInterface.locator('text=Ask AI')).toBeVisible();
+    await expect(chatInterface.locator('button[data-target="tab-chat"]')).toBeVisible();
 
     // Click "Ask AI" tab
     await chatInterface.locator('button[data-target="tab-chat"]').click();

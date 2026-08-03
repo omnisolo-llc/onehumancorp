@@ -2,13 +2,13 @@
 
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
-    window.OHC_TOOLTIPS = {};
-    fetch("/api/v1/tooltips").then(r => r.json()).then(data => {
-        Object.assign(window.OHC_TOOLTIPS, data);
-    }).catch(e => {
-        console.error(e);
-    });
-}
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => {
+            Object.assign(window.OHC_TOOLTIPS, data);
+        }).catch(e => {
+            console.error("Failed to load tooltip registry:", e);
+        });
+    }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
     if (document.body) document.body.appendChild(tooltipEl);
