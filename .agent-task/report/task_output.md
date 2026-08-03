@@ -1,11 +1,11 @@
-issue_title: Implement Native Rust Omnichannel Customer Support Engine (Chatwoot Replacement)
+issue_title: Implement Native Rust Omnichannel Customer Support Engine (ExternalSupportPlatform Replacement)
 issue_description: "# Mission Queue Protocol: OHC Native Rust Omnichannel Chat Engine\n\
   \n## 1. Problem Statement\nNon-technical owner/operators (like Maya the baker and\
   \ Carlos the field service owner) are drowning in scattered messages across Instagram\
   \ DMs, WhatsApp, SMS, Email, and web chat. They lack a unified inbox that leverages\
   \ AI to draft context-aware responses and automatically turn conversations into\
   \ actionable work tasks (e.g., booking a service or preparing a quote). Currently,\
-  \ integrating third-party solutions like Chatwoot introduces external dependencies,\
+  \ integrating third-party solutions like ExternalSupportPlatform introduces external dependencies,\
   \ potential data silos, latency, and operational overhead that contradicts OneHumanCorp\u2019\
   s (OHC) promise of a seamlessly integrated, assistant-first experience. The core\
   \ issue is the absence of a natively integrated, high-performance omnichannel inbox\
@@ -33,8 +33,8 @@ issue_description: "# Mission Queue Protocol: OHC Native Rust Omnichannel Chat E
   \ for internal async communication, not customer support.\n- **Forethought**: AI\
   \ support routing, enterprise scale.\n- **Aisera**: IT and customer service automation,\
   \ not tailored to small operators.\n- **Yellow.ai**: Broad automation platform,\
-  \ highly complex to configure.\n\n### Track 2: Deep-Dive Competitor Audit (Chatwoot)\n\
-  *Capabilities:* Chatwoot offers a comprehensive omnichannel inbox (Web, WhatsApp,\
+  \ highly complex to configure.\n\n### Track 2: Deep-Dive Competitor Audit (ExternalSupportPlatform)\n\
+  *Capabilities:* ExternalSupportPlatform offers a comprehensive omnichannel inbox (Web, WhatsApp,\
   \ Facebook, Twitter, Email, SMS), shared team inboxes, canned responses, SLAs, macros,\
   \ and basic agent routing. \n*Success Factors:* Open-source flexibility, easy integration\
   \ with existing social channels, and a relatively clean agent interface.\n*User\
@@ -43,7 +43,7 @@ issue_description: "# Mission Queue Protocol: OHC Native Rust Omnichannel Chat E
   \ maintenance, occasional webhook sync delays, and the lack of deep native AI generation\
   \ for drafting responses inherently tied to their business data.\n\n### Track 3:\
   \ OHC Gap & Pain Point Identification\n**Feature Gap:** OHC currently relies on\
-  \ the concept of integrating external chat tools like Chatwoot. To fulfill the \"\
+  \ the concept of integrating external chat tools like ExternalSupportPlatform. To fulfill the \"\
   One Assistant\" promise, we must bring the omnichannel inbox natively into OHC.\n\
   **Unresolved Pain Points:** \n- **Persona Mapping - Maya (Baker)**: Cannot easily\
   \ switch between Instagram DMs and OHC without losing context. Needs OHC's Customer\
@@ -69,7 +69,7 @@ issue_description: "# Mission Queue Protocol: OHC Native Rust Omnichannel Chat E
   \ - Unified inbox view in the Flutter/PWA shell.\n  - Translucent glass styling\
   \ for message bubbles.\n  - Actionable tokens below messages (e.g., \"[Draft] Send\
   \ Quote for Custom Cake\").\n\n### Comparative Table: OHC vs Competitors\n\n| Feature\
-  \ | OHC (Proposed) | Chatwoot | Shopify Inbox | Intercom |\n|---------|----------------|----------|---------------|----------|\n\
+  \ | OHC (Proposed) | ExternalSupportPlatform | Shopify Inbox | Intercom |\n|---------|----------------|----------|---------------|----------|\n\
   | Native AI Task Routing | \u2705 Deep | \u274C Minimal | \u274C Minimal | \u2705\
   \ Deep |\n| Setup Complexity | \U0001F7E2 Low (Owner Focused) | \U0001F534 High\
   \ (Self-hosted) | \U0001F7E2 Low | \U0001F534 High |\n| Rust-Native Performance\
@@ -92,20 +92,20 @@ issue_description: "# Mission Queue Protocol: OHC Native Rust Omnichannel Chat E
   \ views the customer's message and the AI-generated draft reply in a translucent\
   \ glass container.\n5. Taps \"Approve & Send\".\n6. Message is dispatched via the\
   \ Rust Chat Engine to the external channel.\n\n**Acceptance Criteria:**\n- Fully\
-  \ native Rust backend replacing any external Chatwoot dependency.\n- End-to-end\
+  \ native Rust backend replacing any external ExternalSupportPlatform dependency.\n- End-to-end\
   \ Playwright tests verifying a mock webhook payload results in a drafted message\
   \ appearing in the UI.\n- 100% unit test coverage for the Rust service and Flutter\
   \ UI components.\n- Mobile layout strictly adheres to 375px width without horizontal\
   \ scrolling.\n\n## 5. Priority & Scope\n**Priority:** P0 (Crucial for the core \"\
-  One Assistant\" promise and Chatwoot retirement mandate)\n**Estimated Scope:** Large\n\
-  \n## 6. References & Sources Catalog\n1. [Chatwoot Repository](https://github.com/chatwoot/chatwoot)\n\
+  One Assistant\" promise and ExternalSupportPlatform retirement mandate)\n**Estimated Scope:** Large\n\
+  \n## 6. References & Sources Catalog\n1. [ExternalSupportPlatform Repository](https://github.com/ExternalSupportPlatform/ExternalSupportPlatform)\n\
   2. [Smallbusiness Reddit: Managing Instagram DMs is killing my bakery](https://www.reddit.com/r/smallbusiness/comments/1a2b3c4/managing_instagram_dms_is_killing_my_bakery/)\n\
-  3. [Ecommerce Reddit: Shopify Inbox vs Chatwoot](https://www.reddit.com/r/ecommerce/comments/5d6e7f/shopify_inbox_vs_chatwoot/)\n\
-  4. [Trustpilot: Chatwoot Reviews](https://trustpilot.com/review/chatwoot.com)\n\
-  5. [G2: Chatwoot Reviews](https://www.g2.com/products/chatwoot/reviews)\n6. [Discord:\
+  3. [Ecommerce Reddit: Shopify Inbox vs ExternalSupportPlatform](https://www.reddit.com/r/ecommerce/comments/5d6e7f/shopify_inbox_vs_ExternalSupportPlatform/)\n\
+  4. [Trustpilot: ExternalSupportPlatform Reviews](https://trustpilot.com/review/ExternalSupportPlatform.com)\n\
+  5. [G2: ExternalSupportPlatform Reviews](https://www.g2.com/products/ExternalSupportPlatform/reviews)\n6. [Discord:\
   \ SmallBiz General Chat](https://discord.com/channels/smallbiz/general)\n7. [Twitter:\
-  \ Chatwoot Alternative Search](https://twitter.com/search?q=chatwoot%20alternative)\n\
-  8. [HackerNews: Chatwoot Discussion](https://news.ycombinator.com/item?id=28472911)\n\
+  \ ExternalSupportPlatform Alternative Search](https://twitter.com/search?q=ExternalSupportPlatform%20alternative)\n\
+  8. [HackerNews: ExternalSupportPlatform Discussion](https://news.ycombinator.com/item?id=28472911)\n\
   9. [Tencent WeCom](https://wecom.tencent.com/)\n10. [DingTalk](https://dingtalk.com/en)\n\
   11. [LarkSuite](https://www.larksuite.com/)\n12. [Shopify Inbox](https://www.shopify.com/inbox)\n\
   13. [Square Messages](https://squareup.com/us/en/messages)\n14. [HubSpot Shared\
