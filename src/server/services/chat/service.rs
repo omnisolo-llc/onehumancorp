@@ -3,7 +3,7 @@ use uuid::Uuid;
 use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage};
 
 pub struct ChatService {
-    pool: PgPool,
+    pub pool: PgPool,
 }
 
 impl ChatService {
