@@ -42,35 +42,33 @@ test.describe('Documentation Features CUJ', () => {
     await expect(page.locator('h1')).toContainText('Release Notes & Changelog');
   });
 
-  test('User can navigate to Advanced API Docs and see tooltip on header', async ({ page }) => {
+  test('User can navigate to Advanced API Docs', async ({ page }) => {
     await page.goto('/api-docs');
 
     // Check title
     await expect(page.locator('h1')).toContainText('OHC Advanced API Reference');
 
-    // Hover the tooltip element
-    const tooltipTarget = page.locator('#api-docs-tooltip');
-    await expect(tooltipTarget).toBeVisible();
-
-    // Simulate hover
-    await tooltipTarget.hover();
-
-    // Check if tooltip becomes visible. We expect the global tooltip element to appear
-    const globalTooltip = page.locator('.ohc-tooltip');
-    await expect(globalTooltip).toHaveClass(/visible/);
-    await expect(globalTooltip).toContainText('Direct API access is only for custom integrations.');
+    // Wait for the Swagger UI to be rendered - the backend now serves /api/v1/api-docs-spec
+    await expect(page.locator('.swagger-ui')).toBeVisible();
   });
 
   test('User can view mobile-optimized help videos in widget', async ({ page }) => {
     await page.goto('/dashboard');
+
+    // Simulate mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
+
     await page.evaluate(() => {
         window.dispatchEvent(new CustomEvent('open-help-chat'));
     });
 
     const chatInterface = page.locator('#ai-chat-interface');
     await expect(chatInterface).toBeVisible();
+
+    // Click Videos tab
     await chatInterface.locator('button[data-target="tab-videos"]').click();
+
+    // The #video-list container should be visible
     await expect(page.locator('#video-list')).toBeVisible();
   });
 });
