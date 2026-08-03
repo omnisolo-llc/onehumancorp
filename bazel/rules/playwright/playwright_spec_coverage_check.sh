@@ -62,32 +62,47 @@ find_spec_relpaths() {
   done < <(find_spec_files "$root") | sort -u
 }
 
-check_forbidden_markers() {
+
+run_combined_checks() {
   local checker
-  local findings
   local node
   checker="$(no_substitution_checker)"
   node="$(node_binary)"
   if [[ -z "$checker" || ! -f "$checker" || -z "$node" || ! -x "$node" ]]; then
-    echo "Playwright Bazel coverage check failed: TypeScript marker checker or Node.js is unavailable."
-    exit 1
+    echo "Playwright Bazel coverage check failed: TypeScript checker or Node.js is unavailable."
+    return 1
   fi
+
   if [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
     export NODE_PATH="$TEST_SRCDIR/$TEST_WORKSPACE/node_modules${NODE_PATH:+:$NODE_PATH}"
   fi
-  if findings="$($node "$checker" --markers-only "$@" 2>&1)"; then
-    return
+
+  local findings
+  if findings="$($node "$checker" "$@" 2>&1)"; then
+    return 0
   fi
   if [[ -z "$findings" ]]; then
-    echo "Playwright Bazel coverage check failed: marker checker exited without diagnostics."
-    exit 1
+    echo "Playwright Bazel coverage check failed: checker exited without diagnostics."
+    return 1
   fi
+
+  local type
   local category
   local spec
-  while IFS=$'\t' read -r category spec; do
-    echo "Playwright Bazel coverage check failed: $category: $(display_spec "$spec")"
+  while IFS=$'\t' read -r type category spec; do
+    if [[ "$type" == "MARKER" ]]; then
+      echo "Playwright Bazel coverage check failed: $category: $(display_spec "$spec")"
+    elif [[ "$type" == "SUBST" ]]; then
+      if [[ -z "$spec" ]]; then
+        echo "Playwright Bazel coverage check failed: $category"
+      else
+        echo "Playwright Bazel coverage check failed: no-substitution category '$category': $(display_spec "$spec")"
+      fi
+    else
+      echo "$type\t$category\t$spec"
+    fi
   done <<<"$findings"
-  exit 1
+  return 1
 }
 
 node_binary() {
@@ -114,40 +129,6 @@ no_substitution_checker() {
   fi
 }
 
-check_no_substitutions() {
-  local checker
-  local node
-  checker="$(no_substitution_checker)"
-  node="$(node_binary)"
-  if [[ -z "$checker" || ! -f "$checker" || -z "$node" || ! -x "$node" ]]; then
-    echo "Playwright Bazel coverage check failed: TypeScript no-substitution checker or Node.js is unavailable."
-    exit 1
-  fi
-
-  if [[ -n "${TEST_SRCDIR:-}" && -n "${TEST_WORKSPACE:-}" ]]; then
-    export NODE_PATH="$TEST_SRCDIR/$TEST_WORKSPACE/node_modules${NODE_PATH:+:$NODE_PATH}"
-  fi
-
-  local findings
-  if findings="$($node "$checker" "$@" 2>&1)"; then
-    return
-  fi
-  if [[ -z "$findings" ]]; then
-    echo "Playwright Bazel coverage check failed: no-substitution checker exited without diagnostics."
-    exit 1
-  fi
-
-  local category
-  local spec
-  while IFS=$'\t' read -r category spec; do
-    if [[ -z "$spec" ]]; then
-      echo "Playwright Bazel coverage check failed: $category"
-    else
-      echo "Playwright Bazel coverage check failed: no-substitution category '$category': $(display_spec "$spec")"
-    fi
-  done <<<"$findings"
-  exit 1
-}
 
 for arg in "$@"; do
   case "$arg" in
@@ -198,8 +179,9 @@ if [[ "$scan_runfiles" == true ]]; then
     echo "Playwright Bazel coverage check failed: no runfile specs were discovered."
     exit 1
   fi
-  check_forbidden_markers "${runfile_specs[@]}"
-  check_no_substitutions "${runfile_specs[@]}" "${support_sources[@]}"
+  if ! run_combined_checks "${runfile_specs[@]}" "${support_sources[@]}"; then
+    exit 1
+  fi
   if [[ -n "${SOURCE_REPO_ROOT:-}" && -d "${SOURCE_REPO_ROOT:-}" ]]; then
     source_unique="$(find_spec_relpaths "$SOURCE_REPO_ROOT")"
     runfile_unique="$(find_spec_relpaths "$root")"
@@ -229,7 +211,6 @@ for spec in "${ci_specs[@]}"; do
   fi
 done
 
-check_forbidden_markers "${all_specs[@]}"
 all_unique="$(printf '%s\n' "${all_specs[@]}" | sort -u)"
 ci_unique="$(printf '%s\n' "${ci_specs[@]}" | sort -u)"
 not_discovered="$(comm -13 <(printf '%s\n' "$all_unique") <(printf '%s\n' "$ci_unique"))"
@@ -239,5 +220,7 @@ if [[ -n "$not_discovered" ]]; then
   exit 1
 fi
 
-check_no_substitutions "${all_specs[@]}" "${support_sources[@]}"
+if ! run_combined_checks "${all_specs[@]}" "${support_sources[@]}"; then
+  exit 1
+fi
 echo "Bazel aggregate CI selection includes ${#ci_specs[@]} of ${#all_specs[@]} discovered Playwright specs."

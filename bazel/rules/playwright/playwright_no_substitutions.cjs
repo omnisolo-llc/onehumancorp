@@ -71,6 +71,7 @@ function createProgram(rootNames) {
       moduleResolution: ts.ModuleResolutionKind.NodeNext,
       noEmit: true,
       skipLibCheck: true,
+      types: [],
       target: ts.ScriptTarget.ES2022,
       paths: { "*": [`${path.basename(nodeModules)}/*`] },
     },
@@ -187,10 +188,10 @@ function makeStringEvaluator(checker) {
 function discoverReachable(initialFiles) {
   const files = new Set(initialFiles.map((file) => path.resolve(file)));
   const discoveryFindings = [];
-  let changed = true;
+  let changed = true; let lastProgram;
   while (changed) {
     changed = false;
-    const program = createProgram([...files]);
+    const program = createProgram([...files]); lastProgram = program;
     const checker = program.getTypeChecker();
     const evaluateString = makeStringEvaluator(checker);
     for (const filename of [...files]) {
@@ -199,11 +200,11 @@ function discoverReachable(initialFiles) {
       function addSpecifier(node, dynamic) {
         const specifier = evaluateString(node);
         if (specifier === undefined) {
-          if (dynamic) discoveryFindings.push(["unresolved dynamic import", filename]);
+          if (dynamic) discoveryFindings.push(["SUBST", "unresolved dynamic import", filename]);
           return;
         }
         const resolved = resolveLocalImport(filename, specifier);
-        if (resolved === "") discoveryFindings.push(["unresolved local import", filename]);
+        if (resolved === "") discoveryFindings.push(["SUBST", "unresolved local import", filename]);
         else if (resolved && !files.has(resolved)) {
           files.add(resolved);
           changed = true;
@@ -221,12 +222,12 @@ function discoverReachable(initialFiles) {
         if (ts.isCallExpression(node)) {
           const expression = unwrap(node.expression);
           if (expression.kind === ts.SyntaxKind.ImportKeyword) {
-            discoveryFindings.push(["dynamic import", filename]);
+            discoveryFindings.push(["SUBST", "dynamic import", filename]);
             if (node.arguments.length === 1) addSpecifier(node.arguments[0], true);
-            else discoveryFindings.push(["unresolved dynamic import", filename]);
+            else discoveryFindings.push(["SUBST", "unresolved dynamic import", filename]);
           } else if (ts.isIdentifier(expression) && expression.text === "require") {
             if (node.arguments.length === 1) addSpecifier(node.arguments[0], true);
-            else discoveryFindings.push(["unresolved dynamic import", filename]);
+            else discoveryFindings.push(["SUBST", "unresolved dynamic import", filename]);
           }
         }
         ts.forEachChild(node, visit);
@@ -234,11 +235,11 @@ function discoverReachable(initialFiles) {
       visit(sourceFile);
     }
   }
-  return { files: [...files], findings: discoveryFindings };
+  return { files: [...files], findings: discoveryFindings, program: lastProgram };
 }
 
-function scanMarkers(filenames) {
-  const program = createProgram(filenames);
+function scanMarkers(filenames, program) {
+  // // const program = createProgram(filenames);
   const checker = program.getTypeChecker();
   const evaluateString = makeStringEvaluator(checker);
   const findings = [];
@@ -307,13 +308,13 @@ function scanMarkers(filenames) {
       ts.forEachChild(node, visit);
     }
     visit(sourceFile);
-    for (const category of [...categories].sort()) findings.push([category, filename]);
+    for (const category of [...categories].sort()) findings.push(["MARKER", category, filename]);
   }
   return findings;
 }
 
-function scanFiles(filenames) {
-  const program = createProgram(filenames);
+function scanFiles(filenames, program) {
+  // // const program = createProgram(filenames);
   const checker = program.getTypeChecker();
   const evaluateString = makeStringEvaluator(checker);
   const entityKinds = new Map();
@@ -457,7 +458,7 @@ function scanFiles(filenames) {
     return changed;
   }
 
-  let changed = true;
+  let changed = true; let lastProgram;
   while (changed) {
     changed = false;
     for (const filename of filenames) {
@@ -1099,7 +1100,7 @@ function scanFiles(filenames) {
       ts.forEachChild(node, visit);
     }
     visit(sourceFile);
-    for (const category of [...categories].sort()) findings.push([category, filename]);
+    for (const category of [...categories].sort()) findings.push(["SUBST", category, filename]);
   }
   return findings;
 }
@@ -1114,12 +1115,13 @@ for (const filename of initial) {
   }
 }
 if (!failed) {
+
   const reachable = discoverReachable(initial);
-  const findings = markerOnly
-    ? scanMarkers(reachable.files)
-    : [...reachable.findings, ...scanFiles(reachable.files)];
-  const unique = new Map(findings.map(([category, filename]) => [`${category}\0${filename}`, [category, filename]]));
-  for (const [category, filename] of unique.values()) process.stdout.write(`${category}\t${filename}\n`);
+  const findings = [...reachable.findings, ...scanMarkers(reachable.files, reachable.program), ...scanFiles(reachable.files, reachable.program)];
+  const unique = new Map(findings.map(([type, category, filename]) => [`${type}	${category}	${filename}`, [type, category, filename]]));
+  for (const [type, category, filename] of unique.values()) process.stdout.write(`${type}	${category}	${filename}
+`);
   failed = unique.size > 0;
+
 }
 process.exitCode = failed ? 1 : 0;

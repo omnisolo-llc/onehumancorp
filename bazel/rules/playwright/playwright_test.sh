@@ -29,6 +29,7 @@ SOURCE_REPO_ROOT_CANDIDATES=(
   "$(pwd)"
   "/home/kevin/mono"
   "/home/runner/work/mono/mono"
+  "/app"
   "$workspace_root"
 )
 for candidate in "${SOURCE_REPO_ROOT_CANDIDATES[@]}"; do
