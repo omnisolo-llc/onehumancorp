@@ -539,6 +539,13 @@ Output JSON format:
                         .execute(&self.db.pool).await {
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
+                    if let Err(e) = sqlx::query("UPDATE chat_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(&action_payload)
+                        .bind(&message_id)
+                        .bind(&tenant_id)
+                        .execute(&self.db.pool).await {
+                        tracing::error!("Failed to update chat_messages: {}", e);
+                    }
 
 
 
@@ -668,6 +675,13 @@ Output JSON format:
                         .bind(&tenant_id)
                         .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to update inbox_messages: {}", e);
+                    }
+                    if let Err(e) = sqlx::query("UPDATE chat_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                        .bind(&action_payload)
+                        .bind(&message_id)
+                        .bind(&tenant_id)
+                        .execute(&*sqlite_pool).await {
+                        tracing::error!("Failed to update chat_messages: {}", e);
                     }
 
 

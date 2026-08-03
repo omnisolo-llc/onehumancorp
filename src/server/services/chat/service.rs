@@ -111,7 +111,7 @@ impl ChatService {
             r#"
             INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
             VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, draft_reply, created_at, updated_at
             "#
         )
         .bind(Uuid::new_v4())
@@ -122,5 +122,26 @@ impl ChatService {
         .bind(content)
         .fetch_one(&self.pool)
         .await
+    }
+
+    pub async fn update_draft_reply(
+        &self,
+        tenant_id: uuid::Uuid,
+        message_id: uuid::Uuid,
+        draft_reply: String,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE chat_messages
+            SET draft_reply = $1, updated_at = NOW()
+            WHERE id = $2 AND tenant_id = $3
+            "#
+        )
+        .bind(draft_reply)
+        .bind(message_id)
+        .bind(tenant_id)
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
     }
 }

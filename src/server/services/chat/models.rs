@@ -54,6 +54,7 @@ pub struct ChatMessage {
     pub sender_type: String,
     pub sender_id: Option<Uuid>,
     pub content: String,
+    pub draft_reply: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
