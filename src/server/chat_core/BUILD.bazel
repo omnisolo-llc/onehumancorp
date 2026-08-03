@@ -1,0 +1,21 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_chat_core",
+    srcs = ["src/lib.rs"],
+    deps = [
+        "@crates//:axum",
+        "@crates//:tokio",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:chrono",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "server_chat_core_test",
+    crate = ":server_chat_core",
+)

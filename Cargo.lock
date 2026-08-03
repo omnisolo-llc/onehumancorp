@@ -8892,6 +8892,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "server_chat_core"
+version = "0.1.0"
+dependencies = [
+ "axum 0.8.9",
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "server_common"
 version = "0.1.0"
 dependencies = [
