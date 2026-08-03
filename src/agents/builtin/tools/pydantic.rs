@@ -73,40 +73,57 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
                 // Provide specific hints for common serde errors
                 if err_str.contains("missing field") {
                     let field_name = err_str.split('`').nth(1).unwrap_or("unknown");
-                    let hint = format!("The required field '{}' is missing. Please provide it.", field_name);
-                    detailed_instruction = Some(detailed_instruction.map_or(hint.clone(), |mut instr| {
-                        instr.push_str("\nHint: ");
-                        instr.push_str(&hint);
-                        instr
-                    }));
-                } else if err_str.contains("expected struct") || err_str.contains("expected a map") || (err_str.contains("invalid type: string") && err_str.contains("expected struct")) {
-                    let hint = format!("There is a structural mismatch. Please ensure you are providing a valid JSON object matching the exact schema definition, not a string or primitive. Detailed error: {}", err_str);
-                    detailed_instruction = Some(detailed_instruction.map_or(hint.clone(), |mut instr| {
-                        instr.push_str("\nHint: ");
-                        instr.push_str(&hint);
-                        instr
-                    }));
+                    let hint = format!(
+                        "The required field '{}' is missing. Please provide it.",
+                        field_name
+                    );
+                    detailed_instruction =
+                        Some(detailed_instruction.map_or(hint.clone(), |mut instr| {
+                            instr.push_str("\nHint: ");
+                            instr.push_str(&hint);
+                            instr
+                        }));
+                } else if err_str.contains("expected struct")
+                    || err_str.contains("expected a map")
+                    || (err_str.contains("invalid type: string")
+                        && err_str.contains("expected struct"))
+                {
+                    let hint = format!(
+                        "There is a structural mismatch. Please ensure you are providing a valid JSON object matching the exact schema definition, not a string or primitive. Detailed error: {}",
+                        err_str
+                    );
+                    detailed_instruction =
+                        Some(detailed_instruction.map_or(hint.clone(), |mut instr| {
+                            instr.push_str("\nHint: ");
+                            instr.push_str(&hint);
+                            instr
+                        }));
                 } else if err_str.contains("invalid type") {
                     let hint = "There is a type mismatch. Ensure strings are quoted, numbers are not quoted, and arrays/objects are formatted correctly as JSON.";
-                    detailed_instruction = Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
-                        instr.push_str("\nHint: ");
-                        instr.push_str(hint);
-                        instr
-                    }));
-                } else if err_str.contains("invalid value: null") || err_str.contains("invalid type: null") {
+                    detailed_instruction =
+                        Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
+                            instr.push_str("\nHint: ");
+                            instr.push_str(hint);
+                            instr
+                        }));
+                } else if err_str.contains("invalid value: null")
+                    || err_str.contains("invalid type: null")
+                {
                     let hint = "A null value was provided where a non-null value is required. Please check your schema requirements.";
-                    detailed_instruction = Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
-                        instr.push_str("\nHint: ");
-                        instr.push_str(hint);
-                        instr
-                    }));
+                    detailed_instruction =
+                        Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
+                            instr.push_str("\nHint: ");
+                            instr.push_str(hint);
+                            instr
+                        }));
                 } else if err_str.contains("unknown variant") {
                     let hint = "An unrecognized enum variant was provided. Please ensure the string precisely matches one of the allowed options.";
-                    detailed_instruction = Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
-                        instr.push_str("\nHint: ");
-                        instr.push_str(hint);
-                        instr
-                    }));
+                    detailed_instruction =
+                        Some(detailed_instruction.map_or(hint.to_string(), |mut instr| {
+                            instr.push_str("\nHint: ");
+                            instr.push_str(hint);
+                            instr
+                        }));
                 }
 
                 return Err(ToolError::LlmRecoverable(
@@ -199,7 +216,7 @@ mod tests {
             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             assert!(msg.contains("invalid type"));
             assert!(msg.contains("...")); // Verifies the snippet truncation logic
-            // assert!(msg.len() < 500); // Ensures the error message didn't blow up
+        // assert!(msg.len() < 500); // Ensures the error message didn't blow up
         } else {
             panic!("Expected LlmRecoverable error with truncated snippet");
         }
@@ -303,7 +320,6 @@ mod tests {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests_custom {

@@ -1,15 +1,14 @@
 use chrono::{DateTime, Utc};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::mysql::MySqlPoolOptions;
+use sqlx::MySqlPool;
 use sqlx::PgPool;
 use sqlx::Row;
 use sqlx::SqlitePool;
-use sqlx::MySqlPool;
+use sqlx::mysql::MySqlPoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::OnceLock;
-
 
 macro_rules! validate_tenant_id {
     ($tenant_id:expr) => {
@@ -28,10 +27,16 @@ macro_rules! validate_tenant_id_box {
     ($tenant_id:expr) => {
         if crate::config::get().multitenant {
             if $tenant_id.trim().eq_ignore_ascii_case("system") {
-                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "tenant_id 'system' cannot be queried in multi-tenant mode")));
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "tenant_id 'system' cannot be queried in multi-tenant mode",
+                )));
             }
             if $tenant_id.trim().is_empty() {
-                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "empty tenant_id is not allowed in multi-tenant mode")));
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "empty tenant_id is not allowed in multi-tenant mode",
+                )));
             }
         }
     };
@@ -41,15 +46,18 @@ macro_rules! validate_tenant_id_sqlx {
     ($tenant_id:expr) => {
         if crate::config::get().multitenant {
             if $tenant_id.trim().eq_ignore_ascii_case("system") {
-                return Err(sqlx::Error::Configuration("tenant_id 'system' cannot be queried in multi-tenant mode".into()));
+                return Err(sqlx::Error::Configuration(
+                    "tenant_id 'system' cannot be queried in multi-tenant mode".into(),
+                ));
             }
             if $tenant_id.trim().is_empty() {
-                return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
+                return Err(sqlx::Error::Configuration(
+                    "empty tenant_id is not allowed in multi-tenant mode".into(),
+                ));
             }
         }
     };
 }
-
 
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 static GLOBAL_MYSQL_POOL: OnceLock<MySqlPool> = OnceLock::new();
@@ -57,8 +65,8 @@ const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
 pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 
-fn database_url_from_environment(
-) -> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
+fn database_url_from_environment()
+-> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
     let canonical_direct = std::env::var_os("DATABASE_URL").is_some();
     let legacy_direct = std::env::var_os("OHC_DATABASE_URL").is_some();
     if canonical_direct && legacy_direct {
@@ -235,7 +243,8 @@ impl DB {
                 use sqlx::Row;
                 let id: String = row.get("id");
 
-                let start_time = match row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time") {
+                let start_time = match row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time")
+                {
                     Ok(dt) => dt,
                     Err(_) => {
                         if let Ok(s) = row.try_get::<String, _>("start_time") {
@@ -445,7 +454,6 @@ impl DB {
                                 return Err(e.into());
                             }
                         }
-
                     }
                 }
 
@@ -457,26 +465,26 @@ impl DB {
                     use std::os::unix::fs::PermissionsExt;
 
                     if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                                let mut opts = OpenOptions::new();
-                                opts.read(true).write(true).create(true).mode(0o600);
-                                #[cfg(target_os = "linux")]
-                                opts.custom_flags(0x00020000); // O_NOFOLLOW
-                                #[cfg(target_os = "macos")]
-                                opts.custom_flags(0x0100); // O_NOFOLLOW
+                        let mut opts = OpenOptions::new();
+                        opts.read(true).write(true).create(true).mode(0o600);
+                        #[cfg(target_os = "linux")]
+                        opts.custom_flags(0x00020000); // O_NOFOLLOW
+                        #[cfg(target_os = "macos")]
+                        opts.custom_flags(0x0100); // O_NOFOLLOW
 
-                                let file = opts.open(&db_path)?;
-                                let metadata = file.metadata()?;
-                                let mut perms = metadata.permissions();
-                                if (perms.mode() & 0o777) != 0o600 {
-                                    perms.set_mode(0o600);
-                                    if let Err(e) = file.set_permissions(perms) {
-                                        tracing::error!(
-                                            "Failed to securely update standalone database file permissions: {}",
-                                            e
-                                        );
-                                        return Err(e.into());
-                                    }
-                                }
+                        let file = opts.open(&db_path)?;
+                        let metadata = file.metadata()?;
+                        let mut perms = metadata.permissions();
+                        if (perms.mode() & 0o777) != 0o600 {
+                            perms.set_mode(0o600);
+                            if let Err(e) = file.set_permissions(perms) {
+                                tracing::error!(
+                                    "Failed to securely update standalone database file permissions: {}",
+                                    e
+                                );
+                                return Err(e.into());
+                            }
+                        }
 
                         // Pre-create SQLite auxiliary files (-wal and -shm) with secure permissions
                         // to prevent them from inheriting the default umask (e.g. 0644).
@@ -486,39 +494,39 @@ impl DB {
                             let shm_path = format!("{}-shm", db_path.display());
 
                             for ext_path in [&wal_path, &shm_path] {
-                                        if !std::path::Path::new(ext_path).exists() {
-                                            let mut aux_opts = OpenOptions::new();
-                                            aux_opts.read(true).write(true).create_new(true).mode(0o600);
-                                            #[cfg(target_os = "linux")]
-                                            aux_opts.custom_flags(0x00020000); // O_NOFOLLOW
-                                            #[cfg(target_os = "macos")]
-                                            aux_opts.custom_flags(0x0100); // O_NOFOLLOW
-                                            if let Ok(file) = aux_opts.open(ext_path) {
-                                                if let Ok(metadata) = file.metadata() {
-                                                    let mut p = metadata.permissions();
-                                                    if (p.mode() & 0o777) != 0o600 {
-                                                        p.set_mode(0o600);
-                                                        let _ = file.set_permissions(p);
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            let mut opts = OpenOptions::new();
-                                            opts.read(true).write(true);
-                                            #[cfg(target_os = "linux")]
-                                            opts.custom_flags(0x00020000); // O_NOFOLLOW
-                                            #[cfg(target_os = "macos")]
-                                            opts.custom_flags(0x0100); // O_NOFOLLOW
-                                            if let Ok(file) = opts.open(ext_path) {
-                                                if let Ok(metadata) = file.metadata() {
-                                                    let mut p = metadata.permissions();
-                                                    if (p.mode() & 0o777) != 0o600 {
-                                                        p.set_mode(0o600);
-                                                        let _ = file.set_permissions(p);
-                                                    }
-                                                }
+                                if !std::path::Path::new(ext_path).exists() {
+                                    let mut aux_opts = OpenOptions::new();
+                                    aux_opts.read(true).write(true).create_new(true).mode(0o600);
+                                    #[cfg(target_os = "linux")]
+                                    aux_opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                    #[cfg(target_os = "macos")]
+                                    aux_opts.custom_flags(0x0100); // O_NOFOLLOW
+                                    if let Ok(file) = aux_opts.open(ext_path) {
+                                        if let Ok(metadata) = file.metadata() {
+                                            let mut p = metadata.permissions();
+                                            if (p.mode() & 0o777) != 0o600 {
+                                                p.set_mode(0o600);
+                                                let _ = file.set_permissions(p);
                                             }
                                         }
+                                    }
+                                } else {
+                                    let mut opts = OpenOptions::new();
+                                    opts.read(true).write(true);
+                                    #[cfg(target_os = "linux")]
+                                    opts.custom_flags(0x00020000); // O_NOFOLLOW
+                                    #[cfg(target_os = "macos")]
+                                    opts.custom_flags(0x0100); // O_NOFOLLOW
+                                    if let Ok(file) = opts.open(ext_path) {
+                                        if let Ok(metadata) = file.metadata() {
+                                            let mut p = metadata.permissions();
+                                            if (p.mode() & 0o777) != 0o600 {
+                                                p.set_mode(0o600);
+                                                let _ = file.set_permissions(p);
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -529,7 +537,6 @@ impl DB {
                         let _ = std::fs::File::create(&db_path);
                     }
                 }
-
             }
 
             // sqlite-vec is optional at runtime. The memory repository probes for
@@ -697,7 +704,7 @@ impl DB {
                             return Err(e.into());
                         }
                         tracing::debug!(
-                             "Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...",
+                            "Failed to connect to Postgres (attempt {}/{}): {}. Retrying in 1s...",
                             attempt,
                             max_attempts,
                             e
@@ -726,7 +733,10 @@ impl DB {
         let mut results = Vec::new();
 
         if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
-            let mut tx = mysql_pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
+            let mut tx = mysql_pool
+                .begin()
+                .await
+                .map_err(|e| format!("DB Error: {}", e))?;
             // Search Customers
             let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                 .bind(tenant_id)
@@ -739,8 +749,14 @@ impl DB {
             for row in customer_rows {
                 use sqlx::Row;
                 let id: String = row.get("id");
-                let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
-                let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
+                let name: String = row
+                    .try_get::<Option<String>, _>("name")
+                    .unwrap_or_default()
+                    .unwrap_or_default();
+                let email: String = row
+                    .try_get::<Option<String>, _>("email")
+                    .unwrap_or_default()
+                    .unwrap_or_default();
                 results.push(SearchResult {
                     id: id.clone(),
                     entity_type: "customer".to_string(),
@@ -763,8 +779,14 @@ impl DB {
             for row in order_rows {
                 use sqlx::Row;
                 let id: String = row.get("id");
-                let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
-                let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
+                let status: String = row
+                    .try_get::<Option<String>, _>("status")
+                    .unwrap_or_default()
+                    .unwrap_or_default();
+                let amount: f64 = row
+                    .try_get::<Option<f64>, _>("total_cost")
+                    .unwrap_or_default()
+                    .unwrap_or_default();
                 results.push(SearchResult {
                     id: id.clone(),
                     entity_type: "order".to_string(),
@@ -787,8 +809,14 @@ impl DB {
             for row in message_rows {
                 use sqlx::Row;
                 let id: String = row.get("id");
-                let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
-                let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
+                let source: String = row
+                    .try_get::<Option<String>, _>("source")
+                    .unwrap_or_default()
+                    .unwrap_or_default();
+                let content: String = row
+                    .try_get::<Option<String>, _>("original_content")
+                    .unwrap_or_default()
+                    .unwrap_or_default();
                 let snippet = if content.len() > 50 {
                     format!("{}...", &content[0..47])
                 } else {
@@ -805,7 +833,10 @@ impl DB {
         } else {
             match &self.store {
                 DbStore::Sqlite(sqlite_pool) => {
-                    let mut tx = sqlite_pool.begin().await.map_err(|e| format!("DB Error: {}", e))?;
+                    let mut tx = sqlite_pool
+                        .begin()
+                        .await
+                        .map_err(|e| format!("DB Error: {}", e))?;
                     // Search Customers
                     let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)) ORDER BY id ASC LIMIT 10")
                         .bind(tenant_id)
@@ -818,8 +849,14 @@ impl DB {
                     for row in customer_rows {
                         use sqlx::Row;
                         let id: String = row.get("id");
-                        let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
-                        let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
+                        let name: String = row
+                            .try_get::<Option<String>, _>("name")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        let email: String = row
+                            .try_get::<Option<String>, _>("email")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
                         results.push(SearchResult {
                             id: id.clone(),
                             entity_type: "customer".to_string(),
@@ -842,8 +879,14 @@ impl DB {
                     for row in order_rows {
                         use sqlx::Row;
                         let id: String = row.get("id");
-                        let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
-                        let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
+                        let status: String = row
+                            .try_get::<Option<String>, _>("status")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        let amount: f64 = row
+                            .try_get::<Option<f64>, _>("total_cost")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
                         results.push(SearchResult {
                             id: id.clone(),
                             entity_type: "order".to_string(),
@@ -866,8 +909,14 @@ impl DB {
                     for row in message_rows {
                         use sqlx::Row;
                         let id: String = row.get("id");
-                        let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
-                        let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
+                        let source: String = row
+                            .try_get::<Option<String>, _>("source")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        let content: String = row
+                            .try_get::<Option<String>, _>("original_content")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
                         let snippet = if content.len() > 50 {
                             format!("{}...", &content[0..47])
                         } else {
@@ -902,8 +951,14 @@ impl DB {
                     for row in customer_rows {
                         use sqlx::Row;
                         let id: String = row.get("id");
-                        let name: String = row.try_get::<Option<String>, _>("name").unwrap_or_default().unwrap_or_default();
-                        let email: String = row.try_get::<Option<String>, _>("email").unwrap_or_default().unwrap_or_default();
+                        let name: String = row
+                            .try_get::<Option<String>, _>("name")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        let email: String = row
+                            .try_get::<Option<String>, _>("email")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
                         results.push(SearchResult {
                             id: id.clone(),
                             entity_type: "customer".to_string(),
@@ -924,8 +979,14 @@ impl DB {
                     for row in order_rows {
                         use sqlx::Row;
                         let id: String = row.get("id");
-                        let status: String = row.try_get::<Option<String>, _>("status").unwrap_or_default().unwrap_or_default();
-                        let amount: f64 = row.try_get::<Option<f64>, _>("total_cost").unwrap_or_default().unwrap_or_default();
+                        let status: String = row
+                            .try_get::<Option<String>, _>("status")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        let amount: f64 = row
+                            .try_get::<Option<f64>, _>("total_cost")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
                         results.push(SearchResult {
                             id: id.clone(),
                             entity_type: "order".to_string(),
@@ -947,8 +1008,14 @@ impl DB {
                     for row in message_rows {
                         use sqlx::Row;
                         let id: String = row.get("id");
-                        let source: String = row.try_get::<Option<String>, _>("source").unwrap_or_default().unwrap_or_default();
-                        let content: String = row.try_get::<Option<String>, _>("original_content").unwrap_or_default().unwrap_or_default();
+                        let source: String = row
+                            .try_get::<Option<String>, _>("source")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
+                        let content: String = row
+                            .try_get::<Option<String>, _>("original_content")
+                            .unwrap_or_default()
+                            .unwrap_or_default();
                         let snippet = if content.len() > 50 {
                             format!("{}...", &content[0..47])
                         } else {
@@ -3125,13 +3192,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     "BOOLEAN NOT NULL DEFAULT FALSE",
                 )
                 .await?;
-                ensure_sqlite_column(
-                    sqlite_pool,
-                    "orders",
-                    "estimated_duration_days",
-                    "INTEGER",
-                )
-                .await?;
+                ensure_sqlite_column(sqlite_pool, "orders", "estimated_duration_days", "INTEGER")
+                    .await?;
                 ensure_sqlite_column(
                     sqlite_pool,
                     "subscribers",
@@ -3153,13 +3215,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     "INTEGER",
                 )
                 .await?;
-                ensure_sqlite_column(
-                    sqlite_pool,
-                    "subscriptions",
-                    "health_score",
-                    "REAL",
-                )
-                .await?;
+                ensure_sqlite_column(sqlite_pool, "subscriptions", "health_score", "REAL").await?;
                 ensure_sqlite_column(sqlite_pool, "inbox_messages", "sender_id", "TEXT").await?;
                 ensure_sqlite_column(sqlite_pool, "inbox_messages", "customer_id", "TEXT").await?;
                 sqlx::query(
@@ -3425,10 +3481,12 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         let mut result = Vec::new();
 
         if let Some(mysql_pool) = GLOBAL_MYSQL_POOL.get() {
-            let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?")
-                .bind(threshold)
-                .fetch_all(mysql_pool)
-                .await?;
+            let rows = sqlx::query(
+                "SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < ?",
+            )
+            .bind(threshold)
+            .fetch_all(mysql_pool)
+            .await?;
             for row in &rows {
                 let id: String = row.get("session_id");
                 let data: String = row.get("context_data");
@@ -3500,7 +3558,6 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
         Ok(result)
     }
 
-
     pub async fn get_completed_tasks(
         &self,
     ) -> Result<Vec<(String, String, String, String)>, Box<dyn std::error::Error>> {
@@ -3551,8 +3608,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         })
                     );
 
-                    let shared_rows =
-                        shared_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
+                    let shared_rows = shared_res
+                        .map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
                     for row in shared_rows {
                         use sqlx::Row;
                         let id: String = row.get("id");
@@ -3561,8 +3618,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         result.push((id, org_id, payload, "shared_tasks".to_string()));
                     }
 
-                    let swarm_rows =
-                        swarm_res.map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
+                    let swarm_rows = swarm_res
+                        .map_err(|e| sqlx::Error::Configuration(e.to_string().into()))??;
                     for row in swarm_rows {
                         use sqlx::Row;
                         let id: String = row.get("id");
@@ -3941,10 +3998,7 @@ mod tests {
         db.run_migrations().await.unwrap();
 
         for (table, columns) in [
-            (
-                "orders",
-                &["is_consumable", "estimated_duration_days"][..],
-            ),
+            ("orders", &["is_consumable", "estimated_duration_days"][..]),
             (
                 "subscribers",
                 &[
@@ -4143,7 +4197,8 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             let mut perms = std::fs::metadata(&parent_dir).unwrap().permissions();
             perms.set_mode(0o777);
-            std::fs::set_permissions(&parent_dir, perms).expect("Failed to set insecure permissions");
+            std::fs::set_permissions(&parent_dir, perms)
+                .expect("Failed to set insecure permissions");
         }
 
         let db_path = parent_dir.join("test.db");
@@ -4173,7 +4228,8 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let metadata = std::fs::metadata(&parent_dir).expect("Database URL or operation failed in test");
+            let metadata =
+                std::fs::metadata(&parent_dir).expect("Database URL or operation failed in test");
             let permissions = metadata.permissions();
             assert_eq!(
                 permissions.mode() & 0o777,
@@ -4509,7 +4565,8 @@ mod security_tests_final {
                             #[cfg(target_os = "macos")]
                             opts.custom_flags(0x0100); // O_NOFOLLOW
 
-                            let file = opts.open(&db_path)
+                            let file = opts
+                                .open(&db_path)
                                 .expect("Database URL or operation failed in test");
                             let metadata = file
                                 .metadata()
@@ -4593,10 +4650,14 @@ mod e2e_tenant_isolation_tests {
             .execute(&_pool).await;
 
         let _tenant_1_count: (i64,) = sqlx::query_as("SELECT count(*) FROM bookings")
-            .fetch_one(&_pool).await.unwrap_or((0,));
+            .fetch_one(&_pool)
+            .await
+            .unwrap_or((0,));
 
         let _tenant_2_count: (i64,) = sqlx::query_as("SELECT count(*) FROM bookings")
-            .fetch_one(&_pool2).await.unwrap_or((0,));
+            .fetch_one(&_pool2)
+            .await
+            .unwrap_or((0,));
 
         // Even if the exact count is difficult to know if the DB has other data,
         // we can assert that tenant_2 should not see tenant_1's insert if it's the only one.

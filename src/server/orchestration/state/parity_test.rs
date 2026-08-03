@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod parity_tests {
     use crate::db::{DB, DbStore};
-    use std::sync::Arc;
     use sqlx::Row;
-    use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::postgres::PgPoolOptions;
+    use sqlx::sqlite::SqlitePoolOptions;
+    use std::sync::Arc;
 
     async fn setup_sqlite_db() -> Arc<DB> {
         let db_id = uuid::Uuid::new_v4().to_string();
@@ -20,7 +20,10 @@ mod parity_tests {
         // Run migrations/schema setup for SQLite
         let db = DB {
             // Fix connection pooling timeout on mocked pg pool
-            pool: PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(120)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_secs(120))
+                .connect_lazy("postgres://localhost/dummy")
+                .unwrap(),
             store: DbStore::Sqlite(sqlite_pool),
         };
         db.run_migrations().await.unwrap();
@@ -30,7 +33,8 @@ mod parity_tests {
     async fn setup_postgres_db() -> Option<Arc<DB>> {
         if let Ok(url) = std::env::var("OHC_DATABASE_URL") {
             if url.starts_with("postgres") {
-                let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(100))
+                let pool = PgPoolOptions::new()
+                    .acquire_timeout(std::time::Duration::from_millis(100))
                     .connect(&url)
                     .await
                     .ok()?;
@@ -58,27 +62,31 @@ mod parity_tests {
 
         // Use the actual DB execute_with_retry to test service layer behavior
         // Use insert_knowledge_embedding as a proxy for complex parity-sensitive operations
-        let insert_res_sqlite = sqlite_db.insert_knowledge_embedding(
-            &test_product_id,
-            org_id,
-            "agent_1",
-            "task_1",
-            "content",
-            "[0.1, 0.2]",
-            "type_a"
-        ).await;
-        assert!(insert_res_sqlite.is_ok());
-
-        if let Some(ref db) = pg_db {
-            let insert_res_pg = db.insert_knowledge_embedding(
+        let insert_res_sqlite = sqlite_db
+            .insert_knowledge_embedding(
                 &test_product_id,
                 org_id,
                 "agent_1",
                 "task_1",
                 "content",
                 "[0.1, 0.2]",
-                "type_a"
-            ).await;
+                "type_a",
+            )
+            .await;
+        assert!(insert_res_sqlite.is_ok());
+
+        if let Some(ref db) = pg_db {
+            let insert_res_pg = db
+                .insert_knowledge_embedding(
+                    &test_product_id,
+                    org_id,
+                    "agent_1",
+                    "task_1",
+                    "content",
+                    "[0.1, 0.2]",
+                    "type_a",
+                )
+                .await;
             assert!(insert_res_pg.is_ok());
         }
 
@@ -113,14 +121,21 @@ mod parity_tests {
         let org_id = "test_org_parity";
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlite_db.execute_with_retry("insert_customer", || async { sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES (?, ?, ?, ?)")
-                .bind(&customer_id)
-                .bind(org_id)
-                .bind("test@example.com")
-                .bind("Test User")
-                .execute(pool)
+            sqlite_db
+                .execute_with_retry("insert_customer", || async {
+                    sqlx::query(
+                        "INSERT INTO customers (id, tenant_id, email, name) VALUES (?, ?, ?, ?)",
+                    )
+                    .bind(&customer_id)
+                    .bind(org_id)
+                    .bind("test@example.com")
+                    .bind("Test User")
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())
+                })
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .unwrap();
 
             let email: String = sqlx::query_scalar("SELECT email FROM customers WHERE id = ?")
                 .bind(&customer_id)
@@ -131,14 +146,20 @@ mod parity_tests {
         }
 
         if let Some(ref db) = pg_db {
-            db.execute_with_retry("insert_customer", || async { sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES ($1, $2, $3, $4)")
+            db.execute_with_retry("insert_customer", || async {
+                sqlx::query(
+                    "INSERT INTO customers (id, tenant_id, email, name) VALUES ($1, $2, $3, $4)",
+                )
                 .bind(&customer_id)
                 .bind(org_id)
                 .bind("test@example.com")
                 .bind("Test User")
                 .execute(&db.pool)
                 .await
-                .map_err(|e| e.to_string()) }).await.unwrap();
+                .map_err(|e| e.to_string())
+            })
+            .await
+            .unwrap();
 
             let email: String = sqlx::query_scalar("SELECT email FROM customers WHERE id = $1")
                 .bind(&customer_id)
@@ -168,11 +189,12 @@ mod parity_tests {
                 .await
                 .map_err(|e| e.to_string()) }).await.unwrap();
 
-            let parent_plan_id: Option<String> = sqlx::query_scalar("SELECT parent_plan_id FROM swarm_tasks WHERE id = ?")
-                .bind(&task_id)
-                .fetch_one(pool)
-                .await
-                .unwrap();
+            let parent_plan_id: Option<String> =
+                sqlx::query_scalar("SELECT parent_plan_id FROM swarm_tasks WHERE id = ?")
+                    .bind(&task_id)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap();
             assert_eq!(parent_plan_id, None);
         }
 
@@ -187,11 +209,12 @@ mod parity_tests {
                 .await
                 .map_err(|e| e.to_string()) }).await.unwrap();
 
-            let parent_plan_id: Option<String> = sqlx::query_scalar("SELECT parent_plan_id FROM swarm_tasks WHERE id = $1")
-                .bind(parsed_id)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+            let parent_plan_id: Option<String> =
+                sqlx::query_scalar("SELECT parent_plan_id FROM swarm_tasks WHERE id = $1")
+                    .bind(parsed_id)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap();
             assert_eq!(parent_plan_id, None);
         }
     }
@@ -224,19 +247,23 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            let null_tasks: Vec<String> = sqlx::query_scalar("SELECT id FROM swarm_tasks WHERE parent_plan_id IS NULL AND mission_id = ?")
-                .bind(mission_id)
-                .fetch_all(pool)
-                .await
-                .unwrap();
+            let null_tasks: Vec<String> = sqlx::query_scalar(
+                "SELECT id FROM swarm_tasks WHERE parent_plan_id IS NULL AND mission_id = ?",
+            )
+            .bind(mission_id)
+            .fetch_all(pool)
+            .await
+            .unwrap();
             assert_eq!(null_tasks.len(), 1);
             assert_eq!(null_tasks[0], task_id1);
 
-            let non_null_tasks: Vec<String> = sqlx::query_scalar("SELECT id FROM swarm_tasks WHERE parent_plan_id = 'plan_1' AND mission_id = ?")
-                .bind(mission_id)
-                .fetch_all(pool)
-                .await
-                .unwrap();
+            let non_null_tasks: Vec<String> = sqlx::query_scalar(
+                "SELECT id FROM swarm_tasks WHERE parent_plan_id = 'plan_1' AND mission_id = ?",
+            )
+            .bind(mission_id)
+            .fetch_all(pool)
+            .await
+            .unwrap();
             assert_eq!(non_null_tasks.len(), 1);
             assert_eq!(non_null_tasks[0], task_id2);
         }
@@ -262,19 +289,23 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            let null_tasks: Vec<uuid::Uuid> = sqlx::query_scalar("SELECT id FROM swarm_tasks WHERE parent_plan_id IS NULL AND mission_id = $1")
-                .bind(mission_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap();
+            let null_tasks: Vec<uuid::Uuid> = sqlx::query_scalar(
+                "SELECT id FROM swarm_tasks WHERE parent_plan_id IS NULL AND mission_id = $1",
+            )
+            .bind(mission_id)
+            .fetch_all(&db.pool)
+            .await
+            .unwrap();
             assert_eq!(null_tasks.len(), 1);
             assert_eq!(null_tasks[0], parsed_id1);
 
-            let non_null_tasks: Vec<uuid::Uuid> = sqlx::query_scalar("SELECT id FROM swarm_tasks WHERE parent_plan_id = 'plan_1' AND mission_id = $1")
-                .bind(mission_id)
-                .fetch_all(&db.pool)
-                .await
-                .unwrap();
+            let non_null_tasks: Vec<uuid::Uuid> = sqlx::query_scalar(
+                "SELECT id FROM swarm_tasks WHERE parent_plan_id = 'plan_1' AND mission_id = $1",
+            )
+            .bind(mission_id)
+            .fetch_all(&db.pool)
+            .await
+            .unwrap();
             assert_eq!(non_null_tasks.len(), 1);
             assert_eq!(non_null_tasks[0], parsed_id2);
         }
@@ -300,11 +331,13 @@ mod parity_tests {
 
             let mut tx1 = pool.begin().await.unwrap();
             // In SQLite, an immediate transaction acquires a lock, we simulate updating.
-            sqlx::query("UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = ? AND status = 'PENDING'")
-                .bind(&task_id)
-                .execute(&mut *tx1)
-                .await
-                .unwrap();
+            sqlx::query(
+                "UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = ? AND status = 'PENDING'",
+            )
+            .bind(&task_id)
+            .execute(&mut *tx1)
+            .await
+            .unwrap();
 
             let pool_clone = pool.clone();
             let task_id_clone = task_id.clone();
@@ -347,7 +380,10 @@ mod parity_tests {
                 }
             }
 
-            assert!(!completed, "Second transaction should be blocked by isolation and not complete successfully while tx1 holds the lock");
+            assert!(
+                !completed,
+                "Second transaction should be blocked by isolation and not complete successfully while tx1 holds the lock"
+            );
 
             tx1.commit().await.unwrap();
 
@@ -387,15 +423,19 @@ mod parity_tests {
             // we can just await the task since NOWAIT guarantees it returns immediately with an error if locked.
             let join_handle = tokio::spawn(async move {
                 let mut tx2 = pool_clone.begin().await.unwrap();
-                let res = sqlx::query("SELECT status FROM swarm_tasks WHERE id = $1 FOR UPDATE NOWAIT")
-                    .bind(parsed_id)
-                    .fetch_optional(&mut *tx2)
-                    .await;
+                let res =
+                    sqlx::query("SELECT status FROM swarm_tasks WHERE id = $1 FOR UPDATE NOWAIT")
+                        .bind(parsed_id)
+                        .fetch_optional(&mut *tx2)
+                        .await;
                 res
             });
 
             let res = join_handle.await.unwrap();
-            assert!(res.is_err(), "Second transaction should be blocked by isolation in Postgres and fail with NOWAIT");
+            assert!(
+                res.is_err(),
+                "Second transaction should be blocked by isolation in Postgres and fail with NOWAIT"
+            );
 
             tx1.commit().await.unwrap();
         }
@@ -467,7 +507,9 @@ mod parity_tests {
         let title = "Test Timezone Edge Case Title";
 
         use chrono::TimeZone;
-        let dt = chrono::Utc.with_ymd_and_hms(2025, 2, 28, 15, 30, 45).unwrap();
+        let dt = chrono::Utc
+            .with_ymd_and_hms(2025, 2, 28, 15, 30, 45)
+            .unwrap();
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
             sqlite_db.execute_with_retry("insert_task_tz", || async { sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at, tenant_id) VALUES (?, ?, ?, \'PENDING\', ?, 'default_tenant')")
@@ -527,11 +569,12 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            let dept: String = sqlx::query_scalar("SELECT department FROM department_tasks WHERE id = ?")
-                .bind(&task_id)
-                .fetch_one(pool)
-                .await
-                .unwrap();
+            let dept: String =
+                sqlx::query_scalar("SELECT department FROM department_tasks WHERE id = ?")
+                    .bind(&task_id)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap();
             assert_eq!(dept, "ops");
         }
 
@@ -544,11 +587,12 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            let dept: String = sqlx::query_scalar("SELECT department FROM department_tasks WHERE id = $1")
-                .bind(&task_id)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+            let dept: String =
+                sqlx::query_scalar("SELECT department FROM department_tasks WHERE id = $1")
+                    .bind(&task_id)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap();
             assert_eq!(dept, "ops");
         }
     }
@@ -563,12 +607,14 @@ mod parity_tests {
 
         // SQLite
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlx::query("INSERT INTO shared_tasks (id, organization_id, title) VALUES (?, ?, 'test_task')")
-                .bind(&task_id)
-                .bind(org_id)
-                .execute(pool)
-                .await
-                .unwrap();
+            sqlx::query(
+                "INSERT INTO shared_tasks (id, organization_id, title) VALUES (?, ?, 'test_task')",
+            )
+            .bind(&task_id)
+            .bind(org_id)
+            .execute(pool)
+            .await
+            .unwrap();
 
             let title: String = sqlx::query_scalar("SELECT title FROM shared_tasks WHERE id = ?")
                 .bind(&task_id)
@@ -596,7 +642,6 @@ mod parity_tests {
         }
     }
 
-
     #[tokio::test]
     async fn test_parity_jsonb_merging() {
         let sqlite_db = setup_sqlite_db().await;
@@ -615,7 +660,8 @@ mod parity_tests {
                 .unwrap();
 
             let reason = "Task failed due to error XYZ";
-            let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap();
+            let payload_update =
+                serde_json::to_string(&serde_json::json!({"error": reason})).unwrap();
 
             sqlx::query("UPDATE department_tasks SET payload = json_patch(COALESCE(payload, '{}'), ?) WHERE id = ?")
                 .bind(&payload_update)
@@ -624,11 +670,12 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            let payload_str: String = sqlx::query_scalar("SELECT payload FROM department_tasks WHERE id = ?")
-                .bind(&task_id)
-                .fetch_one(pool)
-                .await
-                .unwrap();
+            let payload_str: String =
+                sqlx::query_scalar("SELECT payload FROM department_tasks WHERE id = ?")
+                    .bind(&task_id)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap();
 
             let parsed: serde_json::Value = serde_json::from_str(&payload_str).unwrap();
             assert_eq!(parsed["original"], true);
@@ -647,7 +694,8 @@ mod parity_tests {
                 .unwrap();
 
             let reason = "Task failed due to error XYZ";
-            let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap();
+            let payload_update =
+                serde_json::to_string(&serde_json::json!({"error": reason})).unwrap();
 
             sqlx::query("UPDATE department_tasks SET payload = COALESCE(payload::jsonb, '{}'::jsonb) || $2::jsonb WHERE id = $1")
                 .bind(parsed_id)
@@ -656,11 +704,12 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            let payload_value: serde_json::Value = sqlx::query_scalar("SELECT payload FROM department_tasks WHERE id = $1")
-                .bind(parsed_id)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+            let payload_value: serde_json::Value =
+                sqlx::query_scalar("SELECT payload FROM department_tasks WHERE id = $1")
+                    .bind(parsed_id)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap();
 
             assert_eq!(payload_value["original"], true);
             assert_eq!(payload_value["error"], reason);
@@ -684,8 +733,6 @@ mod parity_tests {
             assert!(res.is_ok());
         }
     }
-
-
 
     #[tokio::test]
     async fn test_parity_empty_string_vs_null() {
@@ -715,17 +762,19 @@ mod parity_tests {
                 .unwrap();
 
             // Read back
-            let desc_empty: Option<String> = sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = ?")
-                .bind(&task_id_empty)
-                .fetch_one(pool)
-                .await
-                .unwrap();
+            let desc_empty: Option<String> =
+                sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = ?")
+                    .bind(&task_id_empty)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap();
 
-            let desc_null: Option<String> = sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = ?")
-                .bind(&task_id_null)
-                .fetch_one(pool)
-                .await
-                .unwrap();
+            let desc_null: Option<String> =
+                sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = ?")
+                    .bind(&task_id_null)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap();
 
             assert_eq!(desc_empty, Some("".to_string()));
             assert_eq!(desc_null, None);
@@ -753,17 +802,19 @@ mod parity_tests {
                 .unwrap();
 
             // Read back
-            let desc_empty: Option<String> = sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = $1")
-                .bind(parsed_id_empty)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+            let desc_empty: Option<String> =
+                sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = $1")
+                    .bind(parsed_id_empty)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap();
 
-            let desc_null: Option<String> = sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = $1")
-                .bind(parsed_id_null)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+            let desc_null: Option<String> =
+                sqlx::query_scalar("SELECT description FROM swarm_tasks WHERE id = $1")
+                    .bind(parsed_id_null)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap();
 
             assert_eq!(desc_empty, Some("".to_string()));
             assert_eq!(desc_null, None);
@@ -789,11 +840,12 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            let created_at: String = sqlx::query_scalar("SELECT datetime(created_at) FROM swarm_tasks WHERE id = ?")
-                .bind(&task_id)
-                .fetch_one(pool)
-                .await
-                .unwrap();
+            let created_at: String =
+                sqlx::query_scalar("SELECT datetime(created_at) FROM swarm_tasks WHERE id = ?")
+                    .bind(&task_id)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap();
 
             // SQLite datetime function normalizes it, ensure parity function correctly normalizes
             let parsed_sqlite = crate::db::parse_sqlite_datetime(&created_at).unwrap();
@@ -810,11 +862,12 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            let created_at: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT created_at FROM swarm_tasks WHERE id = $1")
-                .bind(task_id_pg)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+            let created_at: chrono::DateTime<chrono::Utc> =
+                sqlx::query_scalar("SELECT created_at FROM swarm_tasks WHERE id = $1")
+                    .bind(task_id_pg)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap();
 
             assert_eq!(created_at.to_rfc3339(), "2023-10-25T14:30:00+00:00");
         }
@@ -830,51 +883,67 @@ mod parity_tests {
         let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
         let attempts_clone = attempts.clone();
 
-        let result: Result<(), String> = sqlite_db.execute_with_retry("test_sync_lag", || {
-            let attempts_clone = attempts_clone.clone();
-            async move {
-                let mut a = attempts_clone.lock().unwrap();
-                *a += 1;
-
-                // Simulate a lag (e.g. over slow network/disk) that exceeds the 60s timeout constraint
-                // We run it inside a spawn to prevent deadlocking the current task when time advances
-                let handle = tokio::spawn(async {
-                    tokio::time::advance(std::time::Duration::from_secs(65)).await;
-                    tokio::task::yield_now().await;
-                });
-                let _ = handle.await;
-
-                // We'll return an error so retry logic would theoretically kick in if not timed out
-                Err::<(), String>("database is locked".to_string())
-            }
-        }).await;
-
-        assert!(result.is_err(), "Sync operation must time out under lag conditions to prevent cascading failures");
-        assert!(result.unwrap_err().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
-
-        let pg_db = setup_postgres_db().await;
-        if let Some(db) = pg_db {
-            let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
-            let attempts_clone = attempts.clone();
-
-            let result: Result<(), String> = db.execute_with_retry("test_sync_lag_pg", || {
+        let result: Result<(), String> = sqlite_db
+            .execute_with_retry("test_sync_lag", || {
                 let attempts_clone = attempts_clone.clone();
                 async move {
                     let mut a = attempts_clone.lock().unwrap();
                     *a += 1;
 
+                    // Simulate a lag (e.g. over slow network/disk) that exceeds the 60s timeout constraint
+                    // We run it inside a spawn to prevent deadlocking the current task when time advances
                     let handle = tokio::spawn(async {
                         tokio::time::advance(std::time::Duration::from_secs(65)).await;
                         tokio::task::yield_now().await;
                     });
                     let _ = handle.await;
 
-                    Err::<(), String>("serialization failure".to_string())
+                    // We'll return an error so retry logic would theoretically kick in if not timed out
+                    Err::<(), String>("database is locked".to_string())
                 }
-            }).await;
+            })
+            .await;
 
-            assert!(result.is_err(), "Sync operation must time out under lag conditions to prevent cascading failures");
-            assert!(result.unwrap_err().contains("timed out"), "Must be explicitly timed out by ML-Resilience rule");
+        assert!(
+            result.is_err(),
+            "Sync operation must time out under lag conditions to prevent cascading failures"
+        );
+        assert!(
+            result.unwrap_err().contains("timed out"),
+            "Must be explicitly timed out by ML-Resilience rule"
+        );
+
+        let pg_db = setup_postgres_db().await;
+        if let Some(db) = pg_db {
+            let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
+            let attempts_clone = attempts.clone();
+
+            let result: Result<(), String> = db
+                .execute_with_retry("test_sync_lag_pg", || {
+                    let attempts_clone = attempts_clone.clone();
+                    async move {
+                        let mut a = attempts_clone.lock().unwrap();
+                        *a += 1;
+
+                        let handle = tokio::spawn(async {
+                            tokio::time::advance(std::time::Duration::from_secs(65)).await;
+                            tokio::task::yield_now().await;
+                        });
+                        let _ = handle.await;
+
+                        Err::<(), String>("serialization failure".to_string())
+                    }
+                })
+                .await;
+
+            assert!(
+                result.is_err(),
+                "Sync operation must time out under lag conditions to prevent cascading failures"
+            );
+            assert!(
+                result.unwrap_err().contains("timed out"),
+                "Must be explicitly timed out by ML-Resilience rule"
+            );
         }
     }
 
@@ -885,38 +954,48 @@ mod parity_tests {
         let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
         let attempts_clone = attempts.clone();
 
-        let res: Result<(), String> = sqlite_db.execute_with_retry("test_exhaustion", || {
-            let attempts_clone = attempts_clone.clone();
-            async move {
-                let mut a = attempts_clone.lock().unwrap();
-                *a += 1;
-                // Always fail
-                Err("database is locked".to_string())
-            }
-        }).await;
+        let res: Result<(), String> = sqlite_db
+            .execute_with_retry("test_exhaustion", || {
+                let attempts_clone = attempts_clone.clone();
+                async move {
+                    let mut a = attempts_clone.lock().unwrap();
+                    *a += 1;
+                    // Always fail
+                    Err("database is locked".to_string())
+                }
+            })
+            .await;
 
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("Database retry exhausted"));
         // execute_with_retry makes 1 initial attempt + 2 retries (max_attempts = 2)
-        assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS + 1);
+        assert_eq!(
+            *attempts.lock().unwrap(),
+            crate::db::MAX_DB_RETRY_ATTEMPTS + 1
+        );
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
             let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
             let attempts_clone = attempts.clone();
 
-            let res: Result<(), String> = db.execute_with_retry("test_exhaustion_pg", || {
-                let attempts_clone = attempts_clone.clone();
-                async move {
-                    let mut a = attempts_clone.lock().unwrap();
-                    *a += 1;
-                    Err("serialization failure".to_string())
-                }
-            }).await;
+            let res: Result<(), String> = db
+                .execute_with_retry("test_exhaustion_pg", || {
+                    let attempts_clone = attempts_clone.clone();
+                    async move {
+                        let mut a = attempts_clone.lock().unwrap();
+                        *a += 1;
+                        Err("serialization failure".to_string())
+                    }
+                })
+                .await;
 
             assert!(res.is_err());
             assert!(res.unwrap_err().contains("Database retry exhausted"));
-            assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS + 1);
+            assert_eq!(
+                *attempts.lock().unwrap(),
+                crate::db::MAX_DB_RETRY_ATTEMPTS + 1
+            );
         }
     }
 
@@ -927,15 +1006,17 @@ mod parity_tests {
         let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
         let attempts_clone = attempts.clone();
 
-        let res: Result<(), String> = sqlite_db.execute_with_retry("test_non_retryable", || {
-            let attempts_clone = attempts_clone.clone();
-            async move {
-                let mut a = attempts_clone.lock().unwrap();
-                *a += 1;
-                // Always fail with non-retryable error
-                Err("syntax error at or near".to_string())
-            }
-        }).await;
+        let res: Result<(), String> = sqlite_db
+            .execute_with_retry("test_non_retryable", || {
+                let attempts_clone = attempts_clone.clone();
+                async move {
+                    let mut a = attempts_clone.lock().unwrap();
+                    *a += 1;
+                    // Always fail with non-retryable error
+                    Err("syntax error at or near".to_string())
+                }
+            })
+            .await;
 
         assert!(res.is_err());
         assert!(!res.unwrap_err().contains("Database retry exhausted"));
@@ -947,14 +1028,16 @@ mod parity_tests {
             let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
             let attempts_clone = attempts.clone();
 
-            let res: Result<(), String> = db.execute_with_retry("test_non_retryable_pg", || {
-                let attempts_clone = attempts_clone.clone();
-                async move {
-                    let mut a = attempts_clone.lock().unwrap();
-                    *a += 1;
-                    Err("syntax error at or near".to_string())
-                }
-            }).await;
+            let res: Result<(), String> = db
+                .execute_with_retry("test_non_retryable_pg", || {
+                    let attempts_clone = attempts_clone.clone();
+                    async move {
+                        let mut a = attempts_clone.lock().unwrap();
+                        *a += 1;
+                        Err("syntax error at or near".to_string())
+                    }
+                })
+                .await;
 
             assert!(res.is_err());
             assert!(!res.unwrap_err().contains("Database retry exhausted"));
@@ -969,44 +1052,54 @@ mod parity_tests {
         let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
         let attempts_clone = attempts.clone();
 
-        let res = sqlite_db.execute_with_retry("test_success", || {
-            let attempts_clone = attempts_clone.clone();
-            async move {
-                let mut a = attempts_clone.lock().unwrap();
-                *a += 1;
-                if *a < crate::db::MAX_DB_RETRY_ATTEMPTS + 1 {
-                    Err("database is locked".to_string())
-                } else {
-                    Ok("success".to_string())
+        let res = sqlite_db
+            .execute_with_retry("test_success", || {
+                let attempts_clone = attempts_clone.clone();
+                async move {
+                    let mut a = attempts_clone.lock().unwrap();
+                    *a += 1;
+                    if *a < crate::db::MAX_DB_RETRY_ATTEMPTS + 1 {
+                        Err("database is locked".to_string())
+                    } else {
+                        Ok("success".to_string())
+                    }
                 }
-            }
-        }).await;
+            })
+            .await;
 
         assert!(res.is_ok());
         assert_eq!(res.unwrap(), "success");
-        assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS + 1);
+        assert_eq!(
+            *attempts.lock().unwrap(),
+            crate::db::MAX_DB_RETRY_ATTEMPTS + 1
+        );
 
         let pg_db = setup_postgres_db().await;
         if let Some(db) = pg_db {
             let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
             let attempts_clone = attempts.clone();
 
-            let res = db.execute_with_retry("test_success_pg", || {
-                let attempts_clone = attempts_clone.clone();
-                async move {
-                    let mut a = attempts_clone.lock().unwrap();
-                    *a += 1;
-                    if *a < crate::db::MAX_DB_RETRY_ATTEMPTS + 1 {
-                        Err("serialization failure".to_string())
-                    } else {
-                        Ok("success".to_string())
+            let res = db
+                .execute_with_retry("test_success_pg", || {
+                    let attempts_clone = attempts_clone.clone();
+                    async move {
+                        let mut a = attempts_clone.lock().unwrap();
+                        *a += 1;
+                        if *a < crate::db::MAX_DB_RETRY_ATTEMPTS + 1 {
+                            Err("serialization failure".to_string())
+                        } else {
+                            Ok("success".to_string())
+                        }
                     }
-                }
-            }).await;
+                })
+                .await;
 
             assert!(res.is_ok());
             assert_eq!(res.unwrap(), "success");
-            assert_eq!(*attempts.lock().unwrap(), crate::db::MAX_DB_RETRY_ATTEMPTS + 1);
+            assert_eq!(
+                *attempts.lock().unwrap(),
+                crate::db::MAX_DB_RETRY_ATTEMPTS + 1
+            );
         }
     }
 }

@@ -9,7 +9,6 @@ use std::sync::Arc;
 use super::MeshLockGuard;
 use crate::orchestration::mesh::TeammateMesh;
 
-
 pub struct StandaloneStateManager {
     db: Arc<DB>,
     mesh: Arc<dyn TeammateMesh>,
@@ -178,7 +177,12 @@ impl StateManager for StandaloneStateManager {
             .await
         };
 
-        match tokio::time::timeout(crate::orchestration::state::state_manager_timeout(), transition_future).await {
+        match tokio::time::timeout(
+            crate::orchestration::state::state_manager_timeout(),
+            transition_future,
+        )
+        .await
+        {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
@@ -240,7 +244,11 @@ impl StateManager for StandaloneStateManager {
         {
             Ok(Ok(result)) => result,
             Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") || e.contains("database is locked") || e.contains("Timeout") {
+                if e.contains("Timeout acquiring lock")
+                    || e.contains("is currently locked")
+                    || e.contains("database is locked")
+                    || e.contains("Timeout")
+                {
                     tracing::warn!(
                         "Lock timeout or unavailable in StandaloneStateManager::pull_available_tasks, fail-safing to empty list."
                     );

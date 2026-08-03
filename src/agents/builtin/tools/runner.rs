@@ -1,10 +1,10 @@
 #![allow(clippy::unnecessary_unwrap)]
+use async_trait::async_trait;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-use async_trait::async_trait;
-use tokio::process::Command;
 use std::sync::OnceLock;
+use tokio::process::Command;
 
 #[async_trait]
 pub trait CommandRunner: Send + Sync {
@@ -38,7 +38,14 @@ impl SandboxedCommandRunner {
     pub(crate) fn should_use_container_backend(backend_env: &str, execution_mode: &str) -> bool {
         matches!(
             backend_env,
-            "container" | "docker" | "podman" | "ssh" | "singularity" | "modal" | "daytona" | "vercal"
+            "container"
+                | "docker"
+                | "podman"
+                | "ssh"
+                | "singularity"
+                | "modal"
+                | "daytona"
+                | "vercal"
         ) || matches!(execution_mode, "cluster" | "cloud")
     }
 
@@ -55,8 +62,13 @@ impl SandboxedCommandRunner {
 
         for candidate in candidates {
             let mut cmd = std::process::Command::new(candidate);
-            let arg = if candidate == "ssh" { "-V" } else { "--version" };
-            let available = cmd.arg(arg)
+            let arg = if candidate == "ssh" {
+                "-V"
+            } else {
+                "--version"
+            };
+            let available = cmd
+                .arg(arg)
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null())
                 .status()
@@ -93,7 +105,8 @@ impl SandboxedCommandRunner {
         // Multi-backend argument mapping based on selected runtime
         match runtime {
             "ssh" => {
-                let target = std::env::var("OHC_AGENT_SSH_TARGET").unwrap_or_else(|_| "localhost".to_string());
+                let target = std::env::var("OHC_AGENT_SSH_TARGET")
+                    .unwrap_or_else(|_| "localhost".to_string());
                 let mut ssh_args = vec![target];
                 let mut env_prefix = String::new();
                 for (key, value) in envs {
@@ -101,7 +114,7 @@ impl SandboxedCommandRunner {
                 }
                 ssh_args.push(format!("{} {}", env_prefix, command));
                 ssh_args
-            },
+            }
             "singularity" => {
                 let image = std::env::var("OHC_AGENT_SINGULARITY_IMAGE")
                     .unwrap_or_else(|_| "ubuntu.sif".to_string());
@@ -118,16 +131,20 @@ impl SandboxedCommandRunner {
                 exec_args.push("-c".to_string());
                 exec_args.push(command);
                 exec_args
-            },
+            }
             "modal" => {
-                let mut exec_args = vec!["run".to_string(), "ohc_modal_stub".to_string(), "--".to_string()];
+                let mut exec_args = vec![
+                    "run".to_string(),
+                    "ohc_modal_stub".to_string(),
+                    "--".to_string(),
+                ];
                 for (key, value) in envs {
                     exec_args.push("--env".to_string());
                     exec_args.push(format!("{}={}", key, value));
                 }
                 exec_args.push(command);
                 exec_args
-            },
+            }
             "daytona" => {
                 let workspace = std::env::var("OHC_AGENT_DAYTONA_WORKSPACE")
                     .unwrap_or_else(|_| "default".to_string());
@@ -140,7 +157,7 @@ impl SandboxedCommandRunner {
 
                 exec_args.push(format!("{}{}", env_prefix, command));
                 exec_args
-            },
+            }
             "vercal" => {
                 let mut exec_args = vec!["sandbox".to_string(), "exec".to_string()];
                 for (key, value) in envs {
@@ -150,7 +167,7 @@ impl SandboxedCommandRunner {
                 exec_args.push("--".to_string());
                 exec_args.push(command);
                 exec_args
-            },
+            }
             _ => {
                 // Default Docker / Podman mapping
                 let image = std::env::var("OHC_AGENT_CONTAINER_IMAGE")
@@ -158,13 +175,16 @@ impl SandboxedCommandRunner {
                 let workspace = sandbox_dir
                     .or(current_dir)
                     .map(Path::to_path_buf)
-                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+                    .unwrap_or_else(|| {
+                        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+                    });
 
                 let mut docker_args = vec![
                     "run".to_string(),
                     "--rm".to_string(),
                     "--network".to_string(),
-                    std::env::var("OHC_AGENT_CONTAINER_NETWORK").unwrap_or_else(|_| "none".to_string()),
+                    std::env::var("OHC_AGENT_CONTAINER_NETWORK")
+                        .unwrap_or_else(|_| "none".to_string()),
                     "-v".to_string(),
                     format!("{}:/workspace", workspace.display()),
                     "-w".to_string(),
@@ -214,10 +234,14 @@ impl CommandRunner for SandboxedCommandRunner {
         if Self::should_use_container_backend(&backend_env, &execution_mode) {
             // Retrieve cached runtime based on backend
             static RUNTIME: OnceLock<Option<String>> = OnceLock::new();
-            let runtime_opt = RUNTIME.get_or_init(|| {
-                let current_backend = std::env::var("OHC_AGENT_COMMAND_BACKEND").unwrap_or_default().to_lowercase();
-                Self::find_container_runtime(&current_backend)
-            }).clone();
+            let runtime_opt = RUNTIME
+                .get_or_init(|| {
+                    let current_backend = std::env::var("OHC_AGENT_COMMAND_BACKEND")
+                        .unwrap_or_default()
+                        .to_lowercase();
+                    Self::find_container_runtime(&current_backend)
+                })
+                .clone();
 
             if let Some(runtime) = runtime_opt {
                 let container_args = Self::container_args(
@@ -250,18 +274,30 @@ impl CommandRunner for SandboxedCommandRunner {
         });
 
         if is_bwrap_available && self.sandbox_dir.is_some() {
-            let sandbox_dir_str = self.sandbox_dir.as_ref().unwrap().to_string_lossy().to_string();
+            let sandbox_dir_str = self
+                .sandbox_dir
+                .as_ref()
+                .unwrap()
+                .to_string_lossy()
+                .to_string();
 
             let mut bwrap_args = vec![
                 "--unshare-pid".to_string(),
                 "--unshare-uts".to_string(),
                 "--unshare-ipc".to_string(),
                 "--unshare-cgroup".to_string(),
-                "--proc".to_string(), "/proc".to_string(),
-                "--dev".to_string(), "/dev".to_string(),
-                "--tmpfs".to_string(), "/tmp".to_string(),
-                "--ro-bind".to_string(), "/".to_string(), "/".to_string(),
-                "--bind".to_string(), sandbox_dir_str.clone(), sandbox_dir_str,
+                "--proc".to_string(),
+                "/proc".to_string(),
+                "--dev".to_string(),
+                "/dev".to_string(),
+                "--tmpfs".to_string(),
+                "/tmp".to_string(),
+                "--ro-bind".to_string(),
+                "/".to_string(),
+                "/".to_string(),
+                "--bind".to_string(),
+                sandbox_dir_str.clone(),
+                sandbox_dir_str,
                 "--".to_string(),
                 program.to_string(),
             ];
@@ -277,7 +313,10 @@ impl CommandRunner for SandboxedCommandRunner {
                 bwrap_cmd.current_dir(dir);
             }
             bwrap_cmd.env_clear();
-            bwrap_cmd.env("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+            bwrap_cmd.env(
+                "PATH",
+                "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            );
             for (k, v) in envs {
                 bwrap_cmd.env(k, v);
             }
@@ -299,8 +338,8 @@ impl CommandRunner for SandboxedCommandRunner {
 #[cfg(test)]
 pub mod mock {
     use super::*;
-    use std::sync::{Arc, Mutex};
     use std::collections::VecDeque;
+    use std::sync::{Arc, Mutex};
 
     #[derive(Clone)]
     pub struct MockCommandRunner {
@@ -330,14 +369,21 @@ pub mod mock {
             _current_dir: Option<&Path>,
             _envs: Vec<(String, String)>,
         ) -> io::Result<Output> {
-            *self.last_command.lock().unwrap() = Some((program.to_string(), args.iter().map(|s| s.to_string()).collect()));
-            self.next_responses.lock().unwrap().pop_front().unwrap_or_else(|| {
-                Ok(Output {
-                    status: mock_exit_status(0),
-                    stdout: Vec::new(),
-                    stderr: Vec::new(),
+            *self.last_command.lock().unwrap() = Some((
+                program.to_string(),
+                args.iter().map(|s| s.to_string()).collect(),
+            ));
+            self.next_responses
+                .lock()
+                .unwrap()
+                .pop_front()
+                .unwrap_or_else(|| {
+                    Ok(Output {
+                        status: mock_exit_status(0),
+                        stdout: Vec::new(),
+                        stderr: Vec::new(),
+                    })
                 })
-            })
         }
     }
 
@@ -368,7 +414,12 @@ mod tests {
     #[test]
     fn test_container_args_ssh() {
         let args = SandboxedCommandRunner::container_args(
-            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "ssh"
+            "echo",
+            &["hello"],
+            None,
+            None,
+            &vec![("FOO".to_string(), "bar".to_string())],
+            "ssh",
         );
         assert_eq!(args[0], "localhost"); // default target
         assert!(args[1].contains("FOO=bar"));
@@ -378,7 +429,12 @@ mod tests {
     #[test]
     fn test_container_args_singularity() {
         let args = SandboxedCommandRunner::container_args(
-            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "singularity"
+            "echo",
+            &["hello"],
+            None,
+            None,
+            &vec![("FOO".to_string(), "bar".to_string())],
+            "singularity",
         );
         assert_eq!(args[0], "exec");
         assert_eq!(args[1], "--env");
@@ -392,7 +448,12 @@ mod tests {
     #[test]
     fn test_container_args_modal() {
         let args = SandboxedCommandRunner::container_args(
-            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "modal"
+            "echo",
+            &["hello"],
+            None,
+            None,
+            &vec![("FOO".to_string(), "bar".to_string())],
+            "modal",
         );
         assert_eq!(args[0], "run");
         assert_eq!(args[1], "ohc_modal_stub");
@@ -405,7 +466,12 @@ mod tests {
     #[test]
     fn test_container_args_daytona() {
         let args = SandboxedCommandRunner::container_args(
-            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "daytona"
+            "echo",
+            &["hello"],
+            None,
+            None,
+            &vec![("FOO".to_string(), "bar".to_string())],
+            "daytona",
         );
         assert_eq!(args[0], "execute");
         assert_eq!(args[1], "default"); // default workspace
@@ -415,7 +481,12 @@ mod tests {
     #[test]
     fn test_container_args_vercal() {
         let args = SandboxedCommandRunner::container_args(
-            "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "vercal"
+            "echo",
+            &["hello"],
+            None,
+            None,
+            &vec![("FOO".to_string(), "bar".to_string())],
+            "vercal",
         );
         assert_eq!(args[0], "sandbox");
         assert_eq!(args[1], "exec");
@@ -427,12 +498,27 @@ mod tests {
 
     #[test]
     fn test_should_use_container_backend() {
-        assert!(SandboxedCommandRunner::should_use_container_backend("docker", "standalone"));
-        assert!(SandboxedCommandRunner::should_use_container_backend("modal", "standalone"));
-        assert!(SandboxedCommandRunner::should_use_container_backend("unknown", "cloud"));
-        assert!(SandboxedCommandRunner::should_use_container_backend("unknown", "cluster"));
-        assert!(!SandboxedCommandRunner::should_use_container_backend("unknown", "standalone"));
-        assert!(!SandboxedCommandRunner::should_use_container_backend("", ""));
+        assert!(SandboxedCommandRunner::should_use_container_backend(
+            "docker",
+            "standalone"
+        ));
+        assert!(SandboxedCommandRunner::should_use_container_backend(
+            "modal",
+            "standalone"
+        ));
+        assert!(SandboxedCommandRunner::should_use_container_backend(
+            "unknown", "cloud"
+        ));
+        assert!(SandboxedCommandRunner::should_use_container_backend(
+            "unknown", "cluster"
+        ));
+        assert!(!SandboxedCommandRunner::should_use_container_backend(
+            "unknown",
+            "standalone"
+        ));
+        assert!(!SandboxedCommandRunner::should_use_container_backend(
+            "", ""
+        ));
     }
 
     #[test]

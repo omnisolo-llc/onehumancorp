@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
 #[cfg(ohc_bazel)]
 use crate::integrations::mercadopago::client::MercadoPagoClient;
-#[cfg(not(ohc_bazel))]
-use server_integrations_mercadopago::client::MercadoPagoClient;
 #[cfg(ohc_bazel)]
 use crate::integrations::razorpay::client::RazorpayClient;
+use serde::{Deserialize, Serialize};
+#[cfg(not(ohc_bazel))]
+use server_integrations_mercadopago::client::MercadoPagoClient;
 #[cfg(not(ohc_bazel))]
 use server_integrations_razorpay::client::RazorpayClient;
 
@@ -53,7 +53,11 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
-    pub async fn create_payment_link(&self, name: &str, amount_cents: i64) -> Result<String, String> {
+    pub async fn create_payment_link(
+        &self,
+        name: &str,
+        amount_cents: i64,
+    ) -> Result<String, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             // Mock response if no real key
@@ -76,10 +80,14 @@ impl StripeClient {
             .map_err(|e| format!("Stripe API error creating product: {}", e))?;
 
         if !product_res.status().is_success() {
-            return Err(format!("Stripe API error creating product: {}", product_res.text().await.unwrap_or_default()));
+            return Err(format!(
+                "Stripe API error creating product: {}",
+                product_res.text().await.unwrap_or_default()
+            ));
         }
 
-        let product_json: serde_json::Value = product_res.json().await.map_err(|e| e.to_string())?;
+        let product_json: serde_json::Value =
+            product_res.json().await.map_err(|e| e.to_string())?;
         let product_id = product_json["id"].as_str().unwrap_or_default().to_string();
 
         // 2. Create a Price
@@ -97,7 +105,10 @@ impl StripeClient {
             .map_err(|e| format!("Stripe API error creating price: {}", e))?;
 
         if !price_res.status().is_success() {
-             return Err(format!("Stripe API error creating price: {}", price_res.text().await.unwrap_or_default()));
+            return Err(format!(
+                "Stripe API error creating price: {}",
+                price_res.text().await.unwrap_or_default()
+            ));
         }
         let price_json: serde_json::Value = price_res.json().await.map_err(|e| e.to_string())?;
         let price_id = price_json["id"].as_str().unwrap_or_default().to_string();
@@ -116,7 +127,10 @@ impl StripeClient {
             .map_err(|e| format!("Stripe API error creating payment link: {}", e))?;
 
         if !link_res.status().is_success() {
-             return Err(format!("Stripe API error creating payment link: {}", link_res.text().await.unwrap_or_default()));
+            return Err(format!(
+                "Stripe API error creating payment link: {}",
+                link_res.text().await.unwrap_or_default()
+            ));
         }
 
         let link_json: serde_json::Value = link_res.json().await.map_err(|e| e.to_string())?;
@@ -125,10 +139,21 @@ impl StripeClient {
         Ok(url)
     }
 
-    pub async fn create_checkout_session(&self, price_id_or_name: &str, customer_id: &str, amount_usd: f64, subscription_interval: Option<String>, product_id: Option<String>, target_currency: Option<String>) -> Result<String, String> {
+    pub async fn create_checkout_session(
+        &self,
+        price_id_or_name: &str,
+        customer_id: &str,
+        amount_usd: f64,
+        subscription_interval: Option<String>,
+        product_id: Option<String>,
+        target_currency: Option<String>,
+    ) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);
-        tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
+        tracing::info!(
+            "💰 Miser telemetry: Payment method optimized. Saved ${} in fees",
+            savings
+        );
 
         // For MercadoPago and others not routed to Stripe Checkout
         match pm {
@@ -136,19 +161,25 @@ impl StripeClient {
                 let api_key = std::env::var("RAZORPAY_API_KEY").unwrap_or_default();
                 let api_secret = std::env::var("RAZORPAY_API_SECRET").unwrap_or_default();
                 let rzp_client = RazorpayClient::new(api_key, api_secret);
-                return rzp_client.create_checkout_preference(price_id_or_name, customer_id).await;
-            },
+                return rzp_client
+                    .create_checkout_preference(price_id_or_name, customer_id)
+                    .await;
+            }
             PaymentMethod::MercadoPago => {
                 if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
                     let mp_client = MercadoPagoClient::new(token);
-                    return mp_client.create_checkout_preference(price_id_or_name, customer_id).await;
+                    return mp_client
+                        .create_checkout_preference(price_id_or_name, customer_id)
+                        .await;
                 } else {
                     return Err("Mercado Pago access token is required".to_string());
                 }
-            },
+            }
             PaymentMethod::Alipay => {
-                return Err("Alipay checkout is not configured for Stripe checkout sessions".to_string());
-            },
+                return Err(
+                    "Alipay checkout is not configured for Stripe checkout sessions".to_string(),
+                );
+            }
             _ => {} // Fall through for ACH and CreditCard to Stripe API
         }
 
@@ -158,10 +189,8 @@ impl StripeClient {
             return match pm {
                 PaymentMethod::Ach => {
                     Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
-                },
-                _ => {
-                    Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
                 }
+                _ => Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string()),
             };
         }
 
@@ -169,19 +198,40 @@ impl StripeClient {
         let amount_cents = (amount_usd * 100.0).round() as i64;
 
         let mut form = std::collections::HashMap::new();
-        form.insert("success_url".to_string(), "https://example.com/success".to_string());
-        form.insert("cancel_url".to_string(), "https://example.com/cancel".to_string());
+        form.insert(
+            "success_url".to_string(),
+            "https://example.com/success".to_string(),
+        );
+        form.insert(
+            "cancel_url".to_string(),
+            "https://example.com/cancel".to_string(),
+        );
         if let Some(interval) = subscription_interval {
             form.insert("mode".to_string(), "subscription".to_string());
-            form.insert("line_items[0][price_data][recurring][interval]".to_string(), interval);
+            form.insert(
+                "line_items[0][price_data][recurring][interval]".to_string(),
+                interval,
+            );
         } else {
             form.insert("mode".to_string(), "payment".to_string());
         }
-        let currency = target_currency.unwrap_or_else(|| "usd".to_string()).to_lowercase();
+        let currency = target_currency
+            .unwrap_or_else(|| "usd".to_string())
+            .to_lowercase();
         form.insert("line_items[0][price_data][currency]".to_string(), currency);
-        let display_name = if price_id_or_name.trim().is_empty() { "Checkout".to_string() } else { price_id_or_name.to_string() };
-        form.insert("line_items[0][price_data][product_data][name]".to_string(), display_name);
-        form.insert("line_items[0][price_data][unit_amount]".to_string(), amount_cents.to_string());
+        let display_name = if price_id_or_name.trim().is_empty() {
+            "Checkout".to_string()
+        } else {
+            price_id_or_name.to_string()
+        };
+        form.insert(
+            "line_items[0][price_data][product_data][name]".to_string(),
+            display_name,
+        );
+        form.insert(
+            "line_items[0][price_data][unit_amount]".to_string(),
+            amount_cents.to_string(),
+        );
         form.insert("line_items[0][quantity]".to_string(), "1".to_string());
         form.insert("client_reference_id".to_string(), customer_id.to_string());
         if let Some(pid) = product_id {
@@ -190,8 +240,11 @@ impl StripeClient {
 
         match pm {
             PaymentMethod::Ach => {
-                form.insert("payment_method_types[0]".to_string(), "us_bank_account".to_string());
-            },
+                form.insert(
+                    "payment_method_types[0]".to_string(),
+                    "us_bank_account".to_string(),
+                );
+            }
             _ => {
                 form.insert("payment_method_types[0]".to_string(), "card".to_string());
             }
@@ -211,14 +264,22 @@ impl StripeClient {
             return Err(format!("Stripe API error ({}): {}", status, text));
         }
 
-        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-        let url = json["url"].as_str().ok_or_else(|| "Missing url in response".to_string())?;
+        let json: serde_json::Value = res
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        let url = json["url"]
+            .as_str()
+            .ok_or_else(|| "Missing url in response".to_string())?;
 
         Ok(url.to_string())
     }
 
-
-    pub async fn create_billing_portal_session(&self, customer_id: &str, return_url_base: Option<&str>) -> Result<String, String> {
+    pub async fn create_billing_portal_session(
+        &self,
+        customer_id: &str,
+        return_url_base: Option<&str>,
+    ) -> Result<String, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             return Ok("/pricing".to_string());
@@ -227,9 +288,9 @@ impl StripeClient {
 
         let mut form = std::collections::HashMap::new();
         form.insert("customer".to_string(), customer_id.to_string());
-        let base_url = return_url_base
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string()));
+        let base_url = return_url_base.map(|s| s.to_string()).unwrap_or_else(|| {
+            std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string())
+        });
         form.insert("return_url".to_string(), format!("{}/pricing", base_url));
 
         let res = reqwest::Client::new()
@@ -246,18 +307,30 @@ impl StripeClient {
             return Err(format!("Stripe API error ({}): {}", status, text));
         }
 
-        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-        let url = json["url"].as_str().ok_or_else(|| "Missing url in response".to_string())?;
+        let json: serde_json::Value = res
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        let url = json["url"]
+            .as_str()
+            .ok_or_else(|| "Missing url in response".to_string())?;
 
         Ok(url.to_string())
     }
 
-    pub async fn get_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn get_subscription(
+        &self,
+        subscription_id: &str,
+    ) -> Result<StripeSubscription, String> {
         let api_key = self.require_api_key()?;
         let client = reqwest::Client::new();
 
         let res = client
-            .get(format!("{}/v1/subscriptions/{}", Self::api_base(), subscription_id))
+            .get(format!(
+                "{}/v1/subscriptions/{}",
+                Self::api_base(),
+                subscription_id
+            ))
             .basic_auth(api_key, Some(""))
             .send()
             .await
@@ -322,7 +395,10 @@ impl StripeClient {
         Ok(invoices)
     }
 
-    pub async fn cancel_subscription(&self, subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn cancel_subscription(
+        &self,
+        subscription_id: &str,
+    ) -> Result<StripeSubscription, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             // Mock response if no real key
@@ -335,7 +411,11 @@ impl StripeClient {
         let api_key = api_key_res.unwrap();
 
         let res = reqwest::Client::new()
-            .delete(format!("{}/v1/subscriptions/{}", Self::api_base(), subscription_id))
+            .delete(format!(
+                "{}/v1/subscriptions/{}",
+                Self::api_base(),
+                subscription_id
+            ))
             .basic_auth(api_key, Some(""))
             .send()
             .await
@@ -343,7 +423,10 @@ impl StripeClient {
 
         if !res.status().is_success() {
             let error_text = res.text().await.unwrap_or_default();
-            return Err(format!("Stripe API Error cancelling subscription: {}", error_text));
+            return Err(format!(
+                "Stripe API Error cancelling subscription: {}",
+                error_text
+            ));
         }
 
         let stripe_sub: StripeSubscription = res
@@ -354,7 +437,11 @@ impl StripeClient {
         Ok(stripe_sub)
     }
 
-    pub async fn submit_dispute_evidence(&self, dispute_id: &str, evidence_data: serde_json::Value) -> Result<(), String> {
+    pub async fn submit_dispute_evidence(
+        &self,
+        dispute_id: &str,
+        evidence_data: serde_json::Value,
+    ) -> Result<(), String> {
         let api_key = self.require_api_key()?;
         let client = reqwest::Client::new();
 
@@ -373,11 +460,7 @@ impl StripeClient {
         }
 
         let res = client
-            .post(format!(
-                "{}/v1/disputes/{}",
-                Self::api_base(),
-                dispute_id
-            ))
+            .post(format!("{}/v1/disputes/{}", Self::api_base(), dispute_id))
             .basic_auth(api_key, Some(""))
             .form(&form)
             .send()
@@ -393,7 +476,12 @@ impl StripeClient {
         Ok(())
     }
 
-    pub async fn create_draft_invoice(&self, customer_id: &str, amount_cents: i64, description: &str) -> Result<StripeInvoice, String> {
+    pub async fn create_draft_invoice(
+        &self,
+        customer_id: &str,
+        amount_cents: i64,
+        description: &str,
+    ) -> Result<StripeInvoice, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             // Mock response if no real key
@@ -425,7 +513,10 @@ impl StripeClient {
         if !res_item.status().is_success() {
             let status = res_item.status();
             let text = res_item.text().await.unwrap_or_default();
-            return Err(format!("Stripe API error creating invoice item ({}): {}", status, text));
+            return Err(format!(
+                "Stripe API error creating invoice item ({}): {}",
+                status, text
+            ));
         }
 
         // 2. Create the draft invoice
@@ -445,10 +536,16 @@ impl StripeClient {
         if !res_inv.status().is_success() {
             let status = res_inv.status();
             let text = res_inv.text().await.unwrap_or_default();
-            return Err(format!("Stripe API error creating invoice ({}): {}", status, text));
+            return Err(format!(
+                "Stripe API error creating invoice ({}): {}",
+                status, text
+            ));
         }
 
-        let json: serde_json::Value = res_inv.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let json: serde_json::Value = res_inv
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(StripeInvoice {
             id: json["id"].as_str().unwrap_or_default().to_string(),
             amount_due: amount_cents,
@@ -457,7 +554,10 @@ impl StripeClient {
         })
     }
 
-    pub async fn finalize_and_send_invoice(&self, invoice_id: &str) -> Result<StripeInvoice, String> {
+    pub async fn finalize_and_send_invoice(
+        &self,
+        invoice_id: &str,
+    ) -> Result<StripeInvoice, String> {
         let api_key_res = self.require_api_key();
         if api_key_res.is_err() {
             // Mock response if no real key
@@ -472,7 +572,11 @@ impl StripeClient {
         let client = reqwest::Client::new();
 
         let res_inv = client
-            .post(format!("{}/v1/invoices/{}/send", Self::api_base(), invoice_id))
+            .post(format!(
+                "{}/v1/invoices/{}/send",
+                Self::api_base(),
+                invoice_id
+            ))
             .basic_auth(api_key, Some(""))
             .send()
             .await
@@ -481,10 +585,16 @@ impl StripeClient {
         if !res_inv.status().is_success() {
             let status = res_inv.status();
             let text = res_inv.text().await.unwrap_or_default();
-            return Err(format!("Stripe API error sending invoice ({}): {}", status, text));
+            return Err(format!(
+                "Stripe API error sending invoice ({}): {}",
+                status, text
+            ));
         }
 
-        let json: serde_json::Value = res_inv.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let json: serde_json::Value = res_inv
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(StripeInvoice {
             id: json["id"].as_str().unwrap_or_default().to_string(),
             amount_due: json["amount_due"].as_i64().unwrap_or(0),
@@ -504,7 +614,6 @@ impl StripeClient {
     ) -> Result<Option<String>, String> {
         let payout_amount = batcher.record_payout(account_id, amount_cents).await?;
         if let Some(total_cents) = payout_amount {
-
             // Execute real payout call here...
             Ok(Some(format!("po_test_{}", total_cents)))
         } else {
@@ -512,7 +621,3 @@ impl StripeClient {
         }
     }
 }
-
-
-
-

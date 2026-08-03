@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -183,20 +183,32 @@ mod tests {
             model_id: "gpt-4-0613".to_string(),
             display_name: "GPT-4".to_string(),
             description: "OpenAI GPT-4".to_string(),
-            icon: _ModelIcon { url: "".to_string(), color: "".to_string() },
+            icon: _ModelIcon {
+                url: "".to_string(),
+                color: "".to_string(),
+            },
             cost: _ModelCost {
-                input_per_token: 0.0, output_per_token: 0.0,
-                cache_read_per_token: 0.0, cache_write_per_token: 0.0,
-                input_per_million: 0.0, output_per_million: 0.0,
+                input_per_token: 0.0,
+                output_per_token: 0.0,
+                cache_read_per_token: 0.0,
+                cache_write_per_token: 0.0,
+                input_per_million: 0.0,
+                output_per_million: 0.0,
             },
             context_limit: _ModelContextLimit {
-                context_window: 8192, max_input_tokens: 8192, max_output_tokens: 8192,
+                context_window: 8192,
+                max_input_tokens: 8192,
+                max_output_tokens: 8192,
             },
             capabilities: _ModelCapabilities {
-                supports_reasoning: false, supports_tool_calling: true,
-                supports_temperature: true, input_modalities: vec![],
-                output_modalities: vec![], supports_streaming: true,
-                supports_vision: false, supports_function_calling: true,
+                supports_reasoning: false,
+                supports_tool_calling: true,
+                supports_temperature: true,
+                input_modalities: vec![],
+                output_modalities: vec![],
+                supports_streaming: true,
+                supports_vision: false,
+                supports_function_calling: true,
             },
             status: _ModelStatus::Active,
             recommended_index: 1,

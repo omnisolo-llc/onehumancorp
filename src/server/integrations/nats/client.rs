@@ -1,7 +1,7 @@
 use async_nats::Client;
 use async_trait::async_trait;
-use opentelemetry::{global, KeyValue};
 use opentelemetry::metrics::Counter;
+use opentelemetry::{KeyValue, global};
 
 #[async_trait]
 pub trait NatsClientWrapper: Send + Sync {
@@ -23,13 +23,19 @@ impl RealNatsClient {
         let client = async_nats::connect(url).await?;
         let meter = global::meter("ohc.nats");
         let publish_counter = meter.u64_counter("ohc.nats.messages_published").build();
-        Ok(Self { client: Some(client), publish_counter })
+        Ok(Self {
+            client: Some(client),
+            publish_counter,
+        })
     }
 
     pub fn dummy() -> Self {
         let meter = global::meter("ohc.nats");
         let publish_counter = meter.u64_counter("ohc.nats.messages_published").build();
-        Self { client: None, publish_counter }
+        Self {
+            client: None,
+            publish_counter,
+        }
     }
 }
 
@@ -37,8 +43,12 @@ impl RealNatsClient {
 impl NatsClientWrapper for RealNatsClient {
     async fn publish(&self, subject: &str, data: Vec<u8>) -> Result<(), String> {
         if let Some(client) = &self.client {
-            client.publish(subject.to_string(), data.into()).await.map_err(|e| e.to_string())?;
-            self.publish_counter.add(1, &[KeyValue::new("subject", subject.to_string())]);
+            client
+                .publish(subject.to_string(), data.into())
+                .await
+                .map_err(|e| e.to_string())?;
+            self.publish_counter
+                .add(1, &[KeyValue::new("subject", subject.to_string())]);
         }
         Ok(())
     }
@@ -49,7 +59,10 @@ impl NatsClientWrapper for RealNatsClient {
         handler: Box<dyn Fn(Vec<u8>) + Send + Sync>,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         if let Some(client) = &self.client {
-            let mut subscriber = client.subscribe(subject.to_string()).await.map_err(|e| e.to_string())?;
+            let mut subscriber = client
+                .subscribe(subject.to_string())
+                .await
+                .map_err(|e| e.to_string())?;
             let subject_string = subject.to_string();
 
             let worker = tokio::spawn(async move {

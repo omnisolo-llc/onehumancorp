@@ -1,4 +1,7 @@
-use axum::{body::Body, http::{Request, StatusCode}};
+use axum::{
+    body::Body,
+    http::{Request, StatusCode},
+};
 use std::sync::Arc;
 use tower::ServiceExt;
 
@@ -65,12 +68,7 @@ async fn test_list_pending_drafts_unauthorized() {
     let app = super::action_required::router(db, Arc::new(::server_auth::Store::new()));
 
     let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
         .await
         .unwrap();
 

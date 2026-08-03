@@ -1,8 +1,8 @@
-use sqlx::{FromRow};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use std::sync::Arc;
 use crate::db::DB;
+use chrono::{DateTime, Utc};
+use sqlx::FromRow;
+use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone, Debug, FromRow)]
 pub struct CustomerProfile {
@@ -76,7 +76,11 @@ impl OmniChannelRepo {
         Self { db }
     }
 
-    pub async fn create_customer_profile(&self, tenant_id: Uuid, name: Option<String>) -> Result<CustomerProfile, sqlx::Error> {
+    pub async fn create_customer_profile(
+        &self,
+        tenant_id: Uuid,
+        name: Option<String>,
+    ) -> Result<CustomerProfile, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, CustomerProfile>(
             "INSERT INTO customer_profile (id, tenant_id, name) VALUES ($1, $2, $3) RETURNING id, tenant_id, name, created_at, updated_at",
@@ -89,7 +93,13 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_work_item(&self, tenant_id: Uuid, customer_id: Uuid, source: String, payload: serde_json::Value) -> Result<WorkItem, sqlx::Error> {
+    pub async fn create_work_item(
+        &self,
+        tenant_id: Uuid,
+        customer_id: Uuid,
+        source: String,
+        payload: serde_json::Value,
+    ) -> Result<WorkItem, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, WorkItem>(
             "INSERT INTO work_item (id, tenant_id, customer_id, source, payload, status) VALUES ($1, $2, $3, $4, $5, 'PENDING') RETURNING id, tenant_id, customer_id, source, payload as \"payload: sqlx::types::Json<serde_json::Value>\", status, created_at, updated_at",
@@ -104,7 +114,11 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_agent_draft(&self, work_item_id: Uuid, response: String) -> Result<AgentDraft, sqlx::Error> {
+    pub async fn create_agent_draft(
+        &self,
+        work_item_id: Uuid,
+        response: String,
+    ) -> Result<AgentDraft, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, AgentDraft>(
             "INSERT INTO agent_draft (id, work_item_id, response, status) VALUES ($1, $2, $3, 'DRAFT') RETURNING id, work_item_id, response, status, created_at, updated_at",
@@ -117,7 +131,12 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_conversation(&self, tenant_id: Uuid, channel: String, status: String) -> Result<Conversation, sqlx::Error> {
+    pub async fn create_conversation(
+        &self,
+        tenant_id: Uuid,
+        channel: String,
+        status: String,
+    ) -> Result<Conversation, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, Conversation>(
             "INSERT INTO conversations (id, tenant_id, channel, status) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, channel, status, created_at, updated_at",
@@ -131,7 +150,13 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_message(&self, tenant_id: Uuid, conversation_id: Uuid, direction: String, content: String) -> Result<Message, sqlx::Error> {
+    pub async fn create_message(
+        &self,
+        tenant_id: Uuid,
+        conversation_id: Uuid,
+        direction: String,
+        content: String,
+    ) -> Result<Message, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, Message>(
             "INSERT INTO messages (id, tenant_id, conversation_id, direction, content) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, conversation_id, direction, content, created_at, updated_at",
@@ -146,7 +171,13 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_ai_draft(&self, tenant_id: Uuid, message_id: Uuid, proposed_response: String, status: String) -> Result<AiDraft, sqlx::Error> {
+    pub async fn create_ai_draft(
+        &self,
+        tenant_id: Uuid,
+        message_id: Uuid,
+        proposed_response: String,
+        status: String,
+    ) -> Result<AiDraft, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, AiDraft>(
             "INSERT INTO ai_drafts (id, tenant_id, message_id, proposed_response, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, message_id, proposed_response, status, created_at, updated_at",
@@ -171,7 +202,10 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn get_messages_by_conversation_id(&self, conversation_id: Uuid) -> Result<Vec<Message>, sqlx::Error> {
+    pub async fn get_messages_by_conversation_id(
+        &self,
+        conversation_id: Uuid,
+    ) -> Result<Vec<Message>, sqlx::Error> {
         let records = sqlx::query_as::<_, Message>(
             "SELECT id, tenant_id, conversation_id, direction, content, created_at, updated_at FROM messages WHERE conversation_id = $1",
         )
@@ -181,7 +215,10 @@ impl OmniChannelRepo {
         Ok(records)
     }
 
-    pub async fn get_ai_drafts_by_message_id(&self, message_id: Uuid) -> Result<Vec<AiDraft>, sqlx::Error> {
+    pub async fn get_ai_drafts_by_message_id(
+        &self,
+        message_id: Uuid,
+    ) -> Result<Vec<AiDraft>, sqlx::Error> {
         let records = sqlx::query_as::<_, AiDraft>(
             "SELECT id, tenant_id, message_id, proposed_response, status, created_at, updated_at FROM ai_drafts WHERE message_id = $1",
         )
@@ -191,7 +228,11 @@ impl OmniChannelRepo {
         Ok(records)
     }
 
-    pub async fn update_ai_draft_status(&self, id: Uuid, status: String) -> Result<AiDraft, sqlx::Error> {
+    pub async fn update_ai_draft_status(
+        &self,
+        id: Uuid,
+        status: String,
+    ) -> Result<AiDraft, sqlx::Error> {
         let record = sqlx::query_as::<_, AiDraft>(
             "UPDATE ai_drafts SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, tenant_id, message_id, proposed_response, status, created_at, updated_at",
         )

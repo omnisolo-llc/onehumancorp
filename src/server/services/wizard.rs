@@ -1,7 +1,7 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::wizard_service_server::WizardService;
+use ::server_ohc::orchestration::*;
 use std::sync::RwLock;
+use tonic::{Request, Response, Status};
 
 pub struct MyWizardService {
     settings: RwLock<WizardConfigureRequest>,
@@ -31,17 +31,17 @@ impl WizardService for MyWizardService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<WizardStatusProtoResponse>, Status> {
         let cfg = self.settings.read().unwrap();
-        
+
         let has_enabled_provider = cfg.ai_providers.iter().any(|p| p.enabled);
-        
+
         let steps = WizardStepsProto {
             server: !cfg.listen_addr.is_empty() && !cfg.db_path.is_empty(),
             ai_provider: has_enabled_provider,
             centrifuge: !cfg.centrifuge_url.is_empty(),
         };
-        
+
         let configured = steps.server && steps.ai_provider && steps.centrifuge;
-        
+
         Ok(Response::new(WizardStatusProtoResponse {
             configured,
             steps: Some(steps),
@@ -54,7 +54,7 @@ impl WizardService for MyWizardService {
     ) -> Result<Response<WizardStatusProtoResponse>, Status> {
         let req = request.into_inner();
         let mut cfg = self.settings.write().unwrap();
-        
+
         if !req.listen_addr.is_empty() {
             cfg.listen_addr = req.listen_addr;
         }
@@ -73,25 +73,25 @@ impl WizardService for MyWizardService {
         if !req.minimax_api_key.is_empty() {
             cfg.minimax_api_key = req.minimax_api_key;
         }
-        
+
         for (k, v) in req.extras {
             cfg.extras.insert(k, v);
         }
-        
+
         if !req.ai_providers.is_empty() {
             cfg.ai_providers = req.ai_providers;
         }
 
         let has_enabled_provider = cfg.ai_providers.iter().any(|p| p.enabled);
-        
+
         let steps = WizardStepsProto {
             server: !cfg.listen_addr.is_empty() && !cfg.db_path.is_empty(),
             ai_provider: has_enabled_provider,
             centrifuge: !cfg.centrifuge_url.is_empty(),
         };
-        
+
         let configured = steps.server && steps.ai_provider && steps.centrifuge;
-        
+
         Ok(Response::new(WizardStatusProtoResponse {
             configured,
             steps: Some(steps),
@@ -104,7 +104,6 @@ impl WizardService for MyWizardService {
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
         let is_standalone = crate::is_standalone_runtime();
 
-        
         let mut health_checks = Vec::new();
         let mut is_all_healthy = true;
 
@@ -160,7 +159,9 @@ impl WizardService for MyWizardService {
                 health_checks.push(DiagnosticCheckProto {
                     check: "OHC_DATABASE_URL".to_string(),
                     status: "invalid".to_string(),
-                    message: "OHC_DATABASE_URL must be a sqlite:// connection string in standalone mode".to_string(),
+                    message:
+                        "OHC_DATABASE_URL must be a sqlite:// connection string in standalone mode"
+                            .to_string(),
                 });
             } else {
                 health_checks.push(DiagnosticCheckProto {
@@ -171,11 +172,16 @@ impl WizardService for MyWizardService {
             }
         }
 
-        let resp_status = if is_all_healthy { "healthy" } else { "degraded" };
+        let resp_status = if is_all_healthy {
+            "healthy"
+        } else {
+            "degraded"
+        };
         let mode = if is_standalone { "standalone" } else { "cloud" };
 
         // Hybrid mode mission sync health probe check
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        let db_url =
+            std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if !db_url.is_empty() {
             health_checks.push(DiagnosticCheckProto {
                 check: "LOCAL_TO_CLOUD_SYNC".to_string(),
@@ -199,5 +205,4 @@ impl WizardService for MyWizardService {
 }
 
 #[cfg(test)]
-mod tests {
-}
+mod tests {}

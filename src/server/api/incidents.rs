@@ -1,18 +1,18 @@
 use axum::{
+    Json, Router,
     extract::{Extension, State},
     http::StatusCode,
     response::IntoResponse,
     routing::post,
-    Json, Router,
 };
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use uuid::Uuid;
 
-use ::server_common::Claims;
-use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
 use crate::api::agent_feed::get_agent_feed_cache;
+use crate::domain::repository::agent_feed_repo::{AgentFeedItem, AgentFeedRepository};
+use ::server_common::Claims;
 
 #[derive(Deserialize)]
 pub struct CreateIncidentRequest {
@@ -34,8 +34,7 @@ where
     S: Clone + Send + Sync + 'static,
     PgPool: axum::extract::FromRef<S>,
 {
-    Router::new()
-        .route("/", post(create_incident))
+    Router::new().route("/", post(create_incident))
 }
 
 async fn create_incident(
@@ -64,10 +63,10 @@ async fn create_incident(
             serde_json::json!({"id": "ORD-2", "status": "pending"}),
             serde_json::json!({"id": "ORD-3", "status": "pending"}),
         ];
-        affected_inventory = vec![
-            serde_json::json!({"item": "Espresso", "status": "out_of_stock"}),
-        ];
-        actions.push(serde_json::json!({ "action": "text_repair_tech", "details": "Draft attached" }));
+        affected_inventory =
+            vec![serde_json::json!({"item": "Espresso", "status": "out_of_stock"})];
+        actions
+            .push(serde_json::json!({ "action": "text_repair_tech", "details": "Draft attached" }));
         actions.push(serde_json::json!({ "action": "refund_pending_orders", "details": "Refund 3 pending orders and send apology" }));
         actions.push(serde_json::json!({ "action": "mark_out_of_stock", "details": "Mark item 'Espresso' out of stock on menu" }));
     } else {
@@ -97,11 +96,18 @@ async fn create_incident(
         .await
     {
         tracing::error!("Failed to create incident: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create incident").into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to create incident",
+        )
+            .into_response();
     }
 
     // Now, create an AgentFeedItem for the owner
-    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
+    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
+        pool: pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    }));
     let feed_item = AgentFeedItem {
         id: Uuid::new_v4().to_string(),
         tenant_id: tenant_id.clone(),
@@ -119,7 +125,11 @@ async fn create_incident(
 
     if let Err(e) = repo.create(feed_item).await {
         tracing::error!("Failed to create incident agent feed item: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create incident feed item").into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to create incident feed item",
+        )
+            .into_response();
     }
 
     let cache = get_agent_feed_cache();
@@ -141,17 +151,19 @@ async fn create_incident(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::Request;
-    use tower::ServiceExt;
     use ::server_common::Claims;
+    use axum::http::Request;
     use sqlx::PgPool;
+    use tower::ServiceExt;
 
     #[tokio::test]
     async fn test_create_incident() {
         if std::env::var("DATABASE_URL").is_err() && std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = std::env::var("OHC_DATABASE_URL").or_else(|_| std::env::var("DATABASE_URL")).unwrap();
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .or_else(|_| std::env::var("DATABASE_URL"))
+            .unwrap();
         let pool = PgPool::connect(&database_url).await.unwrap();
 
         let claims = Claims {
@@ -167,11 +179,13 @@ mod tests {
         };
 
         let app = router::<PgPool>()
-            .layer(axum::middleware::from_fn(move |req: axum::extract::Request, next: axum::middleware::Next| {
-                let mut req = req;
-                req.extensions_mut().insert(claims.clone());
-                async move { next.run(req).await }
-            }))
+            .layer(axum::middleware::from_fn(
+                move |req: axum::extract::Request, next: axum::middleware::Next| {
+                    let mut req = req;
+                    req.extensions_mut().insert(claims.clone());
+                    async move { next.run(req).await }
+                },
+            ))
             .with_state(pool.clone());
 
         let payload = serde_json::json!({
@@ -184,7 +198,9 @@ mod tests {
                     .method("POST")
                     .uri("/")
                     .header("Content-Type", "application/json")
-                    .body(axum::body::Body::from(serde_json::to_string(&payload).unwrap()))
+                    .body(axum::body::Body::from(
+                        serde_json::to_string(&payload).unwrap(),
+                    ))
                     .unwrap(),
             )
             .await

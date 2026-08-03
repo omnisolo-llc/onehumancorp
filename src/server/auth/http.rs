@@ -389,8 +389,6 @@ struct ApiKeyMetadata {
     expires_at: Option<String>,
 }
 
-
-
 #[derive(Clone)]
 pub struct InMemoryApiKey {
     pub id: String,
@@ -654,7 +652,9 @@ async fn list_member_usage_analytics(
                 );
             }
         };
-        let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
+        let _ = sqlx::query("SET ROLE ohc_bypassrls")
+            .execute(&mut *tx)
+            .await;
         let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(&organization_id)
             .execute(&mut *tx)
@@ -985,8 +985,9 @@ async fn update_oidc_provider(
         return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC settings unavailable");
     };
     let configured = match repository.oidc_provider(&provider).await {
-        Ok(Some(config)) => !config.client_id.trim().is_empty()
-            && !config.secret_ref.trim().is_empty(),
+        Ok(Some(config)) => {
+            !config.client_id.trim().is_empty() && !config.secret_ref.trim().is_empty()
+        }
         Ok(None) => return error(StatusCode::NOT_FOUND, "OIDC provider unavailable"),
         Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC settings unavailable"),
     };
@@ -1044,7 +1045,10 @@ async fn start_email_verification(
     let now = Utc::now();
     let invitation_id = if mode == crate::seaorm_store::RegistrationMode::InviteOnly {
         let raw_token = payload.invitation_token.as_deref().unwrap_or_default();
-        if raw_token.len() < 16 || raw_token.len() > 256 || raw_token.bytes().any(|byte| byte.is_ascii_whitespace()) {
+        if raw_token.len() < 16
+            || raw_token.len() > 256
+            || raw_token.bytes().any(|byte| byte.is_ascii_whitespace())
+        {
             return error(StatusCode::FORBIDDEN, "invitation required");
         }
         let token_hash = registration_hash_hex(
@@ -1297,7 +1301,8 @@ async fn register(
             );
         }
     };
-    let organization_id = match crate::validation::normalize_organization(&payload.organization_id) {
+    let organization_id = match crate::validation::normalize_organization(&payload.organization_id)
+    {
         Ok(organization_id) => organization_id,
         Err(message) => {
             return no_store_json(
@@ -1328,9 +1333,7 @@ async fn register(
         Ok(_) => return error(StatusCode::BAD_REQUEST, "invalid registration"),
         Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable"),
     };
-    if mode == crate::seaorm_store::RegistrationMode::InviteOnly
-        && ticket.invitation_id.is_none()
-    {
+    if mode == crate::seaorm_store::RegistrationMode::InviteOnly && ticket.invitation_id.is_none() {
         return error(StatusCode::FORBIDDEN, "invitation required");
     }
     if let Err(message) =
@@ -1856,7 +1859,8 @@ mod tests {
             .await
             .unwrap();
 
-        let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+        let has_db =
+            std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
         if has_db {
             let _ = crate::postgres_test_support::postgres_security_pool(10).await;
             let pool = crate::db::get_pool();
@@ -1869,12 +1873,16 @@ mod tests {
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
             if let Some(mut tx) = tx_opt {
-                let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
-                let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING")
-                    .bind(&org_id)
-                    .bind("Test Tenant")
+                let _ = sqlx::query("SET ROLE ohc_bypassrls")
                     .execute(&mut *tx)
                     .await;
+                let _ = sqlx::query(
+                    "INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                )
+                .bind(&org_id)
+                .bind("Test Tenant")
+                .execute(&mut *tx)
+                .await;
                 let _ = sqlx::query(
                     "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING"
                 )
@@ -2754,7 +2762,9 @@ mod tests {
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
             if let Some(mut tx) = tx_opt {
-                let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
+                let _ = sqlx::query("SET ROLE ohc_bypassrls")
+                    .execute(&mut *tx)
+                    .await;
                 sqlx::query(
                     "INSERT INTO user_usage_logs (user_id, organization_id, feature, tokens_used, computed_cost) VALUES ($1, $2, $3, $4, $5)"
                 )

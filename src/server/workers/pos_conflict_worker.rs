@@ -1,8 +1,8 @@
-use std::sync::Arc;
 use crate::db::DB;
-use crate::queue::{TaskJobHandler as JobHandler, Job as OHCJob};
-use serde_json::json;
+use crate::queue::{Job as OHCJob, TaskJobHandler as JobHandler};
 use async_trait::async_trait;
+use serde_json::json;
+use std::sync::Arc;
 
 pub struct PosConflictWorker {
     pub db: Arc<DB>,
@@ -20,8 +20,14 @@ impl JobHandler for PosConflictWorker {
         let db = self.db.clone();
 
         let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(json!({}));
-        let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
-        let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("");
+        let product_id = payload
+            .get("product_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let transaction_id = payload
+            .get("transaction_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
         let tenant_id = job.tenant_id.clone();
 
         let mut tx = db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -30,7 +36,7 @@ impl JobHandler for PosConflictWorker {
             "SELECT o.id FROM orders o
              JOIN order_items oi ON o.id = oi.order_id
              WHERE oi.product_id = $1 AND o.tenant_id = $2 AND o.status = 'PENDING'
-             LIMIT 1"
+             LIMIT 1",
         )
         .bind(product_id)
         .bind(&tenant_id)
@@ -48,7 +54,10 @@ impl JobHandler for PosConflictWorker {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            format!("An in-store sale overlapped with an online order ({}). Operations has secured the in-store sale. Customer Success has drafted an apology and alternative offer for the online customer.", order_id)
+            format!(
+                "An in-store sale overlapped with an online order ({}). Operations has secured the in-store sale. Customer Success has drafted an apology and alternative offer for the online customer.",
+                order_id
+            )
         } else {
             "An in-store sale overlapped with an online order. Operations has secured the in-store sale. Please review recent online orders to address the out-of-stock item.".to_string()
         };
@@ -73,8 +82,14 @@ impl JobHandler for PosConflictWorker {
         .await
         .map_err(|e| e.to_string())?;
 
-        let expected_stock = payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
-        let actual_stock = payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+        let expected_stock = payload
+            .get("expected_stock")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0);
+        let actual_stock = payload
+            .get("actual_stock")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0);
 
         let event_id = uuid::Uuid::new_v4().to_string();
         let event_payload = json!({
@@ -86,7 +101,7 @@ impl JobHandler for PosConflictWorker {
         });
         sqlx::query(
             "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-             VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+             VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')",
         )
         .bind(&event_id)
         .bind(&tenant_id)
@@ -109,13 +124,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_conflict_worker() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let pool = crate::db::secure_pg_pool_options()
+            .connect(&database_url)
+            .await
+            .unwrap();
+        let db = Arc::new(DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
         let worker = PosConflictWorker::new(db.clone());
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-conflict-test', 'Test') ON CONFLICT DO NOTHING").execute(&pool).await.unwrap();
@@ -140,7 +162,10 @@ mod tests {
         let res = worker.handle(job).await;
         assert!(res.is_ok());
 
-        let status: (String,) = sqlx::query_as("SELECT status FROM orders WHERE id = 'order-1'").fetch_one(&pool).await.unwrap();
+        let status: (String,) = sqlx::query_as("SELECT status FROM orders WHERE id = 'order-1'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
         assert_eq!(status.0, "Requires Intervention");
 
         let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE action_type = 'pos_conflict_resolution' AND tenant_id = 'tenant-conflict-test'").fetch_one(&pool).await.unwrap();

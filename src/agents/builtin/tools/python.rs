@@ -5,7 +5,10 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::fs;
 
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+};
 
 #[derive(Deserialize)]
 struct PythonArgs {
@@ -35,20 +38,38 @@ impl PydanticToolExecutor<PythonArgs> for PythonExecutor {
         let temp_file_path = wd.join(format!(".tmp_py_{}.py", uuid::Uuid::new_v4()));
 
         if let Err(e) = fs::write(&temp_file_path, &code).await {
-            return Err(ToolError::LlmRecoverable(format!("python: failed to write code to file: {}", e)));
+            return Err(ToolError::LlmRecoverable(format!(
+                "python: failed to write code to file: {}",
+                e
+            )));
         }
 
         let wd_ref = self.working_dir.as_deref();
 
         // Execute python3 script
-        let output_res = tokio::time::timeout(timeout, self.runner.run("python3", &[temp_file_path.to_str().unwrap()], wd_ref, vec![])).await;
+        let output_res = tokio::time::timeout(
+            timeout,
+            self.runner.run(
+                "python3",
+                &[temp_file_path.to_str().unwrap()],
+                wd_ref,
+                vec![],
+            ),
+        )
+        .await;
 
         // Clean up the temp file
         let _ = fs::remove_file(&temp_file_path).await;
 
         let output = output_res
-            .map_err(|_| ToolError::LlmRecoverable(format!("python: execution timed out after {}s", timeout_secs)))?
-            .map_err(|e| format!("python: failed to execute: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|_| {
+                ToolError::LlmRecoverable(format!(
+                    "python: execution timed out after {}s",
+                    timeout_secs
+                ))
+            })?
+            .map_err(|e| format!("python: failed to execute: {}", e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let mut stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let mut stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -93,7 +114,10 @@ impl PydanticToolExecutor<PythonArgs> for PythonExecutor {
     }
 }
 
-pub fn python_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
+pub fn python_tool(
+    working_dir: Option<std::path::PathBuf>,
+    runner: Arc<dyn crate::runner::CommandRunner>,
+) -> Tool {
     Tool {
         name: "Python".to_string(),
         description: "Execute Python code and return its output. \
@@ -114,7 +138,10 @@ pub fn python_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crat
             },
             "required": ["code"]
         }),
-        execute: Arc::new(PydanticAdapter::new(PythonExecutor { working_dir, runner })),
+        execute: Arc::new(PydanticAdapter::new(PythonExecutor {
+            working_dir,
+            runner,
+        })),
     }
 }
 
@@ -145,7 +172,11 @@ mod tests {
     #[tokio::test]
     async fn test_python_executor_stderr() {
         let runner = Arc::new(MockCommandRunner::new());
-        runner.push_response(Ok(crate::runner::mock::mock_output(1, "output", "ZeroDivisionError")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(
+            1,
+            "output",
+            "ZeroDivisionError",
+        )));
 
         let executor = PythonExecutor {
             working_dir: None,

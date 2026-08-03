@@ -129,7 +129,8 @@ where
     }
 }
 
-pub fn minimax_agent_workspace_from_env() -> Result<MinimaxAgentWorkspace<crate::minimax::MinimaxClient>, String> {
+pub fn minimax_agent_workspace_from_env()
+-> Result<MinimaxAgentWorkspace<crate::minimax::MinimaxClient>, String> {
     let api_key = std::env::var("MINIMAX_API_KEY")
         .map_err(|_| "MINIMAX_API_KEY is required for the Minimax agent workspace".to_string())?;
     if api_key.trim().is_empty() {
@@ -161,7 +162,8 @@ fn agent_prompt(
     prior_turns: &[AgentTurn],
 ) -> Result<String, String> {
     let prior_json = serde_json::to_string(prior_turns).map_err(|err| err.to_string())?;
-    let handoff_json = serde_json::to_string(&template.handoff_to).map_err(|err| err.to_string())?;
+    let handoff_json =
+        serde_json::to_string(&template.handoff_to).map_err(|err| err.to_string())?;
 
     Ok(format!(
         "You are an OHC agent in a five-agent workspace. Agent id: {agent_id}. Role: {role}. Mission: {mission}. Task: {task}. Prior agent transcript JSON: {prior_json}. You must collaborate with the prior agents and hand off to exactly these next agents: {handoff_json} (do not include any other agents or omit any, ensure the list is exactly as provided). Return strict JSON only with keys agent_id, role, contribution, handoff_to, confidence. contribution must mention at least one prior agent when prior transcript is non-empty, and must be concise but specific.",
@@ -194,7 +196,8 @@ fn repair_prompt(
     raw_response: &str,
     parse_error: &str,
 ) -> Result<String, String> {
-    let handoff_json = serde_json::to_string(&template.handoff_to).map_err(|err| err.to_string())?;
+    let handoff_json =
+        serde_json::to_string(&template.handoff_to).map_err(|err| err.to_string())?;
     Ok(format!(
         "Convert this agent response into strict JSON only. Do not add markdown. Required schema: {{\"agent_id\":\"{agent_id}\",\"role\":\"{role}\",\"contribution\":\"short specific text\",\"handoff_to\":{handoff_json},\"confidence\":0.0}}. The previous parse error was: {parse_error}. Raw response: {raw_response}",
         agent_id = template.id,
@@ -307,7 +310,8 @@ fn parse_json_object(raw: &str) -> Result<Value, String> {
                 if ch != '{' {
                     continue;
                 }
-                let mut stream = serde_json::Deserializer::from_str(&raw[idx..]).into_iter::<Value>();
+                let mut stream =
+                    serde_json::Deserializer::from_str(&raw[idx..]).into_iter::<Value>();
                 if let Some(Ok(value)) = stream.next() {
                     if value.is_object() {
                         return Ok(value);
@@ -406,7 +410,10 @@ mod tests {
             id: "strategy_lead".to_string(),
             role: "Strategy Lead".to_string(),
             mission: "Plan".to_string(),
-            handoff_to: vec!["market_researcher".to_string(), "offer_designer".to_string()],
+            handoff_to: vec![
+                "market_researcher".to_string(),
+                "offer_designer".to_string(),
+            ],
         };
         let err = parse_and_validate_agent_turn(
             r#"{"agent_id":"strategy_lead","role":"Strategy Lead","contribution":"Define concrete launch workstreams for this project.","handoff_to":["market_researcher"],"confidence":0.86}"#,
@@ -498,11 +505,13 @@ mod tests {
         }
         let maybe_workspace = minimax_agent_workspace_from_env();
         if maybe_workspace.is_err() {
-            tracing::info!("Skipping live_minimax_five_agent_workspace_collaborates: MINIMAX_API_KEY not set");
+            tracing::info!(
+                "Skipping live_minimax_five_agent_workspace_collaborates: MINIMAX_API_KEY not set"
+            );
             return;
         }
-        let workspace = maybe_workspace.unwrap()
-
+        let workspace = maybe_workspace
+            .unwrap()
             .with_turn_delay(std::time::Duration::from_millis(
                 std::env::var("OHC_MINIMAX_SWARM_TURN_DELAY_MS")
                     .ok()
@@ -516,10 +525,12 @@ mod tests {
         tracing::info!("{}", serde_json::to_string_pretty(&transcript).unwrap());
 
         assert_eq!(transcript.turns.len(), 5);
-        assert!(transcript
-            .turns
-            .iter()
-            .all(|turn| has_substantive_contribution(&turn.contribution)));
+        assert!(
+            transcript
+                .turns
+                .iter()
+                .all(|turn| has_substantive_contribution(&turn.contribution))
+        );
         for (turn, template) in transcript.turns.iter().zip(agent_templates()) {
             assert_eq!(turn.handoff_to, template.handoff_to);
         }

@@ -14,11 +14,16 @@ impl ValidationEndpoint {
 
         if mode == "cloud" {
             if db != "postgres" || cache != "redis" {
-                return Err("invalid configuration for cloud mode: requires postgres and redis".to_string());
+                return Err(
+                    "invalid configuration for cloud mode: requires postgres and redis".to_string(),
+                );
             }
         } else if mode == "standalone" {
             if db != "sqlite" || cache != "memory" {
-                return Err("invalid configuration for standalone mode: requires sqlite and memory".to_string());
+                return Err(
+                    "invalid configuration for standalone mode: requires sqlite and memory"
+                        .to_string(),
+                );
             }
         } else {
             return Err("unknown mode".to_string());
@@ -50,7 +55,10 @@ mod tests {
                     ("mode".to_string(), "cloud".to_string()),
                     ("db".to_string(), "postgres".to_string()),
                     ("cache".to_string(), "redis".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
                 want_err: false,
             },
             Test {
@@ -59,7 +67,10 @@ mod tests {
                     ("mode".to_string(), "cloud".to_string()),
                     ("db".to_string(), "sqlite".to_string()),
                     ("cache".to_string(), "redis".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
                 want_err: true,
             },
             Test {
@@ -68,7 +79,10 @@ mod tests {
                     ("mode".to_string(), "standalone".to_string()),
                     ("db".to_string(), "sqlite".to_string()),
                     ("cache".to_string(), "memory".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
                 want_err: false,
             },
             Test {
@@ -77,7 +91,10 @@ mod tests {
                     ("mode".to_string(), "standalone".to_string()),
                     ("db".to_string(), "sqlite".to_string()),
                     ("cache".to_string(), "redis".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
                 want_err: true,
             },
             Test {
@@ -85,7 +102,10 @@ mod tests {
                 config: [
                     ("db".to_string(), "sqlite".to_string()),
                     ("cache".to_string(), "memory".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
                 want_err: true,
             },
             Test {
@@ -94,7 +114,10 @@ mod tests {
                     ("mode".to_string(), "unknown".to_string()),
                     ("db".to_string(), "sqlite".to_string()),
                     ("cache".to_string(), "memory".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
                 want_err: true,
             },
         ];

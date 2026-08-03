@@ -1,5 +1,3 @@
-
-
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -66,7 +64,10 @@ impl SkillBlueprint {
         for role in &self.roles {
             if !role.reports_to.is_empty() {
                 if !roles_map.contains_key(&role.reports_to) {
-                    return Err(format!("role {} reports to unknown role: {}", role.id, role.reports_to));
+                    return Err(format!(
+                        "role {} reports to unknown role: {}",
+                        role.id, role.reports_to
+                    ));
                 }
             }
         }
@@ -90,7 +91,10 @@ impl SkillBlueprint {
                     if !visited.contains(reports_to) {
                         check_cycle(reports_to, roles_map, visited, rec_stack)?;
                     } else if rec_stack.contains(reports_to) {
-                        return Err(format!("circular reporting loop detected involving role: {}", node_id));
+                        return Err(format!(
+                            "circular reporting loop detected involving role: {}",
+                            node_id
+                        ));
                     }
                 }
             }
@@ -235,7 +239,12 @@ roles:
             let res = parse_blueprint(yaml_data.as_bytes(), true);
             assert!(res.is_err(), "Expected error for test case: {}", name);
             let err = res.unwrap_err();
-            assert!(err.contains(expected_err), "Expected error to contain '{}', got: {}", expected_err, err);
+            assert!(
+                err.contains(expected_err),
+                "Expected error to contain '{}', got: {}",
+                expected_err,
+                err
+            );
         }
     }
 
@@ -258,7 +267,11 @@ roles:
         let res = parse_blueprint(yaml_data.as_bytes(), true);
         assert!(res.is_err());
         let err = res.unwrap_err();
-        assert!(err.contains("circular reporting loop detected"), "Expected circular reporting loop detected, got: {}", err);
+        assert!(
+            err.contains("circular reporting loop detected"),
+            "Expected circular reporting loop detected, got: {}",
+            err
+        );
     }
 
     #[test]
@@ -266,8 +279,20 @@ roles:
         let mut bp = SkillBlueprint {
             domain: "Test".to_string(),
             roles: vec![
-                RoleDefinition { id: "a".to_string(), title: "".to_string(), context: "context".to_string(), tools: vec![], reports_to: "".to_string() },
-                RoleDefinition { id: "b".to_string(), title: "".to_string(), context: "context".to_string(), tools: vec![], reports_to: "a".to_string() },
+                RoleDefinition {
+                    id: "a".to_string(),
+                    title: "".to_string(),
+                    context: "context".to_string(),
+                    tools: vec![],
+                    reports_to: "".to_string(),
+                },
+                RoleDefinition {
+                    id: "b".to_string(),
+                    title: "".to_string(),
+                    context: "context".to_string(),
+                    tools: vec![],
+                    reports_to: "a".to_string(),
+                },
             ],
         };
 

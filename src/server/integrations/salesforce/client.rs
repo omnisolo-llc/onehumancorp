@@ -74,7 +74,10 @@ impl SalesforceClient {
         format!("{}/services/data/v58.0", self.instance_url)
     }
 
-    async fn check_error_response(&self, resp: reqwest::Response) -> Result<reqwest::Response, String> {
+    async fn check_error_response(
+        &self,
+        resp: reqwest::Response,
+    ) -> Result<reqwest::Response, String> {
         if !resp.status().is_success() {
             let status = resp.status();
             let text = resp
@@ -85,7 +88,10 @@ impl SalesforceClient {
             if let Ok(err) = serde_json::from_str::<SalesforceErrorResponse>(&text) {
                 let msg = err.message.unwrap_or_default();
                 let code = err.error_code.unwrap_or_default();
-                return Err(format!("Salesforce API error {} [{}]: {}", status, code, msg));
+                return Err(format!(
+                    "Salesforce API error {} [{}]: {}",
+                    status, code, msg
+                ));
             }
 
             return Err(format!("Salesforce API error {}: {}", status, text));
@@ -95,7 +101,11 @@ impl SalesforceClient {
 
     // ── Contacts ──────────────────────────────────────────────────
 
-    pub async fn get_contacts(&self, query: &str, limit: u32) -> Result<Vec<SalesforceRecord>, String> {
+    pub async fn get_contacts(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<SalesforceRecord>, String> {
         let token = self.validated_access_token()?;
         let soql = if query.is_empty() {
             format!(
@@ -391,9 +401,7 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_server(
-        response_body: &'static str,
-    ) -> (String, oneshot::Receiver<String>) {
+    async fn start_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -411,8 +419,7 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) =
-                        request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -440,7 +447,9 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
+            request_tx
+                .send(String::from_utf8(request).unwrap())
+                .unwrap();
         });
 
         (base_url, request_rx)
@@ -474,8 +483,7 @@ mod tests {
             ]
         }"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client =
-            SalesforceClient::with_base_url_for_test(base_url, "valid-token".to_string());
+        let client = SalesforceClient::with_base_url_for_test(base_url, "valid-token".to_string());
 
         let contacts = client.get_contacts("", 10).await.unwrap();
         assert_eq!(contacts.len(), 2);
@@ -497,11 +505,16 @@ mod tests {
     async fn create_contact_returns_new_record() {
         let response = r#"{"id": "003xx000003NEW1", "success": true}"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client =
-            SalesforceClient::with_base_url_for_test(base_url, "test-token".to_string());
+        let client = SalesforceClient::with_base_url_for_test(base_url, "test-token".to_string());
 
         let record = client
-            .create_contact("Alice", "Johnson", "alice@test.com", "555-1234", "Acme Corp")
+            .create_contact(
+                "Alice",
+                "Johnson",
+                "alice@test.com",
+                "555-1234",
+                "Acme Corp",
+            )
             .await
             .unwrap();
         assert_eq!(record.id, "003xx000003NEW1");
@@ -524,8 +537,7 @@ mod tests {
             ]
         }"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client =
-            SalesforceClient::with_base_url_for_test(base_url, "search-token".to_string());
+        let client = SalesforceClient::with_base_url_for_test(base_url, "search-token".to_string());
 
         let results = client.search("Acme").await.unwrap();
         assert_eq!(results.len(), 2);
@@ -539,7 +551,8 @@ mod tests {
 
     #[tokio::test]
     async fn handles_salesforce_error_response() {
-        let error_body = r#"{"message": "Session expired or invalid", "errorCode": "INVALID_SESSION_ID"}"#;
+        let error_body =
+            r#"{"message": "Session expired or invalid", "errorCode": "INVALID_SESSION_ID"}"#;
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
@@ -565,8 +578,7 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
-        let client =
-            SalesforceClient::with_base_url_for_test(base_url, "   ".to_string());
+        let client = SalesforceClient::with_base_url_for_test(base_url, "   ".to_string());
         let error = client.get_contacts("", 10).await.unwrap_err();
         assert_eq!(error, "Salesforce access token is required");
     }

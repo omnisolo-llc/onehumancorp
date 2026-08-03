@@ -1,9 +1,4 @@
-use axum::{
-    extract::{Query},
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
+use axum::{Router, extract::Query, response::IntoResponse, routing::get};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -22,7 +17,6 @@ fn escape_html(s: &str) -> String {
     escaped
 }
 
-
 #[derive(Deserialize)]
 pub struct OAuthCallbackQuery {
     pub code: String,
@@ -31,9 +25,7 @@ pub struct OAuthCallbackQuery {
     pub extra: HashMap<String, String>,
 }
 
-pub async fn handle_oauth_callback(
-    Query(query): Query<OAuthCallbackQuery>,
-) -> impl IntoResponse {
+pub async fn handle_oauth_callback(Query(query): Query<OAuthCallbackQuery>) -> impl IntoResponse {
     // In Standalone mode, we receive the callback and need to route it.
     // In Cloud mode, we just process it directly.
     let state = query.state;
@@ -60,28 +52,53 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
-            if tunnel_base_url.starts_with("http://127.0.0.1:") || tunnel_base_url.starts_with("http://localhost:") {
+            if tunnel_base_url.starts_with("http://127.0.0.1:")
+                || tunnel_base_url.starts_with("http://localhost:")
+            {
                 // allowed for local dev
             } else if !tunnel_base_url.starts_with("https://") || tunnel_base_url.len() < 10 {
                 return (
                     axum::http::StatusCode::BAD_REQUEST,
                     "Invalid tunnel_base_url: must be HTTPS or localhost.",
-                ).into_response();
+                )
+                    .into_response();
             } else {
-                let stripped = tunnel_base_url.strip_prefix("https://").unwrap_or(&tunnel_base_url);
-                let host = stripped.split('/').next().unwrap_or(stripped).split(':').next().unwrap_or(stripped);
-                if !host.ends_with(".ohc.network") && host != "ohc.network" && host != "localhost" && host != "127.0.0.1" {
-                    return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url host").into_response();
+                let stripped = tunnel_base_url
+                    .strip_prefix("https://")
+                    .unwrap_or(&tunnel_base_url);
+                let host = stripped
+                    .split('/')
+                    .next()
+                    .unwrap_or(stripped)
+                    .split(':')
+                    .next()
+                    .unwrap_or(stripped);
+                if !host.ends_with(".ohc.network")
+                    && host != "ohc.network"
+                    && host != "localhost"
+                    && host != "127.0.0.1"
+                {
+                    return (
+                        axum::http::StatusCode::BAD_REQUEST,
+                        "Invalid tunnel_base_url host",
+                    )
+                        .into_response();
                 }
             }
 
-            let mut redirect_url = format!("{}/{}/oauth/callback#code={}&state={}",
+            let mut redirect_url = format!(
+                "{}/{}/oauth/callback#code={}&state={}",
                 tunnel_base_url,
                 urlencoding::encode(&tunnel_id),
                 urlencoding::encode(&query.code),
-                urlencoding::encode(&actual_state));
+                urlencoding::encode(&actual_state)
+            );
             for (k, v) in query.extra {
-                redirect_url.push_str(&format!("&{}={}", urlencoding::encode(&k), urlencoding::encode(&v)));
+                redirect_url.push_str(&format!(
+                    "&{}={}",
+                    urlencoding::encode(&k),
+                    urlencoding::encode(&v)
+                ));
             }
             let safe_redirect_url = escape_html(&redirect_url);
             let html_redirect = format!(
@@ -102,7 +119,8 @@ pub async fn handle_oauth_callback(
                 axum::http::StatusCode::OK,
                 [("Cache-Control", "no-store")],
                 axum::response::Html(html_redirect),
-            ).into_response();
+            )
+                .into_response();
         }
     }
 
@@ -111,8 +129,7 @@ pub async fn handle_oauth_callback(
 }
 
 pub fn router() -> Router<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
-    Router::new()
-        .route("/callback", get(handle_oauth_callback))
+    Router::new().route("/callback", get(handle_oauth_callback))
 }
 
 #[cfg(test)]
@@ -120,14 +137,6 @@ mod tests {
     use super::*;
     use axum::extract::Query;
     use std::collections::HashMap;
-
-
-
-
-
-
-
-
 
     #[tokio::test]
     async fn test_valid_tunnel_id_secure_fragment_redirect() {
@@ -143,7 +152,9 @@ mod tests {
         let response = handle_oauth_callback(Query(query)).await.into_response();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         // Assert that the redirect uses a fragment (#) instead of a query string (?)
@@ -152,13 +163,6 @@ mod tests {
         assert!(body_str.contains("state=actualState123"));
         assert!(body_str.contains("foo=bar"));
     }
-
-
-
-
-
-
-
 
     #[tokio::test]
     async fn test_invalid_tunnel_id_path_traversal() {
@@ -232,11 +236,13 @@ mod tests {
         assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
     }
 
-
     #[tokio::test]
     async fn test_xss_in_callback_is_escaped() {
         let mut extra = HashMap::new();
-        extra.insert("foo".to_string(), "bar\"<script>alert(1)</script>".to_string());
+        extra.insert(
+            "foo".to_string(),
+            "bar\"<script>alert(1)</script>".to_string(),
+        );
 
         let query = OAuthCallbackQuery {
             code: "\"><img src=x onerror=alert(1)>".to_string(),
@@ -247,12 +253,13 @@ mod tests {
         let response = handle_oauth_callback(Query(query)).await.into_response();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         assert!(!body_str.contains("<script>alert(1)</script>"));
         assert!(!body_str.contains("\"><img"));
-
     }
 
     #[tokio::test]
@@ -269,7 +276,9 @@ mod tests {
         let response = handle_oauth_callback(Query(query)).await.into_response();
         assert_eq!(response.status(), axum::http::StatusCode::OK);
 
-        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         assert!(body_str.contains("token=abc%2Bdef"));

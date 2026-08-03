@@ -40,9 +40,14 @@ impl LobClient {
         }
     }
 
-    pub async fn create_postcard(&self, request: &PostcardRequest) -> Result<PostcardResponse, String> {
+    pub async fn create_postcard(
+        &self,
+        request: &PostcardRequest,
+    ) -> Result<PostcardResponse, String> {
         let url = format!("{}/postcards", self.base_url);
-        let res = self.client.post(&url)
+        let res = self
+            .client
+            .post(&url)
             .basic_auth(&self.api_key, Some(""))
             .json(request)
             .send()

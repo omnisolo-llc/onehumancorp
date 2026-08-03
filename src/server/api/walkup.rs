@@ -1,12 +1,12 @@
 use axum::{
-    extract::{State, Json},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
     Router,
+    extract::{Json, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
 };
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct WalkupPayload {
@@ -42,13 +42,11 @@ pub async fn handle_walkup(
     let pool = &state.db.pool;
 
     let target_language: String = {
-        let prefs_row = sqlx::query(
-            "SELECT language_preference FROM tenants WHERE id = $1"
-        )
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .unwrap_or(None);
+        let prefs_row = sqlx::query("SELECT language_preference FROM tenants WHERE id = $1")
+            .bind(tenant_id)
+            .fetch_optional(pool)
+            .await
+            .unwrap_or(None);
 
         match prefs_row {
             Some(r) => {
@@ -72,18 +70,36 @@ pub async fn handle_walkup(
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.trim().is_empty() {
-                crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                crate::minimax::LocalLLMClient::new()
+                    .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                    .await
+                    .unwrap_or_default()
             } else {
-                crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                crate::minimax::MinimaxClient::new(api_key)
+                    .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                    .await
+                    .unwrap_or_default()
             }
-        },
-        _ => crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default(),
+        }
+        _ => crate::minimax::LocalLLMClient::new()
+            .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+            .await
+            .unwrap_or_default(),
     };
 
-    let clean_res = raw_response.trim_matches('`').trim_start_matches("json\n").trim_end();
+    let clean_res = raw_response
+        .trim_matches('`')
+        .trim_start_matches("json\n")
+        .trim_end();
     if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {
-        let intent = translated_json.get("intent").and_then(|v| v.as_str()).unwrap_or("Query");
-        let translated_text = translated_json.get("translated_text").and_then(|v| v.as_str()).unwrap_or(message);
+        let intent = translated_json
+            .get("intent")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Query");
+        let translated_text = translated_json
+            .get("translated_text")
+            .and_then(|v| v.as_str())
+            .unwrap_or(message);
 
         if intent == "Order" {
             let _ = sqlx::query(
@@ -95,9 +111,23 @@ pub async fn handle_walkup(
             .execute(pool)
             .await;
 
-            return (StatusCode::OK, Json(WalkupResponse { success: true, structured_order: Some(translated_text.to_string()) })).into_response();
+            return (
+                StatusCode::OK,
+                Json(WalkupResponse {
+                    success: true,
+                    structured_order: Some(translated_text.to_string()),
+                }),
+            )
+                .into_response();
         }
     }
 
-    (StatusCode::OK, Json(WalkupResponse { success: true, structured_order: None })).into_response()
+    (
+        StatusCode::OK,
+        Json(WalkupResponse {
+            success: true,
+            structured_order: None,
+        }),
+    )
+        .into_response()
 }

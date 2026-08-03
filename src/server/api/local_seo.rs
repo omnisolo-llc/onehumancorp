@@ -1,11 +1,10 @@
+use ::server_common::Claims;
 use axum::{
+    Extension, Router,
     extract::Path,
-    Extension,
     response::Json,
     routing::{get, post},
-    Router,
 };
-use ::server_common::Claims;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -43,10 +42,15 @@ fn google_business_api_base() -> String {
 }
 
 fn percent_encode(input: &str) -> String {
-    input.bytes().map(|byte| match byte {
-        b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (byte as char).to_string(),
-        _ => format!("%{byte:02X}"),
-    }).collect()
+    input
+        .bytes()
+        .map(|byte| match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (byte as char).to_string()
+            }
+            _ => format!("%{byte:02X}"),
+        })
+        .collect()
 }
 
 fn google_business_token() -> Option<String> {
@@ -64,20 +68,26 @@ fn google_business_location() -> Option<(String, String)> {
     Some((account_id, location_id))
 }
 
-pub async fn connect_google_business(Extension(claims): Extension<Claims>) -> Json<serde_json::Value> {
+pub async fn connect_google_business(
+    Extension(claims): Extension<Claims>,
+) -> Json<serde_json::Value> {
     let client_id = match std::env::var("GOOGLE_BUSINESS_CLIENT_ID") {
         Ok(value) if !value.trim().is_empty() => value,
-        _ => return Json(serde_json::json!({
-            "status": "error",
-            "message": "Google Business Profile OAuth is not configured"
-        })),
+        _ => {
+            return Json(serde_json::json!({
+                "status": "error",
+                "message": "Google Business Profile OAuth is not configured"
+            }));
+        }
     };
     let redirect_uri = match std::env::var("GOOGLE_BUSINESS_REDIRECT_URI") {
         Ok(value) if !value.trim().is_empty() => value,
-        _ => return Json(serde_json::json!({
-            "status": "error",
-            "message": "Google Business Profile OAuth is not configured"
-        })),
+        _ => {
+            return Json(serde_json::json!({
+                "status": "error",
+                "message": "Google Business Profile OAuth is not configured"
+            }));
+        }
     };
 
     let redirect_url = format!(
@@ -94,7 +104,9 @@ pub async fn connect_google_business(Extension(claims): Extension<Claims>) -> Js
     }))
 }
 
-pub async fn get_connection_status(Extension(_claims): Extension<Claims>) -> Json<ConnectionStatusResponse> {
+pub async fn get_connection_status(
+    Extension(_claims): Extension<Claims>,
+) -> Json<ConnectionStatusResponse> {
     Json(ConnectionStatusResponse {
         connected: google_business_token().is_some() && google_business_location().is_some(),
     })
@@ -130,41 +142,56 @@ pub async fn get_pending_reviews(Extension(_claims): Extension<Claims>) -> Json<
         _ => return Json(vec![]),
     };
 
-    let reviews = body.get("reviews")
+    let reviews = body
+        .get("reviews")
         .and_then(|value| value.as_array())
         .map(|items| {
-            items.iter().filter_map(|item| {
-                let review_id = item.get("reviewId")
-                    .or_else(|| item.get("name"))
-                    .and_then(|value| value.as_str())?
+            items
+                .iter()
+                .filter_map(|item| {
+                    let review_id = item
+                        .get("reviewId")
+                        .or_else(|| item.get("name"))
+                        .and_then(|value| value.as_str())?
+                        .to_string();
+                    let reviewer_name = item
+                        .get("reviewer")
+                        .and_then(|value| value.get("displayName"))
+                        .and_then(|value| value.as_str())
+                        .unwrap_or("Google reviewer")
+                        .to_string();
+                    let star_rating = item
+                        .get("starRating")
+                        .and_then(|value| value.as_str())
+                        .and_then(|rating| match rating {
+                            "ONE" => Some(1),
+                            "TWO" => Some(2),
+                            "THREE" => Some(3),
+                            "FOUR" => Some(4),
+                            "FIVE" => Some(5),
+                            _ => None,
+                        })
+                        .unwrap_or(0);
+                    let comment = item
+                        .get("comment")
+                        .and_then(|value| value.as_str())
+                        .map(|value| value.to_string());
+                    let reply_status = if item.get("reviewReply").is_some() {
+                        "REPLIED"
+                    } else {
+                        "PENDING"
+                    }
                     .to_string();
-                let reviewer_name = item.get("reviewer")
-                    .and_then(|value| value.get("displayName"))
-                    .and_then(|value| value.as_str())
-                    .unwrap_or("Google reviewer")
-                    .to_string();
-                let star_rating = item.get("starRating")
-                    .and_then(|value| value.as_str())
-                    .and_then(|rating| match rating {
-                        "ONE" => Some(1),
-                        "TWO" => Some(2),
-                        "THREE" => Some(3),
-                        "FOUR" => Some(4),
-                        "FIVE" => Some(5),
-                        _ => None,
+                    Some(LocalReview {
+                        review_id,
+                        reviewer_name,
+                        star_rating,
+                        comment,
+                        ai_draft_reply: None,
+                        reply_status,
                     })
-                    .unwrap_or(0);
-                let comment = item.get("comment").and_then(|value| value.as_str()).map(|value| value.to_string());
-                let reply_status = if item.get("reviewReply").is_some() { "REPLIED" } else { "PENDING" }.to_string();
-                Some(LocalReview {
-                    review_id,
-                    reviewer_name,
-                    star_rating,
-                    comment,
-                    ai_draft_reply: None,
-                    reply_status,
                 })
-            }).collect()
+                .collect()
         })
         .unwrap_or_default();
 
@@ -178,17 +205,21 @@ pub async fn approve_and_reply(
 ) -> Json<serde_json::Value> {
     let token = match google_business_token() {
         Some(token) => token,
-        None => return Json(serde_json::json!({
-            "status": "error",
-            "message": "Google Business Profile is not connected"
-        })),
+        None => {
+            return Json(serde_json::json!({
+                "status": "error",
+                "message": "Google Business Profile is not connected"
+            }));
+        }
     };
     let (account_id, location_id) = match google_business_location() {
         Some(location) => location,
-        None => return Json(serde_json::json!({
-            "status": "error",
-            "message": "Google Business Profile is not connected"
-        })),
+        None => {
+            return Json(serde_json::json!({
+                "status": "error",
+                "message": "Google Business Profile is not connected"
+            }));
+        }
     };
     if payload.reply_content.trim().is_empty() {
         return Json(serde_json::json!({
@@ -212,9 +243,15 @@ pub async fn approve_and_reply(
         .await;
 
     match resp {
-        Ok(response) if response.status().is_success() => Json(serde_json::json!({ "status": "success", "review_id": review_id })),
-        Ok(response) => Json(serde_json::json!({ "status": "error", "message": format!("Google Business Profile API error: {}", response.status()) })),
-        Err(err) => Json(serde_json::json!({ "status": "error", "message": format!("Google Business Profile request failed: {err}") })),
+        Ok(response) if response.status().is_success() => {
+            Json(serde_json::json!({ "status": "success", "review_id": review_id }))
+        }
+        Ok(response) => Json(
+            serde_json::json!({ "status": "error", "message": format!("Google Business Profile API error: {}", response.status()) }),
+        ),
+        Err(err) => Json(
+            serde_json::json!({ "status": "error", "message": format!("Google Business Profile request failed: {err}") }),
+        ),
     }
 }
 
@@ -255,12 +292,17 @@ pub async fn get_discovery_report(
     .await
     .unwrap_or_default();
 
-    let reports = rows.into_iter().map(|(id, month, plain_language_summary, metrics)| DiscoveryReport {
-        id,
-        month,
-        plain_language_summary,
-        metrics: metrics.unwrap_or_else(|| serde_json::json!({})),
-    }).collect();
+    let reports = rows
+        .into_iter()
+        .map(
+            |(id, month, plain_language_summary, metrics)| DiscoveryReport {
+                id,
+                month,
+                plain_language_summary,
+                metrics: metrics.unwrap_or_else(|| serde_json::json!({})),
+            },
+        )
+        .collect();
 
     Json(reports)
 }
@@ -298,8 +340,14 @@ mod tests {
     #[tokio::test]
     async fn test_connect_google_business() {
         unsafe {
-            std::env::set_var("GOOGLE_BUSINESS_CLIENT_ID", "client-123.apps.googleusercontent.com");
-            std::env::set_var("GOOGLE_BUSINESS_REDIRECT_URI", "https://ohc.example/oauth/google-business/callback");
+            std::env::set_var(
+                "GOOGLE_BUSINESS_CLIENT_ID",
+                "client-123.apps.googleusercontent.com",
+            );
+            std::env::set_var(
+                "GOOGLE_BUSINESS_REDIRECT_URI",
+                "https://ohc.example/oauth/google-business/callback",
+            );
         }
 
         let claims = mock_claims();
@@ -307,7 +355,9 @@ mod tests {
         let redirect_url = response["redirect_url"].as_str().unwrap();
         assert_eq!(response["status"], "success");
         assert!(redirect_url.contains("client-123.apps.googleusercontent.com"));
-        assert!(redirect_url.contains("https%3A%2F%2Fohc.example%2Foauth%2Fgoogle-business%2Fcallback"));
+        assert!(
+            redirect_url.contains("https%3A%2F%2Fohc.example%2Foauth%2Fgoogle-business%2Fcallback")
+        );
         assert!(redirect_url.contains("state=tenant123"));
         assert!(!redirect_url.contains("MOCK"));
 
@@ -326,7 +376,10 @@ mod tests {
         let claims = mock_claims();
         let Json(response) = connect_google_business(Extension(claims)).await;
         assert_eq!(response["status"], "error");
-        assert_eq!(response["message"], "Google Business Profile OAuth is not configured");
+        assert_eq!(
+            response["message"],
+            "Google Business Profile OAuth is not configured"
+        );
     }
 
     #[tokio::test]
@@ -362,7 +415,10 @@ mod tests {
         });
         let Json(response) = approve_and_reply(Extension(claims), review_id, payload).await;
         assert_eq!(response["status"], "error");
-        assert_eq!(response["message"], "Google Business Profile is not connected");
+        assert_eq!(
+            response["message"],
+            "Google Business Profile is not connected"
+        );
     }
 
     #[tokio::test]

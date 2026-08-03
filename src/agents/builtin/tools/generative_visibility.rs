@@ -1,16 +1,13 @@
-use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
-use std::sync::Arc;
 use super::{Tool, ToolExecutor};
+use ohc_builtin_agent_core::types::ToolError;
+use serde_json::{Value, json};
+use std::sync::Arc;
 
 pub struct GenerativeVisibilityExecutor;
 
 #[async_trait::async_trait]
 impl ToolExecutor for GenerativeVisibilityExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let content = args["content"].as_str().unwrap_or("");
         let url = args["url"].as_str().unwrap_or("");
 
@@ -51,11 +48,16 @@ impl ToolExecutor for GenerativeVisibilityExecutor {
                 recommendations.push("Expand your content. LLMs prefer rich, descriptive text to summarize your offerings.");
             }
         } else {
-             // If only URL is provided, we simulate a scan but give generic advice.
-             score = 40;
-             recommendations.push("Provide the actual page content for a deeper generative visibility analysis.");
-             recommendations.push("Ensure your website clearly states what you do in plain language on the homepage.");
-             recommendations.push("Use structured data to identify your business type, address, and reviews.");
+            // If only URL is provided, we simulate a scan but give generic advice.
+            score = 40;
+            recommendations.push(
+                "Provide the actual page content for a deeper generative visibility analysis.",
+            );
+            recommendations.push(
+                "Ensure your website clearly states what you do in plain language on the homepage.",
+            );
+            recommendations
+                .push("Use structured data to identify your business type, address, and reviews.");
         }
 
         // Cap score at 100
@@ -66,7 +68,8 @@ impl ToolExecutor for GenerativeVisibilityExecutor {
             "generative_score": score,
             "recommendations": recommendations,
             "message": format!("Analyzed visibility for content/url. Score: {}", score)
-        }).to_string())
+        })
+        .to_string())
     }
 }
 

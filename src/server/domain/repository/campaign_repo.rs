@@ -1,5 +1,5 @@
 use crate::domain::repository::models::{Campaign, CampaignAsset, LeadGenCampaign};
-use sqlx::{PgPool, Error};
+use sqlx::{Error, PgPool};
 use uuid::Uuid;
 
 pub struct CampaignRepository {
@@ -44,7 +44,12 @@ impl CampaignRepository {
         .await
     }
 
-    pub async fn update_campaign_status(&self, tenant_id: &str, id: &str, status: &str) -> Result<(), Error> {
+    pub async fn update_campaign_status(
+        &self,
+        tenant_id: &str,
+        id: &str,
+        status: &str,
+    ) -> Result<(), Error> {
         sqlx::query(
             r#"
             UPDATE campaigns SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $2 AND id = $3
@@ -78,7 +83,11 @@ impl CampaignRepository {
         Ok(())
     }
 
-    pub async fn get_assets(&self, tenant_id: &str, campaign_id: &str) -> Result<Vec<CampaignAsset>, Error> {
+    pub async fn get_assets(
+        &self,
+        tenant_id: &str,
+        campaign_id: &str,
+    ) -> Result<Vec<CampaignAsset>, Error> {
         sqlx::query_as::<_, CampaignAsset>(
             r#"
             SELECT * FROM campaign_assets WHERE tenant_id = $1 AND campaign_id = $2
@@ -135,7 +144,11 @@ impl CampaignRepository {
         Ok(())
     }
 
-    pub async fn get_lead_gen_campaign(&self, tenant_id: &str, id: &str) -> Result<LeadGenCampaign, Error> {
+    pub async fn get_lead_gen_campaign(
+        &self,
+        tenant_id: &str,
+        id: &str,
+    ) -> Result<LeadGenCampaign, Error> {
         sqlx::query_as::<_, LeadGenCampaign>(
             r#"
             SELECT * FROM lead_gen_campaigns WHERE tenant_id = $1::uuid AND id = $2::uuid

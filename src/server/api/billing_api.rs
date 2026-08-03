@@ -1,15 +1,16 @@
-use axum::{extract::State, Json};
+use crate::hub::Hub;
+use crate::utils::cache::HybridCache;
+use axum::http::HeaderMap;
+use axum::http::StatusCode;
+use axum::{Json, extract::State};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::OnceLock;
-use crate::hub::Hub;
-use axum::http::HeaderMap;
-use axum::http::StatusCode;
-use crate::utils::cache::HybridCache;
 
 pub static MY_PLAN_CACHE: OnceLock<HybridCache<MyPlanResponse>> = OnceLock::new();
 pub static COST_DASHBOARD_CACHE: OnceLock<HybridCache<CostDashboardResponse>> = OnceLock::new();
-pub static DEPARTMENT_TIER_USAGE_CACHE: OnceLock<HybridCache<DepartmentTierUsageResponse>> = OnceLock::new();
+pub static DEPARTMENT_TIER_USAGE_CACHE: OnceLock<HybridCache<DepartmentTierUsageResponse>> =
+    OnceLock::new();
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct MyPlanResponse {
@@ -78,12 +79,30 @@ struct DepartmentRecord {
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
-        .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
-        .route("/department-tier-usage", axum::routing::get(department_tier_usage_handler))
-        .route("/create-checkout-session", axum::routing::post(create_checkout_session_handler))
-        .route("/create-billing-portal-session", axum::routing::post(create_billing_portal_session_handler))
-        .route("/cancel-subscription", axum::routing::post(cancel_subscription_handler))
-        .route("/download-invoice", axum::routing::post(download_invoice_handler))
+        .route(
+            "/cost-dashboard",
+            axum::routing::get(cost_dashboard_handler),
+        )
+        .route(
+            "/department-tier-usage",
+            axum::routing::get(department_tier_usage_handler),
+        )
+        .route(
+            "/create-checkout-session",
+            axum::routing::post(create_checkout_session_handler),
+        )
+        .route(
+            "/create-billing-portal-session",
+            axum::routing::post(create_billing_portal_session_handler),
+        )
+        .route(
+            "/cancel-subscription",
+            axum::routing::post(cancel_subscription_handler),
+        )
+        .route(
+            "/download-invoice",
+            axum::routing::post(download_invoice_handler),
+        )
         .route("/report-cost", axum::routing::post(report_cost_handler))
         .with_state(hub)
 }
@@ -99,22 +118,33 @@ pub async fn report_cost_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => "default".to_string(),
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
-    let req: ReportCostRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64)
+        .await
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let req: ReportCostRequest =
+        serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     if req.value < 0 {
         return Err(StatusCode::BAD_REQUEST);
     }
 
     if req.metric_name == "ohc_llm_cost_total_cents" {
-        let agent_id = req.labels.get("agent_id").map(|s| s.as_str()).unwrap_or("unknown_agent");
-        hub.get_cost_auditor().record_manual_cost(agent_id, &tenant_id, req.value);
+        let agent_id = req
+            .labels
+            .get("agent_id")
+            .map(|s| s.as_str())
+            .unwrap_or("unknown_agent");
+        hub.get_cost_auditor()
+            .record_manual_cost(agent_id, &tenant_id, req.value);
         if let Some(cache) = COST_DASHBOARD_CACHE.get() {
             let cache_clone = cache.clone();
             let tenant_id_clone = tenant_id.clone();
@@ -134,8 +164,9 @@ pub async fn report_cost_handler(
         &req.metric_name,
         "gauge",
         req.value,
-        labels_value
-    ).await;
+        labels_value,
+    )
+    .await;
 
     Ok(Json(serde_json::json!({ "success": true })))
 }
@@ -174,8 +205,7 @@ fn validated_subscription_interval(interval: Option<&str>) -> Result<&str, Statu
     }
 }
 
-const ACTIVE_STRIPE_SUBSCRIPTION_SQL: &str =
-    "SELECT stripe_subscription_id FROM subscribers WHERE tenant_id = $1 AND LOWER(status) = 'active' AND stripe_subscription_id IS NOT NULL AND stripe_subscription_id <> '' ORDER BY updated_at DESC LIMIT 1";
+const ACTIVE_STRIPE_SUBSCRIPTION_SQL: &str = "SELECT stripe_subscription_id FROM subscribers WHERE tenant_id = $1 AND LOWER(status) = 'active' AND stripe_subscription_id IS NOT NULL AND stripe_subscription_id <> '' ORDER BY updated_at DESC LIMIT 1";
 
 async fn begin_billing_tenant_transaction<'a>(
     pool: &'a sqlx::PgPool,
@@ -195,7 +225,9 @@ fn valid_stripe_subscription_id(value: &str) -> bool {
     value.len() > 4
         && value.len() <= 255
         && value.starts_with("sub_")
-        && value.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
 }
 
 pub async fn create_billing_portal_session_handler(
@@ -203,40 +235,51 @@ pub async fn create_billing_portal_session_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<Json<CreateBillingPortalSessionResponse>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => "default".to_string(),
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
     let origin = headers.get("origin").and_then(|h| h.to_str().ok());
-    let referer = headers.get("referer").and_then(|h| h.to_str().ok()).and_then(|r| {
-        if r.starts_with("http") {
-            let mut parts = r.splitn(4, '/');
-            let scheme = parts.next()?;
-            let _empty = parts.next()?;
-            let host = parts.next()?;
-            Some(format!("{}//{}", scheme, host))
-        } else {
-            None
-        }
-    });
+    let referer = headers
+        .get("referer")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|r| {
+            if r.starts_with("http") {
+                let mut parts = r.splitn(4, '/');
+                let scheme = parts.next()?;
+                let _empty = parts.next()?;
+                let host = parts.next()?;
+                Some(format!("{}//{}", scheme, host))
+            } else {
+                None
+            }
+        });
 
     let return_url_base = origin.or(referer.as_deref());
 
     let customer_id = format!("cus_{}", tenant_id); // Basic fallback to avoid DB join here for simplicity
 
     if let Some(client) = &hub.tracker().stripe_client {
-        match client.create_billing_portal_session(&customer_id, return_url_base).await {
+        match client
+            .create_billing_portal_session(&customer_id, return_url_base)
+            .await
+        {
             Ok(url) => Ok(Json(CreateBillingPortalSessionResponse { url })),
             Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
         }
     } else {
         // Fallback if Stripe config is missing
-        let base_url = return_url_base
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string()));
-        Ok(Json(CreateBillingPortalSessionResponse { url: format!("{}/pricing", base_url) }))
+        let base_url = return_url_base.map(|s| s.to_string()).unwrap_or_else(|| {
+            std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:18789".to_string())
+        });
+        Ok(Json(CreateBillingPortalSessionResponse {
+            url: format!("{}/pricing", base_url),
+        }))
     }
 }
 
@@ -245,14 +288,20 @@ pub async fn create_checkout_session_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<Json<CreateCheckoutSessionResponse>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => return Err(StatusCode::UNAUTHORIZED),
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
-    let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64)
+        .await
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let req: CreateCheckoutSessionRequest =
+        serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
     let quantity = validated_checkout_quantity(req.quantity)?;
     let requested_interval = validated_subscription_interval(req.subscription_interval.as_deref())?;
 
@@ -288,10 +337,14 @@ pub async fn create_checkout_session_handler(
             .map_err(|_| StatusCode::NOT_FOUND)?;
         use sqlx::Row;
         let price_cents: i64 = row.try_get("price_cents").unwrap_or(0);
-        let title: String = row.try_get("title").unwrap_or_else(|_| "Product".to_string());
+        let title: String = row
+            .try_get("title")
+            .unwrap_or_else(|_| "Product".to_string());
         let is_subscribable: bool = row.try_get("is_subscribable").unwrap_or(false);
-        let subscription_frequency: Option<String> = row.try_get("subscription_frequency").unwrap_or(None);
-        let subscription_discount_percent: i32 = row.try_get("subscription_discount_percent").unwrap_or(0);
+        let subscription_frequency: Option<String> =
+            row.try_get("subscription_frequency").unwrap_or(None);
+        let subscription_discount_percent: i32 =
+            row.try_get("subscription_discount_percent").unwrap_or(0);
 
         amount_usd = (price_cents as f64 / 100.0) * quantity as f64;
         item_name = title;
@@ -306,7 +359,9 @@ pub async fn create_checkout_session_handler(
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
             if let Some(plan) = plan_row {
-                let interval: String = plan.try_get("interval").map_err(|_| StatusCode::BAD_REQUEST)?;
+                let interval: String = plan
+                    .try_get("interval")
+                    .map_err(|_| StatusCode::BAD_REQUEST)?;
                 let interval = validated_subscription_interval(Some(&interval))?.to_string();
                 let discount_percentage: i32 = plan.try_get("discount_percentage").unwrap_or(0);
                 actual_interval = Some(interval);
@@ -320,7 +375,8 @@ pub async fn create_checkout_session_handler(
                     validated_subscription_interval(subscription_frequency.as_deref())?.to_string(),
                 );
                 if subscription_discount_percent > 0 {
-                    amount_usd = amount_usd * (1.0 - (subscription_discount_percent as f64 / 100.0));
+                    amount_usd =
+                        amount_usd * (1.0 - (subscription_discount_percent as f64 / 100.0));
                 }
             } else {
                 actual_interval = Some(requested_interval.to_string());
@@ -336,39 +392,60 @@ pub async fn create_checkout_session_handler(
 
     let mut acquired_lock_id = "".to_string();
     if let Some(product_id) = &req.product_id {
-            let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
-            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client());
-            match inventory_service.reserve_inventory(&tenant_id, product_id, quantity, ttl).await {
-                Ok(result) => {
-                    if !result.success {
-                        return Err(StatusCode::CONFLICT);
-                    }
-                    acquired_lock_id = result.lock_id;
+        let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
+        let inventory_service =
+            crate::services::inventory::InventoryService::new(hub.redis_client());
+        match inventory_service
+            .reserve_inventory(&tenant_id, product_id, quantity, ttl)
+            .await
+        {
+            Ok(result) => {
+                if !result.success {
+                    return Err(StatusCode::CONFLICT);
                 }
-                Err(_) => {
-                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
-                }
+                acquired_lock_id = result.lock_id;
             }
+            Err(_) => {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
     }
 
     if let Some(client) = &hub.tracker().stripe_client {
-        let savings = crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount_usd);
+        let savings =
+            crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount_usd);
         if savings > 0.0 {
-            tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${:.2} in fees", savings); // pii-safe
+            tracing::info!(
+                "💰 Miser telemetry: Payment method optimized. Saved ${:.2} in fees",
+                savings
+            ); // pii-safe
         }
 
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
         let product_id_opt = req.product_id.clone();
-        match client.create_checkout_session(&item_name, &tenant_id, amount_usd, actual_interval, product_id_opt, None).await {
+        match client
+            .create_checkout_session(
+                &item_name,
+                &tenant_id,
+                amount_usd,
+                actual_interval,
+                product_id_opt,
+                None,
+            )
+            .await
+        {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails
                 if let Some(product_id) = &req.product_id {
-                        let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client());
-                        let _ = inventory_service.release_inventory(&tenant_id, product_id, quantity, &acquired_lock_id).await;
+                    let inventory_service =
+                        crate::services::inventory::InventoryService::new(hub.redis_client());
+                    let _ = inventory_service
+                        .release_inventory(&tenant_id, product_id, quantity, &acquired_lock_id)
+                        .await;
                 }
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
-            },
+            }
         }
     } else {
         Err(axum::http::StatusCode::SERVICE_UNAVAILABLE)
@@ -380,7 +457,10 @@ pub async fn cancel_subscription_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => return Err(StatusCode::UNAUTHORIZED),
         None => return Err(StatusCode::UNAUTHORIZED),
@@ -414,8 +494,10 @@ pub async fn cancel_subscription_handler(
                     .commit()
                     .await
                     .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
-                Ok(Json(serde_json::json!({ "status": sub.status, "message": "Subscription canceled successfully." })))
-            },
+                Ok(Json(
+                    serde_json::json!({ "status": sub.status, "message": "Subscription canceled successfully." }),
+                ))
+            }
             Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
         }
     } else {
@@ -428,14 +510,17 @@ pub async fn my_plan_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<Json<MyPlanResponse>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) => {
             if auth.org_id.is_empty() {
                 "default".to_string()
             } else {
                 auth.org_id.clone()
             }
-        },
+        }
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
@@ -452,9 +537,7 @@ pub async fn my_plan_handler(
     let trend_future = tokio::task::spawn({
         let pool = crate::db::get_pool();
         let t_id = tenant_id.clone();
-        async move {
-            crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &t_id).await
-        }
+        async move { crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &t_id).await }
     });
 
     let auditor = hub.get_cost_auditor();
@@ -469,20 +552,28 @@ pub async fn my_plan_handler(
         )
     });
 
-    let (tier_res, ai_used_res, storage_used_bytes_res, trend_res, auditor_res) = tokio::join!(tier_future, ai_used_future, storage_used_bytes_future, trend_future, auditor_future);
+    let (tier_res, ai_used_res, storage_used_bytes_res, trend_res, auditor_res) = tokio::join!(
+        tier_future,
+        ai_used_future,
+        storage_used_bytes_future,
+        trend_future,
+        auditor_future
+    );
 
     let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
     let ai_used = ai_used_res.unwrap_or(0);
     let storage_used_bytes = storage_used_bytes_res.unwrap_or(0);
     let trend = trend_res.unwrap_or_else(|_| vec![]);
-    let (llm_cost_cents, payment_fees_f64, compute_cost_f64, network_cost_f64) = auditor_res.unwrap_or((0, 0.0, 0.0, 0.0));
+    let (llm_cost_cents, payment_fees_f64, compute_cost_f64, network_cost_f64) =
+        auditor_res.unwrap_or((0, 0.0, 0.0, 0.0));
 
     let plan_name = match tier {
         ::server_pricing::rate_limit::PlanTier::Free => "Free",
         ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
         ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
         ::server_pricing::rate_limit::PlanTier::Business => "Business",
-    }.to_string();
+    }
+    .to_string();
 
     let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
     let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
@@ -496,11 +587,18 @@ pub async fn my_plan_handler(
     let email_cost_f64 = email_cost_cents as f64 / 100.0;
     let api_cost_f64 = api_cost_cents as f64 / 100.0;
 
-    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
+    let total_costs_f64 = llm_cost_f64
+        + storage_cost_f64
+        + payment_fees_f64
+        + compute_cost_f64
+        + network_cost_f64
+        + email_cost_f64
+        + api_cost_f64;
 
     let now = chrono::Utc::now();
     use chrono::Datelike;
-    let mut elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-") {
+    let mut elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-")
+    {
         7
     } else {
         now.day()
@@ -509,7 +607,11 @@ pub async fn my_plan_handler(
         elapsed_days = 1;
     }
 
-    let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30);
+    let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(
+        total_costs_f64,
+        elapsed_days,
+        30,
+    );
 
     let base_bill = tier.base_price();
     let next_bill_estimated = (base_bill * 100.0).round() as i32 + projected_cents as i32;
@@ -550,7 +652,9 @@ pub async fn my_plan_handler(
         soft_limit_reached,
         user_message,
     };
-    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
+    cache
+        .set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60))
+        .await;
     Ok(Json(resp))
 }
 
@@ -559,14 +663,17 @@ pub async fn cost_dashboard_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<Json<CostDashboardResponse>, StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) => {
             if auth.org_id.is_empty() {
                 "default".to_string()
             } else {
                 auth.org_id.clone()
             }
-        },
+        }
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
@@ -577,7 +684,11 @@ pub async fn cost_dashboard_handler(
 
     let now = chrono::Utc::now();
     use chrono::Datelike;
-    let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc();
+    let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc();
     let period_start = start_of_month.format("%Y-%m-%d").to_string();
     let period_end = now.format("%Y-%m-%d").to_string();
 
@@ -598,43 +709,56 @@ pub async fn cost_dashboard_handler(
             auditor_clone.get_tenant_network_cost(&tenant_id_for_auditor),
             auditor_clone.get_tenant_bandwidth_savings(&tenant_id_for_auditor),
             auditor_clone.get_tenant_tokens(&tenant_id_for_auditor),
-            auditor_clone.get_tenant_cached_tokens(&tenant_id_for_auditor)
+            auditor_clone.get_tenant_cached_tokens(&tenant_id_for_auditor),
         )
     });
 
     let hub_clone_for_storage = hub_clone.clone();
     let storage_future = tokio::task::spawn(async move {
-        hub_clone_for_storage.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
+        hub_clone_for_storage
+            .tracker()
+            .get_tenant_storage_used(&tenant_id_clone)
+            .await
+            .unwrap_or(0)
     });
 
     let trend_future = tokio::task::spawn({
         let pool = crate::db::get_pool();
         let t_id = tenant_id.clone();
-        async move {
-            crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &t_id).await
-        }
+        async move { crate::pricing::cost_aggregator::aggregate_daily_costs(&pool, &t_id).await }
     });
 
     let agent_costs_future = tokio::task::spawn({
         let pool = crate::db::get_pool();
         let t_id = tenant_id.clone();
-        async move {
-            crate::pricing::cost_aggregator::aggregate_agent_costs(&pool, &t_id).await
-        }
+        async move { crate::pricing::cost_aggregator::aggregate_agent_costs(&pool, &t_id).await }
     });
 
     let department_future = tokio::task::spawn({
         let h = hub_clone.clone();
         let t = tenant_id.clone();
-        async move {
-            department_tier_usage_for_tenant(&h, &t).await
-        }
+        async move { department_tier_usage_for_tenant(&h, &t).await }
     });
 
-    let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
+    let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(
+        storage_future,
+        auditor_future,
+        trend_future,
+        agent_costs_future,
+        department_future
+    );
 
     let _storage_bytes = storage_res.unwrap_or(0);
-    let (llm_cost_cents, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
+    let (
+        llm_cost_cents,
+        total_revenue_f64,
+        payment_fees_f64,
+        compute_cost_f64,
+        network_cost_f64,
+        bandwidth_savings_f64,
+        total_tokens,
+        cached_tokens,
+    ) = auditor_res.unwrap_or((0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
     let llm_cost_f64 = llm_cost_cents as f64 / 100.0;
     let trend = trend_res.unwrap_or_else(|_| vec![]);
     let agent_costs = agent_costs_res.unwrap_or_else(|_| vec![]);
@@ -660,9 +784,16 @@ pub async fn cost_dashboard_handler(
     let email_cost_f64 = email_cost_cents as f64 / 100.0;
     let api_cost_f64 = api_cost_cents as f64 / 100.0;
 
-    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
+    let total_costs_f64 = llm_cost_f64
+        + storage_cost_f64
+        + payment_fees_f64
+        + compute_cost_f64
+        + network_cost_f64
+        + email_cost_f64
+        + api_cost_f64;
 
-    let mut elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-")  {
+    let mut elapsed_days = if tenant_id.starts_with("e2e-tenant") || tenant_id.starts_with("test-")
+    {
         7
     } else {
         now.day()
@@ -686,23 +817,35 @@ pub async fn cost_dashboard_handler(
         _ => ::server_pricing::rate_limit::PlanTier::Free,
     };
 
-    let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30);
+    let projected_cents = ::server_pricing::calculator::calculate_projected_monthly_cost_cents(
+        total_costs_f64,
+        elapsed_days,
+        30,
+    );
 
     // For free tier, base_price is 0, so any cost > 0 might trigger it, but let's say the budget is $10 for free, $50 for starter, $150 for pro, $500 for business
     let budget_limit = tier.base_price();
-    let budget_limit = if budget_limit <= 0.0 { 10.0 } else { budget_limit };
+    let budget_limit = if budget_limit <= 0.0 {
+        10.0
+    } else {
+        budget_limit
+    };
 
     let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
     let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
-
-    let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
-
+    let department_tier_usage =
+        department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
-        projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
+        projected_monthly_cost:
+            ::server_pricing::calculator::calculate_projected_monthly_cost_cents(
+                total_costs_f64,
+                elapsed_days,
+                30,
+            ),
         llm_cost: llm_cost_cents,
         storage_cost: storage_cost_cents,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
@@ -714,14 +857,21 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
         trend,
-        agent_costs: agent_costs.into_iter().map(|r| AgentCostRow { agent_id: r.agent_id, cost_cents: r.cost_cents }).collect(),
+        agent_costs: agent_costs
+            .into_iter()
+            .map(|r| AgentCostRow {
+                agent_id: r.agent_id,
+                cost_cents: r.cost_cents,
+            })
+            .collect(),
         department_tier_usage,
         email_cost: email_cost_cents,
         api_cost: api_cost_cents,
         budget_health_alert,
-
     };
-    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
+    cache
+        .set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60))
+        .await;
     Ok(Json(resp))
 }
 
@@ -730,7 +880,10 @@ pub async fn department_tier_usage_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<DepartmentTierUsageResponse> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => "default".to_string(),
         None => return Json(empty_department_tier_usage_response()),
@@ -739,7 +892,10 @@ pub async fn department_tier_usage_handler(
     Json(department_tier_usage_for_tenant(&hub, &tenant_id).await)
 }
 
-pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
+pub async fn department_tier_usage_for_tenant(
+    hub: &Arc<Hub>,
+    tenant_id: &str,
+) -> DepartmentTierUsageResponse {
     let cache = DEPARTMENT_TIER_USAGE_CACHE.get_or_init(|| HybridCache::new(None));
     if let Some(cached_resp) = cache.get(tenant_id).await {
         return cached_resp;
@@ -761,7 +917,10 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
             let tracker = hub.tracker().clone();
             let tenant_id = tenant_id.to_string();
             futures.push(tokio::spawn(async move {
-                let used = tracker.get_agent_actions_used(&tenant_id, &key).await.unwrap_or(0);
+                let used = tracker
+                    .get_agent_actions_used(&tenant_id, &key)
+                    .await
+                    .unwrap_or(0);
                 (key, used)
             }));
         }
@@ -774,14 +933,20 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
         }
     }
 
-    let resp = build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
-        usage_by_key.get(agent_id).copied().unwrap_or(0)
-    });
-    cache.set(tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
+    let resp =
+        build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
+            usage_by_key.get(agent_id).copied().unwrap_or(0)
+        });
+    cache
+        .set(tenant_id, resp.clone(), std::time::Duration::from_secs(60))
+        .await;
     resp
 }
 
-async fn load_department_records(pool: &sqlx::PgPool, tenant_id: &str) -> Result<Vec<DepartmentRecord>, sqlx::Error> {
+async fn load_department_records(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+) -> Result<Vec<DepartmentRecord>, sqlx::Error> {
     use sqlx::Row;
 
     let mut tx = pool.begin().await?;
@@ -831,7 +996,9 @@ fn build_department_tier_usage_response(
                 actions_used,
                 action_limit,
                 usage_percent: usage_percent.map(|value| (value * 100.0).round() / 100.0),
-                soft_limit_reached: action_limit.map(|limit| actions_used >= limit).unwrap_or(false),
+                soft_limit_reached: action_limit
+                    .map(|limit| actions_used >= limit)
+                    .unwrap_or(false),
             }
         })
         .collect();
@@ -845,10 +1012,14 @@ fn build_department_tier_usage_response(
 
 fn department_usage_keys(department: &DepartmentRecord) -> Vec<String> {
     let mut seen = HashSet::new();
-    [department.id.clone(), department.department_type.clone(), department_agent_id(&department.department_type)]
-        .into_iter()
-        .filter(|key| seen.insert(key.clone()))
-        .collect()
+    [
+        department.id.clone(),
+        department.department_type.clone(),
+        department_agent_id(&department.department_type),
+    ]
+    .into_iter()
+    .filter(|key| seen.insert(key.clone()))
+    .collect()
 }
 
 fn department_agent_id(department_type: &str) -> String {
@@ -882,7 +1053,8 @@ mod department_tier_usage_tests {
 
     #[tokio::test]
     async fn test_department_tier_usage_for_tenant_concurrency() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
         let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect(&database_url)
@@ -928,12 +1100,26 @@ mod department_tier_usage_tests {
         let elapsed = start.elapsed();
 
         // Assert concurrency latency (should be very fast since no actual usage)
-        assert!(elapsed.as_millis() < 500, "Should execute concurrently and quickly");
-        assert_eq!(response.current_plan, plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string());
+        assert!(
+            elapsed.as_millis() < 500,
+            "Should execute concurrently and quickly"
+        );
+        assert_eq!(
+            response.current_plan,
+            plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string()
+        );
 
         // Teardown
-        sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM tenants WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM tenants WHERE id = $1")
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -949,7 +1135,13 @@ mod department_tier_usage_tests {
         let mock_resp = empty_department_tier_usage_response();
 
         // Set it in the cache
-        cache.set(&tenant_id, mock_resp.clone(), std::time::Duration::from_secs(60)).await;
+        cache
+            .set(
+                &tenant_id,
+                mock_resp.clone(),
+                std::time::Duration::from_secs(60),
+            )
+            .await;
 
         // Verify it was cached
         let cached = cache.get(&tenant_id).await;
@@ -977,14 +1169,26 @@ mod department_tier_usage_tests {
         assert_eq!(validated_checkout_quantity(None), Ok(1));
         assert_eq!(validated_checkout_quantity(Some(1)), Ok(1));
         assert_eq!(validated_checkout_quantity(Some(100)), Ok(100));
-        assert_eq!(validated_checkout_quantity(Some(0)), Err(StatusCode::BAD_REQUEST));
-        assert_eq!(validated_checkout_quantity(Some(101)), Err(StatusCode::BAD_REQUEST));
+        assert_eq!(
+            validated_checkout_quantity(Some(0)),
+            Err(StatusCode::BAD_REQUEST)
+        );
+        assert_eq!(
+            validated_checkout_quantity(Some(101)),
+            Err(StatusCode::BAD_REQUEST)
+        );
 
         for interval in ["day", "week", "month", "year"] {
-            assert_eq!(validated_subscription_interval(Some(interval)), Ok(interval));
+            assert_eq!(
+                validated_subscription_interval(Some(interval)),
+                Ok(interval)
+            );
         }
         assert_eq!(validated_subscription_interval(None), Ok("month"));
-        assert_eq!(validated_subscription_interval(Some("quarter")), Err(StatusCode::BAD_REQUEST));
+        assert_eq!(
+            validated_subscription_interval(Some("quarter")),
+            Err(StatusCode::BAD_REQUEST)
+        );
     }
 
     #[test]
@@ -1026,7 +1230,12 @@ mod department_tier_usage_tests {
         );
 
         assert_eq!(response.departments.len(), 2);
-        assert!(response.departments.iter().all(|row| row.department_type != "sales"));
+        assert!(
+            response
+                .departments
+                .iter()
+                .all(|row| row.department_type != "sales")
+        );
 
         let marketing = response
             .departments
@@ -1052,7 +1261,10 @@ pub async fn download_invoice_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Result<axum::Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => "default".to_string(),
         None => return Err(axum::http::StatusCode::UNAUTHORIZED),

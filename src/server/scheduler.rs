@@ -1,7 +1,7 @@
+use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
-use chrono::{DateTime, Utc, Duration};
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TaskStatus {
@@ -74,14 +74,21 @@ impl Scheduler {
 
     pub fn list_for_org(&self, org_id: &str) -> Vec<Task> {
         let tasks = self.tasks.read().unwrap();
-        tasks.values().filter(|t| t.organization_id == org_id).cloned().collect()
+        tasks
+            .values()
+            .filter(|t| t.organization_id == org_id)
+            .cloned()
+            .collect()
     }
 
     pub fn poll_due(&self) -> Vec<Task> {
         let tasks = self.tasks.read().unwrap();
         let now = Utc::now();
-        tasks.values()
-            .filter(|t| t.status == TaskStatus::Pending && t.next_run_at.map_or(false, |at| at < now))
+        tasks
+            .values()
+            .filter(|t| {
+                t.status == TaskStatus::Pending && t.next_run_at.map_or(false, |at| at < now)
+            })
             .cloned()
             .collect()
     }
@@ -131,12 +138,12 @@ impl Default for Scheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_create_and_poll_task() {
         let s = Scheduler::new();
         let now = Utc::now();
-        
+
         let task = Task {
             id: "task1".to_string(),
             organization_id: "org1".to_string(),
@@ -154,9 +161,9 @@ mod tests {
             next_run_at: Some(now - Duration::seconds(10)),
             payload: serde_json::json!({}),
         };
-        
+
         s.create(task.clone()).unwrap();
-        
+
         let due = s.poll_due();
         assert_eq!(due.len(), 1);
         assert_eq!(due[0].id, "task1");
@@ -166,7 +173,7 @@ mod tests {
     fn test_mark_running_and_done() {
         let s = Scheduler::new();
         let now = Utc::now();
-        
+
         let task = Task {
             id: "task2".to_string(),
             organization_id: "org1".to_string(),
@@ -184,14 +191,14 @@ mod tests {
             next_run_at: Some(now),
             payload: serde_json::json!({}),
         };
-        
+
         s.create(task.clone()).unwrap();
-        
+
         let running = s.mark_running("org1", "task2").unwrap();
         assert_eq!(running.status, TaskStatus::Running);
-        
+
         s.mark_done("org1", "task2", true).unwrap();
-        
+
         let tasks = s.list_for_org("org1");
         assert_eq!(tasks[0].status, TaskStatus::Succeeded);
     }

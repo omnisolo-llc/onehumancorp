@@ -1,7 +1,7 @@
-use axum::{Json, response::IntoResponse, extract::State};
+use axum::{Json, extract::State, response::IntoResponse};
 use serde::Serialize;
-use sqlx::Row;
 use sqlx::PgPool;
+use sqlx::Row;
 
 #[derive(Serialize)]
 pub struct ChaosReportResponse {
@@ -17,9 +17,7 @@ pub struct ChaosReportResponse {
     pub error_rate_llm_outage: String,
 }
 
-pub async fn get_chaos_report_handler(
-    State(pool): State<PgPool>,
-) -> impl IntoResponse {
+pub async fn get_chaos_report_handler(State(pool): State<PgPool>) -> impl IntoResponse {
     let (histograms_res, errors_res, latency_p99_cloud_res, latency_p99_standalone_res, error_rate_llm_outage_res) = tokio::join!(
         sqlx::query("SELECT value FROM telemetry_buffer WHERE metric_name = 'api_latency' ORDER BY timestamp DESC LIMIT 20").fetch_all(&pool),
         sqlx::query("SELECT value FROM telemetry_buffer WHERE metric_name = 'error_rate' ORDER BY timestamp DESC LIMIT 20").fetch_all(&pool),
@@ -44,9 +42,18 @@ pub async fn get_chaos_report_handler(
         }
     }
 
-    let latency_p99_cloud = latency_p99_cloud_res.unwrap_or(None).map(|v| format!("{:.0}ms", v)).unwrap_or_else(|| "N/A".to_string());
-    let latency_p99_standalone = latency_p99_standalone_res.unwrap_or(None).map(|v| format!("{:.0}ms", v)).unwrap_or_else(|| "N/A".to_string());
-    let error_rate_llm_outage = error_rate_llm_outage_res.unwrap_or(None).map(|v| format!("{:.1}% (Handled via Graceful Pause)", v * 100.0)).unwrap_or_else(|| "N/A".to_string());
+    let latency_p99_cloud = latency_p99_cloud_res
+        .unwrap_or(None)
+        .map(|v| format!("{:.0}ms", v))
+        .unwrap_or_else(|| "N/A".to_string());
+    let latency_p99_standalone = latency_p99_standalone_res
+        .unwrap_or(None)
+        .map(|v| format!("{:.0}ms", v))
+        .unwrap_or_else(|| "N/A".to_string());
+    let error_rate_llm_outage = error_rate_llm_outage_res
+        .unwrap_or(None)
+        .map(|v| format!("{:.1}% (Handled via Graceful Pause)", v * 100.0))
+        .unwrap_or_else(|| "N/A".to_string());
 
     Json(ChaosReportResponse {
         latency_histograms: histograms,

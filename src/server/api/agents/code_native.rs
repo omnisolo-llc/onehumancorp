@@ -1,4 +1,4 @@
-use axum::{Json, routing::post, Router};
+use axum::{Json, Router, routing::post};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]

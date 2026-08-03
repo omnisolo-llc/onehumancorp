@@ -69,7 +69,13 @@ impl PartialOrd for DistNode {
 
 impl Ord for DistNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        if other.dist < self.dist { Ordering::Less } else if other.dist > self.dist { Ordering::Greater } else { Ordering::Equal }
+        if other.dist < self.dist {
+            Ordering::Less
+        } else if other.dist > self.dist {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
     }
 }
 
@@ -96,7 +102,13 @@ impl PartialOrd for MaxDistNode {
 
 impl Ord for MaxDistNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        if self.dist < other.dist { Ordering::Less } else if self.dist > other.dist { Ordering::Greater } else { Ordering::Equal }
+        if self.dist < other.dist {
+            Ordering::Less
+        } else if self.dist > other.dist {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
     }
 }
 
@@ -200,9 +212,7 @@ impl AgentDB {
 
                 // Add bidirectional connections
                 for neighbor in neighbors {
-                    let neighbor_links = self.layers[lc]
-                        .entry(neighbor.clone())
-                        .or_default();
+                    let neighbor_links = self.layers[lc].entry(neighbor.clone()).or_default();
                     neighbor_links.push(id.clone());
                     let links_len = neighbor_links.len();
                     let current_links = neighbor_links.clone();
@@ -257,9 +267,10 @@ impl AgentDB {
         }) = c.pop()
         {
             if let Some(farthest) = w.peek()
-                && c_dist > farthest.dist {
-                    break; // All remaining candidates in C are further than the furthest in W
-                }
+                && c_dist > farthest.dist
+            {
+                break; // All remaining candidates in C are further than the furthest in W
+            }
 
             if let Some(neighbors) = self.layers[lc].get(&c_id) {
                 for e in neighbors {
@@ -340,7 +351,13 @@ impl AgentDB {
         candidates.sort_by(|a, b| {
             let da = q.distance(self.vectors.get(a).unwrap());
             let db = q.distance(self.vectors.get(b).unwrap());
-            if da < db { Ordering::Less } else if da > db { Ordering::Greater } else { Ordering::Equal }
+            if da < db {
+                Ordering::Less
+            } else if da > db {
+                Ordering::Greater
+            } else {
+                Ordering::Equal
+            }
         });
 
         candidates

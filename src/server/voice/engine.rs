@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CallStatus {
@@ -71,7 +71,12 @@ impl VoiceAIEdgeEngine {
         calls.push(session);
 
         // Log the initial AI greeting
-        self.log_transcript(&session_id, "AI", "Hello! Thank you for calling. How can I help you today?").await;
+        self.log_transcript(
+            &session_id,
+            "AI",
+            "Hello! Thank you for calling. How can I help you today?",
+        )
+        .await;
 
         session_id
     }
@@ -88,7 +93,12 @@ impl VoiceAIEdgeEngine {
         logs.push(transcript);
     }
 
-    pub async fn log_intent_action(&self, session_id: &str, intent_type: &str, details: serde_json::Value) {
+    pub async fn log_intent_action(
+        &self,
+        session_id: &str,
+        intent_type: &str,
+        details: serde_json::Value,
+    ) {
         let action = IntentAction {
             id: uuid::Uuid::new_v4().to_string(),
             session_id: session_id.to_string(),
@@ -116,7 +126,9 @@ mod tests {
     #[tokio::test]
     async fn test_voice_engine_call_flow() {
         let engine = VoiceAIEdgeEngine::new();
-        let session_id = engine.handle_incoming_call("merchant_123", "+1234567890").await;
+        let session_id = engine
+            .handle_incoming_call("merchant_123", "+1234567890")
+            .await;
 
         {
             let calls = engine.active_calls.lock().await;
@@ -124,14 +136,22 @@ mod tests {
             assert_eq!(calls[0].status, CallStatus::InProgress);
         }
 
-        engine.log_transcript(&session_id, "USER", "Do you have any openings tomorrow?").await;
+        engine
+            .log_transcript(&session_id, "USER", "Do you have any openings tomorrow?")
+            .await;
 
         {
             let transcripts = engine.transcripts.lock().await;
             assert_eq!(transcripts.len(), 2); // Greeting + User msg
         }
 
-        engine.log_intent_action(&session_id, "CHECK_AVAILABILITY", serde_json::json!({"date": "tomorrow"})).await;
+        engine
+            .log_intent_action(
+                &session_id,
+                "CHECK_AVAILABILITY",
+                serde_json::json!({"date": "tomorrow"}),
+            )
+            .await;
 
         {
             let actions = engine.actions.lock().await;

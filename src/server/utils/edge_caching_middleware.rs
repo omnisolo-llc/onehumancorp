@@ -1,15 +1,15 @@
+use crate::cache::HybridCache;
 use axum::{
     body::{Body, to_bytes},
     extract::Request,
-    http::{header, Response},
+    http::{Response, header},
     middleware::Next,
     response::IntoResponse,
 };
-use std::hash::{Hash, Hasher};
+use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::sync::OnceLock;
-use crate::cache::HybridCache;
-use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CachedResponse {
@@ -21,7 +21,9 @@ pub struct CachedResponse {
 pub static CDN_CACHE: OnceLock<std::sync::Arc<HybridCache<CachedResponse>>> = OnceLock::new();
 
 pub fn get_cdn_cache() -> std::sync::Arc<HybridCache<CachedResponse>> {
-    CDN_CACHE.get_or_init(|| std::sync::Arc::new(HybridCache::new(None))).clone()
+    CDN_CACHE
+        .get_or_init(|| std::sync::Arc::new(HybridCache::new(None)))
+        .clone()
 }
 
 pub async fn edge_caching_middleware(
@@ -51,11 +53,16 @@ pub async fn edge_caching_middleware(
                 .unwrap();
 
             for (k, v) in cached.headers {
-                if let (Ok(hk), Ok(hv)) = (axum::http::HeaderName::try_from(k), axum::http::HeaderValue::try_from(v)) {
+                if let (Ok(hk), Ok(hv)) = (
+                    axum::http::HeaderName::try_from(k),
+                    axum::http::HeaderValue::try_from(v),
+                ) {
                     response.headers_mut().insert(hk, hv);
                 }
             }
-            response.headers_mut().insert("X-Cache", "HIT".parse().unwrap());
+            response
+                .headers_mut()
+                .insert("X-Cache", "HIT".parse().unwrap());
             return Ok(response.into_response());
         }
     }
@@ -123,7 +130,14 @@ pub async fn edge_caching_middleware(
             body: bytes.to_vec(),
         };
 
-        cdn_cache.set_with_tags(&cache_key, cached_response, tags_vec, std::time::Duration::from_secs(60)).await;
+        cdn_cache
+            .set_with_tags(
+                &cache_key,
+                cached_response,
+                tags_vec,
+                std::time::Duration::from_secs(60),
+            )
+            .await;
     }
 
     let new_body = Body::from(bytes.to_vec());
@@ -135,11 +149,11 @@ pub async fn edge_caching_middleware(
 mod tests {
     use super::*;
     use axum::{
+        Router,
         body::{Body, to_bytes},
         http::{Request, Response, StatusCode},
         middleware::from_fn,
         routing::get,
-        Router,
     };
     use tower::ServiceExt;
 
@@ -173,7 +187,10 @@ mod tests {
             .layer(from_fn(edge_caching_middleware));
 
         // Initial request -> MISS
-        let req1 = Request::builder().uri("/bypass").body(Body::empty()).unwrap();
+        let req1 = Request::builder()
+            .uri("/bypass")
+            .body(Body::empty())
+            .unwrap();
         let res1 = app.clone().oneshot(req1).await.unwrap();
         assert_eq!(res1.headers().get("X-Cache").unwrap(), "MISS");
 
@@ -192,14 +209,21 @@ mod tests {
     #[tokio::test]
     async fn test_edge_caching_middleware_surrogate_key() {
         let app = Router::new()
-            .route("/surrogate", get(|| async {
-                let mut res = Response::new(Body::from("Surrogate Content"));
-                res.headers_mut().insert("Cache-Tag", "tag1, tag2".parse().unwrap());
-                res
-            }))
+            .route(
+                "/surrogate",
+                get(|| async {
+                    let mut res = Response::new(Body::from("Surrogate Content"));
+                    res.headers_mut()
+                        .insert("Cache-Tag", "tag1, tag2".parse().unwrap());
+                    res
+                }),
+            )
             .layer(from_fn(edge_caching_middleware));
 
-        let req = Request::builder().uri("/surrogate").body(Body::empty()).unwrap();
+        let req = Request::builder()
+            .uri("/surrogate")
+            .body(Body::empty())
+            .unwrap();
         let res = app.oneshot(req).await.unwrap();
 
         assert_eq!(res.headers().get("Surrogate-Key").unwrap(), "tag1 tag2");

@@ -1,8 +1,11 @@
 use axum::{
-    extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Query},
+    extract::{
+        Query,
+        ws::{Message as WsMessage, WebSocket, WebSocketUpgrade},
+    },
     response::IntoResponse,
 };
-use futures::{stream::StreamExt, sink::SinkExt};
+use futures::{sink::SinkExt, stream::StreamExt};
 use serde::Deserialize;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -14,7 +17,6 @@ pub struct SyncConnectQuery {
     pub tenant_id: String,
 }
 
-
 pub async fn ws_sync_handler(
     ws: WebSocketUpgrade,
     headers: axum::http::HeaderMap,
@@ -24,8 +26,12 @@ pub async fn ws_sync_handler(
     let tenant_id = match crate::api::mesh_handler::check_spiffe_auth(&headers) {
         Ok(_) => {
             // we trust the query string if the spiffe check passes, or better extract tenant from headers
-            headers.get("x-tenant-id").and_then(|val| val.to_str().ok()).unwrap_or(&query.tenant_id).to_string()
-        },
+            headers
+                .get("x-tenant-id")
+                .and_then(|val| val.to_str().ok())
+                .unwrap_or(&query.tenant_id)
+                .to_string()
+        }
         Err(err) => {
             // if we fail spiffe auth, we must reject the upgrade.
             // For tests to pass, we might allow a mock header.
@@ -39,7 +45,6 @@ pub async fn ws_sync_handler(
 
     ws.on_upgrade(move |socket| handle_sync_socket(socket, tenant_id))
 }
-
 
 async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
     let (mut sender, mut receiver) = socket.split();
@@ -59,7 +64,8 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
             let mut stream = pubsub_conn.into_on_message();
 
             // Bounded buffer with drop-oldest semantics (256 capacity)
-            let buffer: Arc<Mutex<VecDeque<String>>> = Arc::new(Mutex::new(VecDeque::with_capacity(256)));
+            let buffer: Arc<Mutex<VecDeque<String>>> =
+                Arc::new(Mutex::new(VecDeque::with_capacity(256)));
             let notify = Arc::new(Notify::new());
 
             // Task 1: Redis subscriber -> buffer (non-blocking, drops oldest on full)
@@ -151,28 +157,34 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
     }
 }
 
-async fn flush_batch(sender: &mut futures::stream::SplitSink<WebSocket, WsMessage>, batch: &mut Vec<String>) {
+async fn flush_batch(
+    sender: &mut futures::stream::SplitSink<WebSocket, WsMessage>,
+    batch: &mut Vec<String>,
+) {
     if batch.len() == 1 {
         // Single message - send directly for backwards compatibility
         let msg = batch.remove(0);
         let _ = sender.send(WsMessage::Text(msg.into())).await;
     } else {
         // Multiple messages - send as batch
-        let items: Vec<serde_json::Value> = batch.drain(..)
+        let items: Vec<serde_json::Value> = batch
+            .drain(..)
             .map(|m| serde_json::Value::String(m))
             .collect();
         let batch_msg = serde_json::json!({
             "type": "batch",
             "items": items
         });
-        let _ = sender.send(WsMessage::Text(batch_msg.to_string().into())).await;
+        let _ = sender
+            .send(WsMessage::Text(batch_msg.to_string().into()))
+            .await;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{routing::get, Router};
+    use axum::{Router, routing::get};
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
     use tokio_tungstenite::connect_async;
@@ -199,13 +211,20 @@ mod tests {
             .unwrap();
         });
 
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_url =
+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             if client.get_connection().is_ok() {
                 let ws_url = format!("ws://{}/ws?tenant_id=test_tenant", addr);
 
-                let mut request = tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(ws_url).unwrap();
-                request.headers_mut().insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
+                let mut request =
+                    tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(
+                        ws_url,
+                    )
+                    .unwrap();
+                request
+                    .headers_mut()
+                    .insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
                 let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
 
                 // Sleep briefly to ensure server has subscribed to the pubsub topic
@@ -215,7 +234,12 @@ mod tests {
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let topic = "inventory:test_tenant";
                 let payload = "{\"event\":\"inventory_updated\"}";
-                let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
+                let _: () = redis::cmd("PUBLISH")
+                    .arg(topic)
+                    .arg(payload)
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap();
 
                 let msg = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
                     .await
@@ -229,13 +253,19 @@ mod tests {
                 // Publish tenant event message
                 let topic2 = "tenant_events:test_tenant";
                 let payload2 = "{\"event\":\"notification\"}";
-                let _: () = redis::cmd("PUBLISH").arg(topic2).arg(payload2).query_async(&mut conn).await.unwrap();
-
-                let msg2 = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                let _: () = redis::cmd("PUBLISH")
+                    .arg(topic2)
+                    .arg(payload2)
+                    .query_async(&mut conn)
                     .await
-                    .expect("Timeout")
-                    .expect("Stream closed")
-                    .expect("Error receiving");
+                    .unwrap();
+
+                let msg2 =
+                    tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                        .await
+                        .expect("Timeout")
+                        .expect("Stream closed")
+                        .expect("Error receiving");
 
                 assert!(msg2.is_text());
                 assert_eq!(msg2.to_text().unwrap(), payload2);
@@ -265,13 +295,20 @@ mod tests {
             .unwrap();
         });
 
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_url =
+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             if client.get_connection().is_ok() {
                 let ws_url = format!("ws://{}/ws?tenant_id=test_batch", addr);
 
-                let mut request = tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(ws_url).unwrap();
-                request.headers_mut().insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
+                let mut request =
+                    tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(
+                        ws_url,
+                    )
+                    .unwrap();
+                request
+                    .headers_mut()
+                    .insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
                 let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
 
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
@@ -282,7 +319,12 @@ mod tests {
                 // Publish 5 messages rapidly - they should be batched
                 for i in 0..5 {
                     let payload = format!("{{\"seq\":{}}}", i);
-                    let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
+                    let _: () = redis::cmd("PUBLISH")
+                        .arg(topic)
+                        .arg(payload)
+                        .query_async(&mut conn)
+                        .await
+                        .unwrap();
                 }
 
                 // Wait for batch to arrive (50ms window + buffer)

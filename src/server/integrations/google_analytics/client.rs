@@ -236,12 +236,7 @@ impl GoogleAnalyticsClient {
             .to_string();
 
         let report = self
-            .get_report(
-                &start,
-                &end,
-                &["activeUsers".to_string()],
-                &[],
-            )
+            .get_report(&start, &end, &["activeUsers".to_string()], &[])
             .await?;
 
         let total = report
@@ -275,7 +270,14 @@ impl GoogleAnalyticsClient {
             .iter()
             .filter_map(|r| {
                 let path = r.dimensions.first()?.value.clone();
-                let views = r.metrics.first()?.values.first()?.value.parse::<u64>().ok()?;
+                let views = r
+                    .metrics
+                    .first()?
+                    .values
+                    .first()?
+                    .value
+                    .parse::<u64>()
+                    .ok()?;
                 Some((path, views))
             })
             .collect();
@@ -305,7 +307,14 @@ impl GoogleAnalyticsClient {
             .iter()
             .filter_map(|r| {
                 let source = r.dimensions.first()?.value.clone();
-                let sessions = r.metrics.first()?.values.first()?.value.parse::<u64>().ok()?;
+                let sessions = r
+                    .metrics
+                    .first()?
+                    .values
+                    .first()?
+                    .value
+                    .parse::<u64>()
+                    .ok()?;
                 Some((source, sessions))
             })
             .collect();
@@ -340,8 +349,7 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) =
-                        request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -369,7 +377,9 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
+            request_tx
+                .send(String::from_utf8(request).unwrap())
+                .unwrap();
         });
 
         (base_url, request_rx)
@@ -400,7 +410,12 @@ mod tests {
 
         // Override the BASE_URL for test by constructing URL manually
         let report = client
-            .get_report("2026-01-01", "2026-01-31", &["screenPageViews".to_string()], &["pagePath".to_string()])
+            .get_report(
+                "2026-01-01",
+                "2026-01-31",
+                &["screenPageViews".to_string()],
+                &["pagePath".to_string()],
+            )
             .await
             .unwrap();
 
@@ -475,7 +490,9 @@ mod tests {
             .unwrap();
 
         let request = request_rx.await.unwrap();
-        assert!(request.starts_with("POST /properties/properties/123456:runRealtimeReport HTTP/1.1"));
+        assert!(
+            request.starts_with("POST /properties/properties/123456:runRealtimeReport HTTP/1.1")
+        );
         assert!(
             request.contains("authorization: Bearer test-token")
                 || request.contains("Authorization: Bearer test-token")
@@ -490,7 +507,12 @@ mod tests {
     async fn blank_token_rejected_before_network() {
         let client = GoogleAnalyticsClient::new("   ".to_string(), "properties/123456".to_string());
         let err = client
-            .get_report("2026-01-01", "2026-01-31", &["activeUsers".to_string()], &[])
+            .get_report(
+                "2026-01-01",
+                "2026-01-31",
+                &["activeUsers".to_string()],
+                &[],
+            )
             .await
             .unwrap_err();
         assert_eq!(err, "Google Analytics access token is required");

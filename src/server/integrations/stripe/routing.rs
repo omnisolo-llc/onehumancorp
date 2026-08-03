@@ -88,7 +88,10 @@ mod tests {
 
     #[test]
     fn test_optimize_payment_method_small_amount() {
-        assert_eq!(PaymentRouter::optimize_payment_method(10.0), PaymentMethod::CreditCard);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(10.0),
+            PaymentMethod::CreditCard
+        );
     }
 
     #[test]
@@ -96,8 +99,14 @@ mod tests {
         // Amount: $50.00
         // Card fee: 50 * 0.029 + 0.30 = 1.75
         // ACH fee: 50 * 0.008 = 0.40
-        assert_eq!(PaymentRouter::optimize_payment_method(50.0), PaymentMethod::Ach);
-        assert_eq!(PaymentRouter::optimize_payment_method(49.99), PaymentMethod::CreditCard);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(50.0),
+            PaymentMethod::Ach
+        );
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(49.99),
+            PaymentMethod::CreditCard
+        );
     }
 
     #[test]
@@ -105,13 +114,22 @@ mod tests {
         // Amount: $1000.00
         // Card fee: $29.00 + $0.30 = $29.30
         // ACH fee: $8.00 capped at $5.00 = $5.00
-        assert_eq!(PaymentRouter::optimize_payment_method(1000.0), PaymentMethod::Ach);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(1000.0),
+            PaymentMethod::Ach
+        );
     }
 
     #[test]
     fn test_optimize_payment_method_alipay_currency() {
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "CNY"), PaymentMethod::Alipay);
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "cny"), PaymentMethod::Alipay);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(100.0, "CNY"),
+            PaymentMethod::Alipay
+        );
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(100.0, "cny"),
+            PaymentMethod::Alipay
+        );
     }
 
     #[test]
@@ -133,7 +151,10 @@ mod extra_tests {
         // Card fee: 50.0 * 0.029 + 0.30 = 1.45 + 0.30 = 1.75
         // ACH fee: 50.0 * 0.008 = 0.40
         // Because 0.40 < 1.75 and amount is >= 50.0, ACH should be preferred.
-        assert_eq!(PaymentRouter::optimize_payment_method(50.0), PaymentMethod::Ach);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(50.0),
+            PaymentMethod::Ach
+        );
     }
 
     #[test]
@@ -142,7 +163,10 @@ mod extra_tests {
         // Card fee: 49.99 * 0.029 + 0.30 = 1.44971 + 0.30 = 1.74971
         // ACH fee: 49.99 * 0.008 = 0.39992
         // Although ACH is cheaper, amount is < 50.0, so CreditCard is preferred.
-        assert_eq!(PaymentRouter::optimize_payment_method(49.99), PaymentMethod::CreditCard);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(49.99),
+            PaymentMethod::CreditCard
+        );
     }
 
     #[test]
@@ -171,13 +195,19 @@ mod extra_tests {
 
     #[test]
     fn test_zero_amount() {
-        assert_eq!(PaymentRouter::optimize_payment_method(0.0), PaymentMethod::CreditCard);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(0.0),
+            PaymentMethod::CreditCard
+        );
         assert_eq!(PaymentRouter::calculate_fee_savings(0.0), 0.0);
     }
 
     #[test]
     fn test_negative_amount() {
-        assert_eq!(PaymentRouter::optimize_payment_method(-10.0), PaymentMethod::CreditCard);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(-10.0),
+            PaymentMethod::CreditCard
+        );
         assert_eq!(PaymentRouter::calculate_fee_savings(-10.0), 0.0);
     }
 }
@@ -188,8 +218,14 @@ mod razorpay_tests {
 
     #[test]
     fn test_optimize_payment_method_inr() {
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "INR"), PaymentMethod::Razorpay);
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(10000.0, "inr"), PaymentMethod::Razorpay);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(100.0, "INR"),
+            PaymentMethod::Razorpay
+        );
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(10000.0, "inr"),
+            PaymentMethod::Razorpay
+        );
     }
 }
 
@@ -199,10 +235,22 @@ mod mercadopago_tests {
 
     #[test]
     fn test_optimize_payment_method_mercadopago() {
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "BRL"), PaymentMethod::MercadoPago);
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "MXN"), PaymentMethod::MercadoPago);
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "brl"), PaymentMethod::MercadoPago);
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"), PaymentMethod::MercadoPago);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(100.0, "BRL"),
+            PaymentMethod::MercadoPago
+        );
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(100.0, "MXN"),
+            PaymentMethod::MercadoPago
+        );
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(100.0, "brl"),
+            PaymentMethod::MercadoPago
+        );
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"),
+            PaymentMethod::MercadoPago
+        );
     }
 }
 
@@ -212,8 +260,14 @@ mod alipay_tests {
 
     #[test]
     fn test_optimize_payment_method_alipay() {
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "CNY"), PaymentMethod::Alipay);
-        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(1000.0, "cny"), PaymentMethod::Alipay);
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(100.0, "CNY"),
+            PaymentMethod::Alipay
+        );
+        assert_eq!(
+            PaymentRouter::optimize_payment_method_with_currency(1000.0, "cny"),
+            PaymentMethod::Alipay
+        );
     }
 }
 
@@ -238,19 +292,39 @@ mod cost_analysis_tests {
         // Scenario: A single large payment of $5,000.
         let amount_usd = 5000.0;
 
-        let card_fee = (amount_usd * PaymentRouter::CARD_FEE_PERCENTAGE) + PaymentRouter::CARD_FEE_FIXED;
-        let ach_fee = (amount_usd * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP);
+        let card_fee =
+            (amount_usd * PaymentRouter::CARD_FEE_PERCENTAGE) + PaymentRouter::CARD_FEE_FIXED;
+        let ach_fee =
+            (amount_usd * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP);
 
         // Assert actual computed fees with precision tolerance
-        assert!((card_fee - 145.30).abs() < 1e-6, "Expected 145.30, got {}", card_fee);
-        assert!((ach_fee - 5.00).abs() < 1e-6, "Expected 5.00, got {}", ach_fee);
+        assert!(
+            (card_fee - 145.30).abs() < 1e-6,
+            "Expected 145.30, got {}",
+            card_fee
+        );
+        assert!(
+            (ach_fee - 5.00).abs() < 1e-6,
+            "Expected 5.00, got {}",
+            ach_fee
+        );
 
         // Total Savings
         let savings = card_fee - ach_fee;
-        assert!((savings - 140.30).abs() < 1e-6, "Expected 140.30, got {}", savings);
+        assert!(
+            (savings - 140.30).abs() < 1e-6,
+            "Expected 140.30, got {}",
+            savings
+        );
 
         // Assert the routing logic matches
-        assert_eq!(PaymentRouter::optimize_payment_method(amount_usd), PaymentMethod::Ach);
-        assert!((PaymentRouter::calculate_fee_savings(amount_usd) - 140.30).abs() < 1e-6, "Expected fee savings 140.30");
+        assert_eq!(
+            PaymentRouter::optimize_payment_method(amount_usd),
+            PaymentMethod::Ach
+        );
+        assert!(
+            (PaymentRouter::calculate_fee_savings(amount_usd) - 140.30).abs() < 1e-6,
+            "Expected fee savings 140.30"
+        );
     }
 }

@@ -1,12 +1,12 @@
-use uuid::Uuid;
-use chrono::{DateTime, Utc, Timelike};
-use serde::{Deserialize, Serialize};
 use crate::db::get_pool;
+use chrono::{DateTime, Timelike, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Quote {
@@ -126,7 +126,10 @@ impl BookingService {
         };
 
         // Dummy Stripe Link
-        let stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", Uuid::new_v4().to_string().replace("-", ""));
+        let stripe_link = format!(
+            "https://checkout.stripe.com/pay/cs_test_{}",
+            Uuid::new_v4().to_string().replace("-", "")
+        );
 
         Ok((time_slot, stripe_link))
     }
@@ -147,7 +150,9 @@ impl BookingService {
     pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
             .fetch_all(&mut *tx)
@@ -156,16 +161,19 @@ impl BookingService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        let services = rows.into_iter().map(|row| Service {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            title: row.get("title"),
-            description: row.get("description"),
-            price_cents: row.get("price_cents"),
-            seo_title: row.get("seo_title"),
-            seo_description: row.get("seo_description"),
-            seo_schema_json: row.get("seo_schema_json"),
-        }).collect();
+        let services = rows
+            .into_iter()
+            .map(|row| Service {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                title: row.get("title"),
+                description: row.get("description"),
+                price_cents: row.get("price_cents"),
+                seo_title: row.get("seo_title"),
+                seo_description: row.get("seo_description"),
+                seo_schema_json: row.get("seo_schema_json"),
+            })
+            .collect();
 
         Ok(services)
     }
@@ -173,7 +181,9 @@ impl BookingService {
     pub async fn upsert_service(service: Service) -> Result<(), String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         sqlx::query(
             "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
@@ -182,7 +192,7 @@ impl BookingService {
              title = EXCLUDED.title, \
              description = EXCLUDED.description, \
              price_cents = EXCLUDED.price_cents, \
-             updated_at = CURRENT_TIMESTAMP"
+             updated_at = CURRENT_TIMESTAMP",
         )
         .bind(&service.id)
         .bind(&service.tenant_id)
@@ -220,7 +230,9 @@ impl BookingService {
     pub async fn get_bookings(tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let rows = sqlx::query("SELECT id, tenant_id, customer_id, service_id, quote_id, start_time, end_time, status FROM bookings")
             .fetch_all(&mut *tx)
@@ -229,16 +241,19 @@ impl BookingService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        let bookings = rows.into_iter().map(|row| BookingRecord {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            customer_id: row.get("customer_id"),
-            service_id: row.get("service_id"),
-            quote_id: row.try_get("quote_id").ok(),
-            start_time: row.get("start_time"),
-            end_time: row.get("end_time"),
-            status: row.get("status"),
-        }).collect();
+        let bookings = rows
+            .into_iter()
+            .map(|row| BookingRecord {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                customer_id: row.get("customer_id"),
+                service_id: row.get("service_id"),
+                quote_id: row.try_get("quote_id").ok(),
+                start_time: row.get("start_time"),
+                end_time: row.get("end_time"),
+                status: row.get("status"),
+            })
+            .collect();
 
         Ok(bookings)
     }
@@ -246,12 +261,18 @@ impl BookingService {
     pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let now = chrono::Utc::now();
         if booking.start_time.signed_duration_since(now).num_hours() < 48 {
             tokio::spawn(async move {
-                let _ = crate::dispatch_critical_sms("urgent_booking", "You have an urgent booking coming up soon!").await;
+                let _ = crate::dispatch_critical_sms(
+                    "urgent_booking",
+                    "You have an urgent booking coming up soon!",
+                )
+                .await;
             });
         }
 
@@ -304,7 +325,13 @@ mod tests {
         let required_deposit = 5000;
         let expires_at = Utc::now() + chrono::Duration::days(7);
 
-        let quote = BookingService::create_draft_quote(tenant_id, customer_id, amount, required_deposit, expires_at);
+        let quote = BookingService::create_draft_quote(
+            tenant_id,
+            customer_id,
+            amount,
+            required_deposit,
+            expires_at,
+        );
 
         assert_eq!(quote.tenant_id, tenant_id);
         assert_eq!(quote.customer_id, customer_id);
@@ -323,7 +350,13 @@ mod tests {
         let required_deposit = 5000;
         let expires_at = Utc::now() + chrono::Duration::days(7);
 
-        let mut quote = BookingService::create_draft_quote(tenant_id, customer_id, amount, required_deposit, expires_at);
+        let mut quote = BookingService::create_draft_quote(
+            tenant_id,
+            customer_id,
+            amount,
+            required_deposit,
+            expires_at,
+        );
 
         let new_amount = Some(20000);
         let result = BookingService::approve_quote(&mut quote, new_amount);
@@ -369,14 +402,13 @@ mod tests {
         assert!(BookingService::prevent_double_booking(&existing, &overlapping_slot).is_err());
     }
 }
-use tonic::{Request, Response, Status};
 use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
 use ::server_ohc::app::{
-
-    CheckAvailabilityRequest, CheckAvailabilityResponse, TimeSlot,
-    SyncCalendarRequest, SyncCalendarResponse, ReserveTimeSlotRequest, ReserveTimeSlotResponse, CreateConversationalCheckoutRequest,
-    ConversationalCheckoutSession,
+    CheckAvailabilityRequest, CheckAvailabilityResponse, ConversationalCheckoutSession,
+    CreateConversationalCheckoutRequest, ReserveTimeSlotRequest, ReserveTimeSlotResponse,
+    SyncCalendarRequest, SyncCalendarResponse, TimeSlot,
 };
+use tonic::{Request, Response, Status};
 
 const TIMESLOT_LOCK_TTL: Duration = Duration::from_secs(60);
 #[allow(dead_code)]
@@ -515,17 +547,16 @@ impl BookingSoftLockStore {
 
         let capacity_key = inventory_capacity_lock_key(tenant_id, service_id);
         let Some(capacity_lock) = self
-            .acquire_key(
-                capacity_key,
-                session_id,
-                INVENTORY_CAPACITY_LOCK_TTL,
-            )
+            .acquire_key(capacity_key, session_id, INVENTORY_CAPACITY_LOCK_TTL)
             .await?
         else {
             return Ok(None);
         };
 
-        let active_locks = match self.active_inventory_lock_count(tenant_id, service_id).await {
+        let active_locks = match self
+            .active_inventory_lock_count(tenant_id, service_id)
+            .await
+        {
             Ok(count) => count,
             Err(e) => {
                 let _ = self.release(&capacity_lock).await;
@@ -632,7 +663,11 @@ fn inventory_lock_prefix(tenant_id: &str, service_id: &str) -> String {
 
 #[allow(dead_code)]
 fn inventory_lock_key(tenant_id: &str, service_id: &str, session_id: &str) -> String {
-    format!("{}{}", inventory_lock_prefix(tenant_id, service_id), session_id)
+    format!(
+        "{}{}",
+        inventory_lock_prefix(tenant_id, service_id),
+        session_id
+    )
 }
 
 async fn redis_connection(
@@ -730,12 +765,12 @@ impl NativeBookingService {
         BookingSoftLockStore::for_service(self.redis_client.clone())
     }
 
-    pub async fn confirm_booking(
-        &self,
-        booking_id: &str,
-    ) -> Result<(), Status> {
+    pub async fn confirm_booking(&self, booking_id: &str) -> Result<(), Status> {
         let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         // Extract tenant_id from the booking
         let tenant_id: String = sqlx::query_scalar("SELECT tenant_id FROM bookings WHERE id = $1")
@@ -753,13 +788,17 @@ impl NativeBookingService {
 
         if update_res.rows_affected() == 0 {
             let _ = tx.rollback().await;
-            return Err(Status::failed_precondition("Booking cannot be confirmed from current state"));
+            return Err(Status::failed_precondition(
+                "Booking cannot be confirmed from current state",
+            ));
         }
 
         // Simulate confirmation email via shared_tasks
         let task_id = Uuid::new_v4().to_string();
         let title = format!("Send Confirmation Email for Booking {}", booking_id);
-        let desc = "Automatically send booking confirmation after successful deposit / confirmation.".to_string();
+        let desc =
+            "Automatically send booking confirmation after successful deposit / confirmation."
+                .to_string();
 
         if let Err(e) = sqlx::query(
             "INSERT INTO shared_tasks (id, organization_id, title, description, status) VALUES ($1, $2, $3, $4, 'PENDING')"
@@ -774,22 +813,24 @@ impl NativeBookingService {
              return Err(Status::internal(e.to_string()));
         }
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         Ok(())
     }
 
-    async fn product_inventory_capacity(
-        tenant_id: &str,
-        service_id: &str,
-    ) -> Result<i64, Status> {
+    async fn product_inventory_capacity(tenant_id: &str, service_id: &str) -> Result<i64, Status> {
         let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
         let capacity: Option<i64> = sqlx::query_scalar(
-            "SELECT inventory_count::BIGINT FROM products WHERE tenant_id = $1 AND id = $2"
+            "SELECT inventory_count::BIGINT FROM products WHERE tenant_id = $1 AND id = $2",
         )
         .bind(tenant_id)
         .bind(service_id)
@@ -797,7 +838,9 @@ impl NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         capacity.ok_or_else(|| Status::not_found("Product inventory capacity not found"))
     }
 }
@@ -808,22 +851,38 @@ impl BookingEngineService for NativeBookingService {
         &self,
         request: tonic::Request<::server_ohc::app::GetResourcesRequest>,
     ) -> Result<tonic::Response<::server_ohc::app::GetResourcesResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
         let rows = sqlx::query(
@@ -838,38 +897,59 @@ impl BookingEngineService for NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let resources = rows.into_iter().map(|row| ::server_ohc::app::BookingResource {
-            id: row.get("id"),
-            name: row.get("name"),
-            resource_type: row.get("resource_type"),
-            availability_schedule: row.get::<serde_json::Value, _>("availability_schedule").to_string(),
-        }).collect();
+        let resources = rows
+            .into_iter()
+            .map(|row| ::server_ohc::app::BookingResource {
+                id: row.get("id"),
+                name: row.get("name"),
+                resource_type: row.get("resource_type"),
+                availability_schedule: row
+                    .get::<serde_json::Value, _>("availability_schedule")
+                    .to_string(),
+            })
+            .collect();
 
-        Ok(tonic::Response::new(::server_ohc::app::GetResourcesResponse {
-            resources,
-        }))
+        Ok(tonic::Response::new(
+            ::server_ohc::app::GetResourcesResponse { resources },
+        ))
     }
 
     async fn get_services(
         &self,
         request: tonic::Request<::server_ohc::app::GetServicesRequest>,
     ) -> Result<tonic::Response<::server_ohc::app::GetServicesResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
         let rows = sqlx::query(
@@ -903,7 +983,10 @@ impl BookingEngineService for NativeBookingService {
             .unwrap_or_default()
         };
 
-        let mut reqs_map: std::collections::HashMap<String, Vec<::server_ohc::app::ServiceResourceRequirement>> = std::collections::HashMap::new();
+        let mut reqs_map: std::collections::HashMap<
+            String,
+            Vec<::server_ohc::app::ServiceResourceRequirement>,
+        > = std::collections::HashMap::new();
         for r in all_reqs {
             let s_id: String = r.get("service_id");
             let req = ::server_ohc::app::ServiceResourceRequirement {
@@ -928,35 +1011,55 @@ impl BookingEngineService for NativeBookingService {
             });
         }
 
-        Ok(tonic::Response::new(::server_ohc::app::GetServicesResponse {
-            services: service_definitions,
-        }))
+        Ok(tonic::Response::new(
+            ::server_ohc::app::GetServicesResponse {
+                services: service_definitions,
+            },
+        ))
     }
 
     async fn create_unified_booking(
         &self,
         request: tonic::Request<::server_ohc::app::CreateUnifiedBookingRequest>,
-    ) -> Result<tonic::Response<::server_ohc::app::CreateUnifiedBookingResponse>, tonic::Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+    ) -> Result<tonic::Response<::server_ohc::app::CreateUnifiedBookingResponse>, tonic::Status>
+    {
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let auth_tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if auth_tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let payload = request.into_inner();
-        let tenant_id = if payload.tenant_id.is_empty() { auth_tenant_id.clone() } else { payload.tenant_id };
+        let tenant_id = if payload.tenant_id.is_empty() {
+            auth_tenant_id.clone()
+        } else {
+            payload.tenant_id
+        };
 
         if tenant_id != auth_tenant_id {
             // Verify access if needed, or just reject cross-tenant booking depending on product rules.
             // For now, assuming standard multi-tenant isolation.
-            return Err(Status::permission_denied("Cannot create booking for another tenant"));
+            return Err(Status::permission_denied(
+                "Cannot create booking for another tenant",
+            ));
         }
 
         let service_id = payload.service_id;
@@ -965,8 +1068,13 @@ impl BookingEngineService for NativeBookingService {
         let customer_id = payload.customer_id;
 
         let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
 
@@ -976,19 +1084,22 @@ impl BookingEngineService for NativeBookingService {
             SELECT resource_type, quantity
             FROM service_resource_requirements
             WHERE service_id = $1
-            "#
+            "#,
         )
         .bind(&service_id)
         .fetch_all(&mut *tx)
-        .await {
+        .await
+        {
             Ok(rows) => rows,
             Err(e) => {
                 tracing::error!("Failed to fetch resource requirements: {}", e);
-                return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
-                    success: false,
-                    booking: None,
-                    error: "Failed to fetch resource requirements".to_string(),
-                }));
+                return Ok(tonic::Response::new(
+                    ::server_ohc::app::CreateUnifiedBookingResponse {
+                        success: false,
+                        booking: None,
+                        error: "Failed to fetch resource requirements".to_string(),
+                    },
+                ));
             }
         };
 
@@ -1017,7 +1128,7 @@ impl BookingEngineService for NativeBookingService {
                 )
                 LIMIT $5
                 FOR UPDATE SKIP LOCKED
-                "#
+                "#,
             )
             .bind(&tenant_id)
             .bind(&r_type)
@@ -1025,25 +1136,30 @@ impl BookingEngineService for NativeBookingService {
             .bind(&end_time)
             .bind(qty)
             .fetch_all(&mut *tx)
-            .await {
+            .await
+            {
                 Ok(rows) => rows,
                 Err(e) => {
                     tracing::error!("Failed to find available resources: {}", e);
-                    return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
-                        success: false,
-                        booking: None,
-                        error: "Failed to find available resources".to_string(),
-                    }));
+                    return Ok(tonic::Response::new(
+                        ::server_ohc::app::CreateUnifiedBookingResponse {
+                            success: false,
+                            booking: None,
+                            error: "Failed to find available resources".to_string(),
+                        },
+                    ));
                 }
             };
 
             if available_resources.len() < qty as usize {
                 // Not enough resources available
-                return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
-                    success: false,
-                    booking: None,
-                    error: format!("Not enough resources available for type {}", r_type),
-                }));
+                return Ok(tonic::Response::new(
+                    ::server_ohc::app::CreateUnifiedBookingResponse {
+                        success: false,
+                        booking: None,
+                        error: format!("Not enough resources available for type {}", r_type),
+                    },
+                ));
             }
 
             for row in available_resources {
@@ -1052,22 +1168,31 @@ impl BookingEngineService for NativeBookingService {
         }
 
         // Yield Management: Dynamic Pricing for Booking
-        let base_price: i64 = sqlx::query_scalar("SELECT price_cents FROM services WHERE id = $1 AND tenant_id = $2")
-            .bind(&service_id)
-            .bind(&tenant_id)
-            .fetch_one(&mut *tx)
-            .await
-            .unwrap_or(5000);
+        let base_price: i64 =
+            sqlx::query_scalar("SELECT price_cents FROM services WHERE id = $1 AND tenant_id = $2")
+                .bind(&service_id)
+                .bind(&tenant_id)
+                .fetch_one(&mut *tx)
+                .await
+                .unwrap_or(5000);
 
         let final_price = crate::pricing::engine::apply_yield_management(
             &crate::db::get_pool(),
             &tenant_id,
             &service_id,
-            DateTime::parse_from_rfc3339(&start_time).unwrap_or_default().with_timezone(&Utc),
+            DateTime::parse_from_rfc3339(&start_time)
+                .unwrap_or_default()
+                .with_timezone(&Utc),
             base_price,
-        ).await;
+        )
+        .await;
 
-        tracing::info!("Yield management: booking price for {} is {} (base: {})", service_id, final_price, base_price);
+        tracing::info!(
+            "Yield management: booking price for {} is {} (base: {})",
+            service_id,
+            final_price,
+            base_price
+        );
 
         // 3. Create the booking
         let booking_id = uuid::Uuid::new_v4().to_string();
@@ -1102,31 +1227,36 @@ impl BookingEngineService for NativeBookingService {
                 r#"
                 INSERT INTO booking_resource_reservations (id, tenant_id, booking_id, resource_id)
                 VALUES ($1, $2, $3, $4)
-                "#
+                "#,
             )
             .bind(&res_res_id)
             .bind(&tenant_id)
             .bind(&booking_id)
             .bind(res_id)
             .execute(&mut *tx)
-            .await {
+            .await
+            {
                 tracing::error!("Failed to reserve resource: {}", e);
-                return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
-                    success: false,
-                    booking: None,
-                    error: "Failed to reserve resource".to_string(),
-                }));
+                return Ok(tonic::Response::new(
+                    ::server_ohc::app::CreateUnifiedBookingResponse {
+                        success: false,
+                        booking: None,
+                        error: "Failed to reserve resource".to_string(),
+                    },
+                ));
             }
         }
 
         // Commit transaction
         if let Err(e) = tx.commit().await {
             tracing::error!("Failed to commit transaction: {}", e);
-            return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
-                success: false,
-                booking: None,
-                error: "Failed to complete booking process".to_string(),
-            }));
+            return Ok(tonic::Response::new(
+                ::server_ohc::app::CreateUnifiedBookingResponse {
+                    success: false,
+                    booking: None,
+                    error: "Failed to complete booking process".to_string(),
+                },
+            ));
         }
 
         let booking = ::server_ohc::app::UnifiedBooking {
@@ -1139,27 +1269,40 @@ impl BookingEngineService for NativeBookingService {
             locked_resource_ids,
         };
 
-        Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
-            success: true,
-            booking: Some(booking),
-            error: String::new(),
-        }))
+        Ok(tonic::Response::new(
+            ::server_ohc::app::CreateUnifiedBookingResponse {
+                success: true,
+                booking: Some(booking),
+                error: String::new(),
+            },
+        ))
     }
     async fn check_availability(
         &self,
         request: Request<CheckAvailabilityRequest>,
     ) -> Result<Response<CheckAvailabilityResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let mut req = request.into_inner();
@@ -1172,7 +1315,10 @@ impl BookingEngineService for NativeBookingService {
             .map_err(|_e| Status::invalid_argument("Invalid date format, use YYYY-MM-DD"))?;
 
         let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
         crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -1180,7 +1326,7 @@ impl BookingEngineService for NativeBookingService {
         let rows = sqlx::query(
             "SELECT start_time, end_time FROM bookings \
              WHERE tenant_id = $1 AND service_id = $2 AND start_time::date = $3::date \
-             AND COALESCE(status, 'pending') <> 'cancelled'"
+             AND COALESCE(status, 'pending') <> 'cancelled'",
         )
         .bind(&tenant_id)
         .bind(&service_id)
@@ -1189,11 +1335,18 @@ impl BookingEngineService for NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = rows.into_iter().filter_map(|row| {
-            let st: Option<DateTime<Utc>> = row.get("start_time");
-            let et: Option<DateTime<Utc>> = row.get("end_time");
-            if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
-        }).collect();
+        let existing_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = rows
+            .into_iter()
+            .filter_map(|row| {
+                let st: Option<DateTime<Utc>> = row.get("start_time");
+                let et: Option<DateTime<Utc>> = row.get("end_time");
+                if let (Some(s), Some(e)) = (st, et) {
+                    Some((s, e))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         // Incorporate availability_ledger into blocked slots
         let ledger_rows = sqlx::query(
@@ -1206,11 +1359,18 @@ impl BookingEngineService for NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let mut blocked_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = ledger_rows.into_iter().filter_map(|row| {
-            let st: Option<DateTime<Utc>> = row.get("start_time");
-            let et: Option<DateTime<Utc>> = row.get("end_time");
-            if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
-        }).collect();
+        let mut blocked_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = ledger_rows
+            .into_iter()
+            .filter_map(|row| {
+                let st: Option<DateTime<Utc>> = row.get("start_time");
+                let et: Option<DateTime<Utc>> = row.get("end_time");
+                if let (Some(s), Some(e)) = (st, et) {
+                    Some((s, e))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         // Incorporate booking_slots into blocked slots
         let slot_rows = sqlx::query(
@@ -1233,7 +1393,7 @@ impl BookingEngineService for NativeBookingService {
 
         // Fetch exceptions / business hours from availability_schedules (if any)
         let schedule_rows = sqlx::query(
-            "SELECT business_hours, exceptions FROM availability_schedules WHERE tenant_id = $1"
+            "SELECT business_hours, exceptions FROM availability_schedules WHERE tenant_id = $1",
         )
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
@@ -1241,16 +1401,20 @@ impl BookingEngineService for NativeBookingService {
         .map_err(|e| Status::internal(e.to_string()))?;
 
         for row in schedule_rows {
-             let exceptions_json: serde_json::Value = row.try_get("exceptions").unwrap_or(serde_json::json!([]));
-             if let Some(arr) = exceptions_json.as_array() {
-                 for ex in arr {
-                      let st_str = ex.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
-                      let et_str = ex.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
-                      if let (Ok(st), Ok(et)) = (DateTime::parse_from_rfc3339(st_str), DateTime::parse_from_rfc3339(et_str)) {
-                          blocked_slots.push((st.with_timezone(&Utc), et.with_timezone(&Utc)));
-                      }
-                 }
-             }
+            let exceptions_json: serde_json::Value =
+                row.try_get("exceptions").unwrap_or(serde_json::json!([]));
+            if let Some(arr) = exceptions_json.as_array() {
+                for ex in arr {
+                    let st_str = ex.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                    let et_str = ex.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+                    if let (Ok(st), Ok(et)) = (
+                        DateTime::parse_from_rfc3339(st_str),
+                        DateTime::parse_from_rfc3339(et_str),
+                    ) {
+                        blocked_slots.push((st.with_timezone(&Utc), et.with_timezone(&Utc)));
+                    }
+                }
+            }
         }
 
         let soft_locks = self.soft_lock_store();
@@ -1335,17 +1499,28 @@ impl BookingEngineService for NativeBookingService {
         &self,
         request: Request<ReserveTimeSlotRequest>,
     ) -> Result<Response<ReserveTimeSlotResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let mut req = request.into_inner();
@@ -1363,7 +1538,9 @@ impl BookingEngineService for NativeBookingService {
             .with_timezone(&Utc);
 
         if end_time <= start_time {
-            return Err(Status::invalid_argument("end_time must be after start_time"));
+            return Err(Status::invalid_argument(
+                "end_time must be after start_time",
+            ));
         }
 
         let booking_id = Uuid::new_v4().to_string();
@@ -1380,7 +1557,9 @@ impl BookingEngineService for NativeBookingService {
             .await
             .map_err(Status::internal)?
         else {
-            return Err(Status::already_exists("Time slot is currently being held by another request"));
+            return Err(Status::already_exists(
+                "Time slot is currently being held by another request",
+            ));
         };
 
         let pool = crate::db::get_pool();
@@ -1399,7 +1578,7 @@ impl BookingEngineService for NativeBookingService {
         let overlap_count: i64 = match sqlx::query_scalar(
             "SELECT COUNT(*) FROM bookings \
              WHERE tenant_id = $1 AND service_id = $2 AND start_time < $4 AND end_time > $3 \
-             AND COALESCE(status, 'pending') <> 'cancelled'"
+             AND COALESCE(status, 'pending') <> 'cancelled'",
         )
         .bind(&tenant_id)
         .bind(&service_id)
@@ -1422,8 +1601,19 @@ impl BookingEngineService for NativeBookingService {
             return Err(Status::already_exists("Time slot already booked"));
         }
 
-        let initial_status = if req.requires_deposit { "pending_payment" } else { "pending" };
-        let payment_intent_id = if req.requires_deposit { Some(format!("pi_test_{}", Uuid::new_v4().to_string().replace("-", ""))) } else { None };
+        let initial_status = if req.requires_deposit {
+            "pending_payment"
+        } else {
+            "pending"
+        };
+        let payment_intent_id = if req.requires_deposit {
+            Some(format!(
+                "pi_test_{}",
+                Uuid::new_v4().to_string().replace("-", "")
+            ))
+        } else {
+            None
+        };
 
         if let Err(e) = sqlx::query(
             "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status, payment_intent_id) \
@@ -1476,7 +1666,10 @@ impl BookingEngineService for NativeBookingService {
             .map_err(Status::internal)?;
 
         // Generate dummy stripe link
-        let deposit_stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", booking_id.replace("-", ""));
+        let deposit_stripe_link = format!(
+            "https://checkout.stripe.com/pay/cs_test_{}",
+            booking_id.replace("-", "")
+        );
 
         Ok(Response::new(ReserveTimeSlotResponse {
             booking_id,
@@ -1488,17 +1681,28 @@ impl BookingEngineService for NativeBookingService {
         &self,
         request: Request<CreateConversationalCheckoutRequest>,
     ) -> Result<Response<ConversationalCheckoutSession>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let mut req = request.into_inner();
@@ -1510,7 +1714,8 @@ impl BookingEngineService for NativeBookingService {
         let _inventory_capacity =
             Self::product_inventory_capacity(&req.tenant_id, &req.service_id).await?;
 
-        let inventory_service = crate::services::inventory::InventoryService::new(self.redis_client.clone());
+        let inventory_service =
+            crate::services::inventory::InventoryService::new(self.redis_client.clone());
         let reserve_result = inventory_service
             .reserve_inventory(&req.tenant_id, &req.service_id, 1, 300)
             .await
@@ -1522,7 +1727,10 @@ impl BookingEngineService for NativeBookingService {
 
         let inventory_lock_id = reserve_result.lock_id;
 
-        let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
+        let checkout_url = format!(
+            "https://checkout.stripe.com/pay/cs_test_{}",
+            session_id.replace("-", "")
+        );
 
         Ok(Response::new(ConversationalCheckoutSession {
             session_id,
@@ -1540,17 +1748,28 @@ impl BookingEngineService for NativeBookingService {
         &self,
         request: Request<::server_ohc::app::CreateQuoteRequest>,
     ) -> Result<Response<::server_ohc::app::QuoteResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let req = request.into_inner();
@@ -1558,11 +1777,18 @@ impl BookingEngineService for NativeBookingService {
         let mut total_amount_cents = 0;
 
         let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        let _capacity_lock = if let (Some(service_id), Some(slot_id)) = (req.service_id.as_deref(), req.proposed_slot_id.as_deref()) {
+        let _capacity_lock = if let (Some(service_id), Some(slot_id)) =
+            (req.service_id.as_deref(), req.proposed_slot_id.as_deref())
+        {
             let soft_locks = self.soft_lock_store();
             // Assuming proposed_slot_id implies a start and end time that we should know or look up.
             // For now, if we don't have the explicit time block in the request, we look it up from the slot,
@@ -1570,12 +1796,14 @@ impl BookingEngineService for NativeBookingService {
             // Given the signature `acquire_capacity_lock(&self, tenant_id, service_id, start_time, end_time, owner, ttl)`,
             // we will query the slot first.
 
-            let slot_row = sqlx::query("SELECT start_time, end_time FROM booking_slots WHERE id = $1 AND tenant_id = $2")
-                .bind(slot_id)
-                .bind(&tenant_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
+            let slot_row = sqlx::query(
+                "SELECT start_time, end_time FROM booking_slots WHERE id = $1 AND tenant_id = $2",
+            )
+            .bind(slot_id)
+            .bind(&tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
             if let Some(row) = slot_row {
                 let start_time: DateTime<Utc> = row.try_get("start_time").unwrap();
@@ -1595,7 +1823,9 @@ impl BookingEngineService for NativeBookingService {
 
                 if lock.is_none() {
                     let _ = tx.rollback().await;
-                    return Err(Status::already_exists("Proposed time slot is currently being held or is unavailable"));
+                    return Err(Status::already_exists(
+                        "Proposed time slot is currently being held or is unavailable",
+                    ));
                 }
 
                 // Update the booking slot status to soft_locked
@@ -1653,7 +1883,9 @@ impl BookingEngineService for NativeBookingService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(::server_ohc::app::QuoteResponse {
             quote_id,
@@ -1672,24 +1904,40 @@ impl BookingEngineService for NativeBookingService {
         &self,
         request: Request<::server_ohc::app::FetchQuoteRequest>,
     ) -> Result<Response<::server_ohc::app::QuoteResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let req = request.into_inner();
 
         let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         use sqlx::Row;
         let quote_row = sqlx::query("SELECT * FROM quotes WHERE id = $1 AND tenant_id = $2")
@@ -1742,14 +1990,12 @@ impl BookingEngineService for NativeBookingService {
     }
 }
 
-
 #[cfg(test)]
 mod native_booking_tests {
     use super::*;
-    use tonic::Request;
     use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
-    use ::server_ohc::app::{
-    ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
+    use ::server_ohc::app::{CreateConversationalCheckoutRequest, ReserveTimeSlotRequest};
+    use tonic::Request;
 
     #[tokio::test]
     async fn local_capacity_lock_blocks_and_releases_timeslot() {
@@ -1809,13 +2055,7 @@ mod native_booking_tests {
         let locks = BookingSoftLockStore::isolated_for_tests();
 
         let first = locks
-            .acquire_inventory_lock(
-                "tenant-1",
-                "product-1",
-                "session-1",
-                1,
-                INVENTORY_LOCK_TTL,
-            )
+            .acquire_inventory_lock("tenant-1", "product-1", "session-1", 1, INVENTORY_LOCK_TTL)
             .await
             .unwrap()
             .expect("first inventory hold should be acquired");
@@ -1869,12 +2109,15 @@ mod native_booking_tests {
             requires_deposit: false,
             timezone: "UTC".to_string(),
         });
-        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "t1".to_string(),
-            agent_id: "test".to_string(),
-        });
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: "t1".to_string(),
+                agent_id: "test".to_string(),
+            });
 
         let res = svc.reserve_time_slot(req).await;
         assert!(res.is_err());
@@ -1889,12 +2132,15 @@ mod native_booking_tests {
             service_id: "p1".to_string(),
             date: "invalid-date".to_string(),
         });
-        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "t1".to_string(),
-            agent_id: "test".to_string(),
-        });
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: "t1".to_string(),
+                agent_id: "test".to_string(),
+            });
 
         let res = svc.check_availability(req).await;
         assert!(res.is_err());
@@ -1910,12 +2156,15 @@ mod native_booking_tests {
             amount_cents: 1000,
             service_id: "p1".to_string(),
         });
-        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "t1".to_string(),
-            agent_id: "test".to_string(),
-        });
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: "t1".to_string(),
+                agent_id: "test".to_string(),
+            });
 
         let res = svc.create_conversational_checkout(req).await;
         assert!(res.is_ok());
@@ -1923,7 +2172,11 @@ mod native_booking_tests {
         assert_eq!(session.tenant_id, "t1");
         assert_eq!(session.customer_id, "c1");
         assert_eq!(session.amount_cents, 1000);
-        assert!(session.checkout_url.starts_with("https://checkout.stripe.com/pay/cs_test_"));
+        assert!(
+            session
+                .checkout_url
+                .starts_with("https://checkout.stripe.com/pay/cs_test_")
+        );
         assert_eq!(session.status, "pending");
     }
 
@@ -1939,12 +2192,15 @@ mod native_booking_tests {
             requires_deposit: true,
             timezone: "UTC".to_string(),
         });
-        if std::env::var("OHC_DATABASE_URL").is_err() { return; }
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: "t1".to_string(),
-            agent_id: "test".to_string(),
-        });
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: "t1".to_string(),
+                agent_id: "test".to_string(),
+            });
 
         let res = svc.reserve_time_slot(req).await;
         assert!(res.is_err());
@@ -2053,7 +2309,9 @@ impl BookingService {
         })
     }
 
-    pub async fn get_proposed_bookings(tenant_id: Uuid) -> Result<Vec<ProposedBooking>, sqlx::Error> {
+    pub async fn get_proposed_bookings(
+        tenant_id: Uuid,
+    ) -> Result<Vec<ProposedBooking>, sqlx::Error> {
         let pool = get_pool();
         let mut tx = pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id.to_string()).await?;

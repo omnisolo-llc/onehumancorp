@@ -17,7 +17,10 @@ pub struct PydanticValidateResponse {
     pub is_recoverable: bool,
 }
 
-pub fn router<S>() -> Router<S> where S: Clone + Send + Sync + 'static {
+pub fn router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
     Router::new().route("/", post(validate_pydantic))
 }
 
@@ -34,36 +37,61 @@ async fn validate_pydantic(
         "TopicRetrieve" => {
             #[derive(Deserialize)]
             #[allow(dead_code)]
-            struct Args { _topic_name: Option<String> }
+            struct Args {
+                _topic_name: Option<String>,
+            }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
-                err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
+                err_msg = Some(format_pydantic_error(
+                    &e,
+                    Some(&payload.arguments.to_string()),
+                    None,
+                ));
                 is_recoverable = true;
             }
         }
         "TranscriptSearch" => {
             #[derive(Deserialize)]
             #[allow(dead_code)]
-            struct Args { _query: Option<String> }
+            struct Args {
+                _query: Option<String>,
+            }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
-                err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
+                err_msg = Some(format_pydantic_error(
+                    &e,
+                    Some(&payload.arguments.to_string()),
+                    None,
+                ));
                 is_recoverable = true;
             }
         }
         "TopicWrite" => {
             #[derive(Deserialize)]
             #[allow(dead_code)]
-            struct Args { _topic_name: Option<String>, _content: Option<String> }
+            struct Args {
+                _topic_name: Option<String>,
+                _content: Option<String>,
+            }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
-                err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
+                err_msg = Some(format_pydantic_error(
+                    &e,
+                    Some(&payload.arguments.to_string()),
+                    None,
+                ));
                 is_recoverable = true;
             }
         }
         "Bash" => {
             #[derive(Deserialize)]
             #[allow(dead_code)]
-            struct Args { _command: Option<String> }
+            struct Args {
+                _command: Option<String>,
+            }
             if let Err(e) = serde_json::from_value::<Args>(payload.arguments.clone()) {
-                err_msg = Some(format_pydantic_error(&e, Some(&payload.arguments.to_string()), None));
+                err_msg = Some(format_pydantic_error(
+                    &e,
+                    Some(&payload.arguments.to_string()),
+                    None,
+                ));
                 is_recoverable = true;
             }
         }

@@ -55,10 +55,7 @@ impl GoogleWorkspaceProvider {
         self.client.list_files(folder_id, page_size).await
     }
 
-    pub async fn drive_get_file(
-        &self,
-        file_id: &str,
-    ) -> Result<super::client::DriveFile, String> {
+    pub async fn drive_get_file(&self, file_id: &str) -> Result<super::client::DriveFile, String> {
         self.client.get_file(file_id).await
     }
 
@@ -93,10 +90,7 @@ impl GoogleWorkspaceProvider {
         self.client.write_range(spreadsheet_id, range, values).await
     }
 
-    pub async fn sheets_create_spreadsheet(
-        &self,
-        title: &str,
-    ) -> Result<String, String> {
+    pub async fn sheets_create_spreadsheet(&self, title: &str) -> Result<String, String> {
         self.client.create_spreadsheet(title).await
     }
 

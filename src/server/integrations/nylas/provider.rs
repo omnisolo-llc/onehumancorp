@@ -29,7 +29,7 @@ impl NylasProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 }
@@ -42,6 +42,9 @@ mod tests {
     fn test_nylas_provider_metadata() {
         let provider = NylasProvider::new("test_token".to_string());
         assert_eq!(provider.to_integration_provider().metadata.id, "nylas");
-        assert_eq!(provider.to_integration_provider().metadata.category, "calendar");
+        assert_eq!(
+            provider.to_integration_provider().metadata.category,
+            "calendar"
+        );
     }
 }

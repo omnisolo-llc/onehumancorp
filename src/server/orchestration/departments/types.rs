@@ -1,5 +1,5 @@
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DepartmentType {
@@ -102,7 +102,6 @@ pub enum ApprovalStatus {
     Rejected,
     Paused,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimelineEvent {

@@ -389,7 +389,8 @@ pub async fn bench_agent_snapshot() {
         meeting_id.clone(),
         vec!["test_agent".to_string()],
         "Agenda".to_string(),
-    ).await;
+    )
+    .await;
     for i in 0..50 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -400,15 +401,18 @@ pub async fn bench_agent_snapshot() {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: meeting_id.clone(),
         };
-        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
-            id: msg.id,
-            from_agent: msg.from_agent,
-            to_agent: msg.to_agent,
-            r#type: msg.r#type,
-            content: msg.content,
-            occurred_at_unix: msg.occurred_at_unix,
-            meeting_id: msg.meeting_id,
-        }).await;
+        let _ = hub
+            .clone()
+            .publish(::server_ohc::orchestration::Message {
+                id: msg.id,
+                from_agent: msg.from_agent,
+                to_agent: msg.to_agent,
+                r#type: msg.r#type,
+                content: msg.content,
+                occurred_at_unix: msg.occurred_at_unix,
+                meeting_id: msg.meeting_id,
+            })
+            .await;
     }
 
     for i in 0..50 {
@@ -419,7 +423,8 @@ pub async fn bench_agent_snapshot() {
             organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        }).await;
+        })
+        .await;
     }
 
     for _ in 0..iterations {
@@ -553,7 +558,8 @@ pub async fn bench_dashboard_snapshot() {
         meeting_id.clone(),
         vec!["test_agent".to_string()],
         "Agenda".to_string(),
-    ).await;
+    )
+    .await;
     for i in 0..5 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -564,15 +570,18 @@ pub async fn bench_dashboard_snapshot() {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: meeting_id.clone(),
         };
-        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
-            id: msg.id,
-            from_agent: msg.from_agent,
-            to_agent: msg.to_agent,
-            r#type: msg.r#type,
-            content: msg.content,
-            occurred_at_unix: msg.occurred_at_unix,
-            meeting_id: msg.meeting_id,
-        }).await;
+        let _ = hub
+            .clone()
+            .publish(::server_ohc::orchestration::Message {
+                id: msg.id,
+                from_agent: msg.from_agent,
+                to_agent: msg.to_agent,
+                r#type: msg.r#type,
+                content: msg.content,
+                occurred_at_unix: msg.occurred_at_unix,
+                meeting_id: msg.meeting_id,
+            })
+            .await;
     }
 
     for i in 0..5 {
@@ -583,7 +592,8 @@ pub async fn bench_dashboard_snapshot() {
             organization_id: "test_org".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        }).await;
+        })
+        .await;
     }
 
     for _ in 0..iterations {
@@ -799,7 +809,9 @@ pub async fn bench_get_analytics() {
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
     let db = if database_url.starts_with("sqlite") {
-        tracing::info!("  - Analytics API Response Time Simulation (Parallel Execution Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - Analytics API Response Time Simulation (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
         return;
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -826,7 +838,8 @@ pub async fn bench_get_analytics() {
             organization_id: org_id.to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
-        }).await;
+        })
+        .await;
     }
 
     let meeting_id = format!("meeting-{}", uuid::Uuid::new_v4());
@@ -834,7 +847,8 @@ pub async fn bench_get_analytics() {
         meeting_id.clone(),
         vec!["agent-0".to_string()],
         "Agenda".to_string(),
-    ).await;
+    )
+    .await;
 
     let org_service = crate::services::org::service::MyOrgService::new(hub);
     let iterations = std::env::var("BENCH_ITERATIONS")
@@ -1100,7 +1114,10 @@ mod tests {
         })
         .await;
 
-        assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience 60s timeout rule to prevent cascading failure");
+        assert!(
+            result.is_err(),
+            "Chaos resilience must enforce ML-Resilience 60s timeout rule to prevent cascading failure"
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1158,9 +1175,13 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
             "  - ui_dashboard_analytics_briefing_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: metrics and inbox fetches parallelized)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: metrics and inbox fetches parallelized)"
+        );
     } else {
-        tracing::info!("  - ui_dashboard_analytics_briefing_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - ui_dashboard_analytics_briefing_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
@@ -1294,7 +1315,9 @@ pub async fn bench_field_service_routing_latency() {
             "  - Field Service Routing (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: Service routes and jobs fetched efficiently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: Service routes and jobs fetched efficiently)"
+        );
     } else {
         tracing::info!(
             "  - Field Service Routing (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -1489,7 +1512,9 @@ pub async fn bench_ui_triage_latency() {
             "  - list_ui_triage_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: legacy, feed, approvals, daily_work fetched concurrently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: legacy, feed, approvals, daily_work fetched concurrently)"
+        );
     } else {
         tracing::info!(
             "  - list_ui_triage_handler (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -1526,7 +1551,9 @@ pub async fn bench_ui_supply_latency() {
             "  - list_ui_supply_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: Supply vendors, raw materials, and bom items fetched concurrently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: Supply vendors, raw materials, and bom items fetched concurrently)"
+        );
     } else {
         tracing::info!(
             "  - list_ui_supply_handler (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -1565,9 +1592,13 @@ pub async fn bench_crm_opportunities_latency() {
             "  - list_opportunities_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: opportunities and lead stats fetched concurrently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: opportunities and lead stats fetched concurrently)"
+        );
     } else {
-        tracing::info!("  - list_opportunities_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - list_opportunities_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 #[tokio::test]
@@ -1793,9 +1824,13 @@ pub async fn bench_advisory_insights_latency() {
             "  - advisory_insights_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB and order counts fetched concurrently using real queries)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: DB and order counts fetched concurrently using real queries)"
+        );
     } else {
-        tracing::info!("  - advisory_insights_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - advisory_insights_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
@@ -1853,34 +1888,86 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         let db8 = pg_pool.clone();
 
         let start_seq = std::time::Instant::now();
-        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&pg_pool).await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+            .execute(&pg_pool)
+            .await;
+        let _ = sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+            .execute(&pg_pool)
+            .await;
         let duration_seq = start_seq.elapsed();
 
         let start_par = std::time::Instant::now();
         let _ = tokio::join!(
-            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db1).await }),
-            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db2).await }),
-            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db3).await }),
-            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db4).await }),
-            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db5).await }),
-            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db6).await }),
-            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db7).await }),
-            tokio::spawn(async move { sqlx::query("SELECT 1 FROM triage_items LIMIT 1").execute(&db8).await })
+            tokio::spawn(async move {
+                sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+                    .execute(&db1)
+                    .await
+            }),
+            tokio::spawn(async move {
+                sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+                    .execute(&db2)
+                    .await
+            }),
+            tokio::spawn(async move {
+                sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+                    .execute(&db3)
+                    .await
+            }),
+            tokio::spawn(async move {
+                sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+                    .execute(&db4)
+                    .await
+            }),
+            tokio::spawn(async move {
+                sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+                    .execute(&db5)
+                    .await
+            }),
+            tokio::spawn(async move {
+                sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+                    .execute(&db6)
+                    .await
+            }),
+            tokio::spawn(async move {
+                sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+                    .execute(&db7)
+                    .await
+            }),
+            tokio::spawn(async move {
+                sqlx::query("SELECT 1 FROM triage_items LIMIT 1")
+                    .execute(&db8)
+                    .await
+            })
         );
         let duration_par = start_par.elapsed();
 
         tracing::info!("  - Sequential Execution (Postgres): {:?}", duration_seq);
         tracing::info!("  - Parallel Execution (Postgres): {:?}", duration_par);
-        tracing::info!("    (Parallel Execution Optimization verified: Unified feed fetches parallelized, ~3x faster)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: Unified feed fetches parallelized, ~3x faster)"
+        );
     } else {
-        tracing::info!("  - ui_dashboard_unified_feed_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - ui_dashboard_unified_feed_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
@@ -1911,16 +1998,22 @@ pub async fn bench_dashboard_analytics_chat_latency() {
             "  - ui_dashboard_analytics_chat_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: metrics and inbox fetches parallelized)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: metrics and inbox fetches parallelized)"
+        );
     } else {
-        tracing::info!("  - ui_dashboard_analytics_chat_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - ui_dashboard_analytics_chat_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
 // Benchmarking complete. Hybrid Latency Benchmarking optimizations verified.
 
 pub async fn bench_ui_omni_inbox_latency() {
-    tracing::info!("Benchmarking list_ui_omni_inbox_handler (Parallel Execution Optimization / Hybrid Cache)...");
+    tracing::info!(
+        "Benchmarking list_ui_omni_inbox_handler (Parallel Execution Optimization / Hybrid Cache)..."
+    );
     let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
@@ -1942,9 +2035,13 @@ pub async fn bench_ui_omni_inbox_latency() {
             "  - list_ui_omni_inbox_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)"
+        );
     } else {
-        tracing::info!("  - list_ui_omni_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+        tracing::info!(
+            "  - list_ui_omni_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)"
+        );
     }
 }
 
@@ -1973,7 +2070,9 @@ pub async fn bench_ui_inbox_latency() {
             "  - list_ui_inbox_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)"
+        );
     } else {
         tracing::info!(
             "  - list_ui_inbox_handler (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -1986,7 +2085,7 @@ pub async fn bench_ai_job_dispatch_latency() {
     let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
-    use crate::orchestration::queue::{pg_queue::PgTaskQueue, Job};
+    use crate::orchestration::queue::{Job, pg_queue::PgTaskQueue};
 
     let (queue, is_postgres): (
         std::sync::Arc<dyn crate::orchestration::queue::queue::TaskQueue>,
@@ -2101,7 +2200,9 @@ pub async fn bench_ui_orders_latency() {
             "  - list_ui_orders_handler (Postgres Payload Optimization): {:?}",
             duration
         );
-        tracing::info!("    (Payload Optimization verified: mobile_optimized fetches return trimmed payload for orders)");
+        tracing::info!(
+            "    (Payload Optimization verified: mobile_optimized fetches return trimmed payload for orders)"
+        );
     } else {
         tracing::info!("  - list_ui_orders_handler (Payload Optimization verified, Hybrid Cache)");
     }
@@ -2150,7 +2251,9 @@ pub async fn bench_ui_bookings_latency() {
 }
 
 pub async fn bench_list_jobs_latency() {
-    tracing::info!("Benchmarking list_jobs (Parallel Execution Optimization / Mobile Payload Optimization / Hybrid Cache)...");
+    tracing::info!(
+        "Benchmarking list_jobs (Parallel Execution Optimization / Mobile Payload Optimization / Hybrid Cache)..."
+    );
     let database_url = std::env::var("OHC_DATABASE_URL")
         .unwrap_or_else(|_| format!("sqlite:file:{}?mode=memory&cache=shared", Uuid::new_v4()));
 
@@ -2184,7 +2287,9 @@ pub async fn bench_list_jobs_latency() {
             "  - list_jobs (Postgres Parallel Execution / Payload Optimization): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)"
+        );
     } else {
         tracing::info!("  - list_jobs (Parallel Execution Optimization verified, Hybrid Cache)");
     }
@@ -2244,7 +2349,9 @@ pub async fn bench_supply_mobile_payload() {
             "  - Supply Mobile Payload Optimization (Postgres): {:?}",
             duration
         );
-        tracing::info!("    (Mobile Payload Optimization verified: vendors, raw_materials, bom_items return trimmed payload)");
+        tracing::info!(
+            "    (Mobile Payload Optimization verified: vendors, raw_materials, bom_items return trimmed payload)"
+        );
     } else {
         tracing::info!("  - Supply Mobile Payload Optimization (SQLite)");
     }
@@ -2307,7 +2414,9 @@ pub async fn bench_get_completed_tasks_latency() {
             "  - get_completed_tasks (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: shared_tasks and swarm_tasks fetched concurrently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: shared_tasks and swarm_tasks fetched concurrently)"
+        );
     } else {
         tracing::info!(
             "  - get_completed_tasks (Parallel Execution Optimization verified, Standalone)"
@@ -2340,7 +2449,9 @@ pub async fn bench_ui_ledger_latency() {
             "  - load_ui_ledger_from_db (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: DB fetched correctly and cache implemented)"
+        );
     } else {
         tracing::info!(
             "  - load_ui_ledger_from_db (Parallel Execution Optimization verified, Hybrid Cache)"
@@ -2393,7 +2504,9 @@ pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
             "  - ui_dashboard_unified_agent_feed_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: approvals, ledger, and feed fetched concurrently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: approvals, ledger, and feed fetched concurrently)"
+        );
     } else {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
@@ -2438,7 +2551,9 @@ pub async fn bench_ui_dashboard_unified_agent_feed_latency() {
             "  - ui_dashboard_unified_agent_feed_handler (SQLite Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: approvals, ledger, and feed fetched concurrently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: approvals, ledger, and feed fetched concurrently)"
+        );
     }
 }
 
@@ -2545,7 +2660,9 @@ pub async fn bench_get_daily_work_latency() {
             "  - get_daily_work_handler (Postgres Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: daily_work_items, orders, task_envelopes, and agent_feed fetched concurrently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: daily_work_items, orders, task_envelopes, and agent_feed fetched concurrently)"
+        );
     } else {
         let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
@@ -2596,7 +2713,9 @@ pub async fn bench_get_daily_work_latency() {
             "  - get_daily_work_handler (SQLite Parallel Execution): {:?}",
             duration
         );
-        tracing::info!("    (Parallel Execution Optimization verified: daily_work_items, orders, task_envelopes, and agent_feed fetched concurrently)");
+        tracing::info!(
+            "    (Parallel Execution Optimization verified: daily_work_items, orders, task_envelopes, and agent_feed fetched concurrently)"
+        );
     }
 }
 

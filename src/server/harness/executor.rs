@@ -1,8 +1,10 @@
-use super::sandbox::{SandboxManager, SandboxAdapter};
+use super::sandbox::{SandboxAdapter, SandboxManager};
+use ::server_telemetry::{
+    record_bubblewrap_execution_latency, record_bubblewrap_spawn, record_bubblewrap_violation,
+    record_harness_execution_latency, record_harness_io_bytes,
+};
 use sqlx::PgPool;
 use std::time::Instant;
-use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency, record_harness_io_bytes};
-
 
 use super::network_proxy::NetworkProxy;
 
@@ -11,7 +13,6 @@ pub struct LocalShellTask {
 }
 
 impl LocalShellTask {
-
     pub fn new(pool: Option<PgPool>) -> Self {
         LocalShellTask {
             manager: SandboxManager::new(pool),
@@ -22,22 +23,26 @@ impl LocalShellTask {
         self.manager.update_config(policy_json).await
     }
 
-
-
     pub async fn execute(&self, cmd: &str) -> Result<String, String> {
         let wrapped_cmd = match self.manager.wrap_command(cmd).await {
             Ok(c) => c,
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
         };
 
-
         // The task_id and agent_id should be dynamic in reality, but for context we use defaults if not available here
         let task_id = "unknown_task";
         let agent_id = "unknown_agent";
 
         let policy = self.manager.get_policy();
-        let proxy = NetworkProxy::new(policy.allowed_domains.clone(), agent_id.to_string(), task_id.to_string());
-        let (proxy_port, _shutdown_tx) = proxy.start(0).await.map_err(|e| format!("Failed to start proxy: {}", e))?;
+        let proxy = NetworkProxy::new(
+            policy.allowed_domains.clone(),
+            agent_id.to_string(),
+            task_id.to_string(),
+        );
+        let (proxy_port, _shutdown_tx) = proxy
+            .start(0)
+            .await
+            .map_err(|e| format!("Failed to start proxy: {}", e))?;
 
         record_bubblewrap_spawn(agent_id, task_id);
 
@@ -62,15 +67,24 @@ impl LocalShellTask {
         let latency_seconds = start.elapsed().as_secs_f64();
         record_harness_execution_latency(latency_seconds);
 
-        if exit_code == 13 || exit_code == 126 { // Permission denied related exit codes
+        if exit_code == 13 || exit_code == 126 {
+            // Permission denied related exit codes
             record_bubblewrap_violation(agent_id, task_id, "permission_denied");
         }
 
         if !output.status.success() {
-            return Err(format!("Process exited with error: {}\n{}", exit_code, String::from_utf8_lossy(&output.stderr)));
+            return Err(format!(
+                "Process exited with error: {}\n{}",
+                exit_code,
+                String::from_utf8_lossy(&output.stderr)
+            ));
         }
 
-        Ok(format!("Executing: {}\n{}", wrapped_cmd, String::from_utf8_lossy(&output.stdout)))
+        Ok(format!(
+            "Executing: {}\n{}",
+            wrapped_cmd,
+            String::from_utf8_lossy(&output.stdout)
+        ))
     }
 }
 

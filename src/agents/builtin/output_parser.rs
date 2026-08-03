@@ -1,9 +1,9 @@
+use crate::retry::{ExponentialBackoffWithJitter, RetryStrategy};
 /// Master Catalog B.6. Output Parsing: Schema-constrained responses with Pydantic fallback
 use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
-use crate::retry::{RetryStrategy, ExponentialBackoffWithJitter};
 
 #[async_trait]
 pub trait LlmClientForParser: Send + Sync {
@@ -16,7 +16,6 @@ pub trait LlmClientForParser: Send + Sync {
 pub trait OutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String>;
 }
-
 
 /// Master Catalog B.6. Output Parsing
 /// Pydantic-first tool schema error feedback implementation
@@ -50,7 +49,11 @@ impl<T: Send + Sync> AdvancedPydanticOutputParser<T> {
 impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for AdvancedPydanticOutputParser<T> {
     fn parse_message(&self, msg: &Message) -> Result<T, String> {
         // Output Parsing: Primary mechanic is extracting from native tool_calls
-        if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
+        if let Some(call) = msg
+            .tool_calls
+            .iter()
+            .find(|t| t.name == "structured_output")
+        {
             if let Some(data) = call.arguments.get("data") {
                 return self.validate_schema(data);
             } else {
@@ -64,7 +67,6 @@ impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for AdvancedPydanticOutp
         Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data. Pydantic-first schema validation failed.".to_string())
     }
 }
-
 
 pub struct StructuredOutputParser<T: Send + Sync> {
     _marker: std::marker::PhantomData<T>,
@@ -196,7 +198,8 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             || parse_error_msg.contains("Semantic validation failed")
                             || parse_error_msg.contains("Expected native tool_calls")
                             || parse_error_msg.contains("Missing required 'data' parameter")
-                            || parse_error_msg.contains("Pydantic-first schema validation failed") || parse_error_msg.contains("Failed to parse arguments")
+                            || parse_error_msg.contains("Pydantic-first schema validation failed")
+                            || parse_error_msg.contains("Failed to parse arguments")
                         {
                             return Err(ToolError::LlmRecoverable(parse_error_msg));
                         } else {
@@ -214,7 +217,11 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
             }
         }
     }
-    fn generate_feedback_message(current_req: &mut ChatRequest, msg: &Message, parse_error_msg: &str) {
+    fn generate_feedback_message(
+        current_req: &mut ChatRequest,
+        msg: &Message,
+        parse_error_msg: &str,
+    ) {
         if !msg.tool_calls.is_empty() {
             current_req.messages.push(msg.clone());
 
@@ -228,23 +235,34 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     .map(|t| serde_json::to_string_pretty(&t.parameters).unwrap_or_default())
                     .unwrap_or_default();
 
-                let mut detailed_error = if parse_error_msg.contains("Validation Error") || parse_error_msg.contains("Semantic validation failed") {
+                let mut detailed_error = if parse_error_msg.contains("Validation Error")
+                    || parse_error_msg.contains("Semantic validation failed")
+                {
                     parse_error_msg.to_string()
                 } else {
                     // Extract snippet of arguments to feed back and format as strict Pydantic JSON array
-                    let args_str = match serde_json::to_string(&tc.arguments) { Ok(s) => s, Err(_) => "<unprintable>".to_string(), }; let args_snippet = Some(args_str);
+                    let args_str = match serde_json::to_string(&tc.arguments) {
+                        Ok(s) => s,
+                        Err(_) => "<unprintable>".to_string(),
+                    };
+                    let args_snippet = Some(args_str);
                     crate::types::format_pydantic_error_string(
                         parse_error_msg,
                         args_snippet.as_deref(),
-                        Some("Please strictly follow the Pydantic-first tool schema and try again. The provided arguments do not match the expected JSON schema. Fix the errors and output a new tool call.")
+                        Some(
+                            "Please strictly follow the Pydantic-first tool schema and try again. The provided arguments do not match the expected JSON schema. Fix the errors and output a new tool call.",
+                        ),
                     )
                 };
 
                 if !schema_str.is_empty() {
-                    detailed_error = format!("{}
+                    detailed_error = format!(
+                        "{}
 
 Expected Schema:
-{}", detailed_error, schema_str);
+{}",
+                        detailed_error, schema_str
+                    );
                 }
 
                 tool_results.push(crate::types::ToolResult::new_llm_recoverable(
@@ -284,7 +302,11 @@ Expected Schema:
                 role: crate::types::Role::Tool,
                 content: String::new(),
                 tool_calls: vec![],
-                tool_results: vec![crate::types::ToolResult::new_llm_recoverable("call_1".to_string(), "structured_output", &error_context)],
+                tool_results: vec![crate::types::ToolResult::new_llm_recoverable(
+                    "call_1".to_string(),
+                    "structured_output",
+                    &error_context,
+                )],
                 response_id: None,
                 previous_response_id: None,
             };
@@ -292,7 +314,6 @@ Expected Schema:
             current_req.messages.push(error_msg);
         }
     }
-
 }
 
 /// Implements the Output Parsing mechanic from the Master Catalog:
@@ -351,7 +372,10 @@ mod tests {
 
         // It should recover on the second try
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "recovered");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "recovered"
+        );
 
         // Need to check the requests to ensure the prompt contained the "Validation Error (Pydantic-first tool schema)"
         // Let's modify the test to just check if it fails with the right message when max_retries = 0
@@ -498,13 +522,9 @@ mod tests {
 
         let req = create_test_req();
         let result: TestOutput =
-            parse_structured_output(
-                &(client.clone() as Arc<dyn LlmClientForParser>),
-                req,
-                3,
-            )
-            .await
-            .expect("Expected TestOutput in test");
+            parse_structured_output(&(client.clone() as Arc<dyn LlmClientForParser>), req, 3)
+                .await
+                .expect("Expected TestOutput in test");
         assert_eq!(result.result, "recovered_from_markdown");
         assert_eq!(*client.call_count.lock().await, 2);
     }
@@ -537,7 +557,10 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "success after retry");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "success after retry"
+        );
     }
 
     #[tokio::test]
@@ -554,7 +577,14 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         match result {
             Ok(_) => panic!("Expected parsing to fail and retry to exhaust, but it succeeded"),
-            Err(ref e) => assert!(e.to_string().contains("exhausted") || e.to_string().contains("Pydantic-first") || e.to_string().contains("retry") || e.to_string().contains("error") || e.to_string().contains("Failed") || e.to_string().contains("native tool_calls")),
+            Err(ref e) => assert!(
+                e.to_string().contains("exhausted")
+                    || e.to_string().contains("Pydantic-first")
+                    || e.to_string().contains("retry")
+                    || e.to_string().contains("error")
+                    || e.to_string().contains("Failed")
+                    || e.to_string().contains("native tool_calls")
+            ),
         }
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Expected native tool_calls API object"));
@@ -599,7 +629,10 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "success_tool_call_retry");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "success_tool_call_retry"
+        );
     }
 
     #[tokio::test]
@@ -622,11 +655,19 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         match result {
             Ok(_) => panic!("Expected parsing to fail and retry to exhaust, but it succeeded"),
-            Err(ref e) => assert!(e.to_string().contains("exhausted") || e.to_string().contains("Pydantic-first") || e.to_string().contains("retry") || e.to_string().contains("error") || e.to_string().contains("Failed") || e.to_string().contains("native tool_calls")),
+            Err(ref e) => assert!(
+                e.to_string().contains("exhausted")
+                    || e.to_string().contains("Pydantic-first")
+                    || e.to_string().contains("retry")
+                    || e.to_string().contains("error")
+                    || e.to_string().contains("Failed")
+                    || e.to_string().contains("native tool_calls")
+            ),
         }
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(
-                msg.contains("Pydantic-first schema validation failed") || msg.contains("Failed to parse arguments")
+                msg.contains("Pydantic-first schema validation failed")
+                    || msg.contains("Failed to parse arguments")
                     || msg.contains("Output parsing failed after"),
                 "msg was: {}",
                 msg
@@ -652,7 +693,10 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "recovered");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "recovered"
+        );
     }
 
     #[tokio::test]
@@ -675,7 +719,10 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
 
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "success_preamble_recovered");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "success_preamble_recovered"
+        );
     }
 
     #[tokio::test]
@@ -700,7 +747,10 @@ mod tests {
 
         // Because of the strict native tool_calls enforcement, it must retry and succeed on the second attempt
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "success_plain_recovered");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "success_plain_recovered"
+        );
     }
 
     #[tokio::test]
@@ -722,7 +772,10 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "corrected_schema");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "corrected_schema"
+        );
     }
 
     #[tokio::test]
@@ -741,11 +794,20 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         match result {
             Ok(_) => panic!("Expected parsing to fail and retry to exhaust, but it succeeded"),
-            Err(ref e) => assert!(e.to_string().contains("exhausted") || e.to_string().contains("Pydantic-first") || e.to_string().contains("retry") || e.to_string().contains("error") || e.to_string().contains("Failed") || e.to_string().contains("native tool_calls")),
+            Err(ref e) => assert!(
+                e.to_string().contains("exhausted")
+                    || e.to_string().contains("Pydantic-first")
+                    || e.to_string().contains("retry")
+                    || e.to_string().contains("error")
+                    || e.to_string().contains("Failed")
+                    || e.to_string().contains("native tool_calls")
+            ),
         }
         match result {
             Err(ToolError::LlmRecoverable(msg)) => {
-                assert!(msg.contains("Expected native tool_calls API object, but got plain text. Please use the"));
+                assert!(msg.contains(
+                    "Expected native tool_calls API object, but got plain text. Please use the"
+                ));
             }
             _ => panic!("Expected LlmRecoverable error for exhaustion"),
         }
@@ -767,7 +829,10 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "recovered_eof");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "recovered_eof"
+        );
     }
 }
 
@@ -883,7 +948,10 @@ mod retry_tests {
         let result: Result<TestOutput, _> = retry_parser.parse_with_prompt(req, 3).await;
 
         assert!(result.is_ok());
-        assert_eq!(result.expect("Expected TestOutput in test").result, "success");
+        assert_eq!(
+            result.expect("Expected TestOutput in test").result,
+            "success"
+        );
     }
 
     #[tokio::test]
@@ -911,7 +979,14 @@ mod retry_tests {
 
         match result {
             Ok(_) => panic!("Expected parsing to fail and retry to exhaust, but it succeeded"),
-            Err(ref e) => assert!(e.to_string().contains("exhausted") || e.to_string().contains("Pydantic-first") || e.to_string().contains("retry") || e.to_string().contains("error") || e.to_string().contains("Failed") || e.to_string().contains("native tool_calls")),
+            Err(ref e) => assert!(
+                e.to_string().contains("exhausted")
+                    || e.to_string().contains("Pydantic-first")
+                    || e.to_string().contains("retry")
+                    || e.to_string().contains("error")
+                    || e.to_string().contains("Failed")
+                    || e.to_string().contains("native tool_calls")
+            ),
         }
         match result {
             Err(ToolError::Transient(msg)) => {
@@ -1017,20 +1092,34 @@ mod tests_clamped {
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
             Box::new(AdvancedPydanticOutputParser::new());
-        let retry_parser =
-            RetryWithErrorOutputParser::new(parser, failing_client.clone() as Arc<dyn LlmClientForParser>);
+        let retry_parser = RetryWithErrorOutputParser::new(
+            parser,
+            failing_client.clone() as Arc<dyn LlmClientForParser>,
+        );
 
         // Pass max_retries = 10, but it should be clamped to 2
         let handle = tokio::spawn(async move {
-            retry_parser.parse_with_prompt_and_strategy(req, 10, &crate::retry::ExponentialBackoffWithJitter::new(0, 0)).await
+            retry_parser
+                .parse_with_prompt_and_strategy(
+                    req,
+                    10,
+                    &crate::retry::ExponentialBackoffWithJitter::new(0, 0),
+                )
+                .await
         });
-
 
         let result = handle.await.expect("Expected TestOutput in test");
 
         match result {
             Ok(_) => panic!("Expected parsing to fail and retry to exhaust, but it succeeded"),
-            Err(ref e) => assert!(e.to_string().contains("exhausted") || e.to_string().contains("Pydantic-first") || e.to_string().contains("retry") || e.to_string().contains("error") || e.to_string().contains("Failed") || e.to_string().contains("native tool_calls")),
+            Err(ref e) => assert!(
+                e.to_string().contains("exhausted")
+                    || e.to_string().contains("Pydantic-first")
+                    || e.to_string().contains("retry")
+                    || e.to_string().contains("error")
+                    || e.to_string().contains("Failed")
+                    || e.to_string().contains("native tool_calls")
+            ),
         }
         match result {
             Err(ToolError::Transient(msg)) => {
@@ -1066,11 +1155,22 @@ mod tests_clamped {
                 })
             } else {
                 // Second call: inspect the request to verify feedback was included
-                assert!(req.messages.len() >= 2, "Expected previous failed message and error message");
+                assert!(
+                    req.messages.len() >= 2,
+                    "Expected previous failed message and error message"
+                );
 
                 let last_msg = req.messages.last().unwrap();
                 assert_eq!(last_msg.role, crate::types::Role::Tool);
-                assert!(last_msg.tool_results[0].content.contains("Validation Error") || last_msg.tool_results[0].error.contains("Validation Error"), "content was: {}, error was: {}", last_msg.tool_results[0].content, last_msg.tool_results[0].error);
+                assert!(
+                    last_msg.tool_results[0]
+                        .content
+                        .contains("Validation Error")
+                        || last_msg.tool_results[0].error.contains("Validation Error"),
+                    "content was: {}, error was: {}",
+                    last_msg.tool_results[0].content,
+                    last_msg.tool_results[0].error
+                );
                 assert!(
                     last_msg.tool_results[0].content.contains("{ invalid json")
                         || last_msg.tool_results[0].error.contains("{ invalid json")
@@ -1100,11 +1200,19 @@ mod tests_clamped {
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
             Box::new(AdvancedPydanticOutputParser::new());
-        let retry_parser =
-            RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
+        let retry_parser = RetryWithErrorOutputParser::new(
+            parser,
+            feedback_client.clone() as Arc<dyn LlmClientForParser>,
+        );
 
         let handle = tokio::spawn(async move {
-            retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::retry::ExponentialBackoffWithJitter::new(0, 0)).await
+            retry_parser
+                .parse_with_prompt_and_strategy(
+                    req,
+                    2,
+                    &crate::retry::ExponentialBackoffWithJitter::new(0, 0),
+                )
+                .await
         });
 
         let result = handle.await.expect("Expected TestOutput in test");
@@ -1127,9 +1235,15 @@ mod tests_clamped {
             *count += 1;
 
             if *count == 1 {
-                Ok(super::tests::create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": 123}})))
+                Ok(super::tests::create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": 123}}),
+                ))
             } else {
-                Ok(super::tests::create_tool_call_resp("structured_output", serde_json::json!({"data": {"result": "success"}})))
+                Ok(super::tests::create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "success"}}),
+                ))
             }
         }
     }
@@ -1143,10 +1257,18 @@ mod tests_clamped {
         let req = create_test_req();
         let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
             Box::new(AdvancedPydanticOutputParser::new());
-        let retry_parser =
-            RetryWithErrorOutputParser::new(parser, feedback_client.clone() as Arc<dyn LlmClientForParser>);
+        let retry_parser = RetryWithErrorOutputParser::new(
+            parser,
+            feedback_client.clone() as Arc<dyn LlmClientForParser>,
+        );
 
-        let result = retry_parser.parse_with_prompt_and_strategy(req, 2, &crate::retry::ExponentialBackoffWithJitter::new(0, 0)).await;
+        let result = retry_parser
+            .parse_with_prompt_and_strategy(
+                req,
+                2,
+                &crate::retry::ExponentialBackoffWithJitter::new(0, 0),
+            )
+            .await;
 
         assert!(result.is_ok());
         assert_eq!(result.expect("Should be OK").result, "success");
@@ -1154,7 +1276,9 @@ mod tests_clamped {
     }
 }
 
-fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(data: &serde_json::Value) -> Result<T, String> {
+fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(
+    data: &serde_json::Value,
+) -> Result<T, String> {
     match T::deserialize(data) {
         Ok(parsed) => Ok(parsed),
         Err(e) => {
@@ -1162,19 +1286,25 @@ fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(data: &serde_json::V
             Err(crate::types::format_pydantic_error(
                 &e,
                 Some(&args_str),
-                Some("Please strictly follow the Pydantic-first tool schema and try again. Also ensure all enum variants are exact string matches."),
+                Some(
+                    "Please strictly follow the Pydantic-first tool schema and try again. Also ensure all enum variants are exact string matches.",
+                ),
             ))
         }
     }
 }
 
-impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for AdvancedPydanticOutputParser<T> {
+impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T>
+    for AdvancedPydanticOutputParser<T>
+{
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
         validate_pydantic_schema(data)
     }
 }
 
-impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T> for StructuredOutputParser<T> {
+impl<T: serde::de::DeserializeOwned + Send + Sync> PydanticSchemaValidator<T>
+    for StructuredOutputParser<T>
+{
     fn validate_schema(&self, data: &serde_json::Value) -> Result<T, String> {
         validate_pydantic_schema(data)
     }
@@ -1199,7 +1329,10 @@ mod strict_output_tests {
 
     #[async_trait::async_trait]
     impl LlmClientForParser for MockStrictClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             *self.call_count.lock().await += 1;
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
@@ -1265,14 +1398,17 @@ mod strict_output_tests {
 
         let parser: Box<dyn OutputParser<StrictTestOutput> + Send + Sync> =
             Box::new(AdvancedPydanticOutputParser::new());
-        let retry_parser = RetryWithErrorOutputParser::new(parser, client.clone() as Arc<dyn LlmClientForParser>);
+        let retry_parser =
+            RetryWithErrorOutputParser::new(parser, client.clone() as Arc<dyn LlmClientForParser>);
 
         let req = create_test_req();
-        let result = retry_parser.parse_with_prompt_and_strategy(
-            req,
-            2,
-            &crate::retry::ExponentialBackoffWithJitter::new(0, 0)
-        ).await;
+        let result = retry_parser
+            .parse_with_prompt_and_strategy(
+                req,
+                2,
+                &crate::retry::ExponentialBackoffWithJitter::new(0, 0),
+            )
+            .await;
 
         assert_eq!(
             result.expect("markdown should recover through a native tool call"),
