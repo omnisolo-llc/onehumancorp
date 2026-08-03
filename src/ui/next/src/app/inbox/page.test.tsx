@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi, Mock } from 'vitest';
 import InboxPage from './page';
 
 const queryState = vi.hoisted(() => ({
@@ -19,8 +19,19 @@ vi.mock('../components/AppShell', () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 beforeEach(() => {
   queryState.data = [];
+  if (typeof global.fetch !== 'undefined' && vi.isMockFunction(global.fetch)) {
+      (global.fetch as Mock).mockReset();
+  } else {
+      global.fetch = vi.fn();
+  }
+  (global.fetch as Mock).mockResolvedValue(Response.json([]));
 });
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {
@@ -41,7 +52,7 @@ test('renders message markup as text while preserving safe HTTPS media', () => {
 
   const { container } = render(<InboxPage />);
 
-  expect(screen.getByText('<script>window.compromised = true</script>')).toBeInTheDocument();
+  expect(screen.getAllByText(/<script>window\.compromised = true<\/script>/)[0]).toBeInTheDocument();
   expect(container.querySelector('script')).toBeNull();
   expect(screen.getByRole('img', { name: 'Receipt' })).toHaveAttribute(
     'src',

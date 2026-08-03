@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, Mock } from "vitest";
 import VerifyEmailPage from "./page";
 
 const replace = vi.fn();
@@ -14,11 +14,15 @@ describe("email verification", () => {
       "ohc-registration-challenge",
       JSON.stringify({ challengeId: "challenge-7", email: "alice@example.test" }),
     );
-    vi.mocked(fetch).mockReset();
+    if (typeof global.fetch !== 'undefined' && vi.isMockFunction(global.fetch)) {
+      (global.fetch as Mock).mockReset();
+    } else {
+      global.fetch = vi.fn();
+    }
   });
 
   it("does not expose account credentials until the email code succeeds", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({
+    (global.fetch as Mock).mockResolvedValueOnce(Response.json({
       registration_ticket: "ticket-7",
       expires_in_seconds: 1200,
     }));
@@ -39,7 +43,7 @@ describe("email verification", () => {
 
   it("creates a sealed session only after submitting the verified ticket", async () => {
     sessionStorage.setItem("ohc-registration-ticket", "ticket-7");
-    vi.mocked(fetch)
+    (global.fetch as Mock)
       .mockResolvedValueOnce(Response.json({ registration_ticket: "ticket-7", expires_in_seconds: 1200 }))
       .mockResolvedValueOnce(Response.json({ user: { id: "user-7" }, next: "/onboarding" }, { status: 201 }));
     render(<VerifyEmailPage />);
@@ -52,7 +56,7 @@ describe("email verification", () => {
     await user.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/onboarding"));
-    expect(fetch).toHaveBeenLastCalledWith("/api/v1/auth/register?next=%2Fonboarding", expect.objectContaining({
+    expect(global.fetch).toHaveBeenLastCalledWith("/api/v1/auth/register?next=%2Fonboarding", expect.objectContaining({
       method: "POST",
       body: JSON.stringify({
         registration_ticket: "ticket-7",

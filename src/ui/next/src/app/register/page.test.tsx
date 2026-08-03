@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi, Mock } from "vitest";
 import RegisterPage from "./page";
 
 const push = vi.fn();
@@ -10,11 +10,15 @@ describe("registration entry", () => {
   beforeEach(() => {
     push.mockReset();
     sessionStorage.clear();
-    vi.mocked(fetch).mockReset();
+    if (typeof global.fetch !== 'undefined' && vi.isMockFunction(global.fetch)) {
+      (global.fetch as Mock).mockReset();
+    } else {
+      global.fetch = vi.fn();
+    }
   });
 
   it("shows the persisted closed policy without collecting credentials", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(Response.json({
+    (global.fetch as Mock).mockResolvedValueOnce(Response.json({
       registration_mode: "closed",
       registration_available: false,
       email_verification_required: true,
@@ -28,7 +32,7 @@ describe("registration entry", () => {
   });
 
   it("collects only email before verification and stores a bounded challenge", async () => {
-    vi.mocked(fetch)
+    (global.fetch as Mock)
       .mockResolvedValueOnce(Response.json({
         registration_mode: "open",
         registration_available: true,
