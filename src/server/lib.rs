@@ -335,7 +335,7 @@ async fn proxy_agent_rpc_handler(
         .unwrap_or_else(|_| axum::http::StatusCode::BAD_GATEWAY.into_response())
 }
 
-fn strict_ui_claim_tenant(claims: &::server_common::Claims) -> Option<String> {
+pub fn strict_ui_claim_tenant(claims: &::server_common::Claims) -> Option<String> {
     claims
         .organization_id
         .as_deref()
@@ -7674,6 +7674,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/v1/proposals", api::proposals::router().with_state(db.pool.clone()))
+        .nest("/api/v1/chat_engine", api::omnichannel_chat::router(db.clone()))
         .nest(
             "/api/v1/booking/request",
             api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()).route_layer(
