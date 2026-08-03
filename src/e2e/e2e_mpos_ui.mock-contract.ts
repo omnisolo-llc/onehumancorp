@@ -3,7 +3,34 @@ import { test, expect } from './fixtures';
 test.describe('mPOS Premium UI (Glassmorphism, Responsive)', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('mPOS UI shows glassmorphism styles, works offline, shows pulsing NFC and handles payment flow', async ({ memberPage, context }) => {
+  test('mPOS UI shows glassmorphism styles, works offline, shows pulsing NFC and handles payment flow', async ({ memberPage, context, request }) => {
+    // We cannot use fabricated browser storage. Instead, we must create a product through the API.
+    // 1. Get token
+    const authRes = await request.post('/api/v1/auth/login', {
+        data: {
+            email: 'test@example.com', // Using standard E2E_ADMIN_USER
+            password: 'password123'
+        }
+    });
+    const { token } = await authRes.json();
+
+    const productId = \`prod-mpos-ui-\${Date.now()}\`;
+
+    // 2. Create the limited stock product via API
+    await request.post('/api/v1/catalog/products', {
+        headers: {
+            'Authorization': \`Bearer \${token}\`,
+            'x-tenant-id': 'tenant_mpos_ui_test'
+        },
+        data: {
+            id: productId,
+            title: 'Mock Croissant',
+            inventory_count: 5,
+            price_cents: 550
+        }
+    });
+
+
     // Navigate to mPOS URL
     await memberPage.goto('/pos/mpos?tenantId=tenant_mpos_ui_test');
 
@@ -24,22 +51,7 @@ test.describe('mPOS Premium UI (Glassmorphism, Responsive)', () => {
     // Check if offline badge shows
     await expect(memberPage.locator('text=Offline Mode')).toBeVisible({ timeout: 5000 });
 
-    // Check for "No products found" and inject products
-    const noProductsText = memberPage.locator('text=No products found.');
-    if (await noProductsText.isVisible()) {
-       await memberPage.evaluate(() => {
-           localStorage.setItem('ohc_catalog_cache', JSON.stringify([
-               { id: 'mock1', name: 'Mock Croissant', price: 5.50 }
-           ]));
-       });
-       await memberPage.reload();
-       await context.setOffline(true);
-       await memberPage.evaluate(() => {
-         window.dispatchEvent(new Event('offline'));
-       });
-    }
-
-    // Click the first product
+    // Click the first product (now loaded from API)
     await memberPage.locator('text=Mock Croissant').first().click();
 
     // Verify the cart updates
