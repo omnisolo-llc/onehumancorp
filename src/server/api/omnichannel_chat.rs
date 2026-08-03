@@ -35,7 +35,7 @@ pub struct SendMessageReq {
     pub content: String,
 }
 
-pub fn router(db: Arc<DB>) -> Router {
+pub fn router(db: Arc<DB>) -> Router<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let state = AppState {
         chat_service: Arc::new(ChatService::new(db.pool.clone())),
     };
