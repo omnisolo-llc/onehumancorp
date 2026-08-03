@@ -54,8 +54,30 @@ async fn initialize_postgres(admin_url: &str) -> Result<(), String> {
         .map_err(|error| format!("create uuid-ossp extension: {error}"))?;
 
     sqlx::query(
-        r#"CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY);"#
-    ).execute(&admin_pool).await.map_err(|error| format!("create users table: {error}"))?;
+        r#"
+        CREATE TABLE IF NOT EXISTS tenants (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            industry TEXT DEFAULT '',
+            tier TEXT DEFAULT 'free',
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            version BIGINT DEFAULT 1
+        );
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL DEFAULT '',
+            roles TEXT[] DEFAULT '{}',
+            active BOOLEAN DEFAULT TRUE,
+            tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+            oidc_subject TEXT UNIQUE,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        );
+        "#
+    ).execute(&admin_pool).await.map_err(|error| format!("create basic tables: {error}"))?;
 
     MIGRATOR
         .run(&admin_pool)
