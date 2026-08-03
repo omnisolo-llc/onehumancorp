@@ -987,7 +987,9 @@ async fn update_oidc_provider(
     };
     let configured = match repository.oidc_provider(&provider).await {
         Ok(Some(config)) => {
-            !config.client_id.trim().is_empty() && !config.secret_ref.trim().is_empty()
+            !config.client_id.trim().is_empty()
+                && !config.secret_ref.trim().is_empty()
+                && std::env::var(&config.secret_ref).is_ok_and(|secret| !secret.trim().is_empty())
         }
         Ok(None) => return error(StatusCode::NOT_FOUND, "OIDC provider unavailable"),
         Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "OIDC settings unavailable"),
@@ -1068,17 +1070,6 @@ async fn start_email_verification(
     } else {
         None
     };
-    if let Ok(Some(previous)) = repository.latest_email_challenge(&email).await {
-        if previous.resend_after > now {
-            let retry = (previous.resend_after - now).num_seconds().max(1) as u64;
-            return error_with_retry(
-                StatusCode::TOO_MANY_REQUESTS,
-                "verification recently sent",
-                retry,
-            );
-        }
-    }
-
     let challenge_id = uuid::Uuid::new_v4().to_string();
     let code = format!("{:06}", rand::thread_rng().gen_range(0_u32..1_000_000));
     let code_hash = registration_hash_hex(
@@ -1104,8 +1095,18 @@ async fn start_email_verification(
         resend_after: now + chrono::Duration::seconds(60),
         invitation_id,
     };
-    if repository.create_email_challenge(challenge).await.is_err() {
-        return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable");
+    match repository.create_email_challenge(challenge).await {
+        Ok(crate::seaorm_store::EmailChallengeCreation::Created) => {}
+        Ok(crate::seaorm_store::EmailChallengeCreation::Throttled {
+            retry_after_seconds,
+        }) => {
+            return error_with_retry(
+                StatusCode::TOO_MANY_REQUESTS,
+                "verification recently sent",
+                retry_after_seconds,
+            );
+        }
+        Err(_) => return error(StatusCode::SERVICE_UNAVAILABLE, "registration unavailable"),
     }
     if state
         .mailer
@@ -1812,7 +1813,9 @@ mod tests {
         http::Request,
     };
     use chrono::{DateTime, Utc};
-    use sea_orm::{ActiveModelTrait, ConnectionTrait, Database, EntityTrait, Schema, Set};
+    use sea_orm::{
+        ActiveModelTrait, ConnectionTrait, Database, EntityTrait, PaginatorTrait, Schema, Set,
+    };
     use std::net::{Ipv4Addr, SocketAddr};
     use tower::ServiceExt;
 
@@ -2476,11 +2479,29 @@ mod tests {
         Arc<crate::seaorm_store::SeaOrmAuthRepository>,
         String,
     ) {
+        registration_test_app_with_mailer(
+            mode,
+            invitation_creator,
+            Arc::new(crate::email::UnconfiguredMailer),
+        )
+        .await
+    }
+
+    async fn registration_test_app_with_mailer(
+        mode: crate::seaorm_store::RegistrationMode,
+        invitation_creator: Option<User>,
+        mailer: Arc<dyn crate::email::VerificationMailer>,
+    ) -> (
+        Router,
+        Arc<crate::seaorm_store::SeaOrmAuthRepository>,
+        String,
+    ) {
         let connection = Database::connect("sqlite::memory:").await.unwrap();
         let schema = Schema::new(connection.get_database_backend());
         for statement in [
             schema.create_table_from_entity(entities::user::Entity),
             schema.create_table_from_entity(entities::application_setting::Entity),
+            schema.create_table_from_entity(entities::email_challenge::Entity),
             schema.create_table_from_entity(entities::registration_ticket::Entity),
             schema.create_table_from_entity(entities::invitation::Entity),
             schema.create_table_from_entity(entities::external_identity::Entity),
@@ -2497,6 +2518,14 @@ mod tests {
             .execute(sea_orm::Statement::from_string(
                 sea_orm::DatabaseBackend::Sqlite,
                 "ALTER TABLE users ADD COLUMN roles TEXT NOT NULL DEFAULT '[]'".to_string(),
+            ))
+            .await
+            .unwrap();
+        connection
+            .execute(sea_orm::Statement::from_string(
+                sea_orm::DatabaseBackend::Sqlite,
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_email_verification_challenges_email ON email_verification_challenges (email)"
+                    .to_string(),
             ))
             .await
             .unwrap();
@@ -2580,10 +2609,62 @@ mod tests {
         .unwrap();
 
         (
-            router_with_state(HttpAuthState::new(store, HashSet::new())),
+            router_with_state(HttpAuthState::with_mailer(store, HashSet::new(), mailer)),
             repository,
             raw_ticket,
         )
+    }
+
+    struct RecordingMailer;
+
+    #[async_trait]
+    impl crate::email::VerificationMailer for RecordingMailer {
+        async fn send_verification_code(
+            &self,
+            _recipient: &str,
+            _code: &str,
+        ) -> Result<(), String> {
+            Ok(())
+        }
+
+        fn configured(&self) -> bool {
+            true
+        }
+    }
+
+    #[tokio::test]
+    async fn email_verification_start_is_throttled_atomically_with_retry_after() {
+        let (app, repository, _ticket) = registration_test_app_with_mailer(
+            crate::seaorm_store::RegistrationMode::Open,
+            None,
+            Arc::new(RecordingMailer),
+        )
+        .await;
+        let request = |email: &str| {
+            json_request(
+                "/api/v1/auth/registration/email/start",
+                serde_json::json!({ "email": email }).to_string(),
+            )
+        };
+
+        let first = app
+            .clone()
+            .oneshot(request("new.user@example.test"))
+            .await
+            .unwrap();
+        assert_eq!(first.status(), StatusCode::ACCEPTED);
+
+        let second = app.oneshot(request("new.user@example.test")).await.unwrap();
+        assert_eq!(second.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert!(second.headers().get(header::RETRY_AFTER).is_some());
+
+        assert_eq!(
+            entities::email_challenge::Entity::find()
+                .count(repository.connection())
+                .await
+                .unwrap(),
+            1
+        );
     }
 
     fn registration_creator(active: bool, roles: Vec<String>) -> User {
