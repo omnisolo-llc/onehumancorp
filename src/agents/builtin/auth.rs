@@ -40,7 +40,9 @@ impl std::fmt::Debug for AuthMode {
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
+
+    // If auth is explicitly disabled, check that the environment is development, test, or standalone.
+    if auth_disabled {
         let environment = env::var("OHC_ENV").unwrap_or_default();
         if matches!(
             environment.trim().to_ascii_lowercase().as_str(),
@@ -54,23 +56,40 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         );
     }
 
-    if let Ok(token) = env::var("OHC_AGENT_TOKEN")
-        && !token.trim().is_empty()
-    {
-        let key = env::var("OHC_AGENT_AUTH_KEY")
-            .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
-        if key.trim().is_empty() || key.len() < 32 {
-            return Err("OHC_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
+    if let Ok(token) = env::var("OHC_AGENT_TOKEN") {
+        if !token.trim().is_empty() {
+            let key = env::var("OHC_AGENT_AUTH_KEY")
+                .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
+            if key.trim().is_empty() || key.len() < 32 {
+                return Err("OHC_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
+            }
+            let verification_key = key.into_bytes();
+            let token_hash = hmac_token(&token, &verification_key);
+            return Ok(AuthMode::Token {
+                token_hash,
+                verification_key,
+            });
         }
-        let verification_key = key.into_bytes();
-        let token_hash = hmac_token(&token, &verification_key);
-        return Ok(AuthMode::Token {
-            token_hash,
-            verification_key,
-        });
     }
 
-    return Ok(AuthMode::Disabled);
+    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID") {
+        if !spiffe_id.trim().is_empty() {
+            validate_spiffe_id(&spiffe_id)?;
+            return Err("mTLS peer certificate extraction not implemented yet; SPIFFE authentication fails closed".to_string());
+        }
+    }
+
+    // In standalone, development, or test mode, if no authentication configuration is provided,
+    // we default to Disabled to avoid breaking developer workflows.
+    // However, if OHC_ENV is "production" or unset/empty (outside of local dev/test/standalone),
+    // we must fail closed to prevent silent fail-open security vulnerabilities.
+    let environment = env::var("OHC_ENV").unwrap_or_default();
+    let environment_trimmed = environment.trim().to_ascii_lowercase();
+    if environment_trimmed == "development" || environment_trimmed == "test" || environment_trimmed == "standalone" {
+        return Ok(AuthMode::Disabled);
+    }
+
+    Err("No authentication configured. Please set OHC_AGENT_TOKEN, OHC_AGENT_SPIFFE_ID or OHC_AGENT_AUTH_DISABLED=true".to_string())
 }
 
 /// Check a bearer token against an expected HMAC hash.
