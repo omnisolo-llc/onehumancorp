@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package ohc.chat;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/chat;chatpb";
+
+message Inbox {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string channel_type = 4;
+}
+
+message Contact {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string email = 4;
+    string phone_number = 5;
+}
+
+message Conversation {
+    string id = 1;
+    string tenant_id = 2;
+    string inbox_id = 3;
+    string contact_id = 4;
+    string status = 5;
+    int64 created_at_unix = 6;
+    int64 updated_at_unix = 7;
+}
+
+message Message {
+    string id = 1;
+    string tenant_id = 2;
+    string conversation_id = 3;
+    string inbox_id = 4;
+    string sender_type = 5;
+    string sender_id = 6;
+    string content_type = 7;
+    string content = 8;
+    int64 created_at_unix = 9;
+    int64 updated_at_unix = 10;
+}
+
+message ListConversationsRequest {
+    string tenant_id = 1;
+}
+
+message ListConversationsResponse {
+    repeated Conversation conversations = 1;
+}
+
+message GetMessagesRequest {
+    string tenant_id = 1;
+    string conversation_id = 2;
+}
+
+message GetMessagesResponse {
+    repeated Message messages = 1;
+}
+
+message SendMessageRequest {
+    string tenant_id = 1;
+    string conversation_id = 2;
+    string sender_type = 3;
+    string sender_id = 4;
+    string content_type = 5;
+    string content = 6;
+}
+
+message SendMessageResponse {
+    Message message = 1;
+}
+
+service ChatService {
+    rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+    rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+}

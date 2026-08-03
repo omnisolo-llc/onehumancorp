@@ -5,8 +5,7 @@ load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
     "//src/server/services:chat/mod.rs",
-    "//src/server/services:chat/models.rs",
-    "//src/server/services:chat/service.rs",
+    "//src/server/services:chat/grpc.rs",
     "health_test.rs",
     "analytics.rs",
     "autodream_sync.rs",
@@ -400,8 +399,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:daily_ops_routine_worker.rs",
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
-    "//src/server/voice:router.rs",
-]
+    "//src/server/voice:router.rs",]
 
 filegroup(
     name = "server_sources",
@@ -642,6 +640,7 @@ rust_test(
     ],
     edition = "2024",
     deps = [
+        "//src/server/auth:server_auth",
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:sea-orm",
@@ -665,6 +664,7 @@ rust_test(
     ],
     edition = "2024",
     deps = [
+        "//src/server/auth:server_auth",
         "@crates//:chrono",
         "@crates//:sea-orm",
         "@crates//:serde",
