@@ -58,6 +58,7 @@ pub mod mesh;
 pub mod proto;
 pub use service::start_builtin_agent;
 
+pub mod omnichannel;
 pub mod checkpointer;
 pub mod codex_runner;
 pub mod consolidation_worker;
