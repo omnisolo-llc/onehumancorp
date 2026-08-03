@@ -84,6 +84,13 @@ export default function PricingPage() {
     }
   };
 
+  const formatStorage = (bytes: number) => {
+      const mb = bytes / (1024 * 1024);
+      if (mb < 1) return "< 1 MB";
+      if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
+      return parseFloat(mb.toFixed(1)) + " MB";
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden max-w-[100vw]">
       <header className="px-4 py-4 flex items-center justify-between sticky top-0 z-50 app-panel-header shadow-sm w-full">
@@ -135,9 +142,9 @@ export default function PricingPage() {
                 <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Storage Used</p>
                     <p className="text-xl font-bold text-gray-900">
-                        {planDetails?.storage_used_bytes ? (planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1) : 0} MB
+                        {planDetails ? formatStorage(planDetails.storage_used_bytes || 0) : '0 MB'}
                         <span className="text-sm font-normal text-gray-500 ml-1">
-                            / {planDetails?.storage_limit_bytes ? (planDetails.storage_limit_bytes / (1024 * 1024)).toFixed(0) + ' MB' : '∞'}
+                            / {planDetails?.storage_limit_bytes ? formatStorage(planDetails.storage_limit_bytes) : 'Unlimited'}
                         </span>
                     </p>
                 </div>
