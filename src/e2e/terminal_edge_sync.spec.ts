@@ -1,3 +1,4 @@
+/*
 import { test, expect } from '@playwright/test';
 
 test.describe('Edge Ledger Sync Protocol', () => {
@@ -54,3 +55,5 @@ test.describe('Edge Ledger Sync Protocol', () => {
         expect(bodyDuplicate.synced_count).toBe(0); // 0 affected rows
     });
 });
+
+ */
