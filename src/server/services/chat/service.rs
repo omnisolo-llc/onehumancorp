@@ -1,126 +1,89 @@
-use sqlx::PgPool;
 use uuid::Uuid;
-use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage};
+use sqlx::{Sqlite, Pool, Row};
+use crate::services::chat::models::{ChatConversationWithContact, ChatMessage, ChatConversation, ChatContact, ChatInbox};
 
+#[derive(Clone)]
 pub struct ChatService {
-    pool: PgPool,
+    pool: Pool<Sqlite>,
 }
 
 impl ChatService {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: Pool<Sqlite>) -> Self {
         Self { pool }
     }
 
-    pub async fn create_inbox(
+    pub async fn get_conversations(
         &self,
         tenant_id: Uuid,
-        name: String,
-    ) -> Result<ChatInbox, sqlx::Error> {
-        sqlx::query_as(
+    ) -> Result<Vec<ChatConversationWithContact>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            ChatConversationWithContact,
             r#"
-            INSERT INTO chat_inboxes (id, tenant_id, name)
-            VALUES ($1, $2, $3)
-            RETURNING id, tenant_id, name, created_at, updated_at
-            "#
+            SELECT
+                c.id, c.tenant_id, c.inbox_id, c.contact_id, c.assignee_id, c.status, c.created_at, c.updated_at,
+                ct.name as contact_name, ct.email as contact_email, ct.phone as contact_phone
+            FROM chat_conversations c
+            LEFT JOIN chat_contacts ct ON c.contact_id = ct.id
+            WHERE c.tenant_id = $1
+            ORDER BY c.updated_at DESC
+            "#,
+            tenant_id
         )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(name)
-        .fetch_one(&self.pool)
-        .await
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
     }
 
-    pub async fn create_channel(
+    pub async fn get_messages(
         &self,
         tenant_id: Uuid,
-        inbox_id: Uuid,
-        channel_type: String,
-        config: serde_json::Value,
-    ) -> Result<ChatChannel, sqlx::Error> {
-        sqlx::query_as(
+        conversation_id: Uuid,
+    ) -> Result<Vec<ChatMessage>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            ChatMessage,
             r#"
-            INSERT INTO chat_channels (id, tenant_id, inbox_id, channel_type, config)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, tenant_id, inbox_id, channel_type, config, created_at, updated_at
-            "#
+            SELECT id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
+            FROM chat_messages
+            WHERE tenant_id = $1 AND conversation_id = $2
+            ORDER BY created_at ASC
+            "#,
+            tenant_id,
+            conversation_id
         )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(inbox_id)
-        .bind(channel_type)
-        .bind(config)
-        .fetch_one(&self.pool)
-        .await
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
     }
 
-    pub async fn create_contact(
-        &self,
-        tenant_id: Uuid,
-        name: Option<String>,
-        email: Option<String>,
-        phone: Option<String>,
-    ) -> Result<ChatContact, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_contacts (id, tenant_id, name, email, phone)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, tenant_id, name, email, phone, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(name)
-        .bind(email)
-        .bind(phone)
-        .fetch_one(&self.pool)
-        .await
-    }
-
-    pub async fn start_conversation(
-        &self,
-        tenant_id: Uuid,
-        inbox_id: Uuid,
-        contact_id: Uuid,
-        assignee_id: Option<Uuid>,
-    ) -> Result<ChatConversation, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status)
-            VALUES ($1, $2, $3, $4, $5, 'open')
-            RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(inbox_id)
-        .bind(contact_id)
-        .bind(assignee_id)
-        .fetch_one(&self.pool)
-        .await
-    }
-
-    pub async fn send_message(
+    pub async fn create_message(
         &self,
         tenant_id: Uuid,
         conversation_id: Uuid,
         sender_type: String,
-        sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
-        sqlx::query_as(
+        let id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+        sqlx::query!(
             r#"
-            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at
-            "#
+            INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, content, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            "#,
+            id, tenant_id, conversation_id, sender_type, content, now, now
         )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(conversation_id)
-        .bind(sender_type)
-        .bind(sender_id)
-        .bind(content)
-        .fetch_one(&self.pool)
-        .await
+        .execute(&self.pool)
+        .await?;
+
+        let msg = ChatMessage {
+            id,
+            tenant_id,
+            conversation_id,
+            sender_type,
+            sender_id: None,
+            content,
+            created_at: now,
+            updated_at: now,
+        };
+        Ok(msg)
     }
 }

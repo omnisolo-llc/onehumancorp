@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OHC - Unified Inbox</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --bubble-agent: #eff6ff;
+            --bubble-contact: #ffffff;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Glassmorphism utility */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        /* App Shell */
+        .header {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .view-container {
+            display: flex;
+            width: 200%; /* For sliding animation */
+            height: calc(100vh - 60px);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .view {
+            width: 100vw; /* 50% of container */
+            height: 100%;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Inbox List */
+        .conversation-list {
+            list-style: none;
+        }
+
+        .conversation-item {
+            display: flex;
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .conversation-item:active {
+            background: #f9fafb;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .item-content {
+            flex: 1;
+            min-width: 0; /* for text truncation */
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .contact-name {
+            font-weight: 600;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .last-message {
+            font-size: 14px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Conversation View */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: #f9fafb;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.4;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .message.agent {
+            align-self: flex-end;
+            background: var(--accent-color);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.contact {
+            align-self: flex-start;
+            background: var(--bubble-contact);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+
+        .input-area {
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: env(safe-area-inset-bottom, 12px);
+        }
+
+        .input-area input {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 10px 16px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-area input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .send-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .send-btn:active {
+            background: var(--accent-hover);
+        }
+
+        /* State Classes */
+        body.viewing-chat .view-container {
+            transform: translateX(-100vw);
+        }
+        body.viewing-chat .back-btn {
+            display: block;
+        }
+        body.viewing-chat .header h1 {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header glass">
+        <button class="back-btn" onclick="showInbox()">❮ Inbox</button>
+        <h1 id="header-title">Unified Inbox</h1>
+        <div style="width: 24px;"></div> <!-- Spacer for flex alignment -->
+    </header>
+
+    <div class="view-container">
+        <!-- Inbox List View -->
+        <div class="view" id="inbox-view">
+            <ul class="conversation-list" id="conversation-list">
+                <!-- Populated by JS -->
+                <li style="padding: 20px; text-align: center; color: #6b7280;">Loading conversations...</li>
+            </ul>
+        </div>
+
+        <!-- Conversation View -->
+        <div class="view" id="chat-view">
+            <div class="chat-container">
+                <div class="messages" id="messages-container">
+                    <!-- Populated by JS -->
+                </div>
+                <div class="input-area">
+                    <input type="text" id="message-input" placeholder="Type a reply..." onkeypress="handleKeyPress(event)">
+                    <button class="send-btn" onclick="sendMessage()" id="send-button">➤</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentConversationId = null;
+
+        // UI Navigation
+        function showChat(id, name) {
+            currentConversationId = id;
+            document.body.classList.add('viewing-chat');
+            document.getElementById('header-title').innerText = name || 'Customer';
+            loadMessages(id);
+        }
+
+        function showInbox() {
+            currentConversationId = null;
+            document.body.classList.remove('viewing-chat');
+            document.getElementById('header-title').innerText = 'Unified Inbox';
+            loadConversations();
+        }
+
+        // API Calls
+        async function loadConversations() {
+            try {
+                const res = await fetch('/api/v1/chat/conversations');
+                if (!res.ok) throw new Error('Network response was not ok');
+                const data = await res.json();
+
+                const listEl = document.getElementById('conversation-list');
+                listEl.innerHTML = ''; // Clear
+
+                if (!data.conversations || data.conversations.length === 0) {
+                    listEl.innerHTML = '<li style="padding: 20px; text-align: center; color: #6b7280;">No active conversations.</li>';
+                    return;
+                }
+
+                data.conversations.forEach(conv => {
+                    const name = conv.contact_name || 'Unknown Contact';
+                    const initial = name.charAt(0).toUpperCase();
+                    const li = document.createElement('li');
+                    li.className = 'conversation-item';
+                    li.onclick = () => showChat(conv.id, name);
+                    li.innerHTML = `
+                        <div class="avatar">${initial}</div>
+                        <div class="item-content">
+                            <div class="item-header">
+                                <span class="contact-name">${name}</span>
+                                <span class="time">${new Date(conv.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <div class="last-message">Status: ${conv.status}</div>
+                        </div>
+                    `;
+                    listEl.appendChild(li);
+                });
+            } catch (err) {
+                console.error('Failed to load conversations:', err);
+            }
+        }
+
+        async function loadMessages(convId) {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #6b7280;">Loading...</div>';
+
+            try {
+                const res = await fetch(`/api/v1/chat/conversations/${convId}/messages`);
+                if (!res.ok) throw new Error('Network response was not ok');
+                const data = await res.json();
+
+                container.innerHTML = '';
+
+                if (!data.messages || data.messages.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; padding: 20px; color: #6b7280;">No messages yet. Say hi!</div>';
+                    return;
+                }
+
+                data.messages.forEach(msg => {
+                    appendMessage(msg.content, msg.sender_type);
+                });
+
+                scrollToBottom();
+            } catch (err) {
+                console.error('Failed to load messages:', err);
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Failed to load messages.</div>';
+            }
+        }
+
+        async function sendMessage() {
+            if (!currentConversationId) return;
+
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+            if (!content) return;
+
+            // Optimistic UI update
+            input.value = '';
+            appendMessage(content, 'agent');
+            scrollToBottom();
+
+            try {
+                await fetch(`/api/v1/chat/conversations/${currentConversationId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                // Real app would handle failure by marking message as failed
+            } catch (err) {
+                console.error('Failed to send message:', err);
+                alert('Failed to send message. Please try again.');
+            }
+        }
+
+        // Helpers
+        function appendMessage(content, senderType) {
+            const container = document.getElementById('messages-container');
+
+            // Remove 'no messages' text if present
+            if (container.innerHTML.includes('No messages yet')) {
+                container.innerHTML = '';
+            }
+
+            const div = document.createElement('div');
+            // Normalize sender types. 'contact' or 'customer' -> contact bubble. 'agent' or 'system' -> agent bubble.
+            const type = senderType.toLowerCase() === 'agent' ? 'agent' : 'contact';
+            div.className = `message ${type}`;
+            div.textContent = content;
+            container.appendChild(div);
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messages-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConversations();
+        });
+    </script>
+</body>
+</html>

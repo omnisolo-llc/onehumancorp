@@ -57,3 +57,18 @@ pub struct ChatMessage {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatConversationWithContact {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub inbox_id: Uuid,
+    pub contact_id: Uuid,
+    pub assignee_id: Option<Uuid>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub contact_name: Option<String>,
+    pub contact_email: Option<String>,
+    pub contact_phone: Option<String>,
+}
