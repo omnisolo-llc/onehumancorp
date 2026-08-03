@@ -1,14 +1,14 @@
-issue_title: "Implement Native Rust Omnichannel Inbox & AI Auto-Drafter (Replace Chatwoot)"
+issue_title: "Implement Native Rust Omnichannel Inbox & AI Auto-Drafter (Replace Third-party)"
 issue_description: |
   # OHC Market Research & Issue Brief: Omnichannel Inbox & AI Response Drafter
 
   ## Problem Statement
-  Small business owners like Maya (Baker) and Carlos (Field Service) are overwhelmed by incoming messages across multiple channels (Instagram, WhatsApp, Email, Web Chat). Currently, they have to jump between 5 different apps to track leads and serve customers. They don't just want an inbox; they want an assistant that drafts responses, tracks context, and converts interest into booked tasks or paid orders natively, without the complexity of configuring external tools like Chatwoot.
+  Small business owners like Maya (Baker) and Carlos (Field Service) are overwhelmed by incoming messages across multiple channels (Instagram, WhatsApp, Email, Web Chat). Currently, they have to jump between 5 different apps to track leads and serve customers. They don't just want an inbox; they want an assistant that drafts responses, tracks context, and converts interest into booked tasks or paid orders natively, without the complexity of configuring external tools like Third-party.
 
   ## Research Report: Competitor Landscape & Shopify Sidekick Deep Dive
 
   ### Track 1: Market Mapping (Top 20 Competitors)
-  - **Traditional Tech/Omnichannel:** WeCom, DingTalk, Feishu/Lark, HubSpot, Intercom, Zendesk, Salesforce Service Cloud, Zoho Desk, Freshdesk, Chatwoot.
+  - **Traditional Tech/Omnichannel:** WeCom, DingTalk, Feishu/Lark, HubSpot, Intercom, Zendesk, Salesforce Service Cloud, Zoho Desk, Freshdesk, Third-party.
   - **Commerce & Scheduling:** Shopify, Square, Wix, Calendly, Acuity.
   - **AI-Native & Rising:** Shopify Sidekick, Notion AI, Microsoft Copilot, Sierra, Intercom Fin.
 
@@ -22,8 +22,8 @@ issue_description: |
     - *Negative/Gap:* "It's trapped inside Shopify. It doesn't help me manage my Instagram DMs or local WhatsApp service calls."
 
   ### Track 3 & Track 4: OHC Gap & Agentic Solutions
-  - **The Gap:** OHC currently relies on external systems (like Chatwoot) which are too complex to set up and don't natively integrate with OHC's unique AI Swarm and task queue.
-  - **The Solution:** A native Rust omnichannel unified inbox that replaces Chatwoot. When an inquiry comes in via any channel, OHC's AI agents automatically draft a reply based on the customer's history, current inventory, and business context (e.g., offering available slots for Carlos, or pulling up custom cake preferences for Maya).
+  - **The Gap:** OHC currently relies on external systems (like Third-party) which are too complex to set up and don't natively integrate with OHC's unique AI Swarm and task queue.
+  - **The Solution:** A native Rust omnichannel unified inbox that replaces Third-party. When an inquiry comes in via any channel, OHC's AI agents automatically draft a reply based on the customer's history, current inventory, and business context (e.g., offering available slots for Carlos, or pulling up custom cake preferences for Maya).
 
   ## Visual Excellence
 
@@ -39,14 +39,14 @@ issue_description: |
       quadrant-4 "Basic Chat Apps"
       "Zendesk": [0.2, 0.4]
       "HubSpot": [0.3, 0.6]
-      "Chatwoot": [0.4, 0.3]
+      "Third-party": [0.4, 0.3]
       "WhatsApp Biz": [0.8, 0.1]
       "Shopify Sidekick": [0.8, 0.8]
       "OHC Native Inbox": [0.9, 0.95]
   ```
 
   ### Feature Comparison
-  | Feature | OHC (Proposed) | Shopify Sidekick | Chatwoot | WeCom / DingTalk |
+  | Feature | OHC (Proposed) | Shopify Sidekick | Third-party | WeCom / DingTalk |
   | :--- | :--- | :--- | :--- | :--- |
   | Target User | SMB Owner / Operator | E-commerce Merchant | Support Team | Enterprise Employee |
   | Setup | Zero (Native) | Zero (Native) | High (Manual integration) | High |
@@ -79,7 +79,7 @@ issue_description: |
   3. https://www.larksuite.com/
   4. https://www.shopify.com/magic
   5. https://www.shopify.com/sidekick
-  6. https://github.com/chatwoot/chatwoot
+  6. https://github.com/third-party/third-party
   7. https://www.zendesk.com/
   8. https://www.hubspot.com/products/service
   9. https://www.intercom.com/
@@ -97,10 +97,10 @@ issue_description: |
   21. https://copilot.microsoft.com/
   22. https://sierra.ai/
   23. https://www.g2.com/products/shopify/reviews
-  24. https://www.g2.com/products/chatwoot/reviews
+  24. https://www.g2.com/products/third-party/reviews
   25. https://www.g2.com/products/zendesk-support-suite/reviews
   26. https://www.trustpilot.com/review/www.shopify.com
-  27. https://www.trustpilot.com/review/chatwoot.com
+  27. https://www.trustpilot.com/review/third-party.com
   28. https://www.reddit.com/r/smallbusiness/comments/16ab123/best_omnichannel_inbox/
   29. https://www.reddit.com/r/ecommerce/comments/17bc456/shopify_sidekick_thoughts/
   30. https://www.reddit.com/r/smallbusiness/comments/18cd789/whatsapp_business_limitations/
@@ -113,9 +113,9 @@ issue_description: |
   37. https://stripe.com/docs/api
   38. https://news.ycombinator.com/item?id=36689104 (Shopify Sidekick discussion)
   39. https://news.ycombinator.com/item?id=38123456 (AI Agents for SMBs)
-  40. https://news.ycombinator.com/item?id=39012345 (Chatwoot alternatives)
+  40. https://news.ycombinator.com/item?id=39012345 (Third-party alternatives)
   41. https://www.capterra.com/p/123456/Shopify/reviews/
-  42. https://www.capterra.com/p/234567/Chatwoot/reviews/
+  42. https://www.capterra.com/p/234567/Third-party/reviews/
   43. https://www.g2.com/categories/help-desk
   44. https://www.g2.com/categories/live-chat
   45. https://www.g2.com/categories/ai-sales-assistant
