@@ -389,10 +389,7 @@ struct ApiKeyMetadata {
     expires_at: Option<String>,
 }
 
-fn get_member_uuid(sub: &str) -> uuid::Uuid {
-    uuid::Uuid::parse_str(sub)
-        .unwrap_or_else(|_| uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_DNS, sub.as_bytes()))
-}
+
 
 #[derive(Clone)]
 pub struct InMemoryApiKey {
@@ -425,22 +422,34 @@ async fn generate_api_key(
     let key_hash = format!("{:x}", Sha256::digest(raw_key.as_bytes()));
     let created_at = chrono::Utc::now().to_rfc3339();
     let key_id = uuid::Uuid::new_v4().to_string();
-    let member_id = get_member_uuid(&claims.sub);
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
     let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
 
     if has_db {
         let pool = crate::db::get_pool();
+        let mut tx = match pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                return no_store_json(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &serde_json::json!({ "error": e.to_string() }),
+                );
+            }
+        };
+        let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&organization_id)
+            .execute(&mut *tx)
+            .await;
         let insert_res = sqlx::query(
             "INSERT INTO api_keys (id, key_hash, name, member_id, organization_id) VALUES ($1, $2, $3, $4, $5)"
         )
         .bind(uuid::Uuid::parse_str(&key_id).unwrap_or_default())
         .bind(&key_hash)
         .bind(&payload.name)
-        .bind(member_id)
+        .bind(&claims.sub)
         .bind(&organization_id)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await;
 
         if let Err(e) = insert_res {
@@ -449,6 +458,7 @@ async fn generate_api_key(
                 &serde_json::json!({ "error": e.to_string() }),
             );
         }
+        let _ = tx.commit().await;
     }
 
     let mut keys = get_in_memory_keys().lock().unwrap();
@@ -476,15 +486,26 @@ async fn list_api_keys(Extension(claims): Extension<::server_common::Claims>) ->
 
     if has_db {
         let pool = crate::db::get_pool();
-        let member_id = get_member_uuid(&claims.sub);
         let organization_id = claims.organization_id.clone().unwrap_or_default();
-
+        let mut tx = match pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                return no_store_json(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &serde_json::json!({ "error": e.to_string() }),
+                );
+            }
+        };
+        let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&organization_id)
+            .execute(&mut *tx)
+            .await;
         let query_res = sqlx::query(
             "SELECT id, name, created_at, expires_at FROM api_keys WHERE member_id = $1 AND organization_id = $2"
         )
-        .bind(member_id)
+        .bind(&claims.sub)
         .bind(&organization_id)
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await;
 
         match query_res {
@@ -546,16 +567,27 @@ async fn revoke_api_key(
                 );
             }
         };
-        let member_id = get_member_uuid(&claims.sub);
         let organization_id = claims.organization_id.clone().unwrap_or_default();
-
+        let mut tx = match pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                return no_store_json(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &serde_json::json!({ "error": e.to_string() }),
+                );
+            }
+        };
+        let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&organization_id)
+            .execute(&mut *tx)
+            .await;
         let delete_res = sqlx::query(
             "DELETE FROM api_keys WHERE id = $1 AND member_id = $2 AND organization_id = $3",
         )
         .bind(key_uuid)
-        .bind(member_id)
+        .bind(&claims.sub)
         .bind(&organization_id)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await;
 
         if let Err(e) = delete_res {
@@ -564,6 +596,7 @@ async fn revoke_api_key(
                 &serde_json::json!({ "error": e.to_string() }),
             );
         }
+        let _ = tx.commit().await;
     }
 
     let mut keys = get_in_memory_keys().lock().unwrap();
@@ -612,6 +645,21 @@ async fn list_member_usage_analytics(
 
     if has_db {
         let pool = crate::db::get_pool();
+        let mut tx = match pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                return no_store_json(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &serde_json::json!({ "error": e.to_string() }),
+                );
+            }
+        };
+        let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
+        let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&organization_id)
+            .execute(&mut *tx)
+            .await;
+
         let query_res = sqlx::query(
             "SELECT u.username, l.feature, SUM(l.tokens_used), CAST(SUM(l.computed_cost) AS double precision) \
              FROM user_usage_logs l \
@@ -620,7 +668,7 @@ async fn list_member_usage_analytics(
              GROUP BY u.username, l.feature"
         )
         .bind(&organization_id)
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await;
 
         match query_res {
@@ -1795,16 +1843,54 @@ mod tests {
 
     async fn app_with_user() -> (Router, Arc<Store>, User) {
         let store = Arc::new(Store::new());
+        let uid = uuid::Uuid::new_v4().to_string();
+        let org_id = format!("tenant-{}", &uid[..8]);
         let user = store
             .create_user(
-                "Alice".into(),
-                "alice@example.test".into(),
+                format!("Alice_{}", &uid[..8]),
+                format!("alice_{}@example.test", &uid[..8]),
                 "correct horse".into(),
                 vec!["ADMIN".into()],
-                "tenant-7".into(),
+                org_id.clone(),
             )
             .await
             .unwrap();
+
+        let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+        if has_db {
+            let _ = crate::postgres_test_support::postgres_security_pool(10).await;
+            let pool = crate::db::get_pool();
+            let mut tx_opt = None;
+            for _ in 0..10 {
+                if let Ok(tx) = pool.begin().await {
+                    tx_opt = Some(tx);
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+            if let Some(mut tx) = tx_opt {
+                let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
+                let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+                    .bind(&org_id)
+                    .bind("Test Tenant")
+                    .execute(&mut *tx)
+                    .await;
+                let _ = sqlx::query(
+                    "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING"
+                )
+                .bind(&user.id)
+                .bind(&user.username)
+                .bind(&user.email)
+                .bind(&user.password_hash)
+                .bind(&user.roles)
+                .bind(user.active)
+                .bind(&org_id)
+                .execute(&mut *tx)
+                .await;
+                let _ = tx.commit().await;
+            }
+        }
+
         (
             router_with_state(HttpAuthState::new(store.clone(), HashSet::new())),
             store,
@@ -1833,11 +1919,14 @@ mod tests {
 
     #[tokio::test]
     async fn login_accepts_email_through_store_and_returns_bounded_user_contract() {
-        let (app, _, _) = app_with_user().await;
-        let request = json_request(
-            "/api/v1/auth/login",
-            r#"{"email":"alice@example.test","password":"correct horse","organization_id":"tenant-7"}"#,
-        );
+        let (app, _, user) = app_with_user().await;
+        let org_id = user.organization_id.clone().unwrap_or_default();
+        let payload = serde_json::json!({
+            "email": user.email,
+            "password": "correct horse",
+            "organization_id": org_id,
+        });
+        let request = json_request("/api/v1/auth/login", payload.to_string());
 
         let response = app.oneshot(request).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
@@ -1853,8 +1942,8 @@ mod tests {
                 .as_str()
                 .is_some_and(|token| !token.is_empty())
         );
-        assert_eq!(body["user"]["username"], "Alice");
-        assert_eq!(body["user"]["organization_id"], "tenant-7");
+        assert_eq!(body["user"]["username"], user.username);
+        assert_eq!(body["user"]["organization_id"], org_id);
     }
 
     #[tokio::test]
@@ -2146,12 +2235,15 @@ mod tests {
 
     #[tokio::test]
     async fn token_expiry_in_login_response_exactly_matches_signed_claim() {
-        let (app, store, _) = app_with_user().await;
+        let (app, store, user) = app_with_user().await;
+        let org_id = user.organization_id.clone().unwrap_or_default();
+        let payload = serde_json::json!({
+            "username": user.username,
+            "password": "correct horse",
+            "organization_id": org_id,
+        });
         let response = app
-            .oneshot(json_request(
-                "/api/v1/auth/login",
-                r#"{"username":"Alice","password":"correct horse","organization_id":"tenant-7"}"#,
-            ))
+            .oneshot(json_request("/api/v1/auth/login", payload.to_string()))
             .await
             .unwrap();
         let body: serde_json::Value = serde_json::from_slice(
@@ -2639,15 +2731,43 @@ mod tests {
         let admin_token = store.issue_token(&user).unwrap();
 
         // Populate a mock log
+        let org_id = user.organization_id.clone().unwrap_or_default();
         {
             let mut logs = get_in_memory_usage_logs().lock().unwrap();
             logs.push(InMemoryUsageLog {
-                username: "Alice".to_string(),
+                username: user.username.clone(),
                 feature: "gateway_run".to_string(),
                 tokens_used: 1250,
                 computed_cost: 0.0025,
-                organization_id: "tenant-7".to_string(),
+                organization_id: org_id.clone(),
             });
+        }
+        if std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok() {
+            let _ = crate::postgres_test_support::postgres_security_pool(10).await;
+            let pool = crate::db::get_pool();
+            let mut tx_opt = None;
+            for _ in 0..10 {
+                if let Ok(tx) = pool.begin().await {
+                    tx_opt = Some(tx);
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+            if let Some(mut tx) = tx_opt {
+                let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
+                sqlx::query(
+                    "INSERT INTO user_usage_logs (user_id, organization_id, feature, tokens_used, computed_cost) VALUES ($1, $2, $3, $4, $5)"
+                )
+                .bind(&user.id)
+                .bind(&org_id)
+                .bind("gateway_run")
+                .bind(1250)
+                .bind(0.0025)
+                .execute(&mut *tx)
+                .await
+                .expect("INSERT INTO user_usage_logs failed");
+                tx.commit().await.expect("analytics test commit failed");
+            }
         }
 
         let success_request = with_peer(
@@ -2669,7 +2789,7 @@ mod tests {
 
         let array = body.as_array().unwrap();
         assert!(!array.is_empty());
-        assert_eq!(array[0]["username"], "Alice");
+        assert_eq!(array[0]["username"], user.username);
         assert_eq!(array[0]["feature"], "gateway_run");
         assert_eq!(array[0]["tokens_used"], 1250);
         assert_eq!(array[0]["computed_cost"], 0.0025);
