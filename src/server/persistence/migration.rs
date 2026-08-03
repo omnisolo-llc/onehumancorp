@@ -1,5 +1,5 @@
 use chrono::Utc;
-use sea_orm::sea_query::Index;
+use sea_orm::sea_query::{Index, OnConflict};
 use sea_orm::{
     ActiveModelTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryOrder, Schema, Set,
     Statement, TransactionTrait,
@@ -137,6 +137,17 @@ where
                 .to_owned(),
         ),
         (
+            "email_verification_challenges",
+            "ux_email_verification_challenges_email",
+            Index::create()
+                .name("ux_email_verification_challenges_email")
+                .table(auth_entities::email_challenge::Entity)
+                .col(auth_entities::email_challenge::Column::Email)
+                .unique()
+                .if_not_exists()
+                .to_owned(),
+        ),
+        (
             "external_identities",
             "ux_external_identities_provider_subject",
             Index::create()
@@ -163,59 +174,60 @@ where
     backfill_identity_email_claims(connection).await?;
     configure_postgres_role_rls(connection).await?;
 
-    if entities::schema_version::Entity::find_by_id(CORE_SCHEMA_VERSION)
-        .one(connection)
-        .await?
-        .is_none()
-    {
+    insert_default_or_ignore(
+        connection,
         entities::schema_version::ActiveModel {
             id: Set(CORE_SCHEMA_VERSION.to_owned()),
             applied_at: Set(Utc::now()),
-        }
-        .insert(connection)
-        .await?;
-    }
+        },
+    )
+    .await?;
 
-    if auth_entities::application_setting::Entity::find_by_id("registration_mode")
-        .one(connection)
-        .await?
-        .is_none()
-    {
+    insert_default_or_ignore(
+        connection,
         auth_entities::application_setting::ActiveModel {
             key: Set("registration_mode".to_string()),
             value: Set("closed".to_string()),
             updated_at: Set(Utc::now()),
             updated_by: Set(None),
-        }
-        .insert(connection)
-        .await?;
-    }
+        },
+    )
+    .await?;
 
-    if entities::schema_version::Entity::find_by_id(AUTH_SCHEMA_VERSION)
-        .one(connection)
-        .await?
-        .is_none()
-    {
+    insert_default_or_ignore(
+        connection,
         entities::schema_version::ActiveModel {
             id: Set(AUTH_SCHEMA_VERSION.to_owned()),
             applied_at: Set(Utc::now()),
-        }
-        .insert(connection)
-        .await?;
-    }
-    if entities::schema_version::Entity::find_by_id(PORTABLE_ROLE_SCHEMA_VERSION)
-        .one(connection)
-        .await?
-        .is_none()
-    {
+        },
+    )
+    .await?;
+
+    insert_default_or_ignore(
+        connection,
         entities::schema_version::ActiveModel {
             id: Set(PORTABLE_ROLE_SCHEMA_VERSION.to_owned()),
             applied_at: Set(Utc::now()),
-        }
-        .insert(connection)
-        .await?;
-    }
+        },
+    )
+    .await?;
     Ok(())
+}
+
+async fn insert_default_or_ignore<C, A>(connection: &C, active: A) -> Result<(), sea_orm::DbErr>
+where
+    C: ConnectionTrait,
+    A: ActiveModelTrait,
+{
+    match A::Entity::insert(active)
+        .on_conflict(OnConflict::new().do_nothing().to_owned())
+        .exec(connection)
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(sea_orm::DbErr::RecordNotInserted) => Ok(()),
+        Err(error) => Err(error),
+    }
 }
 
 async fn acquire_postgres_migration_guard(

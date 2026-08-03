@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, DatabaseTransaction,
-    EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set, Statement, TransactionTrait,
+    ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, DatabaseConnection,
+    DatabaseTransaction, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set, Statement,
+    TransactionTrait,
 };
 
 use crate::{User, user_repository::UserRepository};
@@ -331,6 +332,12 @@ pub struct NewEmailChallenge {
     pub invitation_id: Option<String>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EmailChallengeCreation {
+    Created,
+    Throttled { retry_after_seconds: u64 },
+}
+
 #[derive(Clone, Debug)]
 pub struct NewRegistrationTicket {
     pub id: String,
@@ -555,11 +562,26 @@ impl SeaOrmAuthRepository {
         transaction.commit().await.map_err(db_error)
     }
 
-    pub async fn create_email_challenge(&self, challenge: NewEmailChallenge) -> Result<(), String> {
+    pub async fn create_email_challenge(
+        &self,
+        challenge: NewEmailChallenge,
+    ) -> Result<EmailChallengeCreation, String> {
         let transaction = begin_global_transaction(&self.connection).await?;
-        entities::email_challenge::ActiveModel {
+        let email = challenge.email.clone();
+        entities::email_challenge::Entity::delete_many()
+            .filter(entities::email_challenge::Column::Email.eq(&email))
+            .filter(
+                Condition::any()
+                    .add(entities::email_challenge::Column::VerifiedAt.is_not_null())
+                    .add(entities::email_challenge::Column::ExpiresAt.lte(challenge.created_at))
+                    .add(entities::email_challenge::Column::ResendAfter.lte(challenge.created_at)),
+            )
+            .exec(&transaction)
+            .await
+            .map_err(db_error)?;
+        let inserted = entities::email_challenge::ActiveModel {
             id: Set(challenge.id),
-            email: Set(challenge.email),
+            email: Set(email.clone()),
             code_hash: Set(challenge.code_hash),
             source_hash: Set(challenge.source_hash),
             created_at: Set(challenge.created_at),
@@ -571,9 +593,30 @@ impl SeaOrmAuthRepository {
             invitation_id: Set(challenge.invitation_id),
         }
         .insert(&transaction)
-        .await
-        .map_err(db_error)?;
-        transaction.commit().await.map_err(db_error)
+        .await;
+        match inserted {
+            Ok(_) => {
+                transaction.commit().await.map_err(db_error)?;
+                Ok(EmailChallengeCreation::Created)
+            }
+            Err(error) if is_unique_violation(&error) => {
+                transaction.rollback().await.map_err(db_error)?;
+                let retry_after_seconds = self
+                    .latest_email_challenge(&email)
+                    .await?
+                    .map(|existing| {
+                        (existing.resend_after - Utc::now()).num_seconds().max(1) as u64
+                    })
+                    .unwrap_or(1);
+                Ok(EmailChallengeCreation::Throttled {
+                    retry_after_seconds,
+                })
+            }
+            Err(error) => {
+                transaction.rollback().await.map_err(db_error)?;
+                Err(db_error(error))
+            }
+        }
     }
 
     pub async fn email_challenge(
@@ -831,7 +874,9 @@ impl SeaOrmAuthRepository {
                 provider_kind: provider.provider_kind,
                 issuer: provider.issuer,
                 configured: !provider.client_id.trim().is_empty()
-                    && !provider.secret_ref.trim().is_empty(),
+                    && !provider.secret_ref.trim().is_empty()
+                    && std::env::var(&provider.secret_ref)
+                        .is_ok_and(|secret| !secret.trim().is_empty()),
                 enabled: provider.enabled,
             })
             .collect();
@@ -883,8 +928,10 @@ impl SeaOrmAuthRepository {
     pub async fn sync_configured_oidc_providers_from_environment(&self) -> Result<(), String> {
         let transaction = begin_global_transaction(&self.connection).await?;
         let mut configured = Vec::new();
-        if let Ok(client_id) = std::env::var("OHC_OIDC_GOOGLE_CLIENT_ID") {
-            if !client_id.trim().is_empty() {
+        let google_client_id = std::env::var("OHC_OIDC_GOOGLE_CLIENT_ID").ok();
+        let google_secret = std::env::var("OHC_OIDC_GOOGLE_CLIENT_SECRET").ok();
+        if let (Some(client_id), Some(secret)) = (google_client_id, google_secret) {
+            if !client_id.trim().is_empty() && !secret.trim().is_empty() {
                 configured.push((
                     "google".to_string(),
                     "Google".to_string(),
@@ -895,11 +942,16 @@ impl SeaOrmAuthRepository {
                 ));
             }
         }
-        if let (Ok(issuer), Ok(client_id)) = (
-            std::env::var("OHC_OIDC_KEYCLOAK_ISSUER"),
-            std::env::var("OHC_OIDC_KEYCLOAK_CLIENT_ID"),
-        ) {
-            if !issuer.trim().is_empty() && !client_id.trim().is_empty() {
+        let keycloak_issuer = std::env::var("OHC_OIDC_KEYCLOAK_ISSUER").ok();
+        let keycloak_client_id = std::env::var("OHC_OIDC_KEYCLOAK_CLIENT_ID").ok();
+        let keycloak_secret = std::env::var("OHC_OIDC_KEYCLOAK_CLIENT_SECRET").ok();
+        if let (Some(issuer), Some(client_id), Some(secret)) =
+            (keycloak_issuer, keycloak_client_id, keycloak_secret)
+        {
+            if !issuer.trim().is_empty()
+                && !client_id.trim().is_empty()
+                && !secret.trim().is_empty()
+            {
                 configured.push((
                     "keycloak".to_string(),
                     "Keycloak".to_string(),
@@ -943,21 +995,31 @@ impl SeaOrmAuthRepository {
                 active.update(&transaction).await.map_err(db_error)?;
             } else {
                 let now = Utc::now();
-                entities::oidc_provider::ActiveModel {
-                    key: Set(key),
-                    display_name: Set(display_name),
-                    provider_kind: Set(provider_kind),
-                    issuer: Set(issuer.trim_end_matches('/').to_string()),
-                    client_id: Set(client_id),
-                    scopes: Set(serde_json::json!(["openid", "email", "profile"])),
-                    secret_ref: Set(secret_ref),
-                    enabled: Set(false),
-                    created_at: Set(now),
-                    updated_at: Set(now),
+                let inserted =
+                    entities::oidc_provider::Entity::insert(entities::oidc_provider::ActiveModel {
+                        key: Set(key),
+                        display_name: Set(display_name),
+                        provider_kind: Set(provider_kind),
+                        issuer: Set(issuer.trim_end_matches('/').to_string()),
+                        client_id: Set(client_id),
+                        scopes: Set(serde_json::json!(["openid", "email", "profile"])),
+                        secret_ref: Set(secret_ref),
+                        enabled: Set(false),
+                        created_at: Set(now),
+                        updated_at: Set(now),
+                    })
+                    .on_conflict(
+                        sea_orm::sea_query::OnConflict::new()
+                            .do_nothing()
+                            .to_owned(),
+                    )
+                    .exec(&transaction)
+                    .await;
+                match inserted {
+                    Ok(_) => {}
+                    Err(sea_orm::DbErr::RecordNotInserted) => {}
+                    Err(error) => return Err(db_error(error)),
                 }
-                .insert(&transaction)
-                .await
-                .map_err(db_error)?;
             }
         }
         transaction.commit().await.map_err(db_error)
@@ -1142,6 +1204,13 @@ where
 fn db_error(error: sea_orm::DbErr) -> String {
     tracing::error!(event = "auth.persistence.unavailable", error_kind = ?error.sql_err());
     "authentication persistence unavailable".to_string()
+}
+
+fn is_unique_violation(error: &sea_orm::DbErr) -> bool {
+    matches!(
+        error.sql_err(),
+        Some(sea_orm::SqlErr::UniqueConstraintViolation(_))
+    )
 }
 
 #[async_trait]
@@ -1405,6 +1474,8 @@ mod atomic_registration_tests {
             migration_source
                 .contains("migrate_with_connection(database.backend(), &migration_guard)")
         );
+        assert!(migration_source.contains("ux_email_verification_challenges_email"));
+        assert!(migration_source.contains("OnConflict::new().do_nothing()"));
         assert!(
             migration_source.contains("ALTER TABLE identity_user_roles ENABLE ROW LEVEL SECURITY")
         );
@@ -1427,6 +1498,16 @@ mod atomic_registration_tests {
 
         let commands_source = include_str!("../persistence/commands.rs");
         assert!(commands_source.contains("run_legacy_postgres_migrations"));
+
+        assert!(production_source.contains("EmailChallengeCreation"));
+        assert!(production_source.contains("is_unique_violation"));
+        assert!(production_source.contains("OHC_OIDC_GOOGLE_CLIENT_SECRET"));
+        assert!(production_source.contains("OHC_OIDC_KEYCLOAK_CLIENT_SECRET"));
+
+        let http_source = include_str!("../auth/http.rs");
+        assert!(http_source.contains("EmailChallengeCreation::Throttled"));
+        assert!(http_source.contains("verification recently sent"));
+        assert!(http_source.contains("std::env::var(&config.secret_ref)"));
     }
 
     async fn repositories() -> (
@@ -1457,6 +1538,7 @@ mod atomic_registration_tests {
             schema.create_table_from_entity(entities::external_identity::Entity),
             schema.create_table_from_entity(entities::identity_email_claim::Entity),
             schema.create_table_from_entity(entities::identity_user_role::Entity),
+            schema.create_table_from_entity(entities::oidc_provider::Entity),
         ] {
             first
                 .execute(first.get_database_backend().build(&statement))
@@ -1470,12 +1552,159 @@ mod atomic_registration_tests {
             ))
             .await
             .unwrap();
+        first
+            .execute(sea_orm::Statement::from_string(
+                sea_orm::DatabaseBackend::Sqlite,
+                "CREATE UNIQUE INDEX IF NOT EXISTS ux_email_verification_challenges_email ON email_verification_challenges (email)"
+                    .to_string(),
+            ))
+            .await
+            .unwrap();
         let second = connect(url).await;
         (
             directory,
             SeaOrmAuthRepository::new(first),
             SeaOrmAuthRepository::new(second),
         )
+    }
+
+    #[tokio::test]
+    async fn concurrent_email_challenge_creation_sends_at_most_one_verification() {
+        let (_directory, first, second) = repositories().await;
+        let challenge = |id: &str| NewEmailChallenge {
+            id: id.to_string(),
+            email: "verify@example.test".to_string(),
+            code_hash: format!("code-{id}"),
+            source_hash: "source".to_string(),
+            created_at: Utc::now(),
+            expires_at: Utc::now() + chrono::Duration::minutes(15),
+            resend_after: Utc::now() + chrono::Duration::seconds(60),
+            invitation_id: None,
+        };
+        let (left, right) = tokio::join!(
+            first.create_email_challenge(challenge("one")),
+            second.create_email_challenge(challenge("two")),
+        );
+        let created = usize::from(matches!(left, Ok(EmailChallengeCreation::Created)))
+            + usize::from(matches!(right, Ok(EmailChallengeCreation::Created)));
+        let throttled = usize::from(matches!(left, Ok(EmailChallengeCreation::Throttled { .. })))
+            + usize::from(matches!(
+                right,
+                Ok(EmailChallengeCreation::Throttled { .. })
+            ));
+        assert_eq!(created, 1);
+        assert_eq!(throttled, 1);
+        assert_eq!(
+            entities::email_challenge::Entity::find()
+                .count(first.connection())
+                .await
+                .unwrap(),
+            1
+        );
+    }
+
+    #[tokio::test]
+    async fn email_challenge_creation_replaces_expired_or_resendable_rows() {
+        let (_directory, repository, _second) = repositories().await;
+        let now = Utc::now();
+        entities::email_challenge::ActiveModel {
+            id: Set("old".to_string()),
+            email: Set("resend@example.test".to_string()),
+            code_hash: Set("old-code".to_string()),
+            source_hash: Set("source".to_string()),
+            created_at: Set(now - chrono::Duration::minutes(5)),
+            expires_at: Set(now + chrono::Duration::minutes(10)),
+            resend_after: Set(now - chrono::Duration::minutes(1)),
+            attempts: Set(0),
+            send_count: Set(1),
+            verified_at: Set(None),
+            invitation_id: Set(None),
+        }
+        .insert(repository.connection())
+        .await
+        .unwrap();
+
+        let created = repository
+            .create_email_challenge(NewEmailChallenge {
+                id: "new".to_string(),
+                email: "resend@example.test".to_string(),
+                code_hash: "new-code".to_string(),
+                source_hash: "source".to_string(),
+                created_at: now,
+                expires_at: now + chrono::Duration::minutes(15),
+                resend_after: now + chrono::Duration::seconds(60),
+                invitation_id: None,
+            })
+            .await
+            .unwrap();
+        assert_eq!(created, EmailChallengeCreation::Created);
+        assert_eq!(
+            entities::email_challenge::Entity::find()
+                .count(repository.connection())
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            entities::email_challenge::Entity::find_by_id("new")
+                .one(repository.connection())
+                .await
+                .unwrap()
+                .unwrap()
+                .code_hash,
+            "new-code"
+        );
+    }
+
+    #[tokio::test]
+    async fn oidc_sync_requires_the_referenced_secret_before_advertising_configuration() {
+        let (_directory, repository, _second) = repositories().await;
+        temp_env::async_with_vars(
+            [
+                ("OHC_OIDC_GOOGLE_CLIENT_ID", Some("client-id")),
+                ("OHC_OIDC_GOOGLE_CLIENT_SECRET", None),
+                ("OHC_OIDC_KEYCLOAK_ISSUER", None),
+                ("OHC_OIDC_KEYCLOAK_CLIENT_ID", None),
+                ("OHC_OIDC_KEYCLOAK_CLIENT_SECRET", None),
+            ],
+            async {
+                repository
+                    .sync_configured_oidc_providers_from_environment()
+                    .await
+                    .unwrap();
+                let providers = repository.admin_oidc_providers().await.unwrap();
+                let google = providers.iter().find(|provider| provider.key == "google");
+                assert!(
+                    google.is_none(),
+                    "secret-less client must not be advertised"
+                );
+            },
+        )
+        .await;
+
+        temp_env::async_with_vars(
+            [
+                ("OHC_OIDC_GOOGLE_CLIENT_ID", Some("client-id")),
+                ("OHC_OIDC_GOOGLE_CLIENT_SECRET", Some("client-secret")),
+                ("OHC_OIDC_KEYCLOAK_ISSUER", None),
+                ("OHC_OIDC_KEYCLOAK_CLIENT_ID", None),
+                ("OHC_OIDC_KEYCLOAK_CLIENT_SECRET", None),
+            ],
+            async {
+                repository
+                    .sync_configured_oidc_providers_from_environment()
+                    .await
+                    .unwrap();
+                let providers = repository.admin_oidc_providers().await.unwrap();
+                let google = providers
+                    .iter()
+                    .find(|provider| provider.key == "google")
+                    .expect("secret-backed client must be present");
+                assert!(google.configured);
+                assert!(!google.enabled);
+            },
+        )
+        .await;
     }
 
     async fn set_mode(repository: &SeaOrmAuthRepository, mode: RegistrationMode) {
