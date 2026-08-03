@@ -1,17 +1,17 @@
-issue_title: "Design Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Design Native Rust Omnichannel Chat System (Omnichannel Dependency Replacement)"
 issue_description: |
   ## Problem Statement
-  OmniSolo/OHC currently relies on external third-party services like Chatwoot for omnichannel customer support and chat functionality. Relying on external dependencies introduces latency, security risks (multi-tenant data sharing), and breaks the unified AI-agent-driven work assistant experience. Non-technical owners (e.g., Maya the Baker, Carlos the Handyman) need an integrated customer communication channel directly within OHC that coordinates seamlessly with the rest of their operations.
+  OmniSolo/OHC currently relies on external third-party services for omnichannel customer support and chat functionality. Relying on external dependencies introduces latency, security risks (multi-tenant data sharing), and breaks the unified AI-agent-driven work assistant experience. Non-technical owners (e.g., Maya the Baker, Carlos the Handyman) need an integrated customer communication channel directly within OHC that coordinates seamlessly with the rest of their operations.
 
   ## Research Report
-  - **Chatwoot Source Code Audit:**
-    - Analyzed Chatwoot's omnichannel data models (`https://github.com/chatwoot/chatwoot`), which include `Conversations`, `Messages`, `Inboxes`, `Contacts`, `ChannelAdapters` (Web, API, Email, SMS, WhatsApp), and `Users` (Agents/Admins).
-    - Chatwoot handles real-time sync through ActionCable (WebSocket).
+  - **External Platform Source Code Audit:**
+    - Analyzed open-source omnichannel data models, which include `Conversations`, `Messages`, `Inboxes`, `Contacts`, `ChannelAdapters` (Web, API, Email, SMS, WhatsApp), and `Users` (Agents/Admins).
+    - It handles real-time sync through WebSocket (ActionCable).
     - It uses SLA policies, auto-assignment algorithms, macros, and canned responses to speed up agent workflows.
   - **OHC Competitive Analysis:**
     - Competitors like Shopify Inbox, WeCom, and DingTalk provide native, deeply integrated chat systems that share context with orders, products, and customer records.
   - **Proposed Integration:**
-    - OHC will build its own high-performance, native Rust omnichannel chat system to fully retire Chatwoot.
+    - OHC will build its own high-performance, native Rust omnichannel chat system to fully retire external dependencies.
     - Our system will handle multi-tenant isolation rigorously via tenant IDs and Row-Level Security (RLS) equivalents at the database level.
     - WebSockets will be handled via Actix-Web or Axum in Rust, ensuring low-latency communication.
 
