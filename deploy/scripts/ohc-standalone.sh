@@ -43,9 +43,7 @@ fi
 
 umask 077
 
-if [ "$(stat -c %a "$0")" != "700" ]; then
-  chmod 700 "$0"
-fi
+chmod 700 "$0" 2>/dev/null || true
 
 echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
 mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}" "${OHC_RUNTIME_DIR}/tmp/" "${OHC_RUNTIME_DIR}/.cache/" "${OHC_RUNTIME_DIR}/downloads/"
@@ -60,6 +58,7 @@ if [ -z "$OHC_SQLITE_KEY" ]; then
     (umask 077 && openssl rand -hex 32 > "$KEY_FILE")
     chmod 600 "$KEY_FILE"
   fi
+  chmod 600 "$KEY_FILE" 2>/dev/null || true
   export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
 fi
 
