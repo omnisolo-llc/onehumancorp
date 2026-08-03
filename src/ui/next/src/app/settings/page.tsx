@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import OmnichannelSettingsPanel from "./OmnichannelSettingsPanel";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "../components/AppShell";
@@ -746,6 +747,13 @@ export default function SettingsPage() {
             registrationStatus={registrationStatus}
           />
         )}
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 border-b pb-2">
+            Omnichannel Communication Settings
+          </h2>
+          <OmnichannelSettingsPanel />
+        </section>
+
 
         {/* Member Analytics Section */}
         {isAdmin && (

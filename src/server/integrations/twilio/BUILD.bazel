@@ -8,6 +8,8 @@ rust_library(
         "client.rs",
         "mod.rs",
         "provider.rs",
+        "webhook.rs",
+        "webhook_test.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -21,6 +23,18 @@ rust_library(
         "@crates//:tokio",
         "@crates//:rand",
         "@crates//:serde_json",
+        "@crates//:tracing",
+
+
+        "@crates//:axum",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:hmac",
+        "@crates//:sha1",
+        "@crates//:sha2",
+        "@crates//:hex",
+        "@crates//:base64",
+        "//src/server/utils:server_utils",
     ],
 )
 

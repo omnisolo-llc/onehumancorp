@@ -3494,6 +3494,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let twilio_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
         .route("/api/v1/webhooks/twilio/voice", axum::routing::post(api::twilio_webhook::twilio_voice_webhook_handler))
+        .route("/api/v1/webhooks/whatsapp_connector", axum::routing::post(crate::integrations::whatsapp_cloud::webhook::handle_whatsapp_webhook).with_state(crate::db::get_pool()))
+        .route_layer(axum::middleware::from_fn(crate::integrations::whatsapp_cloud::webhook::whatsapp_signature_middleware))
+        .route("/api/v1/webhooks/twilio_connector", axum::routing::post(crate::integrations::twilio::webhook::handle_twilio_webhook).with_state(crate::db::get_pool()))
+        .route_layer(axum::middleware::from_fn(crate::integrations::twilio::webhook::twilio_connector_signature_middleware))
         .route_layer(axum::middleware::from_fn(
             api::twilio_webhook::twilio_signature_middleware,
         ))
