@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use serde_json::json;
 use std::sync::OnceLock;
+use regex::Regex;
 
 #[async_trait]
 pub trait WhatsAppCloudClientWrapper: Send + Sync {
@@ -19,26 +20,50 @@ impl RealWhatsAppCloudClient {
             access_token,
         }
     }
+
+    /// Exposes the URL generation for testing purposes
+    pub fn get_url(&self) -> String {
+        format!(
+            "https://graph.facebook.com/v19.0/{}/messages",
+            self.phone_number_id
+        )
+    }
+
+    /// Generates the payload to be sent, exposing it for testing
+    pub fn generate_payload(to: &str, body: &str) -> serde_json::Value {
+        let re = BSUID_REGEX.get_or_init(|| Regex::new(r"^[A-Z]{2}\.(?:ENT\.)?[A-Za-z0-9]{1,128}$").unwrap());
+
+        if re.is_match(to) {
+            json!({
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "recipient": to,
+                "type": "text",
+                "text": {
+                    "body": body
+                }
+            })
+        } else {
+            json!({
+                "messaging_product": "whatsapp",
+                "to": to,
+                "type": "text",
+                "text": {
+                    "body": body
+                }
+            })
+        }
+    }
 }
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+static BSUID_REGEX: OnceLock<Regex> = OnceLock::new();
 
 #[async_trait]
 impl WhatsAppCloudClientWrapper for RealWhatsAppCloudClient {
     async fn send_message(&self, to: &str, body: &str) -> Result<(), String> {
-        let url = format!(
-            "https://graph.facebook.com/v19.0/{}/messages",
-            self.phone_number_id
-        );
-
-        let payload = json!({
-            "messaging_product": "whatsapp",
-            "to": to,
-            "type": "text",
-            "text": {
-                "body": body
-            }
-        });
+        let url = self.get_url();
+        let payload = Self::generate_payload(to, body);
 
         let client = HTTP_CLIENT.get_or_init(reqwest::Client::new);
         let res = client
