@@ -539,8 +539,6 @@ Output JSON format:
                         .execute(&self.db.pool).await {
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
-<<<<<<< HEAD
-=======
                     if let Err(e) = sqlx::query("UPDATE chat_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&action_payload)
                         .bind(&message_id)
@@ -548,7 +546,6 @@ Output JSON format:
                         .execute(&self.db.pool).await {
                         tracing::error!("Failed to update chat_messages: {}", e);
                     }
->>>>>>> 94bae86af (docs: generate architectural research report for native Rust chat engine (#36330))
 
 
 
@@ -679,8 +676,6 @@ Output JSON format:
                         .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to update inbox_messages: {}", e);
                     }
-<<<<<<< HEAD
-=======
                     if let Err(e) = sqlx::query("UPDATE chat_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&action_payload)
                         .bind(&message_id)
@@ -688,7 +683,6 @@ Output JSON format:
                         .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to update chat_messages: {}", e);
                     }
->>>>>>> 94bae86af (docs: generate architectural research report for native Rust chat engine (#36330))
 
 
 
