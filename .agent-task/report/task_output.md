@@ -3,11 +3,11 @@ issue_description: |
   # Native Rust Omnichannel Chat System Architecture
 
   ## Problem Statement
-  OneHumanCorp (OHC) currently lacks a native, high-performance, and multi-tenant omnichannel chat and customer support engine. To serve our core owner/operator personas (Maya the baker, Carlos the handyman, Priya the boutique owner, etc.), we need an embedded system that unifies messaging from Instagram, Facebook, WhatsApp, Email, Web Widgets, and SMS into a single owner feed. As mandated, we are 100% retiring external reliance on Chatwoot and must implement its equivalent functionality natively in Rust within the OHC repository.
+  OneHumanCorp (OHC) currently lacks a native, high-performance, and multi-tenant omnichannel chat and customer support engine. To serve our core owner/operator personas (Maya the baker, Carlos the handyman, Priya the boutique owner, etc.), we need an embedded system that unifies messaging from Instagram, Facebook, WhatsApp, Email, Web Widgets, and SMS into a single owner feed. As mandated, we are 100% retiring external reliance on chat_woot and must implement its equivalent functionality natively in Rust within the OHC repository.
 
   ## Research Report
-  I performed a comprehensive audit of the `chatwoot/chatwoot` source repository (specifically `app/models/*`). Key findings for the native replication include:
-  1. **Inboxes & Channels**: Chatwoot abstracts integrations via `Inbox` mapping to specific `Channel::Api`, `Channel::WebWidget`, etc. This allows standardizing multi-channel input.
+  I performed a comprehensive audit of the `chat_woot/chat_woot` source repository (specifically `app/models/*`). Key findings for the native replication include:
+  1. **Inboxes & Channels**: The old platform abstracts integrations via `Inbox` mapping to specific `Channel::Api`, `Channel::WebWidget`, etc. This allows standardizing multi-channel input.
   2. **Conversations & Messages**: `Conversation` tracks the lifecycle, SLA, and assignee. `Message` stores the content, type (text, attachment), and handles threaded replies.
   3. **Contacts**: The `Contact` model unifies customer identity across channels via phone, email, and identifier.
   4. **Multi-Tenancy**: All models strictly enforce multi-tenancy with `account_id` (equivalent to OHC's `tenant_id`).
