@@ -1,5 +1,5 @@
 -- Create core tables for native omnichannel chat
--- Replaces Chatwoot implementation
+-- Replaces old external chat platform implementation
 
 -- UUIDv7 Generation Function
 -- Properly compliant with RFC 4122 / 9562 for UUID version 7
