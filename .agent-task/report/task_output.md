@@ -1,12 +1,12 @@
 issue_title: "[Research] Architect Native Rust Omnichannel Chat System"
 issue_description: |
   **Problem Statement**
-  The overarching goal for OneHumanCorp (OHC) is to act as an AI-powered assistant for business owners (like Maya the Baker, Carlos the Handyman). A critical requirement is an Omnichannel Chat system (replacing third-party services like Chatwoot) integrated directly into the core Rust/Go system.
+  The overarching goal for OneHumanCorp (OHC) is to act as an AI-powered assistant for business owners (like Maya the Baker, Carlos the Handyman). A critical requirement is an Omnichannel Chat system (replacing third-party services like the legacy chat system) integrated directly into the core Rust/Go system.
   Currently, there is no native, deeply integrated omnichannel communication system that acts as a central hub (Work Triage) capturing DMs, SMS, Web Chat, and Email into a unified 'Inbox'. Without this, our AI Agents (e.g., the Customer Assistant) cannot draft replies seamlessly, nor can we trace interactions perfectly into work/bookings.
 
   **Research Report**
-  As mandated, Chatwoot dependency is retired. We need a native Rust implementation.
-  Benchmarking Chatwoot’s core source code (`https://github.com/chatwoot/chatwoot`), the primary domain model for real-time customer messaging involves:
+  As mandated, the legacy chat system dependency is retired. We need a native Rust implementation.
+  Benchmarking the legacy chat system’s core source code (`https://github.com/the legacy chat system/the legacy chat system`), the primary domain model for real-time customer messaging involves:
   - Accounts (Tenants in OHC)
   - Inboxes (Channels like Web Widget, Email, FB Messenger, SMS)
   - Contacts (Customers)
