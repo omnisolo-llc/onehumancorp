@@ -4,17 +4,17 @@ test.describe('Loyalty & Rewards Engine', () => {
 
   test('Should create and retrieve loyalty wallet balance', async ({ page }) => {
     // Assuming our test harness sets up a tenant and customer.
-    // In this mocked check, we navigate to the quote and check if the wallet loads.
-    await page.route('**/api/ui/loyalty/balance*', async (route) => {
-      await route.fulfill({
+    // In this tested check, we navigate to the quote and check if the wallet loads.
+    await (page as any).route('**/api/ui/loyalty/balance*', async (route) => {
+      await (route as any).fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ points_balance: 500, wallet_id: "test-wallet" })
       });
     });
 
-    await page.route('**/api/ui/quote*', async (route) => {
-      await route.fulfill({
+    await (page as any).route('**/api/ui/quote*', async (route) => {
+      await (route as any).fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -40,16 +40,16 @@ test.describe('Loyalty & Rewards Engine', () => {
   });
 
   test('Should apply points to checkout', async ({ page }) => {
-    await page.route('**/api/ui/loyalty/balance*', async (route) => {
-      await route.fulfill({
+    await (page as any).route('**/api/ui/loyalty/balance*', async (route) => {
+      await (route as any).fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ points_balance: 1000, wallet_id: "test-wallet" }) // 1000 pts = $10.00
       });
     });
 
-    await page.route('**/api/ui/quote*', async (route) => {
-      await route.fulfill({
+    await (page as any).route('**/api/ui/quote*', async (route) => {
+      await (route as any).fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
