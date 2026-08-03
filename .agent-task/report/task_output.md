@@ -1,15 +1,15 @@
-issue_title: "Architecture: Native Rust Omnichannel Chat Engine (Chatwoot Replacement)"
+issue_title: "Architecture: Native Rust Omnichannel Chat Engine (the legacy chat system Replacement)"
 issue_description: |
   ## Mission Queue Protocol Brief
 
   ### Problem Statement
-  OHC has heavily relied on Chatwoot as a third-party dependency for its omnichannel inbox functionality. However, Chatwoot's architecture adds significant operational overhead, breaks our native multi-tenancy model (PostgreSQL RLS), complicates the Zero-Trust security posture, and introduces unacceptable latency for AI agent real-time intervention. For personas like Maya (the baker fielding Instagram DMs) and Carlos (the handyman replying to service queries), the chat interface needs to be instant, offline-tolerant, and deeply integrated into the OHC AI work assistant. We need a native, high-performance omnichannel engine built in Rust to replace Chatwoot completely.
+  OHC has heavily relied on the legacy chat system as a third-party dependency for its omnichannel inbox functionality. However, the legacy chat system's architecture adds significant operational overhead, breaks our native multi-tenancy model (PostgreSQL RLS), complicates the Zero-Trust security posture, and introduces unacceptable latency for AI agent real-time intervention. For personas like Maya (the baker fielding Instagram DMs) and Carlos (the handyman replying to service queries), the chat interface needs to be instant, offline-tolerant, and deeply integrated into the OHC AI work assistant. We need a native, high-performance omnichannel engine built in Rust to replace the legacy chat system completely.
 
   ### Research Report
-  - **Codebase & Docs Audit:** Chatwoot uses Ruby on Rails with complex database schemas (Accounts, Conversations, Messages, Contacts, Inboxes). It handles WebSocket real-time messaging and channel integrations (WhatsApp, FB, Twitter, Email).
+  - **Codebase & Docs Audit:** the legacy chat system uses Ruby on Rails with complex database schemas (Accounts, Conversations, Messages, Contacts, Inboxes). It handles WebSocket real-time messaging and channel integrations (WhatsApp, FB, Twitter, Email).
   - **Competitor Systems Audit:** Systems like Shopify Ping, Stripe Customer Portal, and Intercom use edge-optimized real-time messaging with tightly coupled AI copilot features.
   - **Gap Identification:** OHC requires an omnichannel chat architecture built natively in Rust that enforces PostgreSQL RLS (Row-Level Security) natively for multi-tenancy, handles WebSockets directly via OHC's API gateway, and integrates seamlessly with our AI Agent background job queues.
-  - **Chatwoot Source Benchmarking:** Analyzed `conversations`, `messages`, `contacts`, and `inboxes` schemas in Chatwoot. We will replicate the unified conversational model but using native Rust structs, Diesel/SQLx, and our established `tenant_id` RLS patterns.
+  - **the legacy chat system Source Benchmarking:** Analyzed `conversations`, `messages`, `contacts`, and `inboxes` schemas in the legacy chat system. We will replicate the unified conversational model but using native Rust structs, Diesel/SQLx, and our established `tenant_id` RLS patterns.
 
   ### Architecture Design
   - **Architecture Diagram (Mermaid.js)**
@@ -66,7 +66,7 @@ issue_description: |
   - Create a WebSocket service adapter for real-time delivery to the Flutter frontend.
   - Write unit tests for all models and API endpoints achieving 100% coverage.
   - Provide one E2E Playwright test simulating an owner opening the inbox, viewing a mock injected conversation, and sending a reply.
-  - Replace all remaining Chatwoot API calls with the new native Rust API.
+  - Replace all remaining the legacy chat system API calls with the new native Rust API.
 
 issue_priority: P0
 issue_category: research
