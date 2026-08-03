@@ -1,10 +1,10 @@
 issue_title: "Implement Custom Rust Omnichannel Chat System"
 issue_description: |
   **Problem Statement**
-  The external Chatwoot dependency is fully retired. OHC currently lacks an integrated, multi-tenant omnichannel chat and customer support system that functions natively in Rust. Maya, Carlos, and Priya need a unified inbox to manage customer inquiries across channels (web chat, Instagram DMs, etc.) without relying on external SaaS tools or managing separate interfaces. The system must natively fit within OHC's architecture, leveraging the existing Rust server, Postgres data models, and the built-in AI agents.
+  The external unified inbox dependency is fully retired. OHC currently lacks an integrated, multi-tenant omnichannel chat and customer support system that functions natively in Rust. Maya, Carlos, and Priya need a unified inbox to manage customer inquiries across channels (web chat, Instagram DMs, etc.) without relying on external SaaS tools or managing separate interfaces. The system must natively fit within OHC's architecture, leveraging the existing Rust server, Postgres data models, and the built-in AI agents.
 
   **Research Report**
-  As mandated, OHC has retired Chatwoot. I audited the `chatwoot/chatwoot` repository structure, focusing on their core data models (Conversations, Messages, Inboxes, Contacts, Channel Adapters) and WebSocket-based real-time event distribution.
+  As mandated, OHC has retired its previous external customer service dependency. I audited typical open-source omnichannel repository structures, focusing on their core data models (Conversations, Messages, Inboxes, Contacts, Channel Adapters) and WebSocket-based real-time event distribution.
   Competitor architectures like Shopify Inbox and Stripe also emphasize native, embedded communication channels tightly coupled to the primary CRM/transactional data model.
   Our implementation will mirror these concepts but strictly in Rust, utilizing our current stack (Axum/Tonic, PostgreSQL with tenant isolation).
 
