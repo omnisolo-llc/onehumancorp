@@ -1080,11 +1080,13 @@ impl VectorRepository {
                                         (b.id.clone(), a.id.clone())
                                     };
                                     conflicting_pairs_ids.push((id_a, id_b));
+                                    skip_set.insert(i);
                                     skip_set.insert(j);
                                     match_count += 1;
                                     if match_count >= 100 {
                                         break 'outer;
                                     }
+                                    break;
                                 }
                             }
                         }
