@@ -6,10 +6,10 @@ use std::sync::Arc;
 use crate::llm::LlmClient;
 use ohc_builtin_agent_core::types::{ChatRequest, Message as LlmMessage};
 
-/// Chatwoot Retirement & Custom Rust Omnichannel Chat System Standard (MANDATORY)
-/// Complete Chatwoot Retirement: Chatwoot as an external third-party service, dependency, or integration is 100% RETIRED.
+/// Legacy System Retirement & Custom Rust Omnichannel Chat System Standard (MANDATORY)
+/// Complete Legacy System Retirement: Legacy System as an external third-party service, dependency, or integration is 100% RETIRED.
 /// OHC implements its own high-performance, multi-tenant omnichannel customer support & chat engine natively in Rust.
-/// These models replicate Chatwoot's data models to achieve 100% feature parity.
+/// These models replicate Legacy System's data models to achieve 100% feature parity.
 /// Row-level tenant isolation is strictly enforced via `tenant_id`.
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
