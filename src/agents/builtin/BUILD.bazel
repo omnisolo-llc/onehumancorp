@@ -54,6 +54,12 @@ rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
         "actor_model.rs",
+        "omnichannel/mod.rs",
+        "omnichannel/chat_engine.rs",
+        "omnichannel/models.rs",
+        "omnichannel/routing.rs",
+        "omnichannel/webhooks.rs",
+        "omnichannel/ai_features.rs",
         "agent.rs",
         "agent_protocol.rs",
         "auth.rs",
