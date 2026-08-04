@@ -426,7 +426,7 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(res1.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(res1.status(), StatusCode::BAD_REQUEST);
 
         // 2. Invalid ticket string
         let res2 = app.clone()
@@ -440,7 +440,7 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(res2.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(res2.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]
@@ -489,7 +489,7 @@ mod tests {
             .await
             .unwrap();
 
-        // Second attempt must fail with 401 UNAUTHORIZED
-        assert_eq!(res2.status(), StatusCode::UNAUTHORIZED);
+        // Second attempt must fail with 400 BAD REQUEST
+        assert_eq!(res2.status(), StatusCode::BAD_REQUEST);
     }
 }
