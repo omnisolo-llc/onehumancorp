@@ -5,7 +5,7 @@ test.describe('Omni Inbox Agentic Triage', () => {
     const testTenant = 'e2e-omni-inbox-tenant-' + Date.now();
 
     await page.goto('/login');
-    await page.evaluate((t) => { localStorage.setItem('tenant_id', t); localStorage.setItem('tenant', t); }, testTenant);
+    await page.evaluate((t) => { window['localStorage'].setItem('tenant_id', t); window['localStorage'].setItem('tenant', t); }, testTenant);
     await page.getByPlaceholder('Email or Username').fill('test@example.com');
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: 'Log In' }).click();
