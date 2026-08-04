@@ -129,7 +129,7 @@ common:nativelink-readonly --remote_upload_local_results=false
 
 common:remote-cache --config=nativelink
 common:remote-cache --remote_executor=
-common:remote-cache --remote_download_minimal
+common:remote-cache --remote_download_outputs=all
 common:remote-cache --remote_local_fallback
 common:remote-cache --remote_timeout=10m
 
