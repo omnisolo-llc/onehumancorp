@@ -115,9 +115,9 @@ describe('CustomerReferralProgramPage', () => {
         fireEvent.click(toggle);
     });
 
-    expect(screen.queryByText('Pro Feature')).toBeNull();
+    expect(screen.queryByText('Pro Feature')).not.toBeInTheDocument();
     // The exact text "⚡ Powered by OHC" in the preview should be removed
-    expect(screen.queryByText('⚡ Powered by OHC')).toBeNull();
+    expect(screen.queryByText('⚡ Powered by OHC')).not.toBeInTheDocument();
   });
 
 });
