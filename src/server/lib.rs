@@ -1,5 +1,7 @@
 use sqlx::Row;
 pub mod persistence;
+#[cfg(test)]
+mod persistence_commands_test;
 pub mod rag_sync;
 pub mod redis_pool;
 pub mod cart_recovery;
@@ -2913,10 +2915,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let standalone = crate::is_standalone_runtime();
     let portable_database = match crate::persistence::commands::connect_from_environment().await {
-        Ok(database) => {
-            crate::persistence::migration::migrate(&database).await?;
-            Some(std::sync::Arc::new(database))
-        }
+        Ok(database) => Some(std::sync::Arc::new(database)),
         Err(error) if standalone => {
             tracing::warn!("portable database is unavailable in standalone mode: {error}");
             None
@@ -2954,6 +2953,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
+    if let Some(database) = portable_database.as_ref() {
+        crate::persistence::migration::migrate(database).await?;
+    }
 
     let grpc_port = std::env::var("OHC_GRPC_PORT")
         .ok()
