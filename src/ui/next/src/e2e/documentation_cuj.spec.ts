@@ -72,7 +72,7 @@ test.describe("Documentation User Journey", () => {
 
     // Verify AI response from the real backend
     await expect(
-      page.locator("text=How do I add a product?").first(),
+      page.locator("text=Based on our help center:").first(),
     ).toBeVisible();
   });
 });

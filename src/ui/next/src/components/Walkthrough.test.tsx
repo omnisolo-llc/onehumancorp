@@ -377,7 +377,7 @@ describe('Walkthrough Component', () => {
 
     render(<InteractiveWalkthrough steps={steps} isOpen={true} onClose={() => {}} />);
 
-    vi.advanceTimersByTime(300);
+    act(() => { vi.advanceTimersByTime(300); });
 
     const spy = vi.spyOn(document.getElementById('step1')!, 'getBoundingClientRect').mockReturnValue({
       width: 100, height: 100, top: 10, left: 10, right: 110, bottom: 110, x: 10, y: 10, toJSON: () => {}
@@ -385,7 +385,7 @@ describe('Walkthrough Component', () => {
 
     fireEvent.scroll(window);
 
-    vi.advanceTimersByTime(50);
+    act(() => { vi.advanceTimersByTime(50); });
 
     expect(spy).toHaveBeenCalled();
 

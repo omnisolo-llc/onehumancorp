@@ -43,7 +43,7 @@ test.describe('Help Components', () => {
 
     // Verify response
     await expect(page.locator('text=How do I accept credit cards?').first()).toBeVisible();
-    await expect(page.locator('text=Sorry, I\'m having trouble connecting right now.').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Based on our help center:').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('Help Chat clears messages', async ({ page }) => {
@@ -69,7 +69,7 @@ test.describe('Help Components', () => {
 
     // Verify messages are gone
     await expect(page.locator('text=How do I clear this chat?')).not.toBeVisible();
-    await expect(page.locator('text=Hi! I\'m your AI Help Agent. Need help setting up your store or understanding payments?').first()).toBeVisible();
+    await expect(page.locator('text=Hi! I\'m your AI Support Agent. How can I help you grow your business today?').first()).toBeVisible();
     await expect(clearButton).not.toBeVisible();
   });
 
