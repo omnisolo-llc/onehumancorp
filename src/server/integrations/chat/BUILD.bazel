@@ -1,0 +1,38 @@
+exports_files(["Cargo.toml"])
+
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_chat",
+    srcs = [
+        "src/lib.rs",
+        "src/gateway.rs",
+        "src/models.rs",
+        "src/handlers.rs",
+        "src/tests.rs",
+    ],
+    crate_root = "src/lib.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:tokio",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:axum",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_chat_unit_test",
+    size = "small",
+    crate = ":server_integrations_chat",
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
