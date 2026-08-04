@@ -451,6 +451,29 @@ mod tests {
     }
 
     #[test]
+    fn test_miser_comprehensive_extreme_pricing() {
+        // Let's test a very custom CostConfig with extreme prices and deep discount factor.
+        let config = CostConfig {
+            cost_per_input_token: 0.12345,
+            cost_per_output_token: 0.54321,
+            cost_per_cached_input_token: 0.01234,
+            cost_per_local_embedding: 0.00099,
+            discount_factor: 0.95, // 95% discount (extreme bulk rate)
+            ..Default::default()
+        };
+
+        // Inputs: 1,000,000 input tokens, 2,000,000 output tokens, 3,000,000 cached tokens, 500,000 embedding tokens
+        // Un-discounted cost: 1M * 0.12345 + 2M * 0.54321 + 3M * 0.01234 + 500k * 0.00099
+        // Un-discounted cost = 123,450.0 + 1,086,420.0 + 37,020.0 + 495.0 = 1,247,385.0
+        // With 95% discount (paying 5%): 1,247,385.0 * 0.05 = 62,369.25
+        let cost = calculate_cost_with_config(1_000_000, 2_000_000, 3_000_000, 500_000, &config);
+        assert_eq!(cost, 62369.25);
+
+        let cost_cents = calculate_cost_with_config_cents(1_000_000, 2_000_000, 3_000_000, 500_000, &config);
+        assert_eq!(cost_cents, 6236925);
+    }
+
+    #[test]
     fn test_calculate_heuristic_token_efficiency() {
         // gpt-4o input cost is 5.00 per 1M tokens.
         // We truncate from 100,000 to 50,000 tokens, saving 50,000.
