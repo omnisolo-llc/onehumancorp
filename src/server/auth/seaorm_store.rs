@@ -996,6 +996,10 @@ impl SeaOrmAuthRepository {
             } else {
                 let now = Utc::now();
                 let backend = transaction.get_database_backend();
+                let quote = |identifier: &str| match backend {
+                    sea_orm::DatabaseBackend::MySql => format!("`{identifier}`"),
+                    _ => format!("\"{identifier}\""),
+                };
                 let placeholders: Vec<String> = match backend {
                     sea_orm::DatabaseBackend::Postgres => {
                         (1..=10).map(|index| format!("${index}")).collect()
@@ -1008,7 +1012,24 @@ impl SeaOrmAuthRepository {
                     _ => "INSERT",
                 };
                 let mut sql = format!(
-                    "{keyword} INTO oidc_providers (key, display_name, provider_kind, issuer, client_id, scopes, secret_ref, enabled, created_at, updated_at) VALUES ({})",
+                    "{keyword} INTO {} ({}) VALUES ({})",
+                    quote("oidc_providers"),
+                    [
+                        "key",
+                        "display_name",
+                        "provider_kind",
+                        "issuer",
+                        "client_id",
+                        "scopes",
+                        "secret_ref",
+                        "enabled",
+                        "created_at",
+                        "updated_at",
+                    ]
+                    .iter()
+                    .map(|column| quote(column))
+                    .collect::<Vec<_>>()
+                    .join(", "),
                     placeholders.join(", ")
                 );
                 if backend == sea_orm::DatabaseBackend::Postgres {
@@ -1519,7 +1540,8 @@ mod atomic_registration_tests {
         assert!(production_source.contains("OHC_OIDC_GOOGLE_CLIENT_SECRET"));
         assert!(production_source.contains("OHC_OIDC_KEYCLOAK_CLIENT_SECRET"));
         assert!(production_source.contains("INSERT IGNORE"));
-        assert!(production_source.contains("INTO oidc_providers"));
+        assert!(production_source.contains("quote(\"oidc_providers\")"));
+        assert!(production_source.contains("\"key\","));
 
         let http_source = include_str!("../auth/http.rs");
         assert!(http_source.contains("EmailChallengeCreation::Throttled"));
