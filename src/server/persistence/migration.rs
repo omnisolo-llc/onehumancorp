@@ -226,6 +226,10 @@ where
     C: ConnectionTrait,
 {
     let backend = connection.get_database_backend();
+    let quote = |identifier: &str| match backend {
+        sea_orm::DatabaseBackend::MySql => format!("`{identifier}`"),
+        _ => format!("\"{identifier}\""),
+    };
     let placeholders: Vec<String> = match backend {
         sea_orm::DatabaseBackend::Postgres => (1..=values.len())
             .map(|index| format!("${index}"))
@@ -238,8 +242,13 @@ where
         _ => "INSERT",
     };
     let mut sql = format!(
-        "{keyword} INTO {table} ({}) VALUES ({})",
-        columns.join(", "),
+        "{keyword} INTO {} ({}) VALUES ({})",
+        quote(table),
+        columns
+            .iter()
+            .map(|column| quote(column))
+            .collect::<Vec<_>>()
+            .join(", "),
         placeholders.join(", ")
     );
     if backend == sea_orm::DatabaseBackend::Postgres {
