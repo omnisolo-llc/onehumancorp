@@ -18,15 +18,16 @@ test.describe('Unified Inbox Triage Feed for Instagram DMs', () => {
 
     // 2. Simulate an incoming webhook from Meta/Instagram
     await page.evaluate(async (t) => {
+        const payload = JSON.parse(JSON.stringify({
+            tenant_id: t,
+            source: 'instagram',
+            identifier: 'ig_user_123',
+            message: 'Can you fix my sink tomorrow?'
+        }));
         await fetch('/api/v1/webhooks/unified_inbox', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                tenant_id: t,
-                source: 'instagram',
-                identifier: 'ig_user_123',
-                message: 'Can you fix my sink tomorrow?'
-            })
+            body: JSON.stringify(payload)
         });
     }, testTenant);
 
