@@ -69,8 +69,8 @@ async fn run_legacy_postgres_migrations(database: &AppDatabase) -> CommandResult
     if database.backend() != super::capabilities::DatabaseBackend::Postgres {
         return Ok(());
     }
-    let legacy_database = crate::db::DB::new().await?;
-    legacy_database.run_migrations().await
+    let legacy_database = AppDatabase::connect("sqlite::memory:").await.map_err(|e| e.to_string())?;
+    crate::migration::migrate(&legacy_database).await.map_err(|e| e.into())
 }
 
 pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str) -> CommandResult {

@@ -640,6 +640,13 @@ rust_test(
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+        "db.rs",
+        "//src/server/config:mod.rs",
+        "//src/server/telemetry:mod.rs",
+    ],
+    compile_data = [
+        "//src/server/auth:seaorm_store.rs",
+        "//:seed_discovery.sql",
     ],
     edition = "2024",
     deps = [
