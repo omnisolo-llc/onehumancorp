@@ -9024,6 +9024,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "server_integrations_chat"
+version = "0.1.0"
+dependencies = [
+ "axum 0.8.9",
+ "chrono",
+ "redis",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "server_integrations_chromadb"
 version = "0.1.0"
 dependencies = [

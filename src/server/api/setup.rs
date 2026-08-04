@@ -244,12 +244,16 @@ async fn create_initial_admin(
         return setup_response(StatusCode::UNAUTHORIZED, false, "request failed");
     }
 
-    let Ok(request) = serde_json::from_slice::<SetupAdminRequest>(&body) else {
+    let Ok(mut request) = serde_json::from_slice::<SetupAdminRequest>(&body) else {
         return setup_response(StatusCode::BAD_REQUEST, false, "invalid request");
     };
     if !valid_request(&request) {
         return setup_response(StatusCode::BAD_REQUEST, false, "invalid request");
     }
+    let Ok(normalized_email) = crate::auth::validation::normalize_email(&request.email) else {
+        return setup_response(StatusCode::BAD_REQUEST, false, "invalid request");
+    };
+    request.email = normalized_email;
 
     let result = match &state.db.store {
         crate::db::DbStore::Postgres => {
@@ -303,10 +307,30 @@ async fn bootstrap_postgres(
         .execute(&mut *transaction)
         .await?;
     let now = chrono::Utc::now();
+    let user_id = uuid::Uuid::new_v4().to_string();
+    let claims_exist: bool = sqlx::query_scalar(
+        "SELECT to_regclass('identity_email_claims') IS NOT NULL",
+    )
+    .fetch_one(&mut *transaction)
+    .await?;
+    if claims_exist {
+        let claimed = sqlx::query(
+            "INSERT INTO identity_email_claims (normalized_email, user_id, claimed_at) VALUES ($1, $2, $3) ON CONFLICT (normalized_email) DO NOTHING",
+        )
+        .bind(&request.email)
+        .bind(&user_id)
+        .bind(now)
+        .execute(&mut *transaction)
+        .await?;
+        if claimed.rows_affected() != 1 {
+            transaction.rollback().await?;
+            return Ok(BootstrapOutcome::Conflict);
+        }
+    }
     sqlx::query(
         "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at) VALUES ($1, $2, $3, $4, ARRAY[$5]::TEXT[], TRUE, $6, $7, $7)",
     )
-    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(user_id)
     .bind(&request.username)
     .bind(&request.email)
     .bind(&password_hash)
@@ -343,10 +367,30 @@ async fn bootstrap_sqlite(
         .execute(&mut *transaction)
         .await?;
     let now = chrono::Utc::now();
+    let user_id = uuid::Uuid::new_v4().to_string();
+    let claims_exist: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'identity_email_claims')",
+    )
+    .fetch_one(&mut *transaction)
+    .await?;
+    if claims_exist {
+        let claimed = sqlx::query(
+            "INSERT INTO identity_email_claims (normalized_email, user_id, claimed_at) VALUES (?, ?, ?) ON CONFLICT(normalized_email) DO NOTHING",
+        )
+        .bind(&request.email)
+        .bind(&user_id)
+        .bind(now)
+        .execute(&mut *transaction)
+        .await?;
+        if claimed.rows_affected() != 1 {
+            transaction.rollback().await?;
+            return Ok(BootstrapOutcome::Conflict);
+        }
+    }
     sqlx::query(
         "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at) VALUES (?, ?, ?, ?, json(?), TRUE, ?, ?, ?)",
     )
-    .bind(uuid::Uuid::new_v4().to_string())
+    .bind(user_id)
     .bind(&request.username)
     .bind(&request.email)
     .bind(&password_hash)
@@ -386,6 +430,15 @@ mod tests {
         });
         db.run_migrations().await.unwrap();
         (db, pool)
+    }
+
+    async fn create_identity_email_claims_table(pool: &sqlx::SqlitePool) {
+        sqlx::query(
+            "CREATE TABLE identity_email_claims (normalized_email TEXT PRIMARY KEY NOT NULL, user_id TEXT NOT NULL, claimed_at TIMESTAMP NOT NULL)",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
     }
 
     fn request(token: Option<&str>, body: &str) -> Request<Body> {
@@ -517,6 +570,7 @@ mod tests {
     #[tokio::test]
     async fn concurrent_setup_requests_create_one_admin_and_conflict_the_rest() {
         let (db, pool) = sqlite_db().await;
+        create_identity_email_claims_table(&pool).await;
         temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
             let app = router(db);
             let mut tasks = Vec::new();
@@ -555,6 +609,76 @@ mod tests {
             .await
             .unwrap();
             assert_eq!(admin_count, 1);
+            let claim_count: i64 =
+                sqlx::query_scalar("SELECT COUNT(*) FROM identity_email_claims")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+            assert_eq!(claim_count, 1);
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn setup_normalizes_and_claims_email_when_portable_claims_exist() {
+        let (db, pool) = sqlite_db().await;
+        create_identity_email_claims_table(&pool).await;
+        let body = r#"{
+            "username":"bootstrap-admin",
+            "email":"Admin@Example.Test",
+            "password":"correct horse battery staple",
+            "organizationId":"tenant-bootstrap"
+        }"#;
+
+        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+            let response = router(db)
+                .oneshot(request(Some(SETUP_TOKEN), body))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::CREATED);
+            let user: (String, String) = sqlx::query_as("SELECT id, email FROM users")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert_eq!(user.1, "admin@example.test");
+            let claim: (String, String) = sqlx::query_as(
+                "SELECT normalized_email, user_id FROM identity_email_claims",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            assert_eq!(claim, ("admin@example.test".to_string(), user.0));
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn setup_rejects_a_portable_email_claim_owned_by_another_identity() {
+        let (db, pool) = sqlite_db().await;
+        create_identity_email_claims_table(&pool).await;
+        sqlx::query("INSERT INTO identity_email_claims (normalized_email, user_id, claimed_at) VALUES ('admin@example.test', 'reserved-user', CURRENT_TIMESTAMP)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        temp_env::async_with_vars([("OHC_SETUP_TOKEN", Some(SETUP_TOKEN))], async move {
+            let response = router(db)
+                .oneshot(request(Some(SETUP_TOKEN), VALID_REQUEST))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::CONFLICT);
+            let user_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            assert_eq!(user_count, 0);
+            let owner: String = sqlx::query_scalar(
+                "SELECT user_id FROM identity_email_claims WHERE normalized_email = 'admin@example.test'",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+            assert_eq!(owner, "reserved-user");
         })
         .await;
     }
@@ -755,6 +879,7 @@ mod tests {
     #[tokio::test]
     async fn setup_rolls_back_tenant_creation_when_user_creation_fails() {
         let (db, pool) = sqlite_db().await;
+        create_identity_email_claims_table(&pool).await;
         sqlx::query("CREATE TRIGGER reject_bootstrap_admin BEFORE INSERT ON users WHEN NEW.username = 'bootstrap-admin' BEGIN SELECT RAISE(ABORT, 'forced user failure'); END")
             .execute(&pool)
             .await
@@ -776,6 +901,12 @@ mod tests {
                     .await
                     .unwrap();
             assert_eq!(tenant_count, 0);
+            let claim_count: i64 =
+                sqlx::query_scalar("SELECT COUNT(*) FROM identity_email_claims")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+            assert_eq!(claim_count, 0);
         })
         .await;
     }
@@ -915,6 +1046,31 @@ mod tests {
                 .contains("::server_common::auth_utils::set_system_context(&mut *transaction)")
         );
         assert!(!production_source.contains("SET LOCAL row_security = off"));
+    }
+
+    #[test]
+    fn both_setup_backends_claim_portable_identity_emails_when_available() {
+        let source = include_str!("setup.rs");
+        let production_source = source
+            .rsplit_once("\n#[cfg(test)]\nmod tests {")
+            .expect("setup source must retain its test boundary")
+            .0;
+        let postgres = production_source
+            .split_once("async fn bootstrap_postgres")
+            .unwrap()
+            .1
+            .split_once("async fn bootstrap_sqlite")
+            .unwrap()
+            .0;
+        let sqlite = production_source
+            .split_once("async fn bootstrap_sqlite")
+            .unwrap()
+            .1;
+        for backend in [postgres, sqlite] {
+            assert!(backend.contains("identity_email_claims"));
+            assert!(backend.contains("normalized_email, user_id, claimed_at"));
+            assert!(backend.contains("claimed.rows_affected() != 1"));
+        }
     }
 
     #[test]
