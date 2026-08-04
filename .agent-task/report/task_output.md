@@ -1,11 +1,11 @@
-issue_title: "Implement Native Rust Omnichannel Chat Engine (Chatwoot Replacement)"
+issue_title: "Implement Native Rust Omnichannel Chat Engine (Legacy Integration Replacement)"
 issue_description: |
   ## Problem Statement
-  OHC previously relied on Chatwoot as an external service/dependency for omnichannel customer support and chat functionality. Relying on an external third-party service breaks our strict multi-tenant isolation rules, complicates our deployment model, and introduces external latency and reliability risks. Chatwoot has been 100% RETIRED as an external dependency. We need a native Rust implementation of a high-performance, multi-tenant omnichannel customer support & chat engine natively integrated into OHC to achieve 100% feature parity with Chatwoot, while maintaining strict Zero-Trust multi-tenant isolation, SPIFFE/SPIRE identity, and mobile-first UX.
+  OHC previously relied on a legacy external service/dependency for omnichannel customer support and chat functionality. Relying on an external third-party service breaks our strict multi-tenant isolation rules, complicates our deployment model, and introduces external latency and reliability risks. That external dependency has been 100% RETIRED. We need a native Rust implementation of a high-performance, multi-tenant omnichannel customer support & chat engine natively integrated into OHC to achieve 100% feature parity with the legacy platform, while maintaining strict Zero-Trust multi-tenant isolation, SPIFFE/SPIRE identity, and mobile-first UX.
 
   ## Research Report
   - **Market Context**: Modern SMBs (like Maya the baker and Carlos the handyman) receive customer inquiries across multiple channels (Instagram, WhatsApp, Web, SMS). A unified inbox is critical for them to manage these conversations efficiently.
-  - **Competitor Analysis**: Tools like Chatwoot, Zendesk, and Shopify Inbox provide unified inbox capabilities. Chatwoot's architecture relies on a robust data model with Inboxes, Conversations, Messages, Contacts, and Channel Adapters (e.g., WhatsApp, Web Widget, Email).
+  - **Competitor Analysis**: Tools like Zendesk and Shopify Inbox provide unified inbox capabilities. The legacy platform's architecture relied on a robust data model with Inboxes, Conversations, Messages, Contacts, and Channel Adapters (e.g., WhatsApp, Web Widget, Email). We must replicate and enhance this architecture natively.
   - **Current OHC Deficiencies**: Without a native chat engine, OHC cannot provide the unified inbox experience required by our core personas without relying on external services, which violates our architectural constraints.
 
   ## Design Doc
@@ -47,6 +47,8 @@ issue_description: |
   - Implement a WebSocket gateway for real-time message delivery and typing indicators.
   - Ensure 100% unit test coverage for the new Rust services.
   - Write Playwright E2E tests covering the unified inbox CUJ (receiving and replying to a message).
+
+  **Estimated Scope**: Large
 
 issue_priority: P0
 issue_category: research
