@@ -11,7 +11,7 @@ issue_description: |
   - **Traditional CRM (HubSpot, Salesforce)**: Too complex for 1-10 person operations, requiring heavy administrative setup.
   - **E-commerce AI (Shopify Sidekick)**: Excellent for store analytics and basic workflows but strictly tied to traditional e-commerce paradigms; it struggles with service-oriented or custom order workflows.
   - **Asia-Pacific Leaders (Tencent Workbuddy, WeCom, DingTalk)**: Masterful at omnichannel integration (WeChat + enterprise). They blur the line between internal operations and external customer service, but are regionalized and heavy.
-  - **Chatwoot**: Powerful omnichannel base (WhatsApp, Instagram, Email, SMS, live chat), but lacks integrated business operation actions (like "draft a quote based on inventory").
+  - **Retired-External-Chat-Service**: Powerful omnichannel base (WhatsApp, Instagram, Email, SMS, live chat), but lacks integrated business operation actions (like "draft a quote based on inventory").
 
   ### Deep-Dive: Shopify Sidekick vs. OHC
   Shopify Sidekick aims to be an AI commerce assistant.
@@ -38,7 +38,7 @@ issue_description: |
   ### High-Level Architecture
   - **Entity Types**: `Tenant`, `Customer`, `Conversation`, `Message`, `ActionDraft` (Quote, Booking, Payment Request).
   - **Relationships**: A `Conversation` belongs to a `Tenant` and a `Customer`. `Message`s belong to `Conversation`s. AI agents generate `ActionDraft`s linked to a `Conversation`.
-  - **Integration Points**: Native Rust omnichannel ingest service (replacing Chatwoot) pulling from Instagram Graph API, WhatsApp Business API, and Email.
+  - **Integration Points**: Native Rust omnichannel ingest service (replacing Retired-External-Chat-Service) pulling from Instagram Graph API, WhatsApp Business API, and Email.
 
   ### UI/UX & Mobile Flow (375px First)
   1. **Triage Feed (Home Screen)**: Unified list of active conversations sorted by AI-determined urgency. Translucent glass styling and Apple-like hierarchy.
@@ -87,7 +87,7 @@ issue_description: |
   8. https://squareup.com/us/en/software/appointments
   9. https://hubspot.com/products/crm
   10. https://www.notion.so/product/ai
-  11. https://github.com/chatwoot/chatwoot
+  11. https://github.com/retired-external-chat-service/retired-external-chat-service
   12. https://www.zendesk.com/
   13. https://intercom.com/
   14. https://front.com/
