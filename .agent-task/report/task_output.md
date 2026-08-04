@@ -9,7 +9,7 @@ issue_description: |
   **Findings & Competitive Analysis:**
   - **Shopify Inbox:** Aggregates chat and email but relies heavily on manual responses or basic auto-replies.
   - **Wix Inbox:** Good aggregation, but AI features are mostly limited to "improving tone".
-  - **Chatwoot:** OHC previously relied on Chatwoot for an omnichannel inbox, but Chatwoot as an external dependency is 100% RETIRED. OHC requires a high-performance, multi-tenant omnichannel customer support & chat engine built natively in Rust.
+  - **The external chat service:** OHC previously relied on The external chat service for an omnichannel inbox, but The external chat service as an external dependency is 100% RETIRED. OHC requires a high-performance, multi-tenant omnichannel customer support & chat engine built natively in Rust.
   - **OHC Opportunity:** Leverage our "Teammate" AI philosophy. The Customer Success Agent (The Ambassador) doesn't just aggregate messages; it reads them, queries the customer's omnichannel identity graph, and proactively drafts a complete, accurate response.
 
   # Design Doc
@@ -45,7 +45,7 @@ issue_description: |
 
   ### Key Design Decisions
 
-  - **Native Rust Implementation:** Replace external Chatwoot dependency with a custom Rust omnichannel chat system inside `onehumancorp/mono`.
+  - **Native Rust Implementation:** Replace external The external chat service dependency with a custom Rust omnichannel chat system inside `onehumancorp/mono`.
   - **Proactive Drafting:** Move from read-reply to read-approve. The AI drafts the response _before_ the user opens the app.
   - **Tenant Isolation:** Enforce Row Level Security (RLS) via `tenant_id`.
 
@@ -54,8 +54,8 @@ issue_description: |
   **User-Facing Outcome:** As a business owner, when a customer DMs me on Instagram asking about their past order, I open the OHC app to find a pre-written, perfectly accurate response already drafted. I tap one button to send it.
 
   **CUJ & Acceptance Criteria:**
-  1. Implement a custom native Rust Omnichannel Gateway in `src/server/integrations/chat/` to replace external Chatwoot dependencies.
-  2. The system MUST implement core chat models (Conversation, Message, Inbox) similar to Chatwoot, mapped to the Rust PostgreSQL database with strict row-level security (`tenant_id`).
+  1. Implement a custom native Rust Omnichannel Gateway in `src/server/integrations/chat/` to replace external The external chat service dependencies.
+  2. The system MUST implement core chat models (Conversation, Message, Inbox) similar to The external chat service, mapped to the Rust PostgreSQL database with strict row-level security (`tenant_id`).
   3. The system MUST provide an API endpoint to receive external webhooks (e.g., simulating WhatsApp or Instagram) and process them.
   4. The system MUST trigger an AI Agent to draft a response upon receiving a new message.
   5. The draft must be surfaced to the UI, allowing the owner to "Approve" and send the drafted response.
