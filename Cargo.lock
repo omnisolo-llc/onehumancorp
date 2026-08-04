@@ -9024,6 +9024,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "server_integrations_chat"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum 0.8.9",
+ "chrono",
+ "futures",
+ "prost 0.13.5",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "server_common",
+ "tokio",
+ "tonic 0.12.3",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "server_integrations_chromadb"
 version = "0.1.0"
 dependencies = [
