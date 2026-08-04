@@ -123,7 +123,7 @@ describe('CostDashboardPage', () => {
     });
 
     // My Plan assertions
-    expect(screen.getByText('My Plan')).toBeDefined();
+    expect(screen.getAllByText('My Plan')).toBeDefined();
     expect(screen.getByText('Back to My Plan')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
     // AI Actions Used: 150 / 1000. Text split.
@@ -134,7 +134,7 @@ describe('CostDashboardPage', () => {
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100
 
-    expect(screen.getAllByText('Cost Transparency Dashboard')[0]).toBeDefined();
+    expect(screen.getAllByText('My Plan')[0]).toBeDefined();
     expect(screen.getByText('Period: 2023-10-01 to 2023-10-31')).toBeDefined();
 
     // total revenue

@@ -1,6 +1,6 @@
 import { test, expect } from '../fixtures';
 
-test.describe('Cost Transparency Dashboard CUJ', () => {
+test.describe('My Plan CUJ', () => {
     test('owner can view their tier limits and storage usage', async ({ page }) => {
         // 1. Navigate to cost dashboard
         await page.goto("/api/v1/ui/cost-dashboard.html");

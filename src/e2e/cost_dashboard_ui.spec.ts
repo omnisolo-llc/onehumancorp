@@ -8,7 +8,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await page.goto('/cost-dashboard');
 
     // Wait for the main heading to be visible
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify key sections are present
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
@@ -35,7 +35,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await page.goto('/cost-dashboard');
 
     // Verify main widget renders
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify mobile responsiveness: No horizontal scroll should exist
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -150,7 +150,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     expect(page.url()).toContain('/cost-dashboard');
 
     // Now Cost Dashboard is visible
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
     const backToMyPlanBtn = page.locator('a', { hasText: 'Back to My Plan' });
 

@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Miser Cost Features E2E', () => {
-  test('Cost Dashboard displays Cost Transparency Dashboard, detailed views, and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
+  test('Cost Dashboard displays My Plan, detailed views, and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
     // Log in as an admin user
     await loginAs(page, adminUser);
 
@@ -9,10 +9,10 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/cost-dashboard');
 
     // Wait for the main headings
-    await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=My Plan')).toBeVisible({ timeout: 15000 });
 
-    // Verify Cost Transparency Dashboard section
-    await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible();
+    // Verify My Plan section
+    await expect(page.locator('text=My Plan')).toBeVisible();
 
     // Verify key metrics are rendered (we match the text labels)
     await expect(page.locator('text=Total Costs')).toBeVisible({ timeout: 15000 });
@@ -157,7 +157,7 @@ test.describe('Miser Cost Features E2E', () => {
     await page.goto('/cost-dashboard');
 
     // The threshold should trigger given a $2,000 spend on the Starter plan.
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 15000 });
 
     // Assert that the Soft Limit Approaching alert text is actually visible
     await expect(page.locator('#budget-health-alert-text')).toBeVisible({ timeout: 15000 });

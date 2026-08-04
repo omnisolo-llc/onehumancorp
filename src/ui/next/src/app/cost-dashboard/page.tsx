@@ -163,7 +163,7 @@ export default function CostDashboardPage() {
 
   if (loading) {
       return (
-          <AppShell title="Cost Transparency Dashboard" subtitle="Cost and tier usage signals.">
+          <AppShell title="My Plan" subtitle="Cost and tier usage signals.">
               <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse glass-panel backdrop-blur-xl bg-white/20 p-6 rounded-3xl" data-testid="cost-dashboard-loading">
                   <div className="h-48 glass-card shadow-lg rounded-2xl w-full"></div>
                   <div className="h-64 glass-card shadow-lg rounded-2xl w-full"></div>
@@ -186,7 +186,7 @@ export default function CostDashboardPage() {
 
   return (
     <AppShell
-      title="Cost Transparency Dashboard"
+      title="My Plan"
       subtitle="Cost and tier usage signals based on connected billing, storage, and agents."
       actions={[{ label: "Back to My Plan", href: "/plan" }]}
     >
@@ -287,7 +287,7 @@ export default function CostDashboardPage() {
             <div className="app-panel-header glass-panel px-6 py-4">
                <div className="flex justify-between items-center">
                    <div>
-                       <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Cost Transparency Dashboard</h1>
+                       <h1 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">My Plan</h1>
                        <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
                    </div>
                    <button id="download-invoice-btn" onClick={handleDownloadInvoice} disabled={isActionLoading} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">

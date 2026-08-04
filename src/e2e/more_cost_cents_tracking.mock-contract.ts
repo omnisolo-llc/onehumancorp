@@ -15,7 +15,7 @@ test.describe('More Cost Cents Tracking', () => {
     });
 
     await page.goto('/cost-dashboard', { waitUntil: 'load' });
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 15000 });
 
     // We should see the agent cost reported
     // Wait for elements to populate

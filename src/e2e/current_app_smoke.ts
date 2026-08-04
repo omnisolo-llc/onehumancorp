@@ -48,7 +48,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     expect(ogCard.headers()['content-type']).toContain('image/svg+xml');
 
     await page.goto('/cost-dashboard');
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
 
     const totalCosts = page.locator('#cost-dashboard-total-costs');
