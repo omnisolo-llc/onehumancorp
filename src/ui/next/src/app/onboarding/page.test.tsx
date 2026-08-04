@@ -623,6 +623,7 @@ describe("OnboardingWizard", () => {
         aiAgents: [],
         aiAutoRespond: true,
         domainChoice: "subdomain",
+        aiTone: "Friendly",
       });
     });
 
@@ -664,6 +665,45 @@ describe("OnboardingWizard", () => {
       const state = useOnboardingStore.getState();
       expect(state.aiAutoRespond).toBe(false);
       expect(state.domainChoice).toBe("custom");
+    });
+  });
+
+  it("Step 3: Can tune AI assistant tone and preview live prompt responses", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    act(() => {
+      useOnboardingStore.setState({
+        step: 3,
+        aiTone: "Friendly",
+      });
+    });
+
+    await renderOnboardingWizard();
+    if (screen.queryByRole("button", { name: "Start My Business" })) {
+      await user.click(
+        screen.getAllByRole("button", { name: "Start My Business" })[0],
+      );
+    }
+
+    // Check default tone preview message is shown
+    screen.getByText(/Hey there! Thanks so much for reaching out!/i);
+
+    // Select Professional Tone
+    const professionalBtn = screen.getByRole("button", { name: /Professional/i });
+    await user.click(professionalBtn);
+
+    // Check Professional tone preview message is shown
+    await waitFor(() => {
+      screen.getByText(/Thank you for contacting us. We appreciate your inquiry/i);
+    });
+
+    // Select Bold Tone
+    const boldBtn = screen.getByRole("button", { name: /Bold/i });
+    await user.click(boldBtn);
+
+    // Check Bold tone preview message is shown
+    await waitFor(() => {
+      screen.getByText(/What's up! Let's get things rolling/i);
     });
   });
 

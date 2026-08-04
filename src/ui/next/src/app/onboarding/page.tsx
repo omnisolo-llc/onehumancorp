@@ -36,6 +36,7 @@ export default function OnboardingWizard() {
     firstProductPrice,
     aiAgents,
     aiAutoRespond,
+    aiTone,
     isLoading,
     error,
     startResult,
@@ -121,6 +122,7 @@ export default function OnboardingWizard() {
       firstProductPrice,
       aiAgents,
       aiAutoRespond,
+      aiTone,
       instantImageUrl,
       ...overrideState,
     };
@@ -182,6 +184,7 @@ export default function OnboardingWizard() {
         firstProductPrice,
         aiAgents,
         aiAutoRespond,
+        aiTone,
         instantImageUrl,
       };
 
@@ -251,6 +254,8 @@ export default function OnboardingWizard() {
             updateState({ aiAgents: data.aiAgents });
           if (data.aiAutoRespond !== undefined)
             updateState({ aiAutoRespond: data.aiAutoRespond });
+          if (data.aiTone !== undefined)
+            updateState({ aiTone: data.aiTone });
           if (data.instantImageUrl !== undefined)
             updateState({ instantImageUrl: data.instantImageUrl });
           initialStateLoaded.current = true;
@@ -295,6 +300,7 @@ export default function OnboardingWizard() {
       firstProductPrice,
       aiAgents,
       aiAutoRespond,
+      aiTone,
       instantImageUrl,
     };
 
@@ -326,6 +332,7 @@ export default function OnboardingWizard() {
     firstProductPrice,
     aiAgents,
     aiAutoRespond,
+    aiTone,
     isLoaded,
     instantImageUrl,
   ]);
@@ -498,6 +505,7 @@ export default function OnboardingWizard() {
             target_audience: intakeData.target_audience || "",
             ai_agents: [],
             ai_auto_respond: true,
+        ai_tone: aiTone,
             initial_products: intakeData.initial_products || [],
           }),
         });
@@ -630,6 +638,7 @@ export default function OnboardingWizard() {
           target_audience: targetAudience || "",
           ai_agents: aiAgents,
           ai_auto_respond: aiAutoRespond,
+          ai_tone: aiTone,
           initial_products: JSON.parse(
             localStorage.getItem("onboarding_initial_products") || "[]",
           ),
@@ -1629,119 +1638,166 @@ export default function OnboardingWizard() {
                 </p>
               )}
 
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
-                    Business Name
-                  </label>
-                  <input
-                    type="text"
-                    autoFocus
-                    autoCapitalize="words"
-                    value={businessName}
-                    onChange={(e) => {
-                      updateState({ businessName: e.target.value });
-                      setValidationErrors((prev) => {
-                        const { businessName, ...rest } = prev;
-                        return rest;
-                      });
-                    }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
-                  />
-                  {validationErrors.businessName && (
-                    <p className="text-[#FF3B30] text-xs mt-1">
-                      {validationErrors.businessName}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
-                    Business Type
-                  </label>
-                  <input
-                    type="text"
-                    autoCapitalize="words"
-                    value={businessType}
-                    onChange={(e) => {
-                      updateState({ businessType: e.target.value });
-                      setValidationErrors((prev) => {
-                        const { businessType, ...rest } = prev;
-                        return rest;
-                      });
-                    }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
-                  />
-                  {validationErrors.businessType && (
-                    <p className="text-[#FF3B30] text-xs mt-1">
-                      {validationErrors.businessType}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
-                    Categories (Comma separated)
-                  </label>
-                  <input
-                    type="text"
-                    autoCapitalize="words"
-                    value={categories.join(", ")}
-                    onChange={(e) =>
-                      updateState({
-                        categories: e.target.value
-                          .split(",")
-                          .map((c) => c.trim()),
-                      })
-                    }
-                    className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col lg:flex-row gap-6 w-full flex-1 overflow-y-auto pr-2">
+                <div className="space-y-4 flex-1">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
-                      First Product
+                      Business Name
+                    </label>
+                    <input
+                      type="text"
+                      autoFocus
+                      autoCapitalize="words"
+                      value={businessName}
+                      onChange={(e) => {
+                        updateState({ businessName: e.target.value });
+                        setValidationErrors((prev) => {
+                          const { businessName, ...rest } = prev;
+                          return rest;
+                        });
+                      }}
+                      className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    />
+                    {validationErrors.businessName && (
+                      <p className="text-[#FF3B30] text-xs mt-1">
+                        {validationErrors.businessName}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                      Business Type
                     </label>
                     <input
                       type="text"
                       autoCapitalize="words"
-                      value={firstProductName}
+                      value={businessType}
+                      onChange={(e) => {
+                        updateState({ businessType: e.target.value });
+                        setValidationErrors((prev) => {
+                          const { businessType, ...rest } = prev;
+                          return rest;
+                        });
+                      }}
+                      className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    />
+                    {validationErrors.businessType && (
+                      <p className="text-[#FF3B30] text-xs mt-1">
+                        {validationErrors.businessType}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                      Categories (Comma separated)
+                    </label>
+                    <input
+                      type="text"
+                      autoCapitalize="words"
+                      value={categories.join(", ")}
                       onChange={(e) =>
-                        updateState({ firstProductName: e.target.value })
+                        updateState({
+                          categories: e.target.value
+                            .split(",")
+                            .map((c) => c.trim()),
+                        })
                       }
                       className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
-                      Price
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={firstProductPrice}
-                      onChange={(e) => {
-                        updateState({ firstProductPrice: e.target.value });
-                        if (
-                          e.target.value.trim().length > 0 &&
-                          !/^\d+(\.\d{1,2})?$/.test(e.target.value)
-                        ) {
-                          setValidationErrors((prev) => ({
-                            ...prev,
-                            firstProductPrice: "Invalid price.",
-                          }));
-                        } else {
-                          setValidationErrors((prev) => {
-                            const { firstProductPrice, ...rest } = prev;
-                            return rest;
-                          });
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                        First Product
+                      </label>
+                      <input
+                        type="text"
+                        autoCapitalize="words"
+                        value={firstProductName}
+                        onChange={(e) =>
+                          updateState({ firstProductName: e.target.value })
                         }
-                      }}
-                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
-                    />
-                    {validationErrors.firstProductPrice && (
-                      <p className="text-[#FF3B30] text-xs mt-1">
-                        {validationErrors.firstProductPrice}
+                        className="w-full p-3 sm:p-4 border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-1">
+                        Price
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={firstProductPrice}
+                        onChange={(e) => {
+                          updateState({ firstProductPrice: e.target.value });
+                          if (
+                            e.target.value.trim().length > 0 &&
+                            !/^\d+(\.\d{1,2})?$/.test(e.target.value)
+                          ) {
+                            setValidationErrors((prev) => ({
+                              ...prev,
+                              firstProductPrice: "Invalid price.",
+                            }));
+                          } else {
+                            setValidationErrors((prev) => {
+                              const { firstProductPrice, ...rest } = prev;
+                              return rest;
+                            });
+                          }
+                        }}
+                        className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                      />
+                      {validationErrors.firstProductPrice && (
+                        <p className="text-[#FF3B30] text-xs mt-1">
+                          {validationErrors.firstProductPrice}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Offering Live Preview Card Component */}
+                <div className="flex-1 max-w-sm mx-auto w-full flex flex-col justify-center">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2 text-center lg:text-left">
+                    Live Offering Preview
+                  </div>
+                  <div className="translucent-glass-light dark:translucent-glass-dark border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] p-5 shadow-lg flex flex-col gap-4 relative overflow-hidden transition-all duration-300">
+                    <div className="absolute top-0 right-0 bg-[#0066FF] text-white px-3 py-1 rounded-bl-lg text-[10px] font-bold uppercase tracking-wider">
+                      Live Store Draft
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                        {businessName || "My Business"}
+                      </h3>
+                      <p className="text-xs text-gray-400 font-medium tracking-wide uppercase">
+                        {businessType || "Storefront / Catalog"}
                       </p>
-                    )}
+                    </div>
+
+                    <div className="border-t border-dashed border-gray-300 dark:border-gray-700 my-1"></div>
+
+                    <div className="flex justify-between items-center bg-black/5 dark:bg-white/5 rounded-xl p-3">
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-400">Featured Offer</p>
+                        <p className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm truncate">
+                          {firstProductName || "Starter Product"}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-gray-400">Price</p>
+                        <p className="font-extrabold text-[#0066FF] text-base">
+                          ${firstProductPrice ? parseFloat(firstProductPrice).toFixed(2) : "0.00"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {categories.map((cat, i) => (
+                        <span key={i} className="bg-[#0066FF]/10 text-[#0066FF] text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                          {cat || "General"}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1950,6 +2006,48 @@ export default function OnboardingWizard() {
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+
+                {/* AI Tone customizer capability toggles with plain language real-time preview responses */}
+                <div className="pt-2 border-t border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wide mb-2">
+                    Assistant Voice / Tone Customizer
+                  </label>
+                  <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mb-3">
+                    Select how your AI team responds to customers, and preview real-time responses below.
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2.5 mb-3">
+                    {[
+                      { id: "Friendly", icon: "😊", desc: "Warm & helpful" },
+                      { id: "Professional", icon: "💼", desc: "Polished & formal" },
+                      { id: "Bold", icon: "⚡", desc: "Energetic & creative" }
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => updateState({ aiTone: t.id })}
+                        className={`p-2.5 border rounded-[12px] flex flex-col items-center justify-center text-center transition-all duration-[250ms] ${
+                          aiTone === t.id
+                            ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]"
+                            : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] glass-control text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500"
+                        }`}
+                      >
+                        <span className="text-base mb-0.5">{t.icon}</span>
+                        <span className="font-bold text-xs">{t.id}</span>
+                        <span className="text-[10px] opacity-70 leading-tight mt-0.5">{t.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="p-3 bg-black/5 dark:bg-white/5 rounded-[12px] border border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.05)]">
+                    <p className="text-[10px] font-bold text-[#0066FF] uppercase tracking-wider mb-1">Live Assistant Tone Preview</p>
+                    <p className="text-xs italic text-[#1D1D1F] dark:text-[#F5F5F7] leading-relaxed">
+                      {aiTone === "Friendly" && "“Hey there! Thanks so much for reaching out! We'd love to help you get exactly what you need today. Let us know if you have any questions!”"}
+                      {aiTone === "Professional" && "“Thank you for contacting us. We appreciate your inquiry and stand ready to assist you. Please let us know how we can serve your business needs today.”"}
+                      {aiTone === "Bold" && "“What's up! Let's get things rolling. We build next-level experiences and can't wait to launch yours. Hit us with your questions, let's go!”"}
+                    </p>
                   </div>
                 </div>
 
