@@ -6,7 +6,7 @@ issue_description: |
   Owners like Maya (Home Baker) and Fatima (Food Cart Operator) rely heavily on messaging apps to take orders and answer customer inquiries. Currently, these messages exist outside of OHC, meaning the Work Triage system cannot see them, and the Customer & Relationship Assistant cannot draft replies or update customer preferences. Managing DMs separately slows down response times, leads to missed orders, and forces the owner to manually copy information between apps. Non-technical owners need WhatsApp to function as a seamless part of their OHC assistant feed, without having to manage tokens or webhooks themselves.
 
   ## Research Findings
-  Our research into Chatwoot's omnichannel system revealed that a robust integration for WhatsApp requires specific data models and channel integrations. WhatsApp is critical in many regions, and Meta provides the WhatsApp Cloud API which allows businesses to interact via automated channels.
+  Our research into the legacy omnichannel system revealed that a robust integration for WhatsApp requires specific data models and channel integrations. WhatsApp is critical in many regions, and Meta provides the WhatsApp Cloud API which allows businesses to interact via automated channels.
 
   - Meta Business setup uses an Embedded Signup flow (OAuth) to let owners connect their WhatsApp number easily.
   - Integration uses Webhooks to deliver incoming messages (text, media, location).
