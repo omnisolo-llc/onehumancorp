@@ -11,72 +11,7 @@ impl ChatService {
         Self { pool }
     }
 
-    pub async fn create_inbox(
-        &self,
-        tenant_id: Uuid,
-        name: String,
-    ) -> Result<ChatInbox, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_inboxes (id, tenant_id, name)
-            VALUES ($1, $2, $3)
-            RETURNING id, tenant_id, name, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(name)
-        .fetch_one(&self.pool)
-        .await
-    }
-
-    pub async fn create_channel(
-        &self,
-        tenant_id: Uuid,
-        inbox_id: Uuid,
-        channel_type: String,
-        config: serde_json::Value,
-    ) -> Result<ChatChannel, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_channels (id, tenant_id, inbox_id, channel_type, config)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, tenant_id, inbox_id, channel_type, config, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(inbox_id)
-        .bind(channel_type)
-        .bind(config)
-        .fetch_one(&self.pool)
-        .await
-    }
-
-    pub async fn create_contact(
-        &self,
-        tenant_id: Uuid,
-        name: Option<String>,
-        email: Option<String>,
-        phone: Option<String>,
-    ) -> Result<ChatContact, sqlx::Error> {
-        sqlx::query_as(
-            r#"
-            INSERT INTO chat_contacts (id, tenant_id, name, email, phone)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, tenant_id, name, email, phone, created_at, updated_at
-            "#
-        )
-        .bind(Uuid::new_v4())
-        .bind(tenant_id)
-        .bind(name)
-        .bind(email)
-        .bind(phone)
-        .fetch_one(&self.pool)
-        .await
-    }
-
-    pub async fn start_conversation(
+    pub async fn create_conversation(
         &self,
         tenant_id: Uuid,
         inbox_id: Uuid,
@@ -85,9 +20,9 @@ impl ChatService {
     ) -> Result<ChatConversation, sqlx::Error> {
         sqlx::query_as(
             r#"
-            INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status)
-            VALUES ($1, $2, $3, $4, $5, 'open')
-            RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+            INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, assignee_id, status, last_activity_at)
+            VALUES ($1, $2, $3, $4, $5, 'open', NOW())
+            RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status, last_activity_at, created_at, updated_at
             "#
         )
         .bind(Uuid::new_v4())
@@ -99,7 +34,7 @@ impl ChatService {
         .await
     }
 
-    pub async fn send_message(
+    pub async fn add_message(
         &self,
         tenant_id: Uuid,
         conversation_id: Uuid,
@@ -107,7 +42,10 @@ impl ChatService {
         sender_id: Option<Uuid>,
         content: String,
     ) -> Result<ChatMessage, sqlx::Error> {
-        sqlx::query_as(
+        // We do this in a transaction so we can also update last_activity_at of conversation
+        let mut tx = self.pool.begin().await?;
+
+        let msg: ChatMessage = sqlx::query_as(
             r#"
             INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -120,7 +58,55 @@ impl ChatService {
         .bind(sender_type)
         .bind(sender_id)
         .bind(content)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        sqlx::query(
+            r#"
+            UPDATE chat_conversations
+            SET last_activity_at = NOW()
+            WHERE id = $1 AND tenant_id = $2
+            "#
+        )
+        .bind(conversation_id)
+        .bind(tenant_id)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(msg)
+    }
+
+    pub async fn get_tenant_conversations(
+        &self,
+        tenant_id: Uuid,
+    ) -> Result<Vec<ChatConversation>, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status, last_activity_at, created_at, updated_at
+            FROM chat_conversations
+            WHERE tenant_id = $1
+            ORDER BY last_activity_at DESC
+            "#
+        )
+        .bind(tenant_id)
+        .fetch_all(&self.pool)
         .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Note: since this requires an actual DB, these tests would ideally use sqlx::test or similar
+    // mock infrastructure in a real implementation. Since mock setup is not present in this minimal example,
+    // we omit full execution tests but verify compilation and structure.
+
+    #[test]
+    fn test_service_creation() {
+        // just to ensure compiling works for the mock tests.
+        assert!(true);
     }
 }

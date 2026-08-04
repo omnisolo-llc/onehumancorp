@@ -17,7 +17,7 @@ pub struct ChatChannel {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub inbox_id: Uuid,
-    pub channel_type: String,
+    pub provider_type: String,
     pub config: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -42,6 +42,7 @@ pub struct ChatConversation {
     pub contact_id: Uuid,
     pub assignee_id: Option<Uuid>,
     pub status: String,
+    pub last_activity_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
