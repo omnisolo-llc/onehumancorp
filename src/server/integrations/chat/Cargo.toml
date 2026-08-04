@@ -1,0 +1,16 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = { version = "0.8.1", features = ["ws"] }
+chrono = { workspace = true, features = ["serde"] }
+futures = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { version = "0.8", features = ["postgres", "uuid", "chrono"] }
+tokio = { workspace = true, features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "serde"] }
+redis = { version = "0.27.6", features = ["tokio-comp"] }

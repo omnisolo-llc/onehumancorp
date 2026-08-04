@@ -7644,6 +7644,7 @@ async fn create_ui_bom_item_handler(
         )
         .nest("/api/v1/cart", api::cart::router(hub.clone()))
         .nest("/api/v1/storefront", api::storefront_delivery::router().with_state(api::storefront_delivery::DeliveryState { pool: db.pool.clone() }))
+        .nest("/api/v1/chat_omnichannel", ::server_integrations_chat::chat_routes(std::sync::Arc::new(::server_integrations_chat::ChatState { db: db.pool.clone(), tx: tokio::sync::broadcast::channel(100).0 })))
 
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),
