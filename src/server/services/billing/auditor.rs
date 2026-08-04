@@ -783,3 +783,32 @@ mod additional_tests {
         assert!(anomalies[0].contains("Anomaly detected"));
     }
 }
+
+#[cfg(test)]
+mod more_tests {
+    use super::*;
+    use ::server_pricing::calculator::CostConfig;
+
+    #[test]
+    fn test_cost_auditor_multiple_events() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        let event1 = AuditEvent {
+            agent_id: "agent1".to_string(),
+            tenant_id: "tenant1".to_string(),
+            input_tokens: 1000,
+            output_tokens: 500,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+        auditor.record_event(event1.clone());
+        auditor.record_event(event1);
+
+        assert_eq!(auditor.get_agent_cost("agent1"), 4.0);
+    }
+}

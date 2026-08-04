@@ -313,3 +313,24 @@ mod tests {
         assert!(result.is_err());
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_empty_string_compression() {
+        let compressed = compress_lossless("").expect("failed to compress");
+        let decompressed = decompress_lossless(&compressed).expect("failed to decompress");
+        assert_eq!(decompressed, "");
+    }
+
+    #[test]
+    fn test_large_string_compression() {
+        let large_string = "A".repeat(10000);
+        let compressed = compress_lossless(&large_string).expect("failed to compress");
+        assert!(compressed.len() < large_string.len());
+        let decompressed = decompress_lossless(&compressed).expect("failed to decompress");
+        assert_eq!(decompressed, large_string);
+    }
+}
