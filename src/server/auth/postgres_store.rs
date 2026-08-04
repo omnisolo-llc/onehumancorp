@@ -673,33 +673,10 @@ mod security_tests {
     #[tokio::test]
     async fn test_postgres_create_user_organization_id_parity() {
         let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
-            Ok(url) => url,
-            Err(_) => return,
+        let pool = match crate::postgres_test_support::postgres_security_pool(5).await {
+            Some(p) => p,
+            None => return,
         };
-
-        if database_url.starts_with("sqlite") {
-            return; // Postgres-specific test
-        }
-
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .before_acquire(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("SET app.current_tenant = ''").await?;
-                    Ok(true)
-                })
-            })
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .acquire_timeout(Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
 
         let uid = sqlx::types::Uuid::new_v4().to_string();
         let repo = PgUserRepository::new(pool.clone());
@@ -731,22 +708,30 @@ mod security_tests {
                 // First we need to make sure the function-arg-org-id exists if there is a foreign key.
                 // Let's create it and rollback later.
                 let org_id = format!("function-arg-org-id-{}", uid);
-                let _ = sqlx::query("INSERT INTO organizations (id, name, created_at, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                let mut tx = pool_clone.begin().await.unwrap();
+                let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
+                sqlx::query("INSERT INTO tenants (id, name, created_at, updated_at) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
                     .bind(&org_id)
                     .bind("Test Parity Org")
                     .bind(Utc::now())
                     .bind(Utc::now())
-                    .execute(&pool_clone)
-                    .await;
+                    .execute(&mut *tx)
+                    .await
+                    .expect("INSERT INTO tenants failed");
+                tx.commit().await.unwrap();
 
                 // Pass a different org_id argument to verify the model binds `org_id` argument instead
-                repo.create_user(user.clone(), &org_id).await.unwrap();
+                if let Err(e) = repo.create_user(user.clone(), &org_id).await {
+                    panic!("create_user failed: {e}");
+                }
 
+                let mut tx2 = pool_clone.begin().await.unwrap();
+                let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx2).await;
                 let row = sqlx::query("SELECT tenant_id FROM users WHERE id = $1")
                     .bind(&user.id)
-                    .fetch_one(&pool_clone)
+                    .fetch_one(&mut *tx2)
                     .await
-                    .unwrap();
+                    .expect("SELECT tenant_id failed");
 
                 let fetched_org_id: String = sqlx::Row::get(&row, "tenant_id");
                 assert_eq!(fetched_org_id, org_id);
@@ -754,13 +739,14 @@ mod security_tests {
                 // Cleanup to remain hermetic
                 let _ = sqlx::query("DELETE FROM users WHERE id = $1")
                     .bind(&user.id)
-                    .execute(&pool_clone)
+                    .execute(&mut *tx2)
                     .await;
 
-                let _ = sqlx::query("DELETE FROM organizations WHERE id = $1")
+                let _ = sqlx::query("DELETE FROM tenants WHERE id = $1")
                     .bind(&org_id)
-                    .execute(&pool_clone)
+                    .execute(&mut *tx2)
                     .await;
+                tx2.commit().await.unwrap();
             }
         }).await;
     }
