@@ -12,7 +12,7 @@ vi.mock("next/navigation", () => ({
 describe("login page", () => {
   beforeEach(() => {
     replace.mockReset();
-    vi.mocked(fetch).mockReset();
+    if (vi.isMockFunction(fetch)) { vi.mocked(fetch).mockReset(); } else { global.fetch = vi.fn(); }
   });
 
   it("submits controlled credentials and navigates only after success", async () => {

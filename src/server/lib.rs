@@ -378,15 +378,17 @@ struct OmniReplyDispatch {
 }
 
 async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
-    if dispatch.integration_id == "whatsapp_cloud_api" {
+    if dispatch.integration_id == "whatsapp_cloud_api" || dispatch.integration_id == "instagram" {
         use crate::integrations::meta::provider::MetaProvider;
         let provider = MetaProvider::new(dispatch.auth_token, Some(dispatch.from_phone));
+        let platform = if dispatch.integration_id == "instagram" { "instagram" } else { "whatsapp" };
         let to = dispatch
             .sender_id
             .strip_prefix("whatsapp:")
             .unwrap_or(&dispatch.sender_id);
-        if let Err(error) = provider.send_message("whatsapp", to, &dispatch.reply).await {
-            tracing::error!("Failed to send approved WhatsApp reply: {error:?}");
+        let to = to.strip_prefix("ig:").unwrap_or(to);
+        if let Err(error) = provider.send_message(platform, to, &dispatch.reply).await {
+            tracing::error!("Failed to send approved {} reply: {:?}", platform, error);
         }
         return;
     }
@@ -401,11 +403,12 @@ async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
 
     use crate::integrations::twilio::provider::TwilioProvider;
     let provider = TwilioProvider::new(dispatch.account_sid, dispatch.auth_token);
-    let result = if dispatch.source == "whatsapp" {
+    let result = if dispatch.source == "whatsapp" || dispatch.source == "instagram_dm" {
         let to = if dispatch.sender_id.starts_with("whatsapp:") {
-            dispatch.sender_id
+            dispatch.sender_id.clone()
         } else {
-            format!("whatsapp:{}", dispatch.sender_id)
+            let to = dispatch.sender_id.strip_prefix("ig:").unwrap_or(&dispatch.sender_id);
+            format!("whatsapp:{}", to)
         };
         provider
             .send_whatsapp(&to, &dispatch.from_phone, &dispatch.reply)
@@ -473,17 +476,18 @@ async fn apply_omni_inbox_action(
                     .await?;
 
                     if let (Some(source), Some(sender_id)) = (source, sender_id) {
-                        if source == "whatsapp" || source == "sms" {
+                        if source == "whatsapp" || source == "sms" || source == "instagram_dm" {
                             if let Some((integration_id, account_sid, auth_token, from_phone)) =
                                 sqlx::query_as::<_, (String, String, String, String)>(
                                     "SELECT integration_id, COALESCE(bot_token, ''),
                                             COALESCE(api_token, ''), COALESCE(from_phone, '')
                                      FROM integration_credentials
-                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
+                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio', 'instagram')
                                        AND tenant_id = $1
                                      ORDER BY CASE
                                         WHEN integration_id = 'whatsapp_cloud_api' THEN 1
-                                        WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
+                                        WHEN integration_id = 'whatsapp' THEN 2
+                                        WHEN integration_id = 'instagram' THEN 3 ELSE 4 END
                                      LIMIT 1",
                                 )
                                 .bind(tenant_id)
@@ -544,17 +548,18 @@ async fn apply_omni_inbox_action(
                     .await?;
 
                     if let (Some(source), Some(sender_id)) = (source, sender_id) {
-                        if source == "whatsapp" || source == "sms" {
+                        if source == "whatsapp" || source == "sms" || source == "instagram_dm" {
                             if let Some((integration_id, account_sid, auth_token, from_phone)) =
                                 sqlx::query_as::<_, (String, String, String, String)>(
                                     "SELECT integration_id, COALESCE(bot_token, ''),
                                             COALESCE(api_token, ''), COALESCE(from_phone, '')
                                      FROM integration_credentials
-                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
+                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio', 'instagram')
                                        AND tenant_id = ?
                                      ORDER BY CASE
                                         WHEN integration_id = 'whatsapp_cloud_api' THEN 1
-                                        WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
+                                        WHEN integration_id = 'whatsapp' THEN 2
+                                        WHEN integration_id = 'instagram' THEN 3 ELSE 4 END
                                      LIMIT 1",
                                 )
                                 .bind(tenant_id)
