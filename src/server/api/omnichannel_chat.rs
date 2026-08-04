@@ -9,6 +9,7 @@ use uuid::Uuid;
 use crate::db::DB;
 use crate::services::chat::service::ChatService;
 use crate::services::chat::models::{ChatInbox, ChatConversation, ChatMessage};
+use crate::is_standalone_runtime;
 use server_common::Claims;
 use crate::strict_ui_claim_tenant;
 
@@ -128,29 +129,33 @@ async fn send_message(
 
     match state.chat_service.send_message(tenant_uuid, conversation_id, payload.sender_type, payload.sender_id, payload.content).await {
         Ok(msg) => {
-            // Broadcast using the Redis unified_ws infrastructure
-            if let Some(client) = crate::get_redis_client() {
-                let topic = format!("unified:chat:{tenant_id}");
-                let channel_topic = format!("chat:tenant-{tenant_id}");
-                let payload_json = serde_json::json!({
-                    "channel": "chat",
-                    "topic": channel_topic,
-                    "seq": 0,
-                    "data": {
-                        "event": "new_message",
-                        "message": msg
-                    }
-                }).to_string();
+            // Broadcast using the Redis unified_ws infrastructure or standalone fallback
+            if !is_standalone_runtime() {
+                if let Some(client) = crate::get_redis_client() {
+                    let topic = format!("unified:chat:{tenant_id}");
+                    let channel_topic = format!("chat:tenant-{tenant_id}");
+                    let payload_json = serde_json::json!({
+                        "channel": "chat",
+                        "topic": channel_topic,
+                        "seq": 0,
+                        "data": {
+                            "event": "new_message",
+                            "message": msg
+                        }
+                    }).to_string();
 
-                let _ = tokio::spawn(async move {
-                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(&topic)
-                            .arg(&payload_json)
-                            .query_async(&mut conn)
-                            .await;
-                    }
-                });
+                    let _ = tokio::spawn(async move {
+                        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                            let _: Result<(), _> = redis::cmd("PUBLISH")
+                                .arg(&topic)
+                                .arg(&payload_json)
+                                .query_async(&mut conn)
+                                .await;
+                        }
+                    });
+                }
+            } else {
+                tracing::info!("Standalone mode: skipping redis PUBLISH for chat message");
             }
             Ok(Json(msg))
         },
