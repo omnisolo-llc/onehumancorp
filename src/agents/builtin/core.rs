@@ -13,3 +13,5 @@ pub mod acon_context;
 pub mod code_native;
 pub mod dynamic_workflows;
 pub mod hnsw_memory;
+
+pub mod condensation;

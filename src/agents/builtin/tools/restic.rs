@@ -150,56 +150,62 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_missing_restic_password_returns_error() {
+    #[test]
+    fn test_missing_restic_password_returns_error() {
         temp_env::with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], || {
-            let executor = ResticExecutor {
-                runner: Arc::new(MockRunner),
-            };
-            let args = ResticArgs {
-                action: "status".to_string(),
-                target: None,
-                snapshot_id: None,
-            };
-            let result = executor.execute_typed(args).await;
-            assert!(result.is_err(), "Should error when RESTIC_PASSWORD is not set");
-            match result.unwrap_err() {
-                ToolError::LlmRecoverable(msg) => {
-                    assert!(msg.contains("RESTIC_PASSWORD"), "Error should mention RESTIC_PASSWORD: {}", msg);
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            rt.block_on(async {
+                let executor = ResticExecutor {
+                    runner: Arc::new(MockRunner),
+                };
+                let args = ResticArgs {
+                    action: "status".to_string(),
+                    target: None,
+                    snapshot_id: None,
+                };
+                let result = executor.execute_typed(args).await;
+                assert!(result.is_err(), "Should error when RESTIC_PASSWORD is not set");
+                match result.unwrap_err() {
+                    ToolError::LlmRecoverable(msg) => {
+                        assert!(msg.contains("RESTIC_PASSWORD"), "Error should mention RESTIC_PASSWORD: {}", msg);
+                    }
+                    other => panic!("Expected LlmRecoverable, got: {:?}", other),
                 }
-                other => panic!("Expected LlmRecoverable, got: {:?}", other),
-            }
+            });
         });
     }
 
-    #[tokio::test]
-    async fn test_cloud_mode_returns_error() {
+    #[test]
+    fn test_cloud_mode_returns_error() {
         temp_env::with_vars(vec![
             ("RESTIC_PASSWORD", Some("test_pass")),
             ("OHC_EXECUTION_MODE", Some("cloud")),
         ], || {
-            let executor = ResticExecutor {
-                runner: Arc::new(MockRunner),
-            };
-            let args = ResticArgs {
-                action: "status".to_string(),
-                target: None,
-                snapshot_id: None,
-            };
-            let result = executor.execute_typed(args).await;
-            assert!(result.is_err(), "Should error in cloud mode");
-            match result.unwrap_err() {
-                ToolError::LlmRecoverable(msg) => {
-                    assert!(msg.contains("cloud"), "Error should mention cloud mode: {}", msg);
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            rt.block_on(async {
+                let executor = ResticExecutor {
+                    runner: Arc::new(MockRunner),
+                };
+                let args = ResticArgs {
+                    action: "status".to_string(),
+                    target: None,
+                    snapshot_id: None,
+                };
+                let result = executor.execute_typed(args).await;
+                assert!(result.is_err(), "Should error in cloud mode");
+                match result.unwrap_err() {
+                    ToolError::LlmRecoverable(msg) => {
+                        assert!(msg.contains("cloud"), "Error should mention cloud mode: {}", msg);
+                    }
+                    other => panic!("Expected LlmRecoverable, got: {:?}", other),
                 }
-                other => panic!("Expected LlmRecoverable, got: {:?}", other),
-            }
+            });
         });
     }
 
     #[tokio::test]
-    async fn test_no_hardcoded_dummy_password() {
+    async fn test_no_hardcoded_dummy_pass_word_test_removed() {
         let source = include_str!("restic.rs");
-        assert!(!source.contains("dummy_password"), "Hardcoded 'dummy_password' should have been removed");
+        assert!(!source.contains(&format!("{}_{}", "dummy", "password")), "Hardcoded dummy password should have been removed");
     }
 }

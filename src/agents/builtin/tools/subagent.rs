@@ -25,88 +25,6 @@ pub struct SubagentExecutor {
 
 impl SubagentExecutor {
 
-    async fn summarize_output(
-        &self,
-        raw_output: &str,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        const TARGET_CHARS_MAX: usize = 8000;
-        const CHUNK_SIZE_CHARS: usize = 20000;
-
-        let system_prompt = "You are an expert summarizer. Compress the following subagent execution result into a dense 1k-2k token summary. Preserve all key decisions, code changes, and unresolved issues. Do not include raw context loops.";
-
-        // If the output is already small enough, optionally summarize if it's over 1000 chars, else return it.
-        if raw_output.len() <= TARGET_CHARS_MAX {
-            if raw_output.len() > 1000 {
-                let req = ohc_builtin_agent_core::types::ChatRequest {
-                    model: "gpt-4o-mini".to_string(),
-                    system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                    messages: vec![ohc_builtin_agent_core::types::Message::user(raw_output.to_string())],
-                    tools: vec![],
-                    max_tokens: 2000,
-                    temperature: 0.0,
-                };
-                let resp = if let Some(l) = &self.llm { l.chat(req).await? } else { return Err("LLM client not available for condensation".into()) };
-                return Ok(resp.message.content);
-            }
-            return Ok(raw_output.to_string());
-        }
-
-        // Map: Chunk the large output and summarize each chunk
-        let mut summarized_chunks = Vec::new();
-        let chars: Vec<char> = raw_output.chars().collect();
-        let mut i = 0;
-        while i < chars.len() {
-            let end = std::cmp::min(i + CHUNK_SIZE_CHARS, chars.len());
-            let chunk: String = chars[i..end].iter().collect();
-
-            let req = ohc_builtin_agent_core::types::ChatRequest {
-                model: "gpt-4o-mini".to_string(),
-                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
-                tools: vec![],
-                max_tokens: 2000,
-                temperature: 0.0,
-            };
-
-            let resp = if let Some(l) = &self.llm { l.chat(req).await? } else { return Err("LLM client not available for condensation".into()) };
-            summarized_chunks.push(resp.message.content);
-
-            i += CHUNK_SIZE_CHARS;
-        }
-
-        // Reduce: Join the chunks
-        let joined_chunks = summarized_chunks.join("\n\n");
-
-        // If the combined summary is still too large, do one final pass
-        let mut final_text = joined_chunks.clone();
-        if joined_chunks.len() > TARGET_CHARS_MAX {
-            let req = ohc_builtin_agent_core::types::ChatRequest {
-                model: "gpt-4o-mini".to_string(),
-                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-                messages: vec![ohc_builtin_agent_core::types::Message::user(joined_chunks)],
-                tools: vec![],
-                max_tokens: 2000,
-                temperature: 0.0,
-            };
-
-            if let Some(l) = &self.llm {
-                if let Ok(resp) = l.chat(req).await {
-                    final_text = resp.message.content;
-                }
-            }
-        }
-
-        // Fallback: If it's still over the limit, forcefully truncate
-        if final_text.len() > TARGET_CHARS_MAX {
-            tracing::warn!("Subagent condensation failed to reduce text below target size. Truncating.");
-            final_text = format!(
-                "{}\n\n[Output truncated. Subagent failed to condense summary.]",
-                final_text.chars().take(TARGET_CHARS_MAX).collect::<String>()
-            );
-        }
-
-        Ok(final_text)
-    }
 }
 
 #[async_trait::async_trait]
@@ -160,9 +78,7 @@ impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}
-
-{}", e, inner.result));
+                        let summary = if let Some(l) = &self.llm { ohc_builtin_agent_core::condensation::condense_summary_expert(&inner.result, l.as_ref(), "gpt-4o-mini").await.unwrap_or_else(|e| format!("Failed to summarize: {}\n\n{}", e, inner.result)) } else { inner.result.clone() };
                         Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, summary))
                     }
                 }
@@ -207,9 +123,7 @@ When finished or if you need to report progress, write your final summary to {}.
                         let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                         let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                         if out.status.success() {
-                            executor_clone.summarize_output(&stdout).await.unwrap_or_else(|e| format!("Failed to summarize: {}
-
-{}", e, stdout))
+                            if let Some(l) = &executor_clone.llm { ohc_builtin_agent_core::condensation::condense_summary_expert(&stdout, l.as_ref(), "gpt-4o-mini").await.unwrap_or_else(|e| format!("Failed to summarize: {}\n\n{}", e, stdout)) } else { stdout.clone() }
                         } else {
                             format!("Subagent error: {}", stderr)
                         }
@@ -291,7 +205,7 @@ Final Result: {}", res).as_bytes()).await;
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}\n\n{}", e, inner.result));
+                        let summary = if let Some(l) = &self.llm { ohc_builtin_agent_core::condensation::condense_summary_expert(&inner.result, l.as_ref(), "gpt-4o-mini").await.unwrap_or_else(|e| format!("Failed to summarize: {}\n\n{}", e, inner.result)) } else { inner.result.clone() };
                         Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}\nBranch: {}", task, summary, branch_name))
                     }
                 }
