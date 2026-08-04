@@ -180,10 +180,6 @@ pub async fn bootstrap_admin_from_environment() -> CommandResult {
 
 pub async fn verify_from_environment() -> CommandResult {
     let database = connect_from_environment().await?;
-    let verification = verify(&database).await?;
-    println!(
-        "backend={:?} migrations={} users={} products={}",
-        verification.backend, verification.migrations, verification.users, verification.products
-    );
+    let _verification = verify(&database).await?;
     Ok(())
 }
