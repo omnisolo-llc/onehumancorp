@@ -1,11 +1,11 @@
 issue_title: "[Native Chat] Omnichannel Conversation Data Model & Multi-Tenant Boundaries"
 issue_description: |
   # Problem Statement
-  OneHumanCorp is transitioning away from Chatwoot to a fully native Rust-based omnichannel chat architecture to better serve owners like Carlos the handyman and Maya the baker. To enable a unified inbox where owners can manage messages from WhatsApp, Instagram DMs, Email, and the web widget seamlessly, we must first establish the foundational data models. Currently, there are multiple competing persistence models (`inbox_messages`, `omni_inbox_messages`, etc.). We need a single, strongly-typed, tenant-isolated data model in our Rust backend that maps directly to the required schema, replicating Chatwoot's successful core entities (`Account`/`Tenant`, `Contact`, `Conversation`, `Message`, `Inbox`) while removing its complexity and legacy baggage.
+  OneHumanCorp is transitioning away from the legacy chat platform to a fully native Rust-based omnichannel chat architecture to better serve owners like Carlos the handyman and Maya the baker. To enable a unified inbox where owners can manage messages from WhatsApp, Instagram DMs, Email, and the web widget seamlessly, we must first establish the foundational data models. Currently, there are multiple competing persistence models (`inbox_messages`, `omni_inbox_messages`, etc.). We need a single, strongly-typed, tenant-isolated data model in our Rust backend that maps directly to the required schema, replicating the legacy chat platform's successful core entities (`Account`/`Tenant`, `Contact`, `Conversation`, `Message`, `Inbox`) while removing its complexity and legacy baggage.
 
   # Research Report
   **Findings & Competitive Analysis:**
-  - **Chatwoot Source Code Audit:** Chatwoot uses separate models for `Contact`, `Conversation`, `Message`, and `Inbox`, tightly coupled to an `Account` ID for multi-tenancy.
+  - **the legacy chat platform Source Code Audit:** the legacy chat platform uses separate models for `Contact`, `Conversation`, `Message`, and `Inbox`, tightly coupled to an `Account` ID for multi-tenancy.
     - `Contact`: Represents the customer, capturing identity (email, phone, external identifiers).
     - `Conversation`: The thread of communication between a `Contact` and the business, tied to a specific `Inbox` (channel).
     - `Message`: The individual message payloads, tracking status, sender type (agent/contact/bot), and message type.
@@ -78,7 +78,7 @@ issue_description: |
 
   ### Key Design Decisions
   - **Strict Multi-Tenancy:** Every table MUST include a `tenant_id` column. We will leverage PostgreSQL Row Level Security (RLS) policies based on the session's tenant claim.
-  - **UUIDs for Primary Keys:** Moving away from sequential IDs (like Chatwoot's integers) to UUIDs to prevent enumeration attacks and support offline-first sync (PowerSync).
+  - **UUIDs for Primary Keys:** Moving away from sequential IDs (like the legacy chat platform's integers) to UUIDs to prevent enumeration attacks and support offline-first sync (PowerSync).
   - **Unified Message Table:** All message types (text, rich media, templates) are stored in one table using JSONB for unstructured metadata/attachments, simplifying the query path.
 
   # Implementation Prompt
