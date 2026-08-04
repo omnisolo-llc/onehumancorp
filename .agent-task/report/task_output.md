@@ -1,3 +1,4 @@
+> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
 issue_title: "Native Rust Omnichannel Chat: Feature Replication from Chatwoot"
 issue_description: |
   ## Problem Statement
