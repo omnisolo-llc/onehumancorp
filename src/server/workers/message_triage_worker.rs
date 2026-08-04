@@ -588,6 +588,32 @@ Output JSON format:
                         tracing::error!("Failed to insert triage_proposed_actions: {}", e);
                     }
 
+                    let thread_id = format!("thread-{}", Uuid::new_v4());
+                    let msg_id = format!("msg-{}", Uuid::new_v4());
+
+                    // Unified Tables sync
+                    let _ = sqlx::query("INSERT INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES ($1, $2, $3, $4, 'open') ON CONFLICT DO NOTHING")
+                        .bind(&thread_id)
+                        .bind(&tenant_id)
+                        .bind(customer_id_val)
+                        .bind(&event_source)
+                        .execute(&self.db.pool).await;
+
+                    let _ = sqlx::query("INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES ($1, $2, $3, 'customer', $4)")
+                        .bind(&msg_id)
+                        .bind(&tenant_id)
+                        .bind(&thread_id)
+                        .bind(customer_message)
+                        .execute(&self.db.pool).await;
+
+                    let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, $4, $5, 'pending')")
+                        .bind(&action_id)
+                        .bind(&tenant_id)
+                        .bind(&thread_id)
+                        .bind(&action_type)
+                        .bind(&action_payload)
+                        .execute(&self.db.pool).await;
+
                     if let Some(mut conn) = _lock_conn {
                         use redis::AsyncCommands;
                         let _: Result<(), _> = conn.del(&redis_lock_key).await;
@@ -718,6 +744,32 @@ Output JSON format:
                         tracing::error!("Failed to insert triage_proposed_actions (Sqlite): {}", e);
                     }
 
+                    let thread_id = format!("thread-{}", Uuid::new_v4());
+                    let msg_id = format!("msg-{}", Uuid::new_v4());
+
+                    // Unified Tables sync
+                    let _ = sqlx::query("INSERT OR IGNORE INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES (?, ?, ?, ?, 'open')")
+                        .bind(&thread_id)
+                        .bind(&tenant_id)
+                        .bind(customer_id_val)
+                        .bind(&event_source)
+                        .execute(&*sqlite_pool).await;
+
+                    let _ = sqlx::query("INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES (?, ?, ?, 'customer', ?)")
+                        .bind(&msg_id)
+                        .bind(&tenant_id)
+                        .bind(&thread_id)
+                        .bind(customer_message)
+                        .execute(&*sqlite_pool).await;
+
+                    let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, ?, ?, 'pending')")
+                        .bind(&action_id)
+                        .bind(&tenant_id)
+                        .bind(&thread_id)
+                        .bind(&action_type)
+                        .bind(&action_payload)
+                        .execute(&*sqlite_pool).await;
+
                     if let Some(mut conn) = _lock_conn {
                         use redis::AsyncCommands;
                         let _: Result<(), _> = conn.del(&redis_lock_key).await;
@@ -789,5 +841,58 @@ Output JSON format:
         } else {
             Ok(false)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    #[tokio::test]
+    async fn test_message_triage_worker_unified_tables() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        let schema = "
+            CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, job_type TEXT, payload TEXT, status TEXT, retry_count INTEGER DEFAULT 0, next_retry_at TEXT, created_at TEXT, updated_at TEXT);
+            CREATE TABLE triage_items (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, source TEXT, priority TEXT, context TEXT, status TEXT);
+            CREATE TABLE triage_proposed_actions (id TEXT PRIMARY KEY, triage_item_id TEXT, tenant_id TEXT, action_type TEXT, payload TEXT);
+            CREATE TABLE unified_threads (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, channel TEXT, status TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+            CREATE TABLE unified_messages (id TEXT PRIMARY KEY, tenant_id TEXT, thread_id TEXT, sender_type TEXT, content TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+            CREATE TABLE unified_triage_actions (id TEXT PRIMARY KEY, tenant_id TEXT, thread_id TEXT, action_type TEXT, action_payload TEXT, status TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+            CREATE TABLE agent_feed_items (id TEXT PRIMARY KEY, tenant_id TEXT, event_source TEXT, context_payload TEXT, proposed_action TEXT, lifecycle_state TEXT, created_at TEXT, updated_at TEXT);
+            CREATE TABLE work_intents (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, intent_type TEXT, payload TEXT, status TEXT, created_at TEXT, updated_at TEXT);
+            CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT);
+            CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, created_at TEXT);
+            CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT, phone TEXT);
+            CREATE TABLE customer_identities (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, channel TEXT, channel_identity TEXT);
+        ";
+        sqlx::query(schema).execute(&pool).await.unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
+
+        // Insert mock job
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ('job-1', 'tenant-1', 'message_triage', '{\"message_id\": \"msg-1\", \"source\": \"instagram_dm\", \"content\": \"How much for a cake?\", \"sender_id\": \"user-123\", \"customer_id\": \"cust-1\"}', 'PENDING', CURRENT_TIMESTAMP)")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let worker = Arc::new(MessageTriageWorker::new(db));
+        let res = worker.poll().await;
+
+        assert_eq!(res.is_ok(), true);
+        assert_eq!(res.unwrap(), true);
+
+        // Verify Unified tables were populated
+        let threads_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM unified_threads").fetch_one(&pool).await.unwrap();
+        assert_eq!(threads_count, 1);
+
+        let messages_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM unified_messages").fetch_one(&pool).await.unwrap();
+        assert_eq!(messages_count, 1);
+
+        let actions_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM unified_triage_actions").fetch_one(&pool).await.unwrap();
+        assert_eq!(actions_count, 1);
     }
 }
