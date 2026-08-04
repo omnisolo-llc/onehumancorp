@@ -67,9 +67,9 @@
     "@hono/node-server": "2.0.10",
     "@modelcontextprotocol/sdk": "1.29.0",
     "axios": "1.18.0",
-    "brace-expansion": "5.0.8",
+    "brace-expansion": "5.0.9",
     "esbuild@>=0.27.3 <0.28.1": "0.28.1",
-    "fast-uri": "3.1.4",
+    "fast-uri": "3.1.5",
     "form-data": "4.0.6",
     "immutable": "4.3.9",
     "js-yaml": "4.3.0",
@@ -78,7 +78,7 @@
     "tsx": {
       "esbuild": "0.28.1"
     },
-    "undici": "7.28.0",
+    "undici": "7.29.0",
     "ws@6.2.3": "6.2.4"
   }
 }
