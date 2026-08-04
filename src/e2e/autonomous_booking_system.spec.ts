@@ -19,10 +19,9 @@ test.describe('Autonomous Booking System CUJ', () => {
   });
 
   test('Customer fetches slots and creates a booking requiring a deposit', async ({ page }) => {
-    await page.goto(`/booking?tenant=e2e-tenant&service_id=mock-service`);
+    // E2E tenant has seeded product "e2e-product-class" which is of type 'booking'
+    await page.goto(`/booking?tenant=e2e-tenant&service_id=e2e-product-class`);
     const heading = page.getByRole('heading', { name: 'Book an Appointment' });
-    if (await heading.isVisible()) {
-      await expect(heading).toBeVisible();
-    }
+    await expect(heading).toBeVisible();
   });
 });

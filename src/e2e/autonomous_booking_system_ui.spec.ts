@@ -5,7 +5,7 @@ test.describe('Autonomous Booking System UI', () => {
 
   test('Public Booking Form Flow', async ({ page }) => {
     // 1. Visit booking page
-    await page.goto(`/booking?tenant=${tenantId}&service_id=mock-service`);
+    await page.goto(`/booking?tenant=e2e-tenant&service_id=e2e-product-class`);
     await expect(page.getByRole('heading', { name: 'Book an Appointment' })).toBeVisible();
 
     // 2. Fill the form

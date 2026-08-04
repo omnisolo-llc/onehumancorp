@@ -164,4 +164,25 @@ ALTER TABLE users FORCE ROW LEVEL SECURITY;
 ALTER TABLE customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE orders FORCE ROW LEVEL SECURITY;
 
+
+ALTER TABLE triage_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE triage_proposed_actions DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status)
+VALUES
+  ('triage-test-1', 'e2e-tenant', 'e2e-customer-bakery', 'Instagram DM', 'high', 'Message: Customer asked about vegan cakes.', 'pending'),
+  ('triage-test-2', 'e2e-tenant', 'e2e-customer-bakery', 'Instagram DM', 'high', 'Can you fix my sink tomorrow?', 'pending')
+ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status;
+
+INSERT INTO triage_proposed_actions (id, tenant_id, triage_item_id, action_type, payload)
+VALUES
+  ('action-test-1', 'e2e-tenant', 'triage-test-1', 'Draft Reply', 'Yes, we have vegan options.'),
+  ('action-test-2', 'e2e-tenant', 'triage-test-2', 'Draft Reply', 'Yes! We have 2 available. Should I hold them for you? [Send & Deduct Inventory]')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE triage_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE triage_items FORCE ROW LEVEL SECURITY;
+ALTER TABLE triage_proposed_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE triage_proposed_actions FORCE ROW LEVEL SECURITY;
+
 COMMIT;
