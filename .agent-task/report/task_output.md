@@ -1,10 +1,10 @@
-issue_title: "Architecture: Native Rust Omnichannel Chat System (Chatwoot Retirement)"
+issue_title: "Architecture: Native Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing its reliance on external third-party customer support tools (like Chatwoot) with a native, highly-performant, multi-tenant Rust omnichannel chat system inside the `onehumancorp/mono` repository. OHC's core personas (Maya the Baker, Carlos the Handyman) need all their customer interactions—Instagram DMs, WhatsApp, Email, Web Chat, and SMS—unified into a single prioritized work feed. This system must handle multi-tenant routing, real-time messaging, and seamless AI agent coordination (Work Triage and Customer Assistant) invisibly in the background.
+  OneHumanCorp (OHC) is replacing its reliance on external third-party customer support tools with a native, highly-performant, multi-tenant Rust omnichannel chat system inside the `onehumancorp/mono` repository. OHC's core personas (Maya the Baker, Carlos the Handyman) need all their customer interactions—Instagram DMs, WhatsApp, Email, Web Chat, and SMS—unified into a single prioritized work feed. This system must handle multi-tenant routing, real-time messaging, and seamless AI agent coordination (Work Triage and Customer Assistant) invisibly in the background.
 
   ## Research Report
-  An extensive audit of the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) was conducted. Key architectural patterns from Chatwoot include:
+  An extensive audit of the third party open source systems was conducted. Key architectural patterns include:
   - **Inboxes & Channels:** An `Inbox` represents a collection point for messages, backed by various `Channel` adapters (e.g., `Channel::WebWidget`, `Channel::Whatsapp`, `Channel::Email`).
   - **Conversations & Messages:** A `Conversation` tracks the state (open, resolved, snoozed) and links a `Contact` to an `Inbox`. `Message` entities belong to conversations.
   - **Automation & Agent Bots:** System events trigger webhooks or agent bots that can auto-respond or assign conversations.
@@ -80,7 +80,7 @@ issue_description: |
   2. Implement the Rust data structures and repository layer in `src/server/ohc/domain/omnichannel`.
   3. Build an API endpoint to ingest a new message from a simulated external webhook, which creates a contact (if new), a conversation, and a message record.
   4. Ensure 100% unit test coverage for the repository layer and ensure `bazel test //...` passes completely.
-  *Acceptance Criteria:* A client can create an inbox, simulate receiving a message, and query the conversation via the API. No external Chatwoot dependencies are used.
+  *Acceptance Criteria:* A client can create an inbox, simulate receiving a message, and query the conversation via the API. No external dependencies are used.
 
 issue_priority: P0
 issue_category: research
