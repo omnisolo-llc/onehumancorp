@@ -84,6 +84,17 @@ pub async fn strict_bearer_auth_middleware(
     };
 
     let user_id = claims.sub.clone();
+    let Some(user) = store
+        .get_user(&user_id, &organization_id)
+        .await
+        .filter(|user| user.active && Store::user_access_token_fits(user))
+    else {
+        return axum::http::StatusCode::UNAUTHORIZED.into_response();
+    };
+    claims.sub = user.id;
+    claims.username = user.username;
+    claims.email = user.email;
+    claims.roles = user.roles;
     claims.organization_id = Some(organization_id.clone());
     req.extensions_mut().insert(crate::orchestration::AuthInfo {
         org_id: organization_id.clone(),
@@ -343,13 +354,6 @@ pub struct TenantKey {
     pub key: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct OIDCConfig {
-    pub issuer_url: String,
-    pub client_id: String,
-    pub enabled: bool,
-}
-
 pub struct Store {
     users: RwLock<HashMap<String, User>>,
     by_name: RwLock<HashMap<TenantKey, String>>,
@@ -361,7 +365,6 @@ pub struct Store {
     secret: Vec<u8>,
     password_slots: Arc<tokio::sync::Semaphore>,
     user_creation_lock: tokio::sync::Mutex<()>,
-    oidc_cfg: RwLock<OIDCConfig>,
     repo: Option<std::sync::Arc<dyn crate::user_repository::UserRepository>>,
     portable_repo: Option<std::sync::Arc<crate::seaorm_store::SeaOrmAuthRepository>>,
 }
@@ -577,10 +580,6 @@ impl Store {
             created_at: now,
         });
 
-        let issuer_url = std::env::var("OIDC_ISSUER_URL").unwrap_or_default();
-        let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
-        let enabled = !issuer_url.is_empty();
-
         let redis_configuration = if ::server_config::get().multitenant {
             let setting = match std::env::var("OHC_REDIS_URL") {
                 Ok(url) => RedisUrlSetting::Value(url),
@@ -610,11 +609,6 @@ impl Store {
                 MAX_PASSWORD_HASH_CONCURRENCY,
             )),
             user_creation_lock: tokio::sync::Mutex::new(()),
-            oidc_cfg: RwLock::new(OIDCConfig {
-                issuer_url,
-                client_id,
-                enabled,
-            }),
             repo: None,
             portable_repo: None,
         };
@@ -733,16 +727,15 @@ impl Store {
         email: String,
         password: String,
         roles: Vec<String>,
-        org_id: String,
         ticket_hash: &str,
     ) -> Result<User, String> {
-        self.validate_org_id(&org_id)?;
         let repository = self
             .portable_repo
             .as_ref()
             .ok_or_else(|| "registration persistence unavailable".to_string())?;
         let _creation_guard = self.user_creation_lock.lock().await;
 
+        let org_id = uuid::Uuid::new_v4().to_string();
         let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
         let email_key = TenantKey { org_id: org_id.clone(), key: email.clone() };
         if self.by_name.read().expect("Failed to acquire lock").contains_key(&name_key)
@@ -770,9 +763,12 @@ impl Store {
             return Err("user claims exceed the access token size limit".to_string());
         }
 
-        repository
-            .consume_ticket_and_create_user(ticket_hash, now, user.clone())
+        let user = repository
+            .consume_ticket_and_create_user(ticket_hash, now, user)
             .await?;
+        let org_id = user.organization_id.clone().unwrap_or_default();
+        let name_key = TenantKey { org_id: org_id.clone(), key: user.username.clone() };
+        let email_key = TenantKey { org_id, key: user.email.clone() };
         self.users.write().expect("Failed to acquire lock").insert(id.clone(), user.clone());
         self.by_name.write().expect("Failed to acquire lock").insert(name_key, id.clone());
         self.by_email.write().expect("Failed to acquire lock").insert(email_key, id);
@@ -798,21 +794,9 @@ impl Store {
             }
             return Ok(user);
         }
-
         let email = crate::validation::normalize_email(&identity.email)
             .map_err(|_| "OIDC login denied".to_string())?;
-        if repository.any_user_with_email(&email).await? {
-            return Err("existing account must explicitly link this provider".to_string());
-        }
         let now = Utc::now();
-        let invitation_id = repository.active_invitation_id(&email, now).await?;
-        match repository.registration_mode().await? {
-            crate::seaorm_store::RegistrationMode::Open => {}
-            crate::seaorm_store::RegistrationMode::Closed
-            | crate::seaorm_store::RegistrationMode::InviteOnly
-                if invitation_id.is_some() => {}
-            _ => return Err("registration closed".to_string()),
-        }
 
         let base_username = if identity.username.trim().is_empty() {
             email.split('@').next().unwrap_or_default()
@@ -837,15 +821,10 @@ impl Store {
             updated_at: now,
             oidc_subject: Some(format!("{issuer}|{}", identity.sub)),
         };
-        repository
-            .create_oidc_user(
-                user.clone(),
-                provider_key,
-                issuer,
-                &identity.sub,
-                invitation_id.as_deref(),
-            )
+        let user = repository
+            .create_oidc_user(user, provider_key, issuer, &identity.sub)
             .await?;
+        let organization_id = user.organization_id.clone().unwrap_or_default();
         self.users.write().expect("Failed to acquire lock").insert(user.id.clone(), user.clone());
         self.by_name.write().expect("Failed to acquire lock").insert(
             TenantKey { org_id: organization_id.clone(), key: username },
@@ -1241,68 +1220,6 @@ impl Store {
         _token: &str,
         check_revocation: bool,
     ) -> Result<Claims, TokenValidationError> {
-        if let Ok(header) = jsonwebtoken::decode_header(_token) {
-            if header.alg == jsonwebtoken::Algorithm::RS256 {
-                let oidc_cfg_internal = self
-                    .oidc_cfg
-                    .read()
-                    .expect("Failed to acquire lock")
-                    .clone();
-                let oidc_cfg = crate::oidc::OIDCConfig {
-                    issuer_url: oidc_cfg_internal.issuer_url,
-                    client_id: oidc_cfg_internal.client_id,
-                    enabled: oidc_cfg_internal.enabled,
-                };
-                if oidc_cfg.enabled {
-                    let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg)
-                        .await
-                        .map_err(|error| match error {
-                            crate::oidc::OidcValidationError::InvalidToken => {
-                                TokenValidationError::invalid("Invalid token")
-                            }
-                            crate::oidc::OidcValidationError::Unavailable => {
-                                TokenValidationError::Unavailable
-                            }
-                        })?;
-                    if ::server_config::get().multitenant
-                        && claims
-                            .organization_id
-                            .clone()
-                            .unwrap_or_default()
-                            .trim()
-                            .is_empty()
-                    {
-                        return Err(TokenValidationError::invalid(
-                            "Invalid token: organization_id is required in cloud mode",
-                        ));
-                    }
-                    if ::server_config::get().multitenant
-                        && claims
-                            .organization_id
-                            .as_deref()
-                            .map(|s| s.eq_ignore_ascii_case("system"))
-                            .unwrap_or(false)
-                    {
-                        return Err(TokenValidationError::invalid(
-                            "Invalid token: 'system' organization cannot be used in multitenant mode",
-                        ));
-                    }
-                    if check_revocation
-                        && self
-                            .is_revoked(
-                                &claims.jti,
-                                &claims.organization_id.clone().unwrap_or_default(),
-                            )
-                            .await
-                            .map_err(|_| TokenValidationError::Unavailable)?
-                    {
-                        return Err(TokenValidationError::invalid("token revoked"));
-                    }
-                    return Ok(claims);
-                }
-            }
-        }
-
         let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
         let token_data = jsonwebtoken::decode::<Claims>(
             _token,
@@ -1356,60 +1273,7 @@ impl Store {
                 }
                 Ok(data.claims)
             }
-            Err(_) => {
-                let oidc_cfg = {
-                    let c = self.oidc_cfg.read().expect("Failed to acquire lock");
-                    crate::oidc::OIDCConfig {
-                        issuer_url: c.issuer_url.clone(),
-                        client_id: c.client_id.clone(),
-                        enabled: c.enabled,
-                    }
-                };
-                match crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
-                    Ok(claims) => {
-                        if ::server_config::get().multitenant
-                            && claims
-                                .organization_id
-                                .clone()
-                                .unwrap_or_default()
-                                .trim()
-                                .is_empty()
-                        {
-                            return Err(TokenValidationError::invalid(
-                                "Invalid token: organization_id is required in cloud mode",
-                            ));
-                        }
-                        if ::server_config::get().multitenant
-                            && claims
-                                .organization_id
-                                .as_deref()
-                                .map(|s| s.eq_ignore_ascii_case("system"))
-                                .unwrap_or(false)
-                        {
-                            return Err(TokenValidationError::invalid(
-                                "Invalid token: 'system' organization cannot be used in multitenant mode",
-                            ));
-                        }
-                        if check_revocation
-                            && self
-                                .is_revoked(
-                                    &claims.jti,
-                                    &claims.organization_id.clone().unwrap_or_default(),
-                                )
-                                .await
-                                .map_err(|_| TokenValidationError::Unavailable)?
-                        {
-                            return Err(TokenValidationError::invalid("token revoked"));
-                        }
-                        return Ok(claims);
-                    }
-                    Err(crate::oidc::OidcValidationError::Unavailable) if oidc_cfg.enabled => {
-                        return Err(TokenValidationError::Unavailable);
-                    }
-                    Err(_) => {}
-                }
-                Err(TokenValidationError::invalid("Invalid token"))
-            }
+            Err(_) => Err(TokenValidationError::invalid("Invalid token")),
         }
     }
 }
@@ -1986,11 +1850,6 @@ mod store_tests {
                 MAX_PASSWORD_HASH_CONCURRENCY,
             )),
             user_creation_lock: tokio::sync::Mutex::new(()),
-            oidc_cfg: RwLock::new(OIDCConfig {
-                issuer_url: String::new(),
-                client_id: String::new(),
-                enabled: false,
-            }),
             repo: Some(repo),
             portable_repo: None,
         }
@@ -2029,9 +1888,18 @@ mod store_tests {
         use tower::ServiceExt;
 
         let store = Arc::new(test_store_with_memory_user(true));
-        let token = store
-            .issue_token(&credential_test_user(true, Some("tenant-a")))
-            .unwrap();
+        let mut persisted = credential_test_user(true, Some("tenant-a"));
+        persisted.email = "persisted@example.com".to_string();
+        persisted.roles = vec![ROLE_VIEWER.to_string()];
+        store
+            .users
+            .write()
+            .unwrap()
+            .insert(persisted.id.clone(), persisted.clone());
+        let mut stale_token_user = persisted.clone();
+        stale_token_user.email = "forged@example.com".to_string();
+        stale_token_user.roles = vec![ROLE_ADMIN.to_string()];
+        let token = store.issue_token(&stale_token_user).unwrap();
         let app = Router::new()
             .route(
                 "/",
@@ -2042,12 +1910,13 @@ mod store_tests {
                             "tenant": claims.organization_id,
                             "user": auth.agent_id,
                             "email": claims.email,
+                            "roles": claims.roles,
                         }))
                     },
                 ),
             )
             .layer(axum::middleware::from_fn_with_state(
-                store,
+                store.clone(),
                 strict_bearer_auth_middleware,
             ));
 
@@ -2093,6 +1962,7 @@ mod store_tests {
         assert_eq!(whitespace.status(), axum::http::StatusCode::UNAUTHORIZED);
 
         let valid = app
+            .clone()
             .oneshot(
                 axum::http::Request::builder()
                     .uri("/")
@@ -2109,7 +1979,44 @@ mod store_tests {
         let identity: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(identity["tenant"], "tenant-a");
         assert_eq!(identity["user"], "user-id");
-        assert_eq!(identity["email"], "alice@example.com");
+        assert_eq!(identity["email"], "persisted@example.com");
+        assert_eq!(identity["roles"], serde_json::json!([ROLE_VIEWER]));
+
+        let missing_user = credential_test_user(true, Some("tenant-a"));
+        let mut missing_user = missing_user;
+        missing_user.id = "missing-user".to_string();
+        let missing_token = store.issue_token(&missing_user).unwrap();
+        let missing = app
+            .clone()
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/")
+                    .header("authorization", format!("Bearer {missing_token}"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(missing.status(), axum::http::StatusCode::UNAUTHORIZED);
+
+        let mut inactive = persisted;
+        inactive.active = false;
+        store
+            .users
+            .write()
+            .unwrap()
+            .insert(inactive.id.clone(), inactive);
+        let inactive = app
+            .oneshot(
+                axum::http::Request::builder()
+                    .uri("/")
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(inactive.status(), axum::http::StatusCode::UNAUTHORIZED);
     }
 
     #[test]
@@ -2266,6 +2173,13 @@ mod store_tests {
         );
     }
 
+    #[tokio::test]
+    async fn application_token_validation_never_falls_back_to_raw_rs256_idp_tokens() {
+        let store = test_store_with_memory_user(true);
+        let raw_rs256 = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsifQ.e30.AA";
+        assert_eq!(store.validate_token(raw_rs256).await.unwrap_err(), "Invalid token");
+    }
+
     fn logout_request(token: &str) -> Request<EmptyRequest> {
         let mut request = Request::new(EmptyRequest {});
         request.metadata_mut().insert(
@@ -2301,13 +2215,8 @@ mod store_tests {
     }
 
     #[tokio::test]
-    async fn logout_distinguishes_forged_oidc_tokens_from_oidc_outages() {
+    async fn logout_rejects_raw_oidc_tokens_without_contacting_the_idp() {
         let store = test_store_with_memory_user(true);
-        *store.oidc_cfg.write().unwrap() = OIDCConfig {
-            issuer_url: "ftp://invalid.example".to_string(),
-            client_id: "client".to_string(),
-            enabled: true,
-        };
 
         let missing_kid = "eyJhbGciOiJSUzI1NiJ9.e30.AA";
         assert_eq!(
@@ -2322,7 +2231,7 @@ mod store_tests {
         let authority_unavailable = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsifQ.e30.AA";
         assert_eq!(
             store.logout_token(authority_unavailable).await,
-            Err(LogoutError::ValidationUnavailable)
+            Err(LogoutError::InvalidToken)
         );
     }
 
