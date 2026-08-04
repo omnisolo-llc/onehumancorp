@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables)]
 use axum::{
     extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Extension},
     response::IntoResponse,

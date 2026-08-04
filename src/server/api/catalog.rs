@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables)]
 use crate::hub::Hub;
 use crate::persistence::{
     DatabaseBackend,

@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_variables)]
 use crate::{
     AuthenticationError, LogoutError, MAX_ACCESS_TOKEN_BYTES, MAX_AUTH_EMAIL_BYTES,
     MAX_AUTH_ORGANIZATION_BYTES, MAX_AUTH_ROLE_BYTES, MAX_AUTH_ROLES, MAX_AUTH_USER_ID_BYTES,

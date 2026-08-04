@@ -206,7 +206,6 @@ impl OmniChannelRepo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DB;
     use uuid::Uuid;
 
     // A mock DB trait or trait bound would be ideal, but for now we'll mock the functions or
