@@ -1,5 +1,4 @@
-use crate::models::{Conversation, Message};
-use serde_json::Value;
+use crate::models::Message;
 
 pub async fn handle_web_widget_message(tenant_id: &str, content: &str) -> Message {
     Message {
