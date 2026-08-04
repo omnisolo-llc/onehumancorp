@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{RwLock};
+use std::sync::RwLock;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde_json::Value;
