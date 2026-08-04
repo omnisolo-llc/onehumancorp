@@ -3,7 +3,7 @@ issue_description: |
   # OHC Omnichannel Messaging & Agentic Assistance Gap Analysis
 
   ## Problem Statement
-  Small business owners and operators (like Maya the baker and Carlos the handyman) are overwhelmed by fragmented communication channels (Instagram DMs, WhatsApp, SMS, Email). They lose leads because they cannot monitor every channel simultaneously while performing their core service. Current tools either provide a passive "unified inbox" that still requires manual triaging (like Chatwoot) or overly complex CRM workflows (like HubSpot) that are not mobile-first. OHC lacks a unified, agent-driven omnichannel messaging system that automatically triages, drafts responses, and connects conversations to actionable business entities (like quotes or bookings).
+  Small business owners and operators (like Maya the baker and Carlos the handyman) are overwhelmed by fragmented communication channels (Instagram DMs, WhatsApp, SMS, Email). They lose leads because they cannot monitor every channel simultaneously while performing their core service. Current tools either provide a passive "unified inbox" that still requires manual triaging (like Chat system) or overly complex CRM workflows (like HubSpot) that are not mobile-first. OHC lacks a unified, agent-driven omnichannel messaging system that automatically triages, drafts responses, and connects conversations to actionable business entities (like quotes or bookings).
 
   ## Research Report
 
@@ -17,7 +17,7 @@ issue_description: |
   4. DingTalk (Alibaba's operational hub)
   5. Feishu/Lark (ByteDance's all-in-one suite)
   6. HubSpot (Powerful, but complex CRM)
-  7. Chatwoot (Open-source omnichannel, passive inbox)
+  7. Chat system (Open-source omnichannel, passive inbox)
   8. Intercom (Enterprise-grade, expensive for SMBs)
   9. Zendesk (Ticket-based, not conversational)
   10. Notion (Knowledge management, weak messaging)
@@ -34,17 +34,17 @@ issue_description: |
   9. Ada
   10. Aisera
 
-  ### Deep-Dive Competitor Audit: Chatwoot vs. Gorgias vs. OHC Current State
-  We focused on Chatwoot (our prior dependency) and Gorgias (an AI-native e-commerce leader).
-  - **Capabilities:** Chatwoot provides a robust omnichannel inbox (WhatsApp, IG, Email, Web widget) but relies heavily on human agents or basic macros. Gorgias provides deep Shopify integration and uses AI to auto-resolve common questions.
-  - **Success Factors:** Gorgias succeeds because it connects directly to the system of record (Shopify) and performs actions, not just text generation. Chatwoot succeeds on channel breadth and open-source flexibility.
+  ### Deep-Dive Competitor Audit: Chat system vs. Gorgias vs. OHC Current State
+  We focused on Chat system (our prior dependency) and Gorgias (an AI-native e-commerce leader).
+  - **Capabilities:** Chat system provides a robust omnichannel inbox (WhatsApp, IG, Email, Web widget) but relies heavily on human agents or basic macros. Gorgias provides deep Shopify integration and uses AI to auto-resolve common questions.
+  - **Success Factors:** Gorgias succeeds because it connects directly to the system of record (Shopify) and performs actions, not just text generation. Chat system succeeds on channel breadth and open-source flexibility.
   - **User Sentiment:**
     - *Gorgias:* Users love the automated revenue recovery but complain about high pricing and complex rule setup.
-    - *Chatwoot:* Users appreciate the unified view but complain about the lack of true AI automation and clunky mobile experience.
+    - *Chat system:* Users appreciate the unified view but complain about the lack of true AI automation and clunky mobile experience.
 
   #### Feature Comparison Table
 
-  | Feature / Capability | Chatwoot | Gorgias | OHC (Current) | OHC (Proposed Vision) |
+  | Feature / Capability | Chat system | Gorgias | OHC (Current) | OHC (Proposed Vision) |
   | :--- | :--- | :--- | :--- | :--- |
   | **Core Architecture** | Ruby on Rails + Vue | SaaS / Custom | Legacy Third-party / Rust | Native Rust + Flutter PWA |
   | **Omnichannel Integration** | Yes (WhatsApp, IG, Email, Web) | Yes (Deep e-commerce focus) | None (Retired) | Yes (WhatsApp, IG, Email native) |
@@ -99,7 +99,7 @@ issue_description: |
   ### Top 5 Codebase Anomalies Found During Discovery
   1. There are multiple legacy `Next.js` prototype files still existing under `src/ui/next/` which convolute the frontend architecture source of truth vs the canonical Tauri/Flutter UI.
   2. A Slint-based UI was referenced in legacy documentation but removed, yet leftover script artifacts referencing `.slint` compilation still exist in the deploy folder.
-  3. The `chatwoot` references have been retired, yet several `integrations/chat/` markdown files still describe the old Chatwoot API bridge instead of a native implementation.
+  3. The `chat system` references have been retired, yet several `integrations/chat/` markdown files still describe the old Chat system API bridge instead of a native implementation.
   4. Missing comprehensive PostgreSQL `ROW LEVEL SECURITY` test coverage for the `Message` and `Conversation` entities across all tenant boundary edge cases.
   5. Hardcoded `e2e-tenant` credentials exist directly inside several E2E setup scripts rather than relying completely on environment-injected SPIFFE/SPIRE context.
 
@@ -113,7 +113,7 @@ issue_description: |
   1. Shopify Inbox Features: https://www.shopify.com/inbox
   2. Shopify App Store - Gorgias: https://apps.shopify.com/helpdesk
   3. Intercom AI (Fin): https://www.intercom.com/fin
-  4. Chatwoot GitHub Repository: https://github.com/chatwoot/chatwoot
+  4. Chat system GitHub Repository: https://github.com/chat system/chat system
   5. WhatsApp Cloud API Docs: https://developers.facebook.com/docs/whatsapp/cloud-api
   6. Instagram Graph API Docs: https://developers.facebook.com/docs/instagram-api
   7. HubSpot Mobile App: https://www.hubspot.com/products/mobile-app
@@ -146,7 +146,7 @@ issue_description: |
   34. MessageBird Omnichannel: https://www.messagebird.com/omnichannel/
   35. Sendbird Chat API: https://sendbird.com/products/chat
   36. Stream Chat Feautres: https://getstream.io/chat/
-  37. Chatwoot Architecture Docs: https://www.chatwoot.com/docs/architecture
+  37. Chat system Architecture Docs: https://www.chat system.com/docs/architecture
   38. Gorgias Automation Stats: https://www.gorgias.com/blog/automation-stats
   39. Zendesk AI Trends Report: https://www.zendesk.com/blog/ai-trends/
   40. Intercom State of AI Support: https://www.intercom.com/state-of-ai
@@ -160,7 +160,7 @@ issue_description: |
   48. Postgres Row-Level Security: https://www.postgresql.org/docs/current/ddl-rowsecurity.html
   49. Redis / Valkey Event Streams: https://redis.io/docs/data-types/streams/
   50. OHC Internal Persona Mappings (Maya, Carlos, Priya, Leo, Fatima, Nora, Jun)
-  51. Chatwoot vs. OHC Unified Inbox Migration Plan (Internal Document)
+  51. Chat system vs. OHC Unified Inbox Migration Plan (Internal Document)
 issue_priority: P0
 issue_category: research
 issue_type: task
