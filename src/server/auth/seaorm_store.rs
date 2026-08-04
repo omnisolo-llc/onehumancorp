@@ -995,31 +995,44 @@ impl SeaOrmAuthRepository {
                 active.update(&transaction).await.map_err(db_error)?;
             } else {
                 let now = Utc::now();
-                let inserted =
-                    entities::oidc_provider::Entity::insert(entities::oidc_provider::ActiveModel {
-                        key: Set(key),
-                        display_name: Set(display_name),
-                        provider_kind: Set(provider_kind),
-                        issuer: Set(issuer.trim_end_matches('/').to_string()),
-                        client_id: Set(client_id),
-                        scopes: Set(serde_json::json!(["openid", "email", "profile"])),
-                        secret_ref: Set(secret_ref),
-                        enabled: Set(false),
-                        created_at: Set(now),
-                        updated_at: Set(now),
-                    })
-                    .on_conflict(
-                        sea_orm::sea_query::OnConflict::new()
-                            .do_nothing()
-                            .to_owned(),
-                    )
-                    .exec(&transaction)
-                    .await;
-                match inserted {
-                    Ok(_) => {}
-                    Err(sea_orm::DbErr::RecordNotInserted) => {}
-                    Err(error) => return Err(db_error(error)),
+                let backend = transaction.get_database_backend();
+                let placeholders: Vec<String> = match backend {
+                    sea_orm::DatabaseBackend::Postgres => {
+                        (1..=10).map(|index| format!("${index}")).collect()
+                    }
+                    _ => vec!["?".to_string(); 10],
+                };
+                let keyword = match backend {
+                    sea_orm::DatabaseBackend::MySql => "INSERT IGNORE",
+                    sea_orm::DatabaseBackend::Sqlite => "INSERT OR IGNORE",
+                    _ => "INSERT",
+                };
+                let mut sql = format!(
+                    "{keyword} INTO oidc_providers (key, display_name, provider_kind, issuer, client_id, scopes, secret_ref, enabled, created_at, updated_at) VALUES ({})",
+                    placeholders.join(", ")
+                );
+                if backend == sea_orm::DatabaseBackend::Postgres {
+                    sql.push_str(" ON CONFLICT DO NOTHING");
                 }
+                transaction
+                    .execute(Statement::from_sql_and_values(
+                        backend,
+                        sql,
+                        vec![
+                            key.into(),
+                            display_name.into(),
+                            provider_kind.into(),
+                            issuer.trim_end_matches('/').to_string().into(),
+                            client_id.into(),
+                            serde_json::json!(["openid", "email", "profile"]).into(),
+                            secret_ref.into(),
+                            false.into(),
+                            now.into(),
+                            now.into(),
+                        ],
+                    ))
+                    .await
+                    .map_err(db_error)?;
             }
         }
         transaction.commit().await.map_err(db_error)
@@ -1475,7 +1488,9 @@ mod atomic_registration_tests {
                 .contains("migrate_with_connection(database.backend(), &migration_guard)")
         );
         assert!(migration_source.contains("ux_email_verification_challenges_email"));
-        assert!(migration_source.contains("OnConflict::new().do_nothing()"));
+        assert!(migration_source.contains("INSERT IGNORE"));
+        assert!(migration_source.contains("INSERT OR IGNORE"));
+        assert!(migration_source.contains("ON CONFLICT DO NOTHING"));
         assert!(
             migration_source.contains("ALTER TABLE identity_user_roles ENABLE ROW LEVEL SECURITY")
         );
@@ -1503,6 +1518,8 @@ mod atomic_registration_tests {
         assert!(production_source.contains("is_unique_violation"));
         assert!(production_source.contains("OHC_OIDC_GOOGLE_CLIENT_SECRET"));
         assert!(production_source.contains("OHC_OIDC_KEYCLOAK_CLIENT_SECRET"));
+        assert!(production_source.contains("INSERT IGNORE"));
+        assert!(production_source.contains("INTO oidc_providers"));
 
         let http_source = include_str!("../auth/http.rs");
         assert!(http_source.contains("EmailChallengeCreation::Throttled"));

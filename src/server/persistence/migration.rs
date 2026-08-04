@@ -176,58 +176,79 @@ where
 
     insert_default_or_ignore(
         connection,
-        entities::schema_version::ActiveModel {
-            id: Set(CORE_SCHEMA_VERSION.to_owned()),
-            applied_at: Set(Utc::now()),
-        },
+        "onehumancorp_schema_versions",
+        &["id", "applied_at"],
+        vec![CORE_SCHEMA_VERSION.to_owned().into(), Utc::now().into()],
     )
     .await?;
 
     insert_default_or_ignore(
         connection,
-        auth_entities::application_setting::ActiveModel {
-            key: Set("registration_mode".to_string()),
-            value: Set("closed".to_string()),
-            updated_at: Set(Utc::now()),
-            updated_by: Set(None),
-        },
+        "application_settings",
+        &["key", "value", "updated_at", "updated_by"],
+        vec![
+            "registration_mode".to_owned().into(),
+            "closed".to_owned().into(),
+            Utc::now().into(),
+            sea_orm::Value::String(None),
+        ],
     )
     .await?;
 
     insert_default_or_ignore(
         connection,
-        entities::schema_version::ActiveModel {
-            id: Set(AUTH_SCHEMA_VERSION.to_owned()),
-            applied_at: Set(Utc::now()),
-        },
+        "onehumancorp_schema_versions",
+        &["id", "applied_at"],
+        vec![AUTH_SCHEMA_VERSION.to_owned().into(), Utc::now().into()],
     )
     .await?;
 
     insert_default_or_ignore(
         connection,
-        entities::schema_version::ActiveModel {
-            id: Set(PORTABLE_ROLE_SCHEMA_VERSION.to_owned()),
-            applied_at: Set(Utc::now()),
-        },
+        "onehumancorp_schema_versions",
+        &["id", "applied_at"],
+        vec![
+            PORTABLE_ROLE_SCHEMA_VERSION.to_owned().into(),
+            Utc::now().into(),
+        ],
     )
     .await?;
     Ok(())
 }
 
-async fn insert_default_or_ignore<C, A>(connection: &C, active: A) -> Result<(), sea_orm::DbErr>
+async fn insert_default_or_ignore<C>(
+    connection: &C,
+    table: &str,
+    columns: &[&str],
+    values: Vec<sea_orm::Value>,
+) -> Result<(), sea_orm::DbErr>
 where
     C: ConnectionTrait,
-    A: ActiveModelTrait,
 {
-    match A::Entity::insert(active)
-        .on_conflict(OnConflict::new().do_nothing().to_owned())
-        .exec(connection)
-        .await
-    {
-        Ok(_) => Ok(()),
-        Err(sea_orm::DbErr::RecordNotInserted) => Ok(()),
-        Err(error) => Err(error),
+    let backend = connection.get_database_backend();
+    let placeholders: Vec<String> = match backend {
+        sea_orm::DatabaseBackend::Postgres => (1..=values.len())
+            .map(|index| format!("${index}"))
+            .collect(),
+        _ => vec!["?".to_string(); values.len()],
+    };
+    let keyword = match backend {
+        sea_orm::DatabaseBackend::MySql => "INSERT IGNORE",
+        sea_orm::DatabaseBackend::Sqlite => "INSERT OR IGNORE",
+        _ => "INSERT",
+    };
+    let mut sql = format!(
+        "{keyword} INTO {table} ({}) VALUES ({})",
+        columns.join(", "),
+        placeholders.join(", ")
+    );
+    if backend == sea_orm::DatabaseBackend::Postgres {
+        sql.push_str(" ON CONFLICT DO NOTHING");
     }
+    connection
+        .execute(Statement::from_sql_and_values(backend, sql, values))
+        .await?;
+    Ok(())
 }
 
 async fn acquire_postgres_migration_guard(
