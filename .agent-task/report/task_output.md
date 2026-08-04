@@ -1,13 +1,13 @@
-issue_title: "Native Rust Omnichannel Chat Engine (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat Engine (legacy external chat system Replacement)"
 issue_description: |
-  # Native Rust Omnichannel Chat Engine (Chatwoot Replacement)
+  # Native Rust Omnichannel Chat Engine (legacy external chat system Replacement)
 
   ## Problem Statement
-  OHC currently relies on external systems (or lacked native capability) for omnichannel customer support, creating fragmentation in the multi-tenant architecture. Chatwoot has been 100% RETIRED as a third-party dependency. OHC owners (Maya, Carlos, Priya) need a unified inbox that brings together Instagram DMs, WhatsApp, SMS, Email, and Web Chat into a single, cohesive interface. We must build a high-performance, multi-tenant omnichannel chat engine natively in Rust, directly integrated into OHC's backend, fully supporting SPIFFE/SPIRE identity and Postgres RLS.
+  OHC currently relies on external systems (or lacked native capability) for omnichannel customer support, creating fragmentation in the multi-tenant architecture. legacy external chat system has been 100% RETIRED as a third-party dependency. OHC owners (Maya, Carlos, Priya) need a unified inbox that brings together Instagram DMs, WhatsApp, SMS, Email, and Web Chat into a single, cohesive interface. We must build a high-performance, multi-tenant omnichannel chat engine natively in Rust, directly integrated into OHC's backend, fully supporting SPIFFE/SPIRE identity and Postgres RLS.
 
   ## Research Report
-  ### Competitive Analysis: Chatwoot Architecture Audit
-  An extensive audit of the `chatwoot/chatwoot` repository (Ruby on Rails) revealed its core strengths and architectural models:
+  ### Competitive Analysis: legacy external chat system Architecture Audit
+  An extensive audit of the `legacy external chat system/legacy external chat system` repository (Ruby on Rails) revealed its core strengths and architectural models:
   1. **Omnichannel Inboxes**: Associates physical channels (e.g., WhatsApp, Web Widget) with logical Inboxes.
   2. **Conversations & Messages**: Centralized conversational threads linked to Contacts.
   3. **Real-time WebSockets**: ActionCable-based pub/sub for instant message delivery and typing indicators.
