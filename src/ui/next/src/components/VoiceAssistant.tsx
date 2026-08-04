@@ -236,7 +236,7 @@ export function VoiceAssistant() {
 
   return (
     <div
-      className="relative z-[100] flex w-auto min-w-0 flex-none items-center gap-2 pointer-events-none"
+      className="relative sm:fixed sm:bottom-8 sm:left-1/2 sm:-translate-x-1/2 z-[100] flex w-auto min-w-0 flex-none items-center gap-2 pointer-events-none"
       data-voice-assistant-root
     >
       {status !== "idle" && (
