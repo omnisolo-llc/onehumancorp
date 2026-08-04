@@ -1,17 +1,17 @@
-issue_title: "[Architecture] Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "[Architecture] Native Rust Omnichannel Chat System"
 issue_description: |
   ## Title: Architecture Design for Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  The OHC platform must provide owners and operators (e.g., Maya, Carlos, Priya) with a unified inbox to triage messages, bookings, and customer requests across all channels (Web, WhatsApp, Email, Instagram). Previously, OHC relied on an external third-party service (Chatwoot) which has now been 100% retired to reduce operational complexity, enforce absolute multi-tenant Zero Trust (SPIFFE/SPIRE) security, and improve latency. We need a native Rust omnichannel chat system inside the OHC monolith that replicates the core capabilities of Chatwoot without the bloat, designed explicitly for mobile-first small business workflows and AI agent interactions.
+  The OHC platform must provide owners and operators (e.g., Maya, Carlos, Priya) with a unified inbox to triage messages, bookings, and customer requests across all channels (Web, WhatsApp, Email, Instagram). Previously, OHC relied on an external third-party service which has now been 100% retired to reduce operational complexity, enforce absolute multi-tenant Zero Trust (SPIFFE/SPIRE) security, and improve latency. We need a native Rust omnichannel chat system inside the OHC monolith that replicates the core capabilities without the bloat, designed explicitly for mobile-first small business workflows and AI agent interactions.
 
   ## Research Report & Feature Benchmarking
-  I cloned and audited the Chatwoot source code (`https://github.com/chatwoot/chatwoot`) to understand its architecture and data models. Key findings:
-  1. **Data Models:** Chatwoot centers around `Conversations` (with `status`, `snoozed_until`, `assignee_id`), `Messages` (polymorphic sender: contact or agent), `Contacts`, and `Inboxes`.
+  I cloned and audited the legacy external chat provider source code to understand its architecture and data models. Key findings:
+  1. **Data Models:** The system centers around `Conversations` (with `status`, `snoozed_until`, `assignee_id`), `Messages` (polymorphic sender: contact or agent), `Contacts`, and `Inboxes`.
   2. **Channel Adapters:** It uses a flexible `Channel` model (e.g., `Channel::WebWidget`, `Channel::Whatsapp`, `Channel::Email`) connected to an `Inbox`.
   3. **Real-time:** WebSockets power real-time updates to the unified frontend.
   4. **Omnichannel:** All channels funnel into a unified `Conversation` model, abstracting away the provider specifics.
-  5. **Gap Analysis:** Chatwoot is built for enterprise support teams (SLA policies, macros). OHC needs this optimized for a single owner/operator (and AI agents) where chat leads directly to commerce actions (deposits, bookings, quotes) without complex team routing.
+  5. **Gap Analysis:** The legacy external service is built for enterprise support teams (SLA policies, macros). OHC needs this optimized for a single owner/operator (and AI agents) where chat leads directly to commerce actions (deposits, bookings, quotes) without complex team routing.
 
   ## Design Doc
   ### High-Level Architecture Diagram
@@ -66,7 +66,7 @@ issue_description: |
 
   ## Implementation Prompt
   **Role:** Implementer Agent
-  **Objective:** Build the core database schema, models, and service layer for the Native Rust Omnichannel Chat System based on the Chatwoot audit, replacing the retired dependency.
+  **Objective:** Build the core database schema, models, and service layer for the Native Rust Omnichannel Chat System, replacing the retired dependency.
   **CUJ:** An owner receives a message via a channel (e.g., WhatsApp or Web Widget). The webhook hits our API, creates a Contact (if new), creates a Conversation, and saves the Message. The system then broadcasts an event, and the AI agent drafts a suggested reply.
   **Acceptance Criteria:**
   1. Define Rust models for `Inbox`, `Channel`, `Contact`, `Conversation`, and `Message` in `src/server/services/chat/models.rs`.
