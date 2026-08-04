@@ -34,15 +34,6 @@ pub struct Contact {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, sqlx::Type)]
-#[sqlx(type_name = "VARCHAR", rename_all = "lowercase")]
-pub enum ConversationStatus {
-    Open,
-    Resolved,
-    Snoozed,
-    Bot,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Conversation {
     pub id: Uuid,
@@ -53,15 +44,6 @@ pub struct Conversation {
     pub status: String,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, sqlx::Type)]
-#[sqlx(type_name = "VARCHAR", rename_all = "lowercase")]
-pub enum SenderType {
-    Contact,
-    Agent,
-    Bot,
-    System,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
