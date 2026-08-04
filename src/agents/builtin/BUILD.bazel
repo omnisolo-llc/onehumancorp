@@ -14,6 +14,7 @@ rust_library(
         "caveman.rs",
         "code_native.rs",
         "core.rs",
+        "condensation.rs",
         "durable_execution.rs",
         "dynamic_workflows.rs",
         "expert_team.rs",
