@@ -1,3 +1,4 @@
+-- +goose Up
 CREATE TABLE IF NOT EXISTS chat_inboxes (
     id UUID PRIMARY KEY,
     tenant_id UUID NOT NULL,
@@ -49,7 +50,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY,
     tenant_id UUID NOT NULL,
     conversation_id UUID NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
-    sender_type TEXT NOT NULL, -- e.g. 'contact', 'agent', 'bot'
+    sender_type TEXT NOT NULL,
     sender_id UUID,
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -57,3 +58,10 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_messages_tenant_isolation_policy ON chat_messages FOR ALL USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+
+-- +goose Down
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS chat_conversations CASCADE;
+DROP TABLE IF EXISTS chat_contacts CASCADE;
+DROP TABLE IF EXISTS chat_channels CASCADE;
+DROP TABLE IF EXISTS chat_inboxes CASCADE;
