@@ -1,0 +1,18 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+server_common = { path = "../../common" }
+sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "runtime-tokio-native-tls", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid"] }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+async-trait = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
