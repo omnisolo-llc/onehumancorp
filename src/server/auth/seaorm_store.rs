@@ -1470,6 +1470,8 @@ mod atomic_registration_tests {
     use sea_orm::{ConnectOptions, ConnectionTrait, Database, EntityTrait, PaginatorTrait, Schema};
     use std::time::Duration;
 
+
+
     async fn repositories() -> (
         tempfile::TempDir,
         SeaOrmAuthRepository,
