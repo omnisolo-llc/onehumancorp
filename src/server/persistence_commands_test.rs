@@ -1,3 +1,6 @@
+pub mod db {
+    pub use server_lib::db::*;
+}
 #[path = "persistence/capabilities.rs"]
 mod capabilities;
 #[path = "persistence/commands.rs"]
