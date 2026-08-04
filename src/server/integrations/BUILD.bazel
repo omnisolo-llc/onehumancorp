@@ -14,6 +14,9 @@ exports_files(
 rust_library(
     name = "server_integrations",
     srcs = [
+        "chat/mod.rs",
+        "chat/omnichannel_rust_system.rs",
+        "chat/omnichannel.rs",
         "bazel_lib.rs",
         "catalog.rs",
         "mcp/registry.rs",
@@ -149,6 +152,9 @@ rust_test(
     name = "catalog_metadata_test",
     size = "small",
     srcs = [
+        "chat/mod.rs",
+        "chat/omnichannel_rust_system.rs",
+        "chat/omnichannel.rs",
         "catalog_metadata_test.rs",
         "catalog.rs",
     ],
