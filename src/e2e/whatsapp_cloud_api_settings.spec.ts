@@ -1,17 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
 
 test.describe('WhatsApp Cloud API Integrations Setting', () => {
-  test.beforeAll(async () => {
-    await setupTestEnv();
-  });
-
-  test.afterAll(async () => {
-    await teardownTestEnv();
-  });
-
   test.beforeEach(async ({ page }) => {
-    await loginAsE2eTenant(page);
+    await page.goto('/login');
+    await page.getByLabel('Email or username').fill('test@example.com');
+    await page.getByLabel('Password').fill('password123');
+    await page.getByLabel(/Organization/).fill('e2e-tenant');
+    await Promise.all([
+      page.waitForURL('**/dashboard'),
+      page.getByRole('button', { name: 'Log in' }).click(),
+    ]);
   });
 
   test('Owner can navigate to Settings -> Integrations and see WhatsApp Cloud API', async ({ page }) => {
