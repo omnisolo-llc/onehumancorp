@@ -11,6 +11,12 @@ path = "mod.rs"
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
+sqlx = { version = "0.8", features = ["uuid", "chrono", "macros", "postgres"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+chrono = { workspace = true }
+serde_json = { workspace = true }
+axum = "0.8.1"
+tracing = "0.1"
 
 [build-dependencies]
 tonic-build = "0.12"
