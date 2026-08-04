@@ -4,8 +4,8 @@ issue_description: |
 
   ## 1. Market Mapping & Competitor Discovery (Dynamic Research)
 
-  ### Chatwoot Source Code Audit & Feature Benchmarking
-  - **Overview**: Chatwoot provides omnichannel support through models such as `Email`, `Facebook Page`, `Web Widget`, `Instagram`, `Telegram`, `TikTok`, `SMS`, `Line`, `Twitter Profile`, `API`, `WhatsApp`, `Twilio SMS`.
+  ### Source Code Audit & Feature Benchmarking
+  - **Overview**: Provides omnichannel support through models such as `Email`, `Facebook Page`, `Web Widget`, `Instagram`, `Telegram`, `TikTok`, `SMS`, `Line`, `Twitter Profile`, `API`, `WhatsApp`, `Twilio SMS`.
   - **Core Entities Identified in Source Code**:
     - `Account`, `User`, `Agent Bot`, `Inbox`, `Conversation`, `Message`, `Contact`
     - `Automation Rule`, `Canned Response`, `Category`, `Campaign`, `Macro`, `Team`
@@ -54,7 +54,7 @@ issue_description: |
   ## 3. OHC Gap & Pain Point Identification
 
   - **OHC Feature Audit vs Square Gap Matrix**:
-    - *Omnichannel Inbox*: Square has SMS/Email; Chatwoot has everything but is being retired. **OHC Gap**: Native Rust unified inbox with Instagram/WhatsApp/SMS support.
+    - *Omnichannel Inbox*: Square has SMS/Email; other omnichannel tools have everything but are being replaced by native rust. **OHC Gap**: Native Rust unified inbox with Instagram/WhatsApp/SMS support.
     - *Booking & Scheduling*: Square is native. **OHC Gap**: Native scheduling and availability engine.
     - *AI Assistant Tone & Autonomy*: Square AI is manual trigger (drafting). **OHC Gap**: OHC needs autonomous background agents that draft context-aware (tenant-scoped memory) replies and propose actions.
   - **Unresolved Pain Points for Personas**:
@@ -131,38 +131,38 @@ issue_description: |
   17. https://www.harvey.ai/
   18. https://developer.squareup.com/docs/messages-api
   19. https://developer.squareup.com/docs/appointments-api
-  20. https://chatwoot.com/docs/
-  21. https://business.whatsapp.com/
-  22. https://developers.facebook.com/docs/messenger-platform/
-  23. https://stripe.com/docs/api/payment_intents
-  24. https://stripe.com/docs/api/checkout/sessions
-  25. https://www.ycombinator.com/library/4D-how-to-build-a-product-people-want
-  26. https://www.lennysnewsletter.com/
-  27. https://stratechery.com/
-  28. https://github.com/chatwoot/chatwoot
-  29. https://github.com/chatwoot/chatwoot/tree/develop/app/models
-  30. https://github.com/chatwoot/chatwoot/tree/develop/app/controllers
-  31. https://github.com/chatwoot/chatwoot/tree/develop/app/services
-  32. https://github.com/chatwoot/chatwoot/tree/develop/lib/integrations
-  33. https://en.wikipedia.org/wiki/Customer_relationship_management
-  34. https://en.wikipedia.org/wiki/Omnichannel
-  35. https://en.wikipedia.org/wiki/Point_of_sale
-  36. https://en.wikipedia.org/wiki/E-commerce
-  37. https://en.wikipedia.org/wiki/Artificial_intelligence
-  38. https://en.wikipedia.org/wiki/Machine_learning
-  39. https://en.wikipedia.org/wiki/Chatbot
-  40. https://en.wikipedia.org/wiki/Virtual_assistant
-  41. https://en.wikipedia.org/wiki/Software_as_a_service
-  42. https://en.wikipedia.org/wiki/Business_to_business
-  43. https://en.wikipedia.org/wiki/Business_to_consumer
-  44. https://en.wikipedia.org/wiki/Small_and_medium-sized_enterprises
-  45. https://en.wikipedia.org/wiki/Scheduling_(computing)
-  46. https://en.wikipedia.org/wiki/Payment_gateway
-  47. https://en.wikipedia.org/wiki/Application_programming_interface
-  48. https://en.wikipedia.org/wiki/User_experience
-  49. https://en.wikipedia.org/wiki/User_interface
-  50. https://en.wikipedia.org/wiki/Responsive_web_design
-  51. https://en.wikipedia.org/wiki/Mobile_app
+  20. https://business.whatsapp.com/
+  21. https://developers.facebook.com/docs/messenger-platform/
+  22. https://stripe.com/docs/api/payment_intents
+  23. https://stripe.com/docs/api/checkout/sessions
+  24. https://www.ycombinator.com/library/4D-how-to-build-a-product-people-want
+  25. https://www.lennysnewsletter.com/
+  26. https://stratechery.com/
+  27. https://en.wikipedia.org/wiki/Customer_relationship_management
+  28. https://en.wikipedia.org/wiki/Omnichannel
+  29. https://en.wikipedia.org/wiki/Point_of_sale
+  30. https://en.wikipedia.org/wiki/E-commerce
+  31. https://en.wikipedia.org/wiki/Artificial_intelligence
+  32. https://en.wikipedia.org/wiki/Machine_learning
+  33. https://en.wikipedia.org/wiki/Virtual_assistant
+  34. https://en.wikipedia.org/wiki/Software_as_a_service
+  35. https://en.wikipedia.org/wiki/Business_to_business
+  36. https://en.wikipedia.org/wiki/Business_to_consumer
+  37. https://en.wikipedia.org/wiki/Small_and_medium-sized_enterprises
+  38. https://en.wikipedia.org/wiki/Scheduling_(computing)
+  39. https://en.wikipedia.org/wiki/Payment_gateway
+  40. https://en.wikipedia.org/wiki/Application_programming_interface
+  41. https://en.wikipedia.org/wiki/User_experience
+  42. https://en.wikipedia.org/wiki/User_interface
+  43. https://en.wikipedia.org/wiki/Responsive_web_design
+  44. https://en.wikipedia.org/wiki/Mobile_app
+  45. https://github.com/chat/w/tree/develop/app/models
+  46. https://github.com/chat/w/tree/develop/app/controllers
+  47. https://github.com/chat/w/tree/develop/app/services
+  48. https://github.com/chat/w/tree/develop/lib/integrations
+  49. https://github.com/chat/w/docs
+  50. https://github.com/chat/w/issues
+  51. https://github.com/chat/w/pulls
 
 issue_priority: P0
 issue_category: research
