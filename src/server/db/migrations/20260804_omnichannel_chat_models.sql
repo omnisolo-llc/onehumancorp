@@ -1,5 +1,5 @@
 -- Omnichannel chat models for native Rust backend
--- Replaces Chatwoot models
+-- Replaces legacy external chat service models
 
 CREATE TABLE IF NOT EXISTS chat_channels (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
