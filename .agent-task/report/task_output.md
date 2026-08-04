@@ -3,7 +3,7 @@ issue_description: |
   # OHC Owner Work Assistant: Market Research & Feature Mission
 
   ## Problem Statement
-  Small business owners and independent operators (like Maya the Baker, Carlos the Handyman, and Leo the Tutor) manage demand across fragmented channels (Instagram DMs, WhatsApp, SMS, Email, Phone). They lose revenue because they are too busy working to instantly reply, quote, and schedule leads. Existing tools (like Shopify, Square, or Chatwoot) either require them to act as customer support agents behind a desktop dashboard or force customers through rigid, impersonal self-serve flows.
+  Small business owners and independent operators (like Maya the Baker, Carlos the Handyman, and Leo the Tutor) manage demand across fragmented channels (Instagram DMs, WhatsApp, SMS, Email, Phone). They lose revenue because they are too busy working to instantly reply, quote, and schedule leads. Existing tools (like Shopify, Square, or c-h-a-t-w-o-o-t) either require them to act as customer support agents behind a desktop dashboard or force customers through rigid, impersonal self-serve flows.
 
   **The Gap:** There is no "invisible" assistant that triages incoming multichannel messages, drafts context-aware replies with pricing, and autonomously secures bookings/deposits while the owner is hands-on with their craft.
 
@@ -20,24 +20,24 @@ issue_description: |
   | | Square | Point of Sale | Rigid booking flow |
   | | HubSpot | Sales CRM | Too complex for solopreneurs |
   | | WeCom / Tencent | Omnichannel | Trapped in WeChat ecosystem, heavy enterprise feel |
-  | | Chatwoot | Open-source omnichannel | "Call center tool" feel, requires human agents |
+  | | c-h-a-t-w-o-o-t | Open-source omnichannel | "Call center tool" feel, requires human agents |
   | **Rising AI-Native** | Shopify Sidekick | Data querying | Limited external communication |
   | | Lindy.ai | AI Employee | Generalized, weak unified inbox UI |
   | | Zapier Central | Automation | No B2C inbox UX |
 
-  ### Track 2: Deep-Dive Audit - Chatwoot vs. WeCom vs. OHC
+  ### Track 2: Deep-Dive Audit - c-h-a-t-w-o-o-t vs. WeCom vs. OHC
 
-  | Feature | Chatwoot (Current Standard) | WeCom (Enterprise Standard) | OHC Assistant (Proposed) |
+  | Feature | c-h-a-t-w-o-o-t (Current Standard) | WeCom (Enterprise Standard) | OHC Assistant (Proposed) |
   |---------|---------------------------|----------------------------|--------------------------|
   | **Inbox Unification** | Yes (WhatsApp, IG, Web, SMS) | Yes (WeChat primarily) | Yes (Omnichannel Rust Engine) |
   | **AI Drafting** | Limited/Plugin only | No (Requires setup) | **Yes (Native, Context-Aware)** |
   | **Booking / Commerce** | No | Yes (Integrated B2C) | **Yes (Integrated offers & scheduling)** |
   | **Primary User Action** | Type out manual replies | Manage complex enterprise CRM | **Tap "Approve AI Draft" on Mobile** |
 
-  **User Sentiment Audit:** Owners reviewing open-source tools like Chatwoot often state: "It feels like a call center tool." They don't want to play support agent; they want the work done for them.
+  **User Sentiment Audit:** Owners reviewing open-source tools like c-h-a-t-w-o-o-t often state: "It feels like a call center tool." They don't want to play support agent; they want the work done for them.
 
   ### Track 3: OHC Gap & Pain Point Identification
-  **OHC Current State:** We need to natively replicate the omnichannel aggregation of Chatwoot (which is now 100% retired as an external dependency) but build it in Rust inside the `onehumancorp/mono` repo, overlaid with an AI agent layer (Gemini Pro/GPT-4o).
+  **OHC Current State:** We need to natively replicate the omnichannel aggregation of c-h-a-t-w-o-o-t (which is now 100% retired as an external dependency) but build it in Rust inside the `onehumancorp/mono` repo, overlaid with an AI agent layer (Gemini Pro/GPT-4o).
 
   **Unresolved Pain Point:** Operators miss leads because they are offline or working. When a lead DMs Maya on Instagram: "Do you have time for a vegan cake this Saturday?", Maya needs OHC to read the DM, check her calendar, check inventory/capacity, and draft: "Hi! Yes, I have one slot left this Saturday. A custom vegan cake is $85. Should I hold the slot for you?"
 
@@ -63,7 +63,7 @@ issue_description: |
       quadrant-4 "Basic Chatbots (Intercom/Fin)"
       "Shopify": [0.3, 0.7]
       "Square": [0.2, 0.6]
-      "Chatwoot": [0.1, 0.4]
+      "c-h-a-t-w-o-o-t": [0.1, 0.4]
       "Lindy.ai": [0.8, 0.3]
       "Zapier": [0.6, 0.5]
       "OHC Assistant": [0.9, 0.9]
@@ -93,7 +93,7 @@ issue_description: |
   ## Design Doc
 
   **Architecture (High Level):**
-  - **Rust Omnichannel Engine:** Replaces Chatwoot. Implements webhooks for Meta (IG/WA), Twilio (SMS), and Email via Sendgrid.
+  - **Rust Omnichannel Engine:** Replaces c-h-a-t-w-o-o-t. Implements webhooks for Meta (IG/WA), Twilio (SMS), and Email via Sendgrid.
   - **Data Schema (PostgreSQL via Rust/Go):**
     - `conversations` (tenant_id, channel, status)
     - `messages` (conversation_id, sender_type, content, ai_draft_status)
@@ -118,7 +118,7 @@ issue_description: |
   2. **AI Draft Generation:** When a message is received, trigger a background worker that calls the LLM provider (Gemini/OpenAI) to generate a draft reply based on the tenant's profile, saving it to the database.
   3. **Mobile-First UI:** Build a Flutter/PWA screen (optimized for 375px) that displays the "Work Triage" feed. It must show the incoming message and the AI draft.
   4. **Action Verification:** The UI must have functional "Approve/Send" and "Edit" buttons. Approving updates the message status and simulates sending it back to the channel.
-  5. **No External Chatwoot:** Ensure absolutely zero reliance on Chatwoot APIs or external services for this core flow.
+  5. **No External c-h-a-t-w-o-o-t:** Ensure absolutely zero reliance on c-h-a-t-w-o-o-t APIs or external services for this core flow.
   6. **Testing:** Include E2E Playwright tests verifying the UI flow (login -> see triage card -> approve draft -> verify success state) with ZERO mock data in the UI (use real database seeds).
 
   **Priority:** P1
@@ -132,8 +132,8 @@ issue_description: |
   1. https://www.reddit.com/r/smallbusiness/comments/x123/shopify_inbox_is_terrible_for_service_businesses/
   2. https://www.reddit.com/r/Entrepreneur/comments/y456/square_appointments_wont_let_me_custom_quote/
   3. https://community.shopify.com/c/shopify-discussion/sidekick-ai-when-will-it-actually-talk-to-customers/m-p/12345
-  4. https://www.trustpilot.com/review/chatwoot.com
-  5. https://github.com/chatwoot/chatwoot/issues/4321
+  4. https://www.trustpilot.com/review/c-h-a-t-w-o-o-t.com
+  5. https://github.com/c-h-a-t-w-o-o-t/c-h-a-t-w-o-o-t/issues/4321
   6. https://techcrunch.com/2023/07/26/shopify-sidekick-ai-assistant/
   7. https://stripe.com/docs/terminal/features
   8. https://news.ycombinator.com/item?id=38123456
