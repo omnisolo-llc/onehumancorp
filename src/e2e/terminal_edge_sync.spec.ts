@@ -9,7 +9,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
+            data: JSON.parse(JSON.stringify( {
                 transactions: [
                     {
                         transaction_id: txId,
@@ -20,6 +20,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
                         payload: '{"items": [{"id": "item_1", "qty": 1}]}',
                     }
                 ]
+            }))
             }
         });
 
@@ -34,7 +35,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
             headers: {
                 'x-tenant-id': tenantId,
             },
-            data: {
+            data: JSON.parse(JSON.stringify( {
                 transactions: [
                     {
                         transaction_id: txId,
@@ -45,6 +46,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
                         payload: '{"items": [{"id": "item_1", "qty": 1}]}',
                     }
                 ]
+            }))
             }
         });
 

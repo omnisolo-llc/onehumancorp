@@ -4,7 +4,7 @@ test.describe('Loyalty & Rewards Engine', () => {
 
   test('Should create and retrieve loyalty wallet balance', async ({ page }) => {
     // Override window.fetch to bypass playwright's strict page.route network interception rules
-    await page.addInitScript(() => {
+    await page.evaluate(() => {
         const originalFetch = window.fetch;
         window.fetch = async (...args) => {
             const url = args[0]?.toString() || '';
@@ -37,7 +37,7 @@ test.describe('Loyalty & Rewards Engine', () => {
   });
 
   test('Should apply points to checkout', async ({ page }) => {
-    await page.addInitScript(() => {
+    await page.evaluate(() => {
         const originalFetch = window.fetch;
         window.fetch = async (...args) => {
             const url = args[0]?.toString() || '';

@@ -5,7 +5,7 @@ test.describe('Autonomous Booking System UI', () => {
 
   test('Public Booking Form Flow', async ({ page }) => {
     // Override fetch to bypass playwright's static checks
-    await page.addInitScript(() => {
+    await page.evaluate(() => {
         const originalFetch = window.fetch;
         window.fetch = async (...args) => {
             const url = args[0]?.toString() || '';
@@ -46,7 +46,7 @@ test.describe('Autonomous Booking System UI', () => {
 
   test('Owner Admin Dashboard', async ({ page }) => {
     // Override fetch
-    await page.addInitScript(() => {
+    await page.evaluate(() => {
         const originalFetch = window.fetch;
         window.fetch = async (...args) => {
             const url = args[0]?.toString() || '';

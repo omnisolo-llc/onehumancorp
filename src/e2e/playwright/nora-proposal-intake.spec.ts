@@ -13,7 +13,7 @@ test.describe('Nora Autonomous Proposal Intake Flow', () => {
         'x-user-id': 'nora',
         'Content-Type': 'application/json',
       },
-      data: {
+      data: JSON.parse(JSON.stringify( {
         inquiry: "Looking for a website redesign and branding.",
         customer_id: customerId
       }
