@@ -1,0 +1,21 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "server_integrations_chat"
+path = "lib.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.2", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+axum = "0.7"
+tokio = { version = "1.0", features = ["full", "sync"] }
+ohc_builtin_agent = { path = "../../../agents/builtin" }
+ohc_builtin_agent_core = { path = "../../../agents/builtin/core" }
+ohc_builtin_agent_llm = { path = "../../../agents/builtin/llm" }
+tracing = "0.1"
+async-trait = "0.1"
