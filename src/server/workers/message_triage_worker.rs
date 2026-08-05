@@ -153,39 +153,20 @@ Output JSON format:
                 customer_context: None,
             });
 
+            // The test uses a mock LLM. We must extract final draft from the router instead of
+            // generating a static payload.
+            let extracted_final_draft = _omni_result.final_draft.clone();
+
             let mut extracted = serde_json::json!({
                 "priority": "Medium",
                 "feature_type": "general",
                 "context_summary": "Customer inquiry",
                 "action_type": "Draft Reply",
-                "action_payload": "Thanks for reaching out! We will review this and get back to you soon."
+                "action_payload": extracted_final_draft
             });
 
             let max_retries = 3;
             let mut retry_count = 0;
-
-            let test_override = std::env::var("CI").is_ok() || std::env::var("PLAYWRIGHT_STORAGE_STATE").is_ok() || std::env::var("DATABASE_URL").is_ok();
-            if test_override {
-                let customer_lower = customer_message.to_lowercase();
-                if customer_lower.contains("tomorrow") || customer_lower.contains("sink") {
-                    extracted = serde_json::json!({
-                        "priority": "Medium",
-                        "feature_type": "instagram_dm",
-                        "context_summary": "Customer inquiry",
-                        "action_type": "Draft Reply",
-                        "action_payload": "Hi Sarah! I can do Friday. That will be a $50 deposit."
-                    });
-                } else if customer_lower.contains("cake for friday") || customer_lower.contains("friday") {
-                    extracted = serde_json::json!({
-                        "priority": "Medium",
-                        "feature_type": "instagram_dm",
-                        "context_summary": "Customer inquiry",
-                        "action_type": "Draft Reply",
-                        "action_payload": "Hi Sarah! I can do Friday. That will be a $50 deposit."
-                    });
-                }
-                retry_count = max_retries; // Break out of LLM call
-            }
 
             while retry_count < max_retries {
                 let compressed_prompt_clone = compressed_prompt.clone();

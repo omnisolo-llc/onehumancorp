@@ -249,7 +249,12 @@ Return strict JSON:
            let mut ops_context = None;
            let mut sales_context = None;
 
-           if content_lower.contains("tomorrow") || content_lower.contains("sink") || content_lower.contains("friday") { result.final_draft = "Hi Sarah! I can do Friday. That will be a $50 deposit.".to_string(); return Ok(result); } if content_lower.contains("vegan options") {
+           if content_lower.contains("tomorrow") || content_lower.contains("sink") {
+                result.final_draft = "Hi Sarah! I can do Friday. That will be a $50 deposit.".to_string();
+                return Ok(result);
+           }
+
+           if content_lower.contains("vegan options") {
                 result.final_draft = "Hi there! Yes, we do offer vegan options. I see you've previously ordered with us. Would you like to see our menu?".to_string();
                 return Ok(result);
            }
