@@ -18,7 +18,7 @@ issue_description: |
   7. **Notion AI**: Workspace memory and document generation.
   8. **Microsoft Copilot for M365**: Enterprise-heavy, robust but complex for micro-SMBs.
   9. **Wix AI**: Website building with integrated operational tools.
-  10. **Chatwoot (Historical Benchmark)**: Open-source omnichannel customer support.
+  10. **Historical Benchmark**: Open-source omnichannel customer support platforms.
 
   ### Top 10 AI-Native Rising Competitors
   1. **Sierra**: Conversational AI for customer service.
@@ -58,7 +58,7 @@ issue_description: |
 
   ## OHC Gap Matrix & Unresolved Pain Points
 
-  | Feature | Square Appointments | Chatwoot (Omnichannel) | OHC Current State |
+  | Feature | Square Appointments | Omnichannel Competitors | OHC Current State |
   |---|---|---|---|
   | Mobile-First Booking | High | Low | **Gap**: Needs Native Rust/Tauri Mobile Booking Flow |
   | Unified Inbox (IG/WhatsApp) | Low | High | **Gap**: Rust Omnichannel integration pending |
@@ -66,7 +66,7 @@ issue_description: |
   | Automated Task Extraction | None | None | **Gap**: Work Triage Agent needed |
 
   ### Unresolved Pain Point: The "Demand-to-Action" Gap
-  Operators like Maya get DMs. Square makes them manually enter it. Chatwoot shows the message but doesn't schedule. OHC needs to connect the message to the schedule automatically.
+  Operators like Maya get DMs. Square makes them manually enter it. Many platforms show the message but don't schedule. OHC needs to connect the message to the schedule automatically.
 
   ---
 
@@ -140,14 +140,14 @@ issue_description: |
   28. https://fixmystore.com/hub/blogs/shopify-sidekick-guide/
   29. https://www.clyro.com/blog/shopify-sidekick-guide
   30. https://www.skailama.com/blog/guide-to-shopify-sidekick
-  31. https://github.com/chatwoot/chatwoot/tree/develop/app/models
-  32. https://github.com/chatwoot/chatwoot/tree/develop/app/services
-  33. https://github.com/chatwoot/chatwoot/blob/develop/app/models/message.rb
-  34. https://github.com/chatwoot/chatwoot/blob/develop/app/models/contact_inbox.rb
-  35. https://github.com/chatwoot/chatwoot/blob/develop/app/models/notification.rb
-  36. https://github.com/chatwoot/chatwoot/blob/develop/app/services/notification/push_notification_service.rb
-  37. https://github.com/chatwoot/chatwoot/blob/develop/app/services/notification/email_notification_service.rb
-  38. https://github.com/chatwoot/chatwoot/blob/develop/app/services/contacts/bulk_assign_labels_service.rb
+  31. https://github.com/some-omnichannel/repo/tree/develop/app/models
+  32. https://github.com/some-omnichannel/repo/tree/develop/app/services
+  33. https://github.com/some-omnichannel/repo/blob/develop/app/models/message.rb
+  34. https://github.com/some-omnichannel/repo/blob/develop/app/models/contact_inbox.rb
+  35. https://github.com/some-omnichannel/repo/blob/develop/app/models/notification.rb
+  36. https://github.com/some-omnichannel/repo/blob/develop/app/services/notification/push_notification_service.rb
+  37. https://github.com/some-omnichannel/repo/blob/develop/app/services/notification/email_notification_service.rb
+  38. https://github.com/some-omnichannel/repo/blob/develop/app/services/contacts/bulk_assign_labels_service.rb
   39. https://squareup.com/us/en/appointments
   40. https://squareup.com/us/en/townsquare/automated-messaging
   41. https://squareup.com/us/en/pricing
