@@ -198,8 +198,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_no_hardcoded_dummy_password() {
+    async fn test_no_hardcoded_placeholder_password() {
         let _source = include_str!("restic.rs");
-        assert!(true);
+        // Using variables to prevent matching against the test source file.
+        let secret_phrasing = format!("{}_{}", "dummy", "password");
+        assert!(!_source.contains(&secret_phrasing), "Hardcoded placeholder should have been removed");
     }
 }
