@@ -1,11 +1,11 @@
 issue_title: "Architecture Design: Native Rust Omnichannel Chat System"
 issue_description: |
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing Chatwoot with a high-performance Native Rust Omnichannel Chat System. This change is crucial to providing non-technical owner/operators (such as Maya the baker or Carlos the handyman) an unfragmented work assistant that invisibly centralizes all customer communications (Instagram DMs, WhatsApp, SMS, Web Widget, Email) in a single feed without needing technical expertise or external integrations. OHC must own the entire communication stack to guarantee real-time updates, strict multi-tenant isolation, and deep integration with the Operations, Sales, and Knowledge AI Assistant capabilities natively within `onehumancorp/mono`.
+  OneHumanCorp (OHC) is replacing its legacy third-party Rails chat provider with a high-performance Native Rust Omnichannel Chat System. This change is crucial to providing non-technical owner/operators (such as Maya the baker or Carlos the handyman) an unfragmented work assistant that invisibly centralizes all customer communications (Instagram DMs, WhatsApp, SMS, Web Widget, Email) in a single feed without needing technical expertise or external integrations. OHC must own the entire communication stack to guarantee real-time updates, strict multi-tenant isolation, and deep integration with the Operations, Sales, and Knowledge AI Assistant capabilities natively within `onehumancorp/mono`.
 
   ## Research Report
-  - **Codebase & Chatwoot Source Audit:** We have successfully inspected the Chatwoot Ruby on Rails codebase (specifically models like `conversation.rb`, `contact.rb`, `account.rb` and the `/channel` directory for integrations like SMS, WhatsApp, Web Widget, Twitter).
-  - **Market Position:** Competitors like Shopify Sidekick or Zendesk handle these disjointedly or push them to third parties. OHC's differentiation is an 'owner-centered' single inbox. Removing Chatwoot dependency removes external points of failure and unifies the data schema for OHC Agents.
+  - **Codebase & Legacy Source Audit:** We have successfully inspected the legacy open-source Ruby on Rails chat system codebase (specifically models like `conversation.rb`, `contact.rb`, `account.rb` and the `/channel` directory for integrations like SMS, WhatsApp, Web Widget, Twitter).
+  - **Market Position:** Competitors like Shopify Sidekick or Zendesk handle these disjointedly or push them to third parties. OHC's differentiation is an 'owner-centered' single inbox. Removing external chat dependencies removes points of failure and unifies the data schema for OHC Agents.
   - **Core Discoveries:**
     - Multi-tenant data structures must employ `tenant_id` at every level (Account -> Inbox -> Contact -> Conversation -> Message).
     - Diverse channel handlers (Email, SMS, Web Widget, WhatsApp, Instagram, FB Page, Line, Telegram) require unified standard interfaces.
