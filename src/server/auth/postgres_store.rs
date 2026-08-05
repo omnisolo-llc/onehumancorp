@@ -665,6 +665,14 @@ mod security_tests {
                 let repo = PgUserRepository::new(pool_clone);
                 let res = repo.update_user(dummy_user, "system").await;
                 assert!(res.is_err(), "Must reject system org_id");
+
+                // Also check get_by_id to ensure tenant isolation regression is prevented
+                let res2 = repo.get_by_id("dummy_id", "system").await;
+                assert!(res2.is_err(), "Must reject system id in multitenant mode");
+                assert_eq!(
+                    res2.unwrap_err(),
+                    "tenant_id 'system' cannot be queried in multi-tenant mode".to_string()
+                );
             }
         })
         .await;
