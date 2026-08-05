@@ -1,7 +1,7 @@
 # Production agent optimization and security review
 
 Date: 2026-07-13
-Reviewed branch: `main`  
+Reviewed branch: `main`
 Initial audit head: `64332c4aa`
 Priority: correctness and security first, then performance and token efficiency
 
