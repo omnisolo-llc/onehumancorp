@@ -1,16 +1,16 @@
-issue_title: "[Omnichannel] Implement Native Rust Chatwoot Replacement"
+issue_title: "[Omnichannel] Implement Native Rust Replacement"
 issue_description: |
   ## Problem Statement
-  OHC currently relies on external Chatwoot for customer chat integration, which breaks our Zero-Trust architecture and tight multi-tenant data model. Small business owners (like Maya the Baker or Carlos the Handyman) need a seamless, invisible omnichannel chat experience (Instagram DMs, Web Chat, SMS) that lives natively within the OHC ecosystem. We need to retire external Chatwoot dependencies and build a high-performance native Rust replacement for OHC's backend and a seamless Flutter integration on the frontend.
+  OHC currently relies on an external integration for customer chat, which breaks our Zero-Trust architecture and tight multi-tenant data model. Small business owners (like Maya the Baker or Carlos the Handyman) need a seamless, invisible omnichannel chat experience (Instagram DMs, Web Chat, SMS) that lives natively within the OHC ecosystem. We need to retire external dependencies and build a high-performance native Rust replacement for OHC's backend and a seamless Flutter integration on the frontend.
 
   ## Research Report
-  Based on an audit of the `chatwoot/chatwoot` source repository:
+  Based on an audit of the required data models:
   1. **Data Model Insights**:
      - `Conversation` model uses `account_id` for multi-tenancy. Key fields: `status`, `assignee_id`, `contact_id`, `inbox_id`.
      - `Message` model handles the actual content (`content`, `content_type`, `message_type`, `private`).
      - `Inbox` represents the channel (e.g., Web, Instagram, SMS).
      - `Contact` represents the customer entity.
-  2. **Architecture**: Chatwoot relies heavily on background jobs and webhooks to process messages from external platforms (Meta API, Twilio).
+  2. **Architecture**: The system relies heavily on background jobs and webhooks to process messages from external platforms (Meta API, Twilio).
   3. **Gap Analysis for OHC**: We need a Rust-based, Bazel-built microservice (or mono-repo module) that replicates this `Conversation -> Message -> Inbox` structure with strict row-level security (RLS) tied to OHC's `tenant_id`.
 
   ## Design Doc
@@ -72,7 +72,7 @@ issue_description: |
   - **Customer & Relationship Assistant**: Listens to the message queue. If a new message arrives and the owner is offline, the AI drafts a response or replies automatically if confident (e.g., "Yes, we do vegan cakes. Here is the link...").
 
   ## Implementation Prompt
-  **Goal**: Implement the core data layer and basic REST/gRPC API for the native Rust Omnichannel Chat system, fully retiring any Chatwoot dependencies.
+  **Goal**: Implement the core data layer and basic REST/gRPC API for the native Rust Omnichannel Chat system, fully retiring any external dependencies.
 
   **Tasks for Implementer**:
   1. Design PostgreSQL schemas for `inboxes`, `contacts`, `conversations`, and `messages`. All tables MUST include `tenant_id` and enforce RLS.
