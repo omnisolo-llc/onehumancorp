@@ -188,8 +188,6 @@ docker info
 
 log "Starting Docker Compose stack ..."
 export MINIMAX_API_KEY="${MINIMAX_API_KEY:-dummy_key_for_test}"
-echo "[docker-e2e] Skipping test due to missing docker daemon capabilities." >&2
-exit 0
 compose up -d postgres valkey server server-init
 
 SERVER_BINDING="$(compose port server 8080)"
