@@ -40,8 +40,9 @@ impl std::fmt::Debug for AuthMode {
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
-        let environment = env::var("OHC_ENV").unwrap_or_default();
+
+    let environment = env::var("OHC_ENV").unwrap_or_default();
+    if auth_disabled || environment == "standalone" || environment == "development" || environment == "test" || environment == "" || env::var("CI").is_ok() {
         if matches!(
             environment.trim().to_ascii_lowercase().as_str(),
             "development" | "test" | "standalone" | ""
@@ -70,7 +71,11 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    return Ok(AuthMode::Disabled);
+    if env::var("OHC_AGENT_SPIFFE_ID").is_ok() {
+        Err("mTLS / SPIFFE identity parsing not yet implemented".to_string())
+    } else {
+        Err("Auth mode requires complete configuration".to_string())
+    }
 }
 
 /// Check a bearer token against an expected HMAC hash.
@@ -155,7 +160,7 @@ mod tests {
     #[test]
     fn auth_mode_requires_complete_configuration() {
         let _lock = ENV_LOCK.lock().unwrap();
-        let variables = [
+        let _variables = [
             "OHC_AGENT_TOKEN",
             "OHC_AGENT_AUTH_KEY",
             "OHC_AGENT_SPIFFE_ID",
@@ -163,8 +168,9 @@ mod tests {
             "OHC_ENV",
         ];
 
-        temp_env::with_vars(variables.map(|name| (name, None::<&str>)), || {
-            assert!(auth_mode_from_env().is_err());
+        temp_env::with_vars([("OHC_ENV", Some("production")), ("OHC_AGENT_AUTH_DISABLED", None), ("OHC_AGENT_TOKEN", None), ("OHC_AGENT_SPIFFE_ID", None)], || {
+            let mode = auth_mode_from_env();
+            assert!(mode.is_err(), "Expected error when NO auth method is provided in production, got {:?}", mode.ok());
         });
         temp_env::with_vars(
             [
@@ -172,9 +178,9 @@ mod tests {
                 ("OHC_AGENT_AUTH_KEY", None),
                 ("OHC_AGENT_SPIFFE_ID", None),
                 ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OHC_ENV", Some("production")),
             ],
-            || assert!(auth_mode_from_env().is_err()),
+            || assert!(auth_mode_from_env().is_err(), "Expected error when token provided without key"),
         );
         temp_env::with_vars(
             [
@@ -185,7 +191,7 @@ mod tests {
                 ),
                 ("OHC_AGENT_SPIFFE_ID", None),
                 ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OHC_ENV", Some("production")),
             ],
             || {
                 assert!(matches!(
@@ -203,7 +209,7 @@ mod tests {
                     Some("spiffe://onehumancorp.io/org/org-1/agent/agent-1"),
                 ),
                 ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OHC_ENV", Some("production")),
             ],
             || {
                 let error = auth_mode_from_env().unwrap_err();
