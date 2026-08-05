@@ -225,11 +225,11 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
-                className="ohc-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
+                className="ohc-card w-full max-w-full md:max-w-2xl mx-auto glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
               >
                 {/* Header Context */}
                 <div
-                  className="p-5 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%] cursor-pointer"
+                  className="sm:p-5 p-3 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%] cursor-pointer"
                   onClick={() => {
                     if (isSelected) {
                         setSelectedItemId(null);
@@ -266,7 +266,7 @@ export default function TriagePage() {
                 {isSelected && (
                   <div className="animate-in slide-in-from-top-2 duration-200 fade-in">
                     {item.action_type && (
-                      <div className="p-5 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-[30px] saturate-[210%] flex flex-col gap-2">
+                      <div className="sm:p-5 p-3 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-[30px] saturate-[210%] flex flex-col gap-2">
                         <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
                           Proposed Action: {item.action_type}
                         </div>
@@ -277,14 +277,14 @@ export default function TriagePage() {
                     )}
 
                     {/* Meta Details */}
-                    <div className="px-5 py-3 flex justify-between bg-white/30 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[11px] text-gray-500 dark:text-gray-400">
+                    <div className="sm:px-5 px-3 sm:py-3 py-2 flex justify-between bg-white/30 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[11px] text-gray-500 dark:text-gray-400">
                       <span>{new Date(item.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       <span>{new Date(item.created_at || Date.now()).toLocaleDateString()}</span>
                     </div>
 
                     {/* Action Buttons */}
                     {editingId === item.id ? (
-                      <div className="p-5 flex flex-col gap-3 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
+                      <div className="sm:p-5 p-3 flex flex-col gap-3 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
                         <textarea
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
@@ -315,7 +315,7 @@ export default function TriagePage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="p-5 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
+                      <div className="sm:p-5 p-3 pt-2 flex flex-col sm:flex-row gap-3 w-full border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
                         {item.action_type ? (
                           <>
                             <button

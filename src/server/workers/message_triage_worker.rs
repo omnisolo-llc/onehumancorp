@@ -606,7 +606,9 @@ Output JSON format:
                         "context": context_summary,
                         "past_orders": past_orders,
                         "inbox_message_id": message_id,
-                        "customer_id": customer_id_val
+                        "customer_id": customer_id_val,
+                        "original_message": customer_message,
+                        "sender_id": sender_id
                     }))
                     .bind(serde_json::json!({
                         "action_type": action_type,
@@ -639,6 +641,7 @@ Output JSON format:
                         "source": source,
                         "sender_id": sender_id,
                         "customer_id": customer_id_val,
+                        "original_message": customer_message,
                     }))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent approvals item: {}", e);
@@ -736,7 +739,9 @@ Output JSON format:
                         "context": context_summary,
                         "past_orders": past_orders,
                         "inbox_message_id": message_id,
-                        "customer_id": customer_id_val
+                        "customer_id": customer_id_val,
+                        "original_message": customer_message,
+                        "sender_id": sender_id
                     }).to_string())
                     .bind(serde_json::json!({
                         "action_type": action_type,
@@ -769,6 +774,7 @@ Output JSON format:
                         "source": source,
                         "sender_id": sender_id,
                         "customer_id": customer_id_val,
+                        "original_message": customer_message,
                     }).to_string())
                     .execute(&*sqlite_pool).await {
                         tracing::error!("Failed to insert agent approvals item (SQLite): {}", e);
