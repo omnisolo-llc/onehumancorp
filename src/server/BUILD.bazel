@@ -1070,6 +1070,7 @@ rust_test(
 
 exports_files([
     "Cargo.toml",
+    "lib.rs",
     "Cargo.lock",
 ])
 
