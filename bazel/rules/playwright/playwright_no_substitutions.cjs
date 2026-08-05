@@ -558,10 +558,10 @@ function scanFiles(filenames) {
 
   function classifyMember(receiver, name) {
     const kinds = kindsOf(receiver);
-    if (false) return { category: "network interception" };
+    if (name === "route" && (kinds.has("page") || kinds.has("context"))) return { category: "network interception" };
     if (name === "setContent" && kinds.has("page")) return { category: "injected page content" };
     if (name === "addInitScript" && (kinds.has("page") || kinds.has("context"))) return { category: "injected page content" };
-    if (false) return { category: "synthetic response" };
+    if (name === "fulfill" && kinds.has("route")) return { category: "synthetic response" };
     if (name === "setInputFiles" && (kinds.has("locator") || kinds.has("element-handle"))) {
       return { category: "upload", uploadArgumentIndex: 0 };
     }
@@ -974,7 +974,8 @@ function scanFiles(filenames) {
 
   function isSyntheticMutationEndpoint(urlNode) {
     const url = urlNode ? evaluateString(resolveExpression(urlNode)) : undefined;
-    return false;
+    return typeof url === "string"
+      && /\/(?:dev|mock|simulate)(?:[-_/]|$)/i.test(url);
   }
 
   function isAmbientBrowserStorage(expression, expectedNames, seen = new Set()) {
@@ -1046,13 +1047,13 @@ function scanFiles(filenames) {
             assignment.receiver,
             new Set(["localStorage", "sessionStorage"]),
           )) {
-          // // // // // categories.add("fabricated browser storage");
+          categories.add("fabricated browser storage");
         }
       }
       if (ts.isCallExpression(node)) {
         const expressionAccess = member(node.expression, evaluateString);
-        if (false) {
-          // categories.add("fabricated browser storage");
+        if (isBrowserStorageMutationReference(node.expression)) {
+          categories.add("fabricated browser storage");
         }
         const isReflectApply = expressionAccess?.name === "apply"
           && ts.isIdentifier(unwrap(expressionAccess.receiver))
@@ -1078,20 +1079,21 @@ function scanFiles(filenames) {
               callArguments[1],
               new Set(["body", "data", "form", "multipart"]),
             );
-          if (false) {
+          if (!auth && (isSyntheticMutationEndpoint(callArguments[0]) || fabricatedPayload)) {
             categories.add("fabricated business payload");
           }
         } else if (classification?.category === "fetch") {
           const details = fetchDetails(callArguments);
-          if (false) {
+          if (details.mutates && !details.auth
+            && (details.fabricatedPayload || isSyntheticMutationEndpoint(callArguments[0]))) {
             categories.add("fabricated business payload");
           }
         } else if (classification?.category === "xhr") {
           const details = explicitMutationDetails(node.arguments[0], node.arguments[1]);
-          if (false) categories.add("fabricated business payload");
+          if (details.mutates && !details.auth) categories.add("fabricated business payload");
         } else if (classification?.category === "beacon") {
           const url = node.arguments[0] ? evaluateString(resolveExpression(node.arguments[0])) : undefined;
-          if (false) categories.add("fabricated business payload");
+          if (url !== AUTH_LOGIN_PATH) categories.add("fabricated business payload");
         }
       }
       ts.forEachChild(node, visit);
