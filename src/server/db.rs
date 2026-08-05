@@ -2934,6 +2934,20 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS whatsapp_channels (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        phone_number TEXT NOT NULL,
+                        phone_number_id TEXT NOT NULL,
+                        business_account_id TEXT NOT NULL,
+                        api_token TEXT NOT NULL,
+                        calling_enabled BOOLEAN DEFAULT FALSE,
+                        webhook_verify_token TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT unique_phone_number_id UNIQUE(tenant_id, phone_number_id)
+                    );
+
                     CREATE TABLE IF NOT EXISTS tooltips (
                         id TEXT NOT NULL,
                         tenant_id TEXT NOT NULL,
@@ -3383,6 +3397,19 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         source VARCHAR(255),
                         original_content TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS whatsapp_channels (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        phone_number VARCHAR(255) NOT NULL,
+                        phone_number_id VARCHAR(255) NOT NULL,
+                        business_account_id VARCHAR(255) NOT NULL,
+                        api_token TEXT NOT NULL,
+                        calling_enabled BOOLEAN DEFAULT 0,
+                        webhook_verify_token VARCHAR(255) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
                     CREATE TABLE IF NOT EXISTS users (

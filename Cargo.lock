@@ -3846,6 +3846,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper-tls"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
+dependencies = [
+ "bytes",
+ "hyper 0.14.32",
+ "native-tls",
+ "tokio",
+ "tokio-native-tls",
+]
+
+[[package]]
 name = "hyper-util"
 version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5819,6 +5832,7 @@ dependencies = [
  "server_integrations_taxjar",
  "server_integrations_teams",
  "server_integrations_twilio",
+ "server_integrations_whatsapp_cloud",
  "server_integrations_zoom",
  "server_ohc",
  "server_oidc",
@@ -7732,10 +7746,12 @@ dependencies = [
  "http-body 0.4.6",
  "hyper 0.14.32",
  "hyper-rustls 0.24.2",
+ "hyper-tls",
  "ipnet",
  "js-sys",
  "log",
  "mime",
+ "native-tls",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
@@ -7748,6 +7764,7 @@ dependencies = [
  "sync_wrapper 0.1.2",
  "system-configuration",
  "tokio",
+ "tokio-native-tls",
  "tokio-rustls 0.24.1",
  "tower-service",
  "url",
@@ -8898,6 +8915,8 @@ dependencies = [
  "serde",
  "server_config",
  "sqlx",
+ "temp-env",
+ "tempfile",
 ]
 
 [[package]]
@@ -9527,6 +9546,19 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "server_integrations_whatsapp_cloud"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "lazy_static",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "server_integrations_core",
+ "tokio",
 ]
 
 [[package]]

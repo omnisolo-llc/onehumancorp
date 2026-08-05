@@ -120,12 +120,22 @@ pub async fn meta_webhook_post_handler(
                                   let resolved_tenant_id = match &state.db.store {
                                       crate::db::DbStore::Postgres => {
                                           let mut tid = sqlx::query_scalar::<_, String>(
-                                              "SELECT tenant_id FROM integration_credentials WHERE (from_phone = $1 OR from_phone = $2) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                                              "SELECT tenant_id::text FROM whatsapp_channels WHERE phone_number_id = $1 OR phone_number = $2 OR phone_number = $1 LIMIT 1"
                                           )
                                           .bind(display_phone_number)
                                           .bind(&clean_phone_number)
                                           .fetch_optional(pool)
                                           .await.unwrap_or(None);
+
+                                          if tid.is_none() {
+                                              tid = sqlx::query_scalar::<_, String>(
+                                                  "SELECT tenant_id FROM integration_credentials WHERE (from_phone = $1 OR from_phone = $2) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                                              )
+                                              .bind(display_phone_number)
+                                              .bind(&clean_phone_number)
+                                              .fetch_optional(pool)
+                                              .await.unwrap_or(None);
+                                          }
 
                                           if tid.is_none() {
                                               tid = sqlx::query_scalar::<_, String>(
@@ -145,12 +155,23 @@ pub async fn meta_webhook_post_handler(
                                       },
                                       crate::db::DbStore::Sqlite(sqlite_pool) => {
                                           let mut tid = sqlx::query_scalar::<_, String>(
-                                              "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                                              "SELECT tenant_id FROM whatsapp_channels WHERE phone_number_id = ? OR phone_number = ? OR phone_number = ? LIMIT 1"
                                           )
                                           .bind(display_phone_number)
                                           .bind(&clean_phone_number)
+                                          .bind(display_phone_number)
                                           .fetch_optional(sqlite_pool)
                                           .await.unwrap_or(None);
+
+                                          if tid.is_none() {
+                                              tid = sqlx::query_scalar::<_, String>(
+                                                  "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
+                                              )
+                                              .bind(display_phone_number)
+                                              .bind(&clean_phone_number)
+                                              .fetch_optional(sqlite_pool)
+                                              .await.unwrap_or(None);
+                                          }
 
                                           if tid.is_none() {
                                               tid = sqlx::query_scalar::<_, String>(

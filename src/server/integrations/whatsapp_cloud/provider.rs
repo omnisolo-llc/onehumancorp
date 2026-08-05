@@ -48,6 +48,10 @@ impl WhatsAppCloudProvider {
     pub async fn send_message(&self, to: &str, body: &str) -> Result<(), String> {
         self.client.send_message(to, body).await
     }
+
+    pub async fn send_interactive_button_message(&self, to: &str, text: &str, buttons: &[String]) -> Result<(), String> {
+        self.client.send_interactive_button_message(to, text, buttons).await
+    }
 }
 
 #[cfg(test)]
@@ -60,6 +64,10 @@ mod tests {
     #[async_trait]
     impl WhatsAppCloudClientWrapper for MockWhatsAppCloudClient {
         async fn send_message(&self, _to: &str, _body: &str) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn send_interactive_button_message(&self, _to: &str, _text: &str, _buttons: &[String]) -> Result<(), String> {
             Ok(())
         }
     }
