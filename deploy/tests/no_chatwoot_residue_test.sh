@@ -249,6 +249,3 @@ for path in "${historical[@]}"; do
     exit 1
   fi
 done
-# appending to allowed_reference_paths
-allowed_reference_paths+=(
-)
