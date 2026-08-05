@@ -1,7 +1,15 @@
 import { test, expect } from '../fixtures';
 
 test.describe('Cost Transparency Dashboard CUJ', () => {
-    test('owner can view their tier limits and storage usage', async ({ page }) => {
+    test('owner can view their tier limits and storage usage', async ({ page, loginAs }) => {
+        const freeUser = {
+            email: 'free@example.com',
+            password: 'password123',
+            role: 'ADMIN',
+            organizationId: 'e2e-tenant-free',
+        };
+        await loginAs(page, freeUser as any);
+
         // 1. Navigate to cost dashboard
         await page.goto("/api/v1/ui/cost-dashboard.html");
 
