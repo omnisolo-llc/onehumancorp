@@ -7,7 +7,6 @@ use ::server_ohc::app::{
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
-use prost::Message;
 
 pub struct MyPosService {}
 

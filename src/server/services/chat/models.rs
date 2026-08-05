@@ -54,6 +54,26 @@ pub struct ChatMessage {
     pub sender_type: String,
     pub sender_id: Option<Uuid>,
     pub content: String,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatWebhookIngress {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub payload: serde_json::Value,
+    pub processed: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatOutboxMessage {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub message_id: Uuid,
+    pub status: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

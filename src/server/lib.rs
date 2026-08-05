@@ -6732,6 +6732,10 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
     let app = axum::Router::new()
+        .route("/api/v1/ui/chat/conversations", axum::routing::get(crate::api::chat::list_chat_conversations_handler).with_state(crate::api::chat::ChatAppState { db: db.clone() }))
+        .route("/api/v1/ui/chat/conversations/:id/messages", axum::routing::get(crate::api::chat::list_chat_messages_handler).with_state(crate::api::chat::ChatAppState { db: db.clone() }))
+        .route("/api/v1/ui/chat/conversations/:id/messages", axum::routing::post(crate::api::chat::send_chat_message_handler).with_state(crate::api::chat::ChatAppState { db: db.clone() }))
+        .route("/api/v1/chat/webhook/:channel", axum::routing::post(crate::api::chat::chat_webhook_ingress_handler).with_state(crate::api::chat::ChatAppState { db: db.clone() }))
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
