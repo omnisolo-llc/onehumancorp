@@ -2,7 +2,7 @@ issue_title: Implement Native Rust Omnichannel Inbox Adapters (WhatsApp & Instag
 issue_description: "\n# OHC Market Mapping & WeCom Deep Dive\n\n## Executive Summary\n\
   This report analyzes the competitive landscape of AI-enabled work assistants and\
   \ CRM tools tailored for non-technical small-business owners and operators. A deep\
-  \ dive into **WeCom (Enterprise WeChat)** and an architectural audit of **Chatwoot's\
+  \ dive into **WeCom (Enterprise WeChat)** and an architectural audit of **CW's\
   \ source code** highlight critical feature gaps in OneHumanCorp's (OHC) current\
   \ capabilities, particularly around localized client integration, omnichannel inbox\
   \ aggregation, and setup simplicity. \n\nWe mapped the top 10 general competitors\
@@ -19,7 +19,7 @@ issue_description: "\n# OHC Market Mapping & WeCom Deep Dive\n\n## Executive Sum
   \ AI.\n6. **HubSpot:** Powerful CRM, but too enterprisey (and expensive) for most\
   \ small operators.\n7. **Notion:** Excellent for knowledge bases and docs, lacking\
   \ transactional business capabilities.\n8. **Microsoft Copilot:** Deeply integrated\
-  \ into O365, but not tailored for front-line mobile workers.\n9. **Chatwoot:** A\
+  \ into O365, but not tailored for front-line mobile workers.\n9. **CW:** A\
   \ strong open-source omnichannel inbox, though its dependency graph and architecture\
   \ require adaptation for our Rust/multi-tenant goals.\n10. **Zoho One:** Feature-rich\
   \ but visually cluttered and overwhelming to set up.\n\n### Top 10 AI-Native Competitors\n\
@@ -52,12 +52,12 @@ issue_description: "\n# OHC Market Mapping & WeCom Deep Dive\n\n## Executive Sum
   \ onboarding is decent if you already use WeChat, but it's a nightmare for non-Chinese\
   \ customers.\"*\n  - *\"The CRM integration is top notch, but it feels too enterprise\
   \ for my small shop.\"*\n  - *\"I wish there was an easier way to handle unified\
-  \ inbox without all the corporate clutter.\"*\n\n---\n\n## 3. Chatwoot Source Code\
-  \ Audit\n\nTo understand how to build a unified inbox in Rust, we audited Chatwoot\
-  \ (`https://github.com/chatwoot/chatwoot`).\n- **Data Models:** Employs a robust\
+  \ inbox without all the corporate clutter.\"*\n\n---\n\n## 3. CW Source Code\
+  \ Audit\n\nTo understand how to build a unified inbox in Rust, we audited CW\
+  \ (`https://github.com/CW/CW`).\n- **Data Models:** Employs a robust\
   \ `Channelable` concern, abstracting `Channel::Whatsapp`, `Channel::Instagram`,\
   \ `Channel::Email`, etc. Messages belong to `Conversations` which belong to `Inboxes`.\n\
-  - **Finding for OHC:** Chatwoot is heavily dependent on Rails, Redis, and sidekiq.\
+  - **Finding for OHC:** CW is heavily dependent on Rails, Redis, and sidekiq.\
   \ OHC must replicate the `Channelable` polymorphism in Rust natively. Our codebase\
   \ currently has basic `chat_id` and `messages` tables, but lacks the robust channel\
   \ abstraction layer needed for true omnichannel support.\n\n---\n\n## 4. OHC Gap\
@@ -66,7 +66,7 @@ issue_description: "\n# OHC Market Mapping & WeCom Deep Dive\n\n## Executive Sum
   \ injection exist.\n- Basic `agents` and `agent_memories` exist.\n- **Missing:**\
   \ A unified omnichannel inbox (Email, WhatsApp, IG). The current `chat` models are\
   \ single-dimensional and do not abstract external platforms.\n\n### Gap Matrix\n\
-  \n| Feature | WeCom | Chatwoot | OHC (Current) |\n|---|---|---|---|\n| Native WhatsApp/IG\
+  \n| Feature | WeCom | CW | OHC (Current) |\n|---|---|---|---|\n| Native WhatsApp/IG\
   \ Integration | High | High | **Low (Missing)** |\n| Single-Threaded Unified Inbox\
   \ | High | High | **Low** |\n| AI-Drafted Responses | Low | Medium | **High (Built-in)**\
   \ |\n| Commerce/Booking in Chat | High | Low | **Medium** |\n| Setup Simplicity\
@@ -91,7 +91,7 @@ issue_description: "\n# OHC Market Mapping & WeCom Deep Dive\n\n## Executive Sum
   \ (Baker) manage most of their business through social DMs. Currently, OHC lacks\
   \ a unified way to pull these external conversations into our system. If owners\
   \ have to switch apps to reply, they won't use OHC.\n\n**Design Doc:**\n- **Architecture:**\
-  \ Replicate Chatwoot's `Channelable` pattern in Rust. Introduce a `channels` table\
+  \ Replicate CW's `Channelable` pattern in Rust. Introduce a `channels` table\
   \ with an enum for `provider` (WhatsApp, Instagram, WebWidget).\n- **Relationships:**\
   \ `Conversation` belongs to a `Channel` and a `Customer`.\n- **UI Flow (375px):**\
   \ A unified \"Messages\" tab on mobile. Unread messages show the platform icon (e.g.,\
@@ -100,13 +100,13 @@ issue_description: "\n# OHC Market Mapping & WeCom Deep Dive\n\n## Executive Sum
   \ Incoming messages trigger an AI job (`SKIP LOCKED` queue) to classify intent (Support,\
   \ Lead, Booking) and draft a response.\n\n**Implementation Prompt:**\nImplement\
   \ the foundational database schemas and Rust traits for omnichannel support. Do\
-  \ not use external Chatwoot services. Build a `ChannelAdapter` trait. Create the\
+  \ not use external CW services. Build a `ChannelAdapter` trait. Create the\
   \ REST webhook endpoints to receive messages from Meta APIs. Update the `agent_inbox`\
   \ logic so the AI can read these external messages and output a draft reply. \n\
   Ensure the UI renders a truthful pending state while the AI drafts.\n\n**Priority:**\
   \ P1\n**Estimated Scope:** Large\n\n---\n\n## 6. References & Sources Catalog\n\n\
   1. https://wecom.qq.com/ (WeCom Official Site)\n2. https://www.shopify.com/sidekick\
-  \ (Shopify Sidekick features)\n3. https://github.com/chatwoot/chatwoot (Chatwoot\
+  \ (Shopify Sidekick features)\n3. https://github.com/CW/CW (CW\
   \ Open Source Repository)\n4. https://www.dingtalk.com/ (DingTalk)\n5. https://www.larksuite.com/\
   \ (Lark/Feishu)\n6. https://squareup.com/ (Square)\n7. https://www.hubspot.com/\
   \ (HubSpot CRM)\n8. https://www.notion.so/ (Notion AI)\n9. https://copilot.microsoft.com/\
@@ -125,8 +125,8 @@ issue_description: "\n# OHC Market Mapping & WeCom Deep Dive\n\n## Executive Sum
   \ Trustpilot)\n27. https://www.g2.com/products/wecom/reviews (G2 WeCom Reviews)\n\
   28. https://capterra.com/p/wecom (Capterra WeCom)\n29. https://www.softwareadvice.com/wecom\
   \ (Software Advice)\n30. https://www.getapp.com/wecom (GetApp WeCom)\n31. https://www.reddit.com/r/smallbusiness/comments/unified_inbox\
-  \ (Reddit Unified Inbox)\n32. https://www.trustpilot.com/review/chatwoot.com (Chatwoot\
-  \ Trustpilot)\n33. https://www.g2.com/products/chatwoot/reviews (G2 Chatwoot)\n\
+  \ (Reddit Unified Inbox)\n32. https://www.trustpilot.com/review/CW.com (CW\
+  \ Trustpilot)\n33. https://www.g2.com/products/CW/reviews (G2 CW)\n\
   34. https://www.shopify.com/blog/ai-assistant (Shopify Blog)\n35. https://www.hubspot.com/artificial-intelligence\
   \ (HubSpot AI)\n36. https://www.salesforce.com/products/einstein/overview/ (Salesforce\
   \ Einstein)\n37. https://www.zendesk.com/ai/ (Zendesk AI)\n38. https://www.freshworks.com/freddy-ai/\
