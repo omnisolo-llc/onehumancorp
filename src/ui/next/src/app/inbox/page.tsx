@@ -15,7 +15,6 @@ type Message = {
   draft_reply?: string;
   status?: string;
   sender_id?: string;
-  sender_type?: string;
   customer_id?: string;
   created_at?: string;
 };

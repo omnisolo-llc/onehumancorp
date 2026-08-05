@@ -465,7 +465,7 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
     let threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error>;
     match &state.db.store {
         crate::db::DbStore::Postgres => {
-            let res = sqlx::query("SELECT id, tenant_id, contact_id as customer_id, (SELECT channel_type FROM chat_channels WHERE chat_channels.inbox_id = chat_conversations.inbox_id LIMIT 1) as channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM chat_conversations WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                 .bind(&tenant_id)
                 .fetch_all(&state.db.pool).await;
             threads_res_mapped = res.map(|rows| {
@@ -483,7 +483,7 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
             });
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let res = sqlx::query("SELECT id, tenant_id, contact_id as customer_id, (SELECT channel_type FROM chat_channels WHERE chat_channels.inbox_id = chat_conversations.inbox_id LIMIT 1) as channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM chat_conversations WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                 .bind(&tenant_id)
                 .fetch_all(sqlite_pool).await;
             threads_res_mapped = res.map(|rows| {
@@ -517,7 +517,7 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                 let ids_clone = thread_ids.clone();
 
                 let (msg_res, action_res) = tokio::join!(
-                    sqlx::query("SELECT id, tenant_id, conversation_id as thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM chat_messages WHERE conversation_id = ANY($1) ORDER BY created_at ASC").bind(&thread_ids).fetch_all(&pool),
+                    sqlx::query("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = ANY($1) ORDER BY created_at ASC").bind(&thread_ids).fetch_all(&pool),
                     sqlx::query("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = ANY($1)").bind(&ids_clone).fetch_all(&pool)
                 );
 
@@ -540,7 +540,7 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                 let pool = sqlite_pool.clone();
 
                 let placeholders = thread_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                let msg_query = format!("SELECT id, tenant_id, conversation_id as thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM chat_messages WHERE conversation_id IN ({}) ORDER BY created_at ASC", placeholders);
+                let msg_query = format!("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id IN ({}) ORDER BY created_at ASC", placeholders);
                 let action_query = format!("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id IN ({})", placeholders);
 
                 let (msg_res, action_res) = tokio::join!(

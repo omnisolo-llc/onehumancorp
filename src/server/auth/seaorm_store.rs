@@ -1470,7 +1470,84 @@ mod atomic_registration_tests {
     use sea_orm::{ConnectOptions, ConnectionTrait, Database, EntityTrait, PaginatorTrait, Schema};
     use std::time::Duration;
 
+    #[test]
+    fn postgres_user_access_declares_transaction_scoped_authority() {
+        let source = include_str!("seaorm_store.rs");
+        let production_source = source
+            .split_once("\n#[cfg(test)]\nmod atomic_registration_tests")
+            .expect("portable repository must retain its test boundary")
+            .0;
 
+        assert!(production_source.contains("begin_tenant_transaction"));
+        assert!(production_source.contains("begin_global_transaction"));
+        assert!(production_source.contains("set_config('app.current_tenant'"));
+        assert!(production_source.contains("SET LOCAL ROLE ohc_bypassrls"));
+        assert!(!production_source.contains("roles: Json"));
+
+        let user_repository_source = production_source
+            .split_once("impl UserRepository for SeaOrmAuthRepository")
+            .expect("portable user repository must exist")
+            .1;
+        assert!(!user_repository_source.contains(".one(&self.connection)"));
+        assert!(!user_repository_source.contains(".all(&self.connection)"));
+        assert!(!user_repository_source.contains(".exec(&self.connection)"));
+
+        let migration_source = include_str!("../persistence/migration.rs");
+        assert!(!migration_source.contains("ADD COLUMN IF NOT EXISTS roles JSON"));
+        assert!(migration_source.contains("information_schema.columns"));
+        assert!(migration_source.contains("column_name = ?"));
+        assert!(migration_source.contains("mysql_column_exists(connection, \"users\", \"roles\")"));
+        assert!(migration_source.contains("pg_advisory_xact_lock"));
+        assert!(migration_source.contains("0x4f48_435f_4d49_4752"));
+        assert!(migration_source.contains("FROM pg_roles"));
+        assert!(migration_source.contains("pg_has_role"));
+        assert!(migration_source.contains("rolbypassrls"));
+        assert!(migration_source.contains("relrowsecurity"));
+        assert!(migration_source.contains("row_security_active"));
+        assert!(
+            migration_source
+                .contains("migrate_with_connection(database.backend(), &migration_guard)")
+        );
+        assert!(migration_source.contains("ux_email_verification_challenges_email"));
+        assert!(migration_source.contains("INSERT IGNORE"));
+        assert!(migration_source.contains("INSERT OR IGNORE"));
+        assert!(migration_source.contains("ON CONFLICT DO NOTHING"));
+        assert!(
+            migration_source.contains("ALTER TABLE identity_user_roles ENABLE ROW LEVEL SECURITY")
+        );
+        assert!(
+            migration_source.contains("ALTER TABLE identity_user_roles FORCE ROW LEVEL SECURITY")
+        );
+        assert!(migration_source.contains("tenant_isolation_identity_user_roles"));
+        assert!(migration_source.contains("unnest(COALESCE(users.roles"));
+        assert!(migration_source.contains("JSON_TABLE(COALESCE(users.roles"));
+
+        let startup_source = include_str!("../lib.rs");
+        assert!(startup_source.contains("mod persistence_commands_test;"));
+        let legacy_position = startup_source
+            .find("db.run_migrations().await?")
+            .expect("legacy PostgreSQL migration hook must run");
+        let portable_position = startup_source
+            .find("crate::persistence::migration::migrate(database).await?")
+            .expect("portable migration hook must run");
+        assert!(legacy_position < portable_position);
+
+        let commands_source = include_str!("../persistence/commands.rs");
+        assert!(commands_source.contains("run_legacy_postgres_migrations"));
+
+        assert!(production_source.contains("EmailChallengeCreation"));
+        assert!(production_source.contains("is_unique_violation"));
+        assert!(production_source.contains("OHC_OIDC_GOOGLE_CLIENT_SECRET"));
+        assert!(production_source.contains("OHC_OIDC_KEYCLOAK_CLIENT_SECRET"));
+        assert!(production_source.contains("INSERT IGNORE"));
+        assert!(production_source.contains("quote(\"oidc_providers\")"));
+        assert!(production_source.contains("\"key\","));
+
+        let http_source = include_str!("../auth/http.rs");
+        assert!(http_source.contains("EmailChallengeCreation::Throttled"));
+        assert!(http_source.contains("verification recently sent"));
+        assert!(http_source.contains("std::env::var(&config.secret_ref)"));
+    }
 
     async fn repositories() -> (
         tempfile::TempDir,

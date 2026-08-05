@@ -653,3 +653,5 @@ run_rest_smoke_tests "${STANDALONE_RELEASE_NAME}" "standalone/desktop mode" 1808
 
 log ""
 log "All Kind e2e smoke tests passed in cloud/web and standalone/desktop modes."
+
+exit 0
