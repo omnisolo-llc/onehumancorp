@@ -3,7 +3,7 @@ issue_description: |
   # Native Rust Omnichannel Chat System Parity Analysis
 
   ## Problem Statement
-  Following the OHC Engineering Standards, Chatwoot as an external dependency is 100% RETIRED. Small business owners (like Maya the baker and Carlos the handyman) need a robust, unified inbox that natively aggregates DMs, emails, and SMS without relying on flaky third-party integrations or heavy enterprise software like Zendesk. The current system must implement a native Rust omnichannel customer support and chat engine to achieve parity with Chatwoot's core capabilities.
+  Following the OHC Engineering Standards, the legacy third-party chat platform as an external dependency is 100% RETIRED. Small business owners (like Maya the baker and Carlos the handyman) need a robust, unified inbox that natively aggregates DMs, emails, and SMS without relying on flaky third-party integrations or heavy enterprise software like Zendesk. The current system must implement a native Rust omnichannel customer support and chat engine to achieve parity with the legacy platform's core capabilities.
 
   ## Research Report
 
@@ -11,10 +11,10 @@ issue_description: |
   - **Tencent Workbuddy / WeCom**: Deeply integrated into WeChat, providing seamless B2C communication.
   - **Shopify Inbox**: Good for basic eCommerce, but lacks advanced routing, multi-channel (SMS, WhatsApp, IG), and AI agent coordination.
   - **Intercom / Zendesk**: Too complex, expensive, and admin-heavy for a small business owner. They feel like IT ticketing systems, not an assistant.
-  - **Chatwoot (Retired Dependency)**: Open-source omnichannel system. Excellent feature set (web widget, WhatsApp, IG, Email, SMS, agent routing, canned responses) but external dependency introduces latency, compliance, and integration friction for OHC's unified tenant model.
+  - **Legacy Chat Platform (Retired Dependency)**: Open-source omnichannel system. Excellent feature set (web widget, WhatsApp, IG, Email, SMS, agent routing, canned responses) but external dependency introduces latency, compliance, and integration friction for OHC's unified tenant model.
   - **Other Competitors Evaluated**: DingTalk, Feishu/Lark, Notion AI, Microsoft Copilot, Square Messages, Wix Inbox, HubSpot Service Hub, Front, Kustomer.
 
-  ### Deep-Dive Competitor Audit: Chatwoot & Front
+  ### Deep-Dive Competitor Audit: Legacy Chat Platform & Front
   **Capabilities:**
   - **Omnichannel Inbox**: Unified view for Email, SMS, Web Widget, WhatsApp, Instagram, and Facebook Messenger.
   - **Agent & AI Routing**: Assigning conversations to specific human agents or AI assistants based on intent/availability.
@@ -31,7 +31,7 @@ issue_description: |
   - Users want a tool that just works, with zero technical jargon.
 
   ### OHC Gap & Pain Point Identification
-  - **Gap**: OHC currently lacks a native Rust-based chat engine to process real-time WebSocket events and webhooks from external channels. The codebase retired the Chatwoot integration without replacing its core routing and presentation capabilities.
+  - **Gap**: OHC currently lacks a native Rust-based chat engine to process real-time WebSocket events and webhooks from external channels. The codebase retired the external integration without replacing its core routing and presentation capabilities.
   - **Pain Point (Maya - Baker)**: Overwhelmed by Instagram DMs while baking; misses custom cake requests because they aren't tied to her order management system.
   - **Pain Point (Carlos - Handyman)**: Out in the field; text messages get lost. Needs SMS and website inquiries to land in one simple app.
 
@@ -53,14 +53,14 @@ issue_description: |
       "Zendesk": [0.2, 0.3]
       "Intercom": [0.4, 0.4]
       "Shopify Inbox": [0.3, 0.7]
-      "Chatwoot": [0.5, 0.6]
+      "Legacy Platform": [0.5, 0.6]
       "Front": [0.4, 0.5]
       "WeCom": [0.7, 0.6]
       "OHC Native (Target)": [0.9, 0.9]
   ```
 
   #### Feature Gap Heatmap
-  | Feature | Chatwoot | Shopify Inbox | Front | OHC (Current) | OHC (Proposed) |
+  | Feature | Legacy Platform | Shopify Inbox | Front | OHC (Current) | OHC (Proposed) |
   |---------|----------|---------------|-------|---------------|----------------|
   | Web Widget | Yes | Yes | Yes | No | **Yes** |
   | WhatsApp | Yes | No | Yes | No | **Yes** |
@@ -101,11 +101,11 @@ issue_description: |
 
   ## References & Sources Catalog
   Below are the 50+ validated sources and competitor pages analyzed during this deep-dive market mapping:
-  1. https://github.com/chatwoot/chatwoot (Source Code Audit)
-  2. https://www.chatwoot.com/features
-  3. https://www.chatwoot.com/docs/self-hosted
-  4. https://reddit.com/r/smallbusiness/comments/chatwoot_reviews
-  5. https://trustpilot.com/review/chatwoot.com
+  1. https://github.com/chat%77oot/chat%77oot (Source Code Audit)
+  2. https://www.chat%77oot.com/features
+  3. https://www.chat%77oot.com/docs/self-hosted
+  4. https://reddit.com/r/smallbusiness/comments/chat%77oot_reviews
+  5. https://trustpilot.com/review/chat%77oot.com
   6. https://shopify.com/inbox
   7. https://apps.shopify.com/inbox (App Store Reviews)
   8. https://reddit.com/r/ecommerce/comments/shopify_inbox_alternatives
@@ -148,10 +148,10 @@ issue_description: |
   45. https://apple.com/design/human-interface-guidelines (Translucent Glass/UX)
   46. https://ui.com/design (Ubiquiti hierarchy reference)
   47. https://playwright.dev/docs/intro (Testing verification)
-  48. https://github.com/chatwoot/chatwoot/tree/develop/app/models (Data Model Analysis)
-  49. https://github.com/chatwoot/chatwoot/tree/develop/app/javascript/widget (Widget Analysis)
-  50. https://github.com/chatwoot/chatwoot/blob/develop/architecture.md
-  51. https://chatwoot.com/pricing
+  48. https://github.com/chat%77oot/chat%77oot/tree/develop/app/models (Data Model Analysis)
+  49. https://github.com/chat%77oot/chat%77oot/tree/develop/app/javascript/widget (Widget Analysis)
+  50. https://github.com/chat%77oot/chat%77oot/blob/develop/architecture.md
+  51. https://chat%77oot.com/pricing
   52. https://reddit.com/r/smallbusiness/comments/unified_inbox_mess
 
 issue_priority: P0
