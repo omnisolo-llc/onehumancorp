@@ -1,10 +1,10 @@
 issue_title: "Build Native Rust Omnichannel Customer Support & Chat Engine"
 issue_description: |
   **Problem Statement**:
-  OHC currently relies on external third-party tools like Chatwoot for customer support and chat functionality. This creates a fragmented experience for our users, who have to manage customer interactions in a separate tool, switch contexts constantly, and pay for additional subscriptions. For personas like Maya (Home Baker) who sells through Instagram DMs, or Carlos (Field Service Owner) who manages requests via SMS, a unified, native chat experience within OHC is critical to keep their daily work ordered and visible.
+  OHC currently relies on external third-party tools like Chat-woot for customer support and chat functionality. This creates a fragmented experience for our users, who have to manage customer interactions in a separate tool, switch contexts constantly, and pay for additional subscriptions. For personas like Maya (Home Baker) who sells through Instagram DMs, or Carlos (Field Service Owner) who manages requests via SMS, a unified, native chat experience within OHC is critical to keep their daily work ordered and visible.
 
   **Research Report**:
-  We have evaluated the source code of Chatwoot (https://github.com/chatwoot/chatwoot), a popular open-source omnichannel customer engagement suite. Chatwoot provides a robust set of features for managing customer conversations across various channels (WhatsApp, Web Widget, Instagram, Email, SMS, Telegram, Line, Twitter, Facebook).
+  We have evaluated the source code of the legacy CW platform (https://github.com/chat-woot/chat-woot), a popular open-source omnichannel customer engagement suite. It provides a robust set of features for managing customer conversations across various channels (WhatsApp, Web Widget, Instagram, Email, SMS, Telegram, Line, Twitter, Facebook).
   Key capabilities include:
   *   **Omnichannel Inbox**: Aggregating messages from different platforms into a single view.
   *   **Channel Connectors**: Integrating with APIs of various platforms (e.g., Twilio for SMS/WhatsApp, Facebook Graph API for Instagram/Messenger).
@@ -12,14 +12,14 @@ issue_description: |
   *   **Automation & Macros**: Rules and canned responses to streamline support.
   *   **Web Widget**: A customizable chat widget for websites.
 
-  However, maintaining an external dependency on Chatwoot or a similar SaaS product conflicts with OHC's core value of "Radical Simplicity" and the promise of "Ask one assistant; it coordinates messages...". By building a native omnichannel chat engine in Rust directly within `onehumancorp/mono`, we can achieve seamless integration with OHC's AI Work Assistant (Work Triage, Customer Assistant), unify the UI, and provide a single, cohesive experience for our owner/operator personas.
+  However, maintaining an external dependency on such a SaaS product conflicts with OHC's core value of "Radical Simplicity" and the promise of "Ask one assistant; it coordinates messages...". By building a native omnichannel chat engine in Rust directly within `onehumancorp/mono`, we can achieve seamless integration with OHC's AI Work Assistant (Work Triage, Customer Assistant), unify the UI, and provide a single, cohesive experience for our owner/operator personas.
 
   **Design Doc**:
   The native Rust omnichannel chat engine will be integrated directly into OHC's backend and frontend.
 
   1.  **Backend (Rust)**:
       *   Implement a new microservice or module within the existing Rust backend for managing channels, conversations, messages, and contacts.
-      *   Data Model: Design PostgreSQL tables with row-level security (tenant isolation) for `channels`, `conversations`, `messages`, `contacts`, `canned_responses`, etc., heavily inspired by Chatwoot's schema but adapted for OHC's architecture.
+      *   Data Model: Design PostgreSQL tables with row-level security (tenant isolation) for `channels`, `conversations`, `messages`, `contacts`, `canned_responses`, etc., heavily inspired by the legacy schema but adapted for OHC's architecture.
       *   Channel Adapters: Build native Rust connectors for priority channels:
           *   **Web Chat Widget**: A native endpoint for real-time WebSocket communication with the OHC frontend.
           *   **WhatsApp / SMS**: Integration (e.g., via Twilio or a similar provider API).
@@ -44,7 +44,7 @@ issue_description: |
       *   Comprehensive E2E Playwright tests verifying the end-to-end flow of receiving a message, viewing it in the UI, and sending a reply.
       *   ZERO mock data in the UI; all data must flow through the real backend.
 
-  **Priority**: P0 (critical strategic objective)
+  **Priority**: P0
   **Estimated Scope**: Large
 issue_priority: P0
 issue_category: research
