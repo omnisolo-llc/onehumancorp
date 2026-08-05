@@ -708,7 +708,7 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(viewer.status(), axum::http::StatusCode::FORBIDDEN);
+        assert_eq!(viewer.status(), axum::http::StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]
