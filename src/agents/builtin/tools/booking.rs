@@ -1,3 +1,4 @@
+use sqlx::Row;
 use super::Tool;
 use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
 use crate::tenant::TenantContext;
@@ -471,5 +472,84 @@ pub fn booking_reschedule_tool(store: SharedBookingStore, tenant: TenantContext)
             store,
             tenant,
         })),
+    }
+}
+
+#[derive(Deserialize)]
+pub struct BookingQueryAvailabilityArgs {
+    pub service_id: String,
+    pub start_time: chrono::DateTime<chrono::Utc>,
+    pub end_time: chrono::DateTime<chrono::Utc>,
+}
+
+pub struct BookingQueryAvailabilityExecutor {
+    pub store: SharedBookingStore,
+    pub tenant: TenantContext,
+}
+
+#[async_trait::async_trait]
+impl PydanticToolExecutor<BookingQueryAvailabilityArgs> for BookingQueryAvailabilityExecutor {
+    async fn execute_typed(&self, args: BookingQueryAvailabilityArgs) -> Result<String, ToolError> {
+        let tenant_id = self.tenant.as_str();
+        let store = self.store.read().await;
+        let pool = store.get_pool().await?;
+        let mut tx = pool
+            .begin()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+
+        // Retrieve available slots for the time range
+        let rows = sqlx::query(
+            "SELECT id, start_time, end_time, status FROM booking_slots WHERE tenant_id = $1 AND service_id = $2 AND start_time >= $3 AND end_time <= $4 AND status = 'available'"
+        )
+        .bind(tenant_id)
+        .bind(&args.service_id)
+        .bind(args.start_time)
+        .bind(args.end_time)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| ToolError::Transient(e.to_string()))?;
+
+        let mut available_slots = Vec::new();
+        for row in rows {
+            let id: String = row.get("id");
+            let start_time: chrono::DateTime<chrono::Utc> = row.get("start_time");
+            let end_time: chrono::DateTime<chrono::Utc> = row.get("end_time");
+
+            available_slots.push(json!({
+                "id": id,
+                "start_time": start_time,
+                "end_time": end_time
+            }));
+        }
+
+        tx.commit()
+            .await
+            .map_err(|e| ToolError::Transient(e.to_string()))?;
+
+        Ok(json!({ "status": "success", "available_slots": available_slots }).to_string())
+    }
+}
+
+pub fn booking_query_availability_tool(store: SharedBookingStore, tenant: TenantContext) -> Tool {
+    Tool {
+        name: "booking_query_availability".to_string(),
+        description: "Query availability for a specific service within a given time range.".to_string(),
+        is_read_only: true,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "service_id": { "type": "string" },
+                "start_time": { "type": "string", "format": "date-time" },
+                "end_time": { "type": "string", "format": "date-time" }
+            },
+            "required": ["service_id", "start_time", "end_time"]
+        }),
+        execute: Arc::new(PydanticAdapter::new(BookingQueryAvailabilityExecutor { store, tenant })),
     }
 }

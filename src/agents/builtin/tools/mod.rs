@@ -145,6 +145,7 @@ pub fn all_tools(
         booking::booking_create_appointment_tool(booking_store.clone(), tenant.clone()),
         booking::booking_negotiate_time_tool(booking_store.clone(), tenant.clone()),
         booking::booking_reschedule_tool(booking_store.clone(), tenant.clone()),
+        booking::booking_query_availability_tool(booking_store.clone(), tenant.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         toolsearch::toolsearch_tool(),
         task::task_create_tool(task_store.clone()),
@@ -264,6 +265,7 @@ mod tenant_aware_tool_schema_test {
             booking::booking_create_appointment_tool(store.clone(), tenant.clone()),
             booking::booking_negotiate_time_tool(store.clone(), tenant.clone()),
             booking::booking_reschedule_tool(store.clone(), tenant.clone()),
+            booking::booking_query_availability_tool(store.clone(), tenant.clone()),
             quote::generate_quote_tool(store, tenant),
         ];
 

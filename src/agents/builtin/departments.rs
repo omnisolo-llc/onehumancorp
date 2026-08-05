@@ -59,6 +59,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "booking_create_appointment",
                 "booking_negotiate_time",
                 "booking_reschedule",
+                "booking_query_availability",
             ],
             confidence_threshold: 0.85,
         },
