@@ -414,6 +414,7 @@ export default function CostDashboardPage() {
                     <div>
                         <span className="font-medium text-gray-900 ">Payment Fees</span>
                         <p className="text-sm text-gray-500 mt-1">Stripe transaction fees on processed revenue.</p>
+                        <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-1">Smart ACH payment routing is active and automatically optimizes high-value transactions to minimize processing fees.</p>
                     </div>
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900 ">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>

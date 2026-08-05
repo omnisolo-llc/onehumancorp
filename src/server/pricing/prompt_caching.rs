@@ -507,6 +507,49 @@ mod tests {
         let res2 = PromptCache::truncate_context(text2, 10);
         assert!(res2.len() > 0);
     }
+
+    #[test]
+    fn test_prompt_cache_high_concurrency() {
+        let cache = Arc::new(PromptCache::with_capacity(Duration::from_secs(10), 5));
+        let mut handles = Vec::new();
+
+        for t in 0..10 {
+            let cache_clone = Arc::clone(&cache);
+            let handle = thread::spawn(move || {
+                for i in 0..100 {
+                    let key = format!("prompt-thread-{}-key-{}", t, i);
+                    cache_clone.set(&key, "response", 1);
+                    let _ = cache_clone.get(&key);
+                }
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        // Cache length must be bounded and not exceed our capacity safety guardrails
+        assert!(cache.cache.len() <= 5);
+    }
+
+    #[test]
+    fn test_truncate_context_nested_brackets() {
+        let res = PromptCache::truncate_context("Check out [nested [brackets]](https://url.com) here.", 15);
+        assert_eq!(res, "Check out [nested [brackets]] here.");
+    }
+
+    #[test]
+    fn test_truncate_context_unbalanced_brackets() {
+        let res = PromptCache::truncate_context("Check out [unbalanced (brackets here.", 10);
+        assert_eq!(res, "Check out [unbalanced (brackets here.");
+    }
+
+    #[test]
+    fn test_truncate_context_extremely_short_limit() {
+        let res = PromptCache::truncate_context("Hello world", 1);
+        assert_eq!(res, "Hell...");
+    }
 }
 
 #[cfg(test)]

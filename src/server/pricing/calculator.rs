@@ -36,6 +36,7 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         "gpt-4-turbo" => ModelPricing { input_cost: 10.00, output_cost: 30.00, cached_cost: 0.0 },
         "gpt-4o" => ModelPricing { input_cost: 5.00, output_cost: 15.00, cached_cost: 2.50 },
         "gpt-4o-mini" => ModelPricing { input_cost: 0.15, output_cost: 0.60, cached_cost: 0.075 },
+        "gpt-4.5" => ModelPricing { input_cost: 75.00, output_cost: 150.00, cached_cost: 37.50 },
         // OpenAI — GPT-4.1 family
         "gpt-4.1" => ModelPricing { input_cost: 2.00, output_cost: 8.00, cached_cost: 0.0 },
         "gpt-4.1-mini" => ModelPricing { input_cost: 0.40, output_cost: 1.60, cached_cost: 0.0 },
@@ -245,6 +246,12 @@ pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, to
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_gpt4_5_pricing() {
+        let cost = calculate_cost("gpt-4.5", 1000000, 1000000, 1000000);
+        assert_eq!(cost, 75.00 + 150.00 + 37.50);
+    }
 
     #[test]
     fn test_calculate_cost() {

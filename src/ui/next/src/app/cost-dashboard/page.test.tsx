@@ -750,4 +750,23 @@ describe('CostDashboardPage', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/pricing');
   });
+
+  test('renders payment fee routing savings subtext', async () => {
+    const mockCostData = { cost_per_1k_tokens: 0, trend: [], department_tier_usage: { departments: [] } };
+    const mockPlanData = { current_plan: 'Starter' };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockCostData) });
+      if (url.includes('my-plan')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPlanData) });
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    expect(screen.getByText("Smart ACH payment routing is active and automatically optimizes high-value transactions to minimize processing fees.")).toBeDefined();
+  });
 });
