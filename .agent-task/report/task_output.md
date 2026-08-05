@@ -1,13 +1,13 @@
-issue_title: "Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Native Rust Omnichannel Chat System"
 issue_description: |
-  **Title**: Native Rust Omnichannel Chat System (Chatwoot Replacement)
+  **Title**: Native Rust Omnichannel Chat System
 
   **Problem Statement**:
-  OHC currently lacks a native omnichannel chat system, and the external Chatwoot dependency is officially 100% RETIRED. Our non-technical owner/operators (Maya the baker, Carlos the handyman) need a unified inbox where they can seamlessly interact with customers across various channels (Instagram DMs, Web Widget, WhatsApp, SMS) without ever knowing the underlying system. Currently, this capability is missing, leading to fragmented communication and missed business opportunities.
+  OHC currently lacks a native omnichannel chat system, and the external legacy dependency is officially 100% RETIRED. Our non-technical owner/operators (Maya the baker, Carlos the handyman) need a unified inbox where they can seamlessly interact with customers across various channels (Instagram DMs, Web Widget, WhatsApp, SMS) without ever knowing the underlying system. Currently, this capability is missing, leading to fragmented communication and missed business opportunities.
 
   **Research Report**:
-  - The legacy architecture relied on a third-party service (Chatwoot) which introduced latency, complexity, and broke our strict multi-tenant isolation and security (SPIFFE/SPIRE) invariants.
-  - Analyzing the Chatwoot source code (`app/models/conversation.rb`, `app/models/message.rb`, `app/models/inbox.rb`), we identified key architectural patterns: Conversations, Messages, Inboxes, Contacts, and Channel Adapters (Web, IG, FB, etc.).
+  - The legacy architecture relied on a third-party service which introduced latency, complexity, and broke our strict multi-tenant isolation and security (SPIFFE/SPIRE) invariants.
+  - Analyzing the source code of the legacy service (`app/models/conversation.rb`, `app/models/message.rb`, `app/models/inbox.rb`), we identified key architectural patterns: Conversations, Messages, Inboxes, Contacts, and Channel Adapters (Web, IG, FB, etc.).
   - A native Rust implementation using our existing PostgreSQL backend and multi-tenant row-level security (RLS) is required.
   - Competitor analysis (Shopify Inbox, Wix Inbox) shows that successful implementations integrate chat deeply with commerce actions (sending quotes, products, booking links).
 
@@ -36,7 +36,7 @@ issue_description: |
     - Strict multi-tenancy: Every table (`inboxes`, `conversations`, `messages`, `contacts`) must have `tenant_id` with RLS enforced.
 
   **Implementation Prompt**:
-  *Objective*: Implement the foundational data models and core API for the Native Rust Omnichannel Chat System, replacing Chatwoot.
+  *Objective*: Implement the foundational data models and core API for the Native Rust Omnichannel Chat System, replacing the legacy third-party service.
   *CUJ*: As Maya (home baker), I want to see a new message in my OHC app when a customer texts my business number, so I can reply instantly from my phone and have the AI suggest a response based on my previous cake orders.
   *Acceptance Criteria*:
   1. Define Rust structs, Protobuf definitions, and PostgreSQL migrations for `Inbox`, `Conversation`, `Message`, and `Contact` entities.
