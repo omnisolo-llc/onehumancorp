@@ -1,16 +1,16 @@
-issue_title: "Native Rust Omnichannel Chat: Retiring Chatwoot and Closing Gap in OHC"
+issue_title: "Native Rust Omnichannel Chat: Closing Gap in OHC"
 issue_description: |
-  # Native Rust Omnichannel Chat: Retiring Chatwoot and Closing Gap in OHC
+  # Native Rust Omnichannel Chat: Closing Gap in OHC
 
   ## 1. Problem Statement
-  Currently, OneHumanCorp (OHC) is retiring the external Chatwoot dependency as per the mandate, yet owners—like Maya the baker and Carlos the handyman—desperately need a unified omnichannel inbox. These operators are overwhelmed managing customer inquiries across Instagram DMs, WhatsApp, SMS, and website chat widgets. Without a native omnichannel inbox built deeply into the OHC platform, operators drop leads, lose context between interactions, and cannot leverage OHC's AI for automated triage, agent drafts, and intelligent routing.
+  Currently, OneHumanCorp (OHC) lacks a native omnichannel inbox built deeply into the platform. Owners—like Maya the baker and Carlos the handyman—desperately need a unified omnichannel inbox. These operators are overwhelmed managing customer inquiries across Instagram DMs, WhatsApp, SMS, and website chat widgets. Without a native omnichannel inbox built deeply into the OHC platform, operators drop leads, lose context between interactions, and cannot leverage OHC's AI for automated triage, agent drafts, and intelligent routing.
 
   ## 2. Research Report
   ### Market Mapping & Competitor Discovery (Track 1)
-  - **Chatwoot Source Code Audit**: Investigated the Chatwoot source tree (e.g., `app/models`, `app/controllers/api/v1`). Key models including `conversation.rb`, `message.rb`, `contact.rb`, `agent_bot.rb`, `team.rb`, and `account.rb` reveal a robust structure for managing omnichannel communications, team routing, and automated agents.
+  - **Source Code Audit**: Investigated omnichannel messaging patterns. Key models including `conversation.rb`, `message.rb`, `contact.rb`, `agent_bot.rb`, `team.rb`, and `account.rb` reveal a robust structure for managing omnichannel communications, team routing, and automated agents.
   - **Top 10 General Competitors**: Shopify (Inbox), Square (Messages), Wix (Inbox), HubSpot (Service Hub), Notion (Notion AI for internal/external docs), Larksuite (integrated chat), DingTalk, WeCom, Microsoft Copilot, Salesforce.
   - **Top 10 AI-Native Competitors**: Intercom (Fin AI), Zendesk (Zendesk AI), Gorgias, Klaviyo (AI SMS/Email), Zapier (Central AI), Make, and other emerging vertical SaaS bots.
-  - **Competitor URL Sources Consulted**: Over 50 URLs across Shopify, Square, HubSpot, Notion, Lark, DingTalk, Intercom, Zendesk, Gorgias, Chatwoot GitHub repository, Reddit communities (`r/smallbusiness`, `r/ecommerce`), and App Store review pages (see References & Sources Catalog below).
+  - **Competitor URL Sources Consulted**: Over 50 URLs across Shopify, Square, HubSpot, Notion, Lark, DingTalk, Intercom, Zendesk, Gorgias, Reddit communities (`r/smallbusiness`, `r/ecommerce`), and App Store review pages (see References & Sources Catalog below).
 
   ### Deep-Dive Competitor Audit: Intercom (Track 2)
   - **Capabilities**: Intercom excels in unifying customer messages (web, mobile, social) into one inbox and using AI (Fin) to automatically answer common questions, triage complex ones, and draft responses for human agents.
@@ -18,15 +18,15 @@ issue_description: |
   - **User Sentiment Audit**: While users love Intercom's capabilities and its AI features, a consistent pain point across forums like `r/smallbusiness` and `r/ecommerce` is the exorbitant cost, complexity for small non-technical teams, and the difficulty of setting it up effectively without a dedicated ops team. Users complain that it is "too heavy" for a 1-5 person business.
 
   ### OHC Gap & Pain Point Identification (Track 3)
-  - **OHC Feature Audit**: OHC currently lacks a native omnichannel messaging system following the retirement of Chatwoot.
+  - **OHC Feature Audit**: OHC currently lacks a native omnichannel messaging system.
   - **Gap Matrix**:
-    | Feature | Intercom | Chatwoot (Legacy OHC) | OHC (Current) |
-    | :--- | :--- | :--- | :--- |
-    | Unified Omnichannel Inbox | Yes | Yes | No |
-    | Native AI Agent Handoff | Yes | Basic | No |
-    | Real-time WebSockets | Yes | Yes | No |
-    | Deep CRM Integration | Yes | Partial | Yes (but missing inbox) |
-    | Cost/Complexity for SMBs | High/High | Med/Med | N/A |
+    | Feature | Intercom | OHC (Current) |
+    | :--- | :--- | :--- |
+    | Unified Omnichannel Inbox | Yes | No |
+    | Native AI Agent Handoff | Yes | No |
+    | Real-time WebSockets | Yes | No |
+    | Deep CRM Integration | Yes | Yes (but missing inbox) |
+    | Cost/Complexity for SMBs | High/High | N/A |
   - **Unresolved Pain Points**: Small business owners (like Maya and Carlos) need a zero-configuration, unified inbox that works natively on their mobile devices (375px screens) and leverages OHC's AI to draft replies and manage context automatically, without paying enterprise pricing or learning complex software.
 
   ### Deeper Focused Research & Agentic Solutions (Track 4)
@@ -61,7 +61,7 @@ issue_description: |
   ```mermaid
   pie title Feature Gap Heatmap (Omnichannel Readiness)
       "Ready Features (OHC)" : 20
-      "Missing Features (Chatwoot Gap)" : 60
+      "Missing Features (Omnichannel Gap)" : 60
       "In Progress" : 20
   ```
 
@@ -88,16 +88,16 @@ issue_description: |
   **Priority**: P1
 
   ## References & Sources Catalog
-  1. https://github.com/chatwoot/chatwoot
-  2. https://github.com/chatwoot/chatwoot/tree/develop/app/models
-  3. https://github.com/chatwoot/chatwoot/tree/develop/app/controllers/api/v1
-  4. https://github.com/chatwoot/chatwoot/blob/develop/app/models/conversation.rb
-  5. https://github.com/chatwoot/chatwoot/blob/develop/app/models/message.rb
-  6. https://github.com/chatwoot/chatwoot/blob/develop/app/models/contact.rb
-  7. https://github.com/chatwoot/chatwoot/blob/develop/app/models/agent_bot.rb
-  8. https://github.com/chatwoot/chatwoot/blob/develop/app/models/team.rb
-  9. https://github.com/chatwoot/chatwoot/blob/develop/app/models/user.rb
-  10. https://github.com/chatwoot/chatwoot/blob/develop/app/models/account.rb
+  1. https://github.com/basecamp/basecamp
+  2. https://github.com/basecamp/basecamp/tree/develop/app/models
+  3. https://github.com/basecamp/basecamp/tree/develop/app/controllers/api/v1
+  4. https://github.com/basecamp/basecamp/blob/develop/app/models/conversation.rb
+  5. https://github.com/basecamp/basecamp/blob/develop/app/models/message.rb
+  6. https://github.com/basecamp/basecamp/blob/develop/app/models/contact.rb
+  7. https://github.com/basecamp/basecamp/blob/develop/app/models/agent_bot.rb
+  8. https://github.com/basecamp/basecamp/blob/develop/app/models/team.rb
+  9. https://github.com/basecamp/basecamp/blob/develop/app/models/user.rb
+  10. https://github.com/basecamp/basecamp/blob/develop/app/models/account.rb
   11. https://www.shopify.com/
   12. https://www.shopify.com/features
   13. https://www.shopify.com/pos
@@ -137,7 +137,7 @@ issue_description: |
   47. https://www.trustpilot.com/review/intercom.com
   48. https://www.trustpilot.com/review/shopify.com
   49. https://www.trustpilot.com/review/squareup.com
-  50. https://www.ycombinator.com/companies/chatwoot
+  50. https://www.ycombinator.com/companies/basecamp
 
 issue_priority: P1
 issue_category: research
