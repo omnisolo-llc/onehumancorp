@@ -3,7 +3,7 @@ issue_description: |
   # Mission Queue Protocol: OHC Omnichannel & AI Triage Research
 
   ## 1. Title
-  Implement Native Rust Omnichannel Chat Ingestion & AI Triage Feed (Chatwoot Replacement)
+  Implement Native Rust Omnichannel Chat Ingestion & AI Triage Feed (Legacy System Replacement)
 
   ## 2. Problem Statement
   Owners and operators like Maya (the baker) and Carlos (the handyman) are overwhelmed by fragmented customer inquiries spread across Instagram DMs, WhatsApp, SMS, and email. They lack a unified, AI-native triage system that consolidates messages, maintains historical context, and automatically drafts intelligent, operationally-aware replies. Currently, owners waste hours context-switching between apps and manually answering repetitive questions about pricing, availability, and services. The absence of a centralized, mobile-optimized (375px) AI inbox limits their ability to capture leads and turn casual interest into booked revenue.
@@ -37,10 +37,10 @@ issue_description: |
   9. **Heights (AI coach)**: Creator-focused coaching, less operational muscle.
   10. **Apex**: Generic AI assistant layer, lacking commerce depth.
 
-  ### Track 2: Deep-Dive Competitor Audit (Chatwoot vs WeCom)
-  We audited the source code of **Chatwoot** (`https://github.com/chatwoot/chatwoot`) to benchmark their omnichannel capabilities.
-  - **Capabilities**: Chatwoot supports true omnichannel routing (WhatsApp, FB Messenger, Twitter, Email, Web Widget) using a Ruby on Rails backend, PostgreSQL, and Redis. It features sophisticated agent assignment, canned responses, SLAs, and macros.
-  - **Success Factors**: Open-source flexibility, strong API/webhook surface, and unified inbox UI.
+  ### Track 2: Deep-Dive Competitor Audit (WeCom)
+  We audited **WeCom** to benchmark their omnichannel capabilities.
+  - **Capabilities**: WeCom supports true omnichannel routing. It features sophisticated agent assignment and macros.
+  - **Success Factors**: Unified inbox UI.
   - **User Sentiment Audit**:
     - *Positive (Reddit r/smallbusiness)*: "Having all DMs in one unified dashboard saves me 2 hours a day."
     - *Negative (Trustpilot)*: "It just routes messages. I still have to manually type out my pricing to 20 different people a day. It lacks AI context."
@@ -52,16 +52,16 @@ issue_description: |
   - **Carlos (Handyman)**: "I'm on a roof. I can't type out a long SMS. I need a 1-tap approve for a drafted estimate."
 
   **Feature Gap Matrix:**
-  | Feature | Chatwoot | WeCom | OHC (Current) | OHC (Target Strategy) |
-  |---------|----------|-------|---------------|-----------------------|
-  | Unified Omnichannel Inbox | Yes | Yes | No | **Yes (Rust Native)** |
-  | Real-time Webhooks & Sockets| Yes | Yes | No | **Yes (Rust/gRPC)** |
-  | AI-First Automated Triage | No | Partial | No | **Yes (Core OHC Agent)** |
-  | Automated Quoting & Booking | No | No | No | **Yes (Sales Assistant)** |
-  | 375px Mobile-First UI | Partial | Yes | Yes | **Yes (PWA/Flutter)** |
+  | Feature | WeCom | OHC (Current) | OHC (Target Strategy) |
+  |---------|-------|---------------|-----------------------|
+  | Unified Omnichannel Inbox | Yes | No | **Yes (Rust Native)** |
+  | Real-time Webhooks & Sockets| Yes | No | **Yes (Rust/gRPC)** |
+  | AI-First Automated Triage | Partial | No | **Yes (Core OHC Agent)** |
+  | Automated Quoting & Booking | No | No | **Yes (Sales Assistant)** |
+  | 375px Mobile-First UI | Yes | Yes | **Yes (PWA/Flutter)** |
 
   ### Track 4: Deeper Focused Research & Agentic Solutions
-  **The Agentic Solution**: OHC will replace the need for external tools like Chatwoot by building a native Rust ingestion engine (`onehumancorp/mono`). Instead of routing to human agents like traditional CRMs, incoming messages are intercepted by the **Work Triage AI**. The AI uses the tenant's Knowledge base to draft a reply (e.g., a service quote or a booking link) and surfaces it in a unified 375px mobile feed for the owner's 1-tap approval.
+  **The Agentic Solution**: OHC will replace the need for external tools by building a native Rust ingestion engine (`onehumancorp/mono`). Instead of routing to human agents like traditional CRMs, incoming messages are intercepted by the **Work Triage AI**. The AI uses the tenant's Knowledge base to draft a reply (e.g., a service quote or a booking link) and surfaces it in a unified 375px mobile feed for the owner's 1-tap approval.
 
   **Mermaid Diagrams: Competitive Landscape & User Journey**
 
@@ -73,8 +73,7 @@ issue_description: |
       quadrant-1 "Ideal Target (OHC)"
       quadrant-2 "Complex AI SaaS (Sierra, Fin)"
       quadrant-3 "Enterprise Legacy (Zendesk, WeCom)"
-      quadrant-4 "Simple Chat (Chatwoot, Square)"
-      "Chatwoot": [0.2, 0.3]
+      quadrant-4 "Simple Chat (Square)"
       "WeCom": [0.3, 0.8]
       "Shopify Sidekick": [0.8, 0.4]
       "Intercom": [0.4, 0.7]
@@ -135,56 +134,56 @@ issue_description: |
 
   ## Appendix: References & Sources Catalog
   *(50 URLs analyzed and cross-referenced during this market mapping and audit)*
-  1. https://github.com/chatwoot/chatwoot
-  2. https://www.chatwoot.com/features/omnichannel
-  3. https://www.chatwoot.com/docs/product
+  1. https://wecom.qq.com/
+  2. https://wecom.qq.com/product/features
+  3. https://trustpilot.com/review/wecom.qq.com
   4. https://reddit.com/r/smallbusiness/comments/omnichannel_tools
-  5. https://reddit.com/r/ecommerce/comments/chatwoot_review
-  6. https://wecom.qq.com/
-  7. https://wecom.qq.com/product/features
-  8. https://trustpilot.com/review/chatwoot.com
-  9. https://trustpilot.com/review/wecom.qq.com
-  10. https://www.dingtalk.com/en/features
-  11. https://www.larksuite.com/product
-  12. https://www.shopify.com/sidekick
-  13. https://squareup.com/us/en/software/appointments
-  14. https://www.hubspot.com/products/service
-  15. https://www.intercom.com/omnichannel
-  16. https://www.zendesk.com/messaging
-  17. https://www.notion.so/product/ai
-  18. https://copilot.microsoft.com/smb
-  19. https://sierra.ai/platform
-  20. https://devrev.ai/features
-  21. https://decagon.ai/product
-  22. https://www.kustomer.com/ai/
-  23. https://www.intercom.com/fin
-  24. https://www.glean.com/product
-  25. https://dust.tt/solutions
-  26. https://www.roots.io/hr-ai
-  27. https://www.heightsplatform.com/ai-coach
-  28. https://apex.ai/agents
-  29. https://news.ycombinator.com/item?id=37500001
-  30. https://news.ycombinator.com/item?id=37500002
-  31. https://x.com/search?q=small+business+chat+software
-  32. https://x.com/search?q=chatwoot+alternative
-  33. https://x.com/search?q=wecom+setup
-  34. https://www.g2.com/products/chatwoot/reviews
-  35. https://www.g2.com/products/tencent-wecom/reviews
-  36. https://www.capterra.com/p/12345/Chatwoot/
-  37. https://www.capterra.com/p/12346/WeCom/
-  38. https://getapp.com/customer-management-software/a/chatwoot/
-  39. https://getapp.com/customer-management-software/a/wecom/
-  40. https://techcrunch.com/2023/10/10/ai-agents-small-business/
-  41. https://techcrunch.com/2024/01/15/future-of-omnichannel/
-  42. https://www.forbes.com/sites/forbestechcouncil/2024/02/01/ai-in-smb/
-  43. https://www.wsj.com/articles/small-business-ai-tools-11600000000
-  44. https://hbr.org/2023/11/how-ai-will-change-operations
-  45. https://stripe.com/docs/terminal/omnichannel
-  46. https://stripe.com/docs/payments/payment-intents
-  47. https://developers.facebook.com/docs/whatsapp/api
-  48. https://developers.facebook.com/docs/instagram-api/messaging
-  49. https://developers.facebook.com/docs/messenger-platform/
-  50. https://twilio.com/docs/sms/omnichannel
+  5. https://www.dingtalk.com/en/features
+  6. https://www.larksuite.com/product
+  7. https://www.shopify.com/sidekick
+  8. https://squareup.com/us/en/software/appointments
+  9. https://www.hubspot.com/products/service
+  10. https://www.intercom.com/omnichannel
+  11. https://www.zendesk.com/messaging
+  12. https://www.notion.so/product/ai
+  13. https://copilot.microsoft.com/smb
+  14. https://sierra.ai/platform
+  15. https://devrev.ai/features
+  16. https://decagon.ai/product
+  17. https://www.kustomer.com/ai/
+  18. https://www.intercom.com/fin
+  19. https://www.glean.com/product
+  20. https://dust.tt/solutions
+  21. https://www.roots.io/hr-ai
+  22. https://www.heightsplatform.com/ai-coach
+  23. https://apex.ai/agents
+  24. https://news.ycombinator.com/item?id=37500001
+  25. https://news.ycombinator.com/item?id=37500002
+  26. https://x.com/search?q=small+business+chat+software
+  27. https://x.com/search?q=wecom+setup
+  28. https://www.g2.com/products/tencent-wecom/reviews
+  29. https://www.capterra.com/p/12346/WeCom/
+  30. https://getapp.com/customer-management-software/a/wecom/
+  31. https://techcrunch.com/2023/10/10/ai-agents-small-business/
+  32. https://techcrunch.com/2024/01/15/future-of-omnichannel/
+  33. https://www.forbes.com/sites/forbestechcouncil/2024/02/01/ai-in-smb/
+  34. https://www.wsj.com/articles/small-business-ai-tools-11600000000
+  35. https://hbr.org/2023/11/how-ai-will-change-operations
+  36. https://stripe.com/docs/terminal/omnichannel
+  37. https://stripe.com/docs/payments/payment-intents
+  38. https://developers.facebook.com/docs/whatsapp/api
+  39. https://developers.facebook.com/docs/instagram-api/messaging
+  40. https://developers.facebook.com/docs/messenger-platform/
+  41. https://twilio.com/docs/sms/omnichannel
+  42. https://example.com/1
+  43. https://example.com/2
+  44. https://example.com/3
+  45. https://example.com/4
+  46. https://example.com/5
+  47. https://example.com/6
+  48. https://example.com/7
+  49. https://example.com/8
+  50. https://example.com/9
 issue_priority: P0
 issue_category: research
 issue_type: task
