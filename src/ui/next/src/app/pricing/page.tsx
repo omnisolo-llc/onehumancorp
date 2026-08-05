@@ -98,15 +98,15 @@ export default function PricingPage() {
           <p className="text-base md:text-lg text-gray-600 leading-relaxed">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
         </div>
 
-        <div className="flex justify-center mb-8">
-          <label className="flex items-center cursor-pointer relative">
-            <span className={`mr-3 text-sm font-medium ${!isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>Monthly</span>
-            <div className="relative">
-              <input type="checkbox" id="billing-toggle" className="sr-only" checked={isAnnual} onChange={() => setIsAnnual(!isAnnual)} />
+        <div className="flex justify-center mb-8 w-full">
+          <label className="flex flex-col sm:flex-row items-center gap-3 sm:gap-0 cursor-pointer relative">
+            <span className={`sm:mr-3 text-sm font-medium ${!isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>Monthly</span>
+            <div className="relative flex-shrink-0">
+              <input type="checkbox" id="billing-toggle" data-testid="annual-billing-toggle" className="sr-only" checked={isAnnual} onChange={() => setIsAnnual(!isAnnual)} />
               <div className="block bg-gray-200 w-14 h-8 rounded-full"></div>
               <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition ${isAnnual ? 'transform translate-x-6 bg-indigo-600' : ''}`}></div>
             </div>
-            <span className={`ml-3 text-sm font-medium flex items-center ${isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
+            <span className={`sm:ml-3 text-sm font-medium flex items-center whitespace-nowrap ${isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
               Annual <span className="ml-2 px-2 py-0.5 rounded-full bg-green-100 text-green-800 text-xs font-bold">Save 20%</span>
             </span>
           </label>

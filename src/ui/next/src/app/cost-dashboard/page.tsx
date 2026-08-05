@@ -391,9 +391,9 @@ export default function CostDashboardPage() {
                     {data?.agent_costs && data.agent_costs.length > 0 ? (
                         <ul id="cost-dashboard-agent-costs" className="space-y-2">
                             {data.agent_costs.map((agent, index) => (
-                                <li key={index} className="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-2 last:border-b-0 last:pb-0">
-                                    <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">{agent.agent_id.replace(/_/g, ' ')}</span>
-                                    <span className="text-sm font-medium text-gray-900 ">{formatCurrency(agent.cost_cents)}</span>
+                                <li key={index} className="flex flex-wrap justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-2 gap-2 last:border-b-0 last:pb-0">
+                                    <span className="text-sm text-gray-700 dark:text-gray-300 capitalize break-words min-w-0 flex-1">{agent.agent_id.replace(/_/g, ' ')}</span>
+                                    <span className="text-sm font-medium text-gray-900 whitespace-nowrap">{formatCurrency(agent.cost_cents)}</span>
                                 </li>
                             ))}
                         </ul>
@@ -473,11 +473,11 @@ export default function CostDashboardPage() {
                     {data.department_tier_usage.departments.map((department) => (
                         <div key={department.id} className="p-5 app-card ohc-growth-card">
                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 ">{department.department_type}</h3>
-                                    <p className="text-sm text-gray-500 mt-1">{department.agent_id}</p>
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="font-semibold text-gray-900 break-words">{department.department_type}</h3>
+                                    <p className="text-sm text-gray-500 mt-1 break-words">{department.agent_id}</p>
                                 </div>
-                                <div className="text-left sm:text-right">
+                                <div className="text-left sm:text-right flex-shrink-0">
                                     <p className="font-semibold text-gray-900 ">
                                       {department.action_limit === null
                                         ? `${department.actions_used} actions`

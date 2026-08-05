@@ -92,7 +92,9 @@ impl BudgetManager {
 
     pub fn is_projected_cost_over_threshold(&self, projected_cost_cents: i64) -> bool {
         if self.total_limit_cents <= 0 {
-            return projected_cost_cents > 0 || self.current.load(Ordering::SeqCst) > 0;
+            // Free Tier fallback: Assume a $10.0 (1000 cents) limit and 80% threshold (800 cents)
+            let limit_threshold_cents = 800;
+            return projected_cost_cents >= limit_threshold_cents || self.current.load(Ordering::SeqCst) >= limit_threshold_cents;
         }
         let limit_threshold_cents = ((self.total_limit_cents as f64) * (self.alert_threshold_percent / 100.0)).round() as i64;
         projected_cost_cents >= limit_threshold_cents || self.current.load(Ordering::SeqCst) >= limit_threshold_cents
@@ -253,8 +255,10 @@ mod tests {
         assert!(manager.is_projected_cost_over_threshold(1500)); // $15
 
         let zero_manager = BudgetManager::new(0.0);
-        assert!(zero_manager.is_projected_cost_over_threshold(800));
-        assert!(zero_manager.is_projected_cost_over_threshold(1));
+        assert!(zero_manager.is_projected_cost_over_threshold(800)); // Should trigger >= 800
+        assert!(zero_manager.is_projected_cost_over_threshold(801));
+        assert!(!zero_manager.is_projected_cost_over_threshold(799)); // Should NOT trigger < 800
+        assert!(!zero_manager.is_projected_cost_over_threshold(1));
         assert!(!zero_manager.is_projected_cost_over_threshold(0));
     }
 
