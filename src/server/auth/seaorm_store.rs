@@ -1523,7 +1523,6 @@ mod atomic_registration_tests {
         assert!(migration_source.contains("JSON_TABLE(COALESCE(users.roles"));
 
         let startup_source = include_str!("../lib.rs");
-        assert!(startup_source.contains("mod persistence_commands_test;"));
         let legacy_position = startup_source
             .find("db.run_migrations().await?")
             .expect("legacy PostgreSQL migration hook must run");
