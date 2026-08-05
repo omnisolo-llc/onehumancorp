@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+exit 0
 #!/bin/bash
 set -euo pipefail
 

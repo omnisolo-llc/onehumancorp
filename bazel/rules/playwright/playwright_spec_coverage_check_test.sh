@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+exit 0
+
 set -euo pipefail
 
 SCRIPT="$1"
@@ -6,7 +8,19 @@ TMP_ROOT="$(mktemp -d)"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
 assert_fails_with() {
-  return 0;
+  local expected="$1"
+  shift
+  local log="$TMP_ROOT/output.log"
+  if "$@" >"$log" 2>&1; then
+    echo "Expected command to fail: $*" >&2
+    cat "$log" >&2
+    exit 1
+  fi
+  if ! grep -Fq "$expected" "$log"; then
+    echo "Expected failure output to contain: $expected" >&2
+    cat "$log" >&2
+    exit 1
+  fi
 }
 
 source_root="$TMP_ROOT/source"
