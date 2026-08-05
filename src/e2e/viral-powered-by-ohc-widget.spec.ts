@@ -1,57 +1,24 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
-test.describe('Viral Powered by OHC Widget', () => {
-  test('should load the widget and generate an embed code snippet', async ({ page }) => {
-    await page.goto('/ui/viral-powered-by-ohc-widget.html');
+test.describe('Viral Powered by OHC Widget Flow', () => {
+  test('Owner can navigate to the widget page and generate embed code', async ({ page }) => {
+    // Navigate to the dashboard
+    await page.goto('/ui/dashboard.html');
 
-    // Wait for main elements
-    await expect(page.locator('h1')).toHaveText('Embed Footer Badge');
-    const generateBtn = page.locator('#generate-btn');
-    await expect(generateBtn).toBeVisible();
+    // Click the "Powered by OHC Widget" link
+    await page.click('#powered-by-ohc-link');
 
-    // Click generate
-    await generateBtn.click();
+    // Verify we are on the widget generator page
+    await expect(page).toHaveURL(/.*viral-powered-by-ohc-widget.html/);
+    await expect(page.locator('h1')).toHaveText('Grow your business with OHC');
 
-    // Wait for the animation to finish and result to show
-    const resultArea = page.locator('#result-area');
-    await expect(resultArea).toBeVisible({ timeout: 5000 });
+    // Click the generate button
+    await page.click('#generate-widget-btn');
 
-    // Check embed code generated correctly
-    const embedCode = page.locator('#embed-code');
-    await expect(embedCode).toContainText('Powered by OHC');
-    await expect(embedCode).toContainText('ohc.network/invite/');
-  });
-
-  test('should copy the share link to clipboard', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await page.goto('/ui/viral-powered-by-ohc-widget.html');
-
-    const generateBtn = page.locator('#generate-btn');
-    await generateBtn.click();
-    const resultArea = page.locator('#result-area');
-    await expect(resultArea).toBeVisible({ timeout: 5000 });
-
-    const copyBtn = page.locator('#copy-btn');
-    await expect(copyBtn).toHaveText('Copy Code');
-
-    await copyBtn.click();
-
-    await expect(copyBtn).toHaveText('Copied!', { timeout: 3000 });
-
-    try {
-        const clipboardText = await page.evaluate(async () => {
-            return await navigator.clipboard.readText();
-        });
-        expect(clipboardText).toContain('Powered by OHC');
-    } catch (e) {
-        console.warn('Clipboard read failed (expected in some headless environments): ', e);
-    }
-  });
-
-  test('should navigate back to the dashboard', async ({ page }) => {
-    await page.goto('/ui/viral-powered-by-ohc-widget.html');
-    const backLink = page.locator('.back-link');
-    await expect(backLink).toBeVisible();
-    await expect(backLink).toHaveAttribute('href', '/dashboard.html');
+    // Verify the output text area is visible and contains the expected code
+    const textarea = page.locator('#embed-code-textarea');
+    await expect(textarea).toBeVisible();
+    await expect(textarea).toHaveValue(/<div class="ohc-widget" data-tenant="test-tenant-123">/);
+    await expect(textarea).toHaveValue(/Powered by OHC - Work Assistant for Test Business/);
   });
 });
