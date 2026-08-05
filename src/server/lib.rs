@@ -7924,6 +7924,10 @@ async fn create_ui_bom_item_handler(
             http_auth_store.clone(),
         ))
         .nest(
+            "/api/v1/integrations/chat",
+            server_integrations_chat::routing::router(server_integrations_chat::routing::ChatState {}),
+        )
+        .nest(
             "/api/v1/inbox",
             protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),
         )

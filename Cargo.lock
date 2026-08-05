@@ -5786,6 +5786,7 @@ dependencies = [
  "server_integrations_buffer",
  "server_integrations_cal_com",
  "server_integrations_calendly",
+ "server_integrations_chat",
  "server_integrations_chromadb",
  "server_integrations_convertkit",
  "server_integrations_core",
@@ -9019,6 +9020,23 @@ dependencies = [
  "server_integrations_core",
  "sqlx",
  "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "server_integrations_chat"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum 0.8.9",
+ "chrono",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tower 0.4.13",
  "tracing",
  "uuid",
 ]

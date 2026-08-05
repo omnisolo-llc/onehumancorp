@@ -1,0 +1,23 @@
+[package]
+name = "server_integrations_chat"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "mod.rs"
+
+[dependencies]
+sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "with-chrono", "with-uuid", "with-json"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+axum = { version = "0.8.1", features = ["ws"] }
+async-trait = "0.1"
+tracing = "0.1"
+tokio-stream = { version = "0.1" }
+# Remove server_lib dependency directly to avoid this error for cargo check, we only depend on it in BUILD.bazel if we need.
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
+tower = { version = "0.4", features = ["util"] }
