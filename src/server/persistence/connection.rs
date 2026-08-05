@@ -41,3 +41,22 @@ impl AppDatabase {
         DatabaseCapabilities::for_backend(self.backend)
     }
 }
+
+#[derive(Clone)]
+pub struct DatabaseUrl(String);
+
+impl DatabaseUrl {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn expose_for_connection(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for DatabaseUrl {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("DatabaseUrl(REDACTED)")
+    }
+}
