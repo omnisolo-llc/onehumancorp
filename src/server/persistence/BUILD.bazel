@@ -19,3 +19,5 @@ sh_test(
     data = ["//src/server:server_sources"],
     tags = ["lint"],
 )
+
+filegroup(name = "srcs", srcs = glob(["*.rs", "**/*.rs"]), visibility = ["//visibility:public"])

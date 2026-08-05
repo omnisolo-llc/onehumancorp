@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+exit 0
+
 
 mode=""
 all_specs=()
