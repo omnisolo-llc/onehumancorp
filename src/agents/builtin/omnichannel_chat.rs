@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use crate::llm::LlmClient;
 use ohc_builtin_agent_core::types::{ChatRequest, Message as LlmMessage, Role};
+use std::sync::Arc;
 
 /// Intent representing the classification of a user message.
 #[derive(Debug, Clone, PartialEq)]
@@ -71,7 +71,7 @@ impl Conversation {
     }
 }
 
-/// The engine replicating Chatwoot's core features natively in Rust.
+/// The engine replicating the core features natively in Rust.
 pub struct OmnichannelChatEngine {
     llm: Arc<dyn LlmClient>,
 }
@@ -104,7 +104,11 @@ impl OmnichannelChatEngine {
                 // High-touch intents get handed off to human
                 self.handoff_to_human(conv);
                 // Also draft a copilot response for the human
-                self.draft_copilot_response(conv, "This requires human review. Suggested response...").await?;
+                self.draft_copilot_response(
+                    conv,
+                    "This requires human review. Suggested response...",
+                )
+                .await?;
             }
             _ => {
                 // Auto-respond for standard intents
@@ -117,7 +121,10 @@ impl OmnichannelChatEngine {
     }
 
     /// Uses the LLM client to parse user intent from text.
-    pub async fn classify_intent(&self, text: &str) -> Result<Intent, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn classify_intent(
+        &self,
+        text: &str,
+    ) -> Result<Intent, Box<dyn std::error::Error + Send + Sync>> {
         let req = ChatRequest {
             model: "claude-3-5-sonnet-20241022".to_string(),
             system: "Classify the following text into one of these intents: Support, Sales, Refund, Escalate, Unknown. Reply with ONLY the intent name.".to_string(),
@@ -133,8 +140,13 @@ impl OmnichannelChatEngine {
     }
 
     /// Generates and adds a bot message directly.
-    pub async fn auto_responder(&self, conv: &mut Conversation) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let history = conv.messages.iter()
+    pub async fn auto_responder(
+        &self,
+        conv: &mut Conversation,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let history = conv
+            .messages
+            .iter()
             .filter(|m| !m.is_draft)
             .map(|m| format!("{:?}: {}", m.role, m.content))
             .collect::<Vec<_>>()
@@ -206,7 +218,10 @@ mod tests {
 
     #[async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().unwrap();
             let content = if !resps.is_empty() {
                 resps.remove(0)
@@ -227,12 +242,18 @@ mod tests {
     async fn test_classify_intent() {
         let llm = Arc::new(MockLlmClient::new(vec!["Support".to_string()]));
         let engine = OmnichannelChatEngine::new(llm);
-        let intent = engine.classify_intent("Help me with my account").await.unwrap();
+        let intent = engine
+            .classify_intent("Help me with my account")
+            .await
+            .unwrap();
         assert_eq!(intent, Intent::Support);
 
         let llm = Arc::new(MockLlmClient::new(vec!["Sales".to_string()]));
         let engine = OmnichannelChatEngine::new(llm);
-        let intent = engine.classify_intent("How much does this cost?").await.unwrap();
+        let intent = engine
+            .classify_intent("How much does this cost?")
+            .await
+            .unwrap();
         assert_eq!(intent, Intent::Sales);
     }
 
@@ -258,7 +279,9 @@ mod tests {
         let engine = OmnichannelChatEngine::new(llm);
         let mut conv = Conversation::new("conv_1".to_string());
 
-        let res = engine.draft_copilot_response(&mut conv, "Draft response text").await;
+        let res = engine
+            .draft_copilot_response(&mut conv, "Draft response text")
+            .await;
         assert!(res.is_ok());
 
         assert_eq!(conv.messages.len(), 1);
@@ -281,13 +304,15 @@ mod tests {
     #[tokio::test]
     async fn test_process_incoming_message_support() {
         let llm = Arc::new(MockLlmClient::new(vec![
-            "Support".to_string(), // For intent classification
-            "Auto response".to_string() // For auto responder
+            "Support".to_string(),       // For intent classification
+            "Auto response".to_string(), // For auto responder
         ]));
         let engine = OmnichannelChatEngine::new(llm);
         let mut conv = Conversation::new("conv_1".to_string());
 
-        let res = engine.process_incoming_message(&mut conv, "Help me".to_string()).await;
+        let res = engine
+            .process_incoming_message(&mut conv, "Help me".to_string())
+            .await;
         assert!(res.is_ok());
 
         assert_eq!(conv.intent, Some(Intent::Support));
@@ -310,7 +335,9 @@ mod tests {
         let engine = OmnichannelChatEngine::new(llm);
         let mut conv = Conversation::new("conv_1".to_string());
 
-        let res = engine.process_incoming_message(&mut conv, "Talk to human".to_string()).await;
+        let res = engine
+            .process_incoming_message(&mut conv, "Talk to human".to_string())
+            .await;
         assert!(res.is_ok());
 
         assert_eq!(conv.intent, Some(Intent::Escalate));
@@ -321,7 +348,10 @@ mod tests {
         assert_eq!(conv.messages[0].content, "Talk to human");
 
         assert_eq!(conv.messages[1].role, Role::Assistant);
-        assert_eq!(conv.messages[1].content, "This requires human review. Suggested response...");
+        assert_eq!(
+            conv.messages[1].content,
+            "This requires human review. Suggested response..."
+        );
         assert_eq!(conv.messages[1].is_draft, true);
     }
 }

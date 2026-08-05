@@ -1774,13 +1774,16 @@ impl Agent {
 
                 match llm_client_c.chat(req).await {
                     Ok(resp) => {
-                        let total_tokens_this_turn = resp.usage.input_tokens + resp.usage.output_tokens;
+                        let total_tokens_this_turn =
+                            resp.usage.input_tokens + resp.usage.output_tokens;
                         let current_total = state.total_tokens + total_tokens_this_turn;
 
                         let mut final_content = resp.message.content.clone();
                         let mut has_tool_calls = !resp.message.tool_calls.is_empty();
 
-                        if llm_cfg_c.max_task_tokens > 0 && current_total > llm_cfg_c.max_task_tokens {
+                        if llm_cfg_c.max_task_tokens > 0
+                            && current_total > llm_cfg_c.max_task_tokens
+                        {
                             final_content = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                             has_tool_calls = false; // Prevent further tool calls
                         }
@@ -1831,7 +1834,10 @@ impl Agent {
                 let mut current_checkpoint_id = None;
                 if let Some(checkpointer) = &checkpointer_node {
                     if let Some(thread_id) = &cfg_arc_node.thread_id {
-                        let checkpoint_id = last_msg.response_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                        let checkpoint_id = last_msg
+                            .response_id
+                            .clone()
+                            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
                         let metadata = serde_json::json!({
                             "tool_calls": last_msg.tool_calls.len()
                         });
@@ -1840,7 +1846,8 @@ impl Agent {
                             thread_id: thread_id.clone(),
                             checkpoint_id: checkpoint_id.clone(),
                             parent_id: last_msg.previous_response_id.clone(),
-                            data: serde_json::to_value(&state.messages).unwrap_or(serde_json::json!({})),
+                            data: serde_json::to_value(&state.messages)
+                                .unwrap_or(serde_json::json!({})),
                             metadata,
                             created_at: chrono::Utc::now(),
                         };
@@ -1858,7 +1865,11 @@ impl Agent {
                 let mut mutating_calls = Vec::new();
 
                 for tc in tool_calls {
-                    let is_read_only = tt.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+                    let is_read_only = tt
+                        .iter()
+                        .find(|t| t.name == tc.name)
+                        .map(|t| t.is_read_only)
+                        .unwrap_or(false);
                     if is_read_only {
                         read_only_calls.push(tc.clone());
                     } else {
@@ -1866,11 +1877,14 @@ impl Agent {
                     }
                 }
 
-                let mut tool_results = vec![crate::types::ToolResult {
-                    tool_call_id: "".to_string(),
-                    content: "".to_string(),
-                    error: "".to_string(),
-                }; tool_calls.len()];
+                let mut tool_results = vec![
+                    crate::types::ToolResult {
+                        tool_call_id: "".to_string(),
+                        content: "".to_string(),
+                        error: "".to_string(),
+                    };
+                    tool_calls.len()
+                ];
 
                 // Master Catalog B.2. Tools: Read-only operations run concurrently; mutating operations run serially.
                 let mut read_only_futures = Vec::new();
@@ -1909,7 +1923,10 @@ impl Agent {
                 let ro_results = futures::future::join_all(read_only_futures).await;
 
                 for (id, final_res) in ro_results {
-                    let idx = tool_calls.iter().position(|tc| tc.id == id).expect("Tool call not found in tool_calls array");
+                    let idx = tool_calls
+                        .iter()
+                        .position(|tc| tc.id == id)
+                        .expect("Tool call not found in tool_calls array");
                     let tool_name = tool_calls[idx].name.clone();
                     match final_res {
                         Ok(res) => {
@@ -1929,9 +1946,17 @@ impl Agent {
                             let count = *error_counts.entry(tool_name.clone()).or_insert(0) + 1;
                             error_counts.insert(tool_name.clone(), count);
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, err_msg));
+                                return Err(format!(
+                                    "Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}",
+                                    tool_name, err_msg
+                                ));
                             }
-                            tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id.clone(), &tool_name, &err_msg);
+                            tool_results[idx] =
+                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                                    id.clone(),
+                                    &tool_name,
+                                    &err_msg,
+                                );
                         }
                         Err(crate::types::ToolError::Transient(msg)) => {
                             return Err(format!("Unexpected tool error: Transient error: {}", msg));
@@ -1946,14 +1971,18 @@ impl Agent {
                                 }
                             }
                             if let Some(ref cb) = cfg_arc_node.human_input_callback.0
-                                && let Some(human_input) = cb(&msg).await {
-                                    tool_results[idx] = crate::types::ToolResult {
-                                        tool_call_id: id,
-                                        content: String::new(),
-                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
-                                    };
-                                    continue;
-                                }
+                                && let Some(human_input) = cb(&msg).await
+                            {
+                                tool_results[idx] = crate::types::ToolResult {
+                                    tool_call_id: id,
+                                    content: String::new(),
+                                    error: format!(
+                                        "USER_FIXABLE: {}. Human provided fix: {}",
+                                        msg, human_input
+                                    ),
+                                };
+                                continue;
+                            }
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
                         Err(crate::types::ToolError::Fatal(msg)) => {
@@ -1970,9 +1999,13 @@ impl Agent {
                     let name = tc.name.clone();
                     let args = tc.arguments.clone();
                     let id = tc.id.clone();
-                    let idx = tool_calls.iter().position(|t| t.id == id).expect("Tool call not found in tool_calls array");
+                    let idx = tool_calls
+                        .iter()
+                        .position(|t| t.id == id)
+                        .expect("Tool call not found in tool_calls array");
 
-                    let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
+                    let gating_err =
+                        crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
                         match e {
                             crate::types::ToolError::LlmRecoverable(err_msg) => {
@@ -1982,7 +2015,12 @@ impl Agent {
                                         // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
                                     }
                                 }
-                                tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id.clone(), &tc.name, &err_msg);
+                                tool_results[idx] =
+                                    ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                                        id.clone(),
+                                        &tc.name,
+                                        &err_msg,
+                                    );
                             }
                             crate::types::ToolError::UserFixable(msg) => {
                                 if let Some(checkpointer) = &checkpointer_node {
@@ -1992,18 +2030,25 @@ impl Agent {
                                     }
                                 }
                                 if let Some(ref cb) = cfg_arc_node.human_input_callback.0
-                                    && let Some(human_input) = cb(&msg).await {
-                                        tool_results[idx] = crate::types::ToolResult {
-                                            tool_call_id: id,
-                                            content: String::new(),
-                                            error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
-                                        };
-                                        continue;
-                                    }
+                                    && let Some(human_input) = cb(&msg).await
+                                {
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: id,
+                                        content: String::new(),
+                                        error: format!(
+                                            "USER_FIXABLE: {}. Human provided fix: {}",
+                                            msg, human_input
+                                        ),
+                                    };
+                                    continue;
+                                }
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
                             crate::types::ToolError::Transient(msg) => {
-                                return Err(format!("Unexpected tool error: Transient error: {}", msg));
+                                return Err(format!(
+                                    "Unexpected tool error: Transient error: {}",
+                                    msg
+                                ));
                             }
                             crate::types::ToolError::Unexpected(msg) => {
                                 return Err(format!("Unexpected tool error: {}", msg));
@@ -2011,7 +2056,9 @@ impl Agent {
                             crate::types::ToolError::Fatal(msg) => {
                                 return Err(format!("Fatal tool error: {}", msg));
                             }
-                            crate::types::ToolError::HandoffRequested(target) => return Err(format!("Handoff requested to {}", target)),
+                            crate::types::ToolError::HandoffRequested(target) => {
+                                return Err(format!("Handoff requested to {}", target));
+                            }
                         }
                         continue;
                     }
@@ -2022,12 +2069,19 @@ impl Agent {
                             let count = *error_counts.entry(tool_name.clone()).or_insert(0) + 1;
                             error_counts.insert(tool_name.clone(), count);
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: Schema validation failed: {}", tool_name, e));
+                                return Err(format!(
+                                    "Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: Schema validation failed: {}",
+                                    tool_name, e
+                                ));
                             }
                             tool_results[idx] = crate::types::ToolResult {
                                 tool_call_id: id,
                                 content: "".to_string(),
-                                error: crate::types::format_pydantic_error_string(&e, Some(&args.to_string()), None)
+                                error: crate::types::format_pydantic_error_string(
+                                    &e,
+                                    Some(&args.to_string()),
+                                    None,
+                                ),
                             };
                             continue;
                         }
@@ -2040,7 +2094,6 @@ impl Agent {
                         ).await;
 
                         match final_res {
-
                             Ok(res) => {
                                 error_counts.insert(name.clone(), 0);
                                 tool_results[idx] = crate::types::ToolResult {
@@ -2059,12 +2112,28 @@ impl Agent {
                                 let count = *error_counts.entry(name.clone()).or_insert(0) + 1;
                                 error_counts.insert(name.clone(), count);
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
-                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, err_msg));
+                                    return Err(format!(
+                                        "Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}",
+                                        name, err_msg
+                                    ));
                                 }
-                                tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id.clone(), &tc.name, &err_msg);
+                                tool_results[idx] =
+                                    ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                                        id.clone(),
+                                        &tc.name,
+                                        &err_msg,
+                                    );
 
-                                for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != id).skip(1) {
-                                    let sub_idx = if let Some(idx) = tool_calls.iter().position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
+                                for subsequent_tc in
+                                    mutating_calls.iter().skip_while(|t| t.id != id).skip(1)
+                                {
+                                    let sub_idx = if let Some(idx) =
+                                        tool_calls.iter().position(|t| t.id == subsequent_tc.id)
+                                    {
+                                        idx
+                                    } else {
+                                        continue;
+                                    };
                                     tool_results[sub_idx] = crate::types::ToolResult {
                                         tool_call_id: subsequent_tc.id.clone(),
                                         content: String::new(),
@@ -2074,29 +2143,36 @@ impl Agent {
                                 break;
                             }
                             Err(crate::types::ToolError::Transient(err_msg)) => {
-                                return Err(format!("Unexpected tool error: Transient error: {}", err_msg));
+                                return Err(format!(
+                                    "Unexpected tool error: Transient error: {}",
+                                    err_msg
+                                ));
                             }
                             Err(crate::types::ToolError::Unexpected(err_msg)) => {
                                 return Err(format!("Unexpected tool error: {}", err_msg));
                             }
                             Err(crate::types::ToolError::UserFixable(err_msg)) => {
-                            if let Some(checkpointer) = &checkpointer_node {
-                                if let Some(cp_id) = &current_checkpoint_id {
-                                    let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                if let Some(checkpointer) = &checkpointer_node {
+                                    if let Some(cp_id) = &current_checkpoint_id {
+                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                    }
                                 }
-                            }
-                            if let Some(ref cb) = cfg_arc_node.human_input_callback.0
-                                && let Some(human_input) = cb(&err_msg).await {
+                                if let Some(ref cb) = cfg_arc_node.human_input_callback.0
+                                    && let Some(human_input) = cb(&err_msg).await
+                                {
                                     tool_results[idx] = crate::types::ToolResult {
                                         tool_call_id: id.clone(),
                                         content: String::new(),
-                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", err_msg, human_input),
+                                        error: format!(
+                                            "USER_FIXABLE: {}. Human provided fix: {}",
+                                            err_msg, human_input
+                                        ),
                                     };
                                     // Normally we `continue;` here, but for mutating_calls it's safer to break if human input fixed it. Actually, wait. It's safer to continue if human fixed it.
                                     continue;
                                 }
-                            return Err(format!("USER_FIXABLE:{}", err_msg));
-                        }
+                                return Err(format!("USER_FIXABLE:{}", err_msg));
+                            }
                             Err(crate::types::ToolError::Fatal(err_msg)) => {
                                 return Err(format!("Fatal tool error: {}", err_msg));
                             }
@@ -2108,11 +2184,19 @@ impl Agent {
                         tool_results[idx] = crate::types::ToolResult {
                             tool_call_id: id.clone(),
                             content: "".to_string(),
-                            error: format!("Tool {} not found", name)
+                            error: format!("Tool {} not found", name),
                         };
 
-                        for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != id).skip(1) {
-                            let sub_idx = if let Some(idx) = tool_calls.iter().position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
+                        for subsequent_tc in
+                            mutating_calls.iter().skip_while(|t| t.id != id).skip(1)
+                        {
+                            let sub_idx = if let Some(idx) =
+                                tool_calls.iter().position(|t| t.id == subsequent_tc.id)
+                            {
+                                idx
+                            } else {
+                                continue;
+                            };
                             tool_results[sub_idx] = crate::types::ToolResult {
                                 tool_call_id: subsequent_tc.id.clone(),
                                 content: String::new(),

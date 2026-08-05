@@ -75,11 +75,11 @@ pub mod actor_model;
 pub mod agent_protocol;
 pub mod gpt_researcher;
 pub mod llm_condensation;
+pub mod omnichannel_chat;
 pub mod plan_and_execute;
 pub mod sona_patterns;
 pub mod swarm_topology;
 pub mod visual_workflow;
-pub mod omnichannel_chat;
 pub mod visual_workflow_client;
 
 pub mod agentic_seek;
