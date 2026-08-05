@@ -18,6 +18,7 @@ rust_library(
         "dynamic_workflows.rs",
         "expert_team.rs",
         "hnsw_memory.rs",
+        "omnichannel_chat.rs",
         "output_parser.rs",
         "human_in_loop.rs",
         "pubsub.rs",
