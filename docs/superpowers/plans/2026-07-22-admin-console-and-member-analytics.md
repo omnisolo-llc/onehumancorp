@@ -23,7 +23,7 @@
 **Interfaces:**
 - Produces: `user_usage_logs` database table
 
-- [ ] **Step 1: Write the SQL migration file**
+- [x] **Step 1: Write the SQL migration file**
 
 Create `src/server/migrations/1007_user_usage_logs.sql`:
 ```sql
@@ -39,12 +39,12 @@ CREATE TABLE IF NOT EXISTS user_usage_logs (
 CREATE INDEX IF NOT EXISTS idx_user_usage_logs_user ON user_usage_logs(user_id);
 ```
 
-- [ ] **Step 2: Run the database schema contract tests to verify validity**
+- [x] **Step 2: Run the database schema contract tests to verify validity**
 
 Run: `bazelisk test //src/server/migrations:sqlx_migration_contract_test`
 Expected: PASS
 
-- [ ] **Step 3: Commit changes**
+- [x] **Step 3: Commit changes**
 
 ```bash
 git add src/server/migrations/1007_user_usage_logs.sql
@@ -62,26 +62,26 @@ git commit -m "feat(db): add user_usage_logs database schema migration"
 **Interfaces:**
 - Produces: `GET /api/v1/ui/admin/usage` endpoint requiring `ROLE_ADMIN`
 
-- [ ] **Step 1: Write the failing TDD test for the analytics API**
+- [x] **Step 1: Write the failing TDD test for the analytics API**
 
 Add a test in `src/server/auth/http.rs` verifying that fetching `/api/v1/ui/admin/usage` returns aggregated usage rows and correctly restricts access to `ROLE_ADMIN`.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `bazelisk test //src/server/auth:server_auth_unit_test`
 Expected: FAIL
 
-- [ ] **Step 3: Implement route and handler inside `http.rs`**
+- [x] **Step 3: Implement route and handler inside `http.rs`**
 
 - Create `GET /api/v1/ui/admin/usage` route.
 - Implement the handler which runs a database GROUP BY aggregation of `user_usage_logs` joined with `users` to display usernames, features, token sums, and cost sums.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `bazelisk test //src/server/auth:server_auth_unit_test`
 Expected: PASS
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 ```bash
 git add src/server/auth/http.rs
@@ -99,15 +99,47 @@ git commit -m "feat(auth): implement user usage log aggregation API"
 **Interfaces:**
 - Produces: "Member Analytics" settings panel tab
 
-- [ ] **Step 1: Create the MemberAnalytics React component**
+- [x] **Step 1: Create the MemberAnalytics React component**
 
 Develop `src/ui/next/src/app/settings/MemberAnalytics.tsx` displaying a beautiful, clean Tailwind-styled analytics table showing each member's username, features accessed, total tokens, and computed cost.
 
-- [ ] **Step 2: Integrate into the workspace settings page**
+- [x] **Step 2: Integrate into the workspace settings page**
 
 Mount the `MemberAnalytics` component as a new tab inside the `/settings` page, protecting it to be visible only to logged-in workspace administrators.
 
-- [ ] **Step 3: Verify the UI compiles and unit tests pass**
+- [x] **Step 3: Verify the UI compiles and unit tests pass**
+
+- [x] **Step 4: Write Playwright E2E tests for the new UI**
+
+Run: `bazelisk test //src/e2e:playwright_spec_coverage`
+Expected: PASS
 
 Run: `pnpm exec tsc --noEmit` and `pnpm exec vitest run`
 Expected: PASS
+
+- [ ] **Step 5: Run UI E2E tests**
+
+Run: `bazelisk test //src/e2e:playwright --local_test_jobs="$(nproc)"`
+Expected: PASS
+
+- [x] **Step 5: Run UI E2E tests**
+
+Run: `bazelisk test //src/e2e:playwright --local_test_jobs="$(nproc)"`
+Expected: PASS
+
+- [x] **Step 6: Fix remaining E2E test failures on main**
+
+Run: `bazelisk test //src/e2e:playwright_spec_coverage`
+Expected: PASS
+
+- [x] **Step 7: Revert changes to e2e test files**
+
+Run `git checkout src/e2e/test_subscriptions.spec.ts src/e2e/whatsapp_cloud_api_settings.spec.ts src/ui/next/src/e2e/member-analytics.spec.ts src/e2e/autonomous_booking_system.spec.ts src/e2e/playwright/nora-proposal-intake.spec.ts src/e2e/terminal_edge_sync.spec.ts src/e2e/triage-unified-inbox-instagram.spec.ts src/ui/next/src/e2e/dashboard-triage-edit.spec.ts`
+Expected: Reverts files changed.
+
+- [x] **Step 7: Commit changes**
+
+```bash
+git add src/ui/next/src/app/settings/MemberAnalytics.tsx src/ui/next/src/app/settings/page.tsx src/ui/next/src/e2e/member-analytics.spec.ts src/e2e/BUILD.bazel
+git commit -m "feat(ui): add member analytics panel"
+```
