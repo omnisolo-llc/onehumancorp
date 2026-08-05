@@ -3721,6 +3721,7 @@ impl Agent {
                 if !final_cfg.enable_lazy_tool_loading
                     || t.name == "ToolSearch"
                     || t.name == "LazyLoadTools"
+                    || t.name == "UnloadTools"
                     || active_tools.read().await.contains(&t.name)
                 {
                     req_tools.push(ToolDefinition {
@@ -6948,6 +6949,8 @@ mod tests {
                 if *count == 1 {
                     // Assert that HeavyTool is NOT in the tools list
                     assert!(!req.tools.iter().any(|t| t.name == "HeavyTool"));
+                    // Verify that UnloadTools is included in the base set
+                    assert!(req.tools.iter().any(|t| t.name == "UnloadTools"));
                     // Return a call to LazyLoadTools
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message {
