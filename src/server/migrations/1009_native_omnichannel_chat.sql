@@ -57,3 +57,62 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY chat_messages_tenant_isolation_policy ON chat_messages FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+CREATE TABLE IF NOT EXISTS chat_macros (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    visibility TEXT NOT NULL DEFAULT 'personal', -- 'personal' or 'global'
+    actions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_by_id UUID,
+    updated_by_id UUID,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE chat_macros ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_macros_tenant_isolation_policy ON chat_macros FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+CREATE TABLE IF NOT EXISTS chat_canned_responses (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    short_code TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (tenant_id, short_code)
+);
+ALTER TABLE chat_canned_responses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_canned_responses_tenant_isolation_policy ON chat_canned_responses FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+CREATE TABLE IF NOT EXISTS chat_assignment_policies (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    assignment_order TEXT NOT NULL DEFAULT 'round_robin',
+    conversation_priority TEXT NOT NULL DEFAULT 'earliest_created',
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    fair_distribution_limit INTEGER NOT NULL DEFAULT 100,
+    fair_distribution_window INTEGER NOT NULL DEFAULT 3600,
+    exclude_older_than_hours INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (tenant_id, name)
+);
+ALTER TABLE chat_assignment_policies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_assignment_policies_tenant_isolation_policy ON chat_assignment_policies FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+
+CREATE TABLE IF NOT EXISTS chat_automation_rules (
+    id UUID PRIMARY KEY,
+    tenant_id UUID NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    event_name TEXT NOT NULL,
+    conditions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    actions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    execution_delay INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE chat_automation_rules ENABLE ROW LEVEL SECURITY;
+CREATE POLICY chat_automation_rules_tenant_isolation_policy ON chat_automation_rules FOR ALL USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);

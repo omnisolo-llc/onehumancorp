@@ -1,0 +1,12 @@
+--- src/server/auth/BUILD.bazel
++++ src/server/auth/BUILD.bazel
+@@ -5,6 +5,9 @@
+     compile_data = [
+         "//src/server/migrations",
+         "//src/ui/next:auth_limits",
++        "//src/server:lib.rs",
++        "//src/server/persistence:migration.rs",
++        "//src/server/persistence:commands.rs",
+     ],
+     srcs = [
+         "email.rs",

@@ -216,3 +216,12 @@ async fn bootstrap_admin_rejects_an_identity_email_claim_owned_by_another_user()
     .unwrap();
     assert_eq!(claim.user_id, "existing-owner");
 }
+
+#[cfg(standalone_test)]
+pub mod db {
+    pub struct DB;
+    impl DB {
+        pub async fn new() -> Result<Self, Box<dyn std::error::Error>> { Ok(Self) }
+        pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> { Ok(()) }
+    }
+}
