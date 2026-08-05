@@ -651,6 +651,7 @@ rust_test(
         "@crates//:redis",
         "@crates//:reqwest",
         ":server_lib",
+
         "//src/server/auth:server_auth",
         "@crates//:bcrypt",
         "@crates//:chrono",
@@ -1077,7 +1078,6 @@ rust_test(
 )
 
 exports_files([
-    "lib.rs",
     "Cargo.toml",
     "Cargo.lock",
 ])

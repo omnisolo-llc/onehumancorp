@@ -91,6 +91,8 @@ fn postgres_portable_schema_retains_the_legacy_text_array_contract() {
     let migration_source = include_str!("persistence/migration.rs");
     let persistence_entity_source = include_str!("persistence/entities.rs");
     let auth_entity_source = include_str!("auth/seaorm_store.rs");
+    // Note: DB module needs to be compiled to run tests properly
+    let _db_mod = "pub mod db { pub use server_lib::db::*; }";
 
     assert!(migration_source.contains("roles TEXT[] DEFAULT '{}'"));
     assert!(!persistence_entity_source.contains("pub roles: Json"));

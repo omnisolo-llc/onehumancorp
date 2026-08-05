@@ -1,7 +1,6 @@
 use sqlx::Row;
 pub mod persistence;
 #[cfg(test)]
-
 pub mod rag_sync;
 pub mod redis_pool;
 pub mod cart_recovery;
