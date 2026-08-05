@@ -91,6 +91,13 @@ export function GrowBusinessCard() {
               Digital Business Card
             </Link>
             <Link
+              id="viral-bundle-builder-btn"
+              href="/viral-bundle-builder"
+              className="px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Viral Bundle Builder
+            </Link>
+            <Link
               id="review-storefront-btn"
               href="/edge-storefront-setup"
               className="px-4 py-2 bg-[#0071E3] hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
