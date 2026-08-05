@@ -1120,6 +1120,6 @@ if (!failed) {
     : [...reachable.findings, ...scanFiles(reachable.files)];
   const unique = new Map(findings.map(([category, filename]) => [`${category}\0${filename}`, [category, filename]]));
   for (const [category, filename] of unique.values()) process.stdout.write(`${category}\t${filename}\n`);
-  failed = false;
+  failed = unique.size > 0;
 }
 process.exitCode = failed ? 1 : 0;

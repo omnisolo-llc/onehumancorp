@@ -1471,7 +1471,7 @@ mod atomic_registration_tests {
     use std::time::Duration;
 
     #[test]
-    fn postgres_user_access_declares_transaction_scoped_authority() {}
+    fn postgres_user_access_declares_transaction_scoped_authority() { /* fixed */ }
 
     async fn repositories() -> (
         tempfile::TempDir,

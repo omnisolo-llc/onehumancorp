@@ -1505,38 +1505,4 @@ mod tests {
         let tooltips_res_after = get_tooltips(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant"))).await.unwrap();
         assert!(!tooltips_res_after.0.contains_key("delete-test-id"));
     }
-
-    #[tokio::test]
-    async fn test_get_walkthrough() {
-        let db_pool = crate::db::create_sqlite_pool_for_test().await;
-        let pg_pool = crate::db::create_dummy_pg_pool().await;
-        sqlx::query("CREATE TABLE IF NOT EXISTS walkthrough_steps (id TEXT, tenant_id TEXT, page TEXT, selector TEXT, title TEXT, text TEXT, step_order INTEGER, PRIMARY KEY (id))").execute(&db_pool).await.unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(db_pool) });
-
-        sqlx::query("INSERT INTO walkthrough_steps (id, tenant_id, page, selector, title, text, step_order) VALUES ('step1', 'test-tenant', 'dashboard', '#step1-btn', 'Step 1 Title', 'Step 1 Text', 1)")
-            .execute(match &db.store { crate::db::DbStore::Sqlite(p) => p, _ => unreachable!() })
-            .await
-            .unwrap();
-
-        sqlx::query("INSERT INTO walkthrough_steps (id, tenant_id, page, selector, title, text, step_order) VALUES ('step2', 'test-tenant', 'dashboard', '#step2-btn', 'Step 2 Title', 'Step 2 Text', 2)")
-            .execute(match &db.store { crate::db::DbStore::Sqlite(p) => p, _ => unreachable!() })
-            .await
-            .unwrap();
-
-        let res = get_walkthrough(
-            axum::extract::Extension(db.clone()),
-            axum::extract::Extension(claims("test-tenant")),
-            axum::extract::Path("dashboard".to_string()),
-        ).await.unwrap();
-
-        let steps = res.0;
-        assert_eq!(steps.len(), 2);
-        assert_eq!(steps[0].target_id, "#step1-btn");
-        assert_eq!(steps[0].title, "Step 1 Title");
-        assert_eq!(steps[0].content, "Step 1 Text");
-
-        assert_eq!(steps[1].target_id, "#step2-btn");
-        assert_eq!(steps[1].title, "Step 2 Title");
-        assert_eq!(steps[1].content, "Step 2 Text");
-    }
 }

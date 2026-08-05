@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('Nora Autonomous Proposal Intake Flow', () => {
+test.describe('Nora Autonomous Proposal Intake Flow', () => {
   let proposalId: string;
   let tenantId = 'agency-1';
   let customerId = 'cust-1';
 
-  test.skip('Client intake creates proposal automatically', async ({ request, page }) => {
+  test('Client intake creates proposal automatically', async ({ request, page }) => {
     // Simulate Client Inquiry
     const res = await request.post('/api/v1/intake', {
       headers: {

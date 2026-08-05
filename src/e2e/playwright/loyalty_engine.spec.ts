@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.skip('Loyalty & Rewards Engine', () => {
+test.describe('Loyalty & Rewards Engine', () => {
 
-  test.skip('Should create and retrieve loyalty wallet balance', async ({ page }) => {
+  test('Should create and retrieve loyalty wallet balance', async ({ page }) => {
     // Assuming our test harness sets up a tenant and customer.
     // In this mocked check, we navigate to the quote and check if the wallet loads.
-    await page.route() // disabled => {
+    await page.route('**/api/ui/loyalty/balance*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -13,7 +13,7 @@ test.describe.skip('Loyalty & Rewards Engine', () => {
       });
     });
 
-    await page.route() // disabled => {
+    await page.route('**/api/ui/quote*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -39,8 +39,8 @@ test.describe.skip('Loyalty & Rewards Engine', () => {
     await expect(balanceText).toContainText('You have 500 pts');
   });
 
-  test.skip('Should apply points to checkout', async ({ page }) => {
-    await page.route() // disabled => {
+  test('Should apply points to checkout', async ({ page }) => {
+    await page.route('**/api/ui/loyalty/balance*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -48,7 +48,7 @@ test.describe.skip('Loyalty & Rewards Engine', () => {
       });
     });
 
-    await page.route() // disabled => {
+    await page.route('**/api/ui/quote*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -76,7 +76,7 @@ test.describe.skip('Loyalty & Rewards Engine', () => {
     await expect(page.locator('#quote-total')).toContainText('$140.00');
   });
 
-  test.skip('Dashboard should have a link to the loyalty widget', async ({ page }) => {
+  test('Dashboard should have a link to the loyalty widget', async ({ page }) => {
     await page.goto('/dashboard.html');
     const loyaltyLink = page.locator('a#loyalty-link');
     await expect(loyaltyLink).toBeVisible();
