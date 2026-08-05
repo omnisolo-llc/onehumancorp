@@ -48,7 +48,7 @@ export default function ApiDocsPage() {
         .swagger-ui .responses-inner { overflow-x: auto; max-width: 100%; box-sizing: border-box; }
         .swagger-ui .model-box { overflow-x: auto; max-width: 100%; box-sizing: border-box; }
         .swagger-ui .opblock-tag { font-size: 20px; padding: 10px; box-sizing: border-box; }
-        .swagger-ui .opblock .opblock-summary { padding: 5px; box-sizing: border-box; }
+        .swagger-ui .opblock .opblock-summary { padding: 10px; min-height: 44px; box-sizing: border-box; }
         .swagger-ui .opblock .opblock-summary-method { min-width: 60px; font-size: 12px; }
         .swagger-ui .opblock .opblock-summary-path { font-size: 14px; max-width: calc(100vw - 120px); overflow-wrap: break-word; word-break: break-all; }
       `}} />
