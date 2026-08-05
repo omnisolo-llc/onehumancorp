@@ -6,7 +6,7 @@ rust_library(
     name = "server_auth",
     compile_data = [
         "//src/server/migrations",
-        "//src/ui/next:auth_limits",
+        "//src/ui/next:auth_limits", "//src/server/persistence:migration.rs", "//src/server/persistence:commands.rs", "//src/server:lib.rs",
     ],
     srcs = [
         "email.rs",

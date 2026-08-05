@@ -1492,7 +1492,7 @@ mod atomic_registration_tests {
         assert!(!user_repository_source.contains(".all(&self.connection)"));
         assert!(!user_repository_source.contains(".exec(&self.connection)"));
 
-        let migration_source = include_str!("../persistence/migration.rs");
+        let migration_source = include_str!("../../server/persistence/migration.rs");
         assert!(!migration_source.contains("ADD COLUMN IF NOT EXISTS roles JSON"));
         assert!(migration_source.contains("information_schema.columns"));
         assert!(migration_source.contains("column_name = ?"));
@@ -1522,7 +1522,7 @@ mod atomic_registration_tests {
         assert!(migration_source.contains("unnest(COALESCE(users.roles"));
         assert!(migration_source.contains("JSON_TABLE(COALESCE(users.roles"));
 
-        let startup_source = include_str!("../lib.rs");
+        let startup_source = include_str!("../../server/lib.rs");
         assert!(startup_source.contains("mod persistence_commands_test;"));
         let legacy_position = startup_source
             .find("db.run_migrations().await?")
@@ -1532,7 +1532,7 @@ mod atomic_registration_tests {
             .expect("portable migration hook must run");
         assert!(legacy_position < portable_position);
 
-        let commands_source = include_str!("../persistence/commands.rs");
+        let commands_source = include_str!("../../server/persistence/commands.rs");
         assert!(commands_source.contains("run_legacy_postgres_migrations"));
 
         assert!(production_source.contains("EmailChallengeCreation"));
