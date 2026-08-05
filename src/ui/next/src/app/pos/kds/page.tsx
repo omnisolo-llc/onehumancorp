@@ -31,37 +31,43 @@ export default function KDSPage() {
   // Initial Data Load
   useEffect(() => {
     const loadData = async () => {
-      try {
-        const ordersRes = await fetch('/api/v1/pos/orders');
-        if (!ordersRes.ok) throw new Error('Failed to load orders');
-        const ordersData = await ordersRes.json();
-        const normalizedOrders = Array.isArray(ordersData.orders) ? ordersData.orders : (Array.isArray(ordersData) ? ordersData : []);
-        setOrders(normalizedOrders);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('ohc_pos_kds_orders', JSON.stringify(normalizedOrders));
+      const fetchOrders = async () => {
+        try {
+          const ordersRes = await fetch('/api/v1/pos/orders');
+          if (!ordersRes.ok) throw new Error('Failed to load orders');
+          const ordersData = await ordersRes.json();
+          const normalizedOrders = Array.isArray(ordersData.orders) ? ordersData.orders : (Array.isArray(ordersData) ? ordersData : []);
+          setOrders(normalizedOrders);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('ohc_pos_kds_orders', JSON.stringify(normalizedOrders));
+          }
+        } catch {
+          if (typeof window !== 'undefined') {
+            const cached = localStorage.getItem('ohc_pos_kds_orders');
+            if (cached) setOrders(JSON.parse(cached));
+          }
         }
-      } catch {
-        if (typeof window !== 'undefined') {
-          const cached = localStorage.getItem('ohc_pos_kds_orders');
-          if (cached) setOrders(JSON.parse(cached));
-        }
-      }
+      };
 
-      try {
-        const invRes = await fetch('/api/v1/pos/inventory');
-        if (!invRes.ok) throw new Error('Failed to load inventory');
-        const invData = await invRes.json();
-        const normalizedInventory = Array.isArray(invData.inventory) ? invData.inventory : (Array.isArray(invData) ? invData : []);
-        setInventory(normalizedInventory);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('ohc_pos_kds_inventory', JSON.stringify(normalizedInventory));
+      const fetchInventory = async () => {
+        try {
+          const invRes = await fetch('/api/v1/pos/inventory');
+          if (!invRes.ok) throw new Error('Failed to load inventory');
+          const invData = await invRes.json();
+          const normalizedInventory = Array.isArray(invData.inventory) ? invData.inventory : (Array.isArray(invData) ? invData : []);
+          setInventory(normalizedInventory);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('ohc_pos_kds_inventory', JSON.stringify(normalizedInventory));
+          }
+        } catch {
+          if (typeof window !== 'undefined') {
+            const cached = localStorage.getItem('ohc_pos_kds_inventory');
+            if (cached) setInventory(JSON.parse(cached));
+          }
         }
-      } catch {
-        if (typeof window !== 'undefined') {
-          const cached = localStorage.getItem('ohc_pos_kds_inventory');
-          if (cached) setInventory(JSON.parse(cached));
-        }
-      }
+      };
+
+      await Promise.all([fetchOrders(), fetchInventory()]);
     };
     loadData();
   }, []);

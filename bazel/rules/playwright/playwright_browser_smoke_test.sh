@@ -18,8 +18,10 @@ timeout 15s "$browser" \
   --no-sandbox \
   --disable-gpu \
   --disable-dev-shm-usage \
+  --disable-software-rasterizer \
+  --virtual-time-budget=10000 \
   --dump-dom 'data:text/html,<title>bazel-playwright-browser-ok</title>' \
-  >"$output"
+  >"$output" || true
 
-grep -Fq '<title>bazel-playwright-browser-ok</title>' "$output"
+grep -Fq '<title>bazel-playwright-browser-ok</title>' "$output" || (cat "$output" && return 1 2>/dev/null || false)
 echo "Bazel Chromium headless shell launched successfully"

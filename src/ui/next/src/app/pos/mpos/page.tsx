@@ -85,10 +85,10 @@ function POSTerminalMobileContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans max-w-[375px] mx-auto overflow-hidden relative shadow-xl">
-      <header className="p-4 bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">mPOS</h1>
-        {isOffline && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full absolute right-4 top-4">Offline Mode</span>}
+    <div className="min-h-screen bg-[#F5F5F7] flex flex-col font-sans max-w-[375px] mx-auto overflow-hidden relative shadow-2xl">
+      <header className="p-4 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] sticky top-0 z-10 border-b border-[rgba(255,255,255,0.4)]">
+        <h1 className="text-xl font-bold text-[#1D1D1F] font-outfit">mPOS</h1>
+        {isOffline && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full absolute right-4 top-4 font-medium">Offline Mode</span>}
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 pb-32">
@@ -97,7 +97,7 @@ function POSTerminalMobileContent() {
             <div
               key={product.id}
               onClick={() => addToCart(product)}
-              className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 cursor-pointer active:scale-95 transition-transform"
+              className="bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-3 rounded-2xl shadow-sm border border-[rgba(255,255,255,0.4)] cursor-pointer active:scale-95 transition-transform"
             >
               <div className="h-20 bg-gray-100 rounded-xl mb-2 flex items-center justify-center text-2xl">📦</div>
               <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
@@ -112,16 +112,16 @@ function POSTerminalMobileContent() {
         </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 max-w-[375px] mx-auto bg-white/80 backdrop-blur-lg border-t border-gray-200 p-4 pb-safe z-20">
+      <div className="fixed bottom-0 left-0 right-0 max-w-[375px] mx-auto bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border-t border-[rgba(255,255,255,0.4)] p-4 pb-safe z-20">
         <div className="flex justify-between items-center mb-3">
-          <span className="text-gray-600 font-medium">{cart.reduce((acc, i) => acc + i.quantity, 0)} Items</span>
-          <span className="text-xl font-bold text-gray-900">${totalAmount.toFixed(2)}</span>
+          <span className="text-[#1D1D1F] font-medium">{cart.reduce((acc, i) => acc + i.quantity, 0)} Items</span>
+          <span className="text-xl font-bold text-[#1D1D1F]">${totalAmount.toFixed(2)}</span>
         </div>
         <button
           data-testid="mpos-quick-charge"
           onClick={handleCharge}
           disabled={totalAmount === 0}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-semibold py-4 rounded-2xl transition-colors min-h-[44px]"
+          className="w-full bg-[#0071E3] hover:bg-[#0077ED] disabled:bg-gray-300 text-white font-semibold py-4 rounded-2xl transition-colors min-h-[44px]"
         >
           Quick Charge
         </button>
@@ -129,10 +129,10 @@ function POSTerminalMobileContent() {
 
       {showPaymentSheet && (
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-30 flex flex-col justify-end">
-          <div className="bg-white rounded-t-3xl p-6 pb-safe animate-slide-up h-2/3 flex flex-col">
+          <div className="bg-[rgba(255,255,255,0.85)] backdrop-blur-[40px] saturate-[210%] border border-[rgba(255,255,255,0.5)] rounded-t-3xl p-6 pb-safe animate-slide-up h-2/3 flex flex-col">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Tap to Pay</h2>
-              <button onClick={() => setShowPaymentSheet(false)} className="text-gray-500 text-xl font-bold">&times;</button>
+              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F]">Tap to Pay</h2>
+              <button onClick={() => setShowPaymentSheet(false)} className="text-[#1D1D1F] text-xl font-bold">&times;</button>
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center text-center">

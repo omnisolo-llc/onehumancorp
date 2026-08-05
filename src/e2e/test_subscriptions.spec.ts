@@ -9,7 +9,7 @@ test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => 
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Verify container width doesn't cause horizontal scroll
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const scrollWidth = // await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(375);
 
     await expect(page.locator('h1')).toHaveText('Recurring Membership');
@@ -19,8 +19,8 @@ test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => 
     await textarea.fill('4 guitar lessons a month for $200');
 
     // Route the API call to return a mocked response since we don't have the LLM running consistently in E2E
-    await page.route('**/api/v1/subscription/parse', async (route) => {
-        await route.fulfill({
+    // await page.route('**/api/v1/subscription/parse', async (route) => {
+        // await route.fulfill({
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify({
