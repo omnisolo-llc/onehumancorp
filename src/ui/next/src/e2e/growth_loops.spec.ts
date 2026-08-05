@@ -53,4 +53,16 @@ test.describe('Growth & Referral Features', () => {
     const cloudHeading = page.locator('h3:has-text("Cloud Team")');
     await expect(cloudHeading).toBeVisible();
   });
+
+  test('Viral Countdown Widget generator renders and has copy button', async ({ page }) => {
+    await page.goto('/viral-countdown-widget');
+
+    // Ensure the main UI loaded
+    const title = page.locator('h1:has-text("Viral Countdown Widget")');
+    await expect(title).toBeVisible();
+
+    // Verify copy button exists
+    const copyButton = page.locator('button:has-text("Copy Embed Code")');
+    await expect(copyButton).toBeVisible();
+  });
 });

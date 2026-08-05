@@ -70,6 +70,13 @@ export function GrowBusinessCard() {
               Give/Get Widget
             </Link>
             <Link
+              id="countdown-widget-btn"
+              href="/viral-countdown-widget"
+              className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
+            >
+              Countdown Widget
+            </Link>
+            <Link
               id="viral-widget-btn"
               href="/viral-powered-by-ohc-widget"
               className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition-colors whitespace-nowrap"
