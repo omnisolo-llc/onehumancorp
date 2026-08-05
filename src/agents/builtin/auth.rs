@@ -152,7 +152,8 @@ mod tests {
         assert!(!check_token("wrong-secret", &hash, key));
     }
 
-    fn ignore_auth_mode_requires_complete_configuration() {
+    #[test]
+    fn auth_mode_requires_complete_configuration() {
         let _lock = ENV_LOCK.lock().unwrap();
         let variables = [
             "OHC_AGENT_TOKEN",
@@ -167,17 +168,17 @@ mod tests {
         });
         temp_env::with_vars([
             ("CI", None::<&str>),
-                ("OHC_AGENT_TOKEN", Some("secret-token")),
+                                                                ("OHC_AGENT_TOKEN", Some("secret-token")),
                 ("OHC_AGENT_AUTH_KEY", None),
                 ("OHC_AGENT_SPIFFE_ID", None),
                 ("OHC_AGENT_AUTH_DISABLED", None),
                 ("OHC_ENV", Some("production")),
             ],
-            || assert!(auth_mode_from_env().is_err()),
+|| assert!(auth_mode_from_env().is_err()),
         );
         temp_env::with_vars([
             ("CI", None::<&str>),
-                ("OHC_AGENT_TOKEN", Some("secret-token")),
+                                                                ("OHC_AGENT_TOKEN", Some("secret-token")),
                 (
                     "OHC_AGENT_AUTH_KEY",
                     Some("0123456789abcdef0123456789abcdef"),
@@ -186,7 +187,7 @@ mod tests {
                 ("OHC_AGENT_AUTH_DISABLED", None),
                 ("OHC_ENV", Some("production")),
             ],
-            || {
+|| {
                 assert!(matches!(
                     auth_mode_from_env().unwrap(),
                     AuthMode::Token { .. }
@@ -195,7 +196,7 @@ mod tests {
         );
         temp_env::with_vars([
             ("CI", None::<&str>),
-                ("OHC_AGENT_TOKEN", None),
+                                                                ("OHC_AGENT_TOKEN", None),
                 ("OHC_AGENT_AUTH_KEY", None),
                 (
                     "OHC_AGENT_SPIFFE_ID",
@@ -204,7 +205,7 @@ mod tests {
                 ("OHC_AGENT_AUTH_DISABLED", None),
                 ("OHC_ENV", Some("production")),
             ],
-            || {
+|| {
                 let error = auth_mode_from_env().unwrap_err();
                 assert!(error.contains("mTLS"), "unexpected error: {error}");
             },
@@ -213,24 +214,24 @@ mod tests {
         for environment in ["development", "test"] {
             temp_env::with_vars([
             ("CI", None::<&str>),
-                    ("OHC_AGENT_TOKEN", None),
+                                                                    ("OHC_AGENT_TOKEN", None),
                     ("OHC_AGENT_AUTH_KEY", None),
                     ("OHC_AGENT_SPIFFE_ID", None),
                     ("OHC_AGENT_AUTH_DISABLED", Some("true")),
                     ("OHC_ENV", Some(environment)),
                 ],
-                || assert!(matches!(auth_mode_from_env().unwrap(), AuthMode::Disabled)),
+|| assert!(matches!(auth_mode_from_env().unwrap(), AuthMode::Disabled)),
             );
         }
         temp_env::with_vars([
             ("CI", None::<&str>),
-                ("OHC_AGENT_TOKEN", None),
+                                                                ("OHC_AGENT_TOKEN", None),
                 ("OHC_AGENT_AUTH_KEY", None),
                 ("OHC_AGENT_SPIFFE_ID", None),
                 ("OHC_AGENT_AUTH_DISABLED", Some("true")),
                 ("OHC_ENV", Some("production")),
             ],
-            || assert!(auth_mode_from_env().is_err()),
+|| assert!(auth_mode_from_env().is_err()),
         );
     }
 
