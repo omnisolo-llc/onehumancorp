@@ -9,6 +9,18 @@ mod entities;
 #[path = "persistence/migration.rs"]
 mod migration;
 
+mod db {
+    pub struct DB;
+    impl DB {
+        pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(Self)
+        }
+        pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            Ok(())
+        }
+    }
+}
+
 use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, PaginatorTrait, Set, Statement};
 
