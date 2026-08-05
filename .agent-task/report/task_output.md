@@ -1,10 +1,10 @@
-issue_title: "[Platform] Native Rust Omnichannel Chat & Inbox System (Chatwoot Replacement)"
+issue_title: "[Platform] Native Rust Omnichannel Chat & Inbox System (Chat system Replacement)"
 issue_description: |
   **Problem Statement**
-  OneHumanCorp (OHC) is currently lacking a native, high-performance omnichannel chat system. Relying on external systems like Chatwoot creates architectural fragmentation, increases operational complexity, and prevents the tight integration required for our AI agents to seamlessly participate in conversations, observe context, and assist owners in real-time. We need to implement a native Rust-based omnichannel chat architecture directly within the OHC platform to provide unified messaging, inbox management, and agent routing for our users (Maya, Carlos, Priya, Leo, Fatima).
+  OneHumanCorp (OHC) is currently lacking a native, high-performance omnichannel chat system. Relying on external systems like Chat system creates architectural fragmentation, increases operational complexity, and prevents the tight integration required for our AI agents to seamlessly participate in conversations, observe context, and assist owners in real-time. We need to implement a native Rust-based omnichannel chat architecture directly within the OHC platform to provide unified messaging, inbox management, and agent routing for our users (Maya, Carlos, Priya, Leo, Fatima).
 
   **Research Report**
-  We have benchmarked the open-source Chatwoot data model (conversations, messages, inboxes, contacts, channel adapters) as a baseline. The Chatwoot system relies heavily on a standard conversational data model:
+  We have benchmarked the open-source Chat system data model (conversations, messages, inboxes, contacts, channel adapters) as a baseline. The Chat system system relies heavily on a standard conversational data model:
   - `Conversation`: The central entity grouping messages between a contact and a business/team.
   - `Message`: Individual units of communication within a conversation.
   - `Inbox`: The queue or channel entry point where conversations arrive.
@@ -63,7 +63,7 @@ issue_description: |
   3. Design and implement the WebSocket Gateway foundation for real-time event distribution (new messages).
   4. Create a foundational generic `ChannelAdapter` trait/interface that specific channel integrations (e.g., Web Widget) can implement.
   5. Provide comprehensive unit tests (100% coverage) for the new Rust modules.
-  6. Ensure all schema definitions and API endpoints align with the goal of complete Chatwoot feature replication, but optimized for the OHC architecture.
+  6. Ensure all schema definitions and API endpoints align with the goal of complete Chat system feature replication, but optimized for the OHC architecture.
 
   **Priority**: P0 (Critical - Foundational Architecture)
   **Estimated Scope**: Large
