@@ -153,6 +153,60 @@ impl Anthropic3TierMemory {
         }
         Ok(results)
     }
+
+    /// Performs a substring search across all transcripts, returning context-aware snippets
+    /// with matching lines and a custom number of padding lines around the match.
+    /// This prevents context rot and token explosion by loading only relevant snippets.
+    pub async fn search_transcripts_with_snippets(
+        &self,
+        query: &str,
+        limit: usize,
+        context_lines: usize,
+    ) -> std::io::Result<Vec<String>> {
+        let mut results = Vec::new();
+        let query_lower = query.to_lowercase();
+
+        let mut entries = fs::read_dir(&self.transcripts_dir).await?;
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            if results.len() >= limit {
+                break;
+            }
+            let path = entry.path();
+            if path.is_file() {
+                if let Ok(content) = fs::read_to_string(&path).await {
+                    if content.to_lowercase().contains(&query_lower) {
+                        let filename = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                        let lines: Vec<&str> = content.lines().collect();
+                        let mut snippets = Vec::new();
+
+                        for (idx, line) in lines.iter().enumerate() {
+                            if line.to_lowercase().contains(&query_lower) {
+                                let start = idx.saturating_sub(context_lines);
+                                let end = std::cmp::min(lines.len(), idx + context_lines + 1);
+
+                                let mut snippet_lines = Vec::new();
+                                for i in start..end {
+                                    let indicator = if i == idx { ">>> " } else { "    " };
+                                    snippet_lines.push(format!("{}{:4}: {}", indicator, i + 1, lines[i]));
+                                }
+                                snippets.push(snippet_lines.join("\n"));
+                            }
+                        }
+
+                        if !snippets.is_empty() {
+                            results.push(format!(
+                                "Transcript {} (Matches: {}):\n---\n{}\n---",
+                                filename,
+                                snippets.len(),
+                                snippets.join("\n\n[...]\n\n")
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        Ok(results)
+    }
 }
 
 #[cfg(test)]
@@ -233,5 +287,68 @@ mod tests {
         // Search no match
         let results3 = memory.search_transcripts("bananas", 5).await.unwrap();
         assert_eq!(results3.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_search_transcripts_with_snippets() {
+        let dir = tempdir().unwrap();
+        let memory = Anthropic3TierMemory::new(dir.path()).await.unwrap();
+
+        let log_content = "Line 1: preamble\nLine 2: setup\nLine 3: target query match here\nLine 4: cleanup\nLine 5: postamble";
+        memory
+            .append_transcript("session_snippets", log_content)
+            .await
+            .unwrap();
+
+        // Search with 1 line of context padding
+        let results = memory
+            .search_transcripts_with_snippets("target query", 5, 1)
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 1);
+        let snippet = &results[0];
+        assert!(snippet.contains("session_snippets.log"));
+        assert!(snippet.contains("Matches: 1"));
+
+        // Line 2, 3, 4 should be present
+        assert!(snippet.contains("Line 2: setup"));
+        assert!(snippet.contains(">>>    3: Line 3: target query match here"));
+        assert!(snippet.contains("    4: Line 4: cleanup"));
+
+        // Line 1 and 5 should NOT be present (outside 1-line context window)
+        assert!(!snippet.contains("Line 1: preamble"));
+        assert!(!snippet.contains("Line 5: postamble"));
+    }
+
+    #[tokio::test]
+    async fn test_snippet_extraction_boundaries() {
+        let dir = tempdir().unwrap();
+        let memory = Anthropic3TierMemory::new(dir.path()).await.unwrap();
+
+        let log_content = "target query on first line\nLine 2\nLine 3\nLine 4\ntarget query on last line";
+        memory
+            .append_transcript("session_boundaries", log_content)
+            .await
+            .unwrap();
+
+        // Search with 1 line of context padding
+        let results = memory
+            .search_transcripts_with_snippets("target query", 5, 1)
+            .await
+            .unwrap();
+
+        assert_eq!(results.len(), 1);
+        let snippet = &results[0];
+        assert!(snippet.contains("Matches: 2"));
+
+        // First match boundary (index 0 saturating_sub 1 -> 0, idx+2 -> lines 0 and 1)
+        assert!(snippet.contains(">>>    1: target query on first line"));
+        assert!(snippet.contains("    2: Line 2"));
+        assert!(!snippet.contains("Line 3"));
+
+        // Second match boundary (index 4 saturating_sub 1 -> 3, idx+2 -> lines 3 and 4)
+        assert!(snippet.contains("    4: Line 4"));
+        assert!(snippet.contains(">>>    5: target query on last line"));
     }
 }
