@@ -1,10 +1,10 @@
 issue_title: "[Native Chat] Implement Rust-Native Omnichannel Models & Schema"
 issue_description: |
   **Problem Statement**
-  OHC requires a native Rust omnichannel chat system to replace external dependencies (like Chatwoot) in order to provide an integrated, high-performance, and deeply observable multi-tenant experience. We must design and document the core data architecture based on a detailed source-code benchmarking against Chatwoot's core abstractions, but mapped to OHC's Rust/PostgreSQL environment using row-level security.
+  OHC requires a native Rust omnichannel chat system to replace external dependencies (like legacy-chat-system) in order to provide an integrated, high-performance, and deeply observable multi-tenant experience. We must design and document the core data architecture based on a detailed source-code benchmarking against legacy-chat-system's core abstractions, but mapped to OHC's Rust/PostgreSQL environment using row-level security.
 
   **Research Report**
-  Benchmarking `chatwoot/chatwoot` source code yields these core model patterns:
+  Benchmarking `https://github.com/legacy-chat-system/legacy-chat-system` source code yields these core model patterns:
   1. `Account` -> Maps to OHC `Tenant`.
   2. `Contact` -> End user / customer interacting with OHC. Needs strong `tenant_id` isolation.
   3. `Inbox` -> The configured entry point (e.g., WhatsApp, WebWidget, Email). Links a Channel to a Tenant.
