@@ -37,12 +37,10 @@ export function allowedDevOrigins(environment = process.env) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: allowedDevOrigins(),
+  distDir: '.next',
   outputFileTracingRoot: new URL('../../../', import.meta.url).pathname,
   typescript: {
     ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
 }
 
