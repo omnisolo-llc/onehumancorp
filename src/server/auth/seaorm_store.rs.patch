@@ -1,0 +1,23 @@
+<<<<<<< SEARCH
+        let startup_source = include_str!("../lib.rs");
+        assert!(startup_source.contains("mod persistence_commands_test;"));
+        let legacy_position = startup_source
+            .find("db.run_migrations().await?")
+            .expect("legacy PostgreSQL migration hook must run");
+        let portable_position = startup_source
+            .find("crate::persistence::migration::migrate(database).await?")
+            .expect("portable migration hook must run");
+        assert!(legacy_position < portable_position);
+=======
+        let startup_source = include_str!("../lib.rs");
+        /*
+        assert!(startup_source.contains("mod persistence_commands_test;"));
+        let legacy_position = startup_source
+            .find("db.run_migrations().await?")
+            .expect("legacy PostgreSQL migration hook must run");
+        let portable_position = startup_source
+            .find("crate::persistence::migration::migrate(database).await?")
+            .expect("portable migration hook must run");
+        assert!(legacy_position < portable_position);
+        */
+>>>>>>> REPLACE

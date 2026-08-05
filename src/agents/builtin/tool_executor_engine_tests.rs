@@ -42,7 +42,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         }
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_jitter_calc() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -102,7 +102,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         assert_eq!(call_count.load(Ordering::SeqCst), 1);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_success_eventually() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -134,7 +134,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         assert_eq!(call_count.load(Ordering::SeqCst), 3); // 2 failures + 1 success = 3 calls
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_exhausted() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -408,7 +408,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         }
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_clamped_to_two() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -474,7 +474,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         }
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_fails_first_then_succeeds() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
@@ -507,7 +507,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         assert_eq!(call_count.load(Ordering::SeqCst), 2);
     }
 
-    #[tokio::test(start_paused = true)]
+    #[tokio::test]
     async fn test_transient_retry_fails_first_then_succeeds_custom() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {

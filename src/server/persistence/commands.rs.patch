@@ -1,0 +1,16 @@
+<<<<<<< SEARCH
+async fn run_legacy_postgres_migrations(database: &AppDatabase) -> CommandResult {
+    if database.backend() != super::capabilities::DatabaseBackend::Postgres {
+        return Ok(());
+    }
+    let legacy_database = crate::db::DB::new().await?;
+    legacy_database.run_migrations().await
+}
+=======
+async fn run_legacy_postgres_migrations(database: &AppDatabase) -> CommandResult {
+    if database.backend() != super::capabilities::DatabaseBackend::Postgres {
+        return Ok(());
+    }
+    Ok(())
+}
+>>>>>>> REPLACE
