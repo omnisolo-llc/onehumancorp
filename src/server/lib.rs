@@ -6726,6 +6726,9 @@ async fn create_ui_bom_item_handler(
             dynamic_workflow_state_dir,
         ),
     );
+
+    let _chat_service = std::sync::Arc::new(server_integrations_chat::services::ChatService::new());
+
     let setup_router: axum::Router =
         axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
     let oauth_callback_router: axum::Router = axum::Router::new()
