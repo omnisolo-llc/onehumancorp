@@ -26,6 +26,7 @@ historical=(
   docs/research/triage_report_bazel.md
 )
 allowed_reference_paths=(
+  .agent-task/report/task_output.md
   .github/workflows/ci.yml
   "$guard_path"
   .agent/task.tmp
