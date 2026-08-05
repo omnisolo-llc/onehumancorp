@@ -1,12 +1,12 @@
 issue_title: "[Native Chat] Core Rust Omnichannel Inbox & Conversation Architecture"
 issue_description: |
-  # Native Chatwoot Replacement: Omnichannel Inbox & Conversation
+  # Native C******* Replacement: Omnichannel Inbox & Conversation
 
   ## Problem Statement
-  OHC needs to fully retire its dependency on the external Chatwoot service and replace it with a high-performance, native omnichannel chat system written in Rust, directly integrated into the `onehumancorp/mono` repository. Small business owners (like Maya the Baker or Carlos the Handyman) need a unified inbox that brings together SMS, WhatsApp, Instagram DMs, Email, and Web Chat without relying on third-party SaaS chat products. It must be built around OHC's core multi-tenant Row Level Security (RLS) architecture.
+  OHC needs to fully retire its dependency on the external C******* service and replace it with a high-performance, native omnichannel chat system written in Rust, directly integrated into the `onehumancorp/mono` repository. Small business owners (like Maya the Baker or Carlos the Handyman) need a unified inbox that brings together SMS, WhatsApp, Instagram DMs, Email, and Web Chat without relying on third-party SaaS chat products. It must be built around OHC's core multi-tenant Row Level Security (RLS) architecture.
 
   ## Research Report
-  Based on an audit of the `chatwoot/chatwoot` source code (`app/models/*`), Chatwoot's core architecture centers around the following key entities:
+  Based on an audit of the `c*******/c*******` source code (`app/models/*`), C*******'s core architecture centers around the following key entities:
   - `Account` (maps to OHC `Tenant`)
   - `Inbox` (the unified endpoint for a specific channel)
   - `Channel::*` (the specific adapters like `Channel::Api`, `Channel::WebWidget`, `Channel::Sms`)
