@@ -1,7 +1,17 @@
 import { test, expect } from '../fixtures';
 
+export const E2E_FREE_USER = {
+  email: 'free@example.com',
+  password: 'password123',
+  role: 'ADMIN',
+  organizationId: 'e2e-tenant-free',
+} as const;
+
 test.describe('Cost Transparency Dashboard CUJ', () => {
-    test('owner can view their tier limits and storage usage', async ({ page }) => {
+    test('owner can view their tier limits and storage usage', async ({ page, loginAs }) => {
+        // Log in as free user
+        await loginAs(page, E2E_FREE_USER as any);
+
         // 1. Navigate to cost dashboard
         await page.goto("/api/v1/ui/cost-dashboard.html");
 
