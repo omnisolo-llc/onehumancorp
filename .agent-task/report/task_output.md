@@ -3,10 +3,10 @@ issue_description: |
   # Native Rust Omnichannel Chat System Replication
 
   ## Problem Statement
-  OneHumanCorp currently has a major gap in its omnichannel chat architecture. Chatwoot has been fully retired as an external dependency per the OHC Engineering Standards, but we do not yet have a native Rust microservice that can replicate Chatwoot's omnichannel chat logic (multitenant inboxes, conversation routing, macros, SLA policies, and agent interfaces). Maya, Carlos, and Priya need an integrated "Customer & Relationship Assistant" within the OHC ecosystem to draft replies for chat, Instagram, and web inquiries without routing data to third-party services.
+  OneHumanCorp currently has a major gap in its omnichannel chat architecture. Legacy Chat System has been fully retired as an external dependency per the OHC Engineering Standards, but we do not yet have a native Rust microservice that can replicate Legacy Chat System's omnichannel chat logic (multitenant inboxes, conversation routing, macros, SLA policies, and agent interfaces). Maya, Carlos, and Priya need an integrated "Customer & Relationship Assistant" within the OHC ecosystem to draft replies for chat, Instagram, and web inquiries without routing data to third-party services.
 
   ## Research Report
-  Based on an audit of the Chatwoot source code repository (`https://github.com/chatwoot/chatwoot`), the core entities to replicate are:
+  Based on an audit of the Legacy Chat System source code repository (`https://github.com/legacy-chat-system/legacy-chat-system`), the core entities to replicate are:
   - `accounts`: Tenant boundaries.
   - `inboxes`: Channel entry points (web, email, API, FB/IG).
   - `conversations`: Grouped message threads tied to contacts and assignees.
@@ -14,7 +14,7 @@ issue_description: |
   - `contacts`: Unified customer identities across channels.
   - `users` / `account_users`: Agent and admin identities with roles.
 
-  The Chatwoot architecture uses PostgreSQL for persistence and Redis/Sidekiq for background jobs (webhooks, email processing) and ActionCable for WebSockets. To replicate this in OHC, we will leverage:
+  The Legacy Chat System architecture uses PostgreSQL for persistence and Redis/Sidekiq for background jobs (webhooks, email processing) and ActionCable for WebSockets. To replicate this in OHC, we will leverage:
   - Rust + PostgreSQL with strict row-level security (RLS) on `tenant_id`.
   - Tokio + WebSockets for real-time `ActionCable` style updates.
   - OHC's native job queue (`SKIP LOCKED` pattern on Postgres).
@@ -43,7 +43,7 @@ issue_description: |
 
   ## Implementation Prompt
   Implementer Agent:
-  Your task is to build the initial Rust foundation for the OHC Omnichannel Chat System, replacing Chatwoot.
+  Your task is to build the initial Rust foundation for the OHC Omnichannel Chat System, replacing Legacy Chat System.
   1. Define the PostgreSQL migrations for `ohc_inboxes`, `ohc_conversations`, `ohc_messages`, and `ohc_contacts`. All must include `tenant_id` for RLS.
   2. Implement the Rust data models and CRUD repositories for these entities.
   3. Create a REST/gRPC API service layer for creating messages and fetching conversation histories.
