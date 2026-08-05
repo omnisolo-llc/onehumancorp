@@ -13,25 +13,6 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const tenantId = // await page.evaluate(() => localStorage.getItem('tenant_id') || 'e2e-tenant');
-
-    const seedData = [
-      {
-        source: 'Instagram DM',
-        priority: 'high',
-        context: 'Message: Customer asked about vegan cakes.',
-        action_type: 'Draft Reply',
-        action_payload: 'Yes, we have vegan options.',
-        customer_id: 'cust_test_1'
-      }
-    ];
-
-    for (const data of seedData) {
-      // await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
-        data
-      });
-    }
-
     await page.goto('/dashboard');
     await expect(page.locator('text=Activity Feed').first()).toBeVisible({ timeout: 15000 });
 
