@@ -33,6 +33,7 @@ impl CatalogRepository {
         Self { database }
     }
 
+    #[allow(dead_code)]
     pub const fn backend(&self) -> DatabaseBackend {
         self.database.backend()
     }

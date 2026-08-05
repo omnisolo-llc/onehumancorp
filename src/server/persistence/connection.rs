@@ -37,6 +37,7 @@ impl AppDatabase {
         self.backend
     }
 
+    #[allow(dead_code)]
     pub const fn capabilities(&self) -> DatabaseCapabilities {
         DatabaseCapabilities::for_backend(self.backend)
     }
@@ -46,10 +47,12 @@ impl AppDatabase {
 pub struct DatabaseUrl(String);
 
 impl DatabaseUrl {
+    #[allow(dead_code)]
     pub fn new(value: impl Into<String>) -> Self {
         Self(value.into())
     }
 
+    #[allow(dead_code)]
     pub fn expose_for_connection(&self) -> &str {
         &self.0
     }

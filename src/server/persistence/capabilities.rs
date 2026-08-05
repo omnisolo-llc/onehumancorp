@@ -17,6 +17,7 @@ pub struct DatabaseCapabilities {
 }
 
 impl DatabaseCapabilities {
+    #[allow(dead_code)]
     pub const fn for_backend(backend: DatabaseBackend) -> Self {
         match backend {
             DatabaseBackend::Postgres => Self {
