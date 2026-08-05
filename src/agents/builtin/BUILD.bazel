@@ -147,7 +147,7 @@ rust_library(
         "@crates//:tree-sitter-bash",
     ] + [
         "@crates//:async-nats",
-        "@crates//:axum",
+        "@crates//:axum-0.7.9",
         "@crates//:base64",
         "@crates//:chrono",
         "@crates//:dashmap",

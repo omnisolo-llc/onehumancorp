@@ -6,7 +6,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/common:server_common",
-        "@crates//:axum",
+        "@crates//:axum-0.7.9",
         "@crates//:chrono",
         "@crates//:serde",
         "@crates//:serde_json",

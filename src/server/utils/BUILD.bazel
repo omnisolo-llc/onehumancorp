@@ -27,7 +27,7 @@ rust_library(
         "//src/server/config:server_config",
         "//src/server/auth:server_auth",
         "//src/server/pricing:server_pricing",
-        "@crates//:axum",
+        "@crates//:axum-0.7.9",
         "@crates//:base64",
         "@crates//:chrono",
         "@crates//:flate2",

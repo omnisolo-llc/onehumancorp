@@ -34,7 +34,7 @@ rust_library(
         "//src/server/common:server_common",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
-        "@crates//:axum",
+        "@crates//:axum-0.7.9",
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:hex",

@@ -68,7 +68,7 @@ rust_library(
         "//src/server/utils:server_utils",
         "@crates//:aes-gcm",
         "@crates//:async-nats",
-        "@crates//:axum",
+        "@crates//:axum-0.7.9",
         "@crates//:base64",
         "@crates//:bcrypt",
         "@crates//:chrono",

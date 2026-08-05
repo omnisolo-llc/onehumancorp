@@ -208,7 +208,7 @@ rust_library(
         "//src/server/orchestration/queue:server_orchestration_queue",
         "@crates//:aes-gcm",
         "@crates//:async-nats",
-        "@crates//:axum",
+        "@crates//:axum-0.7.9",
         "@crates//:base64",
         "@crates//:bcrypt",
         "@crates//:chrono",
@@ -275,7 +275,7 @@ rust_test(
     deps = [
         "//src/server:server_lib",
         "@rules_rust//tools/runfiles",
-        "@crates//:axum",
+        "@crates//:axum-0.7.9",
         "@crates//:tokio",
         "@crates//:tower-0.4.13",
         "@crates//:sqlx",
