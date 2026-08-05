@@ -6538,3 +6538,63 @@ pub async fn handle_secret_menu_generate(
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
 }
+
+pub async fn get_affiliate_stats_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::extract::Query(_query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = match crate::common::auth_utils::strict_ui_claim_tenant(&claims) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "Unauthorized"}))).into_response(),
+    };
+
+    let total_affiliates = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM referral_codes WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap_or(0)
+        }
+        _ => 0,
+    };
+
+    let total_commission_cents = 0; // Simulated for now
+
+    axum::Json(serde_json::json!({
+        "total_affiliates": total_affiliates,
+        "total_commission_cents": total_commission_cents,
+    })).into_response()
+}
+
+pub async fn get_reputation_stats_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::extract::Query(_query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
+) -> impl axum::response::IntoResponse {
+    let tenant_id = match crate::common::auth_utils::strict_ui_claim_tenant(&claims) {
+        Some(id) => id,
+        None => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "Unauthorized"}))).into_response(),
+    };
+
+    let (average_rating, total_reviews) = match &db.store {
+        crate::db::DbStore::Postgres => {
+            let res = sqlx::query_as::<_, (Option<f64>, i64)>("SELECT average_rating, total_reviews FROM reputation_profiles WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await;
+            match res {
+                Ok((Some(rating), count)) => (rating, count),
+                Ok((None, count)) => (0.0, count),
+                Err(_) => (0.0, 0),
+            }
+        }
+        _ => (0.0, 0),
+    };
+
+    axum::Json(serde_json::json!({
+        "average_rating": average_rating,
+        "total_reviews": total_reviews,
+    })).into_response()
+}
