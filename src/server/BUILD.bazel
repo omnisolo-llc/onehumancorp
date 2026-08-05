@@ -177,8 +177,6 @@ SERVER_RS_SRCS = [
     "//src/server/integrations:mcp_gateway.rs",
     "//src/server/integrations:mod.rs",
     "//src/server/integrations:registry.rs",
-    "//src/server/integrations:chat/mod.rs",
-    "//src/server/integrations:chat/whatsapp_provider.rs",
     "//src/server/integrations/alipay:client.rs",
     "//src/server/integrations/alipay:mod.rs",
     "//src/server/integrations/alipay:provider.rs",
