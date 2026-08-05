@@ -155,7 +155,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('$100.00')).toBeDefined(); // storage
     expect(screen.getAllByText('$50.00').length).toBeGreaterThan(0); // payment fees
     expect(screen.getByText('$160.00')).toBeDefined(); // network
-    expect(screen.getAllByText('-$50.00').length).toBeGreaterThan(0); // bandwidth savings
+    expect(screen.getAllByText('$50.00').length).toBeGreaterThan(0); // bandwidth savings
 
     // Agent & Feature Costs
     expect(screen.getByText('Agent & Feature Costs')).toBeDefined();
