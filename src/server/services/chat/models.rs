@@ -57,3 +57,37 @@ pub struct ChatMessage {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct CaptainAssistant {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct CaptainDocument {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub assistant_id: Uuid,
+    pub name: Option<String>,
+    pub external_link: String,
+    pub content: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct CaptainAssistantResponse {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub assistant_id: Uuid,
+    pub document_id: Option<Uuid>,
+    pub question: String,
+    pub answer: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

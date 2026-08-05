@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 use uuid::Uuid;
-use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage};
+use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage, CaptainAssistant, CaptainDocument, CaptainAssistantResponse};
 
 pub struct ChatService {
     pool: PgPool,
@@ -122,5 +122,83 @@ impl ChatService {
         .bind(content)
         .fetch_one(&self.pool)
         .await
+    }
+
+    pub async fn create_captain_assistant(
+        &self,
+        tenant_id: Uuid,
+        name: String,
+        description: Option<String>,
+    ) -> Result<CaptainAssistant, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            INSERT INTO captain_assistants (id, tenant_id, name, description)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, tenant_id, name, description, created_at, updated_at
+            "#
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(name)
+        .bind(description)
+        .fetch_one(&self.pool)
+        .await
+    }
+
+    pub async fn create_captain_document(
+        &self,
+        tenant_id: Uuid,
+        assistant_id: Uuid,
+        name: Option<String>,
+        external_link: String,
+        content: Option<String>,
+    ) -> Result<CaptainDocument, sqlx::Error> {
+        sqlx::query_as(
+            r#"
+            INSERT INTO captain_documents (id, tenant_id, assistant_id, name, external_link, content)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, tenant_id, assistant_id, name, external_link, content, created_at, updated_at
+            "#
+        )
+        .bind(Uuid::new_v4())
+        .bind(tenant_id)
+        .bind(assistant_id)
+        .bind(name)
+        .bind(external_link)
+        .bind(content)
+        .fetch_one(&self.pool)
+        .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    #[test]
+    fn test_captain_models() {
+        let assistant = CaptainAssistant {
+            id: Uuid::new_v4(),
+            tenant_id: Uuid::new_v4(),
+            name: "Test Assistant".to_string(),
+            description: Some("Description".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        let document = CaptainDocument {
+            id: Uuid::new_v4(),
+            tenant_id: Uuid::new_v4(),
+            assistant_id: assistant.id,
+            name: Some("Doc".to_string()),
+            external_link: "https://example.com".to_string(),
+            content: Some("Content".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        assert_eq!(assistant.name, "Test Assistant");
+        assert_eq!(document.external_link, "https://example.com");
     }
 }
