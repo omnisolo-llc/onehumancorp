@@ -69,6 +69,8 @@ async fn run_legacy_postgres_migrations(database: &AppDatabase) -> CommandResult
     if database.backend() != super::capabilities::DatabaseBackend::Postgres {
         return Ok(());
     }
+    // Cannot invoke legacy `crate::db::DB::new()` as it violates rust visibility modules
+    // inside persistence test binaries; mock as okay in tests.
     #[cfg(not(test))]
     {
         let legacy_database = crate::db::DB::new().await?;
