@@ -1,4 +1,4 @@
-exports_files(["Cargo.toml"])
+exports_files(["Cargo.toml", "mod.rs"])
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
