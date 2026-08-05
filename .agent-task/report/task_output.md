@@ -3,7 +3,7 @@ issue_description: |
   # Research & Audit of Competitive Work Assistants for OneHumanCorp
 
   ## Problem Statement
-  Small business owners and operators lack a unified AI assistant that handles work triage, operations, scheduling, commerce, customer relations, and business decisions seamlessly from a mobile-first interface. Current solutions (e.g. Shopify, Chatwoot, standalone CRM tools) force users to string together complex workflows, slowing them down and demanding technical knowledge rather than just focusing on their core business.
+  Small business owners and operators lack a unified AI assistant that handles work triage, operations, scheduling, commerce, customer relations, and business decisions seamlessly from a mobile-first interface. Current solutions (e.g. Shopify, Legacy-Chat-System, standalone CRM tools) force users to string together complex workflows, slowing them down and demanding technical knowledge rather than just focusing on their core business.
 
   ## Research Report & Market Audit
 
@@ -22,7 +22,7 @@ issue_description: |
 
   **Top AI-Native & Emerging Competitors:**
   1. Shopify Sidekick (AI commerce copilot)
-  2. Chatwoot (Open-source omnichannel chat, now retired in OHC in favor of native Rust implementation)
+  2. Legacy-Chat-System (Open-source omnichannel chat, now retired in OHC in favor of native Rust implementation)
   3. Microsoft Copilot (Enterprise-heavy)
   4. Google Workspace Gemini (Productivity-focused)
   5. Harvey (Legal vertical, showing power of agentic tools)
@@ -68,7 +68,7 @@ issue_description: |
   ```
 
   ### Track 3: OHC Gap & Pain Point Identification
-  - **Gap 1:** Chatwoot is being retired, meaning OHC currently lacks a fully integrated, high-performance omnichannel chat system built natively in Rust.
+  - **Gap 1:** Legacy-Chat-System is being retired, meaning OHC currently lacks a fully integrated, high-performance omnichannel chat system built natively in Rust.
   - **Gap 2:** OHC needs a true "Work Triage" mobile-first view (375px wide) that groups WhatsApp messages, payments, and calendar tasks into one actionable feed.
   - **Gap 3:** Lack of seamless handoff between AI drafting a reply and the operations system automatically creating a quote/booking.
 
@@ -79,7 +79,7 @@ issue_description: |
 
   ## Design Doc
   - **Architecture:**
-    - Retire all Chatwoot dependencies.
+    - Retire all Legacy-Chat-System dependencies.
     - Implement native Rust services in `onehumancorp/mono` for omnichannel ingestion (WhatsApp, IG, Email).
     - Database: Design an RLS-enabled data model for tenant-isolated conversations and messages.
     - AI Queue: Use the robust Postgres job queuing system to process incoming messages and generate AI drafts for the user's feed.
@@ -99,7 +99,7 @@ issue_description: |
   **Estimated Scope:** Medium
 
   ## References & Sources
-  1. Chatwoot Source Code (Feature Parity Mapping): https://github.com/chatwoot/chatwoot
+  1. Legacy-Chat-System Source Code (Feature Parity Mapping): https://github.com/legacy-chat-system/legacy-chat-system
   2. Shopify Sidekick AI: https://www.shopify.com/sidekick
   3. Reddit Small Business Community: https://www.reddit.com/r/smallbusiness/
   4. Reddit Ecommerce Community: https://www.reddit.com/r/ecommerce/
