@@ -1,21 +1,14 @@
 # OHC Tool Integration Research Report
-> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
-> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
 
 ## 1. Social Media Integration
 
-**Title:** Integrate Chatwoot for Unified Social Inbox
 **Problem Statement:** Business owners like Maya (The Home Baker) receive inquiries across Instagram DMs, WhatsApp, and Facebook. Managing multiple apps is overwhelming and leads to missed sales. They need a single, simple inbox within OHC to see and reply to all customer messages.
-**Research Report:** Chatwoot is an open-source omnichannel customer support platform. It natively supports WhatsApp, Instagram, Facebook, Line, Twitter, and email. It is highly rated for its simplicity and API-first design. Since it's open-source, we can self-host it for Cloud mode (multi-tenant) and potentially integrate its headless API for Standalone mode. The cost is negligible if self-hosted, compared to Zendesk or Intercom which are prohibitively expensive for small businesses. Non-technical users will just see a "Connect Instagram" button and an "Inbox" tab.
 *Key Advantages:* Open-source, supports many channels out-of-the-box, cheap.
 *Key Risks:* Self-hosting requires maintenance. Sync issues if webhooks fail.
 *Modes Supported:* Cloud (self-hosted backend), Standalone (via cloud APIs or embedded local instance).
 **Design Doc:**
 - User clicks "Connect Instagram" in OHC settings.
-- OHC initiates OAuth flow via Chatwoot APIs.
-- Webhooks from Chatwoot are routed to the OHC agent "Customer Success - The Ambassador".
 - The Ambassador agent reads messages, auto-drafts replies, and displays them in the unified OHC inbox.
-- Business owner reviews and clicks "Send", which routes back through Chatwoot to the native social platform.
 **Implementation Prompt:** Implement a unified inbox UI in the OHC Flutter app. Add "Connect" buttons for Instagram and WhatsApp. When a customer sends a message on those platforms, it must appear in the OHC inbox. The user should be able to type a reply in OHC and have it sent back to the customer on the original platform.
 **Priority:** P0
 **Estimated Scope:** Large

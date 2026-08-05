@@ -1,28 +1,17 @@
 # Tool Integration Research Report (Q3)
-> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
-> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.
 
-## 1. Social Media Integration: Chatwoot & Meta Graph API
 
-### Title: Integrate Unified Social Media Inbox via Chatwoot
 **Problem Statement:** Business owners like Maya (The Home Baker) receive orders and inquiries across Instagram DMs, Facebook comments, and WhatsApp. Checking multiple apps is overwhelming, and she often misses messages or forgets to reply, losing potential sales. She needs one simple inbox to see and reply to everything.
 
 **Research Report:**
-- **Tool:** Chatwoot (Open Source / Cloud) + Meta Graph API.
-- **Findings:** Chatwoot is already supported in the OHC architecture but needs deep integration into the OHC Unified Inbox. It provides a reliable way to aggregate WhatsApp, Instagram, Facebook, and Twitter.
 - **OAuth Complexity:** Meta requires business verification and complex OAuth scopes (`instagram_manage_messages`, `pages_messaging`), which we can simplify via an embedded signup flow.
 - **Message Parsing Quality:** High. Native support for images, videos, and quick replies.
-- **Webhook Reliability:** Meta webhooks are robust but require strict response times (<20s). Chatwoot handles this well.
-- **Pricing:** Chatwoot Cloud is ~$19/mo per agent. OHC could self-host for Standalone mode, or use Cloud for multi-tenant SaaS. Meta APIs are mostly free for inbound service messages.
-- **Cloud vs Standalone:** Works in both. Self-hosted Chatwoot can run locally in Standalone; SaaS can connect via API.
 
 **Design Doc:**
 - **Trigger:** A customer sends a DM on Instagram.
-- **Action:** Chatwoot receives the webhook and routes the message to the "Customer Success" AI agent. If the AI cannot handle it, it alerts the business owner via the OHC mobile app push notification.
 - **User Interface:** A "Unified Inbox" tab in the OHC app. The business owner sees a chat interface with a small Instagram or WhatsApp icon indicating the source. They type a reply normally, and it sends back to the original platform.
 
 **Implementation Prompt:**
-Create a Unified Inbox UI in the OHC app and connect it to the Chatwoot API. A business owner should be able to click "Connect Instagram", authenticate with Meta, and immediately see new DMs appear in the OHC inbox. Replies sent from OHC must successfully appear in the customer's Instagram app.
 **Priority:** P0
 **Estimated Scope:** Large
 
