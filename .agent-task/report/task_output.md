@@ -1,13 +1,13 @@
-issue_title: "Native Rust Omnichannel Chat System: WhatsApp & Web Widget Migration"
+issue_title: "Native Rust Omnichannel System: Webhooks & Widget Migration"
 issue_description: |
-  # Native Rust Omnichannel Chat System: WhatsApp & Web Widget Migration
+  # Native Rust Omnichannel System: Webhooks & Widget Migration
 
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing its external reliance on Chatwoot with a 100% native Rust omnichannel chat system. The current legacy architecture relies on an external third-party chat service which violates our goal of complete control, privacy, performance, and Zero-Trust tenant isolation.
+  OneHumanCorp (OHC) is replacing its external reliance on a legacy chat provider with a 100% native Rust omnichannel chat system. The current legacy architecture relies on an external third-party chat service which violates our goal of complete control, privacy, performance, and Zero-Trust tenant isolation.
   Our owner personas (Maya the baker, Carlos the handyman, Fatima the food cart owner) need a unified inbox that supports Meta Webhooks (WhatsApp) and real-time website chat (Web Widget), all natively integrated directly into the OHC application so AI Agent Triage can monitor, respond, and categorize inbound interactions in real time.
 
   ## Research Report
-  - **Chatwoot Source Code Audit**: Benchmarked the `inboxes`, `conversations`, `messages`, and `channel_whatsapp` schemas from `github.com/chatwoot/chatwoot`. Chatwoot uses polymorphic associations (`sender_type`, `sender_id`) and separate channel tables (e.g. `channel_whatsapp`, `channel_web_widget`) mapped via an `inboxes` table which acts as the unified sink.
+  - **Source Code Audit**: Benchmarked the `inboxes`, `conversations`, `messages`, and `channel_whatsapp` schemas from the legacy open-source system. The system uses polymorphic associations (`sender_type`, `sender_id`) and separate channel tables mapped via an `inboxes` table which acts as the unified sink.
   - **Data Isolation Requirement**: OHC must enforce strict tenant isolation using `tenant_id` at the database level with RLS (Row Level Security).
   - **Performance Requirement**: OHC's new system needs to use native Rust microservices for handling webhooks, persisting to Postgres efficiently, and routing WebSocket events.
 
