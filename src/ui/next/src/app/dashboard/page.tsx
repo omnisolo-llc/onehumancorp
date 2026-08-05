@@ -384,8 +384,8 @@ export default function Dashboard() {
       <div className="hidden md:block">
       <AIUsageLimitWidget />
 
-      <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
-      <NeighborhoodPulseCard tenant={tenantId()} />
+      <WalkthroughTarget id="wrapped-summary"><WithTooltip id="wrapped-summary-tooltip"><AiTimeSavingsWidget /></WithTooltip></WalkthroughTarget>
+      <WithTooltip id="neighborhood-pulse-tooltip"><NeighborhoodPulseCard tenant={tenantId()} /></WithTooltip>
 
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />
