@@ -56,10 +56,10 @@ export default function AiTimeSavingsWidget() {
           🎉
         </div>
         <h2 className="text-2xl font-bold font-outfit text-green-900 dark:text-green-100 mb-2">
-          Pro Access Activated
+          Trial Extended!
         </h2>
         <p className="text-green-700 dark:text-green-300">
-          The backend confirmed Pro access for this account.
+          Your Pro trial has been successfully extended by 7 days.
         </p>
       </div>
     );
@@ -106,7 +106,7 @@ export default function AiTimeSavingsWidget() {
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z" />
               </svg>
-              Share to activate Pro
+              Share to get 7 Days Pro
             </>
           )}
         </button>
