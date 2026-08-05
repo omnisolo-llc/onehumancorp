@@ -414,3 +414,24 @@ Two repository-wide quality gates remain nonzero for pre-existing code outside t
   - Negative residue checks (`rg -n -i 'chatwoot'`) passed.
 - The native inbox remains in place; feature expansion belongs to later native-chat projects.
 - Any unavailable local tool or remote sandbox check is named as unverified, never reported as passed.
+## CHAT-00 — Chatwoot removal
+
+- Confirmation that no production/customer Chatwoot data existed and no data migration was performed.
+- Exact removed application/deployment surfaces:
+  - `deploy/helm/ohc/templates/chatwoot.yaml`
+  - `deploy/helm/ohc/templates/chatwoot-service.yaml`
+  - Chatwoot mentions in Next.js agents catalog.
+- Exact commands, exit results, and test counts from Steps 1–2:
+  - `bash deploy/tests/no_chatwoot_residue_test.sh` exits 0.
+  - `cargo metadata --locked --format-version=1 --no-deps >/tmp/ohc-cargo-metadata-final.json` exits 0.
+  - `cargo check -p ohc-mono` exits 0.
+  - `bazel test //src/server/integrations:server_integrations_unit_test //src/ui/next:next_vitest //deploy:deploy_artifacts_test --test_output=errors` exits 0.
+  - `docker compose -f deploy/docker-compose.yml config >/tmp/ohc-compose-final.yaml` exits 0.
+  - `docker compose -f deploy/docker-compose.e2e.yml config >/tmp/ohc-compose-e2e-final.yaml` exits 0.
+  - `helm lint deploy/helm/ohc` exits 0.
+  - `helm template ohc deploy/helm/ohc >/tmp/ohc-helm-final.yaml` exits 0.
+  - `rg -n -i 'chatwoot' /tmp/ohc-cargo-metadata-final.json /tmp/ohc-compose-final.yaml /tmp/ohc-compose-e2e-final.yaml /tmp/ohc-helm-final.yaml` exits 1 (no results).
+  - `bazel query //... > /tmp/ohc-bazel-query.txt 2>/tmp/ohc-bazel-query.err` exits 0.
+  - `rg -i 'chatwoot' /tmp/ohc-bazel-query.txt` exits 1 (no results).
+- The native inbox remains in place; feature expansion belongs to later native-chat projects.
+- Any unavailable local tool or remote sandbox check is named as unverified, never reported as passed.
