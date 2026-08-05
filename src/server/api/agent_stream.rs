@@ -154,8 +154,8 @@ mod tests {
         Arc::new(Hub::new(tx, pool))
     }
 
-    #[test]
-    fn router_uses_axum_v08_capture_syntax() {
+    #[tokio::test]
+    async fn router_uses_axum_v08_capture_syntax() {
         let _: axum::Router<()> = router(make_hub());
     }
 
@@ -195,8 +195,8 @@ mod tests {
         assert_eq!(conn, "keep-alive");
     }
 
-    #[test]
-    fn test_message_to_sse_event_format() {
+    #[tokio::test]
+    async fn test_message_to_sse_event_format() {
         let msg = Message {
             id: "msg-1".to_string(),
             from_agent: "agent-a".to_string(),
@@ -215,8 +215,8 @@ mod tests {
         assert!(event.contains("hello world"));
     }
 
-    #[test]
-    fn test_openai_chunk_from_message_format() {
+    #[tokio::test]
+    async fn test_openai_chunk_from_message_format() {
         let msg = Message {
             id: "msg-1".to_string(),
             from_agent: "agent-a".to_string(),
@@ -235,8 +235,8 @@ mod tests {
         assert!(chunk["choices"][0]["finish_reason"].is_null());
     }
 
-    #[test]
-    fn test_openai_chunk_with_finish_reason() {
+    #[tokio::test]
+    async fn test_openai_chunk_with_finish_reason() {
         let msg = Message {
             id: "msg-2".to_string(),
             from_agent: "agent-a".to_string(),
@@ -251,8 +251,8 @@ mod tests {
         assert_eq!(chunk["choices"][0]["finish_reason"], "stop");
     }
 
-    #[test]
-    fn test_openai_chunk_to_sse_format() {
+    #[tokio::test]
+    async fn test_openai_chunk_to_sse_format() {
         let chunk = serde_json::json!({
             "id": "msg-1",
             "object": "chat.completion.chunk",

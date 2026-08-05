@@ -1,4 +1,5 @@
 exports_files(["migration.rs", "commands.rs"])
+exports_files(["migration.rs", "commands.rs"])
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 exports_files(
