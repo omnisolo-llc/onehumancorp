@@ -7,8 +7,6 @@ rust_library(
     compile_data = [
         "//src/server/migrations",
         "//src/ui/next:auth_limits",
-        "//src/server/persistence:srcs",
-        "//src/server:srcs",
     ],
     srcs = [
         "email.rs",
@@ -79,5 +77,3 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
-
-filegroup(name = "srcs", srcs = glob(["*.rs"]), visibility = ["//visibility:public"])
