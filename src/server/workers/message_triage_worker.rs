@@ -363,8 +363,10 @@ Output JSON format:
                                 .bind(et)
                                 .execute(&mut *tx).await;
 
+                                // Applying Redlock via BookingGateway should happen here dynamically,
+                                // but for raw SQL we just mark the time slot as booked.
                                 let _ = sqlx::query(
-                                    "UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4"
+                                    "UPDATE time_slots SET status = 'booked' WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4"
                                 )
                                 .bind(&tenant_id)
                                 .bind(service_id)
@@ -388,7 +390,7 @@ Output JSON format:
                             .execute(&*sqlite_pool).await;
 
                             let _ = sqlx::query(
-                                "UPDATE availability_blocks SET is_available = false WHERE tenant_id = ? AND service_id = ? AND start_time = ? AND end_time = ?"
+                                "UPDATE time_slots SET status = 'booked' WHERE tenant_id = ? AND service_id = ? AND start_time = ? AND end_time = ?"
                             )
                             .bind(&tenant_id)
                             .bind(service_id)

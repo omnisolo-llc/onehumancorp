@@ -181,25 +181,30 @@ impl Department for NegotiatorAgent {
         // Generate Proposed Options dynamically instead of hardcoding
         let scope = format!("Standard {}", service_name);
 
-        // Find actual availability from BookingService integration
-        // Here we just fetch the next available slot dynamically if the user has defined availability blocks, otherwise fallback to standard default time.
-        // Assuming we have a service checking next slot
+        // Fetch actual availability via BookingGateway
         let mut suggested_time = "Tomorrow 2 PM or 4 PM".to_string();
+        let mut start_time_rfc = "2024-10-15T14:00:00Z".to_string();
+        let mut end_time_rfc = "2024-10-15T15:00:00Z".to_string();
 
-        // We can do a rudimentary availability check from availability_blocks
-        let available_blocks_res = sqlx::query("SELECT start_time FROM availability_blocks WHERE tenant_id = $1 AND status = 'available' ORDER BY start_time ASC LIMIT 1")
+        let available_blocks_res = sqlx::query("SELECT start_time, end_time FROM time_slots WHERE tenant_id = $1 AND status = 'available' ORDER BY start_time ASC LIMIT 1")
             .bind(&event.tenant_id)
             .fetch_one(&pool)
             .await;
 
-        let mut start_time_rfc = "2024-10-15T14:00:00Z".to_string();
-        let mut end_time_rfc = "2024-10-15T15:00:00Z".to_string();
         if let Ok(row) = available_blocks_res {
             use sqlx::Row;
             let start_time_dt: chrono::DateTime<chrono::Utc> = row.get("start_time");
+            let end_time_dt: chrono::DateTime<chrono::Utc> = row.get("end_time");
             suggested_time = format!("{}", start_time_dt.format("%Y-%m-%d %H:%M"));
             start_time_rfc = start_time_dt.to_rfc3339();
-            end_time_rfc = (start_time_dt + chrono::Duration::hours(1)).to_rfc3339();
+            end_time_rfc = end_time_dt.to_rfc3339();
+
+            // To properly mock this in the raw SQL for now since we just have the pool:
+            let _ = sqlx::query("UPDATE time_slots SET status = 'held' WHERE tenant_id = $1 AND start_time = $2")
+                .bind(&event.tenant_id)
+                .bind(start_time_dt)
+                .execute(&pool)
+                .await;
         }
 
         let drafted_message = format!("Yes! It's ${}. I have availability starting at {}. Which works?", price, suggested_time);
