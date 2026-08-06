@@ -9,10 +9,8 @@ test.describe('Loyalty Engine Logic', () => {
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    await page.goto('/dashboard.html');
-    const loyaltyLink = page.locator('a#loyalty-link');
-    if (await loyaltyLink.isVisible()) {
-        await expect(loyaltyLink).toContainText('Viral Loyalty Engine');
-    }
+    await page.goto('/loyalty');
+    await page.locator('button:has-text("Activate")').click();
+    await expect(page.locator('text=Active').first()).toBeVisible();
   });
 });
