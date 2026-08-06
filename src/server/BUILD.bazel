@@ -633,7 +633,6 @@ rust_test(
 rust_test(
     name = "persistence_commands_test",
     size = "small",
-    compile_data = ["//src/server/auth:srcs", "lib.rs"],
     srcs = [
         "persistence_commands_test.rs",
         "//src/server/persistence:capabilities.rs",
@@ -1204,5 +1203,3 @@ sh_test(
     data = glob(["**/*.rs"]),
     args = ["src/server"],
 )
-
-filegroup(name = "srcs", srcs = glob(["*.rs"]), visibility = ["//visibility:public"])
