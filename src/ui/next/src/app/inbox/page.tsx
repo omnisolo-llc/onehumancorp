@@ -331,8 +331,8 @@ function InboxWorkspace({
             </div>
             <div id="messages-list" className="app-list p-2">
               {unreadLeadsCount > 0 && (
-                <div className="app-card daily-summary mb-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 p-4 rounded-xl">
-                  <div className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                <div className="app-card daily-summary mb-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] p-4 rounded-[16px]">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white">
                     ✨ You have {unreadLeadsCount} unread {unreadLeadsCount === 1 ? 'lead' : 'leads'}.
                   </div>
                 </div>
@@ -371,14 +371,14 @@ function InboxWorkspace({
                     <div className="flex gap-3 mt-4 flex-wrap">
                       <button
                         onClick={() => handleSendManualReply(selected.id)}
-                        className="app-btn-primary min-h-[44px] min-w-[44px] rounded-[8px]"
+                        className="app-btn-primary min-h-[44px] min-w-[44px] rounded-[8px] bg-[#0066FF] dark:bg-[#0071E3] text-white"
                         disabled={!manualReply.trim()}
                       >
                         Send Reply
                       </button>
                       <button
                         onClick={handleAttachPhoto}
-                        className="app-btn-secondary flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-[8px]"
+                        className="app-btn-secondary flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-[8px] border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                         Attach Photo
@@ -491,7 +491,7 @@ function InboxWorkspace({
                       if (isInventoryDeduction) {
                         return (
                           <button
-                            className="app-button primary w-full min-h-[44px] min-w-[44px] backdrop-filter bg-white/10 glassmorphism shadow-lg bg-gradient-to-r from-green-500/80 to-emerald-600/80 text-white font-bold border border-white/20"
+                            className="app-button primary w-full min-h-[44px] min-w-[44px] rounded-[8px] backdrop-filter bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] shadow-lg bg-gradient-to-r from-[#34C759] to-[#00C24B] text-white font-bold border border-[rgba(255,255,255,0.4)]"
                             onClick={() => handleApproveAndSend(selected.id)}
                           >
                             ✨ Approve & Send (Deduct Inventory)
@@ -501,7 +501,7 @@ function InboxWorkspace({
 
                       return (
                         <button
-                          className="app-button primary w-full min-h-[44px] min-w-[44px] rounded-[8px] backdrop-filter bg-white/10"
+                          className="app-button primary w-full min-h-[44px] min-w-[44px] rounded-[8px] backdrop-filter shadow-lg text-white font-bold bg-[#0066FF] dark:bg-[#0071E3] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                           onClick={() => handleApproveAndSend(selected.id)}
                         >
                           {buttonText}
@@ -514,7 +514,7 @@ function InboxWorkspace({
                   <div className="mt-4 flex flex-col gap-4">
                     <button
                       onClick={() => handleDraftQuoteWithAI(selected)}
-                      className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
+                      className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] text-white font-bold shadow-lg bg-[#0066FF] dark:bg-[#0071E3] transition-all flex items-center justify-center gap-2"
                     >✨ Draft Quote with AI</button>
                   </div>
                 )}
