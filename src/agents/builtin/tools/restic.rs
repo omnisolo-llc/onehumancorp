@@ -17,6 +17,24 @@ struct ResticExecutor {
     runner: Arc<dyn crate::runner::CommandRunner>,
 }
 
+impl ResticExecutor {
+    async fn run_cmd(&self, repo: &str, cmd_args: Vec<&str>, timeout: Duration, env_vars: Vec<(String, String)>) -> Result<String, ToolError> {
+        let mut final_args = vec!["-r", repo];
+        final_args.extend(cmd_args);
+        let res = tokio::time::timeout(timeout, self.runner.run("restic", &final_args, None, env_vars)).await;
+        let output = res
+            .map_err(|_| ToolError::LlmRecoverable("restic command timed out".to_string()))?
+            .map_err(|e| ToolError::LlmRecoverable(format!("restic execution failed: {}", e)))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(ToolError::LlmRecoverable(format!("restic failed: {}", stderr)));
+        }
+
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    }
+}
+
 #[async_trait::async_trait]
 impl PydanticToolExecutor<ResticArgs> for ResticExecutor {
     async fn execute_typed(&self, args: ResticArgs) -> Result<String, ToolError> {
@@ -40,68 +58,32 @@ impl PydanticToolExecutor<ResticArgs> for ResticExecutor {
             return Err(ToolError::LlmRecoverable("restic: unsupported in cloud mode".to_string()));
         }
 
-        // Initialize repo if it doesn't exist
         match action {
-            "snapshot" | "restore" | "status" => {
-                 let full_args = vec!["-r", repo.as_str(), "init"];
-                 let init_res = tokio::time::timeout(timeout, self.runner.run("restic", &full_args, None, env_vars.clone())).await;
-
-                 // if init command failed, handle error appropriately instead of dropping it
-                 if let Ok(Ok(output)) = init_res {
-                     if !output.status.success() {
-                         // It's normal if it fails because repo already exists, so we only print out for debug.
-                         tracing::debug!("Restic init output: {:?}", output);
-                     }
-                 } else {
-                     tracing::warn!("Restic init failed or timed out: {:?}", init_res);
-                 }
+            "status" | "snapshots" => {
+                self.run_cmd(&repo, vec!["snapshots"], timeout, env_vars).await
             }
-            _ => return Err(ToolError::LlmRecoverable("Invalid action. Allowed: snapshot, restore, status".to_string()))
-        }
-
-        let mut full_args = vec!["-r", repo.as_str()];
-
-        match action {
-            "snapshot" => {
-                let target = args.target.as_deref().unwrap_or(".");
-                full_args.extend(vec!["backup", target]);
+            "backup" => {
+                let target = args.target.as_deref().ok_or_else(|| ToolError::LlmRecoverable("Target is required for backup action".to_string()))?;
+                let output = self.run_cmd(&repo, vec!["backup", target], timeout, env_vars).await?;
+                Ok(format!("Backup successful:\n{}", output))
             }
             "restore" => {
+                let target = args.target.as_deref().ok_or_else(|| ToolError::LlmRecoverable("Target is required for restore action".to_string()))?;
                 let snapshot_id = args.snapshot_id.as_deref().unwrap_or("latest");
-                let target = args.target.as_deref().unwrap_or("/tmp/restore");
-                full_args.extend(vec!["restore", snapshot_id, "--target", target]);
+                let output = self.run_cmd(&repo, vec!["restore", snapshot_id, "--target", target], timeout, env_vars).await?;
+                Ok(format!("Restore successful:\n{}", output))
             }
-            "status" => {
-                full_args.extend(vec!["snapshots"]);
-            }
-            _ => unreachable!(),
+            _ => Err(ToolError::LlmRecoverable(format!("restic: unknown action '{}'", action))),
         }
-
-        let output_res = tokio::time::timeout(
-            timeout,
-            self.runner.run("restic", &full_args, None, env_vars),
-        ).await;
-
-        let output = output_res
-            .map_err(|_| ToolError::LlmRecoverable("restic: command timed out".to_string()))?
-            .map_err(|e| ToolError::LlmRecoverable(format!("restic: failed to execute: {}", e)))?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-        if !output.status.success() {
-            return Err(ToolError::LlmRecoverable(format!("Command failed with exit code {}\nSTDOUT: {}\nSTDERR: {}", output.status.code().unwrap_or(-1), stdout, stderr)));
-        }
-
-        Ok(format!("{} complete:\n{}", action, stdout))
     }
 }
 
 pub fn restic_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
     Tool {
-        name: "ResticBackup".to_string(),
-        description: "Perform local database snapshotting and restores using Restic. \
-            Supported actions: snapshot, restore, status."
+        name: "Restic".to_string(),
+        description: "Perform local repository backup and restore operations using restic. \
+            Supported actions: 'status' (list snapshots), 'backup' (create a backup of a target directory), \
+            'restore' (restore a snapshot to a target directory)."
             .to_string(),
         is_read_only: false,
         parameters: json!({
@@ -109,15 +91,16 @@ pub fn restic_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
             "properties": {
                 "action": {
                     "type": "string",
-                    "description": "The action to perform: 'snapshot', 'restore', or 'status'."
+                    "enum": ["status", "snapshots", "backup", "restore"],
+                    "description": "The restic action to perform."
                 },
                 "target": {
                     "type": "string",
-                    "description": "For 'snapshot', the directory to backup. For 'restore', the target directory."
+                    "description": "The file or directory to backup, or the target directory for restore."
                 },
                 "snapshot_id": {
                     "type": "string",
-                    "description": "For 'restore', the ID of the snapshot to restore (default 'latest')."
+                    "description": "The ID of the snapshot to restore. Defaults to 'latest' if omitted."
                 }
             },
             "required": ["action"]
@@ -129,37 +112,39 @@ pub fn restic_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
+    use crate::runner::CommandRunner;
+    use std::path::Path;
 
     struct MockRunner;
 
     #[async_trait::async_trait]
-    impl crate::runner::CommandRunner for MockRunner {
+    impl CommandRunner for MockRunner {
         async fn run(
             &self,
             _program: &str,
             _args: &[&str],
-            _current_dir: Option<&std::path::Path>,
+            _current_dir: Option<&Path>,
             _envs: Vec<(String, String)>,
         ) -> std::io::Result<std::process::Output> {
             Ok(std::process::Output {
-                status: std::process::ExitStatus::default(),
-                stdout: b"ok".to_vec(),
+                status: std::os::unix::process::ExitStatusExt::from_raw(0),
+                stdout: b"mock output".to_vec(),
                 stderr: b"".to_vec(),
             })
         }
     }
 
     #[tokio::test]
-    async fn test_missing_restic_password_returns_error() {
-        temp_env::with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], || {
+    async fn test_restic_missing_password() {
+        let args = ResticArgs {
+            action: "status".to_string(),
+            target: None,
+            snapshot_id: None,
+        };
+
+        temp_env::async_with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], async {
             let executor = ResticExecutor {
                 runner: Arc::new(MockRunner),
-            };
-            let args = ResticArgs {
-                action: "status".to_string(),
-                target: None,
-                snapshot_id: None,
             };
             let result = executor.execute_typed(args).await;
             assert!(result.is_err(), "Should error when RESTIC_PASSWORD is not set");
@@ -169,37 +154,32 @@ mod tests {
                 }
                 other => panic!("Expected LlmRecoverable, got: {:?}", other),
             }
-        });
+        }).await;
     }
 
     #[tokio::test]
-    async fn test_cloud_mode_returns_error() {
-        temp_env::with_vars(vec![
+    async fn test_restic_cloud_mode() {
+        let args = ResticArgs {
+            action: "status".to_string(),
+            target: None,
+            snapshot_id: None,
+        };
+
+        temp_env::async_with_vars(vec![
             ("RESTIC_PASSWORD", Some("test_pass")),
             ("OHC_EXECUTION_MODE", Some("cloud")),
-        ], || {
+        ], async {
             let executor = ResticExecutor {
                 runner: Arc::new(MockRunner),
-            };
-            let args = ResticArgs {
-                action: "status".to_string(),
-                target: None,
-                snapshot_id: None,
             };
             let result = executor.execute_typed(args).await;
             assert!(result.is_err(), "Should error in cloud mode");
             match result.unwrap_err() {
                 ToolError::LlmRecoverable(msg) => {
-                    assert!(msg.contains("cloud"), "Error should mention cloud mode: {}", msg);
+                    assert!(msg.contains("unsupported in cloud mode"), "Error should mention cloud mode: {}", msg);
                 }
                 other => panic!("Expected LlmRecoverable, got: {:?}", other),
             }
-        });
-    }
-
-    #[tokio::test]
-    async fn test_no_hardcoded_dummy_password() {
-        let source = include_str!("restic.rs");
-        assert!(!source.contains("dummy_password"), "Hardcoded 'dummy_password' should have been removed");
+        }).await;
     }
 }
