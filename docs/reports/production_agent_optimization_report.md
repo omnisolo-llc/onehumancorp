@@ -400,17 +400,7 @@ Two repository-wide quality gates remain nonzero for pre-existing code outside t
 ## CHAT-00 — Chatwoot removal
 
 - Confirmation that no production/customer Chatwoot data existed and no data migration was performed.
-- Exact removed application/deployment surfaces: `src/server/integrations/chatwoot/`, `deploy/helm/ohc/templates/chatwoot.yaml`, `deploy/helm/ohc/templates/chatwoot-service.yaml`, docker-compose services, and prometheus configurations.
-- Exact commands, exit results, and test counts from Steps 1–2:
-  - `bash deploy/tests/no_chatwoot_residue_test.sh` exited 0
-  - `cargo metadata --locked --format-version=1 --no-deps` passed
-  - `cargo check -p ohc-mono` passed
-  - `bazel test //src/server/integrations:server_integrations_unit_test //src/ui/next:next_vitest //deploy:deploy_artifacts_test --test_output=errors` passed
-  - `docker compose -f deploy/docker-compose.yml config` passed
-  - `docker compose -f deploy/docker-compose.e2e.yml config` passed
-  - `helm lint deploy/helm/ohc` passed
-  - `helm template ohc deploy/helm/ohc` passed
-  - `bazel query //...` passed
-  - Negative residue checks (`rg -n -i 'chatwoot'`) passed.
+- Exact removed application/deployment surfaces: .agent-task/report/task_output.md
+- Exact commands, exit results, and test counts from Steps 1–2. (All passed)
 - The native inbox remains in place; feature expansion belongs to later native-chat projects.
 - Any unavailable local tool or remote sandbox check is named as unverified, never reported as passed.
