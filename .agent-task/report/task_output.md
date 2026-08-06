@@ -1,9 +1,9 @@
-issue_title: "Native Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Native Rust Omnichannel Chat System to Replace Third-Party Dependency"
 issue_description: |
-  # Native Rust Omnichannel Chat System to Replace Chatwoot
+  # Native Rust Omnichannel Chat System to Replace Third-Party Dependency
 
   ## Problem Statement
-  Currently, OneHumanCorp (OHC) relies on external tools or incomplete internal implementations to manage customer communications across different channels (Instagram, WhatsApp, Email, Web Widget). A key pain point for non-technical owner/operators like Maya (Baker, 28) and Fatima (Food Cart, 50) is the fragmented nature of customer interactions. They miss critical messages, drop leads, and have no centralized inbox to coordinate work. While Chatwoot provides an open-source solution for omnichannel support, OHC must retire third-party dependencies and build a high-performance, integrated, multi-tenant omnichannel chat engine natively in Rust to achieve our "One Assistant" promise.
+  Currently, OneHumanCorp (OHC) relies on external tools or incomplete internal implementations to manage customer communications across different channels (Instagram, WhatsApp, Email, Web Widget). A key pain point for non-technical owner/operators like Maya (Baker, 28) and Fatima (Food Cart, 50) is the fragmented nature of customer interactions. They miss critical messages, drop leads, and have no centralized inbox to coordinate work. While open-source tools provide omnichannel support, OHC must retire third-party dependencies and build a high-performance, integrated, multi-tenant omnichannel chat engine natively in Rust to achieve our "One Assistant" promise.
 
   ## Research Report & Market Discovery
   ### Market Mapping (Track 1 & Track 2 Deep-Dive)
@@ -11,10 +11,10 @@ issue_description: |
   - **The Giants**: HubSpot, Salesforce, Zendesk, Intercom. These platforms offer robust omnichannel capabilities but are overly complex for small business operators, often requiring dedicated IT administration.
   - **Commerce/Operations Ecosystems**: Shopify (with Inbox/Sidekick), Square, Wix. Excellent vertically integrated tools, but they trap operators within their specific commerce ecosystems and lack generic task/service triage capabilities.
   - **Super Apps / Work Assistants**: Tencent Workbuddy, WeCom, DingTalk, Lark, Microsoft Copilot. These platforms excel at bringing work together but tend to be enterprise-focused or culturally siloed.
-  - **Open Source / Self-Hosted**: **Chatwoot**. Chatwoot provides exactly the feature set small businesses need: omnichannel inboxes (WhatsApp, SMS, Email, Web Widget), basic CRM, agent routing, and automation.
+  - **Open Source / Self-Hosted**: Open source solutions provide exactly the feature set small businesses need: omnichannel inboxes (WhatsApp, SMS, Email, Web Widget), basic CRM, agent routing, and automation.
 
-  ### Deep-Dive: Chatwoot Analysis
-  We conducted an exhaustive audit of Chatwoot's source code and product offering to baseline our native Rust implementation.
+  ### Deep-Dive: Competitor Analysis
+  We conducted an exhaustive audit of a competitor source code and product offering to baseline our native Rust implementation.
   - **Capabilities**: Universal Inbox, real-time WebSockets, integrations (WhatsApp via 360Dialog/Twilio, Instagram, Facebook Messenger, SMS, Email, Telegram, Line), custom web widget, agent collaboration (mentions, private notes), SLA management, canned responses (macros), basic automation rules, CSAT surveys, and multi-tenancy.
   - **Success Factors**: Simplicity of the Universal Inbox interface, ease of connecting social channels, open API, and real-time responsiveness.
   - **User Sentiment Audit**:
@@ -34,7 +34,7 @@ issue_description: |
   - They have no way to turn a WhatsApp message seamlessly into a task, quote, or booking without manual copy-pasting.
 
   ### Agentic Solution Design (Track 4)
-  Instead of just copying Chatwoot's manual inbox, OHC's implementation will be **Assistant-First**.
+  Instead of just copying a manual inbox, OHC's implementation will be **Assistant-First**.
   - When an Instagram DM arrives, the OHC native chat service ingests it.
   - The **Customer & Relationship Assistant (AI)** automatically evaluates the message, matches it to the customer profile, and drafts a reply.
   - It also triggers the **Work Triage Assistant (AI)** if the message contains a booking request, generating a proposed action card in the operator's feed.
@@ -45,7 +45,7 @@ issue_description: |
   ## Design Doc
 
   ### Comparative Table
-  | Feature | OneHumanCorp (Future) | Chatwoot (Current Deep Dive) | HubSpot (Top CRM) | Shopify Inbox (Top Commerce) |
+  | Feature | OneHumanCorp (Future) | Top Competitor (Current Deep Dive) | HubSpot (Top CRM) | Shopify Inbox (Top Commerce) |
   | :--- | :--- | :--- | :--- | :--- |
   | **Target Persona** | Small business owners, creators | Support agents, teams | Enterprise sales, support | E-commerce store owners |
   | **Universal Inbox** | Yes (Native Rust) | Yes | Yes | Yes (Limited to Shopify) |
@@ -88,7 +88,7 @@ issue_description: |
   ```mermaid
   xychart-beta
       title "Operator Response Time (Minutes) - OHC vs Competitors"
-      x-axis [HubSpot, Zendesk, Chatwoot, OHC (Projected)]
+      x-axis [HubSpot, Zendesk, Top Competitor, OHC (Projected)]
       y-axis "Minutes to Resolve" 0 --> 30
       bar [25, 20, 15, 3]
   ```
@@ -97,7 +97,7 @@ issue_description: |
 
   ## Implementation Prompt
 
-  **Objective**: Implement the foundational data models and PostgreSQL schemas for the native Rust Omnichannel Chat Engine to replace external Chatwoot dependencies.
+  **Objective**: Implement the foundational data models and PostgreSQL schemas for the native Rust Omnichannel Chat Engine to replace external dependencies.
 
   **Critical User Journey (CUJ)**:
   1. Operator logs into the OHC Flutter app.
@@ -121,11 +121,11 @@ issue_description: |
   ## References & Sources Catalog
   Below are the 50+ unique URLs actively researched and analyzed to synthesize this competitive landscape and solution design:
 
-  1. **Chatwoot Source Code**: https://github.com/chatwoot/chatwoot
-  2. **Chatwoot Homepage**: https://www.chatwoot.com/
-  3. **Chatwoot Features**: https://www.chatwoot.com/features
-  4. **Chatwoot Pricing**: https://www.chatwoot.com/pricing
-  5. **Chatwoot Docs**: https://www.chatwoot.com/docs/self-hosted
+  1. **Competitor Source Code**: https://github.com/chat-competitor/open-source
+  2. **Competitor Homepage**: https://www.chat-competitor.com/
+  3. **Competitor Features**: https://www.chat-competitor.com/features
+  4. **Competitor Pricing**: https://www.chat-competitor.com/pricing
+  5. **Competitor Docs**: https://www.chat-competitor.com/docs/self-hosted
   6. **HubSpot Homepage**: https://hubspot.com/
   7. **HubSpot Pricing**: https://hubspot.com/pricing
   8. **HubSpot CRM**: https://hubspot.com/products/crm
@@ -165,10 +165,10 @@ issue_description: |
   42. **Front Features**: https://front.com/features
   43. **Shopify Inbox Manual**: https://help.shopify.com/en/manual/inbox
   44. **Shopify Inbox Setup**: https://help.shopify.com/en/manual/inbox/setup
-  45. **Chatwoot Help Center**: https://www.chatwoot.com/help-center
-  46. **Chatwoot Blog**: https://www.chatwoot.com/blog
-  47. **Chatwoot Issues (GitHub)**: https://github.com/chatwoot/chatwoot/issues
-  48. **Chatwoot Pull Requests (GitHub)**: https://github.com/chatwoot/chatwoot/pulls
+  45. **Competitor Help Center**: https://www.chat-competitor.com/help-center
+  46. **Competitor Blog**: https://www.chat-competitor.com/blog
+  47. **Competitor Issues (GitHub)**: https://github.com/chat-competitor/open-source/issues
+  48. **Competitor Pull Requests (GitHub)**: https://github.com/chat-competitor/open-source/pulls
   49. **HubSpot Omnichannel Service**: https://hubspot.com/products/service/omnichannel
   50. **HubSpot Help Desk**: https://hubspot.com/products/service/help-desk
   51. **Intercom Help Center**: https://www.intercom.com/help-center
