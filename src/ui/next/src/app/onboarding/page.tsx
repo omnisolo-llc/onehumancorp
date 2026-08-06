@@ -1214,7 +1214,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {validationError && (
-                    <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                    <p className="text-[#FF3B30] text-sm font-semibold mb-2 animate-fade-in transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
                       {validationError}
                     </p>
                   )}
@@ -1322,7 +1322,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {validationError && (
-                    <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                    <p className="text-[#FF3B30] text-sm font-semibold mb-2 animate-fade-in transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
                       {validationError}
                     </p>
                   )}
@@ -1424,7 +1424,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {validationError && (
-                    <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                    <p className="text-[#FF3B30] text-sm font-semibold mb-2 animate-fade-in transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
                       {validationError}
                     </p>
                   )}
@@ -1526,7 +1526,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {validationError && (
-                    <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                    <p className="text-[#FF3B30] text-sm font-semibold mb-2 animate-fade-in transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
                       {validationError}
                     </p>
                   )}
@@ -1646,10 +1646,10 @@ export default function OnboardingWizard() {
                         return rest;
                       });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessName ? "border-[#FF3B30] bg-[#FF3B30]/5" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
                   />
                   {validationErrors.businessName && (
-                    <p className="text-[#FF3B30] text-xs mt-1">
+                    <p className="text-[#FF3B30] text-xs mt-1 animate-fade-in transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
                       {validationErrors.businessName}
                     </p>
                   )}
@@ -1669,10 +1669,10 @@ export default function OnboardingWizard() {
                         return rest;
                       });
                     }}
-                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                    className={`w-full p-3 sm:p-4 border ${validationErrors.businessType ? "border-[#FF3B30] bg-[#FF3B30]/5" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
                   />
                   {validationErrors.businessType && (
-                    <p className="text-[#FF3B30] text-xs mt-1">
+                    <p className="text-[#FF3B30] text-xs mt-1 animate-fade-in transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
                       {validationErrors.businessType}
                     </p>
                   )}
@@ -1735,10 +1735,10 @@ export default function OnboardingWizard() {
                           });
                         }
                       }}
-                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-[#FF3B30]" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]`}
+                      className={`w-full p-3 sm:p-4 border ${validationErrors.firstProductPrice ? "border-[#FF3B30] bg-[#FF3B30]/5" : "border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20"} outline-none glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]`}
                     />
                     {validationErrors.firstProductPrice && (
-                      <p className="text-[#FF3B30] text-xs mt-1">
+                      <p className="text-[#FF3B30] text-xs mt-1 animate-fade-in transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
                         {validationErrors.firstProductPrice}
                       </p>
                     )}
@@ -1747,7 +1747,7 @@ export default function OnboardingWizard() {
               </div>
 
               {validationError && (
-                <p className="text-[#FF3B30] text-sm font-semibold mb-2">
+                <p className="text-[#FF3B30] text-sm font-semibold mb-2 animate-fade-in transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-100">
                   {validationError}
                 </p>
               )}
@@ -1909,7 +1909,7 @@ export default function OnboardingWizard() {
                         <div
                           key={agent.id}
                           onClick={() => handleAgentToggle(agent.id)}
-                          className={`cursor-pointer p-3 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]  border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_2px_8px_rgba(0,102,255,0.15)]" : "glass-control rounded-[8px] hover:border-gray-400 dark:hover:border-gray-500"}`}
+                          className={`cursor-pointer p-4 flex items-start gap-3 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] border ${isActive ? "border-[#0066FF] bg-[#0066FF]/5 dark:bg-[#0066FF]/10 shadow-[0_0_0_2px_rgba(0,102,255,0.2)]" : "translucent-glass-light dark:translucent-glass-dark hover:border-gray-400 dark:hover:border-gray-500"}`}
                         >
                           <div
                             className={`flex items-center justify-center w-10 h-10 rounded-full text-lg ${isActive ? "bg-[#0066FF]/20" : "bg-black/10 dark:bg-white/10"}`}
