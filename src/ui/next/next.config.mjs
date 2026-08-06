@@ -37,7 +37,7 @@ export function allowedDevOrigins(environment = process.env) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: allowedDevOrigins(),
-  outputFileTracingRoot: new URL('../../../', import.meta.url).pathname,
+  ...(process.env.NODE_ENV === 'production' ? { outputFileTracingRoot: new URL('../../../', import.meta.url).pathname } : {}),
   typescript: {
     ignoreBuildErrors: true,
   },

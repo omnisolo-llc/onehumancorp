@@ -20,7 +20,7 @@ SERVER_RS_SRCS = [
     "chaos_db_test_postgres.rs",
     "chaos_network_test.rs",
     "crypto.rs",
-    "db.rs",
+
     "hub.rs",
     "lib.rs",
     "offline/mod.rs",
@@ -638,10 +638,15 @@ rust_test(
     srcs = [
         "persistence_commands_test.rs",
         "//src/server/persistence:capabilities.rs",
+        "//src/server/persistence:catalog.rs",
         "//src/server/persistence:commands.rs",
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+
+    ],
+    compile_data = [
+        "//src/server/auth:seaorm_store.rs",
     ],
     edition = "2024",
     deps = [
@@ -666,6 +671,9 @@ rust_test(
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+    ],
+    compile_data = [
+        "//src/server/auth:seaorm_store.rs",
     ],
     edition = "2024",
     deps = [
