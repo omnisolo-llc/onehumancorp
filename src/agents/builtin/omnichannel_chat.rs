@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message as AgentMessage};
+use ohc_builtin_agent_core::types::{ChatRequest, Message as AgentMessage};
 
 /// Chatwoot Retirement & Native Rust Omnichannel Chat Integration
 /// Replicates Chatwoot's core entities and features natively in Rust.
@@ -276,7 +276,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let text = req.messages.last().unwrap().content.to_lowercase();
             let mut result = "other";
             if text.contains("cost") {
