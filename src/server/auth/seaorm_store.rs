@@ -1522,7 +1522,7 @@ mod atomic_registration_tests {
         assert!(migration_source.contains("unnest(COALESCE(users.roles"));
         assert!(migration_source.contains("JSON_TABLE(COALESCE(users.roles"));
 
-        let startup_source = include_str!("../lib.rs");
+        let startup_source = include_str!("../../server/lib.rs");
         assert!(startup_source.contains("mod persistence_commands_test;"));
         let legacy_position = startup_source
             .find("db.run_migrations().await?")
@@ -1532,7 +1532,7 @@ mod atomic_registration_tests {
             .expect("portable migration hook must run");
         assert!(legacy_position < portable_position);
 
-        let commands_source = include_str!("../persistence/commands.rs");
+        let commands_source = include_str!("../../server/persistence/commands.rs");
         assert!(commands_source.contains("run_legacy_postgres_migrations"));
 
         assert!(production_source.contains("EmailChallengeCreation"));
@@ -1543,7 +1543,7 @@ mod atomic_registration_tests {
         assert!(production_source.contains("quote(\"oidc_providers\")"));
         assert!(production_source.contains("\"key\","));
 
-        let http_source = include_str!("../auth/http.rs");
+        let http_source = include_str!("http.rs");
         assert!(http_source.contains("EmailChallengeCreation::Throttled"));
         assert!(http_source.contains("verification recently sent"));
         assert!(http_source.contains("std::env::var(&config.secret_ref)"));
