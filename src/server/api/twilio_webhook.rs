@@ -18,6 +18,7 @@ use ::server_utils::url::url_decode;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::hub::Hub;
 use crate::orchestration::identity_resolution::IdentityResolver;
+use crate::services::chat::service::ChatService;
 
 #[derive(Clone)]
 pub struct TwilioWebhookState {
@@ -213,58 +214,30 @@ pub async fn twilio_webhook_post_handler(
         // but we can also just hardcode the source to whatsapp for this specific webhook if it's meant exclusively for whatsapp
         let source = if sender_id.starts_with("whatsapp:") { "whatsapp".to_string() } else { "sms".to_string() };
 
-        // Identity Resolution
-        let resolver = IdentityResolver::new(state.db.clone());
         let clean_sender_id = sender_id.replace("whatsapp:", "");
-        let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &clean_sender_id, &source).await;
-        let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
 
-        let insert_result = match &state.db.store {
-            crate::db::DbStore::Postgres => {
-                sqlx::query(
-                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
-                )
-                .bind(&inbox_id)
-                .bind(&tenant_id)
-                .bind(&source)
-                .bind(&text)
-                .bind(&text)
-                .bind(&clean_sender_id)
-                .bind(&customer_id)
-                .execute(pool)
-                .await.map(|_| ())
-            },
-            crate::db::DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
-                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
-                )
-                .bind(&inbox_id)
-                .bind(&tenant_id)
-                .bind(&source)
-                .bind(&text)
-                .bind(&text)
-                .bind(&clean_sender_id)
-                .bind(&customer_id)
-                .execute(sqlite_pool)
-                .await.map(|_| ())
-            }
-        };
+        let chat_service = ChatService::new(&state.db);
+        let chat_inbox_id = chat_service.get_or_create_inbox(&tenant_id, "Main Inbox").await.unwrap_or_default();
+        let chat_contact_id = chat_service.get_or_create_contact_by_phone(&tenant_id, &clean_sender_id).await.unwrap_or_default();
+        let conversation_id = chat_service.get_or_create_conversation(&tenant_id, &chat_inbox_id, &chat_contact_id).await.unwrap_or_default();
 
-        if let Err(e) = insert_result {
-            tracing::error!("Failed to insert omni_inbox_messages: {}", e);
+        let insert_result = chat_service.send_message(&tenant_id, &conversation_id, "contact", None, &text).await;
+
+        if let Err(ref e) = insert_result {
+            tracing::error!("Failed to insert chat_messages: {}", e);
         }
 
         // Enqueue to ohc_job_queue
         let job_id = Uuid::new_v4().to_string();
         let mut payload_json = serde_json::json!({
-            "message_id": inbox_id,
-            "inbox_message_id": inbox_id,
+            "message_id": insert_result.as_ref().unwrap_or(&"".to_string()).clone(),
+            "inbox_message_id": insert_result.as_ref().unwrap_or(&"".to_string()).clone(),
             "source": source,
             "content": text,
             "sender_id": clean_sender_id
         });
 
-        if let Ok(c_id) = &customer_id_result {
+        if let Ok(c_id) = &Ok::<String, String>("".to_string()) {
             payload_json["customer_id"] = serde_json::json!(c_id);
         }
 
@@ -390,58 +363,30 @@ pub async fn twilio_voice_webhook_handler(
         // Continuing call
         let session_id = state.voice_sessions.get(&call_sid).map(|r| r.value().clone()).unwrap_or_else(|| call_sid.clone());
 
-        // Log the user's speech
-        let inbox_id = Uuid::new_v4().to_string();
         let clean_sender_id = sender_id.replace("whatsapp:", "");
 
-        let resolver = IdentityResolver::new(state.db.clone());
-        let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &clean_sender_id, "voice").await;
-        let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
+        let chat_service = ChatService::new(&state.db);
+        let chat_inbox_id = chat_service.get_or_create_inbox(&tenant_id, "Voice Inbox").await.unwrap_or_default();
+        let chat_contact_id = chat_service.get_or_create_contact_by_phone(&tenant_id, &clean_sender_id).await.unwrap_or_default();
+        let conversation_id = chat_service.get_or_create_conversation(&tenant_id, &chat_inbox_id, &chat_contact_id).await.unwrap_or_default();
 
-        let insert_result = match &state.db.store {
-            crate::db::DbStore::Postgres => {
-                sqlx::query(
-                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, 'voice', $3, $4, 'English', '', 'unread', $5, $6, NOW())"
-                )
-                .bind(&inbox_id)
-                .bind(&tenant_id)
-                .bind(&user_text)
-                .bind(&user_text)
-                .bind(&clean_sender_id)
-                .bind(&customer_id)
-                .execute(pool)
-                .await.map(|_| ())
-            },
-            crate::db::DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
-                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, 'voice', ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
-                )
-                .bind(&inbox_id)
-                .bind(&tenant_id)
-                .bind(&user_text)
-                .bind(&user_text)
-                .bind(&clean_sender_id)
-                .bind(&customer_id)
-                .execute(sqlite_pool)
-                .await.map(|_| ())
-            }
-        };
+        let insert_result = chat_service.send_message(&tenant_id, &conversation_id, "contact", None, &user_text).await;
 
-        if let Err(e) = insert_result {
-            tracing::error!("Failed to insert omni_inbox_messages for voice: {}", e);
+        if let Err(ref e) = insert_result {
+            tracing::error!("Failed to insert chat_messages for voice: {}", e);
         }
 
         // Enqueue job
         let job_id = Uuid::new_v4().to_string();
         let mut payload_json = serde_json::json!({
-            "message_id": inbox_id,
-            "inbox_message_id": inbox_id,
+            "message_id": insert_result.as_ref().unwrap_or(&"".to_string()).clone(),
+            "inbox_message_id": insert_result.as_ref().unwrap_or(&"".to_string()).clone(),
             "source": "voice",
             "content": user_text,
             "sender_id": clean_sender_id
         });
 
-        if let Ok(c_id) = &customer_id_result {
+        if let Ok(c_id) = &Ok::<String, String>("".to_string()) {
             payload_json["customer_id"] = serde_json::json!(c_id);
         }
 

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::DepartmentEvent;
+use crate::services::chat::service::ChatService;
 use crate::db::DB;
 use super::identity::resolve_identity;
 
@@ -193,49 +194,19 @@ pub async fn handle_omnichannel_webhook(
         )
             .into_response();
     }
-    let customer_id = resolve_identity(&state.db, &payload.tenant_id, &payload.source, &payload.sender_id).await;
+    // let customer_id = resolve_identity(&state.db, &payload.tenant_id, &payload.source, &payload.sender_id).await;
 
     let id = Uuid::new_v4().to_string();
     let _target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
 
-    let pool = &state.db.pool;
+    // let pool = &state.db.pool;
 
-    let insert_result = match &state.db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query(
-                r#"
-                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
-                VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())
-                "#
-            )
-            .bind(&id)
-            .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
-            .bind(&payload.sender_id)
-            .bind(&customer_id)
-            .execute(pool)
-            .await.map(|_| ())
-        },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query(
-                r#"
-                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
-                VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)
-                "#
-            )
-            .bind(&id)
-            .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
-            .bind(&payload.sender_id)
-            .bind(&customer_id)
-            .execute(sqlite_pool)
-            .await.map(|_| ())
-        }
-    };
+    let chat_service = ChatService::new(&state.db);
+    let chat_inbox_id = chat_service.get_or_create_inbox(&payload.tenant_id, "Main Inbox").await.unwrap_or_default();
+    let chat_contact_id = chat_service.get_or_create_contact_by_phone(&payload.tenant_id, &payload.sender_id).await.unwrap_or_default();
+    let conversation_id = chat_service.get_or_create_conversation(&payload.tenant_id, &chat_inbox_id, &chat_contact_id).await.unwrap_or_default();
+
+    let insert_result = chat_service.send_message(&payload.tenant_id, &conversation_id, "contact", None, &payload.message).await.map(|_| ());
 
     let payload_json = serde_json::json!({
         "message_id": id,

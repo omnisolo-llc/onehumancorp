@@ -775,7 +775,7 @@ if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_RUN_LOG"
   playwright_status=${PIPESTATUS[0]}
   set -e
-  exit 0
+  exit "$playwright_status"
 else
   echo "[playwright] Listing selected specs/tests"
   if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_LIST_LOG"; then
@@ -795,5 +795,5 @@ else
   "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_RUN_LOG"
   playwright_status=${PIPESTATUS[0]}
   set -e
-  exit 0
+  exit "$playwright_status"
 fi

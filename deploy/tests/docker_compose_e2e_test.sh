@@ -349,5 +349,3 @@ printf '%s' "${inbox_response}" | jq -e 'type == "array" and length > 0' >/dev/n
 printf '%s' "${supply_response}" | jq -e '.vendors | type == "array" and length > 0' >/dev/null
 
 log "Docker Compose E2E checks passed."
-
-exit 0
