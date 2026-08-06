@@ -2,13 +2,13 @@ issue_title: "Native Rust Omnichannel Chat: Architecture & Data Models"
 issue_description: |
   # Problem Statement
 
-  Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" simply aggregate messages without context. To resolve this and completely replace the external Chatwoot dependency, OHC needs a high-performance, native Rust omnichannel chat engine. This engine will not only aggregate messages but also tie into the `Customer Identity Resolution Engine` to power our AI agents (e.g., The Ambassador).
+  Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and email. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" simply aggregate messages without context. To resolve this and completely replace the external dependency, OHC needs a high-performance, native Rust omnichannel chat engine. This engine will not only aggregate messages but also tie into the `Customer Identity Resolution Engine` to power our AI agents (e.g., The Ambassador).
 
   # Research Report
 
   **Findings & Competitive Analysis:**
-  - **Chatwoot Source Audit:** We have audited the Chatwoot source code (`https://github.com/chatwoot/chatwoot`), focusing on its omnichannel data models (`Conversation`, `Message`, `Inbox`, `ChannelAdapter`, `Contact`), controllers, webhooks, and WebSocket architecture. Chatwoot relies on Ruby on Rails and PostgreSQL.
-  - **OHC Architecture:** We are replacing Chatwoot with a Rust-based microservice within `onehumancorp/mono`. This ensures better performance, tighter integration with our agent ecosystem (via Redis and Kafka/Event Mesh), and stricter multi-tenant isolation.
+  - **Source Audit:** We have audited the legacy external system's source code, focusing on its omnichannel data models (`Conversation`, `Message`, `Inbox`, `ChannelAdapter`, `Contact`), controllers, webhooks, and WebSocket architecture. It relies on Ruby on Rails and PostgreSQL.
+  - **OHC Architecture:** We are replacing the external dependency with a Rust-based microservice within `onehumancorp/mono`. This ensures better performance, tighter integration with our agent ecosystem (via Redis and Kafka/Event Mesh), and stricter multi-tenant isolation.
   - **Core Entities:** The new architecture needs robust entities with strict RLS (Row Level Security) per `tenant_id`.
 
   # Design Doc
@@ -43,7 +43,7 @@ issue_description: |
 
   ### AI Agent Integration Points
   - The Chat Engine publishes `MessageReceived` events to the Event Mesh.
-  - The Ambassador Agent listens to these events, fetches context, and drafts a reply, seamlessly interacting with the native Rust chat system rather than external Chatwoot APIs.
+  - The Ambassador Agent listens to these events, fetches context, and drafts a reply, seamlessly interacting with the native Rust chat system rather than external APIs.
 
   ### Key Design Decisions
   - **Rust Native:** Build inside `src/server/integrations/chat/` or a dedicated Rust crate in the workspace.
