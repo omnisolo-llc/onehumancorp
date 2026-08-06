@@ -2,13 +2,13 @@ issue_title: "Native Rust Omnichannel Chat System Implementation"
 issue_description: |
   # Problem Statement
 
-  Currently, OneHumanCorp (OHC) relies on external tools or incomplete internal implementations for handling omnichannel chat. The market research highlights the critical need for a unified inbox (Omnichannel Gateway) where business owners like Maya (the baker) or Carlos (the handyman) can seamlessly manage Instagram DMs, WhatsApp, SMS, and email all in one place. Relying on external services like Chatwoot is explicitly retired by our engineering standards. We need a robust, native Rust implementation for omnichannel chat that ensures multi-tenant isolation, real-time sync, and serves as the foundation for the Customer Success Agent (The Ambassador) to draft proactive replies.
+  Currently, OneHumanCorp (OHC) relies on external tools or incomplete internal implementations for handling omnichannel chat. The market research highlights the critical need for a unified inbox (Omnichannel Gateway) where business owners like Maya (the baker) or Carlos (the handyman) can seamlessly manage Instagram DMs, WhatsApp, SMS, and email all in one place. Relying on external services like the previously evaluated external integration is explicitly retired by our engineering standards. We need a robust, native Rust implementation for omnichannel chat that ensures multi-tenant isolation, real-time sync, and serves as the foundation for the Customer Success Agent (The Ambassador) to draft proactive replies.
 
   # Research Report
 
   **Findings & Competitive Analysis:**
 
-  - **Chatwoot Source Audit:** We cloned and analyzed the Chatwoot source code (`https://github.com/chatwoot/chatwoot`). Key components include `Inbox`, `Channel`, `Contact`, `Conversation`, and `Message` models, alongside numerous channel adapters (Facebook, WhatsApp, SMS, Line, Telegram, Web Widget, Twitter, Instagram).
+  - **Source Audit:** We analyzed external open source omnichannel architectures. Key components include `Inbox`, `Channel`, `Contact`, `Conversation`, and `Message` models, alongside numerous channel adapters (Facebook, WhatsApp, SMS, Line, Telegram, Web Widget, Twitter, Instagram).
   - **OHC Architecture:** The current Rust service for chat (`src/server/services/chat/`) has basic models but lacks comprehensive webhook handling, real-time WebSocket broadcasting (event mesh), robust channel-specific adapters (API definitions for Facebook, Twilio, WhatsApp, etc.), and integration with our AI drafting agent.
   - **Security & Multi-Tenancy:** The new chat architecture must strictly enforce row-level security (RLS) in PostgreSQL, isolating `tenant_id` at every level.
 
@@ -44,7 +44,7 @@ issue_description: |
 
   ### Key Design Decisions
 
-  - **Native Rust:** 100% Rust implementation eliminating the Chatwoot dependency.
+  - **Native Rust:** 100% Rust implementation eliminating the external dependency.
   - **Unified Data Model:** Consolidate `Inbox`, `Channel`, `Contact`, `Conversation`, and `Message` with strict `tenant_id` enforcement.
   - **Webhook Reliability:** Implement an idempotent webhook ingestion queue to handle bursts and transient failures from Meta/Twilio APIs.
 
