@@ -43,6 +43,9 @@ pub mod cart;
 
 pub mod quotes;
 pub mod inbox;
+pub mod native_chat;
+#[cfg(test)]
+pub mod native_chat_test;
 pub mod sync_gateway;
 pub mod assistant;
 pub mod payment_ledger;

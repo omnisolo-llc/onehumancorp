@@ -7935,6 +7935,10 @@ async fn create_ui_bom_item_handler(
             "/api/v1/inbox/action_required",
             api::inbox::action_required::router(db.clone(), http_auth_store.clone()),
         )
+        .nest(
+            "/api/v1/chat/native",
+            api::native_chat::router(db.clone(), http_auth_store.clone()),
+        )
         .merge(twilio_webhook_router)
         .merge(twilio_voice_webhook_router)
         .merge(protect_internal_ingress(
