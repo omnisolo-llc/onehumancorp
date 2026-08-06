@@ -1,3 +1,4 @@
+pub mod omnichannel_chat;
 pub mod claude_subagents;
 pub mod compaction;
 pub mod durable_execution;

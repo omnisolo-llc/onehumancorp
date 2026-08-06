@@ -62,6 +62,7 @@ rust_library(
         "claude_subagents.rs",
         "codex_runner.rs",
         "compaction.rs",
+    "omnichannel_chat.rs",
         "durable_execution.rs",
         "consolidation_worker.rs",
         "departments.rs",
