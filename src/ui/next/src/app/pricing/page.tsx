@@ -113,7 +113,7 @@ export default function PricingPage() {
         </div>
 
         {/* My Plan Section */}
-        <div className="mb-8 p-6 app-card ohc-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-xl rounded-2xl w-full">
+        <div className="mb-8 p-6 app-card ohc-growth-card glass-card backdrop-blur-2xl bg-white/30 border border-white/40 shadow-2xl rounded-2xl w-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                 <div>
                     <h2 className="text-2xl font-bold font-outfit text-gray-900">My Plan: {currentPlan || 'Free'}</h2>
@@ -125,14 +125,14 @@ export default function PricingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                <div className="p-4 bg-white/30 backdrop-blur-md rounded-xl border border-white/20 shadow-inner">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">AI Actions Used</p>
                     <p className="text-xl font-bold text-gray-900">
                         {planDetails?.ai_actions_used || 0}
                         <span className="text-sm font-normal text-gray-500 ml-1">/ {planDetails?.ai_actions_limit || '∞'}</span>
                     </p>
                 </div>
-                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                <div className="p-4 bg-white/30 backdrop-blur-md rounded-xl border border-white/20 shadow-inner">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Storage Used</p>
                     <p className="text-xl font-bold text-gray-900">
                         {planDetails?.storage_used_bytes ? (planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1) : 0} MB
@@ -141,7 +141,7 @@ export default function PricingPage() {
                         </span>
                     </p>
                 </div>
-                <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
+                <div className="p-4 bg-white/30 backdrop-blur-md rounded-xl border border-white/20 shadow-inner">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Estimated Next Bill</p>
                     <p className="text-xl font-bold text-gray-900">
                         ${((planDetails?.next_bill_estimated || 0) / 100).toFixed(2)}

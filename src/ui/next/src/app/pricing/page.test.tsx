@@ -54,6 +54,7 @@ describe('PricingPage', () => {
     await act(async () => {
       render(<PricingPage />);
     });
+    await screen.findByText('My Plan: Free');
     expect(screen.getByText('Pricing Plans')).toBeDefined();
     expect(screen.getByText('Free')).toBeDefined();
     expect(screen.getByText('Starter')).toBeDefined();
@@ -149,6 +150,7 @@ describe('PricingPage', () => {
     await act(async () => {
       render(<PricingPage />);
     });
+    await screen.findByText('My Plan: Free');
     expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
   });
 
@@ -156,6 +158,7 @@ describe('PricingPage', () => {
     await act(async () => {
       render(<PricingPage />);
     });
+    await screen.findByText('My Plan: Free');
     expect(screen.getByTestId('viral-trial-extension-widget')).toBeDefined();
   });
 
@@ -163,6 +166,7 @@ describe('PricingPage', () => {
     await act(async () => {
       render(<PricingPage />);
     });
+    await screen.findByText('My Plan: Free');
     expect(screen.getByText(/Stripe Billing for self-serve plan upgrades, downgrades, and cancellation/)).toBeDefined();
   });
 
@@ -210,10 +214,11 @@ describe('PricingPage', () => {
 
   it('renders loading state correctly', async () => {
     // Keep fetch promise pending to test loading state
-    let resolveFetch;
-    (global.fetch as any).mockImplementation(() => new Promise((resolve) => {
+    let resolveFetch: any;
+    const fetchPromise = new Promise((resolve) => {
         resolveFetch = resolve;
-    }));
+    });
+    (global.fetch as any).mockImplementation(() => fetchPromise);
 
     render(<PricingPage />);
 
@@ -221,7 +226,13 @@ describe('PricingPage', () => {
     expect(screen.getAllByText('Loading...').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /loading/i }).length).toBe(4);
 
-    resolveFetch({ ok: true, json: async () => ({ current_plan: 'Free' }) });
+    await act(async () => {
+      resolveFetch({ ok: true, json: async () => ({ current_plan: 'Free' }) });
+      await fetchPromise;
+    });
+
+    // Verify it finished loading and shows plans
+    await screen.findByText('My Plan: Free');
   });
 
   it('handles manage billing portal errors gracefully', async () => {
@@ -395,6 +406,9 @@ describe('PricingPage', () => {
       expect(consoleSpy).toHaveBeenCalled();
     });
 
+    // Make sure it finishes loading state (by fallback to Free)
+    await screen.findByText('My Plan: Free');
+
     consoleSpy.mockRestore();
   });
 
@@ -496,6 +510,8 @@ describe('PricingPage', () => {
     await act(async () => {
       render(<PricingPage />);
     });
+
+    await screen.findByText('My Plan: Free');
 
     // Verify initial monthly pricing
     expect(screen.getByText('$29')).toBeDefined();
