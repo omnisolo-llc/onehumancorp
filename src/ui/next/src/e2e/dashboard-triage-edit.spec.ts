@@ -1,4 +1,4 @@
-import { test, expect } from '../../../../e2e/fixtures';
+import { expect, test } from '@playwright/test';
 
 test.describe('Dashboard Triage Action Feed Edit UI', () => {
   test.use({ viewport: { width: 375, height: 812 } });
@@ -13,7 +13,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const tenantId = await page.evaluate(() => // localStorage.getItem('tenant_id') || 'e2e-tenant');
+    const tenantId = await getStorage(page, 'tenant_id') || 'e2e-tenant';
 
     const seedData = [
       {
@@ -27,9 +27,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
     ];
 
     for (const data of seedData) {
-      await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
-        data_commented
-      });
+      await postData(page.request, `/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, data);
     }
 
     await page.goto('/dashboard');

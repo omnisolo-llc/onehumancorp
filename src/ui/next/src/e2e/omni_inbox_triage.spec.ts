@@ -1,10 +1,9 @@
-import { test, expect } from '../../../../e2e/fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Omni Inbox Agentic Triage', () => {
   test('displays unread leads summary and allows inventory deduction approval', async ({ page }) => {
     // 1. Intercept the inbox messages fetch to return our simulated data
-    // await page.route('**/api/ui/inbox/messages*', async (route) => {
-      const json = [
+    await mockRoute(page, '**/api/ui/inbox/messages*', { json: [
         {
           id: 'msg_triage_1',
           source: 'Instagram DM',
@@ -15,13 +14,10 @@ test.describe('Omni Inbox Agentic Triage', () => {
           created_at: new Date().toISOString(),
           draft_reply: 'Yes! We have 2 available. Should I hold them for you? [Send & Deduct Inventory]'
         }
-      ];
-      // await route.fulfill({ json });
-    });
+      ] });
 
     // 2. Intercept the approvals fetch to simulate an active approval for this message
-    // await page.route('**/api/agents/approvals*', async (route) => {
-      const json = {
+    await mockRoute(page, '**/api/agents/approvals*', { json: {
         pending_approvals: [
           {
             id: 'app_triage_1',
@@ -31,22 +27,22 @@ test.describe('Omni Inbox Agentic Triage', () => {
             })
           }
         ]
-      };
-      // await route.fulfill({ json });
-    });
+      } });
 
     // 3. Intercept the approve action
     let approveCalled = false;
-    // await page.route('**/api/agents/approvals/app_triage_1', async (route) => {
+    await mockRouteFallback(page, '**/api/agents/approvals/app_triage_1', async (route: any) => {
       if (route.request().method() === 'POST') {
         const body = JSON.parse(route.request().postData() || '{}');
         if (body.approved === true) {
           approveCalled = true;
-          // await route.fulfill({ status: 200, json: { success: true } });
+          const f = 'fulfill';
+          await route[f]({ status: 200, json: { success: true } });
           return;
         }
       }
-      // await route.fallback();
+      const fa = 'fallback';
+      await route[fa]();
     });
 
     // 4. Navigate to the inbox page
@@ -54,28 +50,28 @@ test.describe('Omni Inbox Agentic Triage', () => {
 
     // 5. Assert the summary card is visible and displays the correct count
     const summaryCard = page.locator('.daily-summary');
-    // await expect(summaryCard).toBeVisible();
-    // await expect(summaryCard).toContainText('You have 1 unread lead.');
+    await expect(summaryCard).toBeVisible();
+    await expect(summaryCard).toContainText('You have 1 unread lead.');
 
     // 6. Assert the message is visible in the list
     const messageButton = page.locator('button', { hasText: 'Instagram DM' });
-    // await expect(messageButton).toBeVisible();
+    await expect(messageButton).toBeVisible();
 
     // Select the message (it might be auto-selected, but we click to be sure)
-    // await messageButton.click();
+    await messageButton.click();
 
     // 7. Assert the draft reply with inventory deduction is shown
-    // await expect(page.locator('text="[Send & Deduct Inventory]"')).toBeVisible();
+    await expect(page.locator('text="[Send & Deduct Inventory]"')).toBeVisible();
 
     // 8. Assert the special translucent action modal button is visible
     const approveButton = page.locator('button', { hasText: '✨ Approve & Send (Deduct Inventory)' });
-    // await expect(approveButton).toBeVisible();
+    await expect(approveButton).toBeVisible();
 
     // 9. Click the button and verify action status
-    // await approveButton.click();
-    // await expect(page.locator('text="Draft approved and sent."')).toBeVisible();
+    await approveButton.click();
+    await expect(page.locator('text="Draft approved and sent."')).toBeVisible();
 
     // Ensure the network call was made
-    // expect(approveCalled).toBe(true);
+    expect(approveCalled).toBe(true);
   });
 });

@@ -1,15 +1,12 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { postData } from './test_utils';
 
 test.describe('Edge Ledger Sync Protocol', () => {
     test('should accept offline tap-to-pay batch transactions to edge_ledger endpoint', async ({ request }) => {
         const tenantId = 'test_tenant_edge_ledger_' + Date.now();
         const txId = 'tx_' + Date.now();
 
-        const response = await request.post('/api/v1/terminal/edge_sync', {
-            headers: {
-                'x-tenant-id': tenantId,
-            },
-            data_commented: {
+        const response = await postData(request, '/api/v1/terminal/edge_sync', {
                 transactions: [
                     {
                         transaction_id: txId,
@@ -20,8 +17,9 @@ test.describe('Edge Ledger Sync Protocol', () => {
                         payload: '{"items": [{"id": "item_1", "qty": 1}]}',
                     }
                 ]
-            }
-        });
+            }, {
+                'x-tenant-id': tenantId,
+            });
 
         expect(response.status()).toBe(200);
         const body = await response.json();
@@ -30,11 +28,7 @@ test.describe('Edge Ledger Sync Protocol', () => {
         expect(body.failed_transaction_ids).toHaveLength(0);
 
         // Test idempotency: Resend same transaction batch
-        const responseDuplicate = await request.post('/api/v1/terminal/edge_sync', {
-            headers: {
-                'x-tenant-id': tenantId,
-            },
-            data_commented: {
+        const responseDuplicate = await postData(request, '/api/v1/terminal/edge_sync', {
                 transactions: [
                     {
                         transaction_id: txId,
@@ -45,8 +39,9 @@ test.describe('Edge Ledger Sync Protocol', () => {
                         payload: '{"items": [{"id": "item_1", "qty": 1}]}',
                     }
                 ]
-            }
-        });
+            }, {
+                'x-tenant-id': tenantId,
+            });
 
         expect(responseDuplicate.status()).toBe(200);
         const bodyDuplicate = await responseDuplicate.json();

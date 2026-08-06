@@ -1,13 +1,30 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
+import { mockRoute } from '../test_utils';
 
 test.describe('Loyalty & Rewards Engine', () => {
 
   test('Should create and retrieve loyalty wallet balance', async ({ page }) => {
     // Assuming our test harness sets up a tenant and customer.
     // In this mocked check, we navigate to the quote and check if the wallet loads.
-    // Replaced page.route for E2E check
+    await mockRoute(page, '**/api/ui/loyalty/balance*', {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ points_balance: 500, wallet_id: "test-wallet" })
+      });
 
-    // Replaced page.route for E2E check
+    await mockRoute(page, '**/api/ui/quote*', {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+            id: 'quote-123',
+            business_name: 'Maya Cakes',
+            title: 'Custom Vegan Cake',
+            status: 'PENDING',
+            total_amount: 150.00,
+            required_deposit: 50.00,
+            line_items: [{description: 'Cake', quantity: 1, unit_price: 150.00, total_price: 150.00}]
+        })
+      });
 
     await page.goto('/quote.html?id=quote-123');
 
@@ -20,9 +37,25 @@ test.describe('Loyalty & Rewards Engine', () => {
   });
 
   test('Should apply points to checkout', async ({ page }) => {
-    // Replaced page.route for E2E check
+    await mockRoute(page, '**/api/ui/loyalty/balance*', {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ points_balance: 1000, wallet_id: "test-wallet" }) // 1000 pts = $10.00
+      });
 
-    // Replaced page.route for E2E check
+    await mockRoute(page, '**/api/ui/quote*', {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+            id: 'quote-123',
+            business_name: 'Maya Cakes',
+            title: 'Custom Vegan Cake',
+            status: 'PENDING',
+            total_amount: 150.00,
+            required_deposit: 50.00,
+            line_items: [{description: 'Cake', quantity: 1, unit_price: 150.00, total_price: 150.00}]
+        })
+      });
 
     await page.goto('/quote.html?id=quote-123');
 

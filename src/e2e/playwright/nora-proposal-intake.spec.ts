@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
+import { postData } from '../test_utils';
 
 test.describe('Nora Autonomous Proposal Intake Flow', () => {
   let proposalId: string;
@@ -7,17 +8,14 @@ test.describe('Nora Autonomous Proposal Intake Flow', () => {
 
   test('Client intake creates proposal automatically', async ({ request, page }) => {
     // Simulate Client Inquiry
-    const res = await request.post('/api/v1/intake', {
-      headers: {
+    const res = await postData(request, '/api/v1/intake', {
+        inquiry: "Looking for a website redesign and branding.",
+        customer_id: customerId
+      }, {
         'x-tenant-id': tenantId,
         'x-user-id': 'nora',
         'Content-Type': 'application/json',
-      },
-      data_commented: {
-        inquiry: "Looking for a website redesign and branding.",
-        customer_id: customerId
-      }
-    });
+      });
 
     const body = await res.json();
     proposalId = body.proposal.id;
