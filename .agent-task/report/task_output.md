@@ -3,16 +3,16 @@ issue_description: |
   # Native WhatsApp Integration for OHC
 
   ## Problem Statement
-  Owners like Maya (Home Baker) and Carlos (Field Service Owner) rely heavily on WhatsApp to communicate with clients. Managing messages across multiple platforms is a major pain point. OHC needs a native WhatsApp integration to unify communication channels into the central assistant workflow, without relying on retired third-party services like Chatwoot.
+  Owners like Maya (Home Baker) and Carlos (Field Service Owner) rely heavily on WhatsApp to communicate with clients. Managing messages across multiple platforms is a major pain point. OHC needs a native WhatsApp integration to unify communication channels into the central assistant workflow, without relying on retired third-party services like Chat platform.
 
   ## Research Report
-  ### The Chatwoot WhatsApp Implementation
-  Analysis of the Chatwoot codebase (`app/models/channel/whatsapp.rb`, `app/services/whatsapp/providers/whatsapp_cloud_service.rb`) reveals the following architecture:
+  ### The Chat platform WhatsApp Implementation
+  Analysis of the Chat platform codebase (`app/models/channel/whatsapp.rb`, `app/services/whatsapp/providers/whatsapp_cloud_service.rb`) reveals the following architecture:
   *   **Providers**: Supports `whatsapp_cloud` (Meta's official API) and legacy 360dialog.
   *   **Authentication**: Uses access tokens (often via embedded signup or business management tokens).
   *   **Message Types**: Supports standard text, media, interactive messages, and pre-approved message templates (crucial for initiating conversations outside the 24-hour customer service window).
   *   **Webhooks**: Requires a webhook endpoint for Meta to push incoming messages, delivery statuses, and read receipts.
-  *   **Voice Calling**: Meta now supports voice calling via the API, which Chatwoot has integrated.
+  *   **Voice Calling**: Meta now supports voice calling via the API, which Chat platform has integrated.
 
   ### OHC Rust Implementation Strategy
   To build a native Rust equivalent, we need:
@@ -56,7 +56,7 @@ issue_description: |
   4.  **Client/Service Layer**: Create a Rust service that can send basic text messages via the Meta Graph API (`POST /<PHONE_NUMBER_ID>/messages`).
   5.  **Testing**: Write comprehensive unit tests for webhook signature validation and API payload parsing. Write integration tests simulating incoming webhooks and verifying the correct internal state changes (conversations/messages created).
 
-  This implementation must NOT use Chatwoot. It must be built natively in the OHC Rust codebase.
+  This implementation must NOT use Chat platform. It must be built natively in the OHC Rust codebase.
 
   ## Priority
   P0
