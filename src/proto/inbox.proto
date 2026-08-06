@@ -46,3 +46,44 @@ message FetchMessagesRequest {
 message FetchMessagesResponse {
     repeated OmniMessage messages = 1;
 }
+
+message ChatInbox {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    int64 created_at_unix = 4;
+    int64 updated_at_unix = 5;
+}
+
+message ChatContact {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string email = 4;
+    string phone = 5;
+    int64 created_at_unix = 6;
+    int64 updated_at_unix = 7;
+}
+
+message ChatConversation {
+    string id = 1;
+    string tenant_id = 2;
+    string inbox_id = 3;
+    string contact_id = 4;
+    string status = 5;
+    string channel = 6;
+    int64 created_at_unix = 7;
+    int64 updated_at_unix = 8;
+}
+
+message ChatMessage {
+    string id = 1;
+    string tenant_id = 2;
+    string conversation_id = 3;
+    string sender_type = 4;
+    string sender_id = 5;
+    string content = 6;
+    string status = 7;
+    int64 created_at_unix = 8;
+    int64 updated_at_unix = 9;
+}
