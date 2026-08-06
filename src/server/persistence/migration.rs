@@ -1,5 +1,5 @@
 use chrono::Utc;
-use sea_orm::sea_query::{Index, OnConflict};
+use sea_orm::sea_query::{Index};
 use sea_orm::{
     ActiveModelTrait, ConnectionTrait, DatabaseTransaction, EntityTrait, QueryOrder, Schema, Set,
     Statement, TransactionTrait,

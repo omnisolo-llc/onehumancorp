@@ -6,7 +6,7 @@ use super::capabilities::{DatabaseBackend, DatabaseCapabilities};
 
 #[derive(Clone)]
 pub struct AppDatabase {
-    connection: DatabaseConnection,
+    pub connection: DatabaseConnection,
     backend: DatabaseBackend,
 }
 
@@ -29,7 +29,7 @@ impl AppDatabase {
         })
     }
 
-    pub fn connection(&self) -> &DatabaseConnection {
+    pub fn _connection(&self) -> &DatabaseConnection {
         &self.connection
     }
 
@@ -43,14 +43,14 @@ impl AppDatabase {
 }
 
 #[derive(Clone)]
-pub struct DatabaseUrl(String);
+pub struct DatabaseUrl(pub String);
 
 impl DatabaseUrl {
     pub fn new(value: impl Into<String>) -> Self {
         Self(value.into())
     }
 
-    pub fn expose_for_connection(&self) -> &str {
+    pub fn _expose_for_connection(&self) -> &str {
         &self.0
     }
 }
