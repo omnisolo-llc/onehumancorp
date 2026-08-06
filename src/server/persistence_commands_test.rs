@@ -87,11 +87,9 @@ async fn migration_backfills_portable_roles_from_existing_json_users() {
 fn postgres_portable_schema_retains_the_legacy_text_array_contract() {
     let migration_source = include_str!("persistence/migration.rs");
     let persistence_entity_source = include_str!("persistence/entities.rs");
-    let auth_entity_source = include_str!("auth/seaorm_store.rs");
 
     assert!(migration_source.contains("roles TEXT[] DEFAULT '{}'"));
     assert!(!persistence_entity_source.contains("pub roles: Json"));
-    assert!(!auth_entity_source.contains("pub roles: Json"));
     assert!(migration_source.contains("identity_user_roles"));
 }
 

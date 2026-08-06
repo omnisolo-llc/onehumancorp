@@ -84,6 +84,7 @@ pub struct Product {
     pub variants: Option<Vec<ProductVariantRequest>>,
 }
 
+#[allow(dead_code)]
 fn bounded_product_image_url(metadata: Option<&serde_json::Value>) -> Option<String> {
     let image_url = metadata?.get("image_url")?.as_str()?.trim();
     let is_safe_path = image_url.starts_with('/')
