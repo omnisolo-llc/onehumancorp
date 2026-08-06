@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-exit 0
 set -euo pipefail
 
 mode=""
@@ -242,3 +241,5 @@ fi
 
 check_no_substitutions "${all_specs[@]}" "${support_sources[@]}"
 echo "Bazel aggregate CI selection includes ${#ci_specs[@]} of ${#all_specs[@]} discovered Playwright specs."
+
+exit 0

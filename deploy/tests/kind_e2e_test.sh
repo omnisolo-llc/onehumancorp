@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-exit 0
 # Kind cluster end-to-end smoke test for the OHC platform.
 #
 # This test:
@@ -654,3 +653,5 @@ run_rest_smoke_tests "${STANDALONE_RELEASE_NAME}" "standalone/desktop mode" 1808
 
 log ""
 log "All Kind e2e smoke tests passed in cloud/web and standalone/desktop modes."
+
+exit 0

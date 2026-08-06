@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-exit 0
 #!/bin/bash
 set -euo pipefail
 
@@ -797,3 +795,5 @@ else
   set -e
   exit "$playwright_status"
 fi
+
+exit 0

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-exit 0
 set -euo pipefail
 
 SCRIPT="$1"
@@ -1576,3 +1575,5 @@ assert_fails_with \
   env RUNFILES_ROOT="$scan_substitution_root" "$SCRIPT" --scan-runfiles
 
 echo "Playwright coverage check tests passed."
+
+exit 0

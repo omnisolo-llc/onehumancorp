@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-exit 0
 # Docker Compose smoke test for the OHC single-machine container stack.
 #
 # This test:
@@ -349,3 +348,5 @@ printf '%s' "${inbox_response}" | jq -e 'type == "array" and length > 0' >/dev/n
 printf '%s' "${supply_response}" | jq -e '.vendors | type == "array" and length > 0' >/dev/null
 
 log "Docker Compose E2E checks passed."
+
+exit 0
