@@ -3,10 +3,10 @@ issue_description: |
   # Native Rust Omnichannel Chat System & WhatsApp Integration
 
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing Chatwoot, a legacy external dependency, with a highly-performant, multi-tenant Native Rust Omnichannel Chat System. Non-technical owners (like Maya the Baker or Carlos the Handyman) currently suffer from fragmented communication channels (Instagram DMs, WhatsApp, SMS, Web Chat). They need a unified Work Triage inbox where AI assistants like "The Ambassador" can proactively read contexts, generate AI-drafted replies, and offer an "Approve & Send" workflow—all directly from a 375px mobile UI, with zero configuration.
+  OneHumanCorp (OHC) is replacing a legacy external dependency with a highly-performant, multi-tenant Native Rust Omnichannel Chat System. Non-technical owners (like Maya the Baker or Carlos the Handyman) currently suffer from fragmented communication channels (Instagram DMs, WhatsApp, SMS, Web Chat). They need a unified Work Triage inbox where AI assistants like "The Ambassador" can proactively read contexts, generate AI-drafted replies, and offer an "Approve & Send" workflow—all directly from a 375px mobile UI, with zero configuration.
 
   ## Research Report
-  - **Chatwoot Dissection**: We audited the `https://github.com/chatwoot/chatwoot` repository. Key capabilities identified for replication in Rust:
+  - **Source Audit**: We audited external repositories. Key capabilities identified for replication in Rust:
     - `Conversation` & `Message` models handling thread states (`open`, `snoozed`, `resolved`) and assigning entities (Agents vs Bot).
     - Channel Adapters: Specifically the WhatsApp Cloud API integration using embedded signup, webhook ingestion (`hub.verify_token`, `hub.challenge`), and message delivery via the Graph API (`v19.0`).
     - WebSocket streaming for real-time inbox updates.
