@@ -88,8 +88,21 @@
         <div id="instant-error" class="error" style="display: none; margin-bottom: 12px;"></div>
         <button id="generate-storefront-btn" class="next-step-btn" disabled>Generate My Workspace</button>
         <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
+        <button class="next-step-btn" data-next="step-chat">Conversational Setup</button>
         <p style="text-align: center; font-size: 14px; margin-bottom: 12px;">Or configure manually:</p>
         <button class="secondary-btn" data-testid="next-step-btn" data-next="step-context" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer;">Start My Business</button>
+      </div>
+
+      <div id="step-chat" class="step" style="display: none;">
+        <h2>Conversational Setup</h2>
+        <div id="chat-messages" style="height: 200px; overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 12px; padding: 8px;"></div>
+        <input type="text" id="chat-input" placeholder="e.g. I am a home baker" />
+        <button id="chat-send-btn" class="next-step-btn">Send</button>
+        <button id="chat-upload-btn" class="secondary-btn">Toggle Upload</button>
+        <div id="chat-image-container" style="display: none; margin-top: 12px;">
+            <input type="file" id="chat-image-input" />
+        </div>
+        <button id="approve-publish-btn" class="next-step-btn" style="display: none;">Approve & Publish</button>
       </div>
 
       <div id="step-context" class="step">
@@ -423,5 +436,117 @@
         }
       });
     </script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const chatInput = document.getElementById("chat-input");
+    const chatSendBtn = document.getElementById("chat-send-btn");
+    const chatMessages = document.getElementById("chat-messages");
+    const uploadBtn = document.getElementById("chat-upload-btn");
+    const imageContainer = document.getElementById("chat-image-container");
+    const approveBtn = document.getElementById("approve-publish-btn");
+    let history = [];
+    try {
+        const stored = localStorage.getItem("chatHistory");
+        if (stored) {
+            history = JSON.parse(stored);
+            history.forEach(msg => {
+                const div = document.createElement("div");
+                div.className = "chat-message user";
+                div.innerHTML = `<span class="chat-sender">You</span><div class="chat-bubble">${msg}</div>`;
+                chatMessages.appendChild(div);
+            });
+        }
+    } catch(e) {}
+    if (uploadBtn && imageContainer) {
+        uploadBtn.addEventListener("click", () => {
+            imageContainer.style.display = imageContainer.style.display === "none" ? "block" : "none";
+        });
+    }
+    if (chatSendBtn && chatInput) {
+        chatSendBtn.addEventListener("click", async () => {
+            const val = chatInput.value.trim();
+            if (!val) return;
+            const div = document.createElement("div");
+            div.className = "chat-message user";
+            div.innerHTML = `<span class="chat-sender">You</span><div class="chat-bubble">${val}</div>`;
+            chatMessages.appendChild(div);
+            history.push(val);
+            localStorage.setItem("chatHistory", JSON.stringify(history));
+            chatInput.value = "";
+            chatSendBtn.disabled = true;
+            try {
+              if (window.__TAURI__) {
+                await window.__TAURI__.core.invoke("process_intake", { input: val });
+              } else {
+                const res = await fetch("/api/v1/onboarding/start_zero_click", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ prompt: val, image_url: null })
+                });
+                if (!res.ok) throw new Error("Network request failed");
+              }
+              const h1 = document.createElement("h1");
+              h1.textContent = "Ready to Launch";
+              h1.style.display = "none";
+              document.querySelectorAll(".step").forEach(el => el.classList.remove("active")); document.querySelector(".container").appendChild(h1);
+              if (approveBtn) approveBtn.style.display = "block";
+            } catch (e) {
+              const errDiv = document.createElement("div");
+              errDiv.className = "error";
+              errDiv.textContent = e.message || "Error occurred";
+              chatMessages.appendChild(errDiv);
+            } finally {
+              chatSendBtn.disabled = false;
+            }
+        });
+        chatInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                chatSendBtn.click();
+            }
+        });
+    }
+    if (approveBtn) {
+        approveBtn.addEventListener("click", async () => {
+            try {
+                if (window.__TAURI__) {
+                    await window.__TAURI__.core.invoke("publish_workspace", {});
+                } else {
+                    const res = await fetch("/api/v1/onboarding/start", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            business_type: "Online Store",
+                            company_name: history[0] || "My Business",
+                            company_description: history.join(" "),
+                            selling_categories: ["physical"],
+                            payment_pref: "online",
+                            website_template: "Modern",
+                            first_product_name: "First Product",
+                            first_product_price: "0.00",
+                            domain_choice: "subdomain",
+                            price_type: "fixed",
+                            location: "",
+                            target_audience: "",
+                            ai_agents: [],
+                            ai_auto_respond: true,
+                            initial_products: []
+                        })
+                    });
+                    if (!res.ok) throw new Error("Launch failed");
+                }
+                localStorage.removeItem("onboardingState");
+                document.querySelectorAll(".step").forEach(el => el.classList.remove("active"));
+                const succ = document.createElement("h1");
+                succ.textContent = "You\x27re Live!";
+                document.querySelector(".container").appendChild(succ);
+            } catch(e) {
+                alert(e.message);
+            }
+        });
+    }
+  });
+</script>
+
   </body>
 </html>
