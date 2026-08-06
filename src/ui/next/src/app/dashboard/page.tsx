@@ -6,6 +6,7 @@ import { AIFeaturePaywallWidget } from "./AIFeaturePaywallWidget";
 
 
 import { CFOAgentCard } from "./CFOAgentCard";
+import { ViralUpgradePaywallWidget } from "../components/ViralUpgradePaywallWidget";
 
 
 import { useEffect, useMemo, useState } from "react";
@@ -389,6 +390,7 @@ export default function Dashboard() {
 
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />
+      <ViralUpgradePaywallWidget tenantId={tenantId()} />
       <AIFeaturePaywallWidget />
 
       <InteractiveWalkthrough

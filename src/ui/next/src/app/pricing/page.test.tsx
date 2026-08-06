@@ -20,6 +20,10 @@ vi.mock('../components/ViralTrialExtensionWidget', () => ({
   ViralTrialExtensionWidget: () => <div data-testid="viral-trial-extension-widget" />,
 }));
 
+vi.mock('../components/ViralUpgradePaywallWidget', () => ({
+  ViralUpgradePaywallWidget: () => <div data-testid="viral-upgrade-paywall-widget" />,
+}));
+
 describe('PricingPage', () => {
   const mockPush = vi.fn();
 
@@ -157,6 +161,13 @@ describe('PricingPage', () => {
       render(<PricingPage />);
     });
     expect(screen.getByTestId('viral-trial-extension-widget')).toBeDefined();
+  });
+
+  it('renders the ViralUpgradePaywallWidget when plan is Free', async () => {
+    await act(async () => {
+      render(<PricingPage />);
+    });
+    expect(screen.getByTestId('viral-upgrade-paywall-widget')).toBeDefined();
   });
 
   it('renders the FAQ section with Stripe Billing integration info', async () => {

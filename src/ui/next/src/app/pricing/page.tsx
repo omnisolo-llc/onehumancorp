@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 import { ViralTrialExtensionWidget } from '../components/ViralTrialExtensionWidget';
+import { ViralUpgradePaywallWidget } from '../components/ViralUpgradePaywallWidget';
 import { PricingCard } from './PricingCard';
 
 
@@ -111,6 +112,12 @@ export default function PricingPage() {
             </span>
           </label>
         </div>
+
+        {currentPlan === 'Free' && (
+          <div className="mb-8 w-full">
+            <ViralUpgradePaywallWidget tenantId={planDetails?.tenant_id || "default"} />
+          </div>
+        )}
 
         {/* My Plan Section */}
         <div className="mb-8 p-6 app-card ohc-growth-card glass-card backdrop-blur-2xl bg-white/40 border border-white/40 shadow-xl rounded-2xl w-full">
