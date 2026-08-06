@@ -37,6 +37,7 @@ export function allowedDevOrigins(environment = process.env) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: allowedDevOrigins(),
+  // outputFileTracingRoot removed to prevent Turbopack crash,
   typescript: {
     ignoreBuildErrors: true,
   },

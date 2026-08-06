@@ -7,6 +7,9 @@ rust_library(
     compile_data = [
         "//src/server/migrations",
         "//src/ui/next:auth_limits",
+        "//src/server/persistence:migration.rs",
+        "//src/server/persistence:commands.rs",
+        "//src/server:lib.rs",
     ],
     srcs = [
         "email.rs",
@@ -63,7 +66,7 @@ rust_test(
     name = "server_auth_unit_test",
     size = "small",
     crate = ":server_auth",
-    env = {
+    compile_data = ["//src/server/persistence:migration.rs", "//src/server/persistence:commands.rs", "//src/server:lib.rs"], env = {
         "RUST_TEST_THREADS": "1",
     },
     deps = [

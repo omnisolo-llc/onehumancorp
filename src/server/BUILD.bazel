@@ -1203,3 +1203,5 @@ sh_test(
     data = glob(["**/*.rs"]),
     args = ["src/server"],
 )
+
+exports_files(["lib.rs"])
