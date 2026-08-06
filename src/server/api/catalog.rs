@@ -697,6 +697,23 @@ pub fn router<S: Clone + Send + Sync + 'static>(
         .layer(Extension(hub))
 }
 
+
+#[allow(dead_code)]
+fn bounded_product_image_url(metadata: Option<&serde_json::Value>) -> Option<String> {
+    let image_url = metadata?.get("image_url")?.as_str()?.trim();
+    let is_safe_path = image_url.starts_with('/')
+        && !image_url.starts_with("//")
+        && image_url.len() <= 2_048
+        && !image_url
+            .split('/')
+            .any(|segment| matches!(segment, "." | ".."));
+    if is_safe_path || image_url.starts_with("https://") {
+        Some(image_url.to_string())
+    } else {
+        None
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
