@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, test } from "vitest";
 
@@ -10,10 +10,9 @@ const sensitivePages = [
 
 describe("memory page authority source contract", () => {
   test.each(sensitivePages)("%s does not source identity from browser storage", (file) => {
-    // Correct relative path regardless of where vitest is run
-    const resolvedPath = process.cwd().endsWith("src/ui/next")
-      ? resolve(process.cwd(), file)
-      : resolve(process.cwd(), "src/ui/next", file);
+    // Correct relative path regardless of where vitest is run (root, package, or under Bazel sandbox)
+    const directPath = resolve(process.cwd(), file);
+    const resolvedPath = existsSync(directPath) ? directPath : resolve(process.cwd(), "src/ui/next", file);
     const source = readFileSync(resolvedPath, "utf8");
     expect(source).not.toMatch(/localStorage\s*\.\s*getItem\s*\(\s*["'](?:auth_token|token|tenant_id|tenant|user_id)["']/);
     expect(source).not.toMatch(/["']Authorization["']\s*:/);
