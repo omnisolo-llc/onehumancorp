@@ -912,6 +912,7 @@ pub use ::server_utils as utils;
 pub mod orchestration;
 pub mod storage;
 pub mod sync;
+pub mod chat;
 pub mod interop;
 
 pub mod benchmarks;
@@ -932,7 +933,6 @@ pub mod services {
     pub mod growth;
     pub mod onboarding;
     pub mod sync;
-    pub mod chat;
 
     #[cfg(not(ohc_bazel))]
     pub mod intake;
@@ -6733,6 +6733,8 @@ async fn create_ui_bom_item_handler(
         .with_state(mesh_transport.clone());
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
+        .nest("/api/v1/chat", crate::api::chat::chat_routes(crate::chat::service::ChatService::new(db.pool.clone())))
+        .nest("/api/v1/chat-dev", crate::api::chat::dev_chat_routes(crate::chat::service::ChatService::new(db.pool.clone())))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
