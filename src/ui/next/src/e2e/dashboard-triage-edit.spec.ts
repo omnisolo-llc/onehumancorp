@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Dashboard Triage Action Feed Edit UI', () => {
   test.use({ viewport: { width: 375, height: 812 } });
@@ -26,7 +26,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
       }
     ];
 
-    for (const data_commented of seedData) {
+    for (const data of seedData) {
       await page.request.post(`/api/triage/create?tenant_id=${encodeURIComponent(tenantId)}`, {
         data_commented
       });
@@ -40,7 +40,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
         await feedBtn.click();
     }
 
-    const itemCard = page.locator('div[data_commented-testid="instagram-dm-card"]').first();
+    const itemCard = page.locator('div[data-testid="instagram-dm-card"]').first();
     await expect(itemCard).toBeVisible({ timeout: 15000 });
 
     // Review draft/Edit if available
@@ -54,17 +54,17 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
         }
     }
 
-    const textarea = page.locator('textarea[data_commented-testid="edit-draft-textarea"]').first();
+    const textarea = page.locator('textarea[data-testid="edit-draft-textarea"]').first();
     if (await textarea.isVisible()) {
         await textarea.fill('Edited draft payload from dashboard feed');
-        const saveButton = page.locator('button[data_commented-testid="save-edit-approve-btn"]').first();
+        const saveButton = page.locator('button[data-testid="save-edit-approve-btn"]').first();
         await expect(saveButton).toBeVisible();
         await saveButton.click();
 
         await expect(itemCard).not.toBeVisible({ timeout: 5000 });
     } else {
         // Just approve if textarea is missing in this view
-        const approveButton = page.locator('button[data_commented-testid="approve-instagram-dm"]').first();
+        const approveButton = page.locator('button[data-testid="approve-instagram-dm"]').first();
         if (await approveButton.isVisible()) {
             await approveButton.click();
             await expect(itemCard).not.toBeVisible({ timeout: 5000 });
