@@ -3,13 +3,13 @@ issue_description: |
   # Mission Queue Protocol: Native Rust Omnichannel Chat System
 
   ## Problem Statement
-  Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and web forms. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" (e.g., Shopify Inbox, Wix Inbox, or legacy Chatwoot) simply aggregate messages without context and require manual typing. The current implementation relies on a retired third-party service (Chatwoot). OHC needs a high-performance, native Rust omnichannel chat system that supports unified multi-channel triage, strict multi-tenant isolation, and proactive AI drafting ("The Ambassador" agent).
+  Small business owners (like Carlos the handyman or Maya the baker) receive customer inquiries across multiple unlinked channels: Instagram DMs, WhatsApp, SMS, and web forms. Managing these manually leads to missed messages, slow response times, and lost sales. Traditional platform "unified inboxes" (e.g., Shopify Inbox, Wix Inbox, or legacy system) simply aggregate messages without context and require manual typing. The current implementation relies on a retired third-party service. OHC needs a high-performance, native Rust omnichannel chat system that supports unified multi-channel triage, strict multi-tenant isolation, and proactive AI drafting ("The Ambassador" agent).
 
   ## Research Report
-  - **Competitor Audit (Chatwoot, Shopify Inbox, Zendesk):**
-    - Legacy Chatwoot provided robust data models (`Conversation`, `Message`, `Contact`, `Inbox`, `Channel`) and omnichannel webhook ingestion. However, it's an external dependency that doesn't fit OHC's Zero-Trust, native Rust microservice architecture.
+  - **Competitor Audit (Legacy, Shopify Inbox, Zendesk):**
+    - Legacy systems provided robust data models (`Conversation`, `Message`, `Contact`, `Inbox`, `Channel`) and omnichannel webhook ingestion. However, they are external dependencies that don't fit OHC's Zero-Trust, native Rust microservice architecture.
     - Shopify Inbox and Wix aggregate messages but lack proactive, autonomous AI agent capabilities to negotiate or draft personalized responses natively.
-  - **OHC Architecture Gap:** OHC requires a replacement for Chatwoot built natively in Rust (`onehumancorp/mono`), incorporating the best of Chatwoot's omnichannel data modeling while enforcing our strict `tenant_id` Row Level Security (RLS) in PostgreSQL.
+  - **OHC Architecture Gap:** OHC requires a native replacement built in Rust (`onehumancorp/mono`), incorporating the best of omnichannel data modeling while enforcing our strict `tenant_id` Row Level Security (RLS) in PostgreSQL.
 
   ## Design Doc
 
@@ -43,7 +43,7 @@ issue_description: |
   ```
 
   ### Data Model & Invariants
-  The native Rust implementation must replicate and optimize the core Chatwoot models, ensuring every table has a `tenant_id`:
+  The native Rust implementation must replicate and optimize the core models, ensuring every table has a `tenant_id`:
   - `Contact`: Unifies customer identities across channels (e.g., matching a phone number to an email).
   - `Conversation`: Links a `Contact` to a specific channel/inbox.
   - `Message`: Immutable records of communication, supporting rich media attachments.
@@ -69,7 +69,7 @@ issue_description: |
     - Rust HTTP/gRPC endpoints for message ingestion and retrieval.
     - E2E Playwright test simulating the webhook, verifying the UI state, and approving the draft.
     - 100% test coverage for the new Rust module.
-    - Complete removal/deprecation of any remaining external Chatwoot dependencies.
+    - Complete removal/deprecation of any remaining external legacy dependencies.
 
 issue_priority: P0
 issue_category: research
