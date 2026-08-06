@@ -1271,41 +1271,62 @@ describe("OnboardingWizard", () => {
 
   it("renders error banner with premium macOS aesthetic on API failure", async () => {
     const user = userEvent.setup();
+    const originalConsoleError = console.error;
+    console.error = vi.fn(); // Suppress expected error log
 
-    act(() => {
-      useOnboardingStore.setState({
-        step: -2,
-        chatStep: 0,
-        businessName: "",
-        error: null,
-      });
-    });
-
-    // Mock API
-    global.fetch = vi.fn().mockImplementation((url) => {
-      if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          json: () => Promise.resolve({ error: "Intake Error" }),
+    try {
+      act(() => {
+        useOnboardingStore.setState({
+          step: -2,
+          chatStep: 0,
+          businessName: "",
+          bio: "",
+          error: null,
         });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({}),
       });
-    });
 
-    await renderOnboardingWizard();
+      // Mock API
+      global.fetch = vi.fn().mockImplementation((url) => {
+        if (typeof url === "string" && url.includes("/api/v1/onboarding/start_zero_click")) {
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+            clone: function() { return this; },
+            json: () => Promise.resolve({ error: "Intake Error" }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}),
+        });
+      });
 
-    // Intro screen
-    const startBtn = screen.getAllByRole("button", { name: "Start My Business" })[0];
-    await user.click(startBtn);
+      await renderOnboardingWizard();
 
-    // Wait for the skip button on step 1
-    const skipBtns = await screen.findAllByRole("button", {
-      name: /Skip setup/i,
-    });
-    await user.click(skipBtns[0]);
+      // Intro screen - click Instant Build
+      const instantBuildBtn = screen.getByRole("button", { name: "Instant Build" });
+      await user.click(instantBuildBtn);
+
+      // Type a bio
+      const bioInput = await screen.findByTestId("instant-bio");
+      await user.type(bioInput, "I consult startups in SF.");
+
+      // Click Generate Storefront
+      const generateBtn = screen.getByRole("button", { name: /Generate Storefront/i });
+      await user.click(generateBtn);
+
+      // Wait for error banner and assert its properties
+      await waitFor(() => {
+        const errorBanner = screen.getByText("Intake Error");
+        expect(errorBanner).toBeInTheDocument();
+
+        // The parent element (the banner) should have the required classes
+        const bannerContainer = errorBanner.parentElement;
+        expect(bannerContainer).toHaveClass("glass-control");
+        expect(bannerContainer).toHaveClass("text-[#FF3B30]");
+      });
+    } finally {
+      console.error = originalConsoleError;
+    }
   });
 });
