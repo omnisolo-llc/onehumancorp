@@ -9,8 +9,6 @@ test.describe('Nora Proposal Intake via Real Payload', () => {
     await page.getByRole('button', { name: 'Log In' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id') || 'e2e-tenant');
-
     await page.goto('/projects');
     await page.locator('button:has-text("New Project")').click();
     await page.locator('input[name="title"]').fill('Test Project');
