@@ -283,9 +283,14 @@ describe('HelpChat normalizeAgentReply and URL safety', () => {
     await act(async () => {
       await user.type(screen.getByPlaceholderText('Ask anything...'), 'Hello');
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
 
-    expect(scrollIntoViewMock).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+    });
+
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalled();
+    });
   });
 });
 
