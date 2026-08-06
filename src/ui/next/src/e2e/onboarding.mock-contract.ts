@@ -40,6 +40,9 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByText("Go to Dashboard")).toBeVisible();
+    await expect(page.getByText('Preview Storefront')).toBeVisible();
+    await expect(page.getByText('Open Assistant')).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // // expect(storedTenantId).not.toBeNull();
   });
@@ -74,6 +77,9 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible();
+    await expect(page.getByText("Go to Dashboard")).toBeVisible();
+    await expect(page.getByText('Preview Storefront')).toBeVisible();
+    await expect(page.getByText('Open Assistant')).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // expect(storedTenantId).not.toBeNull();
   });
@@ -141,6 +147,9 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Approve & Publish' }).click();
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Go to Dashboard")).toBeVisible();
+    await expect(page.getByText('Preview Storefront')).toBeVisible();
+    await expect(page.getByText('Open Assistant')).toBeVisible();
     const storedTenantId = await page.evaluate(() => window.localStorage.getItem('tenant_id'));
     // expect(storedTenantId).not.toBeNull();
   });
@@ -294,5 +303,8 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // The current UI skips directly to the "You're Live!" success screen.
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Go to Dashboard")).toBeVisible();
+    await expect(page.getByText('Preview Storefront')).toBeVisible();
+    await expect(page.getByText('Open Assistant')).toBeVisible();
   });
 });

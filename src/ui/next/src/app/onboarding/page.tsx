@@ -2160,6 +2160,12 @@ export default function OnboardingWizard() {
                 </div>
 
                 <a
+                  href="/dashboard"
+                  className="flex w-full items-center justify-center glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                >
+                  <IconLabel icon="dashboard">Go to Dashboard</IconLabel>
+                </a>
+                <a
                   href="/assistant"
                   className="flex w-full items-center justify-center glass-control rounded-[8px] text-[#1D1D1F] dark:text-[#F5F5F7] p-4 font-bold shadow-md hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
