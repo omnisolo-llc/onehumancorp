@@ -1,7 +1,7 @@
 use axum::{
     extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Extension},
     response::IntoResponse,
-    routing::{post, get},
+    routing::{get},
     Json, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
