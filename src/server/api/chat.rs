@@ -1,5 +1,109 @@
-use axum::Json;
+use axum::{
+    extract::{Path, State},
+    routing::{get, post},
+    Json, Router,
+};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::sync::Arc;
+use sqlx::PgPool;
+use crate::services::chat::service::ChatService;
+use crate::services::chat::models::{ChatInbox, ChatConversation, ChatMessage};
+use uuid::Uuid;
+
+#[derive(Clone)]
+pub struct ChatAppState {
+    pub chat_service: Arc<ChatService>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateConversationRequest {
+    pub tenant_id: Uuid,
+    pub inbox_id: Uuid,
+    pub contact_id: Uuid,
+    pub assignee_id: Option<Uuid>,
+}
+
+#[derive(Deserialize)]
+pub struct SendMessageRequest {
+    pub tenant_id: Uuid,
+    pub conversation_id: Uuid,
+    pub sender_type: String,
+    pub sender_id: Option<Uuid>,
+    pub content: String,
+}
+
+pub fn router(pool: PgPool) -> Router {
+    let state = ChatAppState {
+        chat_service: Arc::new(ChatService::new(pool)),
+    };
+
+    Router::new()
+        .route("/api/v1/chat/inboxes/{inbox_id}/conversations", post(create_conversation))
+        .route("/api/v1/chat/conversations/{conversation_id}/messages", post(send_message))
+        .route("/api/v1/chat/inboxes/{tenant_id}/{inbox_id}/conversations", get(list_conversations)) // Using tenant_id for RLS/security if needed
+        .with_state(state)
+}
+
+async fn create_conversation(
+    State(state): State<ChatAppState>,
+    Path(inbox_id): Path<Uuid>,
+    Json(payload): Json<CreateConversationRequest>,
+) -> Result<Json<ChatConversation>, axum::http::StatusCode> {
+    if inbox_id != payload.inbox_id {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+    match state.chat_service.start_conversation(
+        payload.tenant_id,
+        payload.inbox_id,
+        payload.contact_id,
+        payload.assignee_id,
+    ).await {
+        Ok(conversation) => Ok(Json(conversation)),
+        Err(e) => {
+            tracing::error!("Failed to create conversation: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn send_message(
+    State(state): State<ChatAppState>,
+    Path(conversation_id): Path<Uuid>,
+    Json(payload): Json<SendMessageRequest>,
+) -> Result<Json<ChatMessage>, axum::http::StatusCode> {
+    if conversation_id != payload.conversation_id {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+    match state.chat_service.send_message(
+        payload.tenant_id,
+        payload.conversation_id,
+        payload.sender_type,
+        payload.sender_id,
+        payload.content,
+    ).await {
+        Ok(message) => Ok(Json(message)),
+        Err(e) => {
+            tracing::error!("Failed to send message: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn list_conversations(
+    State(state): State<ChatAppState>,
+    Path((tenant_id, inbox_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<Vec<ChatConversation>>, axum::http::StatusCode> {
+    // I need to implement this in ChatService.
+    match state.chat_service.list_conversations(tenant_id, inbox_id).await {
+        Ok(conversations) => Ok(Json(conversations)),
+        Err(e) => {
+            tracing::error!("Failed to list conversations: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 
 #[derive(serde::Deserialize)]
 pub struct ChatRequest {

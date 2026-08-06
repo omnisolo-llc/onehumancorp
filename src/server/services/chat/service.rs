@@ -6,6 +6,7 @@ pub struct ChatService {
     pool: PgPool,
 }
 
+
 impl ChatService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
@@ -123,4 +124,36 @@ impl ChatService {
         .fetch_one(&self.pool)
         .await
     }
+
+
+    pub async fn list_conversations(
+        &self,
+        tenant_id: Uuid,
+        inbox_id: Uuid,
+    ) -> Result<Vec<ChatConversation>, sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+
+        let conversations = sqlx::query_as::<_, ChatConversation>(
+            r#"
+            SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at
+            FROM chat_conversations
+            WHERE tenant_id = $1 AND inbox_id = $2
+            ORDER BY updated_at DESC
+            "#
+        )
+        .bind(tenant_id)
+        .bind(inbox_id)
+        .fetch_all(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(conversations)
+    }
+
+
 }

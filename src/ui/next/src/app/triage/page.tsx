@@ -1,11 +1,9 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { SyncManager } from "../../lib/sync/SyncManager";
 import { getActions } from "../utils/offlineQueue";
-
 
 type TriageItem = {
   id: string;
@@ -43,175 +41,159 @@ const getSourceIcon = (source: string) => {
   const s = source.toLowerCase();
   if (s.includes("instagram")) return "📸";
   if (s.includes("whatsapp")) return "💬";
-  if (s.includes("email")) return "📧";
-  if (s.includes("booking") || s.includes("calendar")) return "📅";
-  if (s.includes("payment") || s.includes("stripe")) return "💳";
-  if (s.includes("alert") || s.includes("inventory")) return "⚠️";
-  return "✉️";
+  if (s.includes("sms")) return "📱";
+  if (s.includes("email")) return "✉️";
+  if (s.includes("web") || s.includes("chat")) return "🌐";
+  return "📥";
 };
 
 export default function TriagePage() {
   const [items, setItems] = useState<TriageItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [actionStatus, setActionStatus] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [isOffline, setIsOffline] = useState(false);
-  const [offlineActionsCount, setOfflineActionsCount] = useState(0);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
+  const currentTenantId = tenantId();
 
   useEffect(() => {
-    loadItems();
+    fetchTriageItems();
 
-    const updateOfflineCount = async () => {
-      try {
-        const actions = await getActions();
-        setOfflineActionsCount(actions.length);
-      } catch (err) {
-        console.warn("Failed to fetch offline actions count:", err);
-      }
-    };
-    updateOfflineCount();
+    // Set up a polling mechanism for realtime updates,
+    // simulating WebSockets/Server-Sent Events for now
+    const pollInterval = setInterval(() => {
+        fetchTriageItems(false);
+    }, 5000);
 
-    setIsOffline(!navigator.onLine);
-
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    const handleQueueUpdated = () => updateOfflineCount();
-    window.addEventListener('ohc_queue_updated', handleQueueUpdated);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener('ohc_queue_updated', handleQueueUpdated);
-    };
+    return () => clearInterval(pollInterval);
   }, []);
 
-
-  async function loadItems() {
-    setLoading(true);
-    setError("");
+  const fetchTriageItems = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
-      const res = await fetch(
-        `/api/v1/triage/pending?tenant_id=${encodeURIComponent(tenantId())}`,
-      );
-      if (!res.ok)
-        throw new Error("Failed to load triage items from the database");
-      const data = await res.json();
-      const rows = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.items)
-          ? data.items
-          : [];
-      setItems(rows);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load triage items");
-    } finally {
-      setLoading(false);
-    }
-  }
+      // Look for triage items using unified triage API
+      const res = await fetch(`/api/v1/inbox/${currentTenantId}/actions`);
+      if (res.ok) {
+        const data = await res.json();
+        // Transform the UnifiedTriageAction to TriageItem format
+        const transformedItems = (data || []).map((action: any) => ({
+           id: action.id,
+           tenant_id: action.tenant_id,
+           customer_id: `Thread ${(action.thread_id || '').substring(0, 8)}`,
+           source: 'Unified Inbox',
+           priority: 'Action Needed',
+           context: 'New message received in thread.',
+           action_type: action.action_type,
+           action_payload: action.action_payload,
+           status: action.status,
+           created_at: action.created_at || new Date().toISOString(),
+        }));
 
-  const activeCount = items.length;
-  const urgentCount = items.filter((item) =>
-    ["urgent", "high"].includes((item.priority || "").toLowerCase()),
-  ).length;
+        // Let's mix in offline queue tasks for demo purposes if nothing from backend
+        let localActions = await getActions();
+        const localTriage = localActions
+            .filter((a: any) => a.action === 'CREATE_TRIAGE_TASK')
+            .map((a: any) => ({
+                id: a.id || `local-${Date.now()}`,
+                tenant_id: currentTenantId,
+                customer_id: 'Offline System',
+                source: 'Local Operation',
+                priority: 'High',
+                context: a.payload.reason || 'Offline action needs review',
+                created_at: new Date(a.timestamp).toISOString()
+            }));
 
-  async function handleDecision(id: string, approved: boolean, edited_payload?: string) {
-    if (isOffline) {
-      await SyncManager.getInstance().enqueue({
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        type: 'triage_action',
-        payload: { triage_item_id: id, approved, edited_payload },
-        timestamp: Date.now()
-      });
-      const newItems = items.filter((i) => i.id !== id);
-      setItems(newItems);
-      setActionStatus(approved ? "Approved offline." : "Dismissed offline.");
-      setTimeout(() => setActionStatus(""), 3000);
-      return;
-    }
-
-    try {
-      setProcessingId(id);
-      setActionStatus(approved ? "Approving..." : "Dismissing...");
-      const res = await fetch(
-        `/api/v1/triage/action?tenant_id=${encodeURIComponent(tenantId())}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ triage_item_id: id, approved, edited_payload }),
-        },
-      );
-      if (!res.ok) throw new Error("Failed to update action");
-
-      setActionStatus(approved ? "Approved!" : "Dismissed.");
-
-      // Optimistic UI update
-      const newItems = items.filter((i) => i.id !== id);
-      setItems(newItems);
-
-      setTimeout(() => setActionStatus(""), 3000);
+        // Use backend first, fallback to offline, then fallback to empty
+        if (transformedItems.length > 0) {
+            setItems([...transformedItems, ...localTriage]);
+        } else {
+            // Check old API for fallback
+            const fallbackRes = await fetch(`/api/v1/dashboard/briefing?tenant_id=${currentTenantId}`);
+            if (fallbackRes.ok) {
+               const fallbackData = await fallbackRes.json();
+               if (fallbackData.triage) {
+                   setItems([...fallbackData.triage, ...localTriage]);
+               } else {
+                   setItems(localTriage);
+               }
+            } else {
+               setItems(localTriage);
+            }
+        }
+      } else {
+        // Fallback for missing new API
+        console.warn("Unified inbox action API missing, falling back to mock offline");
+        const localActions = await getActions();
+        const localTriage = localActions
+            .filter((a: any) => a.action === 'CREATE_TRIAGE_TASK')
+            .map((a: any) => ({
+                id: a.id || `local-${Date.now()}`,
+                tenant_id: currentTenantId,
+                customer_id: 'Offline System',
+                source: 'Local Operation',
+                priority: 'High',
+                context: a.payload.reason || 'Offline action needs review',
+                created_at: new Date(a.timestamp).toISOString()
+            }));
+        setItems(localTriage);
+      }
     } catch (e) {
-      console.error(e);
-      setActionStatus("Error updating action.");
+      console.error("Failed to fetch triage items", e);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
+  const handleDecision = async (id: string, approved: boolean, updatedPayload?: string) => {
+    setProcessingId(id);
+    try {
+      const resolution = approved ? (updatedPayload ? 'edited' : 'approved') : 'rejected';
+      const res = await fetch(`/api/v1/inbox/${currentTenantId}/actions/${id}/resolve`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenant_id: currentTenantId,
+          resolution,
+          updated_payload: updatedPayload,
+        }),
+      });
+
+      if (res.ok) {
+        setItems((prev) => prev.filter((i) => i.id !== id));
+        setSelectedItemId(null);
+        setEditingId(null);
+      }
+    } catch (e) {
+      console.error("Failed to process triage item", e);
     } finally {
       setProcessingId(null);
-      setEditingId(null);
     }
-  }
+  };
 
   return (
     <AppShell
       title="Work Triage"
-      subtitle="AI-prioritized inbox and action center."
-      statusItems={[
-        {
-          label: "Active",
-          value: String(activeCount),
-          tone: activeCount > 0 ? "warn" : "good",
-        },
-        {
-          label: "Urgent",
-          value: String(urgentCount),
-          tone: urgentCount > 0 ? "bad" : "neutral",
-        },
-      ]}
+      subtitle="Unified Omnichannel Inbox"
     >
-      {isOffline && (
-        <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
-          <span>📡</span> You are offline. Actions will sync when online.
-        </div>
-      )}
-      {offlineActionsCount > 0 && (
-        <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
-          <span>🔄</span> Pending Sync ({offlineActionsCount})
-        </div>
-      )}
-      {actionStatus && (
-        <div id="action-status" className="mb-4 app-badge good" role="status">
-          {actionStatus}
-        </div>
-      )}
-
-      <div className="flex flex-col gap-4 w-full max-w-full pb-20">
-        {error && <div className="app-empty">{error}</div>}
+      <div className="w-full max-w-[600px] mx-auto px-4 py-6 pb-24">
         {loading ? (
-          <div className="p-6 space-y-4">
-            <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full"></div>
-            <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full"></div>
+          <div className="flex flex-col gap-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="ohc-card w-full h-[120px] bg-white/40 dark:bg-black/20 rounded-[24px] animate-pulse"
+              />
+            ))}
           </div>
-        ) : !error && items.length === 0 ? (
-          <div className="app-empty flex flex-col items-center justify-center py-16 px-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[24px] border border-white/40 dark:border-white/10" data-testid="triage-feed-empty">
-            <div className="text-5xl mb-6">✨</div>
-            <div className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
-              Inbox Zero Achieved
-            </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-500">
+            <div className="text-[64px] mb-6 opacity-80">🎉</div>
+            <h3 className="text-[20px] font-outfit font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 text-center">
+              Inbox Zero
+            </h3>
             <div className="text-[15px] text-gray-500 dark:text-gray-400 text-center max-w-[280px]">
               Your AI assistant has handled all outstanding items. Take a breath, you're all caught up!
             </div>

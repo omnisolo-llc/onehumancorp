@@ -448,3 +448,34 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
     }
 }
+
+// Trigger unified chat inbox event in NewMessageEvent format for Work Triage AI queue
+pub async fn trigger_unified_chat_triage(db: &crate::db::DB, tenant_id: &str, thread_id: &str, content: &str, sender_type: &str) {
+    if sender_type != "contact" && sender_type != "customer" { return; }
+
+    let job_id = uuid::Uuid::new_v4().to_string();
+    let payload_json = serde_json::json!({
+        "event_type": "NewMessageEvent",
+        "thread_id": thread_id,
+        "content": content,
+    });
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'unified_message_triage', $3, 'PENDING')")
+                .bind(&job_id)
+                .bind(tenant_id)
+                .bind(payload_json.to_string())
+                .execute(&db.pool)
+                .await;
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'unified_message_triage', ?, 'PENDING')")
+                .bind(&job_id)
+                .bind(tenant_id)
+                .bind(payload_json.to_string())
+                .execute(sqlite_pool)
+                .await;
+        }
+    }
+}
