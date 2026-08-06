@@ -64,7 +64,11 @@ impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
             output_matches.push("... (truncated to 50 results. Please use a more specific glob pattern or use grep/find.)".to_string());
         }
 
-        Ok(output_matches.join("\n"))
+        let output = output_matches.join("\n");
+        if output.len() > 1_048_576 { // 1 MiB limit
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Selected content exceeds 1 MiB. Please request a more specific search.".to_string()));
+        }
+        Ok(output)
     }
 }
 

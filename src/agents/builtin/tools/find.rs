@@ -56,7 +56,11 @@ impl PydanticToolExecutor<FindArgs> for FindExecutor {
             matches.push("... (truncated to 100 results to save context. Please use a more specific pattern or path to narrow the search.)".to_string());
         }
 
-        Ok(matches.join("\n"))
+        let output = matches.join("\n");
+        if output.len() > 1_048_576 { // 1 MiB limit
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Selected content exceeds 1 MiB. Please request a more specific search.".to_string()));
+        }
+        Ok(output)
     }
 }
 

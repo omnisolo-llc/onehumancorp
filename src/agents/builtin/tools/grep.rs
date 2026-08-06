@@ -58,7 +58,11 @@ impl PydanticToolExecutor<GrepArgs> for GrepExecutor {
             results.push("... (truncated to 100 results to save context. Please refine your regex pattern, specify a more restrictive include filter, or use glob/find to narrow the search.)".to_string());
         }
 
-        Ok(results.join("\n"))
+        let output = results.join("\n");
+        if output.len() > 1_048_576 { // 1 MiB limit
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Selected content exceeds 1 MiB. Please request a more specific search.".to_string()));
+        }
+        Ok(output)
     }
 }
 

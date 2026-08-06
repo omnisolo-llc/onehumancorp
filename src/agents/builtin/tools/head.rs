@@ -43,6 +43,7 @@ impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
         let mut reader = BufReader::new(file);
         let mut lines = Vec::new();
         let mut buffer = String::new();
+        let mut selected_bytes = 0;
 
         for _ in 0..lines_to_read {
             buffer.clear();
@@ -51,6 +52,12 @@ impl PydanticToolExecutor<HeadArgs> for HeadExecutor {
             if bytes_read == 0 {
                 break;
             }
+            if bytes_read > 1_048_576_usize.saturating_sub(selected_bytes) {
+                return Err(ToolError::LlmRecoverable(
+                    "JIT Retrieval Error: Selected content exceeds 1 MiB. Please request a smaller line range.".to_string(),
+                ));
+            }
+            selected_bytes += bytes_read;
             lines.push(buffer.trim_end_matches(&['\r', '\n'][..]).to_string());
         }
 
@@ -143,6 +150,31 @@ mod tests {
             assert!(msg.contains("Cannot read more than 1000 lines"), "msg was: {}", msg);
         } else {
             panic!("Expected LlmRecoverable error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_head_rejects_selected_content_over_one_mib() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("large.txt");
+        tokio::fs::write(&file_path, vec![b'a'; 1_048_577])
+            .await
+            .unwrap();
+
+        let tool = head_tool(Some(dir.path().to_path_buf()));
+        let args = serde_json::json!({"path": "large.txt", "lines": 10});
+
+        let result = tool.execute.execute(args).await;
+
+        assert!(
+            result.is_err(),
+            "head must fail when the requested line range exceeds 1 MiB"
+        );
+
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("JIT Retrieval Error: Selected content exceeds 1 MiB"));
+        } else {
+            panic!("Expected JIT Retrieval Error");
         }
     }
 }

@@ -80,6 +80,9 @@ impl PydanticToolExecutor<TailArgs> for TailExecutor {
                     if num_lines_found == lines_to_read {
                         let final_start = current_pos as u64 + i as u64 + 1;
                         file.seek(std::io::SeekFrom::Start(final_start)).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+                        if len.saturating_sub(final_start) > 1_048_576 { // 1 MiB limit
+                            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Selected content exceeds 1 MiB. Please request a smaller line range.".to_string()));
+                        }
                         let mut final_content = String::new();
                         file.read_to_string(&mut final_content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                         return Ok(final_content.trim_end().to_string());
@@ -90,6 +93,9 @@ impl PydanticToolExecutor<TailArgs> for TailExecutor {
 
         // If we reached here, we couldn't find enough newlines, so return the whole file
         file.seek(std::io::SeekFrom::Start(0)).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+        if len > 1_048_576 { // 1 MiB limit
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Selected content exceeds 1 MiB. Please request a smaller line range.".to_string()));
+        }
         let mut final_content = String::new();
         file.read_to_string(&mut final_content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         Ok(final_content.trim_end().to_string())
@@ -197,6 +203,31 @@ mod tests {
             assert!(msg.contains("Cannot read more than 1000 lines"), "msg was: {}", msg);
         } else {
             panic!("Expected LlmRecoverable error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tail_rejects_selected_content_over_one_mib() {
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("large.txt");
+        fs::write(&file_path, vec![b'a'; 1_048_577])
+            .await
+            .unwrap();
+
+        let tool = tail_tool(Some(dir.path().to_path_buf()));
+        let args = serde_json::json!({"path": "large.txt", "lines": 10});
+
+        let result = tool.execute.execute(args).await;
+
+        assert!(
+            result.is_err(),
+            "tail must fail when the requested line range exceeds 1 MiB"
+        );
+
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("JIT Retrieval Error: Selected content exceeds 1 MiB"));
+        } else {
+            panic!("Expected JIT Retrieval Error");
         }
     }
 }
