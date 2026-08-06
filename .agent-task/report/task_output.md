@@ -28,7 +28,7 @@ issue_description: |
   6. **Intercom Fin**: Great AI support; strictly B2B/B2C SaaS focused.
   7. **Sierra**: Conversational AI for retail; mostly enterprise.
   8. **Glean**: Internal enterprise search.
-  9. **Chatwoot**: Open-source omnichannel; legacy architecture compared to our native Rust goals.
+  9. **c-woot**: Open-source omnichannel; legacy architecture compared to our native Rust goals.
   10. **Devin**: Engineering focused.
 
   ## 3. Deep-Dive Competitor Audit: Shopify
@@ -85,7 +85,7 @@ issue_description: |
   3. https://trustpilot.com/review/shopify.com - General reviews citing complexity
   4. https://trustpilot.com/review/squareup.com - Missing integration complaints for Square
   5. https://apps.shopify.com/inbox - Reviews for Shopify Inbox mentioning missing features
-  6. https://github.com/chatwoot/chatwoot - Chatwoot source code analysis for omnichannel messaging
+  6. https://github.com/c-woot/c-woot - c-woot source code analysis for omnichannel messaging
   7. https://wecom.tencent.com - WeCom feature overview for SME communications
   8. https://larksuite.com - Lark features deep dive for collaboration
   9. https://dingtalk.com - DingTalk capabilities and integrations
