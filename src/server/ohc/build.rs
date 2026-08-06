@@ -22,6 +22,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../src/proto/inventory.proto",
     ];
 
+    if std::env::var("PROTOC").is_err() {
+        if let Ok(path) = protoc_bin_vendored::protoc_bin_path() {
+            unsafe { std::env::set_var("PROTOC", path); }
+        }
+    }
+
     tonic_build::configure()
         .build_client(true)
         .build_server(true)

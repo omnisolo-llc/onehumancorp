@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package chat_engine;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+message Contact {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string email = 4;
+  string phone = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message Channel {
+  string id = 1;
+  string tenant_id = 2;
+  string type = 3; // e.g. "INSTAGRAM", "WHATSAPP", "EMAIL", "WEB_WIDGET"
+  string name = 4;
+  string provider_config = 5; // JSON string for credentials
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message Conversation {
+  string id = 1;
+  string tenant_id = 2;
+  string channel_id = 3;
+  string contact_id = 4;
+  string status = 5; // e.g. "OPEN", "CLOSED", "PENDING"
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message Message {
+  string id = 1;
+  string tenant_id = 2;
+  string conversation_id = 3;
+  string sender_type = 4; // e.g. "CONTACT", "OPERATOR", "AI_AGENT"
+  string sender_id = 5;
+  string content = 6;
+  string attachments = 7; // JSON string
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message GetConversationsResponse {
+    repeated Conversation conversations = 1;
+}
+
+service ChatEngine {
+    rpc GetConversations(google.protobuf.Empty) returns (GetConversationsResponse);
+}

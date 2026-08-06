@@ -13,6 +13,7 @@ serde = { workspace = true }
 tonic = { workspace = true }
 
 [build-dependencies]
+protoc-bin-vendored = "3.0.0"
 tonic-build = "0.12"
 
 [lints.rust]
