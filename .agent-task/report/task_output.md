@@ -1,13 +1,13 @@
-issue_title: "Implement Custom Rust Omnichannel Chat System to Replace Chatwoot"
+issue_title: "Implement Custom Rust Omnichannel Chat System to Replace ChatPlatform"
 issue_description: |
   **Problem Statement**:
-  OHC currently relies on external Chatwoot services for its omnichannel chat capabilities, or has incomplete native implementations. The `AGENTS.md` and project requirements explicitly state that "Chatwoot as an external third-party service, dependency, or integration is 100% RETIRED." We need a native Rust implementation of a high-performance, multi-tenant omnichannel customer support & chat engine built directly inside `onehumancorp/mono`.
+  OHC currently relies on external ChatPlatform services for its omnichannel chat capabilities, or has incomplete native implementations. The `AGENTS.md` and project requirements explicitly state that "ChatPlatform as an external third-party service, dependency, or integration is 100% RETIRED." We need a native Rust implementation of a high-performance, multi-tenant omnichannel customer support & chat engine built directly inside `onehumancorp/mono`.
 
   **Research Report**:
-  - The Chatwoot source code repository reveals a complex architecture with models for Accounts, Users, Channels, Contacts, Conversations, and Messages.
-  - Chatwoot handles multi-tenancy, various channel types (API, Email, Facebook, Instagram, Line, SMS, Telegram, TikTok, Twilio, Twitter, Web Widget, WhatsApp).
-  - OHC currently has fragmented native implementations in `src/server/services/chat`, `src/server/services/inbox`, and `src/server/services/omnichannel_service.rs` that attempt to replicate some of this functionality but lack a unified, comprehensive architecture mirroring Chatwoot's capabilities.
-  - The goal is to design a unified Rust-based native chat engine that replaces these disparate attempts and fully deprecates any Chatwoot integrations.
+  - The ChatPlatform source code repository reveals a complex architecture with models for Accounts, Users, Channels, Contacts, Conversations, and Messages.
+  - ChatPlatform handles multi-tenancy, various channel types (API, Email, Facebook, Instagram, Line, SMS, Telegram, TikTok, Twilio, Twitter, Web Widget, WhatsApp).
+  - OHC currently has fragmented native implementations in `src/server/services/chat`, `src/server/services/inbox`, and `src/server/services/omnichannel_service.rs` that attempt to replicate some of this functionality but lack a unified, comprehensive architecture mirroring ChatPlatform's capabilities.
+  - The goal is to design a unified Rust-based native chat engine that replaces these disparate attempts and fully deprecates any ChatPlatform integrations.
 
   **Design Doc**:
   - **Architecture Diagram (Mermaid)**:
