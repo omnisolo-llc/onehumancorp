@@ -58,7 +58,7 @@ pub async fn ingest_event(
         .await
     {
         Ok(event_id) => Ok(Json(IngestEventResponse { event_id })),
-        Err(sqlx::Error::RowNotFound) => Err(StatusCode::NOT_FOUND),
+        Err(sqlx::Error::RowNotFound) => Err(StatusCode::UNAUTHORIZED),
         Err(e) => {
             tracing::error!("Failed to ingest event: {:?}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
@@ -176,6 +176,6 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(viewer.status(), StatusCode::NOT_FOUND);
+        assert_eq!(viewer.status(), StatusCode::UNAUTHORIZED);
     }
 }
