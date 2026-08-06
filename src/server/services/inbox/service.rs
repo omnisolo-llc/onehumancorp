@@ -42,6 +42,9 @@ pub struct InboxService {
 }
 
 impl InboxService {
+    pub fn get_pool(&self) -> &PgPool {
+        &self.pool
+    }
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

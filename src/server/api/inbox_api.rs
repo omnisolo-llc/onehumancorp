@@ -27,6 +27,7 @@ pub fn router(pool: PgPool) -> Router {
     Router::new()
         .route("/api/v1/inbox/{tenant_id}/actions", get(get_pending_actions))
         .route("/api/v1/inbox/{tenant_id}/actions/{action_id}/resolve", post(resolve_action))
+        .merge(crate::api::inbox::chat::router())
         .with_state(state)
 }
 
