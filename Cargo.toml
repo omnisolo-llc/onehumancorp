@@ -306,6 +306,8 @@ path = "src/server/integrations/jira"
 
 [dependencies.server_integrations_taxjar]
 path = "src/server/integrations/taxjar"
+[dependencies.server_integrations_chat]
+path = "src/server/integrations/chat"
 
 [workspace.dependencies]
 tonic = "0.12"
