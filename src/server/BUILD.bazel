@@ -635,20 +635,32 @@ rust_test(
     size = "small",
     srcs = [
         "persistence_commands_test.rs",
+        "db.rs",
         "//src/server/persistence:capabilities.rs",
         "//src/server/persistence:commands.rs",
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+        "//src/server/auth:seaorm_store.rs",
     ],
     edition = "2024",
     deps = [
         "//src/server/auth:server_auth",
+        "//src/server/common:server_common",
+        "//src/server/config:server_config",
+        "//src/server/telemetry:server_telemetry",
+        "//src/proto:common_prost",
         "@crates//:bcrypt",
         "@crates//:chrono",
+        "@crates//:futures",
+        "@crates//:hex",
+        "@crates//:rand",
         "@crates//:sea-orm",
         "@crates//:serde",
         "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tempfile",
+        "@crates//:temp-env",
         "@crates//:tokio",
         "@crates//:uuid",
     ],
@@ -1071,6 +1083,7 @@ rust_test(
 exports_files([
     "Cargo.toml",
     "Cargo.lock",
+    "lib.rs",
 ])
 
 rust_test(
