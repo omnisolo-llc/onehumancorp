@@ -176,6 +176,80 @@
         border: 1px solid var(--border);
       }
     }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(40px) saturate(220%);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .modal-content h3 {
+      margin-top: 0;
+      font-size: 24px;
+    }
+    .modal-content p {
+      color: #86868b;
+      margin-bottom: 30px;
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .btn-secondary {
+      background: #f5f5f7;
+      color: #1d1d1f;
+      border: 1px solid #d2d2d7;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #e5e5ea;
+    }
+    .btn-primary-small {
+      background: #0066FF;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary-small:hover {
+      background: #0055cc;
+    }
   </style>
 </head>
 <body>
@@ -195,6 +269,12 @@
       <input type="text" id="goal-reward" value="50% off for everyone!" />
     </div>
 
+
+    <div class="checkbox-group">
+      <input type="checkbox" id="remove-branding" />
+      <label for="remove-branding" style="margin-bottom: 0;">Remove "Powered by OHC" branding (Pro)</label>
+    </div>
+
     <div class="preview-box" id="preview-container">
       <p style="text-align:center; color: var(--text-secondary);">Loading preview...</p>
     </div>
@@ -211,12 +291,28 @@
     </div>
   </div>
 
+
   <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <!-- Soft Paywall Modal -->
+  <div class="modal-overlay" id="paywall-modal">
+    <div class="modal-content">
+      <h3>Upgrade to Pro</h3>
+      <p>Remove the "Powered by OHC" branding and make the widget 100% yours.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="closePaywallBtn">Cancel</button>
+        <a href="/pricing" class="btn-primary-small">Upgrade</a>
+      </div>
+    </div>
+  </div>
 
   <script>
     const targetInput = document.getElementById('goal-target');
     const rewardInput = document.getElementById('goal-reward');
     const previewContainer = document.getElementById('preview-container');
+    const removeBrandingCheckbox = document.getElementById('remove-branding');
+    const paywallModal = document.getElementById('paywall-modal');
+    const closePaywallBtn = document.getElementById('closePaywallBtn');
 
     function getHostUrl() {
         if (window.location.protocol === 'file:' || window.location.hostname === 'tauri.localhost') {
@@ -232,11 +328,34 @@
       const hostUrl = getHostUrl();
 
       const iframeUrl = `${hostUrl}/api/v1/growth/community-goal/embed?tenant=${tenantId}&target=${target}&reward=${reward}`;
-      previewContainer.innerHTML = `<iframe src="${iframeUrl}" style="width:100%; height:250px; border:none; border-radius:12px;" scrolling="no"></iframe>`;
+
+      let previewHtml = `<iframe src="${iframeUrl}" style="width:100%; height:250px; border:none; border-radius:12px;" scrolling="no"></iframe>`;
+
+      if (!removeBrandingCheckbox.checked) {
+        previewHtml += `
+          <div style="margin-top: 12px; font-size: 12px; text-align: center;">
+            <a href="https://ohc.network/invite/${tenantId}" style="color: var(--text-secondary); text-decoration: none; font-weight: 500;" id="preview-branding">⚡ Powered by OHC</a>
+          </div>
+        `;
+      }
+
+      previewContainer.innerHTML = previewHtml;
     }
 
     targetInput.addEventListener('input', updatePreview);
     rewardInput.addEventListener('input', updatePreview);
+
+    removeBrandingCheckbox.addEventListener('change', (e) => {
+      if (e.target.checked) {
+          e.target.checked = false; // Revert immediately
+          paywallModal.style.display = 'flex';
+      }
+      updatePreview();
+    });
+
+    closePaywallBtn.addEventListener('click', () => {
+        paywallModal.style.display = 'none';
+    });
 
     document.getElementById('generate-btn').addEventListener('click', async () => {
       const btn = document.getElementById('generate-btn');
@@ -251,8 +370,15 @@
 
         const iframeUrl = `${hostUrl}/api/v1/growth/community-goal/embed?tenant=${tenantId}&target=${target}&reward=${reward}`;
 
-        const snippet = `<!-- OHC Viral Community Goal Widget -->
+        let snippet = `<!-- OHC Viral Community Goal Widget -->
 <iframe src="${iframeUrl}" style="width:100%; max-width:400px; height:250px; border:none; border-radius:12px; display:block; margin:0 auto;" scrolling="no"></iframe>`;
+
+        if (!removeBrandingCheckbox.checked) {
+            snippet += `
+<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 12px;">
+  <a href="https://ohc.network/invite/${tenantId}" target="_blank" style="color: #86868b; text-decoration: none;">⚡ Powered by OHC</a>
+</div>`;
+        }
 
         document.getElementById('embed-code').textContent = snippet;
 

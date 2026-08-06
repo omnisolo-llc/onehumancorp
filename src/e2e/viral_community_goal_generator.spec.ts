@@ -35,6 +35,23 @@ test.describe('Viral Community Goal Generator', () => {
         await expect(iframe).toHaveAttribute('src', /1000/);
         await expect(iframe).toHaveAttribute('src', /Free%20cupcakes/);
 
+        // Verify "Powered by OHC" watermark is visible in the preview by default
+        const watermark = page.locator('#preview-branding', { hasText: '⚡ Powered by OHC' });
+        await expect(watermark).toBeVisible();
+
+        // Attempt to remove branding, which triggers soft paywall
+        const removeBrandingCheckbox = page.locator('input[id="remove-branding"]');
+        await removeBrandingCheckbox.check();
+
+        // Verify paywall modal appears
+        const paywallModal = page.locator('#paywall-modal');
+        await expect(paywallModal).toBeVisible();
+        await expect(paywallModal.locator('h3', { hasText: 'Upgrade to Pro' })).toBeVisible();
+
+        // Close modal
+        await page.locator('#closePaywallBtn').click();
+        await expect(paywallModal).not.toBeVisible();
+
         // Generate embed code
         const generateBtn = page.locator('button[id="generate-btn"]');
         await generateBtn.click();
@@ -47,5 +64,6 @@ test.describe('Viral Community Goal Generator', () => {
         expect(embedCode).toContain('1000');
         expect(embedCode).toContain('Free%20cupcakes');
         expect(embedCode).toContain('e2e-tenant');
+        expect(embedCode).toContain('⚡ Powered by OHC');
     });
 });
