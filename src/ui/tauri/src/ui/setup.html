@@ -105,6 +105,7 @@
           <option value="Home Baker">Home Baker</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
+        <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-context" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 12px;">Back</button>
       </div>
 
       <div id="step-name" class="step">
@@ -112,6 +113,7 @@
         <input type="text" data-testid="business-name" id="business-name" autocomplete="organization" class="glassmorphism glass-control" />
         <div id="name-error" class="error" style="display: none; margin-bottom: 12px;">Name is required</div>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
+        <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-categories" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 12px;">Back</button>
       </div>
 
       <div id="step-assistant" class="step">
@@ -121,38 +123,44 @@
           <option value="Friendly">Friendly</option>
         </select>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
+        <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-name" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 12px;">Back</button>
       </div>
 
       <div id="step-admin" class="step">
         <h2>Admin</h2>
-        <input type="text" data-testid="admin-name" placeholder="Admin Name" />
-        <input type="email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" />
-        <input type="password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" />
+        <input type="text" id="admin-name" data-testid="admin-name" placeholder="Admin Name" class="glassmorphism glass-control" />
+        <input type="email" id="admin-email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" class="glassmorphism glass-control" />
+        <input type="password" id="admin-password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" class="glassmorphism glass-control" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
+        <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-assistant" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 12px;">Back</button>
       </div>
 
       <div id="step-offer" class="step">
         <h2>Offer</h2>
-        <input type="text" data-testid="first-offer" placeholder="First Offer" />
+        <input type="text" id="first-offer" data-testid="first-offer" placeholder="First Offer" class="glassmorphism glass-control" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-location">Next</button>
+        <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-admin" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 12px;">Back</button>
       </div>
 
       <div id="step-location" class="step">
         <h2>Location</h2>
-        <input type="text" data-testid="location-input" placeholder="Location" />
+        <input type="text" id="location-input" data-testid="location-input" placeholder="Location" class="glassmorphism glass-control" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-target-audience">Next</button>
+        <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 12px;">Back</button>
       </div>
 
       <div id="step-target-audience" class="step">
-        <h2>Target Audience</h2>
-        <input type="text" data-testid="target-audience" placeholder="Target Audience" />
+        <h2>Who is your target audience?</h2>
+        <input type="text" id="target-audience" data-testid="target-audience" placeholder="Target Audience" class="glassmorphism glass-control" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-domain">Next</button>
+        <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-location" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 12px;">Back</button>
       </div>
 
       <div id="step-domain" class="step">
-        <h2>Domain</h2>
-        <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <h2>Where will your business live?</h2>
+        <input type="text" id="domain-name" data-testid="domain-name" placeholder="Domain Name" class="glassmorphism glass-control" />
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
+        <button class="secondary-btn prev-step-btn" data-testid="prev-step-btn" data-prev="step-target-audience" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: transparent; cursor: pointer; margin-top: 12px;">Back</button>
       </div>
 
       <div id="step-template" class="step">
@@ -325,6 +333,14 @@
         state.step = stepOrder.indexOf(stepId);
         saveState();
       }
+
+      document.querySelectorAll('.prev-step-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (e.target.dataset.prev) {
+            goToStep(e.target.dataset.prev);
+          }
+        });
+      });
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
