@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function HelpLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="help-layout">
+    <div className="help-layout bg-gradient-to-b from-[#F5F5F7] to-[#E8E8ED] dark:from-[#16161a] dark:to-[#0f0f13] min-h-screen">
       {children}
     </div>
   );
