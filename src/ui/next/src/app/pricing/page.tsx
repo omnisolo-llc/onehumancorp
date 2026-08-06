@@ -13,6 +13,18 @@ import { PricingCard } from './PricingCard';
 export default function PricingPage() {
   const router = useRouter();
 
+  const formatCurrency = (cents: number | undefined) => {
+      if (cents === undefined || cents === null) return "$0.00";
+      return '$' + (cents / 100).toFixed(2);
+  };
+
+  const formatStorage = (bytes: number) => {
+      const mb = bytes / (1024 * 1024);
+      if (mb < 1) return "< 1 MB";
+      if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
+      return parseFloat(mb.toFixed(1)) + " MB";
+  };
+
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
   const [planDetails, setPlanDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -135,16 +147,16 @@ export default function PricingPage() {
                 <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Storage Used</p>
                     <p className="text-xl font-bold text-gray-900">
-                        {planDetails?.storage_used_bytes ? (planDetails.storage_used_bytes / (1024 * 1024)).toFixed(1) : 0} MB
+                        {formatStorage(planDetails?.storage_used_bytes || 0)}
                         <span className="text-sm font-normal text-gray-500 ml-1">
-                            / {planDetails?.storage_limit_bytes ? (planDetails.storage_limit_bytes / (1024 * 1024)).toFixed(0) + ' MB' : '∞'}
+                            / {planDetails?.storage_limit_bytes ? formatStorage(planDetails.storage_limit_bytes) : '∞'}
                         </span>
                     </p>
                 </div>
                 <div className="p-4 bg-white/60 rounded-xl border border-gray-100">
                     <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Estimated Next Bill</p>
                     <p className="text-xl font-bold text-gray-900">
-                        ${((planDetails?.next_bill_estimated || 0) / 100).toFixed(2)}
+                        {formatCurrency(planDetails?.next_bill_estimated || 0)}
                     </p>
                 </div>
             </div>
