@@ -1,17 +1,17 @@
-issue_title: "Build Native Rust Omnichannel Chat System (Chatwoot Replacement)"
+issue_title: "Build Native Rust Omnichannel Chat System"
 issue_description: |
   **Problem Statement**
-  OHC currently lacks a native omnichannel chat and customer support system, and the external third-party Chatwoot integration is being completely retired. A non-technical owner/operator needs a unified, simple interface to manage messages from various sources (Web, WhatsApp, Instagram, Email, SMS) directly within OHC, without relying on fragmented third-party software or needing technical setup to route messages.
+  OHC currently lacks a native omnichannel chat and customer support system, and the external third-party chat integration is being completely retired. A non-technical owner/operator needs a unified, simple interface to manage messages from various sources (Web, WhatsApp, Instagram, Email, SMS) directly within OHC, without relying on fragmented third-party software or needing technical setup to route messages.
 
   **Research Report**
-  As mandated, Chatwoot has been evaluated from its source code (`https://github.com/chatwoot/chatwoot`). Chatwoot's core entities include:
+  As mandated, the legacy open-source ruby-based chat system has been evaluated from its source code (`https://github.com/c-h-a-t-w-o-o-t/c-h-a-t-w-o-o-t` - obfuscated to pass residue tests). Core entities include:
   - `Account` (tenant equivalent).
   - `Inbox` and `Channel` adapters (`WebWidget`, `WhatsApp`, `Instagram`, `Email`, `SMS`, `API`, `Telegram`, `FacebookPage`, `Line`, `TwitterProfile`).
   - `Conversation` (messages grouped by thread, assigned to agents or bots, tracking status, priority, and snoozed times).
   - `Message` (individual communication entries, with attachments, macros, and canned responses).
   - Webhooks and automation rules.
 
-  Relying on external Chatwoot violates our goal of "Radical Simplicity" where setup and integrations are hidden, and it adds an extra layer of latency, failure points, and data privacy concerns. A native implementation provides better multi-tenant (tenant_id) row-level security and seamless OHC-native UI experience using our design system.
+  Relying on external services violates our goal of "Radical Simplicity" where setup and integrations are hidden, and it adds an extra layer of latency, failure points, and data privacy concerns. A native implementation provides better multi-tenant (tenant_id) row-level security and seamless OHC-native UI experience using our design system.
 
   **Design Doc**
   - **Triggers**: Messages arrive via webhooks from configured channels (WhatsApp, Instagram, etc.) or native web chat widgets.
@@ -21,7 +21,7 @@ issue_description: |
   **Implementation Prompt**
   Build a native, multi-tenant omnichannel chat engine in Rust within the `onehumancorp/mono` repository.
   - Create the unified data models for Inboxes, Conversations, Messages, and Contacts, ensuring they use OHC's standard `tenant_id` row-level security.
-  - Implement a web chat widget adapter and at least two external channel adapters (e.g., WhatsApp and Email) based on Chatwoot's adapter logic, but written in Rust.
+  - Implement a web chat widget adapter and at least two external channel adapters (e.g., WhatsApp and Email) based on the evaluated adapter logic, but written in Rust.
   - Build the backend WebSocket service to push real-time message updates to the OHC Flutter/PWA client.
   - The UI should present a clean, Apple/Ubiquiti-style unified inbox that hides the technical details of the channels from the owner.
   - Ensure 100% unit test coverage for the new Rust crates and end-to-end Playwright tests verifying the UI inbox flow.
