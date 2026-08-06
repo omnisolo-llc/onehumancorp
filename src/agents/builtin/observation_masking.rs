@@ -34,18 +34,23 @@ impl JetBrainsObservationMasker {
             match val {
                 Value::Array(arr) => {
                     let len = arr.len();
-                    *val = Value::String(format!(
+                    arr.clear();
+                    arr.push(Value::String(format!(
                         "[Masked array: {} elements truncated due to depth limit]",
                         len
-                    ));
+                    )));
                     return true;
                 }
                 Value::Object(obj) => {
                     let len = obj.len();
-                    *val = Value::String(format!(
-                        "[Masked object: {} keys truncated due to depth limit]",
-                        len
-                    ));
+                    obj.clear();
+                    obj.insert(
+                        "_masked_depth".to_string(),
+                        Value::String(format!(
+                            "[Masked object: {} keys truncated due to depth limit]",
+                            len
+                        )),
+                    );
                     return true;
                 }
                 _ => {
