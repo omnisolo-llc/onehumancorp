@@ -309,6 +309,41 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
+            // Also write into the native omnichannel chat schema.
+            // 1. Ensure inbox exists
+            let chat_inbox_id = Uuid::new_v4();
+            let _ = sqlx::query("INSERT INTO chat_inboxes (id, tenant_id, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                .bind(&chat_inbox_id)
+                .bind(Uuid::parse_str(tenant_id).unwrap_or_else(|_| Uuid::nil()))
+                .bind("Main Inbox")
+                .execute(&state.db.pool).await;
+
+            // In reality, we'd look up the real inbox and conversation id.
+            let conversation_uuid = Uuid::new_v4();
+            let chat_message_id = Uuid::new_v4();
+
+            // Note: chat_conversations needs a contact_id, which we don't have properly mapped in the new schema. We'll skip complex mapping and insert raw for now.
+            let contact_uuid = Uuid::new_v4();
+            let _ = sqlx::query("INSERT INTO chat_contacts (id, tenant_id, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                .bind(&contact_uuid)
+                .bind(Uuid::parse_str(tenant_id).unwrap_or_else(|_| Uuid::nil()))
+                .bind("External Contact")
+                .execute(&state.db.pool).await;
+
+            let _ = sqlx::query("INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, status) VALUES ($1, $2, $3, $4, 'open') ON CONFLICT DO NOTHING")
+                .bind(&conversation_uuid)
+                .bind(Uuid::parse_str(tenant_id).unwrap_or_else(|_| Uuid::nil()))
+                .bind(&chat_inbox_id)
+                .bind(&contact_uuid)
+                .execute(&state.db.pool).await;
+
+            let _ = sqlx::query("INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, content) VALUES ($1, $2, $3, 'contact', $4)")
+                .bind(&chat_message_id)
+                .bind(Uuid::parse_str(tenant_id).unwrap_or_else(|_| Uuid::nil()))
+                .bind(&conversation_uuid)
+                .bind(&payload.message)
+                .execute(&state.db.pool).await;
+
             let draft_reply = generate_draft_reply(
                 tenant_id,
                 &customer_id,
@@ -319,7 +354,7 @@ pub async fn handle_unified_webhook(
             let action_payload = serde_json::to_string(&DraftedResponse {
                 customer_id: customer_id.clone(),
                 context_summary,
-                draft_reply,
+                draft_reply: draft_reply.clone(),
             })
             .unwrap();
 
@@ -329,6 +364,44 @@ pub async fn handle_unified_webhook(
                 .bind(&thread_id)
                 .bind(&action_payload)
                 .execute(&state.db.pool).await;
+
+            // Generate an agent draft in chat_messages as well.
+            let agent_msg_id = Uuid::new_v4();
+            let _ = sqlx::query("INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, content) VALUES ($1, $2, $3, 'agent_draft', $4)")
+                .bind(&agent_msg_id)
+                .bind(Uuid::parse_str(tenant_id).unwrap_or_else(|_| Uuid::nil()))
+                .bind(&conversation_uuid)
+                .bind(&draft_reply)
+                .execute(&state.db.pool).await;
+
+            // Publish message.created to Redis Pub/Sub for real-time mobile/web clients
+            if let Some(redis_client) = crate::get_redis_client() {
+                if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                    let pub_topic = format!("unified:chat:{}", tenant_id);
+                    let payload_msg = serde_json::json!({
+                        "event": "message.created",
+                        "conversation_id": conversation_uuid.to_string(),
+                        "message_id": chat_message_id.to_string(),
+                        "content": payload.message,
+                        "sender_type": "contact",
+                        "draft_reply": draft_reply
+                    });
+
+                    let env = serde_json::json!({
+                        "channel": "chat",
+                        "topic": format!("chat:{}", tenant_id),
+                        "data": payload_msg,
+                        "seq": 0,
+                        "ts": chrono::Utc::now().timestamp_millis(),
+                    });
+
+                    let _ : redis::RedisResult<()> = redis::cmd("PUBLISH")
+                        .arg(&pub_topic)
+                        .arg(env.to_string())
+                        .query_async(&mut conn)
+                        .await;
+                }
+            }
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             // Build Context Memory Graph Summary

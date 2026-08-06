@@ -179,7 +179,7 @@ async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_cha
     };
 
     for ch in &initial_channels {
-        for topic_suffix in &["inventory", "orders", "tenant_events", "agent_feed"] {
+        for topic_suffix in &["inventory", "orders", "tenant_events", "agent_feed", "chat"] {
             let topic = format!("{}:{}", topic_suffix, tenant_id);
             state.subscribed_topics.insert(format!("{}:{}", ch, topic));
         }
@@ -196,6 +196,7 @@ async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_cha
     let feed_prefix = channel_topic_prefix("feed", &tenant_id);
     let sync_prefix = channel_topic_prefix("sync", &tenant_id);
     let mesh_prefix = channel_topic_prefix("mesh", &tenant_id);
+    let chat_prefix = channel_topic_prefix("chat", &tenant_id);
 
     let send_task = tokio::spawn(async move {
         while let Some(msg) = ws_rx.recv().await {
@@ -215,6 +216,7 @@ async fn handle_unified_socket(socket: WebSocket, tenant_id: String, initial_cha
                         if topic_full.starts_with(&feed_prefix)
                             || topic_full.starts_with(&sync_prefix)
                             || topic_full.starts_with(&mesh_prefix)
+                            || topic_full.starts_with(&chat_prefix)
                         {
                             let envelope = build_envelope(&ch, &topic, data, seq);
                             let _ = ws_tx_clone.send(envelope).await;
