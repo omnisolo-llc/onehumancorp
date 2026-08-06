@@ -7770,14 +7770,7 @@ async fn create_ui_bom_item_handler(
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
-        .route("/api/v1/chat", axum::routing::post(|
-            axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
-            axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-            axum::Json(req): axum::Json<ChatRequest>
-        | async move {
-            let tenant_id = match claims.organization_id {
-                Some(organization_id) => organization_id,
-                None => return axum::response::IntoResponse::into_response((axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({ "error": "authentication required" })))),
+        .route("/api/v1/chat", axum::routing::post(crate::api::chat::help_chat_handler)))),
             };
 
             let message = req.message.trim();
