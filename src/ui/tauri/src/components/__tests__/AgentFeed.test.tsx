@@ -77,8 +77,8 @@ describe('AgentFeed', () => {
         render(<AgentFeed />);
 
         await waitFor(() => {
-            expect(screen.getByText('All caught up!')).toBeDefined();
-            expect(screen.getByText('No pending actions right now.')).toBeDefined();
+            expect(screen.getByText('All caught up')).toBeDefined();
+            expect(screen.getByText('No pending actions required at this time.')).toBeDefined();
         });
     });
 
