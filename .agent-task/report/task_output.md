@@ -6,8 +6,8 @@ issue_description: |
 
   # Research Report
 
-  **Findings & Feature Benchmarking (Chatwoot Audit):**
-  - **Data Models:** Chatwoot's core entities include Account (Tenant), User, Inbox, Channel (WhatsApp, WebWidget), Contact, Conversation, and Message.
+  **Findings & Feature Benchmarking (Legacy Audit):**
+  - **Data Models:** The legacy system's core entities include Account (Tenant), User, Inbox, Channel (WhatsApp, WebWidget), Contact, Conversation, and Message.
   - **Channel Adapters:** E.g., `Channel::Whatsapp` handles provider configs and webhooks; `Channel::WebWidget` manages website tokens and hmac validation.
   - **Real-time:** Depends heavily on WebSockets for web widget and internal dashboard updates.
   - **Automation:** Supports Macros, Canned Responses, and Agent Bot assignment, but these are rigidly programmatic.
