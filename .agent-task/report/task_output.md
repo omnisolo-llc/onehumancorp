@@ -1,10 +1,10 @@
-issue_title: "[Architecture] Native Rust Omnichannel Chat (Chatwoot Replacement)"
+issue_title: "[Architecture] Native Rust Omnichannel Chat (legacy chat engine Replacement)"
 issue_description: |
   ## Problem Statement
-  OHC is retiring the external Chatwoot dependency to build a native Rust omnichannel customer support and chat engine. Our target personas (Maya, Carlos, Priya, Leo, Fatima) need unified communication across web, email, SMS, and Instagram DMs directly within OHC's high-performance native architecture, without relying on third-party SaaS tools that complicate deployment, scale poorly, or lack deep platform integration.
+  OHC is retiring the external legacy chat engine dependency to build a native Rust omnichannel customer support and chat engine. Our target personas (Maya, Carlos, Priya, Leo, Fatima) need unified communication across web, email, SMS, and Instagram DMs directly within OHC's high-performance native architecture, without relying on third-party SaaS tools that complicate deployment, scale poorly, or lack deep platform integration.
 
   ## Research Report
-  - The `chatwoot/chatwoot` repository (Ruby on Rails) was analyzed to understand the domain model of an omnichannel inbox.
+  - The `legacy-chat-engine/legacy-chat-engine` repository (Ruby on Rails) was analyzed to understand the domain model of an omnichannel inbox.
   - **Key Entities Identified**: `Account` (Tenant), `Inbox`, `Channel` (WebWidget, API, Email, Twilio, Facebook), `Conversation`, `Message`, `Contact`, `User` (Agent).
   - **Key Features**: Real-time WebSocket messaging, omnichannel routing (WhatsApp, Instagram, Web), agent assignment, canned responses, SLA policies, and webhook integrations.
   - **OHC Implementation Goal**: Replicate this domain model natively in Rust, ensuring strict multi-tenant isolation (Zero-Trust via `tenant_id` RLS) and leveraging high-performance asynchronous Rust (Tokio/Axum) for WebSocket handling.
