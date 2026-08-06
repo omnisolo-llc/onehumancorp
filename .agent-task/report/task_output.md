@@ -3,11 +3,11 @@ issue_description: |
   # Native Omnichannel Chat & Web Widget Platform
 
   ## Problem Statement
-  OneHumanCorp (OHC) is replacing Chatwoot with a high-performance, multi-tenant omnichannel customer support & chat engine built natively in Rust. Our business owners (Maya, Carlos, Priya, Leo, Fatima, Nora) need a seamless, non-technical way to unify conversations across channels (Web, Email, Instagram, WhatsApp, SMS). Currently, the application relies on an external integration which is being retired. We must build the native Rust microservices, the database schemas (PostgreSQL row-level security enabled), the channel adapters, and the web chat widget to provide a complete "in-house" experience.
+  OneHumanCorp (OHC) is replacing the legacy solution with a high-performance, multi-tenant omnichannel customer support & chat engine built natively in Rust. Our business owners (Maya, Carlos, Priya, Leo, Fatima, Nora) need a seamless, non-technical way to unify conversations across channels (Web, Email, Instagram, WhatsApp, SMS). Currently, the application relies on an external integration which is being retired. We must build the native Rust microservices, the database schemas (PostgreSQL row-level security enabled), the channel adapters, and the web chat widget to provide a complete "in-house" experience.
 
   ## Research Report
-  - **Competitor Analysis:** Solutions like Shopify Inbox, Intercom, and Chatwoot provide robust multi-channel capabilities but often suffer from heavy UI overhead for the end-user.
-  - **Source Code Audit (Chatwoot):** Chatwoot uses a monolithic Rails approach with detailed models for `conversations`, `messages`, `contacts`, `inboxes`, and `channel_web_widgets`.
+  - **Competitor Analysis:** Solutions like Shopify Inbox and Intercom provide robust multi-channel capabilities but often suffer from heavy UI overhead for the end-user.
+  - **Source Code Audit:** We need a robust approach with detailed models for `conversations`, `messages`, `contacts`, `inboxes`, and `channel_web_widgets`.
   - **OHC Missing Capability:** A native Rust engine that mirrors this capability with strict multi-tenant isolation, utilizing our Zero-Trust architecture, and allowing for AI agent interventions (e.g., auto-replying for Maya's cake requests).
 
   ## Design Doc (Architecture)
@@ -90,7 +90,7 @@ issue_description: |
   5. 100% Unit test coverage on the Rust backend logic.
   6. At least 5 Playwright E2E tests verifying the creation of a channel, initiating a chat from the widget, and the owner receiving the message in the unified inbox API.
 
-  ## Priority: P0 (Critical Path for Chatwoot Removal)
+  ## Priority: P0 (Critical Path for Native Architecture Transition)
   ## Estimated Scope: Large
 issue_priority: P0
 issue_category: research
