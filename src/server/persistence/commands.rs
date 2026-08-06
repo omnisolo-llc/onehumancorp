@@ -73,8 +73,9 @@ async fn run_legacy_postgres_migrations(database: &AppDatabase) -> CommandResult
     // inside persistence test binaries; mock as okay in tests.
     #[cfg(not(test))]
     {
-        let legacy_database = crate::db::DB::new().await?;
-        legacy_database.run_migrations().await
+        let legacy_database = crate::db::DB::new().await.map_err(|e| e.to_string())?;
+        legacy_database.run_migrations().await.map_err(|e| e.to_string())?;
+        Ok(())
     }
     #[cfg(test)]
     {
