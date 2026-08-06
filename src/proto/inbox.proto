@@ -4,30 +4,60 @@ package ohc.inbox;
 
 option go_package = "github.com/onehumancorp/mono/src/proto/ohc/inbox;inboxpb";
 
-message OmniMessage {
+message Tenant {
+    string id = 1;
+    string name = 2;
+}
+
+message Inbox {
     string id = 1;
     string tenant_id = 2;
-    string source = 3;
-    string original_content = 4;
-    string translated_content = 5;
-    string source_language = 6;
-    string target_language = 7;
-    string draft_reply = 8;
-    string status = 9;
-    string sender_id = 10;
-    string customer_id = 11;
-    int64 created_at_unix = 12;
-    int64 updated_at_unix = 13;
+    string name = 3;
+}
+
+message Channel {
+    string id = 1;
+    string inbox_id = 2;
+    string provider_type = 3;
+    string credentials = 4;
+}
+
+message Contact {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string identifier = 4;
+}
+
+message OmniMessage {
+    string id = 1;
+    string conversation_id = 2;
+    string content = 3;
+    string sender_type = 4;
+    string sender_id = 5;
+    string source = 6;
+    string original_content = 7;
+    string translated_content = 8;
+    string source_language = 9;
+    string target_language = 10;
+    string draft_reply = 11;
+    string status = 12;
+    int64 created_at_unix = 13;
+    int64 updated_at_unix = 14;
+    string tenant_id = 15;
+    string customer_id = 16;
 }
 
 message Conversation {
     string id = 1;
-    string tenant_id = 2;
-    string customer_id = 3;
-    string channel = 4;
-    string status = 5;
-    int64 created_at_unix = 6;
-    int64 updated_at_unix = 7;
+    string inbox_id = 2;
+    string contact_id = 3;
+    string status = 4;
+    string tenant_id = 5;
+    string customer_id = 6;
+    string channel = 7;
+    int64 created_at_unix = 8;
+    int64 updated_at_unix = 9;
 }
 
 message FetchConversationsRequest {
@@ -45,4 +75,133 @@ message FetchMessagesRequest {
 
 message FetchMessagesResponse {
     repeated OmniMessage messages = 1;
+}
+
+// Basic CRUD operations
+message CreateTenantRequest {
+    string name = 1;
+}
+message CreateTenantResponse {
+    Tenant tenant = 1;
+}
+message GetTenantRequest {
+    string id = 1;
+}
+message GetTenantResponse {
+    Tenant tenant = 1;
+}
+message DeleteTenantRequest {
+    string id = 1;
+}
+message DeleteTenantResponse {
+    bool success = 1;
+}
+
+
+message CreateInboxRequest {
+    string tenant_id = 1;
+    string name = 2;
+}
+message CreateInboxResponse {
+    Inbox inbox = 1;
+}
+message GetInboxRequest {
+    string tenant_id = 1;
+    string id = 2;
+}
+message GetInboxResponse {
+    Inbox inbox = 1;
+}
+
+message CreateChannelRequest {
+    string inbox_id = 1;
+    string provider_type = 2;
+    string credentials = 3;
+    string tenant_id = 4;
+}
+message CreateChannelResponse {
+    Channel channel = 1;
+}
+message GetChannelRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+message GetChannelResponse {
+    Channel channel = 1;
+}
+
+message CreateContactRequest {
+    string tenant_id = 1;
+    string name = 2;
+    string identifier = 3;
+}
+message CreateContactResponse {
+    Contact contact = 1;
+}
+message GetContactRequest {
+    string tenant_id = 1;
+    string id = 2;
+}
+message GetContactResponse {
+    Contact contact = 1;
+}
+
+message CreateConversationRequest {
+    string inbox_id = 1;
+    string contact_id = 2;
+    string status = 3;
+    string tenant_id = 4;
+}
+message CreateConversationResponse {
+    Conversation conversation = 1;
+}
+message GetConversationRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+message GetConversationResponse {
+    Conversation conversation = 1;
+}
+
+message CreateMessageRequest {
+    string conversation_id = 1;
+    string content = 2;
+    string sender_type = 3;
+    string sender_id = 4;
+    string tenant_id = 5;
+}
+message CreateMessageResponse {
+    OmniMessage message = 1;
+}
+message GetMessageRequest {
+    string id = 1;
+    string tenant_id = 2;
+}
+message GetMessageResponse {
+    OmniMessage message = 1;
+}
+
+
+service InboxService {
+    rpc FetchConversations(FetchConversationsRequest) returns (FetchConversationsResponse);
+    rpc FetchMessages(FetchMessagesRequest) returns (FetchMessagesResponse);
+
+    rpc CreateTenant(CreateTenantRequest) returns (CreateTenantResponse);
+    rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+    rpc DeleteTenant(DeleteTenantRequest) returns (DeleteTenantResponse);
+
+    rpc CreateInbox(CreateInboxRequest) returns (CreateInboxResponse);
+    rpc GetInbox(GetInboxRequest) returns (GetInboxResponse);
+
+    rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
+    rpc GetChannel(GetChannelRequest) returns (GetChannelResponse);
+
+    rpc CreateContact(CreateContactRequest) returns (CreateContactResponse);
+    rpc GetContact(GetContactRequest) returns (GetContactResponse);
+
+    rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+    rpc GetConversation(GetConversationRequest) returns (GetConversationResponse);
+
+    rpc CreateMessage(CreateMessageRequest) returns (CreateMessageResponse);
+    rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
 }
