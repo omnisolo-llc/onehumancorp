@@ -40,20 +40,34 @@ impl std::fmt::Debug for AuthMode {
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
-        let environment = env::var("OHC_ENV").unwrap_or_default();
-        if matches!(
-            environment.trim().to_ascii_lowercase().as_str(),
-            "development" | "test" | "standalone" | ""
-        ) {
+
+    let environment = env::var("OHC_ENV").unwrap_or_default();
+    let is_dev_or_test = matches!(
+        environment.trim().to_ascii_lowercase().as_str(),
+        "development" | "test" | "standalone" | ""
+    );
+
+    // If auth is explicitly disabled, check if allowed in this env
+    if auth_disabled {
+        if is_dev_or_test {
             return Ok(AuthMode::Disabled);
+        } else {
+            return Err(
+                "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development, test, or standalone"
+                    .to_string(),
+            );
         }
-        return Err(
-            "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development, test, or standalone"
-                .to_string(),
-        );
     }
 
+    // Check for SPIFFE mode
+    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID")
+        && !spiffe_id.trim().is_empty()
+    {
+        validate_spiffe_id(&spiffe_id)?;
+        return Err("mTLS peer extraction is not yet available, failing closed".to_string());
+    }
+
+    // Check for Token mode
     if let Ok(token) = env::var("OHC_AGENT_TOKEN")
         && !token.trim().is_empty()
     {
@@ -70,7 +84,9 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    return Ok(AuthMode::Disabled);
+    // If neither is configured and auth is not explicitly disabled:
+    // This is an unconfigured state. We must fail closed by returning an Err.
+    Err("Authentication is not configured. Please configure OHC_AGENT_TOKEN or OHC_AGENT_SPIFFE_ID, or explicitly disable auth using OHC_AGENT_AUTH_DISABLED=true (only allowed in development/test/standalone environments).".to_string())
 }
 
 /// Check a bearer token against an expected HMAC hash.

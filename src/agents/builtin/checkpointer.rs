@@ -175,6 +175,148 @@ impl GitCheckpointer {
         }
         Ok(scratchpad_json_val)
     }
+
+    /// Audits the size and commit/tag count of the git checkpoint repository.
+    pub async fn audit_history(&self) -> Result<GitHistoryAudit, String> {
+        let commit_count_out = Command::new("git")
+            .arg("rev-list")
+            .arg("--count")
+            .arg("HEAD")
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| format!("git rev-list failed: {}", e))?;
+
+        let commit_count = if commit_count_out.status.success() {
+            String::from_utf8_lossy(&commit_count_out.stdout)
+                .trim()
+                .parse::<usize>()
+                .unwrap_or(0)
+        } else {
+            0
+        };
+
+        let tag_count_out = Command::new("git")
+            .arg("tag")
+            .arg("-l")
+            .arg("checkpoint-*")
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| format!("git tag failed: {}", e))?;
+
+        let tag_count = if tag_count_out.status.success() {
+            String::from_utf8_lossy(&tag_count_out.stdout)
+                .lines()
+                .filter(|line| !line.trim().is_empty())
+                .count()
+        } else {
+            0
+        };
+
+        let mut total_size_bytes = 0;
+        let git_dir = self.repo_path.join(".git");
+        if git_dir.exists() {
+            total_size_bytes = get_dir_size(&git_dir).unwrap_or(0);
+        }
+
+        Ok(GitHistoryAudit {
+            commit_count,
+            total_size_bytes,
+            tag_count,
+        })
+    }
+
+    /// Prunes old git checkpoint tags and commits, keeping only the most recent `keep_count` checkpoints.
+    /// This reduces disk space usage and prevents git tag bloat on long-running tasks.
+    pub async fn prune_old_checkpoints(&self, keep_count: usize) -> Result<usize, String> {
+        let tag_list_out = Command::new("git")
+            .arg("tag")
+            .arg("-l")
+            .arg("checkpoint-*")
+            .arg("--sort=creatordate") // list oldest first
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| format!("git tag list failed: {}", e))?;
+
+        if !tag_list_out.status.success() {
+            return Err(format!(
+                "Failed to list tags: {}",
+                String::from_utf8_lossy(&tag_list_out.stderr)
+            ));
+        }
+
+        let tags: Vec<String> = String::from_utf8_lossy(&tag_list_out.stdout)
+            .lines()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        if tags.len() <= keep_count {
+            return Ok(0); // Nothing to prune
+        }
+
+        let to_prune_count = tags.len() - keep_count;
+        let prune_tags = &tags[..to_prune_count];
+
+        for tag in prune_tags {
+            let delete_out = Command::new("git")
+                .arg("tag")
+                .arg("-d")
+                .arg(tag)
+                .current_dir(&self.repo_path)
+                .output()
+                .await
+                .map_err(|e| format!("git tag delete failed: {}", e))?;
+
+            if !delete_out.status.success() {
+                tracing::warn!(
+                    "Failed to delete tag {}: {}",
+                    tag,
+                    String::from_utf8_lossy(&delete_out.stderr)
+                );
+            }
+        }
+
+        // Run git gc to prune unreferenced commits and pack objects
+        let gc_out = Command::new("git")
+            .arg("gc")
+            .arg("--prune=now")
+            .current_dir(&self.repo_path)
+            .output()
+            .await
+            .map_err(|e| format!("git gc failed: {}", e))?;
+
+        if !gc_out.status.success() {
+            tracing::warn!(
+                "git gc --prune=now failed: {}",
+                String::from_utf8_lossy(&gc_out.stderr)
+            );
+        }
+
+        Ok(to_prune_count)
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GitHistoryAudit {
+    pub commit_count: usize,
+    pub total_size_bytes: u64,
+    pub tag_count: usize,
+}
+
+fn get_dir_size(path: &std::path::Path) -> std::io::Result<u64> {
+    let mut size = 0;
+    if path.is_file() {
+        size += path.metadata()?.len();
+    } else if path.is_dir() {
+        for entry in std::fs::read_dir(path)? {
+            let entry = entry?;
+            size += get_dir_size(&entry.path())?;
+        }
+    }
+    Ok(size)
 }
 
 #[async_trait]
@@ -1319,5 +1461,49 @@ mod restore_stash_tests {
         assert!(untracked_file_path.exists());
         let untracked_content = std::fs::read_to_string(&untracked_file_path).unwrap();
         assert_eq!(untracked_content, "untracked work");
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_audit_and_prune() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+
+        // Create 5 checkpoints
+        for i in 1..=5 {
+            let cp = Checkpoint {
+                thread_id: "thread-prune-test".to_string(),
+                checkpoint_id: format!("cp-val-{}", i),
+                parent_id: None,
+                data: serde_json::json!({"step": i}),
+                metadata: serde_json::json!({}),
+                created_at: Utc::now(),
+            };
+            saver.put_checkpoint(cp).await.unwrap();
+        }
+
+        // Audit history
+        let audit_before = saver.audit_history().await.unwrap();
+        assert_eq!(audit_before.tag_count, 5);
+        assert!(audit_before.commit_count >= 5);
+        assert!(audit_before.total_size_bytes > 0);
+
+        // Prune down to 2 checkpoints (keeping most recent 2, pruning oldest 3)
+        let pruned = saver.prune_old_checkpoints(2).await.unwrap();
+        assert_eq!(pruned, 3);
+
+        // Audit history again
+        let audit_after = saver.audit_history().await.unwrap();
+        assert_eq!(audit_after.tag_count, 2);
+
+        // Ensure we can still retrieve the kept ones
+        let retrieved_5 = saver.get_checkpoint("thread-prune-test", "cp-val-5").await.unwrap();
+        assert!(retrieved_5.is_some());
+
+        let retrieved_4 = saver.get_checkpoint("thread-prune-test", "cp-val-4").await.unwrap();
+        assert!(retrieved_4.is_some());
+
+        // Old ones should be pruned (tag is deleted)
+        let retrieved_1 = saver.get_checkpoint("thread-prune-test", "cp-val-1").await.unwrap();
+        assert!(retrieved_1.is_none());
     }
 }
