@@ -155,6 +155,7 @@ mod tests {
     }
 
     #[test]
+    #[test]
     fn router_uses_axum_v08_capture_syntax() {
         let _: axum::Router<()> = router(make_hub());
     }
