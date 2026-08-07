@@ -1274,7 +1274,7 @@ describe("OnboardingWizard", () => {
 
     act(() => {
       useOnboardingStore.setState({
-        step: -2,
+        step: -1,
         chatStep: 0,
         businessName: "",
         error: null,
@@ -1298,14 +1298,16 @@ describe("OnboardingWizard", () => {
 
     await renderOnboardingWizard();
 
-    // Intro screen
-    const startBtn = screen.getAllByRole("button", { name: "Start My Business" })[0];
-    await user.click(startBtn);
+    const originalConsoleError = console.error;
+    console.error = vi.fn(); // Suppress expected error log
 
-    // Wait for the skip button on step 1
-    const skipBtns = await screen.findAllByRole("button", {
-      name: /Skip setup/i,
+    const generateBtn = screen.getAllByRole("button", { name: "Generate Storefront" })[0];
+    await user.click(generateBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/HTTP error! status: 500/i)).toBeInTheDocument();
     });
-    await user.click(skipBtns[0]);
+
+    console.error = originalConsoleError;
   });
 });
