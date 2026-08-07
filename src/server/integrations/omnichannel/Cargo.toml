@@ -1,0 +1,16 @@
+[package]
+name = "omnichannel"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "with-chrono", "with-json", "with-uuid"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+chrono = { workspace = true }
+async-trait = "0.1"
+tokio = { version = "1", features = ["macros", "rt"] }
+
+[lib]
+path = "src/lib.rs"

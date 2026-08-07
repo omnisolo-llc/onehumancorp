@@ -49,9 +49,10 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY,
     tenant_id UUID NOT NULL,
     conversation_id UUID NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
-    sender_type TEXT NOT NULL, -- e.g. 'contact', 'agent', 'bot'
+    sender_type TEXT NOT NULL,
     sender_id UUID,
     content TEXT NOT NULL,
+    content_type TEXT NOT NULL DEFAULT 'text',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
