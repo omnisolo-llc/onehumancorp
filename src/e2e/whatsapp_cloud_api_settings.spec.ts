@@ -1,25 +1,12 @@
-import { test, expect } from '@playwright/test';
-import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
+import { test, expect } from './fixtures';
 
 test.describe('WhatsApp Cloud API Integrations Setting', () => {
-  test.beforeAll(async () => {
-    await setupTestEnv();
-  });
-
-  test.afterAll(async () => {
-    await teardownTestEnv();
-  });
-
-  test.beforeEach(async ({ page }) => {
-    await loginAsE2eTenant(page);
-  });
-
   test('Owner can navigate to Settings -> Integrations and see WhatsApp Cloud API', async ({ page }) => {
     // 1. Navigate to Settings -> Integrations
     await page.goto('/settings/integrations');
 
     // 2. Wait for page load
-    await expect(page.locator('h1:has-text("App Integrations")')).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'App Integrations' }).or(page.locator('h1:has-text("App Integrations")'))).toBeVisible();
 
     // 3. Find the WhatsApp Cloud API integration card
     const waCloudCard = page.locator('h3:has-text("WhatsApp Cloud API")').locator('..');
