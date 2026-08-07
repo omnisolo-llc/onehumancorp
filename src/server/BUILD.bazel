@@ -632,7 +632,6 @@ rust_test(
 
 rust_test(
     name = "persistence_commands_test",
-    compile_data = ["//src/server/auth:seaorm_store.rs"],
     size = "small",
     srcs = [
         "persistence_commands_test.rs",
@@ -644,14 +643,6 @@ rust_test(
     ],
     edition = "2024",
     deps = [
-        "//src/server/common:server_common",
-        "//src/server/config:server_config",
-        "@crates//:sqlx",
-        "@crates//:tracing",
-        "@crates//:redis",
-        "@crates//:reqwest",
-        ":server_lib",
-
         "//src/server/auth:server_auth",
         "@crates//:bcrypt",
         "@crates//:chrono",
@@ -1078,9 +1069,9 @@ rust_test(
 )
 
 exports_files([
-    "lib.rs",
     "Cargo.toml",
     "Cargo.lock",
+    "lib.rs",
 ])
 
 rust_test(

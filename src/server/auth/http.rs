@@ -713,13 +713,6 @@ async fn list_member_usage_analytics(
 }
 
 impl HttpAuthState {
-    fn new(store: Arc<Store>, trusted_proxies: HashSet<IpAddr>) -> Self {
-        Self::with_mailer(
-            store,
-            trusted_proxies,
-            Arc::new(crate::email::UnconfiguredMailer),
-        )
-    }
 
     fn with_mailer(
         store: Arc<Store>,
@@ -1800,7 +1793,7 @@ fn error_with_retry(status: StatusCode, message: &'static str, retry_after: u64)
 
 #[cfg(test)]
 fn router_for_test() -> Router {
-    router_with_state(HttpAuthState::new(Arc::new(Store::new()), HashSet::new()))
+    router_with_state(HttpAuthState::with_mailer(Arc::new(Store::new()), HashSet::new(), Arc::new(crate::email::UnconfiguredMailer)))
 }
 
 #[cfg(test)]
@@ -1889,7 +1882,7 @@ mod tests {
         }
 
         (
-            router_with_state(HttpAuthState::new(store.clone(), HashSet::new())),
+            router_with_state(HttpAuthState::with_mailer(store.clone(), HashSet::new(), Arc::new(crate::email::UnconfiguredMailer))),
             store,
             user,
         )
@@ -2004,7 +1997,7 @@ mod tests {
             )
             .await
             .unwrap();
-        let mut state = HttpAuthState::new(store, HashSet::new());
+        let mut state = HttpAuthState::with_mailer(store, HashSet::new(), Arc::new(crate::email::UnconfiguredMailer));
         state.cloud = true;
         let response = router_with_state(state)
             .oneshot(json_request(
@@ -2021,7 +2014,7 @@ mod tests {
     #[tokio::test]
     async fn router_throttles_normalized_account_across_sources_with_retry_after() {
         let store = Arc::new(Store::new());
-        let mut state = HttpAuthState::new(store, HashSet::new());
+        let mut state = HttpAuthState::with_mailer(store, HashSet::new(), Arc::new(crate::email::UnconfiguredMailer));
         state.limiter = Arc::new(Mutex::new(LoginLimiter::new(LimitConfig {
             source_attempts: 10,
             account_attempts: 1,
@@ -2305,7 +2298,7 @@ mod tests {
             .acquire_many_owned(crate::MAX_PASSWORD_HASH_CONCURRENCY as u32)
             .await
             .unwrap();
-        let response = router_with_state(HttpAuthState::new(store, HashSet::new()))
+        let response = router_with_state(HttpAuthState::with_mailer(store, HashSet::new(), Arc::new(crate::email::UnconfiguredMailer)))
             .oneshot(json_request(
                 "/api/v1/auth/login",
                 r#"{"username":"Alice","password":"correct horse","organization_id":"tenant-7"}"#,
