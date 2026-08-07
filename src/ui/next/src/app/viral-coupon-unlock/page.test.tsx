@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ViralCouponUnlockPage from './page';
 
 const mockPush = vi.fn();
@@ -23,7 +23,7 @@ describe('ViralCouponUnlockPage', () => {
 
     const localStorageMock = {
       getItem: vi.fn((key) => {
-        if (key === 'tenant_id' || key === 'tenant') return 'test-tenant';
+        if (key === 'business_display_name') return 'test-tenant';
         return null;
       }),
       setItem: vi.fn(),
@@ -66,7 +66,7 @@ describe('ViralCouponUnlockPage', () => {
     expect(codeDisplay).toBeDefined();
 
     // Check if shares update
-    expect(screen.getByText('5 Shares')).toBeDefined();
+    expect(screen.getByText(/5 Shares/)).toBeDefined();
     expect(screen.getByText('1 / 5')).toBeDefined();
   });
 
