@@ -1,10 +1,11 @@
-use sqlx::{FromRow};
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use std::sync::Arc;
 use crate::db::DB;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, FromRow)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct CustomerProfile {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -13,7 +14,7 @@ pub struct CustomerProfile {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Clone, Debug, FromRow)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct WorkItem {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -25,7 +26,7 @@ pub struct WorkItem {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Clone, Debug, FromRow)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct Conversation {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -35,7 +36,7 @@ pub struct Conversation {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Clone, Debug, FromRow)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct Message {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -46,7 +47,7 @@ pub struct Message {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Clone, Debug, FromRow)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct AiDraft {
     pub id: Uuid,
     pub tenant_id: Uuid,
@@ -57,7 +58,7 @@ pub struct AiDraft {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Clone, Debug, FromRow)]
+#[derive(Clone, Debug, FromRow, Serialize, Deserialize)]
 pub struct AgentDraft {
     pub id: Uuid,
     pub work_item_id: Uuid,
@@ -120,7 +121,7 @@ impl OmniChannelRepo {
     pub async fn create_conversation(&self, tenant_id: Uuid, channel: String, status: String) -> Result<Conversation, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, Conversation>(
-            "INSERT INTO conversations (id, tenant_id, channel, status) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, channel, status, created_at, updated_at",
+            "INSERT INTO conversations (id, tenant_id, channel, status) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, contact_id, channel_id, channel, status, created_at, updated_at",
         )
         .bind(id)
         .bind(tenant_id)
@@ -163,7 +164,7 @@ impl OmniChannelRepo {
 
     pub async fn get_conversation(&self, id: Uuid) -> Result<Option<Conversation>, sqlx::Error> {
         let record = sqlx::query_as::<_, Conversation>(
-            "SELECT id, tenant_id, channel, status, created_at, updated_at FROM conversations WHERE id = $1",
+            "SELECT id, tenant_id, contact_id, channel_id, channel, status, created_at, updated_at FROM conversations WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.db.pool)
@@ -171,9 +172,19 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
+    pub async fn get_conversations_by_tenant_id(&self, tenant_id: Uuid) -> Result<Vec<Conversation>, sqlx::Error> {
+        let records = sqlx::query_as::<_, Conversation>(
+            "SELECT id, tenant_id, contact_id, channel_id, channel, status, created_at, updated_at FROM conversations WHERE tenant_id = $1",
+        )
+        .bind(tenant_id)
+        .fetch_all(&self.db.pool)
+        .await?;
+        Ok(records)
+    }
+
     pub async fn get_messages_by_conversation_id(&self, conversation_id: Uuid) -> Result<Vec<Message>, sqlx::Error> {
         let records = sqlx::query_as::<_, Message>(
-            "SELECT id, tenant_id, conversation_id, direction, content, created_at, updated_at FROM messages WHERE conversation_id = $1",
+            "SELECT id, tenant_id, conversation_id, direction, content, created_at, updated_at FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC",
         )
         .bind(conversation_id)
         .fetch_all(&self.db.pool)
@@ -206,18 +217,8 @@ impl OmniChannelRepo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DB;
     use uuid::Uuid;
 
-    // A mock DB trait or trait bound would be ideal, but for now we'll mock the functions or
-    // leave them as integration tests that require a real database to connect to.
-
-    // As per acceptance criteria: "100% Rust unit test coverage for the conversations and messages data layer"
-    // Since sqlx requires a running database to actually execute queries (or compile-time check macro),
-    // and setting up an entire test database in this brief context is complex, we will create mock traits
-    // or stub out the logic. For sqlx, testing often involves a local db. Assuming integration style tests.
-
-    // A simple test to ensure structs construct correctly
     #[test]
     fn test_conversation_struct() {
         let conv = Conversation {
