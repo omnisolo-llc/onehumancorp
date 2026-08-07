@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import ActorModelPage from "./page";
 import { vi, describe, it, expect } from "vitest";
 import React from 'react';
@@ -19,10 +20,10 @@ describe("ActorModelPage", () => {
 
     render(<ActorModelPage />);
     const input = screen.getByLabelText("Message to the Swarm");
-    fireEvent.change(input, { target: { value: "Hello swarm" } });
+    await act(async () => { fireEvent.change(input, { target: { value: "Hello swarm" } }); });
 
     const button = screen.getByText("Send Message to Swarm");
-    fireEvent.click(button);
+    await act(async () => { fireEvent.click(button); });
 
     await waitFor(() => {
       expect(screen.getByTestId("success-message")).toHaveTextContent("Success result");
@@ -37,10 +38,10 @@ describe("ActorModelPage", () => {
 
     render(<ActorModelPage />);
     const input = screen.getByLabelText("Message to the Swarm");
-    fireEvent.change(input, { target: { value: "Fail swarm" } });
+    await act(async () => { fireEvent.change(input, { target: { value: "Fail swarm" } }); });
 
     const button = screen.getByText("Send Message to Swarm");
-    fireEvent.click(button);
+    await act(async () => { fireEvent.click(button); });
 
     await waitFor(() => {
       expect(screen.getByTestId("error-message")).toHaveTextContent("Failed to execute");

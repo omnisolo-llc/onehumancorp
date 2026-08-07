@@ -1,5 +1,6 @@
+import "@testing-library/jest-dom";
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import CustomerMemoryGraph from './page';
 
@@ -15,6 +16,7 @@ vi.mock('@/app/components/PoweredByOHC', () => ({
 
 describe('CustomerMemoryGraph Component', () => {
   it('renders loading state initially', () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ events: [] }) });
     render(<CustomerMemoryGraph />);
     expect(screen.getByText('Loading customer history...')).toBeInTheDocument();
   });

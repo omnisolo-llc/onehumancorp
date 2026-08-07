@@ -1,5 +1,6 @@
+import "@testing-library/jest-dom";
 /** @jsxImportSource react */
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NeighborhoodPulseCard } from './NeighborhoodPulseCard';
 import React from 'react';

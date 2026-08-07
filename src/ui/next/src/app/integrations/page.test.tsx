@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Integrations from "./page";
 
@@ -32,7 +33,7 @@ describe("Integrations", () => {
 
     render(<Integrations />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[0]);
+    await act(async () => { fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[0]); });
 
     expect(await screen.findByText('Ayrshare connection is unavailable until secure provider verification is configured.')).toBeDefined();
     expect(global.fetch).not.toHaveBeenCalledWith('/api/v1/integrations/ayrshare/connect', expect.anything());
@@ -47,13 +48,13 @@ describe("Integrations", () => {
     });
     render(<Integrations />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
+    await act(async () => { fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]); });
 
     const connect = screen.getByRole('button', { name: 'Connect Twilio' });
     expect(connect).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });
     fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'secret' } });
-    fireEvent.click(connect);
+    await act(async () => { fireEvent.click(connect); });
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations/twilio/connect', expect.objectContaining({
       method: 'POST',
@@ -71,7 +72,7 @@ describe("Integrations", () => {
     });
     render(<Integrations />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
+    await act(async () => { fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]); });
     fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });
     fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Connect Twilio' }));
