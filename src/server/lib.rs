@@ -932,7 +932,7 @@ pub mod services {
     pub mod growth;
     pub mod onboarding;
     pub mod sync;
-    pub mod chat;
+    pub mod omnichannel_chat { pub use crate::api::chat::routes::*; }
 
     #[cfg(not(ohc_bazel))]
     pub mod intake;

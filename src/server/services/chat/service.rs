@@ -13,7 +13,7 @@ impl ChatService {
 
     pub async fn create_inbox(
         &self,
-        tenant_id: Uuid,
+        tenant_id: String,
         name: String,
     ) -> Result<ChatInbox, sqlx::Error> {
         sqlx::query_as(
@@ -32,7 +32,7 @@ impl ChatService {
 
     pub async fn create_channel(
         &self,
-        tenant_id: Uuid,
+        tenant_id: String,
         inbox_id: Uuid,
         channel_type: String,
         config: serde_json::Value,
@@ -55,7 +55,7 @@ impl ChatService {
 
     pub async fn create_contact(
         &self,
-        tenant_id: Uuid,
+        tenant_id: String,
         name: Option<String>,
         email: Option<String>,
         phone: Option<String>,
@@ -78,7 +78,7 @@ impl ChatService {
 
     pub async fn start_conversation(
         &self,
-        tenant_id: Uuid,
+        tenant_id: String,
         inbox_id: Uuid,
         contact_id: Uuid,
         assignee_id: Option<Uuid>,
@@ -101,7 +101,7 @@ impl ChatService {
 
     pub async fn send_message(
         &self,
-        tenant_id: Uuid,
+        tenant_id: String,
         conversation_id: Uuid,
         sender_type: String,
         sender_id: Option<Uuid>,
