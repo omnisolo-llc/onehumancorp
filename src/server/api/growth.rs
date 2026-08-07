@@ -380,6 +380,9 @@ where
         .route("/birthday-club/embed", get(handle_birthday_club_embed))
         .route("/birthday-club/capture", post(handle_birthday_club_capture))
 
+        .route("/ama/generate", post(handle_ama_generate))
+        .route("/ama/embed", get(handle_ama_embed))
+
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
         .route("/viral-before-after/embed", get(handle_viral_before_after_embed))
@@ -5323,6 +5326,100 @@ pub struct WaitlistEmbedQuery {
     pub theme: Option<String>,
     #[serde(rename = "hideBranding")]
     pub hide_branding: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AmaGenerateRequest {
+    pub tenant_id: String,
+    pub title: String,
+}
+
+async fn handle_ama_generate(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<AmaGenerateRequest>,
+) -> impl IntoResponse {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.ama_widget_generated",
+        "tenant_id": req.tenant_id,
+        "title": req.title
+    }));
+    state.hub.append_recent_event(msg).await;
+    Json(serde_json::json!({ "success": true }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AmaEmbedQuery {
+    pub tenant: Option<String>,
+    pub title: Option<String>,
+    pub host: Option<String>,
+    pub branding: Option<String>,
+}
+
+async fn handle_ama_embed(
+    axum::extract::Query(query): axum::extract::Query<AmaEmbedQuery>,
+) -> impl IntoResponse {
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let title = escape_html(query.title.as_deref().unwrap_or("Ask Me Anything"));
+    let host = escape_html(query.host.as_deref().unwrap_or("the Founder"));
+    let branding = query.branding.as_deref().unwrap_or("true") == "true";
+
+    let branding_html = if branding {
+        format!(
+            r#"<div style="margin-top: 16px; font-size: 12px; font-weight: 600; text-align: center;">
+                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=ama_embed" target="_blank" rel="noopener noreferrer" style="color: #86868b; text-decoration: none;">⚡ Powered by OHC</a>
+            </div>"#,
+            tenant
+        )
+    } else {
+        "".to_string()
+    };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{ font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 0; background: transparent; }}
+        .ama-widget {{ border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }}
+        .header {{ font-size: 18px; font-weight: bold; margin-bottom: 8px; color: #111827; text-align: center; }}
+        .sub-header {{ font-size: 14px; color: #6b7280; margin-bottom: 16px; text-align: center; }}
+        textarea {{ width: 100%; height: 80px; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; margin-bottom: 12px; font-family: inherit; font-size: 14px; box-sizing: border-box; resize: none; }}
+        .submit-btn {{ width: 100%; background: #0066ff; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s; }}
+        .submit-btn:hover {{ background: #0052cc; }}
+        @media (prefers-color-scheme: dark) {{
+            .ama-widget {{ background: #1f2937; border-color: #374151; }}
+            .header {{ color: #f9fafb; }}
+            .sub-header {{ color: #9ca3af; }}
+            textarea {{ background: #374151; border-color: #4b5563; color: #f9fafb; }}
+            .submit-btn {{ background: #3b82f6; }}
+            .submit-btn:hover {{ background: #2563eb; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="ama-widget">
+        <div class="header">{}</div>
+        <div class="sub-header">Ask {} anything! Drop your question below.</div>
+        <textarea placeholder="Type your question here..."></textarea>
+        <button class="submit-btn" onclick="alert('Question submitted successfully! We will get back to you soon.')">Submit Question</button>
+        {}
+    </div>
+</body>
+</html>"#,
+        title, host, branding_html
+    );
+
+    axum::response::Html(html)
 }
 
 #[derive(Debug, Deserialize)]
