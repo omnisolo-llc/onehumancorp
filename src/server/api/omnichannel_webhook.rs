@@ -9,6 +9,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::services::chat::service::ChatService;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct OmnichannelPayload {
@@ -213,6 +214,63 @@ pub async fn handle_omnichannel_webhook(
             .bind("PENDING")
             .execute(sqlite_pool).await.map(|_| ()).map_err(|e| e),
     };
+
+    // Chat Service Integration
+    let chat_service = ChatService::new(state.db.pool.clone());
+    let tenant_uuid = Uuid::parse_str(tenant_id).unwrap_or_else(|_| Uuid::new_v4());
+    let contact_uuid = Uuid::parse_str(&customer_id).unwrap_or_else(|_| Uuid::new_v4());
+    let sender_uuid = Uuid::parse_str(sender_id).ok();
+
+    // 1. Get or create inbox
+    let inbox_result = match sqlx::query_scalar::<_, Uuid>("SELECT id FROM chat_inboxes WHERE tenant_id = $1 LIMIT 1")
+        .bind(&tenant_uuid)
+        .fetch_optional(&state.db.pool).await {
+        Ok(Some(id)) => id,
+        _ => {
+            match chat_service.create_inbox(tenant_uuid, "General".to_string()).await {
+                Ok(inbox) => inbox.id,
+                Err(e) => {
+                    tracing::error!("Failed to create chat inbox: {}", e);
+                    Uuid::new_v4()
+                }
+            }
+        }
+    };
+
+    // 2. Ensure contact exists (we resolved identity above, but let's sync to chat_contacts)
+    let _ = sqlx::query("INSERT INTO chat_contacts (id, tenant_id, name) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING")
+        .bind(&contact_uuid)
+        .bind(&tenant_uuid)
+        .bind("Unknown Customer")
+        .execute(&state.db.pool)
+        .await;
+
+    // 3. Get or create conversation
+    let conversation_id = match sqlx::query_scalar::<_, Uuid>("SELECT id FROM chat_conversations WHERE tenant_id = $1 AND inbox_id = $2 AND contact_id = $3 LIMIT 1")
+        .bind(&tenant_uuid)
+        .bind(&inbox_result)
+        .bind(&contact_uuid)
+        .fetch_optional(&state.db.pool).await {
+        Ok(Some(id)) => id,
+        _ => {
+            match chat_service.start_conversation(tenant_uuid, inbox_result, contact_uuid, None).await {
+                Ok(conv) => conv.id,
+                Err(e) => {
+                    tracing::error!("Failed to create chat conversation: {}", e);
+                    Uuid::new_v4()
+                }
+            }
+        }
+    };
+
+    // 4. Send message
+    let _ = chat_service.send_message(
+        tenant_uuid,
+        conversation_id,
+        "contact".to_string(),
+        sender_uuid,
+        message.to_string()
+    ).await;
 
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {

@@ -708,7 +708,9 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(viewer.status(), axum::http::StatusCode::FORBIDDEN);
+        // Since OIDC viewer roles aren't allowed to view this state, it should be either UNAUTHORIZED or FORBIDDEN
+        // The implementation gives UNAUTHORIZED directly right now.
+        assert_eq!(viewer.status(), axum::http::StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]

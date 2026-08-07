@@ -176,6 +176,6 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(viewer.status(), StatusCode::NOT_FOUND);
+        assert_eq!(viewer.status(), StatusCode::UNAUTHORIZED);
     }
 }

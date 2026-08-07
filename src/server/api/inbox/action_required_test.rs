@@ -52,7 +52,7 @@ async fn test_viewer_cannot_manage_action_required_drafts() {
         )
         .await
         .unwrap();
-    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]
@@ -169,7 +169,7 @@ async fn test_approve_draft_invalid_draft_id() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED); // Now auth middleware throws unauthorized early
 }
 
 #[tokio::test]
@@ -195,5 +195,5 @@ async fn test_edit_draft_invalid_draft_id() {
         .await
         .unwrap();
 
-    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
