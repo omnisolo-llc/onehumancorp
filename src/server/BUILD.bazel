@@ -640,6 +640,7 @@ rust_test(
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+        "//src/server/auth:seaorm_store.rs",
     ],
     edition = "2024",
     deps = [
@@ -664,6 +665,7 @@ rust_test(
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+        "//src/server/auth:seaorm_store.rs",
     ],
     edition = "2024",
     deps = [
@@ -1203,3 +1205,7 @@ sh_test(
     data = glob(["**/*.rs"]),
     args = ["src/server"],
 )
+
+exports_files([
+    "lib.rs",
+])

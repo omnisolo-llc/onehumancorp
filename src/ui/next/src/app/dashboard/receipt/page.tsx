@@ -1,17 +1,16 @@
-'use client';
+"use client";
 
-import React, { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 export default function SnapReceiptPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [fileSelected, setFileSelected] = useState<File | null>(null);
 
-  // To avoid mock data, we allow the user to input the amount and vendor,
-  // or default to something based on the file. In a real app, the backend would OCR this.
-  const [amount, setAmount] = useState<number>(45.20);
-  const [vendor, setVendor] = useState<string>("Home Depot");
+  // In a real app, the backend would OCR this from the file.
+  const [amount, setAmount] = useState<number | "">("");
+  const [vendor, setVendor] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -22,66 +21,67 @@ export default function SnapReceiptPage() {
     }
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fileSelected) return;
+    if (!fileSelected && !amount && !vendor) {
+      showToast("Please provide receipt details or an image.");
+      return;
+    }
 
     setIsUploading(true);
-    setToastMessage("AI is categorizing your expense...");
 
     try {
-      // Send data to backend
-      const response = await fetch('/api/v1/payments/ledger/receipt', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          file_name: fileSelected.name,
-          amount: amount,
-          vendor: vendor
-        }),
+      // Create FormData to send file and data
+      const formData = new FormData();
+      if (fileSelected) formData.append("receipt_image", fileSelected);
+      if (amount) formData.append("amount", amount.toString());
+      if (vendor) formData.append("vendor", vendor);
+
+      const res = await fetch("/api/v1/expenses/receipts", {
+        method: "POST",
+        body: formData,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setToastMessage(`AI is categorizing your $${data.amount.toFixed(2)} expense at ${data.vendor}... Done. Marked as '${data.category}'.`);
-
-        // Wait a bit to show the success message, then redirect to dashboard
-        setTimeout(() => {
-          router.push('/dashboard');
-        }, 2000);
-      } else {
-        setToastMessage("Failed to process receipt.");
-        setIsUploading(false);
+      if (!res.ok) {
+        throw new Error("Failed to process receipt");
       }
-    } catch (error) {
-      setToastMessage("Error connecting to server.");
+
+      showToast("Receipt saved to Expense Tracker!");
+
+      // Delay slightly for the toast to be seen before navigating
+      setTimeout(() => {
+        router.push("/dashboard/expenses");
+      }, 1500);
+
+    } catch (err) {
+      console.error(err);
+      showToast("Error saving receipt. Please try again.");
+    } finally {
       setIsUploading(false);
     }
   };
 
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold font-outfit mb-6 text-gray-900">Snap Receipt</h1>
+    <div className="flex flex-col h-full bg-white p-4 max-w-md mx-auto relative">
+      <h1 className="text-2xl font-bold mb-4 font-outfit">Snap a Receipt</h1>
+      <p className="text-gray-500 mb-6 text-sm">Upload a photo of your expense receipt or enter the details manually.</p>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors cursor-pointer relative">
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              onChange={handleFileChange}
-              data-testid="receipt-file-input"
-              ref={fileInputRef}
-            />
-            <div className="text-4xl mb-2">📸</div>
-            <p className="text-sm font-medium">{fileSelected ? `Selected: ${fileSelected.name}` : "Tap to snap or upload"}</p>
-          </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-          <div className="flex flex-col gap-2">
+        {/* Mock OCR Results Area */}
+        <div className="flex flex-col gap-4 p-4 border rounded-xl bg-gray-50">
+          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Receipt Details</h2>
+
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold text-gray-700">Amount (Detected)</label>
             <input
               type="number"
@@ -94,7 +94,7 @@ export default function SnapReceiptPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <label className="text-sm font-semibold text-gray-700">Vendor (Detected)</label>
             <input
               type="text"
@@ -106,22 +106,44 @@ export default function SnapReceiptPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={!fileSelected || isUploading}
-            className={`w-full py-3 rounded-xl font-bold text-white transition-all shadow-md mt-4 ${fileSelected && !isUploading ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 cursor-not-allowed'}`}
-            data-testid="submit-receipt-btn"
-          >
-            {isUploading ? 'Processing...' : 'Upload Receipt'}
-          </button>
-        </form>
-      </div>
+        </div>
 
+        {/* File Upload Area */}
+        <div
+          className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-2xl p-6 gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={handleUploadClick}
+        >
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span className="text-sm font-medium text-gray-600 text-center">
+            {fileSelected ? fileSelected.name : "Tap to snap photo or select file"}
+          </span>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={isUploading}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md disabled:opacity-50 transition-colors"
+        >
+          {isUploading ? "Processing..." : "Save Expense"}
+        </button>
+
+      </form>
+
+      {/* Temporary Toast for manual feedback */}
       {toastMessage && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 z-50 animate-in slide-in-from-bottom-10" data-testid="receipt-toast">
-          <div className="bg-gray-900 text-white p-4 rounded-xl shadow-2xl text-sm font-medium mx-auto max-w-md flex items-center justify-between">
-            <span>{toastMessage}</span>
-          </div>
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm whitespace-nowrap z-50">
+          {toastMessage}
         </div>
       )}
     </div>

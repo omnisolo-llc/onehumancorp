@@ -1,406 +1,519 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viral Scratch-Off Generator | OHC</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-        --bg-color: #f5f5f7;
-        --text-color: #1d1d1f;
-        --accent-color: #0066FF;
-        --border-color: rgba(0, 0, 0, 0.1);
-        --glass-bg: rgba(255, 255, 255, 0.65);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Viral Scratch Off Generator - OHC Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #F5F5F7;
+            --surface-glass: rgba(255, 255, 255, 0.65);
+            --surface-border: rgba(255, 255, 255, 0.4);
+            --accent-blue: #0066FF;
+            --text-main: #1D1D1F;
+            --text-muted: #86868B;
+            --success-green: #34C759;
+            --shadow-sm: 0 4px 12px rgba(0,0,0,0.05);
+            --shadow-md: 0 12px 24px rgba(0,0,0,0.08);
+        }
 
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: var(--bg-color);
-        color: var(--text-color);
-        margin: 0;
-        padding: 40px 20px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-    }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-base: #000000;
+                --surface-glass: rgba(22, 22, 26, 0.7);
+                --surface-border: rgba(255, 255, 255, 0.1);
+                --text-main: #F5F5F7;
+                --text-muted: #A1A1A6;
+            }
+        }
 
-    .container {
-        max-width: 450px;
-        width: 100%;
-        background: var(--glass-bg);
-        backdrop-filter: blur(40px) saturate(220%);
-        -webkit-backdrop-filter: blur(40px) saturate(220%);
-        border: 1px solid var(--border-color);
-        border-radius: 20px;
-        padding: 30px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
-    }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-    h1 {
-        font-family: 'Outfit', sans-serif;
-        font-size: 24px;
-        margin: 0 0 5px 0;
-        text-align: center;
-    }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-    h2 {
-        font-family: 'Outfit', sans-serif;
-        font-size: 16px;
-        color: #86868b;
-        margin: 0 0 20px 0;
-        text-align: center;
-        font-weight: 500;
-    }
+        .header {
+            padding: 16px 20px;
+            background: var(--surface-glass);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border-bottom: 1px solid var(--surface-border);
+            display: flex;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-    label {
-        display: block;
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 8px;
-        color: var(--text-color);
-    }
+        .back-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            margin-left: -8px;
+            color: var(--accent-blue);
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
 
-    input[type="text"] {
-        width: 100%;
-        padding: 12px 16px;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.8);
-        font-size: 15px;
-        margin-bottom: 20px;
-        box-sizing: border-box;
-        transition: border-color 0.2s;
-    }
+        .header-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            margin-left: 12px;
+        }
 
-    input[type="text"]:focus {
-        outline: none;
-        border-color: var(--accent-color);
-    }
+        .container {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 768px;
+            margin: 0 auto;
+            width: 100%;
+        }
 
-    .toggle-container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 30px;
-        padding: 15px;
-        background: rgba(255, 255, 255, 0.4);
-        border-radius: 12px;
-    }
+        .glass-card {
+            background: var(--surface-glass);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid var(--surface-border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
 
-    .toggle-container label {
-        margin: 0;
-    }
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            margin: 0 0 16px 0;
+            font-weight: 600;
+        }
 
-    .toggle {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 28px;
-    }
+        .form-group {
+            margin-bottom: 16px;
+        }
 
-    .toggle input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
 
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #e5e5ea;
-        transition: .4s;
-        border-radius: 34px;
-    }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--surface-border);
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 16px; /* Prevents iOS zoom */
+            outline: none;
+            transition: border-color 0.2s;
+        }
 
-    .slider:before {
-        position: absolute;
-        content: "";
-        height: 20px;
-        width: 20px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
+        @media (prefers-color-scheme: light) {
+            input[type="text"], input[type="number"], select {
+                background: rgba(0, 0, 0, 0.02);
+                border: 1px solid rgba(0,0,0,0.1);
+            }
+        }
 
-    input:checked + .slider {
-        background-color: var(--accent-color);
-    }
+        input:focus, select:focus {
+            border-color: var(--accent-blue);
+        }
 
-    input:checked + .slider:before {
-        transform: translateX(22px);
-    }
+        .prize-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
 
-    button {
-        width: 100%;
-        padding: 16px;
-        background-color: var(--accent-color);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        font-family: 'Inter', sans-serif;
-    }
+        .prize-item {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            background: rgba(0,0,0,0.03);
+            padding: 12px;
+            border-radius: 8px;
+        }
+        @media (prefers-color-scheme: dark) {
+             .prize-item {
+                background: rgba(255,255,255,0.05);
+             }
+        }
 
-    button:hover {
-        background-color: #0055d4;
-    }
+        .prize-item input {
+            margin-bottom: 0;
+            flex: 1;
+        }
 
-    .back-link {
-        display: block;
-        text-align: center;
-        margin-top: 20px;
-        color: #86868b;
-        text-decoration: none;
-        font-size: 14px;
-    }
+        .prize-odds {
+            width: 80px !important;
+            text-align: center;
+        }
 
-    .back-link:hover {
-        text-decoration: underline;
-    }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--accent-blue);
+            color: var(--accent-blue);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            width: 100%;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
 
-    /* Modal Styles */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.4);
-        align-items: center;
-        justify-content: center;
-    }
+        .primary-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
 
-    .modal-content {
-        background: #ffffff;
-        padding: 30px;
-        border-radius: 20px;
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        position: relative;
-    }
+        .primary-btn:active {
+            transform: scale(0.98);
+        }
 
-    .modal-content h2 {
-        color: #1d1d1f;
-        font-size: 22px;
-        margin-bottom: 10px;
-    }
+        .primary-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
-    .modal-content p {
-        color: #86868b;
-        font-size: 15px;
-        margin-bottom: 25px;
-        line-height: 1.5;
-    }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--surface-border);
+        }
 
-    .pro-btn {
-        background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
-        margin-bottom: 10px;
-    }
+        .toggle-row:last-child {
+            border-bottom: none;
+        }
 
-    .x-btn {
-        background: #000;
-    }
+        .toggle-label {
+            font-weight: 500;
+            font-size: 15px;
+        }
 
-    .close-btn {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        background: none;
-        border: none;
-        font-size: 24px;
-        color: #86868b;
-        width: auto;
-        padding: 0;
-        cursor: pointer;
-    }
+        .toggle-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
 
-    /* Embed Modal */
-    #embed-modal .modal-content {
-        max-width: 500px;
-    }
+        /* iOS style toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 30px;
+        }
 
-    textarea {
-        width: 100%;
-        height: 150px;
-        padding: 12px;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        background: #f5f5f7;
-        font-family: monospace;
-        font-size: 13px;
-        resize: none;
-        margin-bottom: 20px;
-        box-sizing: border-box;
-    }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
 
-    /* Mock Scratch Card */
-    .preview-card {
-        background: #0066FF;
-        border-radius: 12px;
-        padding: 30px 20px;
-        margin-bottom: 20px;
-        position: relative;
-        overflow: hidden;
-    }
-    .preview-card h3 {
-        color: white;
-        margin: 0;
-        font-family: 'Outfit', sans-serif;
-    }
-    .scratch-cover {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: repeating-linear-gradient(
-          45deg,
-          #C0C0C0,
-          #C0C0C0 10px,
-          #B0B0B0 10px,
-          #B0B0B0 20px
-        );
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: #666;
-        font-weight: bold;
-        font-family: sans-serif;
-        font-size: 18px;
-    }
-  </style>
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .slider {
+            background-color: var(--success-green);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .result-container {
+            display: none;
+            text-align: center;
+            padding: 30px 10px;
+        }
+
+        .result-container.active {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .qr-placeholder {
+            width: 150px;
+            height: 150px;
+            background: white;
+            border-radius: 12px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--surface-border);
+        }
+
+        .qr-placeholder svg {
+            width: 100px;
+            height: 100px;
+            fill: #000;
+        }
+
+        .link-box {
+            background: rgba(0,0,0,0.05);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 10px 0 20px 0;
+            border: 1px solid var(--surface-border);
+            user-select: all;
+        }
+        @media (prefers-color-scheme: dark) {
+            .link-box { background: rgba(255,255,255,0.05); }
+        }
+
+        /* Preview Scratch Card */
+        .preview-card {
+            background: #0066FF;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .preview-card h3 {
+            color: white;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+        }
+        .scratch-cover {
+            background: linear-gradient(135deg, #ccc, #eee);
+            border-radius: 8px;
+            height: 80px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border: 2px dashed #999;
+        }
+    </style>
 </head>
 <body>
-  <div class="container glassmorphism">
-    <div style="font-size: 48px; text-align: center; margin-bottom: 10px;">🎡</div>
-    <h1>scratch off Generator 🎡</h1>
-    <h2>Widget Configuration</h2>
 
-    <div class="mock-card">
-        <h3>scratch off!</h3>
-        <button style="background: white; color: #0066FF; width: auto; padding: 8px 16px; margin-top: 15px; font-size: 14px;">SCRATCH NOW</button>
-        <div class="scratch-cover">SCRATCH HERE</div>
+    <div class="header">
+        <button class="back-btn" onclick="window.history.back()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back
+        </button>
+        <div class="header-title">Create Scratch-Off</div>
     </div>
 
-    <div>
-      <label for="prizes">Prizes (comma separated)</label>
-      <input type="text" id="prizes" placeholder="10%, 20%, Free Shipping" value="10%, 20%, Free Shipping" />
+    <div class="container" id="config-view">
+        <div class="glass-card">
+            <h2>Campaign Details</h2>
+
+            <div class="form-group">
+                <label>Campaign Name</label>
+                <input type="text" id="campaign-name" placeholder="e.g. Summer Weekend Surprise" value="Weekend Surprise">
+            </div>
+
+            <div class="form-group">
+                <label>Call to Action Text</label>
+                <input type="text" id="cta-text" placeholder="e.g. Scratch to reveal your prize!" value="Scratch to reveal your prize!">
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h2>Prizes & Odds</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: -10px;">Total odds must equal 100%. The system will manage inventory automatically.</p>
+
+            <div class="prize-list">
+                <div class="prize-item">
+                    <input type="text" placeholder="Prize Name" value="Free Dessert">
+                    <input type="number" class="prize-odds" placeholder="%" value="60">
+                    <span style="font-size:12px; color:var(--text-muted)">%</span>
+                </div>
+                <div class="prize-item">
+                    <input type="text" placeholder="Prize Name" value="20% Off Order">
+                    <input type="number" class="prize-odds" placeholder="%" value="30">
+                    <span style="font-size:12px; color:var(--text-muted)">%</span>
+                </div>
+                <div class="prize-item">
+                    <input type="text" placeholder="Prize Name" value="$50 Gift Card">
+                    <input type="number" class="prize-odds" placeholder="%" value="10">
+                    <span style="font-size:12px; color:var(--text-muted)">%</span>
+                </div>
+            </div>
+
+            <button class="btn-outline">+ Add Prize Tier</button>
+        </div>
+
+        <div class="glass-card">
+            <h2>Lead Capture</h2>
+            <div class="toggle-row">
+                <div>
+                    <div class="toggle-label">Require Email/Phone</div>
+                    <div class="toggle-desc">Users must enter details before scratching</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div>
+                    <div class="toggle-label">One Play Per User</div>
+                    <div class="toggle-desc">Prevent multiple entries via cookies/IP</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h2>Preview</h2>
+            <div class="preview-card">
+                <h3>Scratch to reveal your prize!</h3>
+                <div class="scratch-cover">SCRATCH HERE</div>
+            </div>
+        </div>
+
+        <button class="primary-btn" id="generate-btn" onclick="generateCampaign()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            Generate & Publish Campaign
+        </button>
     </div>
 
-    <div class="toggle-container">
-      <div>
-        <label for="branding-toggle">Hide OHC Branding</label>
-        <span style="font-size: 12px; color: #86868b;">Requires Pro or Share</span>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="branding-toggle">
-        <span class="slider"></span>
-      </label>
+    <div class="container result-container" id="result-view">
+        <div class="glass-card" style="text-align: center;">
+            <div style="width: 60px; height: 60px; background: var(--success-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <h2>Campaign Live!</h2>
+            <p style="color: var(--text-muted); font-size: 15px;">Your interactive scratch-off is ready. Share it with customers to drive engagement.</p>
+
+            <div class="qr-placeholder">
+                <!-- QR Code SVG Mock -->
+                <svg viewBox="0 0 100 100">
+                    <path d="M10,10 h30 v30 h-30 z M15,15 h20 v20 h-20 z M60,10 h30 v30 h-30 z M65,15 h20 v20 h-20 z M10,60 h30 v30 h-30 z M15,65 h20 v20 h-20 z M50,50 h10 v10 h-10 z M70,60 h20 v10 h-20 z M60,80 h30 v10 h-30 z M80,70 h10 v10 h-10 z M60,60 h10 v10 h-10 z" />
+                </svg>
+            </div>
+
+            <p style="font-size: 14px; font-weight: 500; margin-bottom: 8px;">Direct Link</p>
+            <div class="link-box" id="campaign-link">
+                https://ohc.app/c/scratch/x8f92k
+            </div>
+
+            <button class="primary-btn" onclick="copyLink()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy Link
+            </button>
+
+            <button class="btn-outline" style="margin-top: 16px; border: none; background: rgba(0, 102, 255, 0.1);" onclick="location.reload()">
+                Create Another
+            </button>
+        </div>
     </div>
 
-    <button id="generate-btn">Generate Widget</button>
-    <a href="dashboard.html" class="back-link">Back to Dashboard</a>
-  </div>
+    <script>
+        function generateCampaign() {
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Publishing...';
 
-  <!-- Paywall Modal -->
-  <div id="paywall-modal" class="modal">
-    <div class="modal-content">
-      <button class="close-btn" id="close-paywall">×</button>
-      <h2>Upgrade to Pro</h2>
-      <p>Hiding the OHC branding is a premium feature. Upgrade your workspace to unlock fully white-labeled widgets, or share on X to get 7 days free.</p>
-      <button class="pro-btn">Upgrade to Pro</button>
-      <button class="x-btn" onclick="window.open('https://twitter.com/intent/tweet?text=Just%20created%20a%20viral%20scratch-off%20campaign%20using%20@OneHumanCorp!%20%F0%9F%8E%A1', '_blank')">Share on X to get 7 Days Free</button>
-    </div>
-  </div>
-
-  <!-- Embed Modal -->
-  <div id="embed-modal" class="modal">
-    <div class="modal-content">
-      <h2 style="margin-bottom: 20px;">Embed scratch off</h2>
-      <textarea id="embed-code" readonly></textarea>
-      <button id="copy-btn" style="margin-bottom: 10px;">Copy to Clipboard</button>
-      <button id="close-embed" style="background: #e5e5ea; color: #1d1d1f;">Close</button>
-    </div>
-  </div>
-
-  <script>
-    const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
-    const toggle = document.getElementById('branding-toggle');
-    const paywallModal = document.getElementById('paywall-modal');
-    const closePaywall = document.getElementById('close-paywall');
-
-    toggle.addEventListener('change', (e) => {
-        if (e.target.checked) {
-            e.target.checked = false; // Revert visually
-            paywallModal.style.display = 'flex';
+            // Simulate network request
+            setTimeout(() => {
+                document.getElementById('config-view').style.display = 'none';
+                document.getElementById('result-view').classList.add('active');
+            }, 1200);
         }
-    });
 
-    closePaywall.addEventListener('click', () => {
-        paywallModal.style.display = 'none';
-    });
+        function copyLink() {
+            const linkText = document.getElementById('campaign-link').innerText;
+            navigator.clipboard.writeText(linkText).then(() => {
+                const btn = document.querySelector('#result-view .primary-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!';
+                btn.style.background = 'var(--success-green)';
 
-    // Embed logic
-    const generateBtn = document.getElementById('generate-btn');
-    const embedModal = document.getElementById('embed-modal');
-    const closeEmbed = document.getElementById('close-embed');
-    const copyBtn = document.getElementById('copy-btn');
-    const embedCode = document.getElementById('embed-code');
-    const prizesInput = document.getElementById('prizes');
-
-    generateBtn.addEventListener('click', () => {
-        let prizes = prizesInput.value.trim();
-        if (!prizes) {
-            prizes = "10%, 20%, Free Shipping";
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = 'var(--accent-blue)';
+                }, 2000);
+            });
         }
 
-        const baseUrl = window.location.origin.includes('localhost') || window.location.origin.includes('tauri')
-            ? 'https://ohc.app'
-            : window.location.origin;
-
-        const iframeSrc = `${baseUrl}/api/v1/growth/scratch-off/embed?tenant=${encodeURIComponent(tenantId)}&prizes=${encodeURIComponent(prizes)}`;
-
-        const code = `<iframe
-    src="${iframeSrc}"
-    width="100%"
-    height="300"
-    style="border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
-    title="Scratch to Win"
-></iframe>`;
-
-        embedCode.value = code;
-        embedModal.style.display = 'flex';
-    });
-
-    closeEmbed.addEventListener('click', () => {
-        embedModal.style.display = 'none';
-    });
-
-    copyBtn.addEventListener('click', () => {
-        embedCode.select();
-        document.execCommand('copy');
-        const origText = copyBtn.innerText;
-        copyBtn.innerText = 'Copied!';
-        setTimeout(() => {
-            copyBtn.innerText = origText;
-        }, 2000);
-    });
-  </script>
+        // Add spinner animation style dynamically
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
+        document.head.appendChild(style);
+    </script>
 </body>
 </html>
