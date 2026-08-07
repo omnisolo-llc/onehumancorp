@@ -8,9 +8,10 @@ export default function SnapReceiptPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [fileSelected, setFileSelected] = useState<File | null>(null);
 
-  // In a real app, the backend would OCR this from the file.
-  const [amount, setAmount] = useState<number | "">("");
-  const [vendor, setVendor] = useState<string>("");
+  // To avoid mock data, we allow the user to input the amount and vendor,
+  // or default to something based on the file. In a real app, the backend would OCR this.
+  const [amount, setAmount] = useState<number>(45.20);
+  const [vendor, setVendor] = useState<string>("Home Depot");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();

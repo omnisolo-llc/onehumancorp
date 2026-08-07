@@ -1,8 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 import SnapReceiptPage from "./page";
 
-// Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),
