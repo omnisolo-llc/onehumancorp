@@ -22,7 +22,7 @@ impl ToolExecutionEngine {
         // SOTA Harness Patterns (2025-2026): Error Handling
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;
-        let retry_strategy = ExponentialBackoffWithJitter::default();
+        let retry_strategy = ExponentialBackoffWithJitter::new(cfg.retry_strategy_base_ms, cfg.retry_strategy_jitter_max_ms);
 
         loop {
             // Enhanced telemetry to explicitly log the start of the LangGraph tool execution mechanic

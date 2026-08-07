@@ -99,6 +99,8 @@ pub struct AgentRunConfig {
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
     pub max_retries: usize,
+    pub retry_strategy_base_ms: u64,
+    pub retry_strategy_jitter_max_ms: u64,
     pub model: String,
     pub server_system_message: String,
     pub developer_instructions: String,
@@ -234,6 +236,8 @@ impl Default for AgentRunConfig {
         Self {
             agent_id: "default-agent".to_string(),
             max_retries: 2,
+            retry_strategy_base_ms: 500,
+            retry_strategy_jitter_max_ms: 100,
             model: String::new(),
             server_system_message: String::new(),
             developer_instructions: String::new(),
