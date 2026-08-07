@@ -321,7 +321,7 @@ function InboxWorkspace({
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
-        <div className="app-grid two gap-4">
+        <div className="flex flex-col md:grid md:grid-cols-2 gap-4">
           <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
             <div className="app-panel-header border-b border-[rgba(255,255,255,0.2)] dark:border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] p-4">
               <div>
@@ -495,6 +495,18 @@ function InboxWorkspace({
                             onClick={() => handleApproveAndSend(selected.id)}
                           >
                             ✨ Approve & Send (Deduct Inventory)
+                          </button>
+                        );
+                      }
+
+                      const isDepositLink = selected.draft_reply?.includes("[Send Deposit Link]");
+                      if (isDepositLink) {
+                        return (
+                          <button
+                            className="app-button primary w-full min-h-[44px] min-w-[44px] backdrop-filter bg-white/10 glassmorphism shadow-lg bg-gradient-to-r from-blue-500/80 to-indigo-600/80 text-white font-bold border border-white/20"
+                            onClick={() => handleApproveAndSend(selected.id)}
+                          >
+                            ✨ Send Deposit Link
                           </button>
                         );
                       }

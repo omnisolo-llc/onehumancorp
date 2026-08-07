@@ -4305,25 +4305,91 @@ pub async fn mock_omni_inbox_handler(
     let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
-    let id = format!("mock-{}", uuid::Uuid::new_v4());
+
+    let tenant_uuid = uuid::Uuid::parse_str(&tenant_id).unwrap_or_else(|_| uuid::Uuid::new_v4());
+
+    let inbox_id = uuid::Uuid::new_v4();
+    let contact_id = uuid::Uuid::new_v4();
+    let conversation_id = uuid::Uuid::new_v4();
+    let message_id = uuid::Uuid::new_v4();
+    let action_id = format!("act-{}", uuid::Uuid::new_v4());
 
     // Create an incoming message and draft a reply synchronously for the mock (so E2E doesn't have to wait for the job queue).
-    let draft_reply = format!("Yes, we do! I have a slot open. A 6-inch vegan cake starts at $50. Would you like to book?");
+    let draft_reply = format!("Yes! We have 2 available. Should I hold them for you? [Send Deposit Link]");
 
     match &db.store {
         crate::db::DbStore::Postgres => {
-            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', $6, 'unread', $7, NULL, NOW())")
-                .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id)
-                .execute(&db.pool).await;
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+            };
+
+            let _ = sqlx::query("INSERT INTO chat_inboxes (id, tenant_id, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                .bind(inbox_id).bind(tenant_uuid).bind("Default Inbox")
+                .execute(&mut *tx).await;
+
+            let _ = sqlx::query("INSERT INTO chat_contacts (id, tenant_id, name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                .bind(contact_id).bind(tenant_uuid).bind(&payload.sender_id)
+                .execute(&mut *tx).await;
+
+            let _ = sqlx::query("INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, status) VALUES ($1, $2, $3, $4, 'unread') ON CONFLICT DO NOTHING")
+                .bind(conversation_id).bind(tenant_uuid).bind(inbox_id).bind(contact_id)
+                .execute(&mut *tx).await;
+
+            let _ = sqlx::query("INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content) VALUES ($1, $2, $3, $4, $5, $6)")
+                .bind(message_id).bind(tenant_uuid).bind(conversation_id).bind("contact").bind(contact_id).bind(&payload.message)
+                .execute(&mut *tx).await;
+
+            // Generate AI summary
+            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload) VALUES ($1, $2, $3, $4, $5)")
+                .bind(&action_id).bind(&tenant_id).bind(conversation_id.to_string()).bind("Draft Reply").bind(
+                    serde_json::to_string(&serde_json::json!({
+                        "feature_type": "instagram_dm",
+                        "draft_reply": draft_reply,
+                        "customer_message": payload.message
+                    })).unwrap_or_default()
+                )
+                .execute(&mut *tx).await;
+
+            let _ = tx.commit().await;
         },
         crate::db::DbStore::Sqlite(pool) => {
-            let _ = sqlx::query("INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', ?, 'unread', ?, NULL, CURRENT_TIMESTAMP)")
-                .bind(&id).bind(&tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&draft_reply).bind(&payload.sender_id)
-                .execute(pool).await;
+            let mut tx = match pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+            };
+
+            let _ = sqlx::query("INSERT OR IGNORE INTO chat_inboxes (id, tenant_id, name) VALUES (?, ?, ?)")
+                .bind(inbox_id).bind(tenant_uuid).bind("Default Inbox")
+                .execute(&mut *tx).await;
+
+            let _ = sqlx::query("INSERT OR IGNORE INTO chat_contacts (id, tenant_id, name) VALUES (?, ?, ?)")
+                .bind(contact_id).bind(tenant_uuid).bind(&payload.sender_id)
+                .execute(&mut *tx).await;
+
+            let _ = sqlx::query("INSERT OR IGNORE INTO chat_conversations (id, tenant_id, inbox_id, contact_id, status) VALUES (?, ?, ?, ?, 'unread')")
+                .bind(conversation_id).bind(tenant_uuid).bind(inbox_id).bind(contact_id)
+                .execute(&mut *tx).await;
+
+            let _ = sqlx::query("INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content) VALUES (?, ?, ?, ?, ?, ?)")
+                .bind(message_id).bind(tenant_uuid).bind(conversation_id).bind("contact").bind(contact_id).bind(&payload.message)
+                .execute(&mut *tx).await;
+
+            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload) VALUES (?, ?, ?, ?, ?)")
+                .bind(&action_id).bind(&tenant_id).bind(conversation_id.to_string()).bind("Draft Reply").bind(
+                    serde_json::to_string(&serde_json::json!({
+                        "feature_type": "instagram_dm",
+                        "draft_reply": draft_reply,
+                        "customer_message": payload.message
+                    })).unwrap_or_default()
+                )
+                .execute(&mut *tx).await;
+
+            let _ = tx.commit().await;
         }
     }
 
-    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true, "id": id}))).into_response()
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true, "id": message_id.to_string()}))).into_response()
 }
 
 pub async fn update_ui_triage_action_handler(

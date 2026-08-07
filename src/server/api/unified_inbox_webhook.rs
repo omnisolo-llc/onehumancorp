@@ -463,17 +463,19 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
     let mut feed_items: Vec<UnifiedFeedItem> = vec![];
 
     let threads_res_mapped: Result<Vec<UnifiedThread>, sqlx::Error>;
+    let tenant_uuid = uuid::Uuid::parse_str(tenant_id).unwrap_or_else(|_| uuid::Uuid::new_v4());
+
     match &state.db.store {
         crate::db::DbStore::Postgres => {
-            let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
-                .bind(&tenant_id)
+            let res = sqlx::query("SELECT id, tenant_id, contact_id as customer_id, 'Instagram DM' as channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM chat_conversations WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+                .bind(&tenant_uuid)
                 .fetch_all(&state.db.pool).await;
             threads_res_mapped = res.map(|rows| {
                 rows.into_iter()
                     .map(|row| UnifiedThread {
-                        id: row.get("id"),
-                        tenant_id: row.get("tenant_id"),
-                        customer_id: row.try_get("customer_id").ok(),
+                        id: row.try_get::<uuid::Uuid, _>("id").map(|u| u.to_string()).unwrap_or_default(),
+                        tenant_id: row.try_get::<uuid::Uuid, _>("tenant_id").map(|u| u.to_string()).unwrap_or_default(),
+                        customer_id: row.try_get::<uuid::Uuid, _>("customer_id").map(|u| u.to_string()).ok(),
                         channel: row.get("channel"),
                         status: row.get("status"),
                         created_at: row.try_get("created_at").unwrap_or_default(),
@@ -483,15 +485,15 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
             });
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let res = sqlx::query("SELECT id, tenant_id, customer_id, channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_threads WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
-                .bind(&tenant_id)
+            let res = sqlx::query("SELECT id, tenant_id, contact_id as customer_id, 'Instagram DM' as channel, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM chat_conversations WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+                .bind(&tenant_uuid)
                 .fetch_all(sqlite_pool).await;
             threads_res_mapped = res.map(|rows| {
                 rows.into_iter()
                     .map(|row| UnifiedThread {
-                        id: row.get("id"),
-                        tenant_id: row.get("tenant_id"),
-                        customer_id: row.try_get("customer_id").ok(),
+                        id: row.try_get::<uuid::Uuid, _>("id").map(|u| u.to_string()).unwrap_or_default(),
+                        tenant_id: row.try_get::<uuid::Uuid, _>("tenant_id").map(|u| u.to_string()).unwrap_or_default(),
+                        customer_id: row.try_get::<uuid::Uuid, _>("customer_id").map(|u| u.to_string()).ok(),
                         channel: row.get("channel"),
                         status: row.get("status"),
                         created_at: row.try_get("created_at").unwrap_or_default(),
@@ -511,21 +513,30 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
         let mut messages_map: std::collections::HashMap<String, Vec<UnifiedMessage>> = std::collections::HashMap::new();
         let mut triage_actions_map: std::collections::HashMap<String, Vec<UnifiedTriageAction>> = std::collections::HashMap::new();
 
+        let thread_uuids: Vec<uuid::Uuid> = thread_ids.iter().filter_map(|s| uuid::Uuid::parse_str(s).ok()).collect();
+
         match &state.db.store {
             crate::db::DbStore::Postgres => {
                 let pool = state.db.pool.clone();
                 let ids_clone = thread_ids.clone();
 
                 let (msg_res, action_res) = tokio::join!(
-                    sqlx::query("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id = ANY($1) ORDER BY created_at ASC").bind(&thread_ids).fetch_all(&pool),
+                    sqlx::query("SELECT id, tenant_id, conversation_id as thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM chat_messages WHERE conversation_id = ANY($1) ORDER BY created_at ASC").bind(&thread_uuids).fetch_all(&pool),
                     sqlx::query("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id = ANY($1)").bind(&ids_clone).fetch_all(&pool)
                 );
 
                 if let Ok(msg_rows) = msg_res {
                     for m_row in msg_rows {
                         use sqlx::Row;
-                        let t_id: String = m_row.get("thread_id");
-                        messages_map.entry(t_id).or_default().push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: m_row.get("content"), created_at: m_row.try_get("created_at").unwrap_or_default() });
+                        let t_id = m_row.try_get::<uuid::Uuid, _>("thread_id").map(|u| u.to_string()).unwrap_or_default();
+                        messages_map.entry(t_id.clone()).or_default().push(UnifiedMessage {
+                            id: m_row.try_get::<uuid::Uuid, _>("id").map(|u| u.to_string()).unwrap_or_default(),
+                            tenant_id: m_row.try_get::<uuid::Uuid, _>("tenant_id").map(|u| u.to_string()).unwrap_or_default(),
+                            thread_id: t_id,
+                            sender_type: m_row.get("sender_type"),
+                            content: m_row.get("content"),
+                            created_at: m_row.try_get("created_at").unwrap_or_default()
+                        });
                     }
                 }
                 if let Ok(action_rows) = action_res {
@@ -540,13 +551,13 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                 let pool = sqlite_pool.clone();
 
                 let placeholders = thread_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-                let msg_query = format!("SELECT id, tenant_id, thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM unified_messages WHERE thread_id IN ({}) ORDER BY created_at ASC", placeholders);
+                let msg_query = format!("SELECT id, tenant_id, conversation_id as thread_id, sender_type, content, CAST(created_at AS text) as created_at FROM chat_messages WHERE conversation_id IN ({}) ORDER BY created_at ASC", placeholders);
                 let action_query = format!("SELECT id, tenant_id, thread_id, action_type, action_payload, status, CAST(created_at AS text) as created_at, CAST(updated_at AS text) as updated_at FROM unified_triage_actions WHERE thread_id IN ({})", placeholders);
 
                 let (msg_res, action_res) = tokio::join!(
                     async {
                         let mut q = sqlx::query(&msg_query);
-                        for id in &thread_ids {
+                        for id in &thread_uuids {
                             q = q.bind(id);
                         }
                         q.fetch_all(&pool).await
@@ -563,8 +574,15 @@ async fn fetch_unified_feed_items(state: &AppState, tenant_id: &str, mobile_opti
                 if let Ok(msg_rows) = msg_res {
                     for m_row in msg_rows {
                         use sqlx::Row;
-                        let t_id: String = m_row.get("thread_id");
-                        messages_map.entry(t_id).or_default().push(UnifiedMessage { id: m_row.get("id"), tenant_id: m_row.get("tenant_id"), thread_id: m_row.get("thread_id"), sender_type: m_row.get("sender_type"), content: m_row.get("content"), created_at: m_row.try_get("created_at").unwrap_or_default() });
+                        let t_id = m_row.try_get::<uuid::Uuid, _>("thread_id").map(|u| u.to_string()).unwrap_or_default();
+                        messages_map.entry(t_id.clone()).or_default().push(UnifiedMessage {
+                            id: m_row.try_get::<uuid::Uuid, _>("id").map(|u| u.to_string()).unwrap_or_default(),
+                            tenant_id: m_row.try_get::<uuid::Uuid, _>("tenant_id").map(|u| u.to_string()).unwrap_or_default(),
+                            thread_id: t_id,
+                            sender_type: m_row.get("sender_type"),
+                            content: m_row.get("content"),
+                            created_at: m_row.try_get("created_at").unwrap_or_default()
+                        });
                     }
                 }
                 if let Ok(action_rows) = action_res {

@@ -1,6 +1,10 @@
 {
   "name": "mono",
   "version": "0.4.47",
+  "scripts": {
+    "test": "npx @bazel/bazelisk test //...",
+    "build": "npx @bazel/bazelisk build //..."
+  },
   "dependencies": {
     "@bufbuild/protobuf": "^2.11.0",
     "@bufbuild/protoc-gen-es": "^2.11.0",

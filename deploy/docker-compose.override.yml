@@ -6,14 +6,21 @@ services:
   server:
     pull_policy: never
     image: onehumancorp/server:latest
+    ports:
+      - "8080:8080"
+      - "127.0.0.1:8081:8081"
 
   postgres:
     image: pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
+    ports:
+      - "127.0.0.1:5432:5432"
 
   valkey:
     image: valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
     pull_policy: missing
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
+    ports:
+      - "127.0.0.1:6379:6379"
