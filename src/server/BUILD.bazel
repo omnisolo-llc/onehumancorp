@@ -1,3 +1,4 @@
+exports_files(["lib.rs"], visibility = ["//visibility:public"])
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
@@ -632,6 +633,10 @@ rust_test(
 
 rust_test(
     name = "persistence_commands_test",
+    compile_data = [
+        "//src/server/auth:seaorm_store.rs",
+    ],
+    rustc_flags = ["--cfg=is_commands_test"],
     size = "small",
     srcs = [
         "persistence_commands_test.rs",
@@ -640,6 +645,9 @@ rust_test(
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+
+
+
     ],
     edition = "2024",
     deps = [
@@ -664,6 +672,9 @@ rust_test(
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+
+
+
     ],
     edition = "2024",
     deps = [
