@@ -32,12 +32,12 @@ export function TapToPayOverlay({ isOpen, onClose, amount, currency, orderId, on
       setStatus('initializing');
 
       // 1. Get Connection Token
-      const tokenRes = await fetch('/api/v1/pos/terminal/connection-token', { method: 'POST' });
+      const tokenRes = await fetch('/api/v1/payments/terminal/token', { method: 'POST' });
       if (!tokenRes.ok) throw new Error('Failed to initialize terminal.');
 
       // 2. Create Payment Intent
       setStatus('ready');
-      const piRes = await fetch('/api/v1/pos/terminal/payment-intent', {
+      const piRes = await fetch('/api/v1/payments/terminal/create_payment_intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, currency, orderId })
@@ -50,7 +50,7 @@ export function TapToPayOverlay({ isOpen, onClose, amount, currency, orderId, on
       await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate NFC interaction time
 
       // 4. Capture Payment Intent
-      const captureRes = await fetch('/api/v1/pos/terminal/capture', {
+      const captureRes = await fetch('/api/v1/payments/terminal/capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentIntentId: piData.id })
