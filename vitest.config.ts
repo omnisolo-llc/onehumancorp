@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    setupFiles: ['./setupTests.ts'],
     globals: true,
     include: [
       'src/ui/next/src/**/*.test.{ts,tsx}',
