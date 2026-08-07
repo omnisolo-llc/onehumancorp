@@ -30,7 +30,7 @@ mod tests {
         assert!(res.is_ok());
 
         let mut tx = pool.begin().await.unwrap();
-        sqlx::query("SET LOCAL app.current_tenant_id = $1").bind(tenant_id).execute(&mut *tx).await.unwrap();
+        sqlx::query("SET LOCAL app.current_tenant = $1").bind(tenant_id).execute(&mut *tx).await.unwrap();
         let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM platform_listings WHERE product_id = 'prod-sync-1' AND sync_status = 'ACTIVE'")
             .fetch_one(&mut *tx).await.unwrap();
         assert_eq!(count.0, 2);
@@ -41,7 +41,7 @@ mod tests {
         assert!(res.is_ok());
 
         let mut tx = pool.begin().await.unwrap();
-        sqlx::query("SET LOCAL app.current_tenant_id = $1").bind(tenant_id).execute(&mut *tx).await.unwrap();
+        sqlx::query("SET LOCAL app.current_tenant = $1").bind(tenant_id).execute(&mut *tx).await.unwrap();
         let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM platform_listings WHERE product_id = 'prod-sync-1' AND sync_status = 'PENDING'")
             .fetch_one(&mut *tx).await.unwrap();
         assert_eq!(count.0, 2);

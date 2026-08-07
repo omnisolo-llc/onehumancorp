@@ -36,7 +36,7 @@ impl SyndicationEngine {
     pub async fn ingest_product(&self, tenant_id: &str, product_id: &str, platforms: Vec<&str>) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let _ = sqlx::query("SET LOCAL app.current_tenant_id = $1")
+        let _ = sqlx::query("SET LOCAL app.current_tenant = $1")
             .bind(tenant_id)
             .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -57,7 +57,7 @@ impl SyndicationEngine {
     pub async fn process_inventory_deduction(&self, tenant_id: &str, product_id: &str, quantity: i32, source: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let _ = sqlx::query("SET LOCAL app.current_tenant_id = $1")
+        let _ = sqlx::query("SET LOCAL app.current_tenant = $1")
             .bind(tenant_id)
             .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -86,7 +86,7 @@ impl SyndicationEngine {
     pub async fn simulate_background_sync(&self, tenant_id: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        let _ = sqlx::query("SET LOCAL app.current_tenant_id = $1")
+        let _ = sqlx::query("SET LOCAL app.current_tenant = $1")
             .bind(tenant_id)
             .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 

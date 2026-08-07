@@ -1,7 +1,7 @@
 -- +goose Up
 -- Fix incorrect RLS policy and column type for waitlist_campaigns and pre_order_entries
 
--- Fix waitlist_campaigns RLS policy (was using app.current_tenant_id which does not exist)
+-- Fix waitlist_campaigns RLS policy (was using app.current_tenant which does not exist)
 DROP POLICY IF EXISTS "Tenant isolation for waitlist_campaigns select" ON waitlist_campaigns;
 DROP POLICY IF EXISTS "Tenant isolation for waitlist_campaigns insert" ON waitlist_campaigns;
 DROP POLICY IF EXISTS "Tenant isolation for waitlist_campaigns update" ON waitlist_campaigns;

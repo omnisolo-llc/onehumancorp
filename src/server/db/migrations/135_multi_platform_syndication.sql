@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_platform_listings_platform_id ON platform_listing
 ALTER TABLE platform_listings ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation_policy ON platform_listings
-    USING (tenant_id = current_setting('app.current_tenant_id', true));
+    USING (tenant_id = current_setting('app.current_tenant', true));
 
 CREATE TABLE IF NOT EXISTS inventory_ledger (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -44,4 +44,4 @@ CREATE INDEX IF NOT EXISTS idx_inventory_ledger_product_id ON inventory_ledger(p
 ALTER TABLE inventory_ledger ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation_policy ON inventory_ledger
-    USING (tenant_id = current_setting('app.current_tenant_id', true));
+    USING (tenant_id = current_setting('app.current_tenant', true));
