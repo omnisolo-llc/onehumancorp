@@ -1,4 +1,4 @@
-exports_files(["Cargo.toml"])
+exports_files(["Cargo.toml", "seaorm_store.rs"])
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
@@ -7,6 +7,9 @@ rust_library(
     compile_data = [
         "//src/server/migrations",
         "//src/ui/next:auth_limits",
+        "//src/server/persistence:migration.rs",
+        "//src/server/persistence:commands.rs",
+        "//src/server:lib.rs",
     ],
     srcs = [
         "email.rs",
