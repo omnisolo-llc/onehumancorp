@@ -63,6 +63,13 @@ rust_test(
     name = "server_auth_unit_test",
     size = "small",
     crate = ":server_auth",
+    compile_data = [
+        "seaorm_store.rs",
+        "http.rs",
+        "//src/server/persistence:migration.rs",
+        "//src/server/persistence:commands.rs",
+        "//src/server:lib.rs",
+    ],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -77,3 +84,5 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+exports_files(['seaorm_store.rs', 'http.rs'])
