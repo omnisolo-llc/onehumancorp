@@ -641,6 +641,7 @@ rust_test(
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
     ],
+    compile_data = ["//src/server/auth:seaorm_store.rs"],
     edition = "2024",
     deps = [
         "//src/server/auth:server_auth",
@@ -1203,3 +1204,4 @@ sh_test(
     data = glob(["**/*.rs"]),
     args = ["src/server"],
 )
+exports_files(["lib.rs"])

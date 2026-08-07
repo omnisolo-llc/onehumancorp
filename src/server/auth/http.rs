@@ -713,6 +713,7 @@ async fn list_member_usage_analytics(
 }
 
 impl HttpAuthState {
+    #[allow(dead_code)]
     fn new(store: Arc<Store>, trusted_proxies: HashSet<IpAddr>) -> Self {
         Self::with_mailer(
             store,

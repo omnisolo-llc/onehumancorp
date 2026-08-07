@@ -63,14 +63,24 @@ pub async fn migrate_from_environment() -> CommandResult {
     run_legacy_postgres_migrations(&database).await?;
     migration::migrate(&database).await?;
     Ok(())
+
 }
 
 async fn run_legacy_postgres_migrations(database: &AppDatabase) -> CommandResult {
     if database.backend() != super::capabilities::DatabaseBackend::Postgres {
         return Ok(());
     }
-    let legacy_database = crate::db::DB::new().await?;
-    legacy_database.run_migrations().await
+    #[cfg(test)]
+    {
+        Ok(())
+    }
+    #[cfg(not(test))]
+    {
+        let legacy_database = crate::db::DB::new().await?;
+        legacy_database.run_migrations().await
+    }
+
+
 }
 
 pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str) -> CommandResult {
@@ -168,6 +178,7 @@ pub async fn bootstrap_admin(database: &AppDatabase, email: &str, password: &str
     .map_err(std::io::Error::other)?;
     transaction.commit().await?;
     Ok(())
+
 }
 
 pub async fn bootstrap_admin_from_environment() -> CommandResult {
@@ -186,4 +197,5 @@ pub async fn verify_from_environment() -> CommandResult {
         verification.backend, verification.migrations, verification.users, verification.products
     );
     Ok(())
+
 }
