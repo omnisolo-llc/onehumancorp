@@ -436,13 +436,41 @@ impl DashboardService for MyDashboardService {
         let org_id = std::sync::Arc::new(req.organization_id);
         let cache_key = format!("dashboard_snapshot:{}:mobile:{}", org_id, req.mobile_optimized);
         let cache = DASHBOARD_SNAPSHOT_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client()));
+
+        let mut stale_data = None;
         if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
             if !is_stale {
                 return Ok(Response::new(cached));
+            } else {
+                stale_data = Some(cached);
             }
         }
 
         let mobile_optimized = req.mobile_optimized;
+        let s = self.clone();
+        let org_id_clone = org_id.clone();
+        let cache_key_clone = cache_key.clone();
+
+        // Stale-While-Revalidate: Return stale data immediately if we have it, and refresh cache in background
+        if let Some(cached) = stale_data {
+            tokio::spawn(async move {
+                let _ = s.fetch_and_cache_dashboard(org_id_clone, mobile_optimized, cache_key_clone).await;
+            });
+            return Ok(Response::new(cached));
+        }
+
+        // Cache miss: block and fetch
+        let result = self.fetch_and_cache_dashboard(org_id.clone(), mobile_optimized, cache_key.clone()).await?;
+        Ok(Response::new(result))
+    }
+
+    async fn fetch_and_cache_dashboard(
+        &self,
+        org_id: std::sync::Arc<String>,
+        mobile_optimized: bool,
+        cache_key: String,
+    ) -> Result<DashboardSnapshot, Status> {
+
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
             {
@@ -639,13 +667,14 @@ impl DashboardService for MyDashboardService {
             orders,
             bookings,
         };
+
         if let Some(c) = DASHBOARD_SNAPSHOT_CACHE.get() {
             let cache_key_set = cache_key.clone();
             let result_set = result.clone();
             tokio::spawn(async move { c.set(&cache_key_set, result_set, std::time::Duration::from_secs(5)).await; });
         }
 
-        Ok(Response::new(result))
+        Ok(result)
     }
 
     async fn get_onboarding_state(
