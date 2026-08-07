@@ -212,6 +212,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("LLM-Recoverable Tool Error (dummy)"));
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
                 assert!(msg.contains("missing field `required_int`"));
             },
@@ -272,6 +273,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
             ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("LLM-Recoverable Tool Error (dummy)"));
                 assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
             },
             _ => panic!("Expected LlmRecoverable error"),
@@ -299,7 +301,10 @@ use ohc_builtin_agent::agent::AgentRunConfig;
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2, &AgentRunConfig::default()).await;
         assert!(res.is_err());
         match res.expect_err("Expected error in test") {
-            ToolError::LlmRecoverable(msg) => assert!(msg.contains("parse error")),
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("LLM-Recoverable Tool Error (dummy)"));
+                assert!(msg.contains("parse error"));
+            }
             _ => panic!("Expected LlmRecoverable error"),
         }
     }

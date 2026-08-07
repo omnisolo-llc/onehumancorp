@@ -665,12 +665,7 @@ impl Agent {
                     }
                     Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                         let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                tc.id.clone(),
-                                &tc.name,
-                                &err_msg,
-                            )
-                            .error;
+                            ohc_builtin_agent_core::types::format_llm_recoverable_error(&tc.name, &err_msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -775,12 +770,7 @@ impl Agent {
                     }
                     Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                         let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                tc.id.clone(),
-                                &tc.name,
-                                &err_msg,
-                            )
-                            .error;
+                            ohc_builtin_agent_core::types::format_llm_recoverable_error(&tc.name, &err_msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -1428,12 +1418,7 @@ impl Agent {
                                     }
                                 }
                                 let self_correct_msg =
-                                    ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                        tc.id.clone(),
-                                        &tc.name,
-                                        &err_msg,
-                                    )
-                                    .error;
+                                    ohc_builtin_agent_core::types::format_llm_recoverable_error(&tc.name, &err_msg);
                                 on_event(AgentEvent::ToolCall {
                                     name: tc.name.clone(),
                                     args_json: tc.arguments.to_string(),
@@ -1550,7 +1535,7 @@ impl Agent {
                                             let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         }
                                     }
-                                    let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &err_msg).error;
+                                    let self_correct_msg = ohc_builtin_agent_core::types::format_llm_recoverable_error(&tc.name, &err_msg);
                                     on_event(AgentEvent::ToolCall {
                                         name: tc.name.clone(),
                                         args_json: tc.arguments.to_string(),
@@ -1931,7 +1916,7 @@ impl Agent {
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, err_msg));
                             }
-                            tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id.clone(), &tool_name, &err_msg);
+                            tool_results[idx] = ohc_builtin_agent_core::types::ToolResult { tool_call_id: id.clone(), content: String::new(), error: err_msg.clone() };
                         }
                         Err(crate::types::ToolError::Transient(msg)) => {
                             return Err(format!("Unexpected tool error: Transient error: {}", msg));
@@ -1982,7 +1967,7 @@ impl Agent {
                                         // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
                                     }
                                 }
-                                tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id.clone(), &tc.name, &err_msg);
+                                tool_results[idx] = ohc_builtin_agent_core::types::ToolResult { tool_call_id: id.clone(), content: String::new(), error: err_msg.clone() };
                             }
                             crate::types::ToolError::UserFixable(msg) => {
                                 if let Some(checkpointer) = &checkpointer_node {
@@ -2061,7 +2046,7 @@ impl Agent {
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, err_msg));
                                 }
-                                tool_results[idx] = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(id.clone(), &tc.name, &err_msg);
+                                tool_results[idx] = ohc_builtin_agent_core::types::ToolResult { tool_call_id: id.clone(), content: String::new(), error: err_msg.clone() };
 
                                 for subsequent_tc in mutating_calls.iter().skip_while(|t| t.id != id).skip(1) {
                                     let sub_idx = if let Some(idx) = tool_calls.iter().position(|t| t.id == subsequent_tc.id) { idx } else { continue; };
@@ -2598,7 +2583,7 @@ impl Agent {
                             llm_recoverable_count += 1;
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
                             // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            let error_result = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(current_tc.id.clone(), &current_tc.name, &err_msg);
+                            let error_result = ohc_builtin_agent_core::types::ToolResult { tool_call_id: current_tc.id.clone(), content: String::new(), error: err_msg.clone() };
                             let msg_to_push = crate::types::Message {
                                 role: crate::types::Role::Tool,
                                 content: String::new(),
@@ -2745,11 +2730,7 @@ impl Agent {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         let error_result =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                current_tc.id.clone(),
-                                &current_tc.name,
-                                &err_msg,
-                            );
+                            ohc_builtin_agent_core::types::ToolResult { tool_call_id: tc.id.clone(), content: String::new(), error: err_msg.clone() };
                         let msg_to_push = crate::types::Message {
                             role: crate::types::Role::Tool,
                             content: String::new(),
@@ -4323,12 +4304,7 @@ impl Agent {
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                tc.id.clone(),
-                                &tc.name,
-                                &err_msg,
-                            )
-                            .error;
+                            ohc_builtin_agent_core::types::format_llm_recoverable_error(&tc.name, &err_msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -4589,12 +4565,7 @@ impl Agent {
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
                             let self_correct_msg =
-                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
-                                    tc.id.clone(),
-                                    &tc.name,
-                                    &err_msg,
-                                )
-                                .error;
+                                ohc_builtin_agent_core::types::format_llm_recoverable_error(&tc.name, &err_msg);
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
