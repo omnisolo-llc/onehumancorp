@@ -1,3 +1,12 @@
+
+pub mod db {
+    pub struct DB {}
+    impl DB {
+        pub async fn new() -> Result<Self, Box<dyn std::error::Error>> { Ok(Self{}) }
+        pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> { Ok(()) }
+    }
+}
+
 #[path = "persistence/capabilities.rs"]
 mod capabilities;
 #[path = "persistence/commands.rs"]

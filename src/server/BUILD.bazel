@@ -1,3 +1,4 @@
+exports_files(["lib.rs"], visibility = ["//visibility:public"])
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
@@ -630,6 +631,7 @@ rust_test(
     ],
 )
 
+
 rust_test(
     name = "persistence_commands_test",
     size = "small",
@@ -642,6 +644,10 @@ rust_test(
         "//src/server/persistence:migration.rs",
     ],
     edition = "2024",
+    compile_data = [
+        "//src/server/auth:seaorm_store.rs",
+        "//src/server/persistence:migration.rs",
+    ],
     deps = [
         "//src/server/auth:server_auth",
         "@crates//:bcrypt",

@@ -1,4 +1,4 @@
-exports_files(["Cargo.toml"])
+exports_files(["seaorm_store.rs", "http.rs"], visibility = ["//visibility:public"])
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
@@ -66,6 +66,13 @@ rust_test(
     env = {
         "RUST_TEST_THREADS": "1",
     },
+    compile_data = [
+        "//src/server/migrations",
+        "//src/ui/next:auth_limits",
+        "//src/server:lib.rs",
+        "//src/server/persistence:commands.rs",
+        "//src/server/persistence:migration.rs",
+    ],
     deps = [
         "@crates//:rcgen",
         "@crates//:tempfile",

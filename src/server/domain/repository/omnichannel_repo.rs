@@ -29,7 +29,9 @@ pub struct WorkItem {
 pub struct Conversation {
     pub id: Uuid,
     pub tenant_id: Uuid,
-    pub channel: String,
+    pub inbox_id: Uuid,
+    pub contact_id: Uuid,
+    pub assignee_id: Option<Uuid>,
     pub status: String,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -40,7 +42,8 @@ pub struct Message {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub conversation_id: Uuid,
-    pub direction: String,
+    pub sender_type: String,
+    pub sender_id: Option<Uuid>,
     pub content: String,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -117,29 +120,31 @@ impl OmniChannelRepo {
         Ok(record)
     }
 
-    pub async fn create_conversation(&self, tenant_id: Uuid, channel: String, status: String) -> Result<Conversation, sqlx::Error> {
+    pub async fn create_conversation(&self, tenant_id: Uuid, inbox_id: Uuid, contact_id: Uuid, status: String) -> Result<Conversation, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, Conversation>(
-            "INSERT INTO conversations (id, tenant_id, channel, status) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, channel, status, created_at, updated_at",
+            "INSERT INTO chat_conversations (id, tenant_id, inbox_id, contact_id, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at",
         )
         .bind(id)
         .bind(tenant_id)
-        .bind(channel)
+        .bind(inbox_id)
+        .bind(contact_id)
         .bind(status)
         .fetch_one(&self.db.pool)
         .await?;
         Ok(record)
     }
 
-    pub async fn create_message(&self, tenant_id: Uuid, conversation_id: Uuid, direction: String, content: String) -> Result<Message, sqlx::Error> {
+    pub async fn create_message(&self, tenant_id: Uuid, conversation_id: Uuid, sender_type: String, sender_id: Option<Uuid>, content: String) -> Result<Message, sqlx::Error> {
         let id = Uuid::new_v4();
         let record = sqlx::query_as::<_, Message>(
-            "INSERT INTO messages (id, tenant_id, conversation_id, direction, content) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, conversation_id, direction, content, created_at, updated_at",
+            "INSERT INTO chat_messages (id, tenant_id, conversation_id, sender_type, sender_id, content) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at",
         )
         .bind(id)
         .bind(tenant_id)
         .bind(conversation_id)
-        .bind(direction)
+        .bind(sender_type)
+        .bind(sender_id)
         .bind(content)
         .fetch_one(&self.db.pool)
         .await?;
@@ -163,7 +168,7 @@ impl OmniChannelRepo {
 
     pub async fn get_conversation(&self, id: Uuid) -> Result<Option<Conversation>, sqlx::Error> {
         let record = sqlx::query_as::<_, Conversation>(
-            "SELECT id, tenant_id, channel, status, created_at, updated_at FROM conversations WHERE id = $1",
+            "SELECT id, tenant_id, inbox_id, contact_id, assignee_id, status, created_at, updated_at FROM chat_conversations WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.db.pool)
@@ -173,7 +178,7 @@ impl OmniChannelRepo {
 
     pub async fn get_messages_by_conversation_id(&self, conversation_id: Uuid) -> Result<Vec<Message>, sqlx::Error> {
         let records = sqlx::query_as::<_, Message>(
-            "SELECT id, tenant_id, conversation_id, direction, content, created_at, updated_at FROM messages WHERE conversation_id = $1",
+            "SELECT id, tenant_id, conversation_id, sender_type, sender_id, content, created_at, updated_at FROM chat_messages WHERE conversation_id = $1",
         )
         .bind(conversation_id)
         .fetch_all(&self.db.pool)
@@ -223,12 +228,14 @@ mod tests {
         let conv = Conversation {
             id: Uuid::new_v4(),
             tenant_id: Uuid::new_v4(),
-            channel: "Instagram".to_string(),
+            inbox_id: Uuid::new_v4(),
+            contact_id: Uuid::new_v4(),
+            assignee_id: None,
             status: "OPEN".to_string(),
             created_at: None,
             updated_at: None,
         };
-        assert_eq!(conv.channel, "Instagram");
+        assert_eq!(conv.status, "OPEN");
     }
 
     #[test]
@@ -237,7 +244,8 @@ mod tests {
             id: Uuid::new_v4(),
             tenant_id: Uuid::new_v4(),
             conversation_id: Uuid::new_v4(),
-            direction: "INBOUND".to_string(),
+            sender_type: "contact".to_string(),
+            sender_id: None,
             content: "Hello".to_string(),
             created_at: None,
             updated_at: None,
