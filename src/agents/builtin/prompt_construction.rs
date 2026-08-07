@@ -188,20 +188,39 @@ pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) ->
 // This builder implements a strict hierarchical priority stack for prompt components.
 pub struct StrictHierarchicalPromptBuilder {
     server_system_message: String,
+    tool_definitions: String,
     developer_instructions: String,
     user_instructions: String,
     lightweight_memory_index: Vec<String>,
 }
 
 impl StrictHierarchicalPromptBuilder {
-    /// Builds the textual instruction hierarchy. Provider-native schemas are the
-    /// sole tool-definition representation; `_tools` remains for API stability.
+    /// Builds the textual instruction hierarchy. Implements the OpenAI Codex Mechanic
+    /// which strictly requires Tool Definitions to be placed between Server System Message
+    /// and Developer Instructions.
     pub fn new(
         cfg: &AgentRunConfig,
-        _tools: &[crate::tools::Tool],
+        tools: &[crate::tools::Tool],
         cascading_agents_md: Option<String>,
         lightweight_memory_index: Option<Vec<String>>,
     ) -> Self {
+        let mut formatted_tools = String::new();
+        if !tools.is_empty() {
+            let tools_json = tools
+                .iter()
+                .map(|t| {
+                    serde_json::json!({
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": t.parameters,
+                    })
+                })
+                .collect::<Vec<_>>();
+            if let Ok(json_str) = serde_json::to_string_pretty(&tools_json) {
+                formatted_tools = json_str;
+            }
+        }
+
         let mut user_instr = cfg.user_instructions.clone();
 
         // Inject cascading AGENTS.md instructions
@@ -250,6 +269,7 @@ impl StrictHierarchicalPromptBuilder {
 
         Self {
             server_system_message: cfg.server_system_message.clone(),
+            tool_definitions: formatted_tools,
             developer_instructions: cfg.developer_instructions.clone(),
             user_instructions: user_instr,
             lightweight_memory_index: processed_memory_index,
@@ -269,6 +289,7 @@ impl StrictHierarchicalPromptBuilder {
         // Pre-allocate capacity to avoid reallocation
         let estimated_capacity = grounding_injection.len()
             + self.server_system_message.len()
+            + self.tool_definitions.len()
             + self.developer_instructions.len()
             + self.user_instructions.len()
             + 1024; // buffer for tags and formatting
@@ -282,7 +303,17 @@ impl StrictHierarchicalPromptBuilder {
             combined_system.push_str("\n</server_system_message>");
         }
 
-        // 2. Developer Instructions
+        // 2. Tool Definitions
+        if !self.tool_definitions.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
+            }
+            combined_system.push_str("<tool_definitions>\n");
+            combined_system.push_str(&self.tool_definitions);
+            combined_system.push_str("\n</tool_definitions>");
+        }
+
+        // 3. Developer Instructions
         if !self.developer_instructions.is_empty() {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");
@@ -292,7 +323,7 @@ impl StrictHierarchicalPromptBuilder {
             combined_system.push_str("\n</developer_instructions>");
         }
 
-        // 3. User Instructions
+        // 4. User Instructions
         if !self.user_instructions.is_empty() {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");
@@ -377,8 +408,8 @@ mod tests {
 
         let prompt = StrictHierarchicalPromptBuilder::new(&cfg, &[tool], None, None).build();
 
-        assert!(!prompt.contains("<tool_definitions>"));
-        assert!(!prompt.contains("Lookup authoritative facts"));
+        assert!(prompt.contains("<tool_definitions>"));
+        assert!(prompt.contains("Lookup authoritative facts"));
     }
 
     #[test]
