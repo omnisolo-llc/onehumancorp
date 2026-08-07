@@ -43,11 +43,6 @@ test.describe('Viral AMA Generator', () => {
 
   test('should show soft paywall when attempting to remove branding without pro', async ({ page }) => {
     await page.goto('/viral-ama-generator.html');
-    await page.evaluate(() => {
-        localStorage.setItem('tenant', 'e2e-test-store');
-        localStorage.setItem('has_pro', 'false');
-    });
-    await page.reload();
 
     const toggle = page.locator('input#branding-toggle');
     await toggle.uncheck({ force: true });
