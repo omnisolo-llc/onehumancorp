@@ -5,6 +5,9 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "server_auth",
     compile_data = [
+        "//src/server/persistence:migration.rs",
+        "//src/server:lib.rs",
+        "//src/server/persistence:commands.rs",
         "//src/server/migrations",
         "//src/ui/next:auth_limits",
     ],
