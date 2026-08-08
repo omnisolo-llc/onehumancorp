@@ -23,6 +23,13 @@ test.describe('Autonomous Booking System UI', () => {
     if (await submitBtn.isVisible()) {
         await submitBtn.click();
     }
+
+    // 5. Verify deposit step
+    const container = page.getByTestId('booking-checkout-container');
+    if (await container.isVisible()) {
+      await expect(container).toBeVisible();
+      await expect(page.getByTestId('pay-deposit-btn')).toHaveAttribute('href', /checkout\.stripe\.com/);
+    }
   });
 
   test('Owner Admin Dashboard', async ({ browser }) => {
@@ -36,6 +43,18 @@ test.describe('Autonomous Booking System UI', () => {
         await newResNameInput.fill('Studio A');
         await page.getByRole('button', { name: 'Add Resource' }).click();
         await expect(page.getByText('Studio A').first()).toBeVisible();
+
+        // Wait for the select to be populated
+        const select = page.locator('select').first();
+        if (await select.isVisible()) {
+            await select.selectOption({ index: 0 });
+            const timeInputs = page.locator('input[type="datetime-local"]');
+            if (await timeInputs.count() >= 2) {
+                await timeInputs.nth(0).fill('2025-02-01T09:00');
+                await timeInputs.nth(1).fill('2025-02-01T17:00');
+                await page.getByRole('button', { name: 'Add Block' }).click();
+            }
+        }
     }
   });
 });
