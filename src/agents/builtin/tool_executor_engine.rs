@@ -70,7 +70,7 @@ impl ToolExecutionEngine {
                         "LLM-recoverable error encountered in tool '{}' (Pydantic-first schema failure or similar): {}",
                         tool.name, msg
                     );
-                    let formatted_msg = msg; // Do not format twice. Let agent.rs call `new_llm_recoverable`.
+                    let formatted_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tool.name, &msg).error;
                     return Err(ToolError::LlmRecoverable(formatted_msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
@@ -206,8 +206,8 @@ mod tests {
         assert!(result.is_err());
         match result.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
-                // We no longer format inside execute_tool_with_langgraph_mechanics
                 assert!(msg.contains("bad schema"));
+                assert!(msg.contains("LLM-Recoverable Tool Error"));
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
