@@ -630,6 +630,16 @@ rust_test(
     ],
 )
 
+sh_test(
+    name = "production_feature_contract_test",
+    size = "small",
+    srcs = ["production_feature_contract_test.sh"],
+    data = [
+        "lib.rs",
+        "//src/server/api:catalog.rs",
+    ],
+)
+
 rust_test(
     name = "persistence_commands_test",
     size = "small",
