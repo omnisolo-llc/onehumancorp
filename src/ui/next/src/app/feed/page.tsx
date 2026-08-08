@@ -6,6 +6,7 @@ import { AppShell } from '../components/AppShell';
 import { useAgentWebSocket } from '../../hooks/useAgentWebSocket';
 
 import { AmbassadorReplyCard } from '../dashboard/AmbassadorReplyCard';
+import { ActionPlanCard } from '../../components/feed/ActionPlanCard';
 
 interface FeedItem {
   id: string;
@@ -198,6 +199,30 @@ export default function FeedPage() {
         <div className="flex flex-col gap-4">
           {items.map((item) => {
             const isProcessing = processingId === item.id;
+            const isActionPlan = item.proposed_action?.feature_type === 'action_plan' || item.context_payload?.feature_type === 'action_plan';
+            const actionPlanPayload = isActionPlan ? (item.proposed_action || item.context_payload) : null;
+
+            if (isActionPlan && actionPlanPayload?.plan) {
+              return (
+                <div key={item.id} className={`${isProcessing ? 'opacity-50 scale-[0.98]' : 'animate-fade-in'}`}>
+                  <ActionPlanCard
+                    planId={item.id}
+                    prompt={actionPlanPayload.plan.prompt}
+                    initialPlan={actionPlanPayload.plan}
+                    onApprove={async (id) => {
+                      const res = await fetch(`/api/v1/dynamic-workflows/${id}/confirm`, {
+                        method: 'POST'
+                      });
+                      if (!res.ok) {
+                        throw new Error('API call failed');
+                      }
+                      await handleAction(item.id, 'APPROVED');
+                    }}
+                  />
+                </div>
+              );
+            }
+
             const isAmbassador = item.proposed_action?.feature_type === 'ambassador_reply' || item.context_payload?.feature_type === 'ambassador_reply';
             const isPromoter = item.proposed_action?.feature_type === 'social_post_draft' || item.context_payload?.feature_type === 'social_post_draft';
             const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;

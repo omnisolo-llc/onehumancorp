@@ -478,6 +478,49 @@ fn infer_work_items(prompt: &str, max_parallel_agents: usize) -> Vec<WorkItem> {
             ("Review IO and database latency", "performance-analyst"),
             ("Prepare low-risk optimizations", "performance-worker"),
         ]
+    } else if prompt_lc.contains("baker") || prompt_lc.contains("cake") || prompt_lc.contains("bake") || prompt_lc.contains("pastry") {
+        vec![
+            ("Triage customer cake inquiries", "customer-assistant"),
+            ("Prepare custom cake order requirements", "operations-assistant"),
+            ("Draft custom deposit and payment link", "sales-assistant"),
+            ("Check bakery production delivery slots", "operations-assistant"),
+        ]
+    } else if prompt_lc.contains("handyman") || prompt_lc.contains("repair") || prompt_lc.contains("carlos") || prompt_lc.contains("service") {
+        vec![
+            ("Process repair service request details", "customer-assistant"),
+            ("Synthesize description to generate automatic quote", "sales-assistant"),
+            ("Schedule service visit and optimize route", "operations-assistant"),
+        ]
+    } else if prompt_lc.contains("boutique") || prompt_lc.contains("inventory") || prompt_lc.contains("shop") || prompt_lc.contains("clothes") {
+        vec![
+            ("Perform omnichannel inventory sync", "operations-assistant"),
+            ("Analyze low-performing items", "finance-assistant"),
+            ("Draft promo campaign and product variants", "marketing-assistant"),
+        ]
+    } else if prompt_lc.contains("tutor") || prompt_lc.contains("lesson") || prompt_lc.contains("schedule") || prompt_lc.contains("music") {
+        vec![
+            ("Structure tutoring lesson package offers", "sales-assistant"),
+            ("Configure automated student reminders", "operations-assistant"),
+            ("Generate secure video meeting links", "operations-assistant"),
+        ]
+    } else if prompt_lc.contains("cart") || prompt_lc.contains("food") || prompt_lc.contains("pre-order") || prompt_lc.contains("preorder") {
+        vec![
+            ("Collate cart pre-orders and pickup times", "operations-assistant"),
+            ("Update daily food menu availability", "operations-assistant"),
+            ("Prepare plain-language customer notifications", "customer-assistant"),
+        ]
+    } else if prompt_lc.contains("agency") || prompt_lc.contains("proposal") || prompt_lc.contains("studio") || prompt_lc.contains("design") {
+        vec![
+            ("Draft professional design proposal", "sales-assistant"),
+            ("Create client intake project tasks", "operations-assistant"),
+            ("Set up automated client invoice reminders", "finance-assistant"),
+        ]
+    } else if prompt_lc.contains("manager") || prompt_lc.contains("location") || prompt_lc.contains("feedback") || prompt_lc.contains("staff") {
+        vec![
+            ("Coordinate local staff scheduling", "operations-assistant"),
+            ("Triage local customer feedback and complaints", "customer-assistant"),
+            ("Compile owner-ready daily performance summary", "finance-assistant"),
+        ]
     } else {
         vec![
             ("Map affected code and docs", "codebase-mapper"),

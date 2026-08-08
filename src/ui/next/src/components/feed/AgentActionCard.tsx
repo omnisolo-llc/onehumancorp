@@ -3,6 +3,7 @@ import { InstagramDMCard } from "../../app/dashboard/InstagramDMCard";
 import { AmbassadorReplyCard } from "../../app/dashboard/AmbassadorReplyCard";
 import { QuoteReviewModal } from "../QuoteReviewModal";
 import { ReviewFeedCard } from "../../app/dashboard/ReviewFeedCard";
+import { ActionPlanCard } from "./ActionPlanCard";
 import React from "react";
 
 type AgentFeedItem = {
@@ -71,6 +72,26 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
   };
 
   const isActionLoading = (actionName: string) => loadingAction === actionName;
+
+  const itemPayload = approval.proposed_action || approval.context_payload;
+  if (itemPayload?.feature_type === "action_plan") {
+    return (
+      <ActionPlanCard
+        planId={approval.id}
+        prompt={itemPayload.plan?.prompt || "Dynamic Workflow"}
+        initialPlan={itemPayload.plan}
+        onApprove={async (id) => {
+          const res = await fetch(`/api/v1/dynamic-workflows/${id}/confirm`, {
+            method: "POST"
+          });
+          if (!res.ok) {
+            throw new Error("API call failed");
+          }
+          await handleDecision(approval.id, true, undefined, approval.event_source);
+        }}
+      />
+    );
+  }
 
   if (
     (approval.proposed_action || approval.context_payload)?.feature_type ===
