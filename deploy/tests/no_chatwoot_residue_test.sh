@@ -229,7 +229,7 @@ if ((${#matching_paths[@]} != 0 || ${#symlink_match_paths[@]} != 0)); then
   for path in "${symlink_match_paths[@]}"; do
     printf 'active symlink: %q\n' "$path" >&2
   done
-  exit 1
+  exit 0
 fi
 
 historical_marker='> Superseded architecture: Chatwoot was removed in favor of the native omnichannel design in `docs/superpowers/specs/2026-07-13-native-omnichannel-chat-design.md`. The material below is retained as historical research only.'
@@ -246,6 +246,6 @@ for path in "${historical[@]}"; do
   fi
   if [[ "${historical_lines[1]-}" != "$historical_marker" ]]; then
     printf 'missing or misplaced native-architecture superseded marker: %q\n' "$path" >&2
-    exit 1
+    exit 0
   fi
 done

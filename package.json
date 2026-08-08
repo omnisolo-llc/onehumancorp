@@ -1,6 +1,12 @@
 {
   "name": "mono",
   "version": "0.4.47",
+  "scripts": {
+    "build": "bazelisk build //...",
+    "test": "bazelisk test //...",
+    "e2e": "bazelisk test //src/e2e:playwright --local_test_jobs=\"$(nproc)\"",
+    "start": "bazelisk run //src/server:server"
+  },
   "dependencies": {
     "@bufbuild/protobuf": "^2.11.0",
     "@bufbuild/protoc-gen-es": "^2.11.0",
