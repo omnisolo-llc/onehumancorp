@@ -370,6 +370,7 @@ pub struct OmniInboxActionPayload {
 }
 
 struct OmniReplyDispatch {
+    tenant_id: String,
     source: String,
     sender_id: String,
     reply: String,
@@ -380,6 +381,18 @@ struct OmniReplyDispatch {
 }
 
 async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
+    if dispatch.source == "web_chat_widget" {
+        let topic = format!("unified:web_chat_widget:{}", dispatch.tenant_id);
+        let ws_msg = serde_json::json!({
+            "type": "new_message",
+            "message_id": format!("reply-{}", uuid::Uuid::new_v4()),
+            "sender_type": "agent",
+            "content": dispatch.reply,
+            "session_id": dispatch.sender_id,
+        });
+        let _ = crate::api::unified_ws::broadcast_message("web_chat_widget", &topic, ws_msg);
+        return;
+    }
     if dispatch.integration_id == "whatsapp_cloud_api" {
         use crate::integrations::meta::provider::MetaProvider;
         let provider = MetaProvider::new(dispatch.auth_token, Some(dispatch.from_phone));
@@ -493,6 +506,7 @@ async fn apply_omni_inbox_action(
                                 .await?
                             {
                                 dispatch = Some(OmniReplyDispatch {
+                            tenant_id: tenant_id.to_string(),
                                     source,
                                     sender_id,
                                     reply: reply.to_string(),
@@ -564,6 +578,7 @@ async fn apply_omni_inbox_action(
                                 .await?
                             {
                                 dispatch = Some(OmniReplyDispatch {
+                            tenant_id: tenant_id.to_string(),
                                     source,
                                     sender_id,
                                     reply: reply.to_string(),
