@@ -253,6 +253,19 @@ rust_library(
 )
 
 rust_test(
+    name = "web_chat_widget_test",
+    srcs = ["web_chat_widget_test.rs", "web_chat_widget.rs"],
+    crate_root = "web_chat_widget_test.rs",
+    deps = [
+        "//src/server:server_lib",
+        "@crates//:axum",
+        "@crates//:tokio",
+        "@crates//:serde_json",
+        "@crates//:temp-env",
+    ],
+)
+
+rust_test(
     name = "server_api_unit_test",
     size = "large",
     crate = ":server_api",
