@@ -89,42 +89,30 @@ pub mod ohc {
 }
 
 pub mod interop {
-    pub use crate::ohc::interop::*;
 }
 pub mod mcp_proxy {
-    pub use crate::ohc::mcp_proxy::*;
 }
 pub mod orchestration {
-    pub use crate::ohc::orchestration::*;
 }
 pub mod billing {
-    pub use crate::ohc::billing::*;
 }
 pub mod agent {
-    pub use crate::ohc::agent::*;
     pub mod service {
-        pub use crate::ohc::agent::service::*;
     }
 }
 pub mod organization {
-    pub use crate::ohc::organization::*;
 }
 pub mod common {
-    pub use crate::ohc::common::*;
 }
 pub mod app {
-    pub use crate::ohc::api::v1::*;
 }
 pub mod campaign {
-    pub use crate::ohc::campaign::*;
 }
 pub mod collective {
-    pub use crate::ohc::collective::*;
 }
 pub mod invoice {
-    pub use crate::ohc::invoice::*;
 }
 
 pub mod inventory {
-    pub use crate::ohc::inventory::*;
 }
+pub mod domain;
