@@ -88,43 +88,108 @@ pub mod ohc {
     }
 }
 
+#[cfg(ohc_bazel)]
 pub mod interop {
     pub use crate::ohc::interop::*;
 }
+#[cfg(ohc_bazel)]
 pub mod mcp_proxy {
     pub use crate::ohc::mcp_proxy::*;
 }
+#[cfg(ohc_bazel)]
 pub mod orchestration {
     pub use crate::ohc::orchestration::*;
 }
+#[cfg(ohc_bazel)]
 pub mod billing {
     pub use crate::ohc::billing::*;
 }
+#[cfg(ohc_bazel)]
 pub mod agent {
     pub use crate::ohc::agent::*;
     pub mod service {
         pub use crate::ohc::agent::service::*;
     }
 }
+#[cfg(ohc_bazel)]
 pub mod organization {
     pub use crate::ohc::organization::*;
 }
+#[cfg(ohc_bazel)]
 pub mod common {
     pub use crate::ohc::common::*;
 }
+#[cfg(ohc_bazel)]
 pub mod app {
     pub use crate::ohc::api::v1::*;
 }
+#[cfg(ohc_bazel)]
 pub mod campaign {
     pub use crate::ohc::campaign::*;
 }
+#[cfg(ohc_bazel)]
 pub mod collective {
     pub use crate::ohc::collective::*;
 }
+#[cfg(ohc_bazel)]
 pub mod invoice {
     pub use crate::ohc::invoice::*;
 }
-
+#[cfg(ohc_bazel)]
 pub mod inventory {
     pub use crate::ohc::inventory::*;
 }
+
+#[cfg(not(ohc_bazel))]
+pub mod interop {
+    pub use crate::ohc::interop::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod mcp_proxy {
+    pub use crate::ohc::mcp_proxy::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod orchestration {
+    pub use crate::ohc::orchestration::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod billing {
+    pub use crate::ohc::billing::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod agent {
+    pub use crate::ohc::agent::*;
+    pub mod service {
+        pub use crate::ohc::agent::service::*;
+    }
+}
+#[cfg(not(ohc_bazel))]
+pub mod organization {
+    pub use crate::ohc::organization::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod common {
+    pub use crate::ohc::common::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod app {
+    pub use crate::ohc::api::v1::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod campaign {
+    pub use crate::ohc::campaign::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod collective {
+    pub use crate::ohc::collective::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod invoice {
+    pub use crate::ohc::invoice::*;
+}
+#[cfg(not(ohc_bazel))]
+pub mod inventory {
+    pub use crate::ohc::inventory::*;
+}
+
+pub mod domain;

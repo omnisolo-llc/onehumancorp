@@ -1,6 +1,9 @@
 use sqlx::Row;
 pub mod persistence;
 #[cfg(test)]
+#[cfg(not(ohc_bazel_test))]
+#[cfg(not(ohc_bazel))]
+#[cfg(not(ohc_bazel))]
 mod persistence_commands_test;
 pub mod rag_sync;
 pub mod redis_pool;
