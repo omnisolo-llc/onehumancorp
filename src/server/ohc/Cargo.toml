@@ -11,6 +11,11 @@ path = "mod.rs"
 prost = { workspace = true }
 serde = { workspace = true }
 tonic = { workspace = true }
+sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "with-chrono", "with-json", "with-uuid", "mock"] }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+chrono = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+serde_json = { workspace = true }
 
 [build-dependencies]
 tonic-build = "0.12"
