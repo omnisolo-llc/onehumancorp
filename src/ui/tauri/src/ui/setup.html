@@ -76,6 +76,18 @@
         min-height: 44px;
       }
       .error { color: #FF3B30; }
+      .prev-step-btn {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        background: transparent;
+        cursor: pointer;
+        margin-top: 16px;
+        margin-bottom: 8px;
+        color: inherit;
+      }
+
     </style>
   </head>
   <body>
@@ -95,6 +107,7 @@
       <div id="step-context" class="step">
         <h2>Context</h2>
         <label class="context-card" data-testid="context-storefront"><input type="radio" name="context" value="Storefront"> Storefront</label>
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-intro" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
       </div>
 
@@ -104,6 +117,7 @@
           <option value="">Select...</option>
           <option value="Home Baker">Home Baker</option>
         </select>
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-context" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
       </div>
 
@@ -111,6 +125,7 @@
         <h2>Name</h2>
         <input type="text" data-testid="business-name" id="business-name" autocomplete="organization" class="glassmorphism glass-control" />
         <div id="name-error" class="error" style="display: none; margin-bottom: 12px;">Name is required</div>
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-categories" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
       </div>
 
@@ -120,6 +135,7 @@
         <select data-testid="assistant-tone">
           <option value="Friendly">Friendly</option>
         </select>
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-name" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
       </div>
 
@@ -128,30 +144,35 @@
         <input type="text" data-testid="admin-name" placeholder="Admin Name" />
         <input type="email" data-testid="admin-email" autocomplete="email" inputmode="email" placeholder="Admin Email" />
         <input type="password" data-testid="admin-password" autocomplete="new-password" placeholder="Password" />
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-assistant" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
       </div>
 
       <div id="step-offer" class="step">
         <h2>Offer</h2>
-        <input type="text" data-testid="first-offer" placeholder="First Offer" />
+        <input type="text" data-testid="first-offer" placeholder="First Offer" class="glass-control glassmorphism" />
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-admin" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-location">Next</button>
       </div>
 
       <div id="step-location" class="step">
         <h2>Location</h2>
-        <input type="text" data-testid="location-input" placeholder="Location" />
+        <input type="text" data-testid="location-input" placeholder="Location" class="glass-control glassmorphism" />
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-offer" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-target-audience">Next</button>
       </div>
 
       <div id="step-target-audience" class="step">
-        <h2>Target Audience</h2>
-        <input type="text" data-testid="target-audience" placeholder="Target Audience" />
+        <h2>Who is your target audience?</h2>
+        <input type="text" data-testid="target-audience" placeholder="Target Audience" class="glass-control glassmorphism" />
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-location" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-domain">Next</button>
       </div>
 
       <div id="step-domain" class="step">
-        <h2>Domain</h2>
+        <h2>Where will your business live?</h2>
         <input type="text" data-testid="domain-name" placeholder="Domain Name" />
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-target-audience" class="secondary-btn prev-step-btn">Back</button>
         <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
       </div>
 
@@ -162,6 +183,7 @@
           <option value="Modern">Modern</option>
         </select>
         <div id="submit-error" class="error" style="display: block !important;"></div>
+        <button class="secondary-btn" data-testid="prev-step-btn" data-prev="step-domain" class="secondary-btn prev-step-btn">Back</button>
         <button id="finish-btn" data-testid="finish-btn" class="next-step-btn">Finish</button><button id="save-draft-btn" data-testid="save-draft-btn" class="secondary-btn">Save Draft</button>
       </div>
 
@@ -325,6 +347,14 @@
         state.step = stepOrder.indexOf(stepId);
         saveState();
       }
+
+      document.querySelectorAll('[data-testid="prev-step-btn"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          if (e.currentTarget.dataset.prev) {
+            goToStep(e.currentTarget.dataset.prev);
+          }
+        });
+      });
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
