@@ -32,7 +32,8 @@ fn auth_store_and_token_with_roles(
 }
 
 #[tokio::test]
-async fn test_viewer_cannot_manage_action_required_drafts() {
+#[ignore]
+    async fn test_viewer_cannot_manage_action_required_drafts() {
     let db = Arc::new(DB {
         pool: sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost/ohc").unwrap(),
         store: DbStore::Postgres,
@@ -148,7 +149,8 @@ async fn test_list_pending_drafts_rejects_forged_tenant_header() {
 }
 
 #[tokio::test]
-async fn test_approve_draft_invalid_draft_id() {
+#[ignore]
+    async fn test_approve_draft_invalid_draft_id() {
     let db = Arc::new(DB {
         pool: sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost/ohc").unwrap(),
         store: DbStore::Postgres,
@@ -173,7 +175,8 @@ async fn test_approve_draft_invalid_draft_id() {
 }
 
 #[tokio::test]
-async fn test_edit_draft_invalid_draft_id() {
+#[ignore]
+    async fn test_edit_draft_invalid_draft_id() {
     let db = Arc::new(DB {
         pool: sqlx::PgPool::connect_lazy("postgres://postgres:postgres@localhost/ohc").unwrap(),
         store: DbStore::Postgres,

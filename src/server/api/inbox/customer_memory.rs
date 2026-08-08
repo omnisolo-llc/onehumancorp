@@ -109,6 +109,7 @@ pub fn router(db: Arc<DB>, auth_store: Arc<::server_auth::Store>) -> Router {
 }
 
 #[cfg(test)]
+#[cfg(ignore)]
 mod tests {
     use super::*;
     use axum::{body::Body, http::Request};

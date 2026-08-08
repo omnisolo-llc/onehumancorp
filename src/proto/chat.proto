@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package ohc.chat;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/chat;chatpb";
+
+message Inbox {
+    string id = 1;
+    string tenant_id = 2;
+    string name = 3;
+    string channel_type = 4;
+    string channel_config = 5;
+    int64 created_at_unix = 6;
+    int64 updated_at_unix = 7;
+}
+
+message Contact {
+    string id = 1;
+    string tenant_id = 2;
+    string identifier = 3;
+    string name = 4;
+    string email = 5;
+    string phone_number = 6;
+    int64 created_at_unix = 7;
+    int64 updated_at_unix = 8;
+}
+
+message Conversation {
+    string id = 1;
+    string tenant_id = 2;
+    string contact_id = 3;
+    string inbox_id = 4;
+    string status = 5;
+    int64 created_at_unix = 6;
+    int64 updated_at_unix = 7;
+}
+
+message Message {
+    string id = 1;
+    string tenant_id = 2;
+    string conversation_id = 3;
+    string sender_type = 4;
+    string sender_id = 5;
+    string content = 6;
+    string message_type = 7;
+    int64 created_at_unix = 8;
+}
+
+message CreateInboxRequest {
+    string tenant_id = 1;
+    string name = 2;
+    string channel_type = 3;
+    string channel_config = 4;
+}
+
+message CreateInboxResponse {
+    Inbox inbox = 1;
+}
+
+message CreateConversationRequest {
+    string tenant_id = 1;
+    string inbox_id = 2;
+    string contact_id = 3;
+}
+
+message CreateConversationResponse {
+    Conversation conversation = 1;
+}
+
+message SendMessageRequest {
+    string tenant_id = 1;
+    string conversation_id = 2;
+    string sender_type = 3;
+    string sender_id = 4;
+    string content = 5;
+    string message_type = 6;
+}
+
+message SendMessageResponse {
+    Message message = 1;
+}
+
+message ListConversationsRequest {
+    string tenant_id = 1;
+    string inbox_id = 2;
+}
+
+message ListConversationsResponse {
+    repeated Conversation conversations = 1;
+}
+
+service ChatService {
+    rpc CreateInbox(CreateInboxRequest) returns (CreateInboxResponse) {}
+    rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse) {}
+    rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
+    rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse) {}
+}
