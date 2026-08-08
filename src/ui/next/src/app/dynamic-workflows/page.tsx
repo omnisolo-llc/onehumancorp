@@ -107,7 +107,7 @@ export default function DynamicWorkflowsPage() {
             )}
           </div>
 
-          {workflowState.status === "pending_confirmation" && (
+          {workflowState.status === "awaiting_confirmation" && (
             <button
               className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl shadow-sm font-medium disabled:opacity-50"
               onClick={() => confirmWorkflow(workflowState.id)}

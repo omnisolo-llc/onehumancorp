@@ -16,5 +16,14 @@ test.describe('Dynamic Workflows Orhestrator', () => {
 
     // It should at least enter loading state since the request will be pending
     await expect(page.locator('text=Processing...')).toBeVisible();
+
+    // Wait for the state to be awaiting_confirmation
+    await expect(page.locator('h2', { hasText: 'Workflow Status: awaiting_confirmation' })).toBeVisible({ timeout: 10000 });
+
+    // Click the approve button
+    await page.click('button:has-text("Approve & Run Workflow")');
+
+    // Wait for the state to transition to queued
+    await expect(page.locator('h2', { hasText: 'Workflow Status: queued' })).toBeVisible({ timeout: 10000 });
   });
 });
