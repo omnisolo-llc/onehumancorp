@@ -182,6 +182,157 @@ async fn handle_waitlist(
     }))
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShareToUnlockGenerateRequest {
+    pub title: String,
+    pub coupon: String,
+    pub target_shares: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ShareToUnlockGenerateResponse {
+    pub embed_code: String,
+}
+
+pub async fn handle_share_to_unlock_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ShareToUnlockGenerateRequest>,
+) -> impl IntoResponse {
+    let tenant_id = auth_info.org_id.clone();
+
+    let encoded_title = req.title.replace("<", "&lt;").replace(">", "&gt;");
+    let encoded_coupon = req.coupon.replace("<", "&lt;").replace(">", "&gt;");
+
+    let embed_url = format!(
+        "https://ohc.app/api/v1/growth/share-to-unlock/embed?tenant={}&title={}&coupon={}&shares={}",
+        tenant_id, encoded_title, encoded_coupon, req.target_shares
+    );
+
+    let embed_code = format!(
+        "<iframe src=\"{embed_url}\" width=\"100%\" height=\"500px\" style=\"border:none; border-radius:12px;\"></iframe>"
+    );
+
+    Json(ShareToUnlockGenerateResponse {
+        embed_code
+    })
+}
+
+#[derive(Deserialize)]
+pub struct ShareToUnlockEmbedQuery {
+    pub tenant: String,
+    #[serde(default = "default_title")]
+    pub title: String,
+    #[serde(default = "default_coupon")]
+    pub coupon: String,
+    #[serde(default = "default_shares")]
+    pub shares: i64,
+}
+
+fn default_title() -> String { "Unlock Coupon".to_string() }
+fn default_coupon() -> String { "SECRET".to_string() }
+fn default_shares() -> i64 { 3 }
+
+pub async fn handle_share_to_unlock_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<ShareToUnlockEmbedQuery>,
+) -> impl IntoResponse {
+    let title = query.title.replace("<", "&lt;").replace(">", "&gt;");
+    let tenant = query.tenant.replace("<", "&lt;").replace(">", "&gt;");
+
+    let html = format!(
+        r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: transparent;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+        }}
+        .widget {{
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.05);
+        }}
+        h3 {{ margin: 0 0 8px; font-size: 20px; color: #111827; }}
+        p {{ color: #4b5563; font-size: 14px; margin: 0 0 20px; }}
+        .btn {{
+            background: #0066FF;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+        }}
+        .coupon-box {{
+            background: #f3f4f6;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 24px;
+            font-weight: bold;
+            color: #9ca3af;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            border: 2px dashed #d1d5db;
+        }}
+        .footer {{
+            margin-top: 16px;
+            font-size: 11px;
+            text-align: center;
+        }}
+        .footer a {{
+            color: #6b7280;
+            text-decoration: none;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <h3>{title}</h3>
+        <p>Share this link with {shares} friends to unlock your discount!</p>
+
+        <div class="coupon-box">LOCKED</div>
+
+        <button class="btn" onclick="alert('Shared! (Simulated)')">Share Now</button>
+
+        <div class="footer">
+            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=share_to_unlock" target="_blank">⚡ POWERED BY OHC GROWTH</a>
+        </div>
+    </div>
+</body>
+</html>
+"#,
+        title = title,
+        shares = query.shares,
+        tenant = tenant
+    );
+
+    ([(axum::http::header::CONTENT_TYPE, "text/html")], html)
+}
+
+
 pub async fn handle_conversational_chat(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
@@ -327,6 +478,8 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+                .route("/share-to-unlock/generate", post(handle_share_to_unlock_generate))
+        .route("/share-to-unlock/embed", get(handle_share_to_unlock_embed))
         .route("/conversational-manager/chat", post(handle_conversational_chat))
         .route("/conversational-manager/execute", post(handle_conversational_execute))
         .route("/waitlist", post(handle_waitlist))
