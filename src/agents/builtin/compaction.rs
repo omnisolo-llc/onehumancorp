@@ -39,9 +39,25 @@ pub async fn compact_context(
                 for tr in &m.tool_results {
                     // Discard redundant/raw tool outputs, but preserve errors if any
                     let status = if tr.error.is_empty() {
-                        "Success (raw output discarded during compaction)".to_string()
+                        let content_chars: Vec<char> = tr.content.chars().collect();
+                        let char_count = content_chars.len();
+                        if char_count <= 1000 {
+                            format!("Success: {}", tr.content)
+                        } else {
+                            let head: String = content_chars.iter().take(500).collect();
+                            let tail: String = content_chars.iter().skip(char_count - 500).collect();
+                            format!("Success (partially truncated): {}...{}", head, tail)
+                        }
                     } else {
-                        format!("Error: {}", tr.error)
+                        let error_chars: Vec<char> = tr.error.chars().collect();
+                        let error_char_count = error_chars.len();
+                        if error_char_count <= 1000 {
+                            format!("Error: {}", tr.error)
+                        } else {
+                            let head: String = error_chars.iter().take(500).collect();
+                            let tail: String = error_chars.iter().skip(error_char_count - 500).collect();
+                            format!("Error (partially truncated): {}...{}", head, tail)
+                        }
                     };
                     middle_text.push_str(&format!(
                         "  tool_call_id: {} -> {}\n",

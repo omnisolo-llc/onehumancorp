@@ -219,11 +219,20 @@ mod tests {
 
         let mut msg_with_tool_result = Message::user("Tool return");
         msg_with_tool_result.role = Role::Tool;
-        msg_with_tool_result.tool_results = vec![ToolResult {
-            tool_call_id: "test_call_id".to_string(),
-            content: "THIS IS RAW REDUNDANT OUTPUT THAT SHOULD BE DISCARDED".to_string(),
-            error: "".to_string(),
-        }];
+        let massive_output = "THIS IS RAW REDUNDANT OUTPUT THAT SHOULD BE DISCARDED".to_string() + &"こんにちは".repeat(1500) + "END OF STRING";
+        let small_output = "This is a small output that is useful".to_string();
+        msg_with_tool_result.tool_results = vec![
+            ToolResult {
+                tool_call_id: "test_call_id".to_string(),
+                content: massive_output,
+                error: "".to_string(),
+            },
+            ToolResult {
+                tool_call_id: "small_call_id".to_string(),
+                content: small_output,
+                error: "".to_string(),
+            }
+        ];
 
         cfg.injected_context = Some(vec![
             Message::user("0"),
@@ -246,8 +255,11 @@ mod tests {
         let compaction_req = &requests[1];
 
         let prompt = &compaction_req.messages[0].content;
-        assert!(prompt.contains("Success (raw output discarded during compaction)"));
-        assert!(!prompt.contains("THIS IS RAW REDUNDANT OUTPUT THAT SHOULD BE DISCARDED"));
+        assert!(prompt.contains("Success (partially truncated)"));
+        assert!(prompt.contains("THIS IS RAW REDUNDANT OUTPUT THAT SHOULD BE DISCARDED"));
+        assert!(prompt.contains("END OF STRING"));
+        assert!(prompt.contains("Success: This is a small output that is useful"));
+        assert!(!prompt.contains(&"こんにちは".repeat(1500)));
     }
 
     #[tokio::test]
