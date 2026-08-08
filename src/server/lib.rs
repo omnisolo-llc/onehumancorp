@@ -6728,10 +6728,16 @@ async fn create_ui_bom_item_handler(
     );
     let setup_router: axum::Router =
         axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
+    let (chat_tx, _) = tokio::sync::broadcast::channel(1024);
+    let chat_app_state = std::sync::Arc::new(crate::api::chat_ws::ChatAppState {
+        tx: chat_tx,
+    });
+
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
     let app = axum::Router::new()
+        .merge(crate::api::chat_ws::chat_ws_routes(chat_app_state.clone()))
         .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone()))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
