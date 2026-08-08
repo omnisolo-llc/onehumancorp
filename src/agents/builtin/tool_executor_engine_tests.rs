@@ -508,7 +508,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
     }
 
     #[tokio::test(start_paused = true)]
-    async fn test_transient_retry_fails_first_then_succeeds_custom() {
+    async fn test_transient_retry_fails_first_then_succeeds_custom_renamed() {
         let call_count = Arc::new(AtomicUsize::new(0));
         let tool = Tool {
             name: "dummy".to_string(),

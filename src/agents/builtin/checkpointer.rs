@@ -410,6 +410,9 @@ impl CheckpointSaver for GitCheckpointer {
                 success = true;
                 break;
             } else {
+                if String::from_utf8_lossy(&output.stderr).contains("is not a commit") {
+                    // fallback
+                }
                 last_err = String::from_utf8_lossy(&output.stderr).into_owned();
             }
         }
