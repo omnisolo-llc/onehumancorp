@@ -52,7 +52,7 @@ export default function ApiDocsPage() {
         .swagger-ui .opblock .opblock-summary-method { min-width: 60px; font-size: 12px; }
         .swagger-ui .opblock .opblock-summary-path { font-size: 14px; max-width: calc(100vw - 120px); overflow-wrap: break-word; word-break: break-all; }
       `}} />
-      <div data-testid="api-docs-title" className="w-full max-w-6xl bg-[#FFCC00]/10 border border-[#FFCC00]/30 backdrop-blur-[30px] saturate-[210%] border-l-4 border-l-[#FFCC00] p-4 mb-8 rounded-r-xl shadow-sm font-inter">
+      <div data-testid="api-docs-title" className="w-full max-w-6xl bg-gradient-to-r from-[#FFCC00]/10 to-transparent border border-[#FFCC00]/30 backdrop-blur-[30px] saturate-[210%] border-l-4 border-l-[#FFCC00] p-5 sm:p-6 mb-8 rounded-xl shadow-sm font-inter">
         <div className="text-yellow-800 dark:text-yellow-400 text-sm font-medium">
           <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
             <span className="font-outfit cursor-help font-bold">Advanced:</span>

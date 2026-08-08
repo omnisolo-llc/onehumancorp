@@ -13,7 +13,8 @@ type ChangelogSection = {
 
 
 function parseLinks(text: string): React.ReactNode {
-  const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+  // Regex ensures the URL doesn't contain unescaped quotes or malicious schemes like javascript:
+  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
   let match;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -21,10 +22,10 @@ function parseLinks(text: string): React.ReactNode {
 
   while ((match = linkRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(<span key={key++}>{text.substring(lastIndex, match.index)}</span>);
+      parts.push(<span key={`text-${key++}`}>{text.substring(lastIndex, match.index)}</span>);
     }
     parts.push(
-      <a key={key++} href={match[2]} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+      <a key={`link-${key++}`} href={match[2]} target="_blank" rel="noopener noreferrer" className="text-[#0071E3] dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors duration-200">
         {match[1]}
       </a>
     );
@@ -32,7 +33,7 @@ function parseLinks(text: string): React.ReactNode {
   }
 
   if (lastIndex < text.length) {
-    parts.push(<span key={key++}>{text.substring(lastIndex)}</span>);
+    parts.push(<span key={`text-${key++}`}>{text.substring(lastIndex)}</span>);
   }
 
   return parts.length > 0 ? <>{parts}</> : text;
