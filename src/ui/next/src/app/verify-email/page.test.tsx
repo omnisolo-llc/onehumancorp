@@ -14,7 +14,7 @@ describe("email verification", () => {
       "ohc-registration-challenge",
       JSON.stringify({ challengeId: "challenge-7", email: "alice@example.test" }),
     );
-    vi.mocked(fetch).mockReset();
+    global.fetch = vi.fn();
   });
 
   it("does not expose account credentials until the email code succeeds", async () => {

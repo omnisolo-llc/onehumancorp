@@ -10,7 +10,7 @@ describe("registration entry", () => {
   beforeEach(() => {
     push.mockReset();
     sessionStorage.clear();
-    vi.mocked(fetch).mockReset();
+    global.fetch = vi.fn();
   });
 
   it("shows the persisted closed policy without collecting credentials", async () => {

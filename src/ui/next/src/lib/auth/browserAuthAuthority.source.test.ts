@@ -2,15 +2,23 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { existsSync } from "node:fs";
+
+let base = process.cwd();
+if (!existsSync(join(base, "src/app"))) {
+  base = join(base, "src/ui/next");
+}
+
 const ROOTS = [
-  join(process.cwd(), "src/app"),
-  join(process.cwd(), "src/components"),
-  join(process.cwd(), "src/hooks"),
-  join(process.cwd(), "src/lib"),
-];
+  join(base, "src/app"),
+  join(base, "src/components"),
+  join(base, "src/hooks"),
+  join(base, "src/lib"),
+].filter(p => existsSync(p));
+
 const SERVER_ONLY_FILES = new Set([
-  join(process.cwd(), "src/lib/auth/backendTransport.ts"),
-  join(process.cwd(), "src/lib/auth/serverSession.ts"),
+  join(base, "src/lib/auth/backendTransport.ts"),
+  join(base, "src/lib/auth/serverSession.ts"),
 ]);
 const BROWSER_IDENTITY =
   /localStorage\s*\.\s*getItem\s*\(\s*["'](?:auth_token|ohc_token|organization_id|roles|spiffe_id|tenant|tenant_id|token|user_id)["']\s*\)/;
@@ -18,10 +26,11 @@ const BROWSER_IDENTITY_HEADER =
   /["']?(?:authorization|x-spiffe-id|x-tenant-id|x-user-id|x-user-roles)["']?\s*:/i;
 
 function productionBrowserFiles(directory: string): string[] {
+  if (!existsSync(directory)) return [];
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
-      if (path === join(process.cwd(), "src/app/api")) return [];
+      if (path === join(base, "src/app/api")) return [];
       return productionBrowserFiles(path);
     }
     if (!/\.(?:ts|tsx)$/.test(entry.name)) return [];

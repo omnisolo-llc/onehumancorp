@@ -13,7 +13,7 @@ describe("LogoutButton", () => {
   beforeEach(() => {
     replace.mockReset();
     refresh.mockReset();
-    vi.mocked(fetch).mockReset();
+    global.fetch = vi.fn();
   });
 
   it("posts logout once and returns to login", async () => {

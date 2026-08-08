@@ -2,8 +2,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { existsSync } from "node:fs";
+
+let base = process.cwd();
+if (!existsSync(join(base, "src/app"))) {
+  base = join(base, "src/ui/next");
+}
+
 function source(relativePath: string): string {
-  return readFileSync(join(process.cwd(), relativePath), "utf8");
+  return readFileSync(join(base, relativePath), "utf8");
 }
 
 describe("product-shell overlay authority", () => {

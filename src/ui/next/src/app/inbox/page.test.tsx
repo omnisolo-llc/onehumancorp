@@ -7,6 +7,14 @@ const queryState = vi.hoisted(() => ({
   data: [] as Array<Record<string, string>>,
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}));
+
 vi.mock('@powersync/react', () => ({
   useQuery: () => ({ data: queryState.data }),
 }));
@@ -21,6 +29,10 @@ vi.mock('../components/AppShell', () => ({
 
 beforeEach(() => {
   queryState.data = [];
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => [],
+  });
 });
 
 test('renders a stable empty state when PowerSync has no inbox messages', () => {

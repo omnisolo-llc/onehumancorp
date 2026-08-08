@@ -2,8 +2,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { existsSync } from "node:fs";
+
+let base = process.cwd();
+if (!existsSync(join(base, "src/app"))) {
+  base = join(base, "src/ui/next");
+}
+
 function page(relativePath: string): string {
-  return readFileSync(join(process.cwd(), "src/app", relativePath), "utf8");
+  return readFileSync(join(base, "src/app", relativePath), "utf8");
 }
 
 describe("page rendering resilience", () => {
@@ -38,13 +45,13 @@ describe("page rendering resilience", () => {
 
   it("keeps handled optional-help failures out of the error console", () => {
     expect(page("help/page.tsx")).not.toContain("console.error(err)");
-    expect(readFileSync(join(process.cwd(), "src/components/TooltipRegistry.tsx"), "utf8"))
+    expect(readFileSync(join(base, "src/components/TooltipRegistry.tsx"), "utf8"))
       .not.toContain("console.error('Failed to load tooltips'");
   });
 
   it("uses App Router metadata primitives and deterministic render values", () => {
     expect(page("crewai/page.tsx")).not.toContain("next/head");
-    expect(readFileSync(join(process.cwd(), "src/components/VoiceAssistant.tsx"), "utf8"))
+    expect(readFileSync(join(base, "src/components/VoiceAssistant.tsx"), "utf8"))
       .not.toContain("Math.random()");
 
     const countdown = page("viral-countdown-widget/page.tsx");
