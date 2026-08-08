@@ -4,6 +4,29 @@ ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE products DISABLE ROW LEVEL SECURITY;
 ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE help_articles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE video_tutorials DISABLE ROW LEVEL SECURITY;
+
+INSERT INTO help_articles (tenant_id, category, title, desc_text, link)
+VALUES
+  ('e2e-tenant', 'Getting Started', 'Getting Started with Your Store', 'Welcome to OneHumanCorp! Let''s get your business online in under 10 minutes.', '/help/getting-started-1'),
+  ('e2e-tenant', 'My Store', 'Adding Products', 'Add products, track what''s in stock, and change how your store looks.', '/help/my-store'),
+  ('e2e-tenant', 'Payments', 'Accepting Payments', 'Get paid faster with integrated payment processing.', '/help/payments'),
+  ('e2e-tenant', 'AI Agents', 'Your AI Helpers', 'Learn how AI can help you manage your business.', '/help/ai-agents'),
+  ('e2e-tenant', 'Marketing', 'Finding Customers', 'Send emails, run promos, and find new customers.', '/help/marketing'),
+  ('e2e-tenant', 'Account & Billing', 'Managing Your Plan', 'View your bills and manage your team.', '/help/billing');
+
+INSERT INTO video_tutorials (tenant_id, title, duration, video_url)
+VALUES
+  ('e2e-tenant', 'Connecting a bank account to accept payments', '1:45', '/videos/payments.mp4'),
+  ('e2e-tenant', 'How to set up your first store easily', '1:20', '/videos/setup.mp4'),
+  ('e2e-tenant', 'Linking your own website name', '0:45', '/videos/domain.mp4');
+
+ALTER TABLE help_articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE video_tutorials ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE help_articles FORCE ROW LEVEL SECURITY;
+ALTER TABLE video_tutorials FORCE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension)
 VALUES
