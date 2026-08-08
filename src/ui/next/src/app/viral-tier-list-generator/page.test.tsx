@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ViralTierListGeneratorPage from './page';
 
@@ -25,15 +25,15 @@ describe('ViralTierListGeneratorPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders correctly', () => {
-    render(<ViralTierListGeneratorPage />);
+  it('renders correctly', async () => {
+    await act(async () => render(<ViralTierListGeneratorPage />));
     expect(screen.getAllByText('Viral Tier List Generator').length).toBeGreaterThan(0);
     expect(screen.getByText('List Title')).toBeDefined();
     expect(screen.getByText('Live Preview')).toBeDefined();
   });
 
-  it('updates form inputs and preview', () => {
-    render(<ViralTierListGeneratorPage />);
+  it('updates form inputs and preview', async () => {
+    await act(async () => render(<ViralTierListGeneratorPage />));
 
     const titleInput = screen.getByPlaceholderText('e.g., Best Coffees of 2024');
     fireEvent.change(titleInput, { target: { value: 'Top Movies' } });
@@ -46,8 +46,8 @@ describe('ViralTierListGeneratorPage', () => {
     expect(screen.getByText('Best movies of the decade')).toBeDefined();
   });
 
-  it('generates a share link', () => {
-    render(<ViralTierListGeneratorPage />);
+  it('generates a share link', async () => {
+    await act(async () => render(<ViralTierListGeneratorPage />));
 
     const titleInput = screen.getByPlaceholderText('e.g., Best Coffees of 2024');
     fireEvent.change(titleInput, { target: { value: 'Test List' } });
@@ -59,8 +59,8 @@ describe('ViralTierListGeneratorPage', () => {
     expect(linkInput.value).toContain('Test%20List');
   });
 
-  it('shows paywall when removing branding without pro', () => {
-    render(<ViralTierListGeneratorPage />);
+  it('shows paywall when removing branding without pro', async () => {
+    await act(async () => render(<ViralTierListGeneratorPage />));
 
     const toggle = screen.getByTestId('branding-toggle');
     fireEvent.click(toggle);

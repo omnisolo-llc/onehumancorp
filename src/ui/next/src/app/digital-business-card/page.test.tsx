@@ -36,8 +36,8 @@ describe('DigitalBusinessCardGeneratorPage', () => {
     });
   });
 
-  it('renders the generator page with default values', () => {
-    render(<DigitalBusinessCardGeneratorPage />);
+  it('renders the generator page with default values', async () => {
+    await act(async () => render(<DigitalBusinessCardGeneratorPage />));
 
     // Check main title
     expect(screen.getByText('Digital Business Card Generator')).toBeInTheDocument();
@@ -49,8 +49,8 @@ describe('DigitalBusinessCardGeneratorPage', () => {
     expect(screen.getByText(/Remove "Powered by OHC" branding/)).toBeInTheDocument();
   });
 
-  it('updates live preview when form is filled', () => {
-    render(<DigitalBusinessCardGeneratorPage />);
+  it('updates live preview when form is filled', async () => {
+    await act(async () => render(<DigitalBusinessCardGeneratorPage />));
 
     const nameInput = screen.getByPlaceholderText('e.g. Jane Doe');
     fireEvent.change(nameInput, { target: { value: 'John Smith' } });
@@ -58,8 +58,8 @@ describe('DigitalBusinessCardGeneratorPage', () => {
     expect(screen.getByText('John Smith')).toBeInTheDocument();
   });
 
-  it('shows paywall when non-pro user tries to remove branding', () => {
-    render(<DigitalBusinessCardGeneratorPage />);
+  it('shows paywall when non-pro user tries to remove branding', async () => {
+    await act(async () => render(<DigitalBusinessCardGeneratorPage />));
 
     const brandingCheckbox = screen.getByRole('checkbox');
     fireEvent.click(brandingCheckbox);
