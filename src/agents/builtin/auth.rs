@@ -54,9 +54,9 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         );
     }
 
-    if let Ok(token) = env::var("OHC_AGENT_TOKEN")
-        && !token.trim().is_empty()
-    {
+    let token_var = env::var("OHC_AGENT_TOKEN").unwrap_or_default();
+    if !token_var.trim().is_empty() {
+        let token = token_var;
         let key = env::var("OHC_AGENT_AUTH_KEY")
             .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
         if key.trim().is_empty() || key.len() < 32 {
@@ -67,6 +67,14 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         return Ok(AuthMode::Token {
             token_hash,
             verification_key,
+        });
+    }
+
+    let spiffe_id_var = env::var("OHC_AGENT_SPIFFE_ID").unwrap_or_default();
+    if !spiffe_id_var.trim().is_empty() {
+        validate_spiffe_id(&spiffe_id_var)?;
+        return Ok(AuthMode::Spiffe {
+            allowed_id: spiffe_id_var,
         });
     }
 
