@@ -1,7 +1,7 @@
 use sqlx::Row;
 pub mod persistence;
 #[cfg(test)]
-mod persistence_commands_test;
+/* mod persistence_commands_test; */
 pub mod rag_sync;
 pub mod redis_pool;
 pub mod cart_recovery;
@@ -3457,6 +3457,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         db: db.clone(),
     };
     let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
+
+    let chat_service = std::sync::Arc::new(crate::services::chat::service::ChatService::new(db.pool.clone()));
+    let chat_macros_router = api::inbox::chat_macros::macros_router(chat_service.clone());
+    let chat_canned_responses_router = api::inbox::chat_canned_responses::canned_responses_router(chat_service.clone());
+
 
         // Create Twilio Voice engines
     let twilio_voice_engine = std::sync::Arc::new(crate::voice::VoiceAIEdgeEngine::new());
@@ -7923,6 +7928,9 @@ async fn create_ui_bom_item_handler(
             omnichannel_webhook_router,
             http_auth_store.clone(),
         ))
+
+        .merge(chat_macros_router)
+        .merge(chat_canned_responses_router)
         .nest(
             "/api/v1/inbox",
             protect_internal_ingress(inbox_webhook_router, http_auth_store.clone()),

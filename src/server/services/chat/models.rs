@@ -57,3 +57,24 @@ pub struct ChatMessage {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatMacro {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub name: String,
+    pub visibility: String,
+    pub actions: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct ChatCannedResponse {
+    pub id: Uuid,
+    pub tenant_id: Uuid,
+    pub short_code: String,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

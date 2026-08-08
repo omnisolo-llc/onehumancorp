@@ -4,3 +4,5 @@ pub mod customer_memory;
 pub mod action_required;
 #[cfg(test)]
 mod action_required_test;
+pub mod chat_macros;
+pub mod chat_canned_responses;
