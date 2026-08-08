@@ -41,7 +41,12 @@ impl ConsolidationWorker {
         let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
         let pruning_source_types_refs: Vec<&str> = self.pruning_source_types.iter().map(|s| s.as_str()).collect();
         let pruning_success = match self.repository.prune_stale(threshold_date, self.pruning_min_reliability, self.pruning_max_reference_count, &pruning_source_types_refs).await {
-            Ok(_) => true,
+            Ok(rows_deleted) => {
+                if rows_deleted > 0 {
+                    tracing::info!("Consolidation Worker: Pruned {} stale context records", rows_deleted);
+                }
+                true
+            },
             Err(e) => {
                 tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
                 if let Some(ref cb) = self.telemetry_error_callback {

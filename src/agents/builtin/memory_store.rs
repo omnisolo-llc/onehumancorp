@@ -578,17 +578,17 @@ impl VectorRepository {
         min_reliability: i32,
         max_reference_count: i32,
         source_types: &[&str],
-    ) -> Result<(), String> {
+    ) -> Result<u64, String> {
         if source_types.is_empty() {
-            return Ok(());
+            return Ok(0);
         }
         let placeholders_sqlite: Vec<String> = source_types.iter().map(|_| "?".to_string()).collect();
         let in_clause_sqlite = placeholders_sqlite.join(", ");
-        let query_sqlite = format!("DELETE FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = 0 AND reference_count < ? AND source_type IN ({})) OR (reliability_score < ? AND owner_override = 0 AND last_referenced_at < ?)", in_clause_sqlite);
+        let query_sqlite = format!("DELETE FROM consolidated_memory WHERE id IN (SELECT id FROM consolidated_memory WHERE (last_referenced_at < ? AND owner_override = 0 AND reference_count < ? AND source_type IN ({})) OR (reliability_score < ? AND owner_override = 0 AND last_referenced_at < ?) LIMIT 1000)", in_clause_sqlite);
 
-        match &self.store {
+        let rows_deleted = match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let query_pg = "DELETE FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < $2 AND source_type = ANY($4)) OR (reliability_score < $3 AND owner_override = FALSE AND last_referenced_at < $1)";
+                let query_pg = "DELETE FROM consolidated_memory WHERE id IN (SELECT id FROM consolidated_memory WHERE (last_referenced_at < $1 AND owner_override = FALSE AND reference_count < $2 AND source_type = ANY($4)) OR (reliability_score < $3 AND owner_override = FALSE AND last_referenced_at < $1) LIMIT 1000)";
 
                 let source_types_vec: Vec<String> = source_types.iter().map(|s| s.to_string()).collect();
 
@@ -597,7 +597,7 @@ impl VectorRepository {
                     .bind(max_reference_count)
                     .bind(min_reliability)
                     .bind(&source_types_vec)
-                    .execute(pool).await.map_err(|e| e.to_string())?;
+                    .execute(pool).await.map_err(|e| e.to_string())?.rows_affected()
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let mut query = sqlx::query(&query_sqlite)
@@ -607,10 +607,10 @@ impl VectorRepository {
                     query = query.bind(st);
                 }
                 query = query.bind(min_reliability).bind(older_than);
-                query.execute(pool).await.map_err(|e| e.to_string())?;
+                query.execute(pool).await.map_err(|e| e.to_string())?.rows_affected()
             }
-        }
-        Ok(())
+        };
+        Ok(rows_deleted)
     }
 
     pub async fn get_by_id(&self, id: &str) -> Result<Option<EmbeddingRecord>, String> {
