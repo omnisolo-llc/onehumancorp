@@ -331,6 +331,8 @@ where
         .route("/conversational-manager/execute", post(handle_conversational_execute))
         .route("/waitlist", post(handle_waitlist))
         .route("/secret-menu/embed", get(handle_secret_menu_embed))
+        .route("/giveaway/generate", post(handle_giveaway_generate))
+        .route("/giveaway/embed", get(handle_giveaway_embed))
         .route("/secret-menu/generate", post(handle_secret_menu_generate))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
@@ -6537,4 +6539,158 @@ pub async fn handle_secret_menu_generate(
     state.hub.append_recent_event(msg).await;
 
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
+}
+
+#[derive(serde::Deserialize)]
+pub struct GiveawayGenerateRequest {
+    pub tenant_id: String,
+    pub title: String,
+    pub description: String,
+    pub extra_entries: i32,
+}
+
+pub async fn handle_giveaway_generate(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Json(req): axum::extract::Json<GiveawayGenerateRequest>,
+) -> impl axum::response::IntoResponse {
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.giveaway_generated",
+        "tenant_id": req.tenant_id,
+        "title": req.title,
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }));
+
+    state.hub.append_recent_event(msg).await;
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "ok"})))
+}
+
+#[derive(serde::Deserialize)]
+pub struct GiveawayEmbedParams {
+    pub tenant: String,
+    pub title: Option<String>,
+    pub desc: Option<String>,
+    pub entries: Option<String>,
+}
+
+pub async fn handle_giveaway_embed(
+    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::extract::Query(params): axum::extract::Query<GiveawayEmbedParams>,
+) -> impl axum::response::IntoResponse {
+    let tenant = params.tenant;
+    let title = params.title.unwrap_or_else(|| "Win Big!".to_string());
+    let desc = params.desc.unwrap_or_else(|| "Enter our sweepstakes today.".to_string());
+    let entries = params.entries.unwrap_or_else(|| "3".to_string());
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {{ margin: 0; font-family: 'Inter', sans-serif; background: transparent; padding: 20px; }}
+        .widget {{ background: white; border-radius: 20px; padding: 32px; text-align: center; border: 1px solid #eaeaea; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }}
+        .icon {{ font-size: 48px; margin: 0 auto 16px; background: rgba(0, 102, 255, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }}
+        .title {{ font-size: 24px; font-weight: 800; margin-bottom: 12px; font-family: 'Outfit', sans-serif; color: #111827; line-height: 1.2; }}
+        .desc {{ color: #4b5563; font-size: 15px; margin-bottom: 24px; line-height: 1.5; }}
+
+        .form-group {{ margin-bottom: 16px; text-align: left; }}
+        input[type="email"] {{ width: 100%; padding: 14px 16px; border: 1px solid #d1d5db; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 15px; box-sizing: border-box; transition: all 0.2s; }}
+        input[type="email"]:focus {{ outline: none; border-color: #0066FF; box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1); }}
+
+        .submit-btn {{ width: 100%; padding: 14px; background: #0066FF; color: white; border: none; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; transition: background 0.2s; }}
+        .submit-btn:hover {{ background: #0055d4; }}
+
+        .referral-box {{ display: none; background: #f3f4f6; border-radius: 12px; padding: 20px; margin-top: 20px; }}
+        .ref-title {{ font-weight: 700; color: #111827; margin-bottom: 8px; font-size: 16px; }}
+        .ref-desc {{ color: #4b5563; font-size: 13px; margin-bottom: 16px; }}
+        .ref-link-container {{ display: flex; gap: 8px; margin-bottom: 16px; }}
+        .ref-link {{ flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; background: white; font-size: 12px; color: #4b5563; }}
+        .copy-btn {{ padding: 10px 16px; background: #111827; color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; }}
+
+        .share-buttons {{ display: flex; gap: 8px; }}
+        .share-btn {{ flex: 1; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 13px; color: white; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; }}
+        .btn-wa {{ background: #25D366; }}
+        .btn-x {{ background: #000000; }}
+    </style>
+</head>
+<body>
+    <div class="widget">
+        <div class="icon">🎁</div>
+        <div class="title">{title}</div>
+        <div class="desc">{desc}</div>
+
+        <form id="enter-form">
+            <div class="form-group">
+                <input type="email" id="email" placeholder="Enter your email to win" required>
+            </div>
+            <button type="submit" class="submit-btn" id="submit-btn">Enter Giveaway</button>
+        </form>
+
+        <div class="referral-box" id="referral-box">
+            <div class="ref-title">🎉 You're entered! Want more chances?</div>
+            <div class="ref-desc">Share your unique link below. For every friend who enters, you get <strong>{entries} extra entries!</strong></div>
+
+            <div class="ref-link-container">
+                <input type="text" class="ref-link" id="ref-link" readonly value="https://ohc.app/giveaway/enter?ref=user123">
+                <button class="copy-btn" id="copy-btn">Copy</button>
+            </div>
+
+            <div class="share-buttons">
+                <a href="#" class="share-btn btn-wa" id="share-wa" target="_blank">WhatsApp</a>
+                <a href="#" class="share-btn btn-x" id="share-x" target="_blank">X (Twitter)</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('enter-form').addEventListener('submit', (e) => {{
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.textContent = 'Entering...';
+            btn.disabled = true;
+
+            // Simulate API call
+            setTimeout(() => {{
+                document.getElementById('enter-form').style.display = 'none';
+
+                // Generate a mock unique ref code
+                const refCode = Math.random().toString(36).substring(2, 8);
+                const shareUrl = `https://ohc.app/giveaway/{tenant}?ref=${{refCode}}`;
+
+                const refInput = document.getElementById('ref-link');
+                refInput.value = shareUrl;
+
+                // Update share links
+                const text = encodeURIComponent(`Enter this awesome giveaway! I just entered to win. Use my link: ${{shareUrl}}`);
+                document.getElementById('share-wa').href = `https://wa.me/?text=${{text}}`;
+                document.getElementById('share-x').href = `https://twitter.com/intent/tweet?text=${{text}}`;
+
+                document.getElementById('referral-box').style.display = 'block';
+            }}, 1000);
+        }});
+
+        document.getElementById('copy-btn').addEventListener('click', () => {{
+            const link = document.getElementById('ref-link').value;
+            navigator.clipboard.writeText(link);
+            const btn = document.getElementById('copy-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }});
+    </script>
+</body>
+</html>"#,
+        title = title,
+        desc = desc,
+        entries = entries,
+        tenant = tenant
+    );
+
+    (
+        axum::http::StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/html")],
+        html,
+    )
 }
