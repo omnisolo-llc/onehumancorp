@@ -102,8 +102,8 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
                     .bind(&new_id)
                     .bind(tenant_id)
                     .bind(name)
-                    .bind(if email.is_empty() { None } else { Some(email) })
-                    .bind(if phone.is_empty() { None } else { Some(phone) })
+                    .bind(if email.is_empty() { None } else { Some(email.to_string()) })
+                    .bind(if phone.is_empty() { None } else { Some(phone.to_string()) })
                     .execute(sqlite_pool)
                     .await;
             }
@@ -111,7 +111,7 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
         new_id
     };
 
-    // Cache this new identity link
+    // 3. Cache the new identity
     let identity_id = Uuid::new_v4().to_string();
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -195,12 +195,25 @@ pub async fn handle_omnichannel_webhook(
     // 2. Persist Message into inbox_messages
     let inbox_id = Uuid::new_v4().to_string();
     let intent_id = Uuid::new_v4().to_string();
+
+    // Chatwoot Feature Replication: Intent Classification
+    let msg_lower = message.to_lowercase();
+    let intent_type = if msg_lower.contains("human") || msg_lower.contains("agent") {
+        "human_handoff"
+    } else if msg_lower.contains("refund") || msg_lower.contains("cancel") {
+        "support_request"
+    } else if msg_lower.contains("quote") || msg_lower.contains("price") {
+        "sales_inquiry"
+    } else {
+        "customer_inquiry"
+    };
+
     let _ = match &state.db.store {
         crate::db::DbStore::Postgres => sqlx::query("INSERT INTO work_intents (id, tenant_id, source, intent_type, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())")
             .bind(&intent_id)
             .bind(tenant_id)
             .bind(channel)
-            .bind("customer_inquiry")
+            .bind(intent_type)
             .bind(serde_json::json!({"message": message, "sender_id": sender_id, "customer_id": customer_id}))
             .bind("PENDING")
             .execute(&state.db.pool).await.map(|_| ()).map_err(|e| e),
@@ -208,35 +221,46 @@ pub async fn handle_omnichannel_webhook(
             .bind(&intent_id)
             .bind(tenant_id)
             .bind(channel)
-            .bind("customer_inquiry")
+            .bind(intent_type)
             .bind(serde_json::json!({"message": message, "sender_id": sender_id, "customer_id": customer_id}).to_string())
             .bind("PENDING")
             .execute(sqlite_pool).await.map(|_| ()).map_err(|e| e),
     };
 
+    // Chatwoot Feature Replication: Auto-Responder / Copilot response drafting
+    let auto_reply = if intent_type == "human_handoff" {
+        "I am transferring you to a human agent now."
+    } else if intent_type == "support_request" {
+        "I see you need help with a refund or cancellation. Let me pull up your account."
+    } else {
+        ""
+    };
+
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             let res = sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, '', 'unread', $6, NOW())"
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, 'unread', $7, NOW())"
             )
             .bind(&inbox_id)
             .bind(tenant_id)
             .bind(channel)
             .bind(message)
             .bind(message)
+            .bind(auto_reply)
             .bind(sender_id)
             .execute(&state.db.pool)
             .await;
 
             if res.is_ok() {
                 if let Err(e) = sqlx::query(
-                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
+                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', $6, 'unread', $7, $8, NOW())"
                 )
                 .bind(&inbox_id)
                 .bind(tenant_id)
                 .bind(channel)
                 .bind(message)
                 .bind(message)
+                .bind(auto_reply)
                 .bind(sender_id)
                 .bind(&customer_id)
                 .execute(&state.db.pool)
@@ -248,26 +272,28 @@ pub async fn handle_omnichannel_webhook(
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             let res = sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, '', 'unread', ?, CURRENT_TIMESTAMP)"
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(tenant_id)
             .bind(channel)
             .bind(message)
             .bind(message)
+            .bind(auto_reply)
             .bind(sender_id)
             .execute(sqlite_pool)
             .await;
 
             if res.is_ok() {
                 if let Err(e) = sqlx::query(
-                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+                    "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', ?, 'unread', ?, ?, CURRENT_TIMESTAMP)"
                 )
                 .bind(&inbox_id)
                 .bind(tenant_id)
                 .bind(channel)
                 .bind(message)
                 .bind(message)
+                .bind(auto_reply)
                 .bind(sender_id)
                 .bind(&customer_id)
                 .execute(sqlite_pool)
@@ -287,6 +313,8 @@ pub async fn handle_omnichannel_webhook(
     // 3. Enqueue message_triage job
     let job_id = Uuid::new_v4().to_string();
     let payload_json = serde_json::json!({
+        "intent_type": intent_type,
+        "auto_reply_draft": auto_reply,
         "message_id": inbox_id,
         "source": channel,
         "content": message,
@@ -411,7 +439,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_omnichannel_webhook() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        let schema = "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT); CREATE TABLE customer_identities (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, channel TEXT NOT NULL, channel_identity TEXT NOT NULL, UNIQUE(tenant_id, channel, channel_identity)); CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, created_at TEXT); CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT); CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, job_type TEXT, payload TEXT, status TEXT);";
+        let schema = "CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT); CREATE TABLE customer_identities (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, customer_id TEXT NOT NULL, channel TEXT NOT NULL, channel_identity TEXT NOT NULL, UNIQUE(tenant_id, channel, channel_identity)); CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, created_at TEXT); CREATE TABLE omni_inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, original_content TEXT, translated_content TEXT, target_language TEXT, draft_reply TEXT, status TEXT, sender_id TEXT, customer_id TEXT, created_at TEXT); CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY, tenant_id TEXT, job_type TEXT, payload TEXT, status TEXT); CREATE TABLE work_intents (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, intent_type TEXT, payload TEXT, status TEXT, created_at TEXT, updated_at TEXT);";
         sqlx::query(schema).execute(&pool).await.unwrap();
         let db = DB {
             pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(),
@@ -422,13 +450,13 @@ mod tests {
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let orchestrator = std::sync::Arc::new(crate::orchestration::departments::DepartmentOrchestrator::new(std::sync::Arc::new(db.clone()), mesh));
 
-        let app_state = AppState { db: std::sync::Arc::new(db), orchestrator };
+        let app_state = AppState { db: std::sync::Arc::new(db.clone()), orchestrator };
 
         let payload = OmnichannelPayload {
             tenant_id: "t-1".into(),
             channel: "sms".into(),
             sender_id: "+123".into(),
-            message: "Hello".into(),
+            message: "I need to talk to a human".into(),
         };
 
         let claims = ::server_common::Claims {
@@ -444,7 +472,12 @@ mod tests {
         };
 
         let res = handle_omnichannel_webhook(State(app_state), Extension(claims), Json(payload)).await.into_response();
-
         assert_eq!(res.status(), StatusCode::OK);
+
+        let intent: String = sqlx::query_scalar("SELECT intent_type FROM work_intents WHERE tenant_id = 't-1'").fetch_one(&pool).await.unwrap();
+        assert_eq!(intent, "human_handoff");
+
+        let draft: String = sqlx::query_scalar("SELECT draft_reply FROM inbox_messages WHERE tenant_id = 't-1'").fetch_one(&pool).await.unwrap();
+        assert_eq!(draft, "I am transferring you to a human agent now.");
     }
 }
