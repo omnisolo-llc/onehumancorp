@@ -34,7 +34,8 @@ test.describe('Omni Inbox Webhook and API', () => {
 
     // Due to standalone testing lacking unified_threads insertion in the simple webhook test endpoint,
     // we query a mock conversation to test the format or check that the system doesn't crash
-    const msgRes = await request.get(`/api/v1/inbox/messages/${tenantId}/conv_123`);
+    const threadId = convJson[0]?.id || 'conv_123';
+    const msgRes = await request.get(`/api/v1/inbox/messages/${tenantId}/${threadId}`);
     expect(msgRes.ok()).toBeTruthy();
     const msgJson = await msgRes.json();
     expect(Array.isArray(msgJson)).toBeTruthy();

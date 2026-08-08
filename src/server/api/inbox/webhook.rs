@@ -202,38 +202,100 @@ pub async fn handle_omnichannel_webhook(
 
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
-                r#"
-                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
-                VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())
-                "#
+            let thread_row = sqlx::query_as::<_, (String,)>(
+                "SELECT id FROM unified_threads WHERE tenant_id = $1 AND customer_id = $2 AND channel = $3 AND status = 'open' LIMIT 1"
             )
-            .bind(&id)
             .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
-            .bind(&payload.sender_id)
             .bind(&customer_id)
+            .bind(&payload.source)
+            .fetch_optional(pool)
+            .await;
+
+            let thread_id = match thread_row {
+                Ok(Some((tid,))) => tid,
+                Ok(None) => {
+                    let new_tid = Uuid::new_v4().to_string();
+                    let res = sqlx::query(
+                        "INSERT INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES ($1, $2, $3, $4, 'open')"
+                    )
+                    .bind(&new_tid)
+                    .bind(&payload.tenant_id)
+                    .bind(&customer_id)
+                    .bind(&payload.source)
+                    .execute(pool)
+                    .await;
+                    if let Err(e) = res {
+                        tracing::error!("Failed to insert unified_thread: {}", e);
+                        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+                    }
+                    new_tid
+                },
+                Err(e) => {
+                    tracing::error!("Failed to fetch unified_threads: {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+                }
+            };
+
+            let msg_res = sqlx::query(
+                "INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES ($1, $2, $3, 'customer', $4)"
+            )
+            .bind(Uuid::new_v4().to_string())
+            .bind(&payload.tenant_id)
+            .bind(&thread_id)
+            .bind(&payload.message)
             .execute(pool)
-            .await.map(|_| ())
+            .await;
+
+            if let Err(e) = msg_res {
+                tracing::error!("Failed to insert unified_message: {}", e);
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+            }
+
+            let res = sqlx::query(
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', '', 'unread', $6, $7, NOW())"
+            ).bind(&id).bind(&payload.tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&payload.sender_id).bind(&customer_id).execute(pool).await;
+            res.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query(
-                r#"
-                INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at)
-                VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)
-                "#
+            let thread_row = sqlx::query_as::<_, (String,)>(
+                "SELECT id FROM unified_threads WHERE tenant_id = ? AND customer_id = ? AND channel = ? AND status = 'open' LIMIT 1"
             )
-            .bind(&id)
             .bind(&payload.tenant_id)
-            .bind(&payload.source)
-            .bind(&payload.message)
-            .bind(&payload.message)
-            .bind(&payload.sender_id)
             .bind(&customer_id)
-            .execute(sqlite_pool)
-            .await.map(|_| ())
+            .bind(&payload.source)
+            .fetch_optional(sqlite_pool)
+            .await;
+
+            let thread_id = match thread_row {
+                Ok(Some((tid,))) => tid,
+                Ok(None) => {
+                    let new_tid = Uuid::new_v4().to_string();
+                    let res = sqlx::query("INSERT INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES (?, ?, ?, ?, 'open')")
+                    .bind(&new_tid).bind(&payload.tenant_id).bind(&customer_id).bind(&payload.source).execute(sqlite_pool).await;
+                    if let Err(e) = res {
+                        tracing::error!("Failed to insert unified_thread (sqlite): {}", e);
+                        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+                    }
+                    new_tid
+                },
+                Err(e) => {
+                    tracing::error!("Failed to fetch unified_threads (sqlite): {}", e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+                }
+            };
+
+            let msg_res = sqlx::query("INSERT INTO unified_messages (id, tenant_id, thread_id, sender_type, content) VALUES (?, ?, ?, 'customer', ?)")
+            .bind(Uuid::new_v4().to_string()).bind(&payload.tenant_id).bind(&thread_id).bind(&payload.message).execute(sqlite_pool).await;
+
+            if let Err(e) = msg_res {
+                tracing::error!("Failed to insert unified_message (sqlite): {}", e);
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
+            }
+
+            let res = sqlx::query(
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', '', 'unread', ?, ?, CURRENT_TIMESTAMP)"
+            ).bind(&id).bind(&payload.tenant_id).bind(&payload.source).bind(&payload.message).bind(&payload.message).bind(&payload.sender_id).bind(&customer_id).execute(sqlite_pool).await;
+            res.map(|_| ())
         }
     };
 
