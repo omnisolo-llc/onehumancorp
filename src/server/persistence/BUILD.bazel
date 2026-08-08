@@ -19,3 +19,9 @@ sh_test(
     data = ["//src/server:server_sources"],
     tags = ["lint"],
 )
+
+exports_files([
+    "migration.rs",
+    "commands.rs",
+    "entities.rs",
+])

@@ -7,6 +7,10 @@ rust_library(
     compile_data = [
         "//src/server/migrations",
         "//src/ui/next:auth_limits",
+        "//src/server:lib.rs",
+        "//src/server/persistence:migration.rs",
+        "//src/server/persistence:commands.rs",
+        "//src/server/auth:http.rs",
     ],
     srcs = [
         "email.rs",
@@ -77,3 +81,8 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+exports_files([
+    "seaorm_store.rs",
+    "http.rs",
+])
