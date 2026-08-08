@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useState, useRef, type ReactNode } from "
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
+import { ChatWebSocketProvider, useChatWebSocket } from "./websocket";
 import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
 
 type Message = {
@@ -512,6 +513,10 @@ function InboxWorkspace({
                 )}
                 {!activeApproval && (
                   <div className="mt-4 flex flex-col gap-4">
+                    <div className="flex flex-col gap-2 mt-4">
+                      <textarea className="app-input w-full p-3 rounded-md bg-white/50 dark:bg-black/30 border border-gray-200 dark:border-white/10" placeholder="Type a native reply..."></textarea>
+                      <button className="app-button primary w-full min-h-[44px] rounded-[8px] bg-blue-600 text-white font-bold" onClick={() => {}}>✨ Send Reply</button>
+                    </div>
                     <button
                       onClick={() => handleDraftQuoteWithAI(selected)}
                       className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
@@ -583,6 +588,19 @@ function ApiInboxFallback() {
 }
 
 export default function InboxPage() {
+  return (
+    <ChatWebSocketProvider>
+      <PowerSyncProvider
+        fallback={<InboxLoadingState />}
+        unsupportedFallback={<ApiInboxFallback />}
+      >
+        <PowerSyncInboxContent />
+      </PowerSyncProvider>
+    </ChatWebSocketProvider>
+  );
+}
+
+function _unused() {
   return (
     <PowerSyncProvider
       fallback={<InboxLoadingState />}
