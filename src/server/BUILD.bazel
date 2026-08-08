@@ -641,6 +641,9 @@ rust_test(
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
     ],
+    compile_data = [
+        "//src/server/auth:seaorm_store.rs",
+    ],
     edition = "2024",
     deps = [
         "//src/server/auth:server_auth",
@@ -664,6 +667,9 @@ rust_test(
         "//src/server/persistence:connection.rs",
         "//src/server/persistence:entities.rs",
         "//src/server/persistence:migration.rs",
+    ],
+    compile_data = [
+        "//src/server/auth:seaorm_store.rs",
     ],
     edition = "2024",
     deps = [
@@ -1071,6 +1077,7 @@ rust_test(
 exports_files([
     "Cargo.toml",
     "Cargo.lock",
+    "lib.rs",
 ])
 
 rust_test(
