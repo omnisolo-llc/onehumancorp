@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Viral Giveaway Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --card-bg: rgba(255, 255, 255, 0.85);
+      --text-main: #1d1d1f;
+      --text-muted: #86868b;
+      --accent: #0066FF;
+      --border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .glassmorphism {
+      background: var(--card-bg);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    p {
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.5);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: white;
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background: #0055d4;
+    }
+
+    .btn-primary:disabled {
+      background: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .code-block {
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 16px 0;
+    }
+
+    .copy-btn {
+      background: white;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+      background: #f5f5f7;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .back-btn svg {
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+    }
+
+    #result-section {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <a href="/dashboard.html" class="back-btn">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+      Dashboard
+    </a>
+
+    <div class="glassmorphism">
+      <h1>Viral Giveaway Generator 🎁</h1>
+      <p>Create an embeddable giveaway widget for your website. Customers enter the sweepstakes by providing their email, and earn extra entries by sharing their unique referral link with friends. Includes a built-in referral loop to reward you when other owners join.</p>
+
+      <form id="giveaway-form">
+        <div class="form-group">
+          <label for="giveaway-title">Giveaway Title</label>
+          <input type="text" id="giveaway-title" placeholder="e.g. Win a Free Coffee for a Year!" required>
+        </div>
+
+        <div class="form-group">
+          <label for="giveaway-description">Giveaway Description</label>
+          <textarea id="giveaway-description" rows="3" placeholder="e.g. Enter our sweepstakes to win. Share with friends to get 3 extra entries per referral!" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="extra-entries">Extra Entries Per Referral</label>
+          <input type="number" id="extra-entries" value="3" min="1" required>
+        </div>
+
+        <button type="submit" class="btn-primary" id="generate-btn">Generate Widget</button>
+      </form>
+    </div>
+
+    <div id="result-section" class="glassmorphism">
+      <h2>Your Giveaway Widget is Ready!</h2>
+      <p>Copy and paste this HTML code into your website where you want the giveaway to appear.</p>
+
+      <div class="code-block" id="embed-code"></div>
+
+      <button class="copy-btn" id="copy-btn">Copy to Clipboard</button>
+
+      <div style="margin-top: 24px;">
+        <h3>Preview:</h3>
+        <div id="preview-container" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: white;">
+          <!-- Iframe will be injected here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('giveaway-form');
+      const generateBtn = document.getElementById('generate-btn');
+      const resultSection = document.getElementById('result-section');
+      const embedCodeEl = document.getElementById('embed-code');
+      const copyBtn = document.getElementById('copy-btn');
+      const previewContainer = document.getElementById('preview-container');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'Generating...';
+
+        const title = document.getElementById('giveaway-title').value;
+        const description = document.getElementById('giveaway-description').value;
+        const extraEntries = document.getElementById('extra-entries').value;
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
+
+        try {
+          const res = await fetch('/api/v1/growth/giveaway/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              tenant_id: tenantId,
+              title: title,
+              description: description,
+              extra_entries: parseInt(extraEntries)
+            })
+          });
+
+          if (res.ok) {
+            const embedUrl = `https://ohc.app/api/v1/growth/giveaway/embed?tenant=${encodeURIComponent(tenantId)}&title=${encodeURIComponent(title)}&desc=${encodeURIComponent(description)}&entries=${encodeURIComponent(extraEntries)}`;
+            const iframeCode = `<iframe src="${embedUrl}" width="100%" height="450" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; max-width: 500px; display: block; margin: 0 auto;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px; font-family: sans-serif;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}&source=giveaway_embed" target="_blank" rel="noopener noreferrer" style="color:#6b7280;text-decoration:none;font-weight:600;">⚡ Powered by OHC</a></div>`;
+
+            embedCodeEl.textContent = iframeCode;
+
+            // Generate preview (using relative URL for preview)
+            const localEmbedUrl = `/api/v1/growth/giveaway/embed?tenant=${encodeURIComponent(tenantId)}&title=${encodeURIComponent(title)}&desc=${encodeURIComponent(description)}&entries=${encodeURIComponent(extraEntries)}`;
+            previewContainer.innerHTML = `<iframe src="${localEmbedUrl}" width="100%" height="450" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea; max-width: 500px; display: block; margin: 0 auto;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px; font-family: sans-serif;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}&source=giveaway_embed" target="_blank" rel="noopener noreferrer" style="color:#6b7280;text-decoration:none;font-weight:600;">⚡ Powered by OHC</a></div>`;
+
+            resultSection.style.display = 'block';
+
+            // Scroll to result
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            alert('Failed to generate widget. Please try again.');
+          }
+        } catch (error) {
+          console.error('Error generating widget:', error);
+          alert('An error occurred. Please check your connection and try again.');
+        } finally {
+          generateBtn.disabled = false;
+          generateBtn.textContent = 'Generate Widget';
+        }
+      });
+
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(embedCodeEl.textContent).then(() => {
+          const originalText = copyBtn.textContent;
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => {
+            copyBtn.textContent = originalText;
+          }, 2000);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
