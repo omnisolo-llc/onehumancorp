@@ -23,6 +23,9 @@ catalog = pathlib.Path(sys.argv[2]).read_text()
 if "legacy_db_compatibility_layer" not in server:
     raise SystemExit("legacy database routes do not use a shared compatibility layer")
 
+if "Extension(std::sync::Arc::new(db.clone()))" in server:
+    raise SystemExit("legacy database layer still wraps an Arc<DB> in a nested Arc")
+
 for route in ("/api/v1/help", "/api/v1/tooltips", "/api/v1/videos"):
     if route not in server:
         raise SystemExit(f"legacy route is missing from the server router: {route}")

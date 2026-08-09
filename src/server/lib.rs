@@ -137,6 +137,17 @@ async fn protected_bearer_auth_middleware(
     .await
 }
 
+/// Supply the legacy SQLx database handle to handlers that still use that
+/// interface while the rest of the service migrates to the portable SeaORM
+/// connection. `db` is already an `Arc<DB>`; keeping this helper centralized
+/// prevents accidentally creating an `Arc<Arc<DB>>` extension that Axum cannot
+/// extract at runtime.
+fn legacy_db_compatibility_layer(
+    db: std::sync::Arc<crate::db::DB>,
+) -> axum::extract::Extension<std::sync::Arc<crate::db::DB>> {
+    axum::extract::Extension(db)
+}
+
 fn protect_internal_ingress<S>(
     router: axum::Router<S>,
     store: std::sync::Arc<::server_auth::Store>,
@@ -7669,7 +7680,7 @@ async fn create_ui_bom_item_handler(
         ))
         .merge(api::realtime::router())
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
-        .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
@@ -7744,27 +7755,27 @@ async fn create_ui_bom_item_handler(
         ))
         .with_state(mesh_transport)
         .route("/api/v1/help", axum::routing::get(crate::api::docs::list_articles)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/help/search", axum::routing::get(crate::api::docs::search_articles)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips", axum::routing::get(crate::api::docs::get_tooltips)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips", axum::routing::post(crate::api::docs::update_tooltip)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/videos", axum::routing::get(crate::api::docs::list_videos)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/changelog", axum::routing::get(crate::api::docs::get_changelog)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))

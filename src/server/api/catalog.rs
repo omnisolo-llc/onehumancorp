@@ -26,6 +26,7 @@ pub struct GenerateOfferingRequest {
 }
 
 #[derive(Serialize)]
+#[derive(Debug)]
 pub struct GenerateOfferingResponse {
     pub title: String,
     pub description: String,
@@ -619,7 +620,7 @@ async fn handle_create_product(
 
 async fn handle_generate_offering(
     Json(payload): Json<GenerateOfferingRequest>,
-) -> impl IntoResponse {
+) -> axum::response::Response {
     let prompt_input = payload.prompt.trim();
     if prompt_input.is_empty() || prompt_input.chars().count() > 4_000 {
         return (
@@ -628,7 +629,19 @@ async fn handle_generate_offering(
         )
             .into_response();
     }
-    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let api_key = match std::env::var("MINIMAX_API_KEY") {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "error": "offering generation unavailable",
+                    "message": "The AI provider is not configured.",
+                })),
+            )
+                .into_response();
+        }
+    };
     let optimized_prompt = ::server_pricing::compression::reduce_tokens(prompt_input);
     let prompt = format!(
         "Extract the product or service offering details from the following text:\n\n'{}'\n\nOutput ONLY a raw JSON object (do not wrap in markdown or backticks) matching this exact schema: {{\"title\": \"string\", \"description\": \"string\", \"price\": \"string\", \"item_type\": \"string (either Product or Service)\", \"is_subscription\": \"boolean\"}}. Suggest an appropriate market price if none is provided.",
@@ -636,62 +649,124 @@ async fn handle_generate_offering(
     );
 
     let client = crate::minimax::MinimaxClient::new(api_key);
-    let mut response_json = GenerateOfferingResponse {
-        title: "Generated Offering".to_string(),
-        description: "AI description".to_string(),
-        price: "10.00".to_string(),
-        item_type: "Service".to_string(),
-        is_subscription: false,
-        variants: None,
+    let reasoned = match client.reason(&prompt).await {
+        Ok(value) => value,
+        Err(error) => {
+            tracing::warn!("catalog offering provider failed: {error}");
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "error": "offering generation unavailable",
+                    "message": "The AI provider could not generate an offering.",
+                })),
+            )
+                .into_response();
+        }
     };
 
-    if let Ok(reasoned) = client.reason(&prompt).await {
-        let cleaned = reasoned.replace("", "").trim().to_string();
-        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&cleaned) {
-            if let Some(title) = parsed.get("title").and_then(|v| v.as_str()) {
-                response_json.title = title.to_string();
-            }
-            if let Some(description) = parsed.get("description").and_then(|v| v.as_str()) {
-                response_json.description = description.to_string();
-            }
-            if let Some(price) = parsed.get("price").and_then(|v| v.as_str()) {
-                response_json.price = price.to_string();
-            } else if let Some(price) = parsed.get("price").and_then(|v| v.as_f64()) {
-                response_json.price = format!("{:.2}", price);
-            }
-            if let Some(item_type) = parsed.get("item_type").and_then(|v| v.as_str()) {
-                response_json.item_type = item_type.to_string();
-            }
-            if let Some(is_sub) = parsed.get("is_subscription").and_then(|v| v.as_bool()) {
-                response_json.is_subscription = is_sub;
-            }
-            if let Some(variants) = parsed.get("variants").and_then(|v| v.as_array()) {
-                let mut v_list = Vec::new();
-                for v in variants.iter().take(20) {
-                    let mut req = ProductVariantRequest {
-                        name: "".to_string(),
-                        price_modifier: "0.00".to_string(),
-                    };
-                    if let Some(n) = v.get("name").and_then(|n| n.as_str()) {
-                        req.name = n.to_string();
-                    }
-                    if let Some(p) = v.get("price_modifier").and_then(|p| p.as_str()) {
-                        req.price_modifier = p.to_string();
-                    } else if let Some(p) = v.get("price_modifier").and_then(|p| p.as_f64()) {
-                        req.price_modifier = format!("{:.2}", p);
-                    }
-                    v_list.push(req);
-                }
-                if !v_list.is_empty() {
-                    response_json.variants = Some(v_list);
-                }
-            }
-        } else {
-            tracing::warn!("Failed to parse LLM JSON: {}", cleaned);
+    let response_json = match parse_generated_offering(&reasoned) {
+        Ok(value) => value,
+        Err(error) => {
+            tracing::warn!("catalog offering provider returned invalid output: {error}");
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(serde_json::json!({
+                    "error": "invalid offering response",
+                    "message": "The AI provider returned an invalid offering.",
+                })),
+            )
+                .into_response();
         }
-    }
+    };
 
-    (axum::http::StatusCode::OK, Json(response_json)).into_response()
+    (StatusCode::OK, Json(response_json)).into_response()
+}
+
+fn parse_generated_offering(raw: &str) -> Result<GenerateOfferingResponse, &'static str> {
+    let cleaned = raw
+        .trim()
+        .strip_prefix("```json")
+        .or_else(|| raw.trim().strip_prefix("```"))
+        .unwrap_or(raw.trim())
+        .strip_suffix("```")
+        .unwrap_or_else(|| {
+            raw.trim()
+                .strip_prefix("```json")
+                .or_else(|| raw.trim().strip_prefix("```"))
+                .unwrap_or(raw.trim())
+        })
+        .trim();
+    let parsed = serde_json::from_str::<serde_json::Value>(cleaned)
+        .map_err(|_| "provider output was not valid JSON")?;
+    let title = parsed
+        .get("title")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && value.chars().count() <= 200)
+        .ok_or("provider output did not contain a valid title")?
+        .to_string();
+    let description = parsed
+        .get("description")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && value.chars().count() <= 10_000)
+        .ok_or("provider output did not contain a valid description")?
+        .to_string();
+
+    let price = match parsed.get("price") {
+        Some(serde_json::Value::String(value)) => value.trim().to_string(),
+        Some(value) if value.is_number() => value.to_string(),
+        _ => return Err("provider output did not contain a price"),
+    };
+    let price_number = parse_bounded_price(&price, false).ok_or("provider output contained an invalid price")?;
+    let item_type = parsed
+        .get("item_type")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| matches!(*value, "Product" | "Service"))
+        .ok_or("provider output contained an invalid item type")?
+        .to_string();
+    let is_subscription = parsed
+        .get("is_subscription")
+        .and_then(serde_json::Value::as_bool)
+        .ok_or("provider output did not contain subscription state")?;
+
+    let variants = match parsed.get("variants") {
+        None | Some(serde_json::Value::Null) => None,
+        Some(serde_json::Value::Array(values)) if values.len() <= 20 => {
+            let mut variants = Vec::with_capacity(values.len());
+            for value in values {
+                let name = value
+                    .get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::trim)
+                    .filter(|name| !name.is_empty() && name.chars().count() <= 200)
+                    .ok_or("provider output contained an invalid variant name")?;
+                let modifier = match value.get("price_modifier") {
+                    Some(serde_json::Value::String(value)) => value.trim().to_string(),
+                    Some(value) if value.is_number() => value.to_string(),
+                    _ => return Err("provider output contained an invalid variant price"),
+                };
+                parse_bounded_price(&modifier, true)
+                    .ok_or("provider output contained an invalid variant price")?;
+                variants.push(ProductVariantRequest {
+                    name: name.to_string(),
+                    price_modifier: modifier,
+                });
+            }
+            Some(variants)
+        }
+        Some(serde_json::Value::Array(_)) => return Err("provider output contained too many variants"),
+        _ => return Err("provider output contained invalid variants"),
+    };
+
+    Ok(GenerateOfferingResponse {
+        title,
+        description,
+        price: format!("{price_number:.2}"),
+        item_type,
+        is_subscription,
+        variants,
+    })
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(
@@ -712,6 +787,18 @@ pub fn router<S: Clone + Send + Sync + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn generated_offering_requires_complete_provider_output() {
+        let incomplete = r#"{"title":"Window cleaning","description":"Exterior service"}"#;
+        assert!(parse_generated_offering(incomplete).is_err());
+
+        let valid = r#"{"title":"Window cleaning","description":"Exterior service","price":"125.00","item_type":"Service","is_subscription":false}"#;
+        let offering = parse_generated_offering(valid).expect("complete provider output");
+        assert_eq!(offering.title, "Window cleaning");
+        assert_eq!(offering.price, "125.00");
+        assert_eq!(offering.item_type, "Service");
+    }
 
     #[test]
     fn test_token_reduction_integration() {
