@@ -6,52 +6,56 @@ import { useParams, useRouter } from "next/navigation";
 export default function InteractiveQuotePage() {
     const params = useParams();
     const router = useRouter();
-    const quoteId = params.id;
+    const quoteId = typeof params.id === "string" ? params.id : "";
+    const isQuoteId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(quoteId);
 
     const [quote, setQuote] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<string>("");
     const [paying, setPaying] = useState(false);
     const [paid, setPaid] = useState(false);
+    const [paymentLink, setPaymentLink] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!isQuoteId) {
+            setLoading(false);
+            return;
+        }
+
         const fetchQuote = async () => {
             try {
-                const res = await fetch(`/api/quotes/${quoteId}`);
+                const res = await fetch(`/api/v1/quotes/${quoteId}`);
                 if (res.ok) {
                     const data = await res.json();
                     setQuote(data);
                 } else {
-                    console.error("Failed to fetch quote");
                 }
-            } catch (err) {
-                console.error("Error fetching quote:", err);
+            } catch {
+                // The not-found surface below is the user-facing error state.
             } finally {
                 setLoading(false);
             }
         };
 
         fetchQuote();
-    }, [quoteId]);
+    }, [isQuoteId, quoteId]);
 
     const handlePayDeposit = async () => {
         setPaying(true);
         try {
-            const res = await fetch(`/api/quotes/${quoteId}/pay`, {
+            const res = await fetch(`/api/v1/quotes/${quoteId}/accept`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    payment_method_id: "pm_card_visa",
-                    calendar_event_id: selectedDate
-                }),
             });
             if (res.ok) {
-                setPaid(true);
-            } else {
-                console.error("Payment failed");
+                const data = await res.json();
+                if (data.stripe_payment_link) {
+                    setPaymentLink(data.stripe_payment_link);
+                } else {
+                    setPaid(true);
+                }
             }
-        } catch (err) {
-            console.error("Payment error:", err);
+        } catch {
+            // The payment action remains on the quote so the customer can retry.
         } finally {
             setPaying(false);
         }
@@ -69,6 +73,25 @@ export default function InteractiveQuotePage() {
         return (
             <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
                 <div className="text-center text-red-500">Quote not found.</div>
+            </div>
+        );
+    }
+
+    if (paymentLink) {
+        return (
+            <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
+                <div className="glassmorphism p-8 rounded-[32px] border border-white/40 shadow-xl max-w-sm w-full text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Quote accepted</h2>
+                    <p className="text-gray-600 mb-6">Continue to the secure payment page to complete your deposit.</p>
+                    <a
+                        href={paymentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-bold rounded-[16px] transition-colors"
+                    >
+                        Continue to payment
+                    </a>
+                </div>
             </div>
         );
     }

@@ -8,8 +8,8 @@ use crate::domain::repository::models::{Campaign, CampaignAsset};
 use crate::integrations::registry::IntegrationsRegistry;
 use super::activation_routing::CampaignChannel;
 
-use ::server_ohc::campaign::campaign_service_server::CampaignService;
-use ::server_ohc::campaign::{
+use ::server_omnisolo::campaign::campaign_service_server::CampaignService;
+use ::server_omnisolo::campaign::{
     AddAssetRequest, AddAssetResponse, CreateDraftRequest, CreateDraftResponse,
     LaunchCampaignRequest, LaunchCampaignResponse,
     ListSocialPostProposalsRequest, ListSocialPostProposalsResponse,

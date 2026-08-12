@@ -1,7 +1,7 @@
 # Title: Add Mode-Specific Prometheus Metrics to Sub-Agent Queue and Spawner
 
 ## Problem Statement
-The OHC Hybrid Architecture currently utilizes `DefaultSubAgentSpawner` in `src/server/orchestration/sub_agent.go` and `QueueManager` in `src/server/orchestration/queue/queue_manager.go` to handle isolated sub-agents spawned from shared tasks. However, the existing telemetry calls do not distinguish between Cloud-native (multi-tenant K8s) and Standalone (local SQLite) contexts, preventing full-spectrum observability of bottlenecks like queue latency differences, SQLite lock contention vs Postgres lock contention, and sub-agent spawn error rates.
+The OmniSolo Hybrid Architecture currently utilizes `DefaultSubAgentSpawner` in `src/server/orchestration/sub_agent.go` and `QueueManager` in `src/server/orchestration/queue/queue_manager.go` to handle isolated sub-agents spawned from shared tasks. However, the existing telemetry calls do not distinguish between Cloud-native (multi-tenant K8s) and Standalone (local SQLite) contexts, preventing full-spectrum observability of bottlenecks like queue latency differences, SQLite lock contention vs Postgres lock contention, and sub-agent spawn error rates.
 
 ## Research Report
 An audit of `QueueManager` reveals that it directly tracks `enqueueCounter` and `pollCounter`, and updates a generic `TaskQueueDepth` gauge without detailed visibility into context-specific throughput or queue dwell times across deployment modes. Similarly, `DefaultSubAgentSpawner` utilizes general logging without fine-grained telemetry to capture `Spawn` timeouts or context-specific retry backoff failures. By adding OpenTelemetry attributes (e.g., `mode` label) to critical path metrics, we can map Cloud vs. Standalone sub-agent performance disparities and expose them through Grafana to enable targeted self-correction.
@@ -28,7 +28,7 @@ You are an Implementer. Implement the sub-agent telemetry improvements as design
 1.  Update `src/server/telemetry/telemetry.go` to add `SubAgentQueueLatency`, `SubAgentSpawnErrors`, and `SubAgentLockContention` OpenTelemetry metrics, ensuring they accept a `mode` label.
 2.  Modify `src/server/orchestration/queue/queue_manager.go` to calculate queue dwell time in `Poll()` and log lock contention issues using the new telemetry functions.
 3.  Modify `src/server/orchestration/sub_agent.go` to capture errors inside `DefaultSubAgentSpawner.failTask` and `executeWithRetry` using the new telemetry functions.
-4.  Update the Grafana dashboards in `deploy/docker/grafana/provisioning/dashboards/` to visualize these mode-labeled metrics natively inside Text/HTML panels conforming to OHC styling guidelines.
+4.  Update the Grafana dashboards in `deploy/docker/grafana/provisioning/dashboards/` to visualize these mode-labeled metrics natively inside Text/HTML panels conforming to OmniSolo styling guidelines.
 5.  Ensure all unit tests in `sub_agent_test.go` and `queue_manager_loop_test.go` pass and achieve 100% test coverage using `bazel test //...`.
 
 ## Priority

@@ -1,14 +1,14 @@
 # Architecture Design: Autonomous AI Zero-Touch Receipt and Expense Intelligence Engine
 
 ## 1. Executive Summary
-Small business owners (SMBs) consistently struggle with the administrative burden of tracking receipts, logging expenses, and maintaining financial records. The "Automation Expectation" trend highlights that anything that can be automated, must be. This document designs the "Autonomous AI Zero-Touch Receipt and Expense Intelligence Engine" for OneHumanCorp (OHC), addressing this critical gap by automatically ingesting, processing, and categorizing receipts through omnichannel inputs without requiring manual intervention from the business owner.
+Small business owners (SMBs) consistently struggle with the administrative burden of tracking receipts, logging expenses, and maintaining financial records. The "Automation Expectation" trend highlights that anything that can be automated, must be. This document designs the "Autonomous AI Zero-Touch Receipt and Expense Intelligence Engine" for OmniSolo (OmniSolo), addressing this critical gap by automatically ingesting, processing, and categorizing receipts through omnichannel inputs without requiring manual intervention from the business owner.
 
 ## 2. Business Persona Journeys
 ### Maya (The Home Baker)
 - **Problem**: Maya buys baking ingredients physically at wholesale markets and receives paper receipts or digital receipts via email. She forgets to log them, leading to inaccurate margin tracking.
 - **Journey**:
   1. Maya buys ingredients at a supplier.
-  2. She simply takes a photo of the receipt using her phone's native camera or OHC mobile app, or forwards an email receipt to `receipts@maya-bakes.ohc.io`.
+  2. She simply takes a photo of the receipt using her phone's native camera or OmniSolo mobile app, or forwards an email receipt to `receipts@maya-bakes.ohc.io`.
   3. The **Zero-Touch Receipt Engine** immediately extracts the data (vendor, items, tax, total), categorizes the expense as "Cost of Goods Sold (COGS)", and associates it with her ingredient inventory if applicable.
   4. At the end of the week, the Finance agent provides a summary of COGS versus Sales without Maya doing any manual data entry.
 
@@ -16,7 +16,7 @@ Small business owners (SMBs) consistently struggle with the administrative burde
 - **Problem**: Carlos buys parts at hardware stores for specific customer jobs. Reconciling which receipt goes to which customer invoice is tedious and often missed, costing him money.
 - **Journey**:
   1. Carlos purchases a plumbing fixture for a specific job.
-  2. He snaps a photo of the receipt and sends it via SMS/WhatsApp to his OHC AI assistant, mentioning "For the Smith plumbing job."
+  2. He snaps a photo of the receipt and sends it via SMS/WhatsApp to his OmniSolo AI assistant, mentioning "For the Smith plumbing job."
   3. The engine parses the receipt, identifies the items, and automatically creates a line item on the draft invoice for "The Smith plumbing job," applying Carlos's standard markup.
   4. Carlos gets an instant notification: "Added Home Depot receipt ($45.00) to Smith invoice as $54.00 (20% markup)."
 
@@ -58,7 +58,7 @@ erDiagram
 ```
 
 ### 3.3 Mobile-First (375px) UX Principles
-- **One-Tap Action**: The OHC mobile app dashboard features a persistent, floating "Scan Receipt" button.
+- **One-Tap Action**: The OmniSolo mobile app dashboard features a persistent, floating "Scan Receipt" button.
 - **Optimistic UI**: When a user uploads a receipt, it immediately appears in the feed as "Processing..." while the backend job queue handles the AI extraction.
 - **Conversational Fallback**: Instead of complex forms to correct miscategorizations, the user can just text the agent: "That Home Depot receipt was actually for the Johnson job, not general supplies," and the AI updates the ledger automatically.
 

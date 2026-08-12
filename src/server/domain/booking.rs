@@ -1,9 +1,9 @@
 use sqlx::PgPool;
 use serde_json::Value;
 
-#[cfg(ohc_bazel)]
+#[cfg(omnisolo_bazel)]
 use crate::integrations::stripe::client::StripeClient;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 use server_integrations_stripe::client::StripeClient;
 
 pub async fn handle_booking_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
@@ -35,6 +35,25 @@ pub async fn handle_booking_action(tenant_id: &str, payload: &Value, pool: &PgPo
                 .await;
         }
     }
+    Ok(())
+}
+
+pub async fn handle_booking_approval(
+    tenant_id: &str,
+    payload: &Value,
+    pool: &PgPool,
+) -> Result<(), sqlx::Error> {
+    if let Some(booking_id) = payload.get("booking_id").and_then(Value::as_str) {
+        sqlx::query(
+            "UPDATE bookings SET status = 'confirmed', updated_at = NOW() \
+             WHERE id = $1 AND tenant_id = $2 AND status = 'pending'",
+        )
+        .bind(booking_id)
+        .bind(tenant_id)
+        .execute(pool)
+        .await?;
+    }
+
     Ok(())
 }
 
@@ -102,7 +121,7 @@ pub async fn handle_autonomous_quote_action(tenant_id: &str, payload: &Value, po
         }
 
         // Release the Redis Redlock explicitly as it was just a temporary hold during quote generation
-        if let Ok(redis_url) = std::env::var("OHC_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
+        if let Ok(redis_url) = std::env::var("OMNISOLO_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
             if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url) {
                 let _ = redis_lock.release_lock(tenant_id, "booking_slot", proposed_slot_id, proposed_slot_id).await; // Note lock_val is not saved, so we can't reliably delete it unless we store it. Since it expires in 10 mins anyway, it's fine.
             }

@@ -17,7 +17,7 @@
       min-height: 100vh;
     }
 
-    /* OHC Premium Glassmorphism */
+    /* OmniSolo Premium Glassmorphism */
     .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
@@ -364,7 +364,7 @@
       <div class="toggle-wrap">
         <div>
           <label for="brandingToggle">Remove branding <span class="pro-badge">PRO</span></label>
-          <div style="font-size:12px; color:#666; margin-top:4px;">Hide the "Powered by OHC" watermark.</div>
+          <div style="font-size:12px; color:#666; margin-top:4px;">Hide the "Powered by OmniSolo" watermark.</div>
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="brandingToggle">
@@ -382,7 +382,7 @@
           <p class="preview-desc" id="previewDesc">Get the latest updates and exclusive offers right to your inbox.</p>
           <input type="email" placeholder="Your email address" class="preview-input" disabled />
           <button class="preview-btn" id="previewBtn">Subscribe Now</button>
-          <a href="#" id="previewBranding" class="powered-by">⚡ Powered by OHC</a>
+          <a href="#" id="previewBranding" class="powered-by">⚡ Powered by OmniSolo</a>
         </div>
       </div>
 
@@ -397,7 +397,7 @@
   <div class="modal">
     <div style="font-size:48px; margin-bottom:15px;">🚀</div>
     <h2>Pro Feature</h2>
-    <p>Make the Newsletter Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+    <p>Make the Newsletter Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.</p>
     <div class="modal-btns">
       <a href="/pricing" class="btn-upgrade">Upgrade to Pro</a>
       <button class="btn-cancel" id="cancelUpgrade">Keep Branding</button>
@@ -437,13 +437,13 @@
     const btnStr = buttonText.value.replace(/"/g, '&quot;');
 
     const html = `
-<!-- OHC Viral Newsletter Widget -->
+<!-- OmniSolo Viral Newsletter Widget -->
 <div style="font-family: sans-serif; border: 1px solid #eaeaea; padding: 20px; border-radius: 12px; text-align: center; max-width: 320px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
   <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #111;">${titleStr}</h3>
   <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">${descStr}</p>
   <input type="email" placeholder="Your email address" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;" />
   <button style="background: #0066FF; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 14px; width: 100%;">${btnStr}</button>
-  ${!brandingToggle.checked ? `<a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=newsletter" target="_blank" style="display: block; margin-top: 15px; font-size: 12px; color: #888; text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>` : ''}
+  ${!brandingToggle.checked ? `<a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=newsletter" target="_blank" style="display: block; margin-top: 15px; font-size: 12px; color: #888; text-decoration: none; font-weight: bold;">⚡ Powered by OmniSolo</a>` : ''}
 </div>
     `.trim();
 
@@ -482,8 +482,8 @@
 
 <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px 16px 0 0; width: 100%; box-sizing: border-box;">
   <a href="/setup.html" id="dashboard-footer-viral-link" style="color: #0066ff; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
-    <span style="background: #0066ff; color: white; padding: 4px 8px; border-radius: 16px; font-size: 10px; font-weight: 800;">OHC</span>
-    Powered by OHC
+    <span style="background: #0066ff; color: white; padding: 4px 8px; border-radius: 16px; font-size: 10px; font-weight: 800;">OmniSolo</span>
+    Powered by OmniSolo
   </a>
 </footer>
 

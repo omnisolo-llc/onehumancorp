@@ -93,7 +93,7 @@ pub async fn handle_inbox_action(tenant_id: &str, payload: &Value, pool: &PgPool
                 if let Ok(api_token) = meta_creds {
                     if !api_token.trim().is_empty() {
                         let registry = crate::integrations::registry::IntegrationsRegistry::new();
-                        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+                        let creds = ::server_omnisolo::orchestration::ConnectIntegrationRequest {
                             integration_id: integration_id.to_string(),
                             base_url: "".to_string(),
                             bot_token: "".to_string(),

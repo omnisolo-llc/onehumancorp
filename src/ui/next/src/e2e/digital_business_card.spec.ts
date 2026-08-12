@@ -32,7 +32,7 @@ test.describe('Digital Business Card Generator E2E', () => {
     });
 
     await test.step('Trigger soft paywall', async () => {
-      // Check "Remove Powered by OHC branding" checkbox
+      // Check "Remove Powered by OmniSolo branding" checkbox
       await page.locator('input[type="checkbox"]').click({ force: true });
 
       // Soft paywall should appear
@@ -64,7 +64,7 @@ test.describe('Digital Business Card Generator E2E', () => {
       await expect(page.getByRole('button', { name: 'Save vCard' })).toBeVisible();
 
       // Verify viral loop footer
-      await expect(page.getByText('Powered by OHC')).toBeVisible();
+      await expect(page.getByText('Powered by OmniSolo')).toBeVisible();
     });
   });
 });

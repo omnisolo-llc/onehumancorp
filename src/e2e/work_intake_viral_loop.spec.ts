@@ -9,13 +9,13 @@ test.describe('Work-Intake Widget Viral Loop', () => {
     await expect(page.getByRole('heading', { name: 'Work-Intake Widget 📋' })).toBeVisible();
 
     // 2. Click the remove branding checkbox (Note: it is a fake checkbox that opens a modal, so use .click())
-    const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OHC" branding');
+    const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OmniSolo" branding');
     await removeBrandingCheckbox.click();
 
     // 3. Verify the soft paywall modal appears
     const modalHeading = page.getByRole('heading', { name: 'Upgrade to Pro' });
     await expect(modalHeading).toBeVisible();
-    await expect(page.getByText('Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.')).toBeVisible();
+    await expect(page.getByText('Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.')).toBeVisible();
 
     // 4. Mock window.open to prevent opening a new tab
     await page.evaluate(() => {
@@ -38,6 +38,6 @@ test.describe('Work-Intake Widget Viral Loop', () => {
     await getCodeBtn.click();
     const textarea = page.locator('textarea');
     const codeValue = await textarea.inputValue();
-    expect(codeValue).not.toContain('Powered by OHC');
+    expect(codeValue).not.toContain('Powered by OmniSolo');
   });
 });

@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use reqwest::Client;
 use serde_json::json;
 use serde::Deserialize;
@@ -32,7 +32,7 @@ impl PydanticToolExecutor<WebSearchArgs> for WebSearchExecutor {
         let resp = self
             .client
             .get(&url)
-            .header("User-Agent", "OHC-Agent/1.0")
+            .header("User-Agent", "OmniSolo-Agent/1.0")
             .send()
             .await
             .map_err(|e| format!("websearch: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;

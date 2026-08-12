@@ -14,7 +14,7 @@ Leading platforms (Shopify, Wix, Stripe) offer dispute management dashboards, bu
 **Competitive Landscape:**
 *   **Stripe / Shopify:** Reactive. Provides the UI to upload evidence and alerts the merchant via email. High friction, high cognitive load.
 *   **Chargehound / Midigator (Enterprise):** Automated chargeback resolution, but aimed at enterprise businesses with massive transaction volumes. Too complex and expensive for a sole proprietor.
-*   **OneHumanCorp (Our Target):** Proactive & Autonomous. The AI Legal/Finance department detects the webhook, compiles the evidence automatically by searching the platform's multi-tenant ledger and communication history, and drafts the response. The merchant is merely notified of the victory.
+*   **OmniSolo (Our Target):** Proactive & Autonomous. The AI Legal/Finance department detects the webhook, compiles the evidence automatically by searching the platform's multi-tenant ledger and communication history, and drafts the response. The merchant is merely notified of the victory.
 
 **Key Findings:**
 1.  **Time Sensitivity:** Disputes have strict deadlines (e.g., 7-21 days). Missing the deadline is an automatic loss.
@@ -33,7 +33,7 @@ erDiagram
     DISPUTE ||--|{ EVIDENCE_PACKET : contains
     EVIDENCE_PACKET ||--o{ EVIDENCE_ITEM : includes
 
-    %% Multi-Tenant & OHC Platform Entities
+    %% Multi-Tenant & OmniSolo Platform Entities
     TENANT {
         string id PK
         string business_name
@@ -121,7 +121,7 @@ The goal is to keep this process entirely out of the user's way. The UX is prima
 Your task is to build the backend logic and data models for the Autonomous AI Dispute & Chargeback Resolution Engine.
 
 **Customer Use Journey (CUJ):**
-A customer initiates a chargeback on their credit card for a cake ordered from Maya. The payment gateway sends a dispute webhook to OHC. Within seconds, the OHC backend catches the webhook, uses the AI Finance Agent to scan Maya's platform data (order history, delivery confirmation, and Instagram DMs confirming receipt), compiles a formatted evidence payload, and automatically submits it back to the payment gateway to fight the chargeback. Maya receives a simple push notification telling her a dispute occurred but that her AI assistant has already handled it.
+A customer initiates a chargeback on their credit card for a cake ordered from Maya. The payment gateway sends a dispute webhook to OmniSolo. Within seconds, the OmniSolo backend catches the webhook, uses the AI Finance Agent to scan Maya's platform data (order history, delivery confirmation, and Instagram DMs confirming receipt), compiles a formatted evidence payload, and automatically submits it back to the payment gateway to fight the chargeback. Maya receives a simple push notification telling her a dispute occurred but that her AI assistant has already handled it.
 
 **Acceptance Criteria:**
 1.  **Webhook Ingestion:** Define the API endpoints and routing logic to securely ingest dispute webhooks from external payment providers.

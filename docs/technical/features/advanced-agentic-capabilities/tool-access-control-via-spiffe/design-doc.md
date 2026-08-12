@@ -7,7 +7,7 @@
 **Scope:** Integration within the core Orchestration Hub and the MCP Gateway, adhering to the Zero-Lock paradigm.
 
 ## 2. Architecture & Components
-Enforces Zero-Trust at the MCP layer. Every tool invocation requires an X.509 SVID. The Gateway extracts the URI SAN (e.g., `spiffe://onehumancorp.io/agent/swe-1`) and cross-references it against the RBAC policies defined in the K8s CRDs.
+Enforces Zero-Trust at the MCP layer. Every tool invocation requires an X.509 SVID. The Gateway extracts the URI SAN (e.g., `spiffe://omnisolo.io/agent/swe-1`) and cross-references it against the RBAC policies defined in the K8s CRDs.
 
 ## 3. Data Flow
 1. **Trigger:** The feature is invoked via Agent intent or a K8s event.

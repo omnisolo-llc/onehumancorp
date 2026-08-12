@@ -33,34 +33,35 @@ impl std::fmt::Debug for AuthMode {
 
 /// Build an AuthMode from environment variables.
 ///
-///   OHC_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
-///   OHC_AGENT_TOKEN                – enables token mode
-///   OHC_AGENT_SPIFFE_ID            – validates the desired identity, then fails closed until
+///   OMNISOLO_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
+///   OMNISOLO_AGENT_TOKEN                – enables token mode
+///   OMNISOLO_AGENT_SPIFFE_ID            – validates the desired identity, then fails closed until
 ///                                    verified mTLS peer extraction is available
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
-    let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
+    let auth_disabled = env::var("OMNISOLO_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
-        let environment = env::var("OHC_ENV").unwrap_or_default();
-        if matches!(
-            environment.trim().to_ascii_lowercase().as_str(),
-            "development" | "test" | "standalone" | ""
-        ) {
+    let environment = env::var("OMNISOLO_ENV")
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase();
+
+    if auth_disabled {
+        if matches!(environment.as_str(), "development" | "test" | "standalone") {
             return Ok(AuthMode::Disabled);
         }
         return Err(
-            "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development, test, or standalone"
+            "OMNISOLO_AGENT_AUTH_DISABLED=true is allowed only when OMNISOLO_ENV is development, test, or standalone"
                 .to_string(),
         );
     }
 
-    if let Ok(token) = env::var("OHC_AGENT_TOKEN")
+    if let Ok(token) = env::var("OMNISOLO_AGENT_TOKEN")
         && !token.trim().is_empty()
     {
-        let key = env::var("OHC_AGENT_AUTH_KEY")
-            .map_err(|_| "OHC_AGENT_AUTH_KEY is required in token mode".to_string())?;
+        let key = env::var("OMNISOLO_AGENT_AUTH_KEY")
+            .map_err(|_| "OMNISOLO_AGENT_AUTH_KEY is required in token mode".to_string())?;
         if key.trim().is_empty() || key.len() < 32 {
-            return Err("OHC_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
+            return Err("OMNISOLO_AGENT_AUTH_KEY must contain at least 32 bytes".to_string());
         }
         let verification_key = key.into_bytes();
         let token_hash = hmac_token(&token, &verification_key);
@@ -70,7 +71,22 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    return Ok(AuthMode::Disabled);
+    if let Ok(allowed_id) = env::var("OMNISOLO_AGENT_SPIFFE_ID") {
+        if allowed_id.trim().is_empty() {
+            return Err("OMNISOLO_AGENT_SPIFFE_ID must not be empty".to_string());
+        }
+        validate_spiffe_id(&allowed_id)?;
+        return Err(
+            "SPIFFE authentication requires verified mTLS peer identity extraction, which is not yet configured for the builtin agent; use token authentication"
+                .to_string(),
+        );
+    }
+
+    if matches!(environment.as_str(), "development" | "test" | "standalone") {
+        return Ok(AuthMode::Disabled);
+    }
+
+    Err("configure OMNISOLO_AGENT_TOKEN or OMNISOLO_AGENT_SPIFFE_ID".to_string())
 }
 
 /// Check a bearer token against an expected HMAC hash.
@@ -129,7 +145,7 @@ pub fn validate_spiffe_id(id: &str) -> Result<(), String> {
 
     let domain = parts[0];
     match domain {
-        "onehumancorp.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
+        "omnisolo.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
         _ if domain.ends_with(".ohc.global") => {}
         _ => return Err(format!("untrusted SPIFFE domain {:?} in {}", domain, id)),
     }
@@ -156,11 +172,11 @@ mod tests {
     fn auth_mode_requires_complete_configuration() {
         let _lock = ENV_LOCK.lock().unwrap();
         let variables = [
-            "OHC_AGENT_TOKEN",
-            "OHC_AGENT_AUTH_KEY",
-            "OHC_AGENT_SPIFFE_ID",
-            "OHC_AGENT_AUTH_DISABLED",
-            "OHC_ENV",
+            "OMNISOLO_AGENT_TOKEN",
+            "OMNISOLO_AGENT_AUTH_KEY",
+            "OMNISOLO_AGENT_SPIFFE_ID",
+            "OMNISOLO_AGENT_AUTH_DISABLED",
+            "OMNISOLO_ENV",
         ];
 
         temp_env::with_vars(variables.map(|name| (name, None::<&str>)), || {
@@ -168,24 +184,24 @@ mod tests {
         });
         temp_env::with_vars(
             [
-                ("OHC_AGENT_TOKEN", Some("secret-token")),
-                ("OHC_AGENT_AUTH_KEY", None),
-                ("OHC_AGENT_SPIFFE_ID", None),
-                ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OMNISOLO_AGENT_TOKEN", Some("secret-token")),
+                ("OMNISOLO_AGENT_AUTH_KEY", None),
+                ("OMNISOLO_AGENT_SPIFFE_ID", None),
+                ("OMNISOLO_AGENT_AUTH_DISABLED", None),
+                ("OMNISOLO_ENV", None),
             ],
             || assert!(auth_mode_from_env().is_err()),
         );
         temp_env::with_vars(
             [
-                ("OHC_AGENT_TOKEN", Some("secret-token")),
+                ("OMNISOLO_AGENT_TOKEN", Some("secret-token")),
                 (
-                    "OHC_AGENT_AUTH_KEY",
+                    "OMNISOLO_AGENT_AUTH_KEY",
                     Some("0123456789abcdef0123456789abcdef"),
                 ),
-                ("OHC_AGENT_SPIFFE_ID", None),
-                ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OMNISOLO_AGENT_SPIFFE_ID", None),
+                ("OMNISOLO_AGENT_AUTH_DISABLED", None),
+                ("OMNISOLO_ENV", None),
             ],
             || {
                 assert!(matches!(
@@ -196,14 +212,14 @@ mod tests {
         );
         temp_env::with_vars(
             [
-                ("OHC_AGENT_TOKEN", None),
-                ("OHC_AGENT_AUTH_KEY", None),
+                ("OMNISOLO_AGENT_TOKEN", None),
+                ("OMNISOLO_AGENT_AUTH_KEY", None),
                 (
-                    "OHC_AGENT_SPIFFE_ID",
-                    Some("spiffe://onehumancorp.io/org/org-1/agent/agent-1"),
+                    "OMNISOLO_AGENT_SPIFFE_ID",
+                    Some("spiffe://omnisolo.io/org/org-1/agent/agent-1"),
                 ),
-                ("OHC_AGENT_AUTH_DISABLED", None),
-                ("OHC_ENV", None),
+                ("OMNISOLO_AGENT_AUTH_DISABLED", None),
+                ("OMNISOLO_ENV", None),
             ],
             || {
                 let error = auth_mode_from_env().unwrap_err();
@@ -214,22 +230,22 @@ mod tests {
         for environment in ["development", "test"] {
             temp_env::with_vars(
                 [
-                    ("OHC_AGENT_TOKEN", None),
-                    ("OHC_AGENT_AUTH_KEY", None),
-                    ("OHC_AGENT_SPIFFE_ID", None),
-                    ("OHC_AGENT_AUTH_DISABLED", Some("true")),
-                    ("OHC_ENV", Some(environment)),
+                    ("OMNISOLO_AGENT_TOKEN", None),
+                    ("OMNISOLO_AGENT_AUTH_KEY", None),
+                    ("OMNISOLO_AGENT_SPIFFE_ID", None),
+                    ("OMNISOLO_AGENT_AUTH_DISABLED", Some("true")),
+                    ("OMNISOLO_ENV", Some(environment)),
                 ],
                 || assert!(matches!(auth_mode_from_env().unwrap(), AuthMode::Disabled)),
             );
         }
         temp_env::with_vars(
             [
-                ("OHC_AGENT_TOKEN", None),
-                ("OHC_AGENT_AUTH_KEY", None),
-                ("OHC_AGENT_SPIFFE_ID", None),
-                ("OHC_AGENT_AUTH_DISABLED", Some("true")),
-                ("OHC_ENV", Some("production")),
+                ("OMNISOLO_AGENT_TOKEN", None),
+                ("OMNISOLO_AGENT_AUTH_KEY", None),
+                ("OMNISOLO_AGENT_SPIFFE_ID", None),
+                ("OMNISOLO_AGENT_AUTH_DISABLED", Some("true")),
+                ("OMNISOLO_ENV", Some("production")),
             ],
             || assert!(auth_mode_from_env().is_err()),
         );
@@ -237,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_validate_spiffe_valid() {
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/agent-1").is_ok());
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/org/org-1/agent/agent-1").is_ok());
         assert!(validate_spiffe_id("spiffe://ohc.local/org/org-2/agent/agent-2").is_ok());
         assert!(validate_spiffe_id("spiffe://us-east.ohc.global/org/org-4/agent/agent-4").is_ok());
     }
@@ -245,10 +261,10 @@ mod tests {
     #[test]
     fn test_validate_spiffe_invalid() {
         assert!(validate_spiffe_id("spiffe://evil.com/x").is_err());
-        assert!(validate_spiffe_id("http://onehumancorp.io/x").is_err());
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/%2F").is_err());
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org-1/agent-1").is_err()); // Missing /org/ and /agent/ structure
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org//agent/agent-1").is_err()); // Empty org_id
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-1/agent/").is_err()); // Empty agent_id
+        assert!(validate_spiffe_id("http://omnisolo.io/x").is_err());
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/%2F").is_err());
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/org-1/agent-1").is_err()); // Missing /org/ and /agent/ structure
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/org//agent/agent-1").is_err()); // Empty org_id
+        assert!(validate_spiffe_id("spiffe://omnisolo.io/org/org-1/agent/").is_err()); // Empty agent_id
     }
 }

@@ -21,15 +21,15 @@ const currentApiDocs = [
   "docs/technical/walkthroughs/swarm_intelligence_protocol.md",
   "docs/technical/walkthroughs/thin_client_integration.md",
 ];
-const unversionedOHCApiPath = /(^|[^A-Za-z0-9_.])\/api\/(?!v1(?:\/|\b))/g;
+const unversionedOmniSoloApiPath = /(^|[^A-Za-z0-9_.])\/api\/(?!v1(?:\/|\b))/g;
 const versionedPathWithoutApiNamespace = /https?:\/\/(?:api\.ohc\.local|localhost(?::\d+)?|127\.0\.0\.1(?::\d+)?)\/v1(?:\/|\b)/g;
 
-test("current OHC API documentation uses the /api/v1 namespace", async () => {
+test("current OmniSolo API documentation uses the /api/v1 namespace", async () => {
   const failures = [];
 
   for (const relativePath of currentApiDocs) {
     const content = await readFile(new URL(relativePath, rootUrl), "utf8");
-    const matches = [...content.matchAll(unversionedOHCApiPath)];
+    const matches = [...content.matchAll(unversionedOmniSoloApiPath)];
     if (matches.length > 0) {
       failures.push(`${relativePath}: ${matches.length} unversioned /api/ path(s)`);
     }

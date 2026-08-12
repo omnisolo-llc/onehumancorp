@@ -1,19 +1,19 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# OHC Hybrid Growth Strategy & Audit Report
+# OmniSolo Hybrid Growth Strategy & Audit Report
 
 **Author**: Principal Growth Engineer & Strategist (L7)
 **Date**: $(date +%s)
 
 ## Executive Summary
 
-To accelerate OHC adoption and establish the **Hybrid Agentic OS** as the gold standard for private LLM usage, we conducted a rigorous audit of our acquisition funnel. The data clearly indicates that the **Standalone Desktop Mode (Local-First)** acts as our primary growth lever due to its unparalleled "Zero Data Leakage" guarantee.
+To accelerate OmniSolo adoption and establish the **Hybrid Agentic OS** as the gold standard for private LLM usage, we conducted a rigorous audit of our acquisition funnel. The data clearly indicates that the **Standalone Desktop Mode (Local-First)** acts as our primary growth lever due to its unparalleled "Zero Data Leakage" guarantee.
 
 This report outlines the funnel audit, the privacy value proposition, and the engineered viral referral loops designed to bridge Standalone sovereignty with Cloud-Native team expansion.
 
 ## 1. Privacy Value Proposition: The "Local-First" Advantage
 
-Enterprise and prosumer markets are increasingly wary of cloud-based AI due to IP leakage and regulatory compliance (GDPR/SOC2). OHC's Standalone Mode uniquely solves this.
+Enterprise and prosumer markets are increasingly wary of cloud-based AI due to IP leakage and regulatory compliance (GDPR/SOC2). OmniSolo's Standalone Mode uniquely solves this.
 
 ### Key Value Pillars:
 - **Zero Data Leakage**: All SIPDB (Swarm Intelligence Protocol Database) operations occur entirely on the host machine via SQLite. No cloud telemetry or context boundaries are breached.
@@ -54,7 +54,7 @@ graph TD
 
 ## Aesthetic Styling Tokens
 
-To adhere to the **Visual Excellence Mandate**, our growth landing pages and dashboards will utilize the following OHC Glassmorphism tokens:
+To adhere to the **Visual Excellence Mandate**, our growth landing pages and dashboards will utilize the following OmniSolo Glassmorphism tokens:
 
 ```css
 .ohc-growth-card {

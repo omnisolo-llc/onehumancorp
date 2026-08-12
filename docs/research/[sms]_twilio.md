@@ -12,11 +12,11 @@ Fatima the Food Cart Operator doesn't have a reliable internet connection at her
 - **Advantages**: Twilio is the industry standard for SMS messaging globally. Incredibly reliable, programmable, and cheap per-message cost.
 - **Risks**: A2P 10DLC compliance in the US requires business registration, potentially tough for informal businesses.
 - **Pricing**: Pay-as-you-go (~$0.0079 per SMS in US).
-- **Compatibility**: Cloud (Centralized OHC Twilio account); Standalone (User provides API key).
+- **Compatibility**: Cloud (Centralized OmniSolo Twilio account); Standalone (User provides API key).
 
 ## Design Doc
 - Users can enable "SMS Notifications" in the "Operations" settings.
-- When an order is placed, the OHC backend triggers a Twilio API call to text the business owner.
+- When an order is placed, the OmniSolo backend triggers a Twilio API call to text the business owner.
 - Additionally, "The Ambassador" can send order confirmation texts to customers who prefer SMS over email.
 
 ## Implementation Prompt

@@ -1413,7 +1413,7 @@ pub async fn create_transport(
     }
 
     // Standalone fallback
-    if let Ok(db_url) = std::env::var("OHC_DATABASE_URL")
+    if let Ok(db_url) = std::env::var("OMNISOLO_DATABASE_URL")
         && db_url.starts_with("sqlite")
     {
         match sqlx::sqlite::SqlitePoolOptions::new()

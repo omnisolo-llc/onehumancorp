@@ -201,7 +201,7 @@ export const useOrchestrator = (): OrchestratorState =&gt; {
     setError(null);
     setOutput(null);
 &nbsp;
-    const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
+    const agentUrl = process.env.OMNISOLO_AGENT_URL || 'http://127.0.0.1:18789';
 &nbsp;
     try {
       const response = await fetch(`${agentUrl}/rpc`, {

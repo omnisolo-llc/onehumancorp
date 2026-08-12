@@ -38,12 +38,12 @@ test.describe('Viral Customer Poll Loop', () => {
     expect(embedCode).toContain('How was your experience today?');
     expect(embedCode).toContain('Excellent');
     expect(embedCode).toContain('customer-poll/index.html');
-    expect(embedCode).toContain('Powered by OHC');
+    expect(embedCode).toContain('Powered by OmniSolo');
 
-    // Verify "Powered by OHC" footer is in the preview
+    // Verify "Powered by OmniSolo" footer is in the preview
     const previewArea = page.locator('#preview-area');
-    await expect(previewArea).toContainText('Powered by OHC');
-    const brandingLink = previewArea.locator('a', { hasText: '⚡ Powered by OHC' });
+    await expect(previewArea).toContainText('Powered by OmniSolo');
+    const brandingLink = previewArea.locator('a', { hasText: '⚡ Powered by OmniSolo' });
     await expect(brandingLink).toBeVisible();
 
     // 6. Navigate to the hosted public poll page simulating a user clicking an option
@@ -57,8 +57,8 @@ test.describe('Viral Customer Poll Loop', () => {
     await expect(publicPage.locator('#question-desc')).toContainText('How was your experience today?');
     await expect(publicPage.locator('#voted-option')).toContainText('Excellent');
 
-    // Verify "Powered by OHC" footer
-    const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OHC' });
+    // Verify "Powered by OmniSolo" footer
+    const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OmniSolo' });
     await expect(footerLink).toBeVisible();
     const footerHref = await footerLink.getAttribute('href');
     expect(footerHref).toContain('/setup.html?ref=e2e-test-store');

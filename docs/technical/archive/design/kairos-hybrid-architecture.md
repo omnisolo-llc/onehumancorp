@@ -3,7 +3,7 @@
 # KAIROS Orchestration: Master Design Document
 
 ## 1. Vision
-The One Human Corp (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation.
+The OmniSolo (OmniSolo) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation.
 
 ## 2. Architectural Pillars
 
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS task_dependencies_dag (
 ### II. Teammate Mesh (Real-time Transport)
 The Teammate Mesh provides low-latency communication across the swarm.
 - **Unified API:** A single gateway (`POST /api/mesh/broadcast`) handles event routing.
-- **OHC-SIP Compliance:** All messages MUST include `agent_id`, `action`, and `status` at the JSON root to ensure compatibility across different agent roles and versions.
+- **OmniSolo-SIP Compliance:** All messages MUST include `agent_id`, `action`, and `status` at the JSON root to ensure compatibility across different agent roles and versions.
 - **Hybrid Transport:**
     - **Cloud:** Powered by Redis Pub/Sub connected to Centrifuge hubs for WebSocket propagation to thin clients and sub-agents.
     - **Standalone:** Powered by a sharded in-memory Go transport (`MemoryMeshTransport`) for maximum host-machine efficiency.
@@ -80,6 +80,6 @@ sequenceDiagram
 
 ---
 *Authored by: Principal Product Architect & KAIROS Orchestrator (L7)*
-*Identity: One Human Corp*
+*Identity: OmniSolo*
 
 </div>

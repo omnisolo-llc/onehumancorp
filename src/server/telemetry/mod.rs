@@ -323,7 +323,7 @@ static BUSINESS_EVENT_COUNT: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 pub fn get_deployment_mode() -> &'static str {
     static DEPLOYMENT_MODE: OnceLock<String> = OnceLock::new();
     DEPLOYMENT_MODE.get_or_init(|| {
-        if std::env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true" {
+        if std::env::var("OMNISOLO_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true" {
             "Cloud".to_string()
         } else {
             "Standalone".to_string()
@@ -1658,9 +1658,9 @@ mod additional_tests {
         assert_eq!(metric_name, "ohc_autodream_sync_duration_seconds");
         record_autodream_sync_duration(0.25, "Standalone");
 
-        let dashboard = fs::read_to_string("../monitoring/dashboards/ohc-hybrid-telemetry.json").or_else(|_| {
-            fs::read_to_string("../../monitoring/dashboards/ohc-hybrid-telemetry.json").or_else(|_| {
-                fs::read_to_string("src/server/monitoring/dashboards/ohc-hybrid-telemetry.json")
+        let dashboard = fs::read_to_string("../monitoring/dashboards/omnisolo-hybrid-telemetry.json").or_else(|_| {
+            fs::read_to_string("../../monitoring/dashboards/omnisolo-hybrid-telemetry.json").or_else(|_| {
+                fs::read_to_string("src/server/monitoring/dashboards/omnisolo-hybrid-telemetry.json")
             })
         }).expect("hybrid telemetry dashboard should be readable");
         assert!(dashboard.contains(metric_name));

@@ -16,7 +16,7 @@ test.describe('scratch off Generator', () => {
     expect(embedCode).toContain('10%');
     expect(embedCode).toContain('20%');
     expect(embedCode).toContain('30%');
-    expect(embedCode).toContain('Powered by OHC');
+    expect(embedCode).toContain('Powered by OmniSolo');
   });
 
   test('soft paywall appears when trying to disable branding', async ({ page }) => {

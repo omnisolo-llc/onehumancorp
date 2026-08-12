@@ -1,6 +1,6 @@
 #![allow(clippy::empty_line_after_doc_comments)]
 use crate::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent_core::types::Message;
+use omnisolo_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -67,7 +67,7 @@ impl GroupChatManager {
         };
 
         for msg in tail_msgs {
-            if msg.role == ohc_builtin_agent_core::types::Role::Assistant {
+            if msg.role == omnisolo_builtin_agent_core::types::Role::Assistant {
                 history.push_str(&format!("{}\n", msg.content));
             } else {
                 history.push_str(&format!("{}: {}\n", msg.role, msg.content));
@@ -79,7 +79,7 @@ impl GroupChatManager {
             agents_desc
         );
 
-        let req = ohc_builtin_agent_core::types::ChatRequest {
+        let req = omnisolo_builtin_agent_core::types::ChatRequest {
             model: "default".to_string(), // The mock or underlying LLM determines this
             system: ::server_pricing::compression::reduce_tokens(&system_prompt),
             messages: vec![Message::user(format!(
@@ -603,7 +603,7 @@ mod tests {
         );
     }
 
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
 
     struct AutoGenMockLlmClient {
         responses: tokio::sync::Mutex<Vec<String>>,
@@ -848,10 +848,10 @@ mod tests {
                 _req: ChatRequest,
             ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(ChatResponse {
-                    message: ohc_builtin_agent_core::types::Message {
-                        role: ohc_builtin_agent_core::types::Role::Assistant,
+                    message: omnisolo_builtin_agent_core::types::Message {
+                        role: omnisolo_builtin_agent_core::types::Role::Assistant,
                         content: "".to_string(),
-                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall {
+                        tool_calls: vec![omnisolo_builtin_agent_core::types::ToolCall {
                             id: "call_1".to_string(),
                             name: "handoff_tool".to_string(),
                             arguments: serde_json::json!({}),

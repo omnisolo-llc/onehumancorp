@@ -302,7 +302,7 @@
 
       <div class="branding-toggle-container">
         <div>
-          <div style="font-weight: 600; font-size: 14px;">Remove OHC Branding</div>
+          <div style="font-weight: 600; font-size: 14px;">Remove OmniSolo Branding</div>
           <div style="font-size: 12px; color: #86868b;">Upgrade to Pro to remove the watermark.</div>
         </div>
         <label class="toggle-switch">
@@ -320,7 +320,7 @@
           <h3 id="prev-headline" style="margin-top: 0; font-size: 18px; color: #1d1d1f;">Wait! Before you go...</h3>
           <p id="prev-desc" style="font-size: 12px; color: #86868b; margin-bottom: 15px;">Get 10% off your first order...</p>
           <button id="prev-button" style="background: #0066FF; color: white; border: none; padding: 10px; border-radius: 6px; width: 100%; font-weight: 600; font-size: 14px;">Claim My 10% Off</button>
-          <div id="prev-branding" style="margin-top: 15px; font-size: 10px; color: #86868b;">⚡ Powered by OHC</div>
+          <div id="prev-branding" style="margin-top: 15px; font-size: 10px; color: #86868b;">⚡ Powered by OmniSolo</div>
         </div>
       </div>
 
@@ -338,8 +338,8 @@
   <div class="modal-overlay" id="paywall-modal">
     <div class="modal-content">
       <div style="font-size: 40px; margin-bottom: 10px;">✨</div>
-      <h3>Remove OHC Branding</h3>
-      <p style="font-size: 14px; color: #86868b; margin-bottom: 25px;">Upgrade to the Pro tier to remove the "Powered by OHC" watermark and unlock advanced pop-up triggers.</p>
+      <h3>Remove OmniSolo Branding</h3>
+      <p style="font-size: 14px; color: #86868b; margin-bottom: 25px;">Upgrade to the Pro tier to remove the "Powered by OmniSolo" watermark and unlock advanced pop-up triggers.</p>
       <button class="btn-primary" id="upgrade-btn">Upgrade to Pro</button>
       <button class="btn-secondary" id="cancel-btn">Cancel</button>
     </div>
@@ -381,7 +381,7 @@
     function updateCode() {
       const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
       const code = `
-<!-- OHC Exit-Intent Pop-up -->
+<!-- OmniSolo Exit-Intent Pop-up -->
 <script>
   (function() {
     let triggered = false;
@@ -396,7 +396,7 @@
               <h2 style="margin-top: 0; color: #1d1d1f;">${inputHeadline.value}</h2>
               <p style="color: #4b5563; margin-bottom: 1.5rem;">${inputDesc.value}</p>
               <button style="background: ${inputColor.value}; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%;">${inputButton.value}</button>
-              ${!brandingToggle.checked ? `<div style="margin-top: 1rem; font-size: 0.75rem; color: #9ca3af;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a></div>` : ''}
+              ${!brandingToggle.checked ? `<div style="margin-top: 1rem; font-size: 0.75rem; color: #9ca3af;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OmniSolo</a></div>` : ''}
             </div>
           </div>
         \`;

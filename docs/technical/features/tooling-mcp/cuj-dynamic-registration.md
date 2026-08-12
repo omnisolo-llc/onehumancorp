@@ -6,7 +6,7 @@
 **Success Metrics:** Successfully registering an un-configured tool and having agents find it dynamically via the `/api/mcp/tools` endpoint.
 
 ## 1. User Journey Overview
-A developer or an automated pipeline registers a new external tool on the One Human Corp Agentic OS. The orchestrator accepts the registration only after validating the SPIFFE SVID of the caller. The tool immediately becomes available for agents.
+A developer or an automated pipeline registers a new external tool on the OmniSolo Agentic OS. The orchestrator accepts the registration only after validating the SPIFFE SVID of the caller. The tool immediately becomes available for agents.
 
 ## 2. Detailed Step-by-Step Breakdown
 
@@ -19,7 +19,7 @@ A developer or an automated pipeline registers a new external tool on the One Hu
 ### 3.1 Scenario: Invalid SPIFFE ID
 - **Detection**: The server rejects the registration payload.
 - **Auto-Recovery**: No tool is registered.
-- **Manual Intervention**: Provide a valid `SPIFFE ID` structure aligned with One Human Corp's trusted domains.
+- **Manual Intervention**: Provide a valid `SPIFFE ID` structure aligned with OmniSolo's trusted domains.
 
 ### 3.2 Scenario: Duplicate Tool Registration
 - **Detection**: The server finds a matching `id` in the `dynamicMCPTools` slice.

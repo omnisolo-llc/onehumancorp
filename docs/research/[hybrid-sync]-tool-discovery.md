@@ -3,7 +3,7 @@
 # [hybrid-sync] Synchronized Cloud-Local Offline Support
 
 ## Problem Statement
-The OHC Hybrid Architecture currently supports Cloud-Native (PostgreSQL/Redis), Standalone Desktop (SQLite), and Thin Client modes. However, true hybrid capability requires seamless state synchronization between local standalone environments and the multi-tenant cloud. When a standalone desktop reconnects to the network, its local SQLite data must sync back to the cloud PostgreSQL database without manual intervention.
+The OmniSolo Hybrid Architecture currently supports Cloud-Native (PostgreSQL/Redis), Standalone Desktop (SQLite), and Thin Client modes. However, true hybrid capability requires seamless state synchronization between local standalone environments and the multi-tenant cloud. When a standalone desktop reconnects to the network, its local SQLite data must sync back to the cloud PostgreSQL database without manual intervention.
 
 ## Research Report
 - **ElectricSQL / PowerSync:** Both tools provide SQLite-to-Postgres sync. PowerSync is better suited for real-time offline-first architectures.
@@ -17,7 +17,7 @@ The OHC Hybrid Architecture currently supports Cloud-Native (PostgreSQL/Redis), 
 3. **API Contracts:**
    - `POST /api/v1/sync/push`: Accepts an array of modified rows from the standalone client.
    - `GET /api/v1/sync/pull`: Returns modified rows from the cloud.
-4. **UI Wireframes:** A "Sync Status" indicator in the main OHC dashboard (Cloud/Local).
+4. **UI Wireframes:** A "Sync Status" indicator in the main OmniSolo dashboard (Cloud/Local).
 
 ## Implementation Prompt
 1. Add PowerSync synchronization orchestration to `src/server/orchestration/`.

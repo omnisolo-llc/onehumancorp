@@ -1,7 +1,7 @@
 # [backend] Multi-Tenant Permission Guardrails
 
 ## Problem Statement
-OHC agents currently execute commands without interactive user approval. For high-risk operations (e.g., deleting a database, making large financial transactions), we need a standardized "Request-Approval" flow that works across Cloud-Native and Standalone modes.
+OmniSolo agents currently execute commands without interactive user approval. For high-risk operations (e.g., deleting a database, making large financial transactions), we need a standardized "Request-Approval" flow that works across Cloud-Native and Standalone modes.
 
 ## Research Report
 - **Competitor Analysis**: Claude Code implements a sophisticated `PermissionPrompt` that pauses execution until the user clicks "Approve" in the TUI/CLI.

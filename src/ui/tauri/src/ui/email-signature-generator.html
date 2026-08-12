@@ -37,7 +37,7 @@
     </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free Email Signature Generator - OHC</title>
+  <title>Free Email Signature Generator - OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -227,7 +227,7 @@
 
       <div class="checkbox-group">
         <input type="checkbox" id="remove-branding" />
-        <label for="remove-branding">Remove "Powered by OHC" branding</label>
+        <label for="remove-branding">Remove "Powered by OmniSolo" branding</label>
       </div>
 
       <button class="btn-primary" id="copyHtmlBtn">Copy Signature HTML</button>
@@ -246,7 +246,7 @@
   <div class="modal-overlay" id="paywall-modal">
     <div class="modal-content">
       <h3>Upgrade to Pro</h3>
-      <p>Remove the "Powered by OHC" branding and make the signature 100% yours.</p>
+      <p>Remove the "Powered by OmniSolo" branding and make the signature 100% yours.</p>
       <div class="modal-actions">
         <button class="btn-secondary" id="closePaywallBtn">Cancel</button>
         <a href="/pricing" class="btn-primary" style="text-decoration: none; width: auto;">Upgrade</a>
@@ -275,7 +275,7 @@
 
         if (!removeBrandingCheckbox.checked) {
             signatureHtml += `  <div style="margin-top: 16px; font-size: 12px; color: #86868b;">
-    <a href="https://ohc.app/api/v1/growth/referrals/click" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC (One Human Corp)</a>
+    <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click" style="color: #6b7280; text-decoration: none;">⚡ Powered by OmniSolo (OmniSolo)</a>
   </div>
 `;
         }

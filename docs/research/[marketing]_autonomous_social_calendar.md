@@ -14,7 +14,7 @@ Feedback from `r/Entrepreneur` and App Store reviews of Wix and GoDaddy highligh
   - A push notification: "Your new cupcakes are live! Tap to approve the 7-day Instagram promo campaign."
 
 ## Implementation Prompt
-Implement the Autonomous Social Calendar. Create a background worker that generates a 7-day social media campaign (including drafted text and AI-generated image suggestions) whenever a user adds a new product to their catalog. Present this campaign in the OHC mobile app as a pending task. The user can review the posts and click "Approve All" to schedule them via the Meta Graph API.
+Implement the Autonomous Social Calendar. Create a background worker that generates a 7-day social media campaign (including drafted text and AI-generated image suggestions) whenever a user adds a new product to their catalog. Present this campaign in the OmniSolo mobile app as a pending task. The user can review the posts and click "Approve All" to schedule them via the Meta Graph API.
 The UI should be strictly mobile-first with 375px breakpoints.
 
 ## Priority

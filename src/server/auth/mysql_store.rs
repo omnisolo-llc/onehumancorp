@@ -7,7 +7,7 @@ use super::user_repository::UserRepository;
 fn is_multitenant_mode() -> bool {
     #[cfg(test)]
     {
-        if let Ok(val) = std::env::var("OHC_MULTITENANT") {
+        if let Ok(val) = std::env::var("OMNISOLO_MULTITENANT") {
             return val == "true";
         }
     }
@@ -331,7 +331,7 @@ mod tests {
     use chrono::Utc;
 
     async fn get_mysql_db() -> Option<MySqlUserRepository> {
-        if let Ok(url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(url) = std::env::var("OMNISOLO_DATABASE_URL") {
             if url.starts_with("mysql") {
                 let pool = MySqlPoolOptions::new()
                     .max_connections(2)

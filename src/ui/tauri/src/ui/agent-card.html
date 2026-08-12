@@ -37,7 +37,7 @@
     </style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agent Public Card Generator - OHC</title>
+  <title>Agent Public Card Generator - OmniSolo</title>
   <style>
     :root {
       --bg-color: #f5f5f7;
@@ -376,7 +376,7 @@
 
       <div class="toggle-group">
         <input type="checkbox" id="remove-branding" />
-        <label for="remove-branding">Remove "Powered by OHC" Badge (Pro)</label>
+        <label for="remove-branding">Remove "Powered by OmniSolo" Badge (Pro)</label>
       </div>
 
       <button class="btn" id="generate-btn">Copy Share Link</button>
@@ -398,7 +398,7 @@
         </div>
         <div class="preview-footer" id="preview-footer-el">
           <a href="/api/v1/growth/referrals/click?target=/setup.html&ref=default-team" id="branding-link" target="_blank">
-            <span>⚡</span> Powered by OHC
+            <span>⚡</span> Powered by OmniSolo
           </a>
         </div>
       </div>
@@ -505,9 +505,9 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -555,7 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const t = e.target;
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -595,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
             }, 500); // 500ms long press
         }
     });
@@ -645,9 +645,9 @@ document.addEventListener('DOMContentLoaded', () => {
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -691,14 +691,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -707,7 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);

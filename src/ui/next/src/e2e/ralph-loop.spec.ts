@@ -6,7 +6,7 @@ test.describe('The Ralph Loop UI E2E', () => {
     await page.goto('/ralph-loop');
 
     // Wait for the page to load
-    await expect(page.locator('h1')).toContainText('The Ralph Loop');
+    await expect(page.getByRole('heading', { name: 'The Ralph Loop', exact: true })).toBeVisible();
 
     // Interact with the text area
     const taskInput = page.getByLabel(/Long-Running Task Description/i);

@@ -1,0 +1,13 @@
+.git
+.worktrees
+.next
+**/.next
+node_modules
+**/node_modules
+target
+**/target
+bazel-*
+playwright-report
+**/playwright-report
+test-results
+**/test-results

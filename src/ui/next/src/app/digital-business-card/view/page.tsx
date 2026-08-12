@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { PoweredByOHC } from '../../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
 
 function VCardContent() {
   const searchParams = useSearchParams();
@@ -181,7 +181,7 @@ function VCardContent() {
         {/* Viral Growth Loop Footer */}
         {!removeBranding && (
           <div className="mt-8 text-center animate-fade-in flex flex-col items-center">
-            <PoweredByOHC tenantId={tenant} />
+            <PoweredByOmniSolo tenantId={tenant} />
             <a
               href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}&source=digital_business_card`}
               target="_blank"
@@ -198,7 +198,7 @@ function VCardContent() {
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

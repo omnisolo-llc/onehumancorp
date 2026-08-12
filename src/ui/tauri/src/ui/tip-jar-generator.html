@@ -281,7 +281,7 @@
     <div class="form-group" style="margin-top: 20px;">
       <label style="display: flex; align-items: center; cursor: pointer; font-weight: normal;">
         <input type="checkbox" id="remove-branding" style="margin-right: 8px;" />
-        Remove "Powered by OHC" branding (Pro)
+        Remove "Powered by OmniSolo" branding (Pro)
       </label>
     </div>
 
@@ -305,7 +305,7 @@
 
       <button class="btn-primary" style="margin-top: 10px;">Send Tip</button>
 
-      <a href="#" class="powered-by" id="preview-powered-by" target="_blank">⚡ Powered by OHC</a>
+      <a href="#" class="powered-by" id="preview-powered-by" target="_blank">⚡ Powered by OmniSolo</a>
     </div>
   </div>
 </div>
@@ -316,7 +316,7 @@
     <button class="modal-close" id="close-paywall">&times;</button>
     <div style="font-size: 40px; margin-bottom: 10px;">✨</div>
     <h2 style="margin-bottom: 10px; font-size: 22px;">Upgrade to Pro</h2>
-    <p style="color: #86868b; margin-bottom: 20px; font-size: 15px;">Make the Tip Jar 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+    <p style="color: #86868b; margin-bottom: 20px; font-size: 15px;">Make the Tip Jar 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.</p>
     <button class="btn-primary" id="upgrade-btn">Upgrade to Pro</button>
   </div>
 </div>
@@ -407,7 +407,7 @@
     // Generate action
     generateBtn.addEventListener('click', () => {
       const isBrandingRemoved = removeBrandingCheckbox.checked;
-      const baseUrl = window.location.origin.includes('localhost') ? 'https://ohc.app' : window.location.origin;
+      const baseUrl = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
       const link = `${baseUrl}/pay/${tenantId}?ref=tipjar` + (!isBrandingRemoved ? `&branding=true` : `&branding=false`);
 
       generatedLinkInput.value = link;

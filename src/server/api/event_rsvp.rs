@@ -46,8 +46,8 @@ pub async fn handle_event_rsvp_embed(Query(query): Query<EventRsvpQuery>) -> imp
         format!(
             r#"
             <div style="margin-top: 1.5rem; text-align: center;">
-                <a href="https://ohc.app/invite/{}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #9ca3af; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
-                    Powered by <span style="color: #4f46e5; font-weight: 600;">OHC</span>
+                <a href="https://cloud.omnisolo.co/invite/{}" target="_blank" rel="noopener noreferrer" style="font-size: 0.75rem; color: #9ca3af; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem;">
+                    Powered by <span style="color: #4f46e5; font-weight: 600;">OmniSolo</span>
                 </a>
             </div>
             "#,

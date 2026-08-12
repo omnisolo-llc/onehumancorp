@@ -5,7 +5,7 @@ use tokio::time::{sleep, timeout, Duration};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 pub mod proto {
-    pub use ::server_ohc::interop::*;
+    pub use ::server_omnisolo::interop::*;
 }
 
 /// Interop Layer protocol for mode-switch behaviour and sync
@@ -60,7 +60,7 @@ impl InteropProtocol {
             return Ok(());
         }
 
-        let handoff_msg = ::server_ohc::interop::StateHandoff {
+        let handoff_msg = ::server_omnisolo::interop::StateHandoff {
             source_mode: 0,
             target_mode: 0,
             mission_id: mission_id.to_string(),
@@ -114,11 +114,11 @@ impl InteropProtocol {
     }
 
     /// Listens for state handoff updates
-    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(::server_ohc::interop::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(::server_omnisolo::interop::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_omnisolo::interop::StateHandoff::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -135,8 +135,8 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
-                    let ack = ::server_ohc::interop::HealthAck {
+                if let Ok(decoded) = ::server_omnisolo::interop::HealthPing::decode(&msg.payload[..]) {
+                    let ack = ::server_omnisolo::interop::HealthAck {
                         source_node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
                         target_node_id: decoded.source_node_id.clone(),
@@ -185,7 +185,7 @@ impl InteropProtocol {
 
         let cancel = self.bus.subscribe(format!("system:health_ack:{}", self.node_id), handler).await?;
 
-        let ping = ::server_ohc::interop::HealthPing {
+        let ping = ::server_omnisolo::interop::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: self.node_id.clone(),
@@ -233,7 +233,7 @@ impl InteropProtocol {
 
         let cancel = self.bus.subscribe(format!("system:job_ack:{}", job_id), handler).await?;
 
-        let dispatch = ::server_ohc::interop::JobDispatch {
+        let dispatch = ::server_omnisolo::interop::JobDispatch {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             action_name: action_name.to_string(),
@@ -298,10 +298,10 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_dispatch:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::JobDispatch::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_omnisolo::interop::JobDispatch::decode(&msg.payload[..]) {
                     // In a real implementation, we would process the job here or send it to a worker pool
                     // Here, we just acknowledge receipt
-                    let ack = ::server_ohc::interop::JobAck {
+                    let ack = ::server_omnisolo::interop::JobAck {
                         job_id: decoded.job_id.clone(),
                         node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -338,7 +338,7 @@ impl InteropProtocol {
     pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        let update = ::server_ohc::interop::JobStatusUpdate {
+        let update = ::server_omnisolo::interop::JobStatusUpdate {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             status: status.to_string(),
@@ -373,11 +373,11 @@ impl InteropProtocol {
     }
 
     /// Listens for job status updates for a specific job
-    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(::server_ohc::interop::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(::server_omnisolo::interop::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::JobStatusUpdate::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_omnisolo::interop::JobStatusUpdate::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -387,7 +387,7 @@ impl InteropProtocol {
     }
 
     /// Synchronizes a QueueJob across modes idempotently
-    pub async fn sync_queue_job(&self, job: ::server_ohc::interop::QueueJob) -> Result<(), String> {
+    pub async fn sync_queue_job(&self, job: ::server_omnisolo::interop::QueueJob) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
         // Idempotency check: ensure we don't duplicate syncing the EXACT same state transition
@@ -435,11 +435,11 @@ impl InteropProtocol {
     }
 
     /// Listens for queue job synchronizations
-    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(::server_ohc::interop::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(::server_omnisolo::interop::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:queue_job_sync:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::QueueJob::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_omnisolo::interop::QueueJob::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -468,7 +468,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
+                let decoded = ::server_omnisolo::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_1" {
                     rx.store(true, Ordering::SeqCst);
                 }
@@ -529,7 +529,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
+                let decoded = ::server_omnisolo::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_resume_1" {
                     rx.store(true, Ordering::SeqCst);
                 }
@@ -585,7 +585,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |msg: ::server_ohc::interop::StateHandoff| {
+        let handler = Box::new(move |msg: ::server_omnisolo::interop::StateHandoff| {
             if msg.mission_id == "mission_2" {
                 rx.store(true, Ordering::SeqCst);
             }
@@ -634,7 +634,7 @@ mod tests {
 
         // Publish a ping
         use prost::Message as ProstMessage;
-        let ping = ::server_ohc::interop::HealthPing {
+        let ping = ::server_omnisolo::interop::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: "sender_node".to_string(),
@@ -678,7 +678,7 @@ mod tests {
 
         // Publish a job
         use prost::Message as ProstMessage;
-        let dispatch = ::server_ohc::interop::JobDispatch {
+        let dispatch = ::server_omnisolo::interop::JobDispatch {
             job_id: "job_123".to_string(),
             tenant_id: "tenant_x".to_string(),
             action_name: "test_action".to_string(),
@@ -730,7 +730,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |update: ::server_ohc::interop::JobStatusUpdate| {
+        let handler = Box::new(move |update: ::server_omnisolo::interop::JobStatusUpdate| {
             if update.job_id == "job_status_123" && update.status == "COMPLETED" {
                 rx.store(true, Ordering::SeqCst);
             }
@@ -862,7 +862,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |_msg: ::server_ohc::interop::StateHandoff| {
+        let handler = Box::new(move |_msg: ::server_omnisolo::interop::StateHandoff| {
             rx.store(true, Ordering::SeqCst);
         });
 
@@ -951,7 +951,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |_update: ::server_ohc::interop::JobStatusUpdate| {
+        let handler = Box::new(move |_update: ::server_omnisolo::interop::JobStatusUpdate| {
             rx.store(true, Ordering::SeqCst);
         });
 

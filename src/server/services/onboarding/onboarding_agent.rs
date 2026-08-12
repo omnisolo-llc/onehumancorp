@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+use ::server_omnisolo::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 use crate::minimax::MinimaxClient;
 use std::sync::OnceLock;
 use ::server_utils::cache::HybridCache;
@@ -214,7 +214,7 @@ impl OnboardingAgent {
         }
 
         let prompt = format!(
-            "You are the OHC Onboarding Expert assistant. Your goal is to synthesize a fully-operational, mobile-first workspace from a single user prompt.
+            "You are the OmniSolo Onboarding Expert assistant. Your goal is to synthesize a fully-operational, mobile-first workspace from a single user prompt.
 Extract the business taxonomy, default any missing fields to sensible industry defaults, and generate the configuration. Do NOT ask follow-up questions unless the input is completely empty or nonsensical, EXCEPT if the business is clearly related to Real Estate / Property Management, in which case you MUST ask ONE clarifying question: 'Do you want to handle maintenance requests through the app?' If they have already answered this question or if the conversation history shows you already asked this, then output [COMPLETE].
 You need to synthesize at least:
 1. What they sell or what service they provide.
@@ -318,8 +318,8 @@ Your response:",
         };
 
         let prompt = format!(
-            "You are the OHC Onboarding Expert. Extract structured business information from the user description.
-            We serve various OHC personas like:
+            "You are the OmniSolo Onboarding Expert. Extract structured business information from the user description.
+            We serve various OmniSolo personas like:
             - Maya (Home Baker): Needs cake customizer, deposits, and delivery.
             - Carlos (Field Service): Needs service bookings, estimates, and route notes.
             - Priya (Boutique): Needs inventory, variants, and tap-to-pay.
@@ -516,7 +516,7 @@ Your response:",
 
         // Invalidate the Dashboard cache as well
         let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
-        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<::server_ohc::app::GetOnboardingStateResponse>::new(self.hub.redis_client()));
+        let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::<::server_omnisolo::app::GetOnboardingStateResponse>::new(self.hub.redis_client()));
         tracing::debug!("Invalidating dashboard onboarding state cache for key: {}", dashboard_cache_key); // pii-safe
         dashboard_cache.invalidate(&dashboard_cache_key).await;
 
@@ -660,7 +660,7 @@ Your response:",
                     .bind(&job_id)
                     .bind(&org_id_clone1)
                     .bind("onboarding_generate_catalog")
-                    .bind(serde_json::to_string(&payload).unwrap_or_default())
+                    .bind(sqlx::types::Json(payload))
                     .execute(&agent_clone_product.db.pool)
                     .await
                     {
@@ -718,7 +718,7 @@ Your response:",
             tracing::info!("publish_events_future event_topics inserts took: {} us", start_events.elapsed().as_micros());
 
             // Trigger KAIROS Orchestration for initial artifacts
-            let storefront_event = ::server_ohc::orchestration::TeammateMeshEvent {
+            let storefront_event = ::server_omnisolo::orchestration::TeammateMeshEvent {
                 agent_id: "system".to_string(),
                 action: "GenerateStorefront".to_string(),
                 status: "pending".to_string(),
@@ -731,7 +731,7 @@ Your response:",
             };
             let _ = hub_clone.publish_teammate_event("promoter_inbox".to_string(), storefront_event).await;
 
-            let policy_event = ::server_ohc::orchestration::TeammateMeshEvent {
+            let policy_event = ::server_omnisolo::orchestration::TeammateMeshEvent {
                 agent_id: "system".to_string(),
                 action: "GeneratePolicies".to_string(),
                 status: "pending".to_string(),
@@ -754,7 +754,7 @@ Your response:",
             if let Err(e) = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $2, NULL, $3, 'QUEUED', $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                 .bind(uuid::Uuid::new_v4().to_string())
                 .bind(&org_id_clone3)
-                .bind(serde_json::to_string(&payload).unwrap_or_default())
+                .bind(sqlx::types::Json(payload))
                 .bind(scheduled_at.naive_utc())
                 .execute(&pool)
                 .await
@@ -798,7 +798,7 @@ Your response:",
         // Provision initial Agent Feed items (Action Required)
         let feed_id = uuid::Uuid::new_v4().to_string();
         let feed_payload = serde_json::json!({
-            "description": format!("Welcome to OHC! I've set up your {} business. Click here to review your new storefront.", business_type),
+            "description": format!("Welcome to OmniSolo! I've set up your {} business. Click here to review your new storefront.", business_type),
             "feature_type": "onboarding_welcome",
             "company_name": company_name
         });
@@ -886,7 +886,7 @@ Your response:",
             "organization_id": org_id,
         });
 
-        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "system".to_string(),
             action: "ProductCreated".to_string(),
             status: "success".to_string(),
@@ -2928,7 +2928,7 @@ Your response:",
                     "organization_id": org_id,
                 });
 
-                let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
                     agent_id: "system".to_string(),
                     action: "ProductCreated".to_string(),
                     status: "success".to_string(),
@@ -3070,7 +3070,7 @@ mod tests {
     use super::*;
     use std::sync::Arc;
     use crate::db::DB;
-    use ::server_ohc::orchestration::StartOnboardingRequest;
+    use ::server_omnisolo::orchestration::StartOnboardingRequest;
 
     static TEST_MIGRATIONS: tokio::sync::OnceCell<Result<(), String>> =
         tokio::sync::OnceCell::const_new();
@@ -3099,9 +3099,9 @@ mod tests {
     }
 
     async fn setup_test_db() -> Option<Arc<DB>> {
-        let _ = std::env::var("OHC_DATABASE_URL").ok()?;
+        let _ = std::env::var("OMNISOLO_DATABASE_URL").ok()?;
         unsafe {
-            std::env::set_var("OHC_SQLITE_KEY", "test-fallback-key");
+            std::env::set_var("OMNISOLO_SQLITE_KEY", "test-fallback-key");
         }
         let db = Arc::new(DB::new().await.ok()?);
         TEST_MIGRATIONS
@@ -3161,8 +3161,8 @@ mod tests {
         // Prime the dashboard cache
         let dashboard_cache_key = format!("onboarding_state_{}", tenant_id);
         let dashboard_cache = crate::services::dashboard::service::ONBOARDING_STATE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(hub.redis_client()));
-        let dashboard_resp = ::server_ohc::app::GetOnboardingStateResponse {
-            state: Some(::server_ohc::app::OnboardingState {
+        let dashboard_resp = ::server_omnisolo::app::GetOnboardingStateResponse {
+            state: Some(::server_omnisolo::app::OnboardingState {
                 organization_id: tenant_id.to_string(),
                 user_id: user_id.to_string(),
                 current_step: 1,
@@ -3418,12 +3418,12 @@ mod tests {
             location: data.location.unwrap_or_default(),
             target_audience: data.target_audience.unwrap_or_default(),
             initial_products: data.initial_products.into_iter().map(|p| {
-                ::server_ohc::orchestration::IntakeProductProto {
+                ::server_omnisolo::orchestration::IntakeProductProto {
                     name: p.name,
                     price: p.price,
                     description: p.description.unwrap_or_default(),
                     variants: p.variants.unwrap_or_default().into_iter().map(|v| {
-                        ::server_ohc::orchestration::IntakeProductVariantProto {
+                        ::server_omnisolo::orchestration::IntakeProductVariantProto {
                             name: v.name,
                             price_modifier: v.price_modifier,
                         }

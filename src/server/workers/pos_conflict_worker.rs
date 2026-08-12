@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::db::DB;
-use crate::queue::{TaskJobHandler as JobHandler, Job as OHCJob};
+use crate::queue::{TaskJobHandler as JobHandler, Job as OmniSoloJob};
 use serde_json::json;
 use async_trait::async_trait;
 
@@ -16,7 +16,7 @@ impl PosConflictWorker {
 
 #[async_trait]
 impl JobHandler for PosConflictWorker {
-    async fn handle(&self, job: OHCJob) -> Result<(), String> {
+    async fn handle(&self, job: OmniSoloJob) -> Result<(), String> {
         let db = self.db.clone();
 
         let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(json!({}));
@@ -109,7 +109,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_conflict_worker() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -122,7 +122,7 @@ mod tests {
         sqlx::query("INSERT INTO orders (id, tenant_id, status) VALUES ('order-1', 'tenant-conflict-test', 'PENDING') ON CONFLICT DO NOTHING").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id) VALUES ('oi-1', 'tenant-conflict-test', 'order-1', 'prod-1') ON CONFLICT DO NOTHING").execute(&pool).await.unwrap();
 
-        let job = OHCJob {
+        let job = OmniSoloJob {
             id: "job-c1".to_string(),
             tenant_id: "tenant-conflict-test".to_string(),
             job_type: "POS_INVENTORY_CONFLICT_RESOLUTION".to_string(),

@@ -1,9 +1,9 @@
 use sqlx::PgPool;
 use serde_json::Value;
 
-#[cfg(ohc_bazel)]
+#[cfg(omnisolo_bazel)]
 use crate::integrations::stripe::client::StripeClient;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 use server_integrations_stripe::client::StripeClient;
 
 pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {

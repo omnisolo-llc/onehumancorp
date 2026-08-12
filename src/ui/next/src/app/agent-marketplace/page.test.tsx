@@ -87,5 +87,19 @@ describe('Agent Marketplace Page', () => {
     await waitFor(() => {
       expect(screen.getByText(/Failed to fetch agents/)).toBeInTheDocument();
     });
+    expect(screen.queryByText(/No agents found/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Retry marketplace' })).toBeInTheDocument();
+  });
+
+  it('retries the current marketplace search after a service failure', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+    render(<AgentMarketplacePage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry marketplace' }));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/No agents found/)).toBeInTheDocument();
   });
 });

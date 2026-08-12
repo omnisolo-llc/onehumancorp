@@ -125,9 +125,9 @@ mod tests {
     use sqlx::postgres::PgPoolOptions;
 
     async fn isolated_postgres_pool() -> Option<(PgPool, PgPool, String, String)> {
-        let database_url = std::env::var("OHC_TEST_POSTGRES_URL")
+        let database_url = std::env::var("OMNISOLO_TEST_POSTGRES_URL")
             .ok()
-            .or_else(|| std::env::var("OHC_DATABASE_URL").ok())?;
+            .or_else(|| std::env::var("OMNISOLO_DATABASE_URL").ok())?;
         if !database_url.starts_with("postgres") {
             return None;
         }

@@ -1,7 +1,7 @@
-# OHC Product Research: Autonomous AI Background Agents for Operations
+# OmniSolo Product Research: Autonomous AI Background Agents for Operations
 
 ## Goal
-Drive OHC's market dominance by replacing manual, repetitive tasks with autonomous background AI agents acting as functional departments (Operations, Customer Success, Marketing, etc.).
+Drive OmniSolo's market dominance by replacing manual, repetitive tasks with autonomous background AI agents acting as functional departments (Operations, Customer Success, Marketing, etc.).
 
 ---
 
@@ -11,27 +11,27 @@ Every engineering decision must be evaluated against these real personas.
 ### 🧁 Maya — The Home Baker (28, non-technical)
 - **Pain Point:** Constant Instagram DMs asking about custom cake options while she tries to bake.
 - **Competitor Failure:** Shopify is too complex; it assumes she understands DNS and fulfillment centers.
-- **OHC Solution:** *The Ambassador* agent automatically drafts contextual replies to her DMs.
+- **OmniSolo Solution:** *The Ambassador* agent automatically drafts contextual replies to her DMs.
 
 ### 🔧 Carlos — The Freelance Handyman (42, non-technical)
 - **Pain Point:** Manual quoting over the phone while on a ladder; loses leads because he can't respond fast enough.
 - **Competitor Failure:** Wix booking systems require complex setup.
-- **OHC Solution:** *The Salesperson* agent automatically sends a quote based on a customer's described problem.
+- **OmniSolo Solution:** *The Salesperson* agent automatically sends a quote based on a customer's described problem.
 
 ### 👗 Priya — The Boutique Owner (35, semi-technical)
 - **Pain Point:** Desires daily analytics to know what sold but finds current tools require complex dashboard navigation.
 - **Competitor Failure:** Existing POS/E-commerce integrations (like Square) don't offer proactive, plain-language advice.
-- **OHC Solution:** *The Advisor* agent sends a weekly SMS: "Blue dresses sold out. Reorder for next week."
+- **OmniSolo Solution:** *The Advisor* agent sends a weekly SMS: "Blue dresses sold out. Reorder for next week."
 
 ### 🎵 Leo — The Music Tutor (22, non-technical)
 - **Pain Point:** Chaos managing Google Calendar links and chasing down students for monthly subscription payments.
 - **Competitor Failure:** Most tools treat bookings as a secondary feature instead of the core product.
-- **OHC Solution:** *The Operations Manager* agent handles Zoom links and *The Accountant* handles recurring billing.
+- **OmniSolo Solution:** *The Operations Manager* agent handles Zoom links and *The Accountant* handles recurring billing.
 
 ### 🍜 Fatima — The Food Cart Operator (50, non-technical, limited English)
 - **Pain Point:** Needs simple pre-orders on a slow Android phone; English-heavy tools are unusable.
 - **Competitor Failure:** Shopify and GoDaddy dashboards are too jargon-heavy and unoptimized for cheap mobile hardware.
-- **OHC Solution:** A localized, zero-jargon, mobile-first app that simply alerts her when an order is placed.
+- **OmniSolo Solution:** A localized, zero-jargon, mobile-first app that simply alerts her when an order is placed.
 
 ---
 
@@ -52,7 +52,7 @@ quadrantChart
     "Squarespace": [0.1, 0.3]
     "GoDaddy Airo": [0.4, 0.6]
     "Durable": [0.5, 0.8]
-    "OHC (Goal)": [0.9, 0.9]
+    "OmniSolo (Goal)": [0.9, 0.9]
 ```
 
 ### Competitor Audit
@@ -79,12 +79,12 @@ quadrantChart
 
 ---
 
-## 4. AI Differentiation Research: The OHC Manifesto
+## 4. AI Differentiation Research: The OmniSolo Manifesto
 
 **The Problem:** Small businesses don't need a chatbot. They need *employees*.
-**The OHC Solution:** AI as functional, autonomous departments.
+**The OmniSolo Solution:** AI as functional, autonomous departments.
 
-### Top 5 Autonomous AI Automations OHC Will Implement First
+### Top 5 Autonomous AI Automations OmniSolo Will Implement First
 1.  **The Ambassador (Customer Success): Auto-Drafting Replies.** Solves Pain Point #1.
 2.  **The Operations Manager (Operations): Auto-Generating Product Listings.** Solves Pain Point #2.
 3.  **The Promoter (Marketing): Auto-Scheduling Social Posts.** Solves Pain Point #5.
@@ -105,7 +105,7 @@ journey
       Build Store: 1: User
       Get IG Message: 3: Customer
       Manually Type Reply: 1: User
-    section OHC
+    section OmniSolo
       Sign Up (AI handles setup): 5: User
       Store is Live: 5: User
       Get IG Message: 3: Customer
@@ -115,15 +115,15 @@ journey
 
 -   **TAM:** ~33 million small businesses in the US alone.
 -   **Beachhead Market:** "The Side Hustler to Full-Time Transition."
--   **Strategic Focus:** OHC must nail the **Mobile-First** and **Zero-Jargon** experience.
+-   **Strategic Focus:** OmniSolo must nail the **Mobile-First** and **Zero-Jargon** experience.
 
 ---
 
 ## 6. Feature Gap Matrix
 
-| Feature | Shopify | Wix | OHC (Current) | OHC (Gap/Advantage) |
+| Feature | Shopify | Wix | OmniSolo (Current) | OmniSolo (Gap/Advantage) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Setup Time** | 30-60 min | 20-40 min | Fast | **Advantage:** OHC aims for < 10 min. |
+| **Setup Time** | 30-60 min | 20-40 min | Fast | **Advantage:** OmniSolo aims for < 10 min. |
 | **AI Agents** | Reactive (Sidekick) | One-time (ADI) | Defined in backend | **Gap:** Needs UI integration (Activity Feed). |
 | **Mobile Mgmt** | Partial | Partial | 375px First | **Advantage:** Full parity on mobile. |
 | **Booking + Store** | Store only | Complex | Supported | **Advantage:** All-in-one native support. |
@@ -149,7 +149,7 @@ journey
 **Problem Statement:** Current dashboards (Shopify, Wix) use complex e-commerce terminology (SKUs, DNS). Non-technical owners (Fatima) manage businesses from their phones and are confused by this jargon.
 
 **Design Doc:**
-- **High-Level Architecture**: UI Framework in Tauri. Design System uses OHC Premium Token library (Glassmorphism, Outfit/Inter typography). State Management via Riverpod.
+- **High-Level Architecture**: UI Framework in Tauri. Design System uses OmniSolo Premium Token library (Glassmorphism, Outfit/Inter typography). State Management via Riverpod.
 - **Mobile UX Flow (375px First)**: Home screen focuses on plain-language metrics ("You made $150 today"). Action buttons must be large touch targets (≥ 44x44px). Group settings by business function (e.g., "My Money").
-- **Implementation Prompt**: Redesign the core dashboard UI in Tauri strictly adhering to the 375px mobile-first mandate. Ensure all terminology is plain language. Implement the OHC Premium Design System tokens for a high-end feel.
+- **Implementation Prompt**: Redesign the core dashboard UI in Tauri strictly adhering to the 375px mobile-first mandate. Ensure all terminology is plain language. Implement the OmniSolo Premium Design System tokens for a high-end feel.
 - **Estimated Scope**: Medium

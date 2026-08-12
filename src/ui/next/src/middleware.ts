@@ -49,7 +49,9 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (outcome.kind === "next") {
     response = NextResponse.next();
   } else if (outcome.kind === "redirect") {
-    response = NextResponse.redirect(new URL(outcome.location, request.url));
+    response = NextResponse.redirect(
+      new URL(outcome.location, `${dependencies.config.canonicalOrigin}/`),
+    );
   } else {
     response = new NextResponse(outcome.body, {
       status: outcome.status,

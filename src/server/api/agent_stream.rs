@@ -11,7 +11,7 @@ use chrono::Utc;
 use futures_util::Stream;
 use tokio::sync::broadcast;
 use crate::hub::Hub;
-use ::server_ohc::orchestration::Message;
+use ::server_omnisolo::orchestration::Message;
 
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(30);
 
@@ -157,6 +157,11 @@ mod tests {
     #[test]
     fn router_uses_axum_v08_capture_syntax() {
         let _: axum::Router<()> = router(make_hub());
+    }
+
+    #[tokio::test]
+    async fn router_builds_with_axum_named_path_captures() {
+        let _router = router::<()>(make_hub());
     }
 
     #[tokio::test]

@@ -33,7 +33,7 @@ test.describe('Viral Social Proof Nudge', () => {
         await expect(page.locator('#preview-product', { hasText: 'Awesome E2E Cake' })).toBeVisible();
 
         // Verify the viral footer exists in the preview
-        const publicFooterLink = page.locator('#preview-branding', { hasText: '⚡ Powered by OHC' });
+        const publicFooterLink = page.locator('#preview-branding', { hasText: '⚡ Powered by OmniSolo' });
         await expect(publicFooterLink).toBeVisible();
 
         // Check the generated embed code
@@ -41,7 +41,7 @@ test.describe('Viral Social Proof Nudge', () => {
         const embedCode = await page.locator('#embed-code').inputValue();
         expect(embedCode).toContain('data-product="Awesome E2E Cake"');
         expect(embedCode).toContain('data-location="Someone in San Francisco"');
-        expect(embedCode).toContain('Powered by OHC');
+        expect(embedCode).toContain('Powered by OmniSolo');
     });
 
     test('should show soft paywall when attempting to remove branding without pro', async ({ page, adminUser, loginAs }) => {
@@ -79,7 +79,7 @@ test.describe('Viral Social Proof Nudge', () => {
         await expect(paywallModal).not.toHaveClass(/active/);
 
         // Preview section should hide the branding
-        const brandingLink = page.locator('#preview-branding', { hasText: '⚡ Powered by OHC' });
+        const brandingLink = page.locator('#preview-branding', { hasText: '⚡ Powered by OmniSolo' });
         await expect(brandingLink).not.toBeVisible();
 
         // Generate link without branding
@@ -89,7 +89,7 @@ test.describe('Viral Social Proof Nudge', () => {
 
         // The generated link should NOT include the branding parameter
         const embedCode = await page.locator('#embed-code').inputValue();
-        expect(embedCode).not.toContain('⚡ Powered by OHC');
+        expect(embedCode).not.toContain('⚡ Powered by OmniSolo');
         expect(embedCode).toContain('data-branding="false"');
     });
 });

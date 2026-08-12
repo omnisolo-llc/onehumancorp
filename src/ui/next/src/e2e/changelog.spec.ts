@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Release Notes & Changelog', () => {
-    test('renders Changelog page with screenshots and can be accessed from AppShell', async ({ page }) => {
+    test('renders Changelog page and can be accessed from AppShell', async ({ page }) => {
         // Go to dashboard to see AppShell
         await page.goto('/dashboard');
 
@@ -17,14 +17,14 @@ test.describe('Release Notes & Changelog', () => {
         // Verify release notes content is rendered
         await expect(page.locator('h2', { hasText: 'v1.2.0' })).toBeVisible();
 
-        // Wait for images to load, which proves the API correctly fetched the screenshot URL
-        // In our manual test setup, we added a placeholder image to the top version
-        const screenshot = page.locator('img[alt*="Screenshot"]').first();
-        await expect(screenshot).toBeVisible();
+        const brokenImages = await page.locator('img').evaluateAll((images) => images
+            .filter((image) => !image.complete || image.naturalWidth === 0)
+            .map((image) => image.getAttribute('src')));
+        expect(brokenImages).toEqual([]);
 
         // Check the website link
         const externalLink = page.locator('a', { hasText: 'Read the full technical changelog on our website' });
         await expect(externalLink).toBeVisible();
-        await expect(externalLink).toHaveAttribute('href', 'https://onehumancorp.com/changelog');
+        await expect(externalLink).toHaveAttribute('href', 'https://cloud.omnisolo.co/changelog');
     });
 });

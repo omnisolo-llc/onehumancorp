@@ -309,7 +309,7 @@
     <div class="card">
       <div class="form-group">
         <label for="service-name">Service / Product Name</label>
-        <input type="text" id="service-name" value="OHC Pro Services" />
+        <input type="text" id="service-name" value="OmniSolo Pro Services" />
       </div>
 
       <div class="form-group">
@@ -324,7 +324,7 @@
 
       <div class="toggle-group">
         <div>
-          <label style="margin-bottom: 2px;">Remove "Powered by OHC"</label>
+          <label style="margin-bottom: 2px;">Remove "Powered by OmniSolo"</label>
           <span style="font-size: 12px; color: #86868b;">Requires Pro Plan</span>
         </div>
         <label class="toggle-switch">
@@ -345,7 +345,7 @@
     <div class="card">
       <label>Live Preview</label>
       <div class="preview-container">
-        <h3 class="preview-title" id="preview-title">OHC Pro Services ROI</h3>
+        <h3 class="preview-title" id="preview-title">OmniSolo Pro Services ROI</h3>
         <p style="font-size: 14px; color: #666;">Adjust the investment below to see your potential return.</p>
 
         <label style="font-size: 12px;">Investment Amount:</label>
@@ -359,7 +359,7 @@
         <button style="width: 100%; background: #111827; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600;">Get Started</button>
 
         <div class="preview-footer" id="preview-footer">
-          <a href="#">⚡ Powered by OHC</a>
+          <a href="#">⚡ Powered by OmniSolo</a>
         </div>
       </div>
     </div>
@@ -370,7 +370,7 @@
   <div class="modal-overlay" id="paywall-modal">
     <div class="modal">
       <h2>Upgrade to Pro</h2>
-      <p>Removing the "Powered by OHC" branding is a Pro feature. Upgrade your workspace to unlock white-labeling.</p>
+      <p>Removing the "Powered by OmniSolo" branding is a Pro feature. Upgrade your workspace to unlock white-labeling.</p>
       <button class="modal-btn" id="upgrade-btn">Upgrade Now</button>
       <button class="modal-btn-outline" id="close-modal-btn">Keep Branding</button>
     </div>
@@ -446,7 +446,7 @@
 
           let baseUrl = window.location.origin;
           if (baseUrl === 'file://' || baseUrl.includes('localhost') || baseUrl === 'null') {
-            baseUrl = 'https://app.onehumancorp.com';
+            baseUrl = 'https://cloud.omnisolo.co';
           }
 
           const serviceName = encodeURIComponent(serviceNameInput.value);

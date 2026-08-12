@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>AI Lead Magnet Builder | OHC</title>
+  <title>AI Lead Magnet Builder | OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -385,7 +385,7 @@
           </label>
           <div>
             <div style="font-weight: 600; font-size: 15px;">Remove Branding</div>
-            <div style="font-size: 13px; color: var(--text-secondary);">Remove the "Powered by OHC" watermark (Pro)</div>
+            <div style="font-size: 13px; color: var(--text-secondary);">Remove the "Powered by OmniSolo" watermark (Pro)</div>
           </div>
         </div>
 
@@ -404,7 +404,7 @@
           <input type="text" class="widget-input" placeholder="Your Email Address" readonly>
           <button class="widget-btn" id="preview-btn-text">Generate Free Audit</button>
 
-          <a href="#" class="powered-by" id="preview-branding">⚡ Powered by OHC</a>
+          <a href="#" class="powered-by" id="preview-branding">⚡ Powered by OmniSolo</a>
         </div>
       </div>
     </div>
@@ -430,7 +430,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p style="color: #666; margin-bottom: 24px;">Make the Lead Magnet 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p style="color: #666; margin-bottom: 24px;">Make the Lead Magnet 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
 
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <button id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
@@ -488,8 +488,8 @@
       }
 
       function generateEmbedCode() {
-        const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
-        const code = `<iframe src="${origin}/api/v1/growth/lead-magnet/embed?tenant=${state.tenant}&title=${encodeURIComponent(state.title)}&desc=${encodeURIComponent(state.desc)}&btn=${encodeURIComponent(state.btnText)}&input=${encodeURIComponent(state.inputLabel)}&hide_branding=${state.removeBranding}" width="100%" height="300" style="border:none;border-radius:12px;overflow:hidden;" title="OHC Lead Magnet"></iframe>`;
+        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
+        const code = `<iframe src="${origin}/api/v1/growth/lead-magnet/embed?tenant=${state.tenant}&title=${encodeURIComponent(state.title)}&desc=${encodeURIComponent(state.desc)}&btn=${encodeURIComponent(state.btnText)}&input=${encodeURIComponent(state.inputLabel)}&hide_branding=${state.removeBranding}" width="100%" height="300" style="border:none;border-radius:12px;overflow:hidden;" title="OmniSolo Lead Magnet"></iframe>`;
         embedCodeTextarea.value = code;
       }
 
@@ -534,7 +534,7 @@
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
           const tenantId = state.tenant;
-          const message = `Check out my new AI Lead Magnet built with OneHumanCorp! 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+          const message = `Check out my new AI Lead Magnet built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenantId}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           window.open(shareUrl, '_blank');

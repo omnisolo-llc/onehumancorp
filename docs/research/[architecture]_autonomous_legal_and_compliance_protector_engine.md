@@ -9,7 +9,7 @@ Small business owners like Maya (baker, 28) and Carlos (handyman, 42) lack the l
     *   **Wix/Squarespace**: Offers static legal page templates. No dynamic, transactional protection for deposits or service liabilities.
     *   **LegalZoom/RocketLawyer**: Too expensive, disconnected from the core business workflow, and not designed for mobile-first, transaction-level use.
     *   **GoDaddy**: Extremely basic boilerplate text.
-*   **The OHC Differentiator**: OHC embeds the "Legal & Compliance" AI Department ("The Protector") directly into the transaction lifecycle. It automatically generates bespoke contracts and policies based on the business type, syncs with operations to require signatures for high-risk bookings/deposits, and auto-generates liability disclaimers. Zero external tools, 100% mobile native.
+*   **The OmniSolo Differentiator**: OmniSolo embeds the "Legal & Compliance" AI Department ("The Protector") directly into the transaction lifecycle. It automatically generates bespoke contracts and policies based on the business type, syncs with operations to require signatures for high-risk bookings/deposits, and auto-generates liability disclaimers. Zero external tools, 100% mobile native.
 
 ## Design Doc
 
@@ -20,7 +20,7 @@ graph TD;
     OperationsEngine -->|Requires Contract| LegalAgent[Legal & Compliance AI Agent];
     LegalAgent -->|Fetches Business Context| RAG[(Memory/Embedding Context)];
     LegalAgent -->|Drafts Custom Contract| ContractGenerator[Contract Generation Service];
-    ContractGenerator -->|Sends for E-Signature| SignatureService[OHC Native E-Sign Mesh];
+    ContractGenerator -->|Sends for E-Signature| SignatureService[OmniSolo Native E-Sign Mesh];
     SignatureService --> Customer;
     SignatureService -->|Signed Payload| LocalDB[(Local SQLite DB / Ledger)];
     LocalDB -->|Sync| CloudSync[Hybrid Sync Daemon];

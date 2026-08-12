@@ -105,8 +105,8 @@ function routeLabel(route: string) {
 const allowedExternalHosts = [
   'facebook.com',
   'meet.google.com',
-  'ohc.app',
-  'onehumancorp.com',
+  'cloud.omnisolo.co',
+  'omnisolo.co',
   'twitter.com',
   'wa.me',
   'www.facebook.com',
@@ -117,12 +117,12 @@ function externalHostAllowed(hostname: string) {
   return allowedExternalHosts.some((allowedHost) => hostname === allowedHost || hostname.endsWith(`.${allowedHost}`));
 }
 
-function isFakeOHCUrl(href: string) {
+function isFakeOmniSoloUrl(href: string) {
   try {
     const url = new URL(href, 'http://dummy.base');
-    return url.protocol === 'ohc:' || url.hostname === 'ohc.store' || url.hostname.endsWith('.ohc.store');
+    return url.protocol === 'ohc:' || url.hostname === 'cloud.omnisolo.co' || url.hostname.endsWith('.cloud.omnisolo.co');
   } catch {
-    return href.startsWith('ohc://') || href.includes('ohc.store');
+    return href.startsWith('ohc://') || href.includes('cloud.omnisolo.co');
   }
 }
 
@@ -173,7 +173,7 @@ async function gotoReady(page: Page, route: string) {
       if (control.disabled || control.readOnly || control.value) continue;
       if (control instanceof HTMLInputElement) {
         if (['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(control.type)) continue;
-        control.value = control.type === 'url' ? 'https://ohc.app' : control.type === 'number' ? '1' : 'Audit value';
+        control.value = control.type === 'url' ? 'https://cloud.omnisolo.co' : control.type === 'number' ? '1' : 'Audit value';
       } else {
         control.value = 'Audit value';
       }
@@ -245,7 +245,7 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
       if (!result.href.trim()) failures.push(`${target} has no href`);
       if (result.href === '#' || result.href.startsWith('#')) failures.push(`${target} uses a placeholder hash href`);
       if (result.href.startsWith('javascript:')) failures.push(`${target} uses a javascript: href`);
-      if (isFakeOHCUrl(result.href)) failures.push(`${target} uses fake OHC destination ${result.href}`);
+      if (isFakeOmniSoloUrl(result.href)) failures.push(`${target} uses fake OmniSolo destination ${result.href}`);
     }
     if ((result.tag === 'button' || result.role === 'button') && /^button$/i.test(result.purpose)) {
       failures.push(`${target} exposes only a generic button purpose`);
@@ -458,8 +458,8 @@ test.describe('comprehensive UI contract', () => {
           failures.push(`${target} uses a javascript: href`);
           continue;
         }
-        if (isFakeOHCUrl(link.href)) {
-          failures.push(`${target} uses fake OHC destination ${link.href}`);
+        if (isFakeOmniSoloUrl(link.href)) {
+          failures.push(`${target} uses fake OmniSolo destination ${link.href}`);
           continue;
         }
         if (link.href.startsWith('mailto:') || link.href.startsWith('tel:')) {

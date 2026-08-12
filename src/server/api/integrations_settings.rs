@@ -20,7 +20,7 @@ pub async fn connect_whatsapp_cloud_api(
     State(registry): State<Arc<IntegrationsRegistry>>,
     Json(payload): Json<ConnectWhatsAppCloudApiReq>,
 ) -> impl IntoResponse {
-    let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+    let creds = ::server_omnisolo::orchestration::ConnectIntegrationRequest {
         integration_id: "whatsapp_cloud_api".to_string(),
         base_url: "".to_string(),
         bot_token: "".to_string(),
@@ -56,7 +56,7 @@ pub async fn connect_whatsapp(
     Json(payload): Json<ConnectWhatsAppReq>,
 ) -> impl IntoResponse {
     let integration_id = payload.integration_id.unwrap_or_else(|| "whatsapp".to_string());
-    let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+    let creds = ::server_omnisolo::orchestration::ConnectIntegrationRequest {
         integration_id: integration_id.clone(),
         base_url: payload.base_url.unwrap_or_default(),
         bot_token: payload.bot_token.unwrap_or_default(),

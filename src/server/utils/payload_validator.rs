@@ -1,7 +1,7 @@
 
 use serde_json::Value;
 
-/// Payload Schema Validator for OHC-SIP
+/// Payload Schema Validator for OmniSolo-SIP
 /// This module provides strict runtime schema validation for complex JSON payloads
 /// embedded within `agent_missions`. It guarantees type safety across Cloud and Local DB syncs.
 pub enum SchemaError {

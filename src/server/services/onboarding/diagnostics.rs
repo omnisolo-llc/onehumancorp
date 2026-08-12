@@ -11,13 +11,13 @@ pub fn run_diagnostics() -> DiagnosticsResult {
         details: Vec::new(),
     };
 
-    let runtime_dir = std::env::var("OHC_RUNTIME_DIR")
+    let runtime_dir = std::env::var("OMNISOLO_RUNTIME_DIR")
         .unwrap_or_else(|_| ".ohc/runtime".to_string());
         
-    let memory_dir = std::env::var("OHC_MEMORY_DIR")
+    let memory_dir = std::env::var("OMNISOLO_MEMORY_DIR")
         .unwrap_or_else(|_| format!("{}/memory", runtime_dir));
         
-    let status_dir = std::env::var("OHC_STATUS_DIR")
+    let status_dir = std::env::var("OMNISOLO_STATUS_DIR")
         .unwrap_or_else(|_| format!("{}/status", runtime_dir));
 
     let required_paths = vec![runtime_dir, memory_dir, status_dir];
@@ -50,9 +50,9 @@ mod tests {
 
         // SAFETY: Test-only code setting environment variables
         unsafe {
-            std::env::set_var("OHC_RUNTIME_DIR", &runtime_dir);
-            std::env::set_var("OHC_MEMORY_DIR", &memory_dir);
-            std::env::set_var("OHC_STATUS_DIR", &status_dir);
+            std::env::set_var("OMNISOLO_RUNTIME_DIR", &runtime_dir);
+            std::env::set_var("OMNISOLO_MEMORY_DIR", &memory_dir);
+            std::env::set_var("OMNISOLO_STATUS_DIR", &status_dir);
         }
 
         // Scenario 1: All paths are missing
@@ -80,9 +80,9 @@ mod tests {
 
         // SAFETY: Test-only code removing environment variables
         unsafe {
-            std::env::remove_var("OHC_RUNTIME_DIR");
-            std::env::remove_var("OHC_MEMORY_DIR");
-            std::env::remove_var("OHC_STATUS_DIR");
+            std::env::remove_var("OMNISOLO_RUNTIME_DIR");
+            std::env::remove_var("OMNISOLO_MEMORY_DIR");
+            std::env::remove_var("OMNISOLO_STATUS_DIR");
         }
     }
 }

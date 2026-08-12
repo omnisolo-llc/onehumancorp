@@ -1,10 +1,10 @@
 // --- Global Tooltip & Walkthrough Logic ---
 
     // Tooltips
-    if (!window.OHC_TOOLTIPS) {
-    window.OHC_TOOLTIPS = {};
+    if (!window.OMNISOLO_TOOLTIPS) {
+    window.OMNISOLO_TOOLTIPS = {};
     fetch("/api/v1/tooltips").then(r => r.json()).then(data => {
-        Object.assign(window.OHC_TOOLTIPS, data);
+        Object.assign(window.OMNISOLO_TOOLTIPS, data);
     }).catch(e => {
         console.error(e);
     });
@@ -45,7 +45,7 @@
         const target = e.target.closest('[data-tooltip], [id]');
         if (target) {
             const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
-            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && tooltipId && window.OMNISOLO_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 showTooltip(e, text);
             }
@@ -64,7 +64,7 @@
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
             const tooltipId = target.getAttribute('data-tooltip-id') || target.id;
-            const text = (window.OHC_TOOLTIPS && tooltipId && window.OHC_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && tooltipId && window.OMNISOLO_TOOLTIPS[tooltipId]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -477,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to OmniSolo</a></li>
                 <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
                 <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   </label>
                 </div>
                 <div id="help-widget-advanced-links" style="display: none;">
-                    <a  href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OHC Advanced API Reference</a>
+                    <a  href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OmniSolo Advanced API Reference</a>
                     <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
                 </div>
             </div>

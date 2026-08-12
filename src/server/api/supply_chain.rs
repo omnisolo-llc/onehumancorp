@@ -4,8 +4,8 @@ use chrono::Utc;
 use std::sync::Arc;
 use crate::db::DB;
 
-use ::server_ohc::supply_chain::supply_chain_service_server::SupplyChainService;
-use ::server_ohc::supply_chain::{GetLowStockAlertsRequest, GetLowStockAlertsResponse, ApprovePurchaseOrderRequest, ApprovePurchaseOrderResponse, RawMaterial, PurchaseOrder};
+use ::server_omnisolo::supply_chain::supply_chain_service_server::SupplyChainService;
+use ::server_omnisolo::supply_chain::{GetLowStockAlertsRequest, GetLowStockAlertsResponse, ApprovePurchaseOrderRequest, ApprovePurchaseOrderResponse, RawMaterial, PurchaseOrder};
 use crate::domain::repository::supply_chain_repo::SupplyChainRepo;
 
 pub struct SupplyChainApi {

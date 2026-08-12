@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use ::server_ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
+use ::server_omnisolo::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use super::provider::FileSystemProvider;
 use tracing::Instrument;
 

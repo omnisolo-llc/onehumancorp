@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Represents the exhaustive set of all possible Swarm Protocol messages.
-/// This file implements the complete OHC-SIP definition for robust cross-agent communication.
+/// This file implements the complete OmniSolo-SIP definition for robust cross-agent communication.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", content = "payload")]
 pub enum SipMessage {

@@ -529,7 +529,7 @@ export default function SettingsPage() {
               <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
                   <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">AI Voice Receptionist</div>
-                  <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Let OHC handle your business calls.</div>
+                  <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Let OmniSolo handle your business calls.</div>
                 </div>
               </div>
               <div className="app-panel-body p-6 space-y-4">
@@ -673,7 +673,7 @@ export default function SettingsPage() {
             <label className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-white dark:bg-gray-900 transition-colors">
               <div>
                 <span>Enable Product Telemetry (Standalone Mode)</span>
-                <p className="text-xs text-gray-500 font-normal mt-1">Shares anonymous usage data to help us improve OHC. Explicit opt-in required for Standalone Mode.</p>
+                <p className="text-xs text-gray-500 font-normal mt-1">Shares anonymous usage data to help us improve OmniSolo. Explicit opt-in required for Standalone Mode.</p>
               </div>
               <input
                 type="checkbox"

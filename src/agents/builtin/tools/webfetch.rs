@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::json;
@@ -65,7 +65,7 @@ impl PydanticToolExecutor<WebFetchArgs> for WebFetchExecutor {
 
             let mut response = client
                 .get(current_url.clone())
-                .header("User-Agent", "OHC-Agent/1.0")
+                .header("User-Agent", "OmniSolo-Agent/1.0")
                 .send()
                 .await
                 .map_err(|error| {

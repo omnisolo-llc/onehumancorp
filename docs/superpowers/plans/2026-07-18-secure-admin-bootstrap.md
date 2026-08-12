@@ -16,7 +16,7 @@
 - Modify: `src/server/api/setup.rs`
 - Test: `src/server/api/setup.rs`
 
-- [ ] Add failing tests proving a missing, short, or incorrect `OHC_SETUP_TOKEN` cannot create an admin.
+- [ ] Add failing tests proving a missing, short, or incorrect `OMNISOLO_SETUP_TOKEN` cannot create an admin.
 - [ ] Run `bazel test //src/server:server_lib_test --test_filter=setup --nocache_test_results --test_output=errors` and confirm the new tests fail for the missing behavior.
 - [ ] Replace the client-controlled role with fixed `ADMIN`, require username/email/password/organization ID bounds, and validate `Authorization: Bearer` against the configured token.
 - [ ] Run the focused Rust test and confirm all setup tests pass.
@@ -51,7 +51,7 @@
 
 - [ ] Add failing shell-contract assertions for `/api/v1/setup/admin`, the setup bearer header, and marker creation only on success.
 - [ ] Run `bazel test //deploy:e2e_ci_execution_contract_test --nocache_test_results --test_output=errors` and confirm failure.
-- [ ] Pass `OHC_SETUP_TOKEN` to server and server-init, send fixed ADMIN input to the versioned endpoint, and exit nonzero without a marker for unexpected status.
+- [ ] Pass `OMNISOLO_SETUP_TOKEN` to server and server-init, send fixed ADMIN input to the versioned endpoint, and exit nonzero without a marker for unexpected status.
 - [ ] Re-run the shell contract and `bash -n` until both pass.
 
 ### Task 5: Authenticate real Compose and Kind smoke requests

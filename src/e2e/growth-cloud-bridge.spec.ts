@@ -22,7 +22,7 @@ test.describe('Growth Cloud Bridge Loop', () => {
 
     // The link should not be the fallback or error link
     const linkInput = page.locator('#referral-link');
-    await expect(linkInput).toHaveValue(/https:\/\/(ohc\.app|cloud\.ohc\.network)\/invite\//);
+    await expect(linkInput).toHaveValue(/https:\/\/(cloud.omnisolo.co|cloud\.ohc\.network)\/invite\//);
 
     // The copy button should work
     const copyBtn = page.locator('#copy-btn');

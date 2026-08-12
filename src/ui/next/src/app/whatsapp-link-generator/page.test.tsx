@@ -52,22 +52,32 @@ describe('WhatsAppLinkGeneratorPage', () => {
     expect(linkTextarea).toBeDefined();
     expect(linkTextarea.value).toContain('https://wa.me/1234567890?text=');
     expect(linkTextarea.value).toContain(encodeURIComponent('Hello'));
-    expect(linkTextarea.value).toContain(encodeURIComponent('\n\n⚡ Powered by OHC'));
+    expect(linkTextarea.value).toContain(encodeURIComponent('\n\n⚡ Powered by OmniSolo'));
   });
 
   it('shows paywall when trying to remove branding', () => {
     render(<WhatsAppLinkGeneratorPage />);
 
-    const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge \(Pro\)/i });
+    const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo" Badge \(Pro\)/i });
     fireEvent.click(toggle);
 
     expect(screen.getByText('Upgrade to Pro')).toBeDefined();
     expect(screen.getByText(/Make your links 100% yours/i)).toBeDefined();
   });
 
-  it('renders Powered by OHC footer', () => {
+  it('renders Powered by OmniSolo footer', () => {
     render(<WhatsAppLinkGeneratorPage />);
-    const footerLinks = screen.getAllByText(/Powered by OHC/i);
+    const footerLinks = screen.getAllByText(/Powered by OmniSolo/i);
     expect(footerLinks.length).toBeGreaterThan(0);
+  });
+
+  it('does not depend on an external Google Fonts stylesheet', () => {
+    render(<WhatsAppLinkGeneratorPage />);
+
+    const styleText = [...document.querySelectorAll('style')]
+      .map((style) => style.textContent || '')
+      .join('\n');
+
+    expect(styleText).not.toMatch(/fonts\.(googleapis|gstatic)\.com/i);
   });
 });

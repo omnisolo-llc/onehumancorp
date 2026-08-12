@@ -9,7 +9,7 @@ The "Blank Page" Paralysis (Onboarding Fatigue): Non-technical SMB owners sign u
 ## Research Report
 - **Competitor Landscape**: Legacy platforms (Shopify, Wix) treat onboarding as a manual configuration process. AI tools like Durable generate a site fast but lack the deep operational layers needed for actual business management.
 - **User Needs**: Users want to skip the "building" phase and go straight to "selling". They need an automated system that infers the heavy lifting from minimal input.
-- **AI Differentiation**: Competitors use AI as a "Copilot" (you drive, it helps). OHC uses AI as a "Department" (it drives, you approve). The Invisible Storefront Generator autonomously creates the entire setup based on a few sentences of input.
+- **AI Differentiation**: Competitors use AI as a "Copilot" (you drive, it helps). OmniSolo uses AI as a "Department" (it drives, you approve). The Invisible Storefront Generator autonomously creates the entire setup based on a few sentences of input.
 
 ## Design Doc
 ### High-Level Architecture

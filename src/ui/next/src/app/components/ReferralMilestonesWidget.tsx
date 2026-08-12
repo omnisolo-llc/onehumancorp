@@ -80,7 +80,7 @@ export default function ReferralMilestonesWidget({
      progressPercent = Math.min(100, Math.max(0, (currentProgress / range) * 100));
   }
 
-  const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${data.tenant_id}&source=milestone_widget` : `https://ohc.app/onboarding?ref=${data.tenant_id}&source=milestone_widget`;
+  const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${data.tenant_id}&source=milestone_widget` : `https://cloud.omnisolo.co/onboarding?ref=${data.tenant_id}&source=milestone_widget`;
 
   const handleCopy = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -106,7 +106,7 @@ export default function ReferralMilestonesWidget({
         </div>
 
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-            Share OHC with other business owners to unlock exclusive rewards and platform credits.
+            Share OmniSolo with other business owners to unlock exclusive rewards and platform credits.
         </p>
 
         {nextMilestone && (

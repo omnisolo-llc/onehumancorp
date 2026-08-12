@@ -12,7 +12,7 @@ Creators and service providers (like Leo the music tutor, who sells sheet music 
     *   **Shopify:** Requires installing apps like "Digital Downloads." This adds extra monthly costs and forces the business owner to manage another disjointed interface.
     *   **Wix/Squarespace:** Basic file delivery exists, but lacks advanced protection (like dynamic watermarking) and relies heavily on email attachments which often fail due to size limits.
     *   **Gumroad:** Excellent single-purpose tool, but forces the business owner to maintain a separate storefront from their main business (e.g., Leo's physical booking site vs. his digital goods site).
-*   **OHC Advantage:** By natively integrating digital entitlements into the global inventory ledger and utilizing the AI Operations Agent, OHC can automatically process the order, dynamically watermark the file with the buyer's details, generate a Zero-Trust signed URL, and dispatch it via the Omnichannel AI Inbox—all invisibly to the business owner.
+*   **OmniSolo Advantage:** By natively integrating digital entitlements into the global inventory ledger and utilizing the AI Operations Agent, OmniSolo can automatically process the order, dynamically watermark the file with the buyer's details, generate a Zero-Trust signed URL, and dispatch it via the Omnichannel AI Inbox—all invisibly to the business owner.
 
 ## Design Doc
 

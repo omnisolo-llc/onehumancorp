@@ -42,8 +42,8 @@ pub async fn translate_inbox_message_with_llm(
         "Return strict JSON with keys source_language and translated_content. Detect the customer's message language and translate it to {target_language} for an omnichannel SMB inbox. Preserve names, prices, dates, and order details. Tenant: {tenant_id}. Source: {source}. Message: {message}"
     );
 
-    let raw = match std::env::var("OHC_TRANSLATION_LLM_PROVIDER")
-        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+    let raw = match std::env::var("OMNISOLO_TRANSLATION_LLM_PROVIDER")
+        .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
         .as_deref()
     {
         Ok("minimax") => {
@@ -127,8 +127,8 @@ pub async fn generate_inbox_draft_reply(
     );
     let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-    match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+    match std::env::var("OMNISOLO_INBOX_DRAFT_LLM_PROVIDER")
+        .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
         .as_deref()
     {
         Ok("minimax") => {

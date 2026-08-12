@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subscribe & Save AI Generator - OHC</title>
+  <title>Subscribe & Save AI Generator - OmniSolo</title>
   <style>
     :root {
       --primary: #0066FF;
@@ -219,7 +219,7 @@
 
     <div class="checkbox-group">
       <input type="checkbox" id="brand-link" checked>
-      <label for="brand-link" style="margin-bottom: 0;">Include 'Powered by OHC' branding link (Earn referral credits)</label>
+      <label for="brand-link" style="margin-bottom: 0;">Include 'Powered by OmniSolo' branding link (Earn referral credits)</label>
     </div>
 
     <button id="generate-btn" class="btn-primary">Generate AI Campaign</button>
@@ -264,7 +264,7 @@
       } catch (err) {
         console.error(err);
         // Fallback for UI testing if backend is offline
-        document.getElementById('preview-text').innerText = `Subject: Never run out of ${payload.product_name || 'your favorite items'} again!\n\nHi there,\n\nWe noticed you recently purchased ${payload.product_name || 'your favorite items'}. Did you know you can get it delivered automatically?\n\nSign up for our ${payload.frequency || 'monthly'} Subscribe & Save plan and get ${payload.discount_percentage || '10'}% off every order.\n\nReady to subscribe? Click here: https://ohc.store/subscribe\n\nBest,\nThe Your Store Team${payload.brand_link ? '\n\n⚡ Powered by OHC' : ''}`;
+        document.getElementById('preview-text').innerText = `Subject: Never run out of ${payload.product_name || 'your favorite items'} again!\n\nHi there,\n\nWe noticed you recently purchased ${payload.product_name || 'your favorite items'}. Did you know you can get it delivered automatically?\n\nSign up for our ${payload.frequency || 'monthly'} Subscribe & Save plan and get ${payload.discount_percentage || '10'}% off every order.\n\nReady to subscribe? Click here: https://cloud.omnisolo.co/subscribe\n\nBest,\nThe Your Store Team${payload.brand_link ? '\n\n⚡ Powered by OmniSolo' : ''}`;
         document.getElementById('preview-box').style.display = 'block';
         document.getElementById('success-msg').style.display = 'none';
       } finally {

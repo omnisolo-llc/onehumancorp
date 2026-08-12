@@ -115,7 +115,7 @@ async fn generate_draft_reply(
 
     let mut enriched_context_summary = context_summary.to_string();
 
-    let embedding = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+    let embedding = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
         Ok("gemini") => crate::minimax::LocalLLMClient::new().generate_embedding(customer_message).await,
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
@@ -173,7 +173,7 @@ async fn generate_draft_reply(
     );
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
-    let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+    let llm_res = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
         Ok("gemini") => {
             crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
         }

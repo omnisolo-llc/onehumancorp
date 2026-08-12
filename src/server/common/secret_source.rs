@@ -99,8 +99,8 @@ mod tests {
     use super::load_optional_secret;
     use std::path::{Path, PathBuf};
 
-    const VALUE_ENV: &str = "OHC_TEST_SECRET_VALUE";
-    const FILE_ENV: &str = "OHC_TEST_SECRET_FILE";
+    const VALUE_ENV: &str = "OMNISOLO_TEST_SECRET_VALUE";
+    const FILE_ENV: &str = "OMNISOLO_TEST_SECRET_FILE";
 
     fn write_secret(contents: &[u8]) -> (tempfile::TempDir, PathBuf) {
         let directory = tempfile::tempdir().unwrap();

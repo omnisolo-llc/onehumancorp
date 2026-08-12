@@ -8,12 +8,12 @@ Small business owners (e.g., Maya the Home Baker) receive customer inquiries acr
 
 ## Research Report
 The current market (Shopify, Wix) either lacks a unified inbox entirely or provides limited, chat-only integrations (like Shopify Inbox) that don't deeply integrate with a full suite of business operations (inventory, bookings). Tools like Zendesk or Intercom are too complex and expensive for micro-businesses.
-Integrating Meta Graph API (Instagram/Messenger), WhatsApp Business API, Twilio (SMS), and Resend/IMAP (Email) into a single Event Mesh within OHC will allow our AI agents to consume, analyze, and respond to all messages centrally.
+Integrating Meta Graph API (Instagram/Messenger), WhatsApp Business API, Twilio (SMS), and Resend/IMAP (Email) into a single Event Mesh within OmniSolo will allow our AI agents to consume, analyze, and respond to all messages centrally.
 
 *Competitor Comparison:*
 - **Shopify Inbox:** Good for web chat and basic Instagram, but not deeply autonomous.
 - **Wix Inbox:** Basic consolidation, limited AI.
-- **OHC:** True autonomous agentic inbox where AI drafts, approves, or auto-sends replies based on business context (inventory, calendar, policies) across *all* channels.
+- **OmniSolo:** True autonomous agentic inbox where AI drafts, approves, or auto-sends replies based on business context (inventory, calendar, policies) across *all* channels.
 
 ## Design Doc
 
@@ -28,7 +28,7 @@ graph TD;
         Email[Email / Resend]
     end
 
-    subgraph OHC Integration Layer
+    subgraph OmniSolo Integration Layer
         MetaWebhook[Meta Webhook Handler]
         TwilioWebhook[Twilio Webhook Handler]
         EmailWebhook[Email Webhook Handler]

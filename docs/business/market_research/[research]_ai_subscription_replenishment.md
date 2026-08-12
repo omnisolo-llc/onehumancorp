@@ -9,7 +9,7 @@ Small businesses selling consumable goods (like Maya the baker or a local coffee
 ## Research Report
 - **Shopify:** Requires third-party apps like ReCharge or Skio. These apps cost hundreds of dollars a month, inject code into the storefront, and have complex configuration dashboards that overwhelm non-technical users.
 - **Wix/Squarespace:** Basic subscription features exist but lack flexibility for customer self-management (e.g., "skip a month", "swap flavor").
-- **OHC Opportunity:** Subscriptions should be a native, one-click feature integrated directly into the core product catalog and Stripe Billing. The AI agents should handle the heavy lifting: predicting when a customer is running low and prompting them, or automatically managing the recurring charge and fulfillment workflow.
+- **OmniSolo Opportunity:** Subscriptions should be a native, one-click feature integrated directly into the core product catalog and Stripe Billing. The AI agents should handle the heavy lifting: predicting when a customer is running low and prompting them, or automatically managing the recurring charge and fulfillment workflow.
 
 ## Design Doc
 ### Architecture Diagram

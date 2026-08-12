@@ -58,7 +58,7 @@ export default function WinBackCampaignPage() {
   const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI win-back campaigns for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI win-back campaigns for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
     try {
       const response = await fetch('/api/v1/growth/trial-extension/claim', { method: 'POST' });
       if (!response.ok) throw new Error('Pro activation is unavailable.');
@@ -212,7 +212,7 @@ export default function WinBackCampaignPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

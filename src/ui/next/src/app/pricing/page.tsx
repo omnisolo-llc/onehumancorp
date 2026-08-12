@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { ViralTrialExtensionWidget } from '../components/ViralTrialExtensionWidget';
 import { PricingCard } from './PricingCard';
 
@@ -217,12 +217,12 @@ export default function PricingPage() {
         </div>
 
         <div className="flex justify-center mt-4">
-          <PoweredByOHC tenantId="ohc" />
+          <PoweredByOmniSolo tenantId="ohc" />
         </div>
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         /* The .ohc-growth-card styles are now managed globally in globals.css for design token consistency */

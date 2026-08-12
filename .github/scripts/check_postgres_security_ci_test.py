@@ -123,10 +123,10 @@ def main() -> None:
             "workflow BASH_ENV override",
         ),
         ("pgvector/pgvector:pg16", "postgres:16", "pgvector service"),
-        ("OHC_REQUIRE_POSTGRES_TESTS: \"1\"", "OHC_REQUIRE_POSTGRES_TESTS: \"0\"", "required mode"),
+        ("OMNISOLO_REQUIRE_POSTGRES_TESTS: \"1\"", "OMNISOLO_REQUIRE_POSTGRES_TESTS: \"0\"", "required mode"),
         (
-            "      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
-            '      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security\n      PATH: "/tmp/fake-bin"',
+            "      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
+            '      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security\n      PATH: "/tmp/fake-bin"',
             "postgres-security job PATH override",
         ),
         ("AND NOT rolbypassrls", "OR rolbypassrls", "NOBYPASSRLS assertion"),
@@ -150,8 +150,8 @@ def main() -> None:
             "commented role assertions",
         ),
         (
-            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          if false; then\n            psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          if false; then\n            psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "unreachable role proof",
         ),
         (
@@ -245,33 +245,33 @@ def main() -> None:
             "check-changes exec replacement",
         ),
         (
-            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          exit 00\n          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          exit 00\n          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "application-role proof early success",
         ),
         (
-            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "          true <<'SQL'",
             "inert admin SQL heredoc owner",
         ),
         (
-            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "          true <<'SQL'",
             "inert application-role SQL heredoc owner",
         ),
         (
-            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          "$(printf psql)" "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          "$(printf psql)" "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "substituted application-role SQL owner",
         ),
         (
-            '          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          command psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          command psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "wrapped application-role SQL owner",
         ),
         (
-            '          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
-            '          exec /bin/true\n          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
+            '          exec /bin/true\n          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\'',
             "application-role proof exec replacement",
         ),
         (
@@ -291,12 +291,12 @@ def main() -> None:
         ),
         (
             "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
-            '      - name: Run PostgreSQL tenant-isolation suite\n        env:\n          OHC_REQUIRE_POSTGRES_TESTS: "0"\n          OHC_DATABASE_URL: ""\n        run:',
+            '      - name: Run PostgreSQL tenant-isolation suite\n        env:\n          OMNISOLO_REQUIRE_POSTGRES_TESTS: "0"\n          OMNISOLO_DATABASE_URL: ""\n        run:',
             "suite optional-skip environment",
         ),
         (
             "      - name: Run PostgreSQL tenant-isolation suite\n        run:",
-            '      - name: Run PostgreSQL tenant-isolation suite\n        ? env\n        :\n          OHC_REQUIRE_POSTGRES_TESTS: "0"\n          OHC_DATABASE_URL: ""\n        run:',
+            '      - name: Run PostgreSQL tenant-isolation suite\n        ? env\n        :\n          OMNISOLO_REQUIRE_POSTGRES_TESTS: "0"\n          OMNISOLO_DATABASE_URL: ""\n        run:',
             "explicit-key suite optional-skip environment",
         ),
         (

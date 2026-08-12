@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -83,7 +83,7 @@ pub fn screenshot_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::ToolError;
+    use omnisolo_builtin_agent_core::types::ToolError;
     use serde_json::json;
     use std::path::PathBuf;
 

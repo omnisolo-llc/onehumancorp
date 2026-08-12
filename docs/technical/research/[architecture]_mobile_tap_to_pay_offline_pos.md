@@ -10,7 +10,7 @@ For businesses operating in the real world—like Fatima running a food cart in 
 - **Wix:** Has a POS system and supports Tap-to-Pay via the Wix Owner app, but offline capabilities are limited.
 
 **Market Needs:**
-The modern solopreneur expects their smartphone to be their entire business operating system. Apple's "Tap to Pay on iPhone" and Google's equivalent for Android have commoditized the payment terminal. By integrating this deeply with an offline-first data synchronization model, OHC can replace Square and Shopify POS entirely for small businesses, without requiring any external hardware.
+The modern solopreneur expects their smartphone to be their entire business operating system. Apple's "Tap to Pay on iPhone" and Google's equivalent for Android have commoditized the payment terminal. By integrating this deeply with an offline-first data synchronization model, OmniSolo can replace Square and Shopify POS entirely for small businesses, without requiring any external hardware.
 
 ## Design Doc
 
@@ -18,13 +18,13 @@ The modern solopreneur expects their smartphone to be their entire business oper
 ```mermaid
 graph TD;
     subgraph Mobile Device
-        App[OHC Mobile App 375px] --> LocalDB[(Local SQLite / CRDT)];
+        App[OmniSolo Mobile App 375px] --> LocalDB[(Local SQLite / CRDT)];
         App --> TapToPay[Native Tap-to-Pay SDK];
         LocalDB --> SyncEngine[Offline Sync Engine];
         TapToPay --> LocalDB: Record Encrypted Payment Intent;
     end
 
-    SyncEngine -- Network Restored --> Gateway[OHC API Gateway];
+    SyncEngine -- Network Restored --> Gateway[OmniSolo API Gateway];
     Gateway --> Stripe[Stripe Terminal API];
     Gateway --> MainDB[(Cloud Postgres)];
     Gateway --> Agents[AI Agent Swarm];
@@ -36,7 +36,7 @@ graph TD;
 ```
 
 ### Mobile UX Flow (375px First)
-1. **Dashboard:** Priya opens the OHC app. A prominent "New Sale" FAB (Floating Action Button) is visible, designed using macOS-style Translucent Glass materials.
+1. **Dashboard:** Priya opens the OmniSolo app. A prominent "New Sale" FAB (Floating Action Button) is visible, designed using macOS-style Translucent Glass materials.
 2. **Cart Building:** She taps products from her visual catalog. The app responds instantly (sub-50ms) because it reads from the local CRDT store.
 3. **Checkout:** She taps "Charge $45.00". A bottom sheet slides up asking "Tap to Pay" or "Cash".
 4. **Payment:** She selects "Tap to Pay". The native iOS/Android Tap-to-Pay system UI appears. The customer taps their card against Priya's phone.

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { parseAuthRuntimeConfig } from "./runtimeConfig";
 
 const production = {
-  OHC_WEB_CANONICAL_ORIGIN: "https://app.example.com",
+  OMNISOLO_WEB_CANONICAL_ORIGIN: "https://app.example.com",
   BACKEND_URL: "https://api.example.com:8443",
-  OHC_WEB_LOCAL_DEV: "false",
+  OMNISOLO_WEB_LOCAL_DEV: "false",
 };
 
 describe("authentication runtime configuration", () => {
@@ -23,7 +23,7 @@ describe("authentication runtime configuration", () => {
     expect(
       parseAuthRuntimeConfig({
         ...production,
-        OHC_WEB_CANONICAL_ORIGIN: "https://192.168.1.40:8443",
+        OMNISOLO_WEB_CANONICAL_ORIGIN: "https://192.168.1.40:8443",
         BACKEND_URL: "http://127.0.0.1:18789",
       }),
     ).toMatchObject({
@@ -34,7 +34,7 @@ describe("authentication runtime configuration", () => {
   });
 
   it("allows plaintext only for explicit loopback local development", () => {
-    expect(parseAuthRuntimeConfig({ OHC_WEB_LOCAL_DEV: "true" })).toEqual({
+    expect(parseAuthRuntimeConfig({ OMNISOLO_WEB_LOCAL_DEV: "true" })).toEqual({
       canonicalOrigin: "http://127.0.0.1:3000",
       backendOrigin: "http://127.0.0.1:18789",
       localDev: true,
@@ -53,22 +53,22 @@ describe("authentication runtime configuration", () => {
     "http://[fe80::40]:3000",
   ])("allows an explicit private LAN origin in local development: %s", (origin) => {
     expect(parseAuthRuntimeConfig({
-      OHC_WEB_LOCAL_DEV: "true",
-      OHC_WEB_CANONICAL_ORIGIN: origin,
+      OMNISOLO_WEB_LOCAL_DEV: "true",
+      OMNISOLO_WEB_CANONICAL_ORIGIN: origin,
     }).canonicalOrigin).toBe(origin);
   });
 
   it.each([
-    [{ ...production, OHC_WEB_CANONICAL_ORIGIN: undefined }, "OHC_WEB_CANONICAL_ORIGIN is required"],
+    [{ ...production, OMNISOLO_WEB_CANONICAL_ORIGIN: undefined }, "OMNISOLO_WEB_CANONICAL_ORIGIN is required"],
     [{ ...production, BACKEND_URL: undefined }, "BACKEND_URL is required"],
-    [{ ...production, OHC_WEB_LOCAL_DEV: "yes" }, "OHC_WEB_LOCAL_DEV must be true or false"],
-    [{ ...production, OHC_WEB_CANONICAL_ORIGIN: "http://app.example.com" }, "canonical origin must use HTTPS"],
-    [{ ...production, OHC_WEB_CANONICAL_ORIGIN: "https://app.example.com/path" }, "canonical origin must not contain"],
-    [{ ...production, OHC_WEB_CANONICAL_ORIGIN: "https://user@app.example.com" }, "canonical origin must not contain"],
+    [{ ...production, OMNISOLO_WEB_LOCAL_DEV: "yes" }, "OMNISOLO_WEB_LOCAL_DEV must be true or false"],
+    [{ ...production, OMNISOLO_WEB_CANONICAL_ORIGIN: "http://app.example.com" }, "canonical origin must use HTTPS"],
+    [{ ...production, OMNISOLO_WEB_CANONICAL_ORIGIN: "https://app.example.com/path" }, "canonical origin must not contain"],
+    [{ ...production, OMNISOLO_WEB_CANONICAL_ORIGIN: "https://user@app.example.com" }, "canonical origin must not contain"],
     [{ ...production, BACKEND_URL: "http://8.8.8.8:8080" }, "backend origin must use HTTPS or loopback HTTP"],
     [{ ...production, BACKEND_URL: "https://api.example.com/path" }, "backend origin must not contain"],
-    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://8.8.8.8:3000" }, "local development canonical origin must be loopback or a private LAN IP"],
-    [{ OHC_WEB_LOCAL_DEV: "true", OHC_WEB_CANONICAL_ORIGIN: "http://devbox.local:3000" }, "local development canonical origin must be loopback or a private LAN IP"],
+    [{ OMNISOLO_WEB_LOCAL_DEV: "true", OMNISOLO_WEB_CANONICAL_ORIGIN: "http://8.8.8.8:3000" }, "local development canonical origin must be loopback or a private LAN IP"],
+    [{ OMNISOLO_WEB_LOCAL_DEV: "true", OMNISOLO_WEB_CANONICAL_ORIGIN: "http://devbox.local:3000" }, "local development canonical origin must be loopback or a private LAN IP"],
   ] as const)("rejects invalid configuration %#", (env, message) => {
     expect(() => parseAuthRuntimeConfig(env)).toThrow(message);
   });

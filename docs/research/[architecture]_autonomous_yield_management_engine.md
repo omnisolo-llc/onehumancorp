@@ -8,7 +8,7 @@ Small business owners in the services and bookings sector (e.g., Leo the Music T
 - **Competitor Analysis**:
   - **Shopify/Wix**: Focus on static product pricing. Any dynamic pricing requires complex third-party apps (e.g., Bold Custom Pricing) that are not tailored for services/bookings.
   - **Acuity/Calendly**: Allow for coupons but do not autonomously adjust prices based on real-time availability.
-- **OHC Opportunity**: OHC can differentiate by embedding an *Invisible AI Yield Manager* that autonomously adjusts service prices and triggers targeted promotions to fill unused capacity, requiring zero configuration from the business owner.
+- **OmniSolo Opportunity**: OmniSolo can differentiate by embedding an *Invisible AI Yield Manager* that autonomously adjusts service prices and triggers targeted promotions to fill unused capacity, requiring zero configuration from the business owner.
 
 ## Design Doc
 - **Architecture**:
@@ -24,7 +24,7 @@ Small business owners in the services and bookings sector (e.g., Leo the Music T
 ## Implementation Prompt
 **Outcome**: Implement the backend logic and mobile-first UI for the Autonomous Yield Management Engine.
 **CUJ**:
-1. Leo (Music Tutor) logs into the OHC app.
+1. Leo (Music Tutor) logs into the OmniSolo app.
 2. The dashboard displays a notification: "3 empty slots tomorrow. Send a 20% discount offer to 15 past students?"
 3. Leo taps "Approve."
 4. The system updates the price for those specific slots and dispatches notifications via the Ambassador Agent.

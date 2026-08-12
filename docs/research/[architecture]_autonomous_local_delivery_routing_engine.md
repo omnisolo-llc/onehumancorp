@@ -5,16 +5,16 @@ Implement Autonomous Local Delivery Routing Engine
 
 ## Problem Statement
 For local business owners like **Maya the baker** or **Fatima the food cart operator**, delivering physical goods locally is a massive source of operational friction. They currently have to manually text customers, punch addresses into Google Maps, figure out the most efficient driving route in their heads, and field endless "where is my order?" messages.
-This breaks the OneHumanCorp promise of invisible complexity. A baker should bake; they shouldn't be acting as a full-time logistics dispatcher or a customer support agent tracking a delayed courier. We need an integrated, zero-touch system that automatically batches local orders, calculates optimal routes, generates a simple step-by-step driver view for whoever is doing the delivery (the owner or an employee), and keeps the buyer updated in real-time.
+This breaks the OmniSolo promise of invisible complexity. A baker should bake; they shouldn't be acting as a full-time logistics dispatcher or a customer support agent tracking a delayed courier. We need an integrated, zero-touch system that automatically batches local orders, calculates optimal routes, generates a simple step-by-step driver view for whoever is doing the delivery (the owner or an employee), and keeps the buyer updated in real-time.
 
 ## Research Report
-- **Current OHC State:** We have strong booking, pickup, and standard shipping capabilities. However, "Local Delivery" is treated either as generic shipping (which requires carrier integrations) or simple pickup, leaving a gap for point-to-point self-managed local delivery.
+- **Current OmniSolo State:** We have strong booking, pickup, and standard shipping capabilities. However, "Local Delivery" is treated either as generic shipping (which requires carrier integrations) or simple pickup, leaving a gap for point-to-point self-managed local delivery.
 - **Competitor Analysis:**
   - **Shopify:** Offers local delivery as a shipping method, but their native routing app is clunky, requiring manual selection of orders and dispatching. It often pushes merchants to third-party paid apps (like Routific).
   - **Square:** Good point-of-sale integration, but local delivery dispatch is heavily reliant on integration with On-Demand delivery services (UberEats/DoorDash) which eat heavily into SMB margins. Self-delivery routing is weak.
   - **Wix:** Basic local delivery zones exist, but lacks multi-stop intelligent routing and real-time SMS buyer tracking without external apps.
 - **The Gap:** There is no platform offering a truly *autonomous* local delivery agent that seamlessly sits between the ledger, the map, and the buyer's phone.
-- **Opportunity:** By treating Local Delivery routing as an autonomous AI background process, OHC can own the entire post-purchase local delivery experience, drastically reducing merchant operations time and improving buyer trust.
+- **Opportunity:** By treating Local Delivery routing as an autonomous AI background process, OmniSolo can own the entire post-purchase local delivery experience, drastically reducing merchant operations time and improving buyer trust.
 
 ## Design Doc
 
@@ -51,7 +51,7 @@ graph TD
 **Outcome:** Build the local delivery driver manifest and routing engine.
 **Core User Journey (CUJ):**
 1. The AI Operations Agent identifies 3 local delivery orders.
-2. The Merchant opens the OHC mobile view, sees a "Start Deliveries" card, and taps it.
+2. The Merchant opens the OmniSolo mobile view, sees a "Start Deliveries" card, and taps it.
 3. The UI presents an optimized, offline-capable route list.
 4. The Merchant completes the route, swiping to mark each as delivered. The system handles buyer ETA notifications automatically.
 **Acceptance Criteria:**

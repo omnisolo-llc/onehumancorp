@@ -24,13 +24,13 @@ impl LocalLLMProvider {
     }
 
     pub fn from_env() -> Self {
-        let endpoint = std::env::var("OHC_LOCAL_LLM_ENDPOINT")
+        let endpoint = std::env::var("OMNISOLO_LOCAL_LLM_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
-        let embed_endpoint = std::env::var("OHC_LOCAL_LLM_EMBED_ENDPOINT")
+        let embed_endpoint = std::env::var("OMNISOLO_LOCAL_LLM_EMBED_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/embeddings".to_string());
-        let model = std::env::var("OHC_LOCAL_MODEL_NAME")
+        let model = std::env::var("OMNISOLO_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
-        let ttl_secs = std::env::var("OHC_PROMPT_CACHE_TTL")
+        let ttl_secs = std::env::var("OMNISOLO_PROMPT_CACHE_TTL")
             .ok()
             .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(600); // 10 minute TTL default
@@ -58,7 +58,7 @@ impl LocalLLMProvider {
             return Ok("Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n".to_string() + &" word".repeat(20000));
         }
 
-        if std::env::var("CI").is_ok() || std::env::var("OHC_ENV").unwrap_or_default() == "test" {
+        if std::env::var("CI").is_ok() || std::env::var("OMNISOLO_ENV").unwrap_or_default() == "test" {
             let lower_prompt = optimized_prompt.to_lowercase();
             if lower_prompt.contains("e2e_mock_trigger_expert_team_analysis") {
                 if lower_prompt.contains("you are an expert in") {

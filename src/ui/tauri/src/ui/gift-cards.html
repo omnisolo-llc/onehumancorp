@@ -145,8 +145,8 @@
       </div>
       <div class="card-footer">
         <div>Redeemable at My Store</div>
-        <span>Powered by OHC</span>
-        <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-tenant&source=gift_card" id="powered-by-link">⚡ Powered by OHC</a>
+        <span>Powered by OmniSolo</span>
+        <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-tenant&source=gift_card" id="powered-by-link">⚡ Powered by OmniSolo</a>
       </div>
     </div>
 
@@ -192,7 +192,7 @@
           // Set href dynamically based on tenant id (though default-tenant is hardcoded in initial HTML for preview)
           poweredByLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=gift_card`;
 
-          const baseUrl = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
+          const baseUrl = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
           shareLink.value = `${baseUrl}/gift-card?amount=${amount}&ref=${tenantId}`;
 
           resultArea.style.display = 'block';

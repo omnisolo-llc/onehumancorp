@@ -11,7 +11,7 @@ export function ViralTrialExtensionWidget() {
     setIsClaiming(true);
     setError("");
 
-    const message = "I just set up my AI-powered storefront using OneHumanCorp! 🚀 Get your own assistant-led business hub today. #OneHumanCorp #SmallBiz";
+    const message = "I just set up my AI-powered storefront using OmniSolo! 🚀 Get your own assistant-led business hub today. #OmniSolo #SmallBiz";
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
     // Open the share window

@@ -10,7 +10,7 @@ The `telemetry-mcp-bridge` exposes standard MCP (Model Context Protocol) JSON-RP
 
 ### `mcp.telemetry.sync`
 
-Synchronizes a batch of local telemetry metrics to the OHC Central Database via the KAIROS Orchestrator.
+Synchronizes a batch of local telemetry metrics to the OmniSolo Central Database via the KAIROS Orchestrator.
 
 **Method:** `tools/call`
 

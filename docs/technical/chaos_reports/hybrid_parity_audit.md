@@ -3,7 +3,7 @@
 # Hybrid OS Chaos Parity Audit
 
 ## Executive Summary
-This report validates the OHC Hybrid Architecture (OHC-HA) under extreme stress and injected failure modes, strictly verifying parity between the Postgres-backed Cloud Pods and SQLite-backed Standalone mode.
+This report validates the OmniSolo Hybrid Architecture (OmniSolo-HA) under extreme stress and injected failure modes, strictly verifying parity between the Postgres-backed Cloud Pods and SQLite-backed Standalone mode.
 
 ## 1. Network Parity & Resilience
 
@@ -37,6 +37,6 @@ graph TD
 - **Verification:** Mesh locks correctly recover using `withSipRetry` during lock contention, verified in `TestLock_ContentionResilience` and `TestMeshFallback_Contention`.
 
 ## Conclusion
-The OHC Hybrid Architecture successfully maintains functional parity. The system correctly routes traffic, retries on locked databases, and fails safely during network partitions. Absolute Autonomy logic remains intact.
+The OmniSolo Hybrid Architecture successfully maintains functional parity. The system correctly routes traffic, retries on locked databases, and fails safely during network partitions. Absolute Autonomy logic remains intact.
 
 </div>

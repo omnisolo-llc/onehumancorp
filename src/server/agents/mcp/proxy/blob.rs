@@ -97,7 +97,7 @@ impl BlobProvider for S3BlobProvider {
 
 pub fn create_blob_provider() -> Arc<dyn BlobProvider> {
     let is_standalone = crate::is_standalone_runtime();
-    let is_multitenant = env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true";
+    let is_multitenant = env::var("OMNISOLO_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true";
 
     if is_multitenant && !is_standalone {
         Arc::new(S3BlobProvider::new())
@@ -193,8 +193,8 @@ mod tests {
     fn test_create_blob_provider() {
         temp_env::with_vars(
             vec![
-                ("OHC_STANDALONE_MODE", None::<&str>),
-                ("OHC_MULTITENANT", None::<&str>),
+                ("OMNISOLO_STANDALONE_MODE", None::<&str>),
+                ("OMNISOLO_MULTITENANT", None::<&str>),
             ],
             || {
                 let _provider = create_blob_provider();
@@ -203,8 +203,8 @@ mod tests {
 
         temp_env::with_vars(
             vec![
-                ("OHC_STANDALONE_MODE", None::<&str>),
-                ("OHC_MULTITENANT", Some("true")),
+                ("OMNISOLO_STANDALONE_MODE", None::<&str>),
+                ("OMNISOLO_MULTITENANT", Some("true")),
             ],
             || {
                 let _provider_mt = create_blob_provider();
@@ -213,8 +213,8 @@ mod tests {
 
         temp_env::with_vars(
             vec![
-                ("OHC_STANDALONE_MODE", Some("true")),
-                ("OHC_MULTITENANT", Some("true")),
+                ("OMNISOLO_STANDALONE_MODE", Some("true")),
+                ("OMNISOLO_MULTITENANT", Some("true")),
             ],
             || {
                 let _provider_st = create_blob_provider();

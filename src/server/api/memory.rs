@@ -7,7 +7,7 @@ use axum::http::HeaderMap;
 use crate::db::DB;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use ohc_builtin_agent::memory_store::VectorRepository;
+use omnisolo_builtin_agent::memory_store::VectorRepository;
 
 #[derive(Serialize)]
 pub struct MemoryResponse {
@@ -49,7 +49,7 @@ async fn get_assistant_memory(
     axum::extract::State(repo): axum::extract::State<std::sync::Arc<VectorRepository>>,
     axum::extract::Path(customer_id): axum::extract::Path<String>,
     auth_info: axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-) -> Result<axum::Json<Vec<ohc_builtin_agent::memory_store::AgentSessionSummary>>, (axum::http::StatusCode, String)> {
+) -> Result<axum::Json<Vec<omnisolo_builtin_agent::memory_store::AgentSessionSummary>>, (axum::http::StatusCode, String)> {
     let tenant_id = auth_info.organization_id.clone().unwrap_or_else(|| "default".to_string());
 
     let results = repo.get_customer_session_summaries(&tenant_id, &customer_id, 10).await
@@ -103,7 +103,7 @@ async fn upload_memory(
         payload.content.clone()
     };
 
-    let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+    let record = omnisolo_builtin_agent::memory_store::EmbeddingRecord {
         id: uuid::Uuid::new_v4().to_string(),
         tenant_id,
         agent_id: "knowledge_agent".to_string(),
@@ -209,7 +209,7 @@ mod tests {
     async fn test_list_memories() {
         let repo = setup_test_repo().await;
 
-        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+        let record = omnisolo_builtin_agent::memory_store::EmbeddingRecord {
             id: "test_mem_1".to_string(),
             tenant_id: "test_tenant".to_string(),
             agent_id: "test_agent".to_string(),
@@ -245,7 +245,7 @@ mod tests {
     async fn test_override_memory() {
         let repo = setup_test_repo().await;
 
-        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+        let record = omnisolo_builtin_agent::memory_store::EmbeddingRecord {
             id: "test_mem_override".to_string(),
             tenant_id: "test_tenant".to_string(),
             agent_id: "test_agent".to_string(),
@@ -292,7 +292,7 @@ mod tests {
     async fn test_override_memory_forbidden() {
         let repo = setup_test_repo().await;
 
-        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+        let record = omnisolo_builtin_agent::memory_store::EmbeddingRecord {
             id: "test_mem_forbidden".to_string(),
             tenant_id: "tenant_A".to_string(),
             agent_id: "test_agent".to_string(),

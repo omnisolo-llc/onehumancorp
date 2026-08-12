@@ -1,8 +1,8 @@
 {
   "$schema": "https://v2.tauri.app/schemas/2.0.0/config.schema.json",
-  "productName": "OHC",
+  "productName": "OmniSolo",
   "version": "0.4.47+1",
-  "identifier": "com.onehumancorp.ohc",
+  "identifier": "com.omnisolo.ohc",
   "build": {
     "frontendDist": "./next_out",
     "devUrl": "http://localhost:3000"
@@ -33,7 +33,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "OHC",
+        "title": "OmniSolo",
         "width": 1200,
         "height": 800,
         "resizable": true,
@@ -48,7 +48,7 @@
     "updater": {
       "pubkey": "TAURI_SIGNING_PUBLIC_KEY_PLACEHOLDER",
       "endpoints": [
-        "https://github.com/onehumancorp/mono/releases/latest/download/latest.json"
+        "https://github.com/omnisolo-llc/omnisolo/releases/latest/download/latest.json"
       ]
     }
   }

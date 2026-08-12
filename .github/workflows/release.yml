@@ -287,8 +287,8 @@ jobs:
           if [[ -n "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET:-}" ]]; then
             echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
           fi
-          echo "OHC_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "OHC_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
+          echo "OMNISOLO_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "OMNISOLO_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
 
       - name: Install macOS signing assets
         if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
@@ -370,15 +370,15 @@ jobs:
             exit 1
           fi
 
-          cp "$DMG_PATH" "dist/OHC-${VERSION_TAG}-macOS.dmg"
-          cp "$TAR_PATH" "dist/OHC-${VERSION_TAG}-macOS.tar.gz"
+          cp "$DMG_PATH" "dist/OmniSolo-${VERSION_TAG}-macOS.dmg"
+          cp "$TAR_PATH" "dist/OmniSolo-${VERSION_TAG}-macOS.tar.gz"
           if [[ -f "$TAR_PATH.sig" ]]; then
-            cp "$TAR_PATH.sig" "dist/OHC-${VERSION_TAG}-macOS.tar.gz.sig"
+            cp "$TAR_PATH.sig" "dist/OmniSolo-${VERSION_TAG}-macOS.tar.gz.sig"
           else
             echo "Missing macOS updater signature: $TAR_PATH.sig" >&2
             exit 1
           fi
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/OHC-${VERSION_TAG}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/OmniSolo-${VERSION_TAG}-macOS.zip"
           ls -lh dist/
 
       - name: Verify macOS signing and notarization
@@ -424,7 +424,7 @@ jobs:
           if ($null -eq $msi) {
             throw 'No Windows MSI installer found'
           }
-          $msiDest = "OHC-$versionTag-Windows.msi"
+          $msiDest = "OmniSolo-$versionTag-Windows.msi"
           Copy-Item $msi.FullName (Join-Path dist $msiDest)
           if (Test-Path "$($msi.FullName).sig") {
             Copy-Item "$($msi.FullName).sig" (Join-Path dist "$msiDest.sig")
@@ -440,11 +440,11 @@ jobs:
           if ($null -eq $exe) {
             throw 'No Windows executable found for portable package'
           }
-          $portableDir = 'dist/OHC-Portable'
+          $portableDir = 'dist/OmniSolo-Portable'
           New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
-          Copy-Item $exe (Join-Path $portableDir 'OHC.exe')
-          @('# OHC portable build marker', 'portable=true') | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
-          Compress-Archive -Path "$portableDir/*" -DestinationPath "dist/OHC-$versionTag-Windows-Portable.zip" -Force
+          Copy-Item $exe (Join-Path $portableDir 'OmniSolo.exe')
+          @('# OmniSolo portable build marker', 'portable=true') | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "dist/OmniSolo-$versionTag-Windows-Portable.zip" -Force
           Remove-Item -Recurse -Force $portableDir
           Get-ChildItem dist | Format-Table Name, Length
 
@@ -466,15 +466,15 @@ jobs:
             exit 1
           fi
 
-          cp "$APPIMAGE" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.AppImage"
+          cp "$APPIMAGE" "dist/OmniSolo-${VERSION_TAG}-Linux-${ARCH}.AppImage"
           if [[ -f "$APPIMAGE.sig" ]]; then
-            cp "$APPIMAGE.sig" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.AppImage.sig"
+            cp "$APPIMAGE.sig" "dist/OmniSolo-${VERSION_TAG}-Linux-${ARCH}.AppImage.sig"
           else
             echo "Missing Linux AppImage updater signature: $APPIMAGE.sig" >&2
             exit 1
           fi
-          cp "$DEB" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.deb"
-          cp "$RPM" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.rpm"
+          cp "$DEB" "dist/OmniSolo-${VERSION_TAG}-Linux-${ARCH}.deb"
+          cp "$RPM" "dist/OmniSolo-${VERSION_TAG}-Linux-${ARCH}.rpm"
           ls -lh dist/
 
       - name: Generate desktop installer checksums
@@ -661,7 +661,7 @@ jobs:
             cat image-files.txt >&2
             exit 1
           fi
-          cp "$image_tar" dist/ohc-server-web-image-linux-amd64.tar
+          cp "$image_tar" dist/omnisolo-server-web-image-linux-amd64.tar
           ls -lh dist/
 
       - name: Generate server web image checksums
@@ -730,14 +730,14 @@ jobs:
             dist/checksums.txt
           generate_release_notes: true
           body: |
-            ## OmniSolo (formerly OHC) ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Nightly Build' }}
+            ## OmniSolo (formerly OmniSolo) ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Nightly Build' }}
 
             ### Download & Installation
 
-            - **Windows**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows.msi` or `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows-Portable.zip`
-            - **macOS**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.dmg`, `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.zip`, or updater/Homebrew artifact `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.tar.gz`
-            - **Linux x86_64**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-x86_64.AppImage`, `.deb`, or `.rpm`
-            - **Linux ARM64**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-arm64.AppImage`, `.deb`, or `.rpm`
+            - **Windows**: `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows.msi` or `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows-Portable.zip`
+            - **macOS**: `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.dmg`, `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.zip`, or updater/Homebrew artifact `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.tar.gz`
+            - **Linux x86_64**: `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-x86_64.AppImage`, `.deb`, or `.rpm`
+            - **Linux ARM64**: `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-arm64.AppImage`, `.deb`, or `.rpm`
 
             `latest.json` is uploaded after artifact publication for the Tauri desktop updater.
           draft: false

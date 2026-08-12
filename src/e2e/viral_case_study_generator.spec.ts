@@ -13,8 +13,8 @@ test.describe('Viral Case Study Generator E2E', () => {
         await expect(page.locator('#preview-title')).toHaveText('How Acme Corp Succeeded');
         await expect(page.locator('#preview-metric-value')).toHaveText('300% ROI');
 
-        // 1. Verify "Powered by OHC" watermark is visible in the preview
-        const watermark = page.locator('#preview-branding', { hasText: '⚡ Powered by OHC' });
+        // 1. Verify "Powered by OmniSolo" watermark is visible in the preview
+        const watermark = page.locator('#preview-branding', { hasText: '⚡ Powered by OmniSolo' });
         await expect(watermark).toBeVisible();
         await expect(watermark).toHaveAttribute('href', /.*setup\.html\?ref=.*utm_source=case-study/);
 
@@ -33,7 +33,7 @@ test.describe('Viral Case Study Generator E2E', () => {
 
         // 3. Test the "Remove Branding" toggle triggering the soft paywall
         // The label acts as the click target for better reliability with custom checkbox styles
-        const checkboxLabel = page.locator('label', { hasText: 'Remove "Powered by OHC" watermark (Pro)' });
+        const checkboxLabel = page.locator('label', { hasText: 'Remove "Powered by OmniSolo" watermark (Pro)' });
         await expect(checkboxLabel).toBeVisible();
 
         // Ensure paywall modal is not visible initially

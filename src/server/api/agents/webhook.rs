@@ -45,7 +45,7 @@ async fn analyze_intake_inquiry(inquiry: &str) -> Result<(f64, String, String), 
         inquiry
     );
 
-    let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
+    let raw_response = match std::env::var("OMNISOLO_SALES_LLM_PROVIDER").or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER")).as_deref() {
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.trim().is_empty() {
@@ -157,7 +157,7 @@ async fn handle_webhook(
 
         // Generate embedding for memory query
         let prompt_for_embedding = format!("Past proposals for {}", service_name);
-        let query_embedding = match std::env::var("OHC_SALES_LLM_PROVIDER").or_else(|_| std::env::var("OHC_LLM_PROVIDER")).as_deref() {
+        let query_embedding = match std::env::var("OMNISOLO_SALES_LLM_PROVIDER").or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER")).as_deref() {
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                 if api_key.trim().is_empty() {

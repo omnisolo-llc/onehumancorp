@@ -10,7 +10,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+    await page.waitForFunction(() => (window as any).OMNISOLO_TOOLTIPS !== undefined, { timeout: 10000 });
 
     // Locate the element with the tooltip text
     const tooltipTarget = page.locator("#api-docs-tooltip");
@@ -52,7 +52,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+    await page.waitForFunction(() => (window as any).OMNISOLO_TOOLTIPS !== undefined, { timeout: 10000 });
 
     // Verify the Delivery tooltip
     const deliveryToggle = page.locator("#settings-delivery-tooltip");
@@ -92,7 +92,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+    await page.waitForFunction(() => (window as any).OMNISOLO_TOOLTIPS !== undefined, { timeout: 10000 });
 
     const tooltipTarget = page.locator("#api-docs-tooltip");
     await tooltipTarget.waitFor({ state: "attached" });
@@ -154,17 +154,17 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+    await page.waitForFunction(() => (window as any).OMNISOLO_TOOLTIPS !== undefined, { timeout: 10000 });
 
     // Locate the element with the tooltip text
-    const tooltipTarget = page.locator("#ohc-floating-help-btn");
+    const tooltipTarget = page.locator("#omnisolo-floating-help-btn");
 
     // Wait for it to be attached to the DOM
     await tooltipTarget.waitFor({ state: "attached" });
 
     // Fallback to touchstart
     await page.evaluate(() => {
-      const node = document.getElementById("ohc-floating-help-btn");
+      const node = document.getElementById("omnisolo-floating-help-btn");
       if (node) {
         const target = node.querySelector('button') || node;
         target.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true }));
@@ -192,7 +192,7 @@ test.describe("Tooltips", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as any).OHC_TOOLTIPS !== undefined, { timeout: 10000 });
+    await page.waitForFunction(() => (window as any).OMNISOLO_TOOLTIPS !== undefined, { timeout: 10000 });
 
     const tooltipTarget = page.locator("#help-search-tooltip");
     await tooltipTarget.waitFor({ state: "attached" });

@@ -3,7 +3,7 @@
 # ⚡ Sentry: Chaos Test Report
 
 ## Phase 1: Risk Assessment
-- Assessed codebases in `onehumancorp/mono` and identified risk factors in the AutoDreamWorker memory pipeline (PostgreSQL parity) and `TestSentry_TeamMesh_Corruption` (file system isolation).
+- Assessed codebases in `omnisolo/mono` and identified risk factors in the AutoDreamWorker memory pipeline (PostgreSQL parity) and `TestSentry_TeamMesh_Corruption` (file system isolation).
 
 ## Phase 2: Chaos Engineering
 - Orchestrated chaos experiments breaking the `.agent-task/memory` component for the Team Mesh.

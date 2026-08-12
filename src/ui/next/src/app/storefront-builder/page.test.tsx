@@ -30,7 +30,7 @@ describe('StorefrontBuilderPage', () => {
 
   it('renders initial setup state', () => {
     render(<TooltipProvider><StorefrontBuilderPage /></TooltipProvider>);
-    expect(screen.getByText('Welcome to OHC Smart Builder')).toBeTruthy();
+    expect(screen.getByText('Welcome to OmniSolo Smart Builder')).toBeTruthy();
     expect(screen.getByText('Build My Storefront')).toBeTruthy();
   });
 
@@ -66,7 +66,7 @@ describe('StorefrontBuilderPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Preview Mode')).toBeTruthy();
-      expect(screen.getByText('⚡ Powered by OHC')).toBeTruthy();
+      expect(screen.getByText('⚡ Powered by OmniSolo')).toBeTruthy();
     });
   });
 

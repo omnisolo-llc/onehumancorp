@@ -771,7 +771,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_sync_worker_logic() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -835,7 +835,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_sync_worker_conflict() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -910,7 +910,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_sync_worker_low_stock() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }

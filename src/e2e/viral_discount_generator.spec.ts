@@ -22,10 +22,10 @@ test.describe('Viral Discount Link Generator E2E', () => {
         await expect(memberPage.locator('#preview-code')).toHaveText('E2ETEST20');
         await expect(memberPage.locator('#preview-amount')).toContainText('20% off all playwright tests automatically applied!');
 
-        // Verify that by default, the "Powered by OHC" branding is visible in the preview
+        // Verify that by default, the "Powered by OmniSolo" branding is visible in the preview
         const previewBranding = memberPage.locator('#preview-branding');
         await expect(previewBranding).toBeVisible();
-        await expect(previewBranding).toContainText('Powered by OHC');
+        await expect(previewBranding).toContainText('Powered by OmniSolo');
 
         // Click generate link
         await memberPage.locator('#get-code-btn').click();
@@ -47,8 +47,8 @@ test.describe('Viral Discount Link Generator E2E', () => {
         await expect(publicPage.locator('#discount-amount')).toHaveText('20% off all playwright tests');
         await expect(publicPage.locator('h2', { hasText: 'Discount Applied!' })).toBeVisible();
 
-        // Verify "Powered by OHC" footer
-        const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OHC' }).first();
+        // Verify "Powered by OmniSolo" footer
+        const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OmniSolo' }).first();
         await expect(footerLink).toBeVisible();
 
         await publicPage.close();
@@ -59,7 +59,7 @@ test.describe('Viral Discount Link Generator E2E', () => {
         await memberPage.goto('/ui/discount-link-generator.html');
 
         // Attempt to remove branding
-        await memberPage.locator('label', { hasText: 'Remove "Powered by OHC" Badge' }).click();
+        await memberPage.locator('label', { hasText: 'Remove "Powered by OmniSolo" Badge' }).click();
 
         // Since the member in E2E isn't a "Pro" by default in local storage, it should pop the paywall
         const paywallModal = memberPage.locator('#paywall-modal');

@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This report outlines the rigorous stress-testing and chaos engineering experiments conducted on the OHC "Hybrid Agentic OS" to guarantee absolute parity and graceful failure recovery between Cloud and Standalone environments.
+This report outlines the rigorous stress-testing and chaos engineering experiments conducted on the OmniSolo "Hybrid Agentic OS" to guarantee absolute parity and graceful failure recovery between Cloud and Standalone environments.
 
 ## 2. Parity Auditing Results
 
@@ -29,7 +29,7 @@ We reviewed the `src/agents/builtin/worker.rs` and confirmed all memory rules ar
 
 ## 5. Visual Excellence Mandate Check
 
-All dashboard interactions during these simulated failures utilize OHC Glassmorphism (`backdrop-filter: blur(20px)`), with correct error state animations maintaining the ≤ 200ms exit timings.
+All dashboard interactions during these simulated failures utilize OmniSolo Glassmorphism (`backdrop-filter: blur(20px)`), with correct error state animations maintaining the ≤ 200ms exit timings.
 
 <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); padding: 20px; border-radius: 12px; margin-top: 20px;">
   <h3 style="margin-top: 0;">Chaos Resilience Metrics</h3>

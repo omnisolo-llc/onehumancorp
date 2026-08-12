@@ -1,9 +1,9 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::growth_service_server::GrowthService;
-use ::server_ohc::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
+use ::server_omnisolo::orchestration::*;
+use ::server_omnisolo::orchestration::growth_service_server::GrowthService;
+use ::server_omnisolo::orchestration::{CreateReferralRequest, GrowthIdRequest, EmptyRequest};
 
-use ::server_ohc::orchestration::{SubmitReviewRequest, SubmitReviewResponse, GetReputationRequest, GetReputationResponse};
+use ::server_omnisolo::orchestration::{SubmitReviewRequest, SubmitReviewResponse, GetReputationRequest, GetReputationResponse};
 use uuid::Uuid;
 
 use std::sync::RwLock;
@@ -253,7 +253,7 @@ impl GrowthService for MyGrowthService {
 
         // Generate clean business URL for sharing
         let slug = ::server_utils::slug::slugify(&business_name);
-        let business_share_url = format!("ohc.app/b/{}", slug);
+        let business_share_url = format!("cloud.omnisolo.co/b/{}", slug);
 
         Ok(Response::new(ReferralStatsResponse {
             total_referrals,
@@ -400,7 +400,7 @@ impl GrowthService for MyGrowthService {
             .map_err(|e| Status::not_found(format!("referral not found: {}", e)))?;
 
         // Implement Credit Attribution: "both get 14 days free Pro trial extension"
-        // In OHC, this is represented by upgrading to Pro and setting the has_claimed_trial_extension flag.
+        // In OmniSolo, this is represented by upgrading to Pro and setting the has_claimed_trial_extension flag.
         let _ = sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1::uuid OR id = (SELECT tenant_id::uuid FROM referrals WHERE id = $2)")
             .bind(&org_id)
             .bind(&req.id)
@@ -775,7 +775,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_referral_flow() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if database_url.contains("localhost") { return; }
@@ -788,7 +788,7 @@ mod tests {
             user_id: "test_user".to_string(),
             referral_code: "TESTCODE".to_string(),
         });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org1/agent1".parse().unwrap());
 
         let resp = service.create_referral(req).await.unwrap().into_inner();
         assert_eq!(resp.user_id, "test_user");
@@ -798,7 +798,7 @@ mod tests {
             .execute(&service.pool).await;
 
         let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
-        click_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/00000000-0000-0000-0000-000000000001/agent1".parse().unwrap());
+        click_req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/00000000-0000-0000-0000-000000000001/agent1".parse().unwrap());
         let click_resp = service.click_referral(click_req).await.unwrap().into_inner();
         assert_eq!(click_resp.clicks, 1);
 
@@ -808,7 +808,7 @@ mod tests {
         assert_eq!(org_tier, "free", "Plan should not upgrade on click");
 
         let mut conv_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
-        conv_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/00000000-0000-0000-0000-000000000001/agent1".parse().unwrap());
+        conv_req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/00000000-0000-0000-0000-000000000001/agent1".parse().unwrap());
         let conv_resp = service.convert_referral(conv_req).await.unwrap().into_inner();
         assert_eq!(conv_resp.conversions, 1);
 
@@ -818,7 +818,7 @@ mod tests {
         assert_eq!(upgraded_tier, "pro", "Plan should upgrade on conversion");
 
         let mut list_req = Request::new(EmptyRequest {});
-        list_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        list_req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org1/agent1".parse().unwrap());
         let list_resp = service.get_referrals(list_req).await.unwrap().into_inner();
         assert!(list_resp.referrals.iter().any(|r| r.id == resp.id));
     }
@@ -827,19 +827,19 @@ mod tests {
     async fn test_referral_score_caching() {
         let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
         let service = MyGrowthService::new(pool, hub);
 
         let mut req1 = Request::new(EmptyRequest {});
-        req1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
+        req1.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org-test-cache/agent1".parse().unwrap());
         let res1 = service.get_referral_score(req1).await;
         assert!(res1.is_ok(), "First referral score request should succeed and cache the result");
 
         let mut req2 = Request::new(EmptyRequest {});
-        req2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
+        req2.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org-test-cache/agent1".parse().unwrap());
         let res2 = service.get_referral_score(req2).await;
         assert!(res2.is_ok(), "Second referral score request should succeed by returning cached value");
         assert_eq!(res1.unwrap().into_inner().score, res2.unwrap().into_inner().score);
@@ -849,19 +849,19 @@ mod tests {
     async fn test_quota_caching() {
         let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test") { Ok(p) => p, Err(_) => return, };
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool.clone()));
         let service = MyGrowthService::new(pool, hub);
 
         let mut req1 = Request::new(GetQuotaRequest { user_id: "user1".to_string(), mobile_optimized: false });
-        req1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
+        req1.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org-test-cache/agent1".parse().unwrap());
         let res1 = service.get_quota(req1).await;
         assert!(res1.is_ok(), "First quota request should succeed and cache the result");
 
         let mut req2 = Request::new(GetQuotaRequest { user_id: "user1".to_string(), mobile_optimized: false });
-        req2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-test-cache/agent1".parse().unwrap());
+        req2.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org-test-cache/agent1".parse().unwrap());
         let res2 = service.get_quota(req2).await;
         assert!(res2.is_ok(), "Second quota request should succeed by returning cached value");
         assert_eq!(res1.unwrap().into_inner().max, res2.unwrap().into_inner().max);
@@ -869,7 +869,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_submit_review_and_reputation_flow() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = match pool_opts.connect_lazy(&database_url) { Ok(p) => p, Err(_) => return, };
         if database_url.contains("localhost") { return; }
@@ -885,7 +885,7 @@ mod tests {
             rating: 5,
             comment: "Excellent!".to_string(),
         });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org1/agent1".parse().unwrap());
 
         // Ensure tenant isolation
         let _ = sqlx::query("SET app.current_tenant = 'org1'").execute(&service.pool).await;
@@ -899,7 +899,7 @@ mod tests {
 
         // Get reputation
         let mut get_req = Request::new(GetReputationRequest {});
-        get_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org1/agent1".parse().unwrap());
+        get_req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org1/agent1".parse().unwrap());
         let get_res = service.get_reputation(get_req).await;
         if let Ok(resp) = get_res {
             let inner = resp.into_inner();
@@ -910,11 +910,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_quota_latency_benchmark() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -945,11 +945,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_quota_mobile_payload_optimization() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -977,11 +977,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_onboarding_metrics_mobile_payload_optimization() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options().max_connections(5).connect(&database_url).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);

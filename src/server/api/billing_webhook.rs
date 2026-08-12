@@ -77,7 +77,7 @@ impl PaymentFailureMessageGenerator for LlmPaymentFailureMessageGenerator {
             subscriber_id
         );
 
-        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+        match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                 crate::minimax::MinimaxClient::new(api_key)
@@ -977,7 +977,7 @@ pub async fn stripe_webhook_handler(
                     tracing::info!("Processed Stripe failed-payment dunning for subscriber {}", subscriber_id); // pii-safe
                 }
                 Ok(None) => {
-                    tracing::warn!("Stripe invoice.payment_failed did not match an OHC subscriber");
+                    tracing::warn!("Stripe invoice.payment_failed did not match an OmniSolo subscriber");
                 }
                 Err(err) => {
                     ::server_telemetry::record_error_signal("[bug] Failed to process Stripe failed-payment dunning");
@@ -1081,7 +1081,7 @@ pub async fn razorpay_webhook_handler(
                 let _ = orch.dispatch_event(evt).await;
             });
 
-            // In a real app, transition OHC orders from "Pending" to "Paid"
+            // In a real app, transition OmniSolo orders from "Pending" to "Paid"
             let res = match &webhook_state.db.store {
                 DbStore::Sqlite(pool) => {
                     sqlx::query("UPDATE orders SET status = 'Paid' WHERE id = ?")
@@ -1141,7 +1141,7 @@ pub async fn calcom_webhook_handler(
         "BOOKING_CREATED" => {
             let booking_uid = &payload.payload.uid;
 
-            // In a real app, create calendar events in the OHC dashboard
+            // In a real app, create calendar events in the OmniSolo dashboard
             // and auto-generate meeting links (e.g., Zoom).
             tracing::info!("Created booking: {}", booking_uid);
             StatusCode::OK.into_response()
@@ -1193,7 +1193,7 @@ pub async fn ayrshare_webhook_handler(
 ) -> impl IntoResponse {
     match payload.action.as_str() {
         "social_message" => {
-            // Ingest inbound messages into a unified OHC inbox table
+            // Ingest inbound messages into a unified OmniSolo inbox table
             tracing::info!("Incoming notification from integration: [REDACTED]");
             StatusCode::OK.into_response()
         },

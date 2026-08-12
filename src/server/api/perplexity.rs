@@ -1,10 +1,10 @@
 use axum::{extract::State, routing::post, Json, Router};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use ohc_builtin_agent_lib::perplexity::PerplexityAgent;
+use omnisolo_builtin_agent_lib::perplexity::PerplexityAgent;
 
 // We use the exact mock from tests, to make the agent testable in e2e isolated environments
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use std::sync::Mutex;
 
 struct E2EPerplexityLlm {
@@ -12,7 +12,7 @@ struct E2EPerplexityLlm {
 }
 
 #[async_trait::async_trait]
-impl ohc_builtin_agent_lib::llm::LlmClient for E2EPerplexityLlm {
+impl omnisolo_builtin_agent_lib::llm::LlmClient for E2EPerplexityLlm {
     async fn chat(
         &self,
         _req: ChatRequest,

@@ -39,8 +39,8 @@ impl std::str::FromStr for PlanTier {
 impl PlanTier {
     pub fn monthly_action_limit(&self) -> Option<u32> {
         let env_var = match self {
-            PlanTier::Free => "OHC_FREE_TIER_ACTIONS",
-            PlanTier::Starter => "OHC_STARTER_TIER_ACTIONS",
+            PlanTier::Free => "OMNISOLO_FREE_TIER_ACTIONS",
+            PlanTier::Starter => "OMNISOLO_STARTER_TIER_ACTIONS",
             _ => "",
         };
         if !env_var.is_empty()
@@ -65,10 +65,10 @@ impl PlanTier {
 
     pub fn storage_limit_mb(&self) -> Option<u32> {
         let env_var = match self {
-            PlanTier::Free => "OHC_FREE_TIER_STORAGE_MB",
-            PlanTier::Starter => "OHC_STARTER_TIER_STORAGE_MB",
-            PlanTier::Pro => "OHC_PRO_TIER_STORAGE_MB",
-            PlanTier::Business => "OHC_BUSINESS_TIER_STORAGE_MB",
+            PlanTier::Free => "OMNISOLO_FREE_TIER_STORAGE_MB",
+            PlanTier::Starter => "OMNISOLO_STARTER_TIER_STORAGE_MB",
+            PlanTier::Pro => "OMNISOLO_PRO_TIER_STORAGE_MB",
+            PlanTier::Business => "OMNISOLO_BUSINESS_TIER_STORAGE_MB",
         };
         if !env_var.is_empty()
             && let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {

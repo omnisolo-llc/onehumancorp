@@ -41,7 +41,7 @@ export default function ExitIntentBuilder() {
   };
 
   const generatedCode = `
-<!-- OHC Exit Intent Pop-up -->
+<!-- OmniSolo Exit Intent Pop-up -->
 <script>
   (function() {
     const headline = ${safeJavaScriptString(headline)};
@@ -74,8 +74,8 @@ export default function ExitIntentBuilder() {
         Object.assign(action.style, { background: themeColor, color: "white", border: "none", padding: "0.75rem 1.5rem", borderRadius: "4px", fontWeight: "bold", cursor: "pointer", width: "100%" });
         popup.append(close, heading, copy, action);
         ${!removeBranding ? `const branding = document.createElement("a");
-        branding.href = "https://onehumancorp.com";
-        branding.textContent = "⚡ Powered by OHC";
+        branding.href = "https://cloud.omnisolo.co";
+        branding.textContent = "⚡ Powered by OmniSolo";
         Object.assign(branding.style, { display: "block", marginTop: "1rem", fontSize: "0.75rem", color: "#9ca3af", textDecoration: "none" });
         popup.appendChild(branding);` : ""}
         overlay.appendChild(popup);
@@ -99,7 +99,7 @@ export default function ExitIntentBuilder() {
   return (
     <div className="min-h-screen bg-gray-50 p-8 flex flex-col items-center justify-center font-sans">
       <Head>
-        <title>Exit-Intent Pop-up Builder | OHC</title>
+        <title>Exit-Intent Pop-up Builder | OmniSolo</title>
       </Head>
 
       <div className="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
@@ -174,7 +174,7 @@ export default function ExitIntentBuilder() {
 
             <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-900">Remove OHC Branding</p>
+                <p className="text-sm font-medium text-gray-900">Remove OmniSolo Branding</p>
                 <p className="text-xs text-gray-500">Upgrade to Pro to remove the watermark.</p>
               </div>
               <button
@@ -223,7 +223,7 @@ export default function ExitIntentBuilder() {
                   {buttonText || "Button Text"}
                 </button>
                 {!removeBranding && (
-                  <p className="mt-2 text-[10px] text-gray-400">⚡ Powered by OHC</p>
+                  <p className="mt-2 text-[10px] text-gray-400">⚡ Powered by OmniSolo</p>
                 )}
               </div>
             </div>
@@ -255,9 +255,9 @@ export default function ExitIntentBuilder() {
             <div className="w-16 h-16 bg-blue-100 text-[#0071E3] rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
               ✨
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Remove OHC Branding</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Remove OmniSolo Branding</h3>
             <p className="text-gray-600 text-sm mb-6">
-              Upgrade to the Pro tier to remove the "Powered by OHC" watermark and unlock advanced pop-up triggers.
+              Upgrade to the Pro tier to remove the "Powered by OmniSolo" watermark and unlock advanced pop-up triggers.
             </p>
             <div className="flex flex-col space-y-3">
               <button

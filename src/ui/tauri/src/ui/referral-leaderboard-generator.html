@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Referral Leaderboard Generator - OHC</title>
+  <title>Referral Leaderboard Generator - OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -271,9 +271,9 @@
           previewContainer.innerHTML = html;
 
           // Generate embed code
-          const embedCode = `<!-- OHC Referral Leaderboard -->
+          const embedCode = `<!-- OmniSolo Referral Leaderboard -->
 <div id="ohc-leaderboard"></div>
-<script src="https://ohc.app/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenantId}"><\/script>`;
+<script src="https://cloud.omnisolo.co/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenantId}"><\/script>`;
 
           embedCodeBlock.textContent = embedCode;
           embedSection.style.display = 'block';

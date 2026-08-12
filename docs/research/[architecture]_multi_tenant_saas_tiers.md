@@ -1,16 +1,16 @@
 # Architecture Brief: Multi-Tenant SaaS Tier Architecture
 
 ## Title
-OHC Multi-Tenant SaaS Tiers: Tier Enforcement and Upsell Logic
+OmniSolo Multi-Tenant SaaS Tiers: Tier Enforcement and Upsell Logic
 
 ## Problem Statement
-The OHC platform currently lacks a formalized multi-tenant tier system to handle feature and usage limits based on subscription plans. Without this, we cannot effectively monetize the platform while providing a robust free tier for non-technical small business owner personas (e.g., Maya, Carlos, Priya). The system needs a transparent, fair, and scalable pricing model. Maya needs a free tier to test the waters with her first cake order. As her business expands, she will hit limits (storage, AI actions, custom domains) that necessitate an upgrade to a paid tier (Starter, Pro, Business). The platform requires a clear architectural definition of these tiers, how limits are enforced, and how the user experience gracefully handles upgrades without technical friction.
+The OmniSolo platform currently lacks a formalized multi-tenant tier system to handle feature and usage limits based on subscription plans. Without this, we cannot effectively monetize the platform while providing a robust free tier for non-technical small business owner personas (e.g., Maya, Carlos, Priya). The system needs a transparent, fair, and scalable pricing model. Maya needs a free tier to test the waters with her first cake order. As her business expands, she will hit limits (storage, AI actions, custom domains) that necessitate an upgrade to a paid tier (Starter, Pro, Business). The platform requires a clear architectural definition of these tiers, how limits are enforced, and how the user experience gracefully handles upgrades without technical friction.
 
 ## Research Report
-- **Competitor Landscape**: Wix and Shopify use aggressive feature-gating. OHC's differentiation is "AI as the upgrade driver."
+- **Competitor Landscape**: Wix and Shopify use aggressive feature-gating. OmniSolo's differentiation is "AI as the upgrade driver."
 - **User Psychology**: Non-technical users upgrade when they see direct value (e.g., "The Sales Agent just secured a $500 booking, but your AI limit is reached. Upgrade to keep it running.") rather than abstract metrics like "Storage."
 - **Tier Structure**:
-  - **Free:** $0/mo. 10 Products, 1 AI Department (Ops), 100 AI actions/mo, 500MB Storage, OHC Subdomain.
+  - **Free:** $0/mo. 10 Products, 1 AI Department (Ops), 100 AI actions/mo, 500MB Storage, OmniSolo Subdomain.
   - **Starter:** $9/mo. 100 Products, 3 AI Departments, 1,000 AI actions/mo, 5GB Storage, Custom Domain.
   - **Pro:** $29/mo. Unlimited Products, 10 AI Departments, Unlimited AI actions, 50GB Storage, Custom Domain + SSL.
   - **Business:** $79/mo. Unlimited everything, 500GB Storage, Multi-domain.
@@ -30,7 +30,7 @@ The OHC platform currently lacks a formalized multi-tenant tier system to handle
 graph TD
     UserAction[User Action / UI Request] --> API[API Gateway]
     API --> TierService[TierService Middleware]
-    TierService -->|Check Tier & Usage| DB[(OHC-SIP DB)]
+    TierService -->|Check Tier & Usage| DB[(OmniSolo-SIP DB)]
     DB -- Limits OK --> Execute[Execute Action]
     DB -- Limits Exceeded --> Graceful[Graceful Degradation UI]
 

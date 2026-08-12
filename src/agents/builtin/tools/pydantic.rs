@@ -1,5 +1,5 @@
 use super::ToolExecutor;
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::sync::Arc;
@@ -110,7 +110,7 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
                 }
 
                 return Err(ToolError::LlmRecoverable(
-                    ohc_builtin_agent_core::types::format_pydantic_error(
+                    omnisolo_builtin_agent_core::types::format_pydantic_error(
                         &e,
                         Some(args_str.as_str()),
                         detailed_instruction.as_deref(),

@@ -60,13 +60,13 @@ pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 fn database_url_from_environment(
 ) -> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
     let canonical_direct = std::env::var_os("DATABASE_URL").is_some();
-    let legacy_direct = std::env::var_os("OHC_DATABASE_URL").is_some();
+    let legacy_direct = std::env::var_os("OMNISOLO_DATABASE_URL").is_some();
     if canonical_direct && legacy_direct {
         return Err(::server_common::secret_source::SecretSourceError);
     }
 
     let value_environment_variable = if legacy_direct {
-        "OHC_DATABASE_URL"
+        "OMNISOLO_DATABASE_URL"
     } else {
         "DATABASE_URL"
     };
@@ -535,12 +535,12 @@ impl DB {
             // sqlite-vec is optional at runtime. The memory repository probes for
             // vec_distance_cosine and falls back to in-process cosine sorting when
             // the extension is unavailable, which keeps desktop/CI startup robust.
-            if std::env::var("OHC_SQLITE_VEC_EXTENSION").ok().as_deref() == Some("enabled") {
+            if std::env::var("OMNISOLO_SQLITE_VEC_EXTENSION").ok().as_deref() == Some("enabled") {
                 conn_opts = conn_opts.extension("sqlite_vec");
             }
 
             // Enforce SQLCipher for Standalone mode unconditionally
-            let key = std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
+            let key = std::env::var("OMNISOLO_SQLITE_KEY").unwrap_or_else(|_| {
                     let secret_path = crate::config::get_safe_user_dir().join(".ohc_sqlite_key");
                     if secret_path.exists() {
                         #[cfg(unix)]
@@ -611,7 +611,7 @@ impl DB {
                 });
 
             if key.trim().is_empty() {
-                return Err("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
+                return Err("CRITICAL SECURITY ERROR: OMNISOLO_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
             }
 
             let pragma_key = format!("'{}'", key.replace('\'', "''"));
@@ -680,7 +680,7 @@ impl DB {
             }
 
             let mut attempt = 0;
-            let max_attempts = std::env::var("OHC_DB_CONNECT_MAX_ATTEMPTS")
+            let max_attempts = std::env::var("OMNISOLO_DB_CONNECT_MAX_ATTEMPTS")
                 .ok()
                 .and_then(|raw| raw.parse::<u32>().ok())
                 .unwrap_or(30);
@@ -3989,7 +3989,7 @@ mod tests {
             [
                 ("DATABASE_URL", Some("postgres://direct.example/ohc")),
                 ("DATABASE_URL_FILE", None),
-                ("OHC_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL", None),
             ],
             || {
                 assert_eq!(
@@ -4007,7 +4007,7 @@ mod tests {
             [
                 ("DATABASE_URL", None),
                 ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
-                ("OHC_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL", None),
             ],
             || {
                 assert_eq!(
@@ -4025,7 +4025,7 @@ mod tests {
             [
                 ("DATABASE_URL", Some("postgres://direct.example/ohc")),
                 ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
-                ("OHC_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL", None),
             ],
             || {
                 let error = database_url_from_environment().unwrap_err();
@@ -4041,7 +4041,7 @@ mod tests {
             [
                 ("DATABASE_URL", None),
                 ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
-                ("OHC_DATABASE_URL", Some("postgres://legacy.example/ohc")),
+                ("OMNISOLO_DATABASE_URL", Some("postgres://legacy.example/ohc")),
             ],
             || {
                 let error = database_url_from_environment().unwrap_err();
@@ -4058,7 +4058,7 @@ mod tests {
             [
                 ("DATABASE_URL", None),
                 ("DATABASE_URL_FILE", Some(missing.to_str().unwrap())),
-                ("OHC_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL", None),
             ],
             || {
                 let error = database_url_from_environment().unwrap_err();
@@ -4075,7 +4075,7 @@ mod tests {
             [
                 ("DATABASE_URL", None),
                 ("DATABASE_URL_FILE", None),
-                ("OHC_DATABASE_URL", Some("postgres://legacy.example/ohc")),
+                ("OMNISOLO_DATABASE_URL", Some("postgres://legacy.example/ohc")),
             ],
             || {
                 assert_eq!(
@@ -4088,7 +4088,7 @@ mod tests {
             [
                 ("DATABASE_URL", None::<&str>),
                 ("DATABASE_URL_FILE", None::<&str>),
-                ("OHC_DATABASE_URL", None::<&str>),
+                ("OMNISOLO_DATABASE_URL", None::<&str>),
             ],
             || assert_eq!(database_url_from_environment().unwrap(), None),
         );
@@ -4111,10 +4111,10 @@ mod tests {
         temp_env::with_vars(
             vec![
                 (
-                    "OHC_DATABASE_URL",
+                    "OMNISOLO_DATABASE_URL",
                     Some("postgres://localhost:54321/nonexistent"),
                 ),
-                ("OHC_DB_CONNECT_MAX_ATTEMPTS", Some("1")),
+                ("OMNISOLO_DB_CONNECT_MAX_ATTEMPTS", Some("1")),
             ],
             || {
                 tokio::runtime::Builder::new_current_thread()
@@ -4156,8 +4156,8 @@ mod tests {
 
         temp_env::with_vars(
             vec![
-                ("OHC_DATABASE_URL", Some(&*database_url)),
-                ("OHC_SQLITE_KEY", Some("dummy_key")),
+                ("OMNISOLO_DATABASE_URL", Some(&*database_url)),
+                ("OMNISOLO_SQLITE_KEY", Some("dummy_key")),
             ],
             || {
                 tokio::runtime::Builder::new_current_thread()
@@ -4190,7 +4190,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_mark_task_auto_dreamed_query() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -4218,7 +4218,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_insert_knowledge_embedding() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -4329,7 +4329,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_tenant_isolation_setup() {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -4396,7 +4396,7 @@ mod autodream_db_tests {
 
     #[tokio::test]
     async fn test_local_sqlite_encryption_hardening_mock() {
-        // We verify that `DB::new()` parses OHC_SQLITE_KEY and cipher directives
+        // We verify that `DB::new()` parses OMNISOLO_SQLITE_KEY and cipher directives
         // without causing thread safety or panic issues in parsing logic
         // We bypass full sqlcipher linkage issues by just simulating the connect string
         // via standard sqlx SqliteConnectOptions to ensure it doesn't crash on invalid pragma
@@ -4454,8 +4454,8 @@ mod security_tests_final {
 
         temp_env::with_vars(
             vec![
-                ("OHC_DATABASE_URL", Some(&*database_url)),
-                ("OHC_SQLITE_KEY", Some("dummy_key")),
+                ("OMNISOLO_DATABASE_URL", Some(&*database_url)),
+                ("OMNISOLO_SQLITE_KEY", Some("dummy_key")),
             ],
             || {
                 tokio::runtime::Builder::new_current_thread()
@@ -4545,12 +4545,12 @@ mod security_tests_final {
 mod e2e_tenant_isolation_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
         let database_url =
-            std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -4607,10 +4607,10 @@ mod e2e_tenant_isolation_tests {
     async fn test_before_acquire_resets_tenant() {
         // Security Regression Test: Ensure PgPoolOptions are created
         // with a global before_acquire that sets app.current_tenant to ''
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
         // Create a basic pool using our implementation logic
@@ -4644,12 +4644,12 @@ mod e2e_tenant_isolation_tests {
 mod e2e_tenant_isolation_swarm_tasks_tests {
     #[tokio::test]
     async fn test_tenant_data_isolation_swarm_tasks() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
         let database_url =
-            std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
         let _pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -4732,12 +4732,12 @@ mod e2e_search_workspace_tests {
 
     #[tokio::test]
     async fn test_search_workspace_parity() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
         let database_url =
-            std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+            std::env::var("OMNISOLO_DATABASE_URL").expect("Database URL or operation failed in test");
 
         // Set up Postgres Pool
         let pg_pool = sqlx::postgres::PgPoolOptions::new()

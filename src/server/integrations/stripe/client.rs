@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
-#[cfg(ohc_bazel)]
+#[cfg(omnisolo_bazel)]
 use crate::integrations::mercadopago::client::MercadoPagoClient;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 use server_integrations_mercadopago::client::MercadoPagoClient;
-#[cfg(ohc_bazel)]
+#[cfg(omnisolo_bazel)]
 use crate::integrations::razorpay::client::RazorpayClient;
-#[cfg(not(ohc_bazel))]
+#[cfg(not(omnisolo_bazel))]
 use server_integrations_razorpay::client::RazorpayClient;
 
 use super::payout_batcher::PayoutBatcher;

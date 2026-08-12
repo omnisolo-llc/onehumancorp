@@ -1,5 +1,5 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::collective::{
+use ::server_omnisolo::collective::{
     collective_service_server::CollectiveService,
     GetNearbyTenantsRequest, GetNearbyTenantsResponse,
     InviteTenantRequest, InviteTenantResponse,

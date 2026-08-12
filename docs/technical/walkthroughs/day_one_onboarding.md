@@ -1,8 +1,8 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# 🚀 Day One Onboarding: Simplifying the Hybrid OHC Experience
+# 🚀 Day One Onboarding: Simplifying the Hybrid OmniSolo Experience
 
-Welcome to **One Human Corp (OHC)**! This guide will walk you through your first day, getting your environment set up and launching your first Hybrid Agentic Swarm.
+Welcome to **OmniSolo (OmniSolo)**! This guide will walk you through your first day, getting your environment set up and launching your first Hybrid Agentic Swarm.
 
 Whether you are targeting **Cloud-Native Mode**, **Standalone Desktop Mode**, or **Headless API Mode**, our simplified setup scripts take the friction out of configuration so you can start orchestrating agents immediately.
 
@@ -10,7 +10,7 @@ Whether you are targeting **Cloud-Native Mode**, **Standalone Desktop Mode**, or
 
 Before starting, ensure your system has the following core dependencies:
 - **Bazelisk:** The Bazel wrapper that standardizes build execution.
-- **Rust:** The primary language for the OHC Backend services.
+- **Rust:** The primary language for the OmniSolo Backend services.
 - **Docker:** (Optional but recommended) For local isolated infrastructure (Postgres, Redis).
 
 ## 2. The Master Setup Script
@@ -18,7 +18,7 @@ Before starting, ensure your system has the following core dependencies:
 To initialize your development environment, start with the master setup script:
 
 ```bash
-./deploy/scripts/ohc-setup.sh
+./deploy/scripts/omnisolo-setup.sh
 ```
 
 **What this does:**
@@ -32,11 +32,11 @@ To initialize your development environment, start with the master setup script:
 If you need to configure API keys (OpenAI, Anthropic) or customize ports and multi-tenancy settings, run the Interactive Wizard:
 
 ```bash
-./deploy/scripts/ohc-env-wizard.sh
+./deploy/scripts/omnisolo-env-wizard.sh
 ```
 
 **Key Configuration Options:**
-- **Mode Selection:** Toggle `OHC_MULTITENANT` to switch between Standalone and Cloud environments.
+- **Mode Selection:** Toggle `OMNISOLO_MULTITENANT` to switch between Standalone and Cloud environments.
 - **LLM Providers:** Securely inject your `OPENAI_API_KEY` and `ANTHROPIC_API_KEY`.
 - **Database/Redis:** Configure external connection strings for Cloud Mode.
 
@@ -45,20 +45,20 @@ If you need to configure API keys (OpenAI, Anthropic) or customize ports and mul
 Once your environment is configured, use the Quick Start script to launch the local backend:
 
 ```bash
-./deploy/scripts/ohc-quick-start.sh
+./deploy/scripts/omnisolo-quick-start.sh
 ```
 
 **What this does:**
-- Enforces `OHC_SOURCE_MODE=standalone`.
+- Enforces `OMNISOLO_SOURCE_MODE=standalone`.
 - Starts the Rust API server in the background.
-- Runs a diagnostic check (`ohc-diagnostics.sh`) to ensure the agent hub and APIs are responsive.
+- Runs a diagnostic check (`omnisolo-diagnostics.sh`) to ensure the agent hub and APIs are responsive.
 
-## 5. The OHC Hybrid CLI Master Menu
+## 5. The OmniSolo Hybrid CLI Master Menu
 
-For day-to-day operations, the OHC Hybrid CLI provides an interactive master menu. You can use it to switch contexts, run diagnostics, or provision new agents:
+For day-to-day operations, the OmniSolo Hybrid CLI provides an interactive master menu. You can use it to switch contexts, run diagnostics, or provision new agents:
 
 ```bash
-./deploy/scripts/ohc_hybrid_cli.sh
+./deploy/scripts/omnisolo_hybrid_cli.sh
 ```
 
 **Available Options:**
@@ -70,7 +70,7 @@ For day-to-day operations, the OHC Hybrid CLI provides an interactive master men
 
 ## 6. Verifying the Gold Standard State
 
-OHC mandates **Zero WIP**. At any time, you can verify your entire workspace by running the universal test command:
+OmniSolo mandates **Zero WIP**. At any time, you can verify your entire workspace by running the universal test command:
 
 ```bash
 bazelisk test //...

@@ -5,12 +5,12 @@ use serde_json::Value;
 
 use super::LlmClient;
 use super::circuit_breaker::CircuitBreaker;
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
 use std::time::Duration;
 
 fn request_timeout() -> Duration {
-    let secs = std::env::var("OHC_LLM_TIMEOUT_SECS")
+    let secs = std::env::var("OMNISOLO_LLM_TIMEOUT_SECS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
         .filter(|value| *value > 0)
@@ -54,8 +54,8 @@ impl OpenAIClientConfig {
             api_key: api_key.into(),
             base_url: "https://api.openai.com/v1".to_string(),
             default_model: None,
-            embedding_model: std::env::var("OHC_OPENAI_EMBEDDING_MODEL")
-                .or_else(|_| std::env::var("OHC_EMBEDDING_MODEL"))
+            embedding_model: std::env::var("OMNISOLO_OPENAI_EMBEDDING_MODEL")
+                .or_else(|_| std::env::var("OMNISOLO_EMBEDDING_MODEL"))
                 .unwrap_or_else(|_| "text-embedding-3-small".to_string()),
             embedding_format: EmbeddingRequestFormat::OpenAI,
             organization: std::env::var("OPENAI_ORGANIZATION")
@@ -77,8 +77,8 @@ impl OpenAIClientConfig {
             api_key: api_key.into(),
             base_url: base_url.into(),
             default_model,
-            embedding_model: std::env::var("OHC_OPENAI_COMPATIBLE_EMBEDDING_MODEL")
-                .or_else(|_| std::env::var("OHC_EMBEDDING_MODEL"))
+            embedding_model: std::env::var("OMNISOLO_OPENAI_COMPATIBLE_EMBEDDING_MODEL")
+                .or_else(|_| std::env::var("OMNISOLO_EMBEDDING_MODEL"))
                 .unwrap_or_else(|_| "text-embedding-3-small".to_string()),
             embedding_format: EmbeddingRequestFormat::OpenAI,
             organization: None,
@@ -407,7 +407,7 @@ impl LlmClient for OpenAIClient {
                 None => {
                     cb.record_non_failure();
                     return Err(
-                        "missing model: set OHC_LLM_MODEL or provider-specific model env var"
+                        "missing model: set OMNISOLO_LLM_MODEL or provider-specific model env var"
                             .into(),
                     );
                 }

@@ -1,19 +1,19 @@
-# Market Audit & OHC Unfair Advantage: Omni-Context Sub-agent Routing
+# Market Audit & OmniSolo Unfair Advantage: Omni-Context Sub-agent Routing
 
 **Author**: Principal Product Researcher & Oracle (L7)
 **Date**: $(date +%s)
 
 ## Executive Summary
 
-After a surgical audit of the leading agentic operating systems in the global market (OpenClaw, Claude Code, and OpenCode), we have identified key trends in multi-channel routing, project grounding, and context retention. OHC has a decisive opportunity to leapfrog these capabilities with an "Unfair Advantage" defined as **Omni-Context Sub-agent Routing**.
+After a surgical audit of the leading agentic operating systems in the global market (OpenClaw, Claude Code, and OpenCode), we have identified key trends in multi-channel routing, project grounding, and context retention. OmniSolo has a decisive opportunity to leapfrog these capabilities with an "Unfair Advantage" defined as **Omni-Context Sub-agent Routing**.
 
-## Market Reality vs. OHC
+## Market Reality vs. OmniSolo
 
-This data-driven analysis compares OHC to Claude Code, OpenClaw, and OpenCode across core agent orchestration parameters, with 100% of data points verified via Playwright exploration.
+This data-driven analysis compares OmniSolo to Claude Code, OpenClaw, and OpenCode across core agent orchestration parameters, with 100% of data points verified via Playwright exploration.
 
-| Feature Area | Claude Code | OpenClaw | OpenCode | **OHC Vision** |
+| Feature Area | Claude Code | OpenClaw | OpenCode | **OmniSolo Vision** |
 | :--- | :--- | :--- | :--- | :--- |
-| **Session Persistence** | File-based context (`CLAUDE.md`) | Event-driven cross-channel persistence | Project-level `AGENTS.md` grounding | **OHC-SIP Database-Driven** with continuous synchronization |
+| **Session Persistence** | File-based context (`CLAUDE.md`) | Event-driven cross-channel persistence | Project-level `AGENTS.md` grounding | **OmniSolo-SIP Database-Driven** with continuous synchronization |
 | **Sub-agent Delegation** | Sub-agents spawned ad-hoc | Route to specialized nodes | Specialized roles defined via project metadata | **Swarm-as-Code** deterministic routing via `agent_missions` |
 | **Tool Execution** | MCP (Model Context Protocol) | Custom integrations | Command hooks | **Universal MCP Mesh** native to k8s/Bazel build logic |
 | **Context Retrieval** | Explicit file read (Adds Latency) | Persistent event history | On-demand indexing | **Instant Ingestion** via Omni-Context Routing |
@@ -24,7 +24,7 @@ This data-driven analysis compares OHC to Claude Code, OpenClaw, and OpenCode ac
 While Claude Code and OpenCode depend on agents actively discovering and reading grounding files (`CLAUDE.md` and `AGENTS.md`), this introduces latency, token bloat, and potential alignment drift. OpenClaw provides robust event routing across WhatsApp and Slack but lacks the strict architectural enforcement required in Bazel-first environments.
 
 ### Mission Brief: Omni-Context Sub-agent Routing
-OHC will bridge this gap by directly embedding project grounding context into the swarm database at the exact moment of task delegation.
+OmniSolo will bridge this gap by directly embedding project grounding context into the swarm database at the exact moment of task delegation.
 
 When an orchestrating agent creates a new mission for a sub-agent, the `SIPDB` system automatically reads standard grounding files (like `AGENTS.md` or `CLAUDE.md`) from the context root and injects their contents directly into the `agent_missions` payload under the `[SYSTEM GROUNDING]` namespace.
 
@@ -40,7 +40,7 @@ graph TD
     A[Orchestrating Agent] -->|Identifies Need| B(Task Generator)
     B --> C{Context Injector}
     C -->|Reads| D[(AGENTS.md / CLAUDE.md)]
-    C -->|Injects Grounding| E[(OHC-SIP DB: agent_missions)]
+    C -->|Injects Grounding| E[(OmniSolo-SIP DB: agent_missions)]
     E -->|Instantly Routed| F[Sub-Agent Executor]
     F -->|Executes with Zero Latency| G[Task Completion]
 
@@ -51,7 +51,7 @@ graph TD
 
 ## Aesthetic Styling Tokens
 
-To adhere to the **Aesthetic Excellence Mandate**, the above visualization and the presentation layer of this report strictly utilize the following OHC CSS tokens:
+To adhere to the **Aesthetic Excellence Mandate**, the above visualization and the presentation layer of this report strictly utilize the following OmniSolo CSS tokens:
 
 ```css
 .ohc-card {

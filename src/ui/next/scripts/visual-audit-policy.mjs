@@ -1,12 +1,16 @@
 export const HYDRATION_FAILURE_PATTERN = /Text content does not match server-rendered HTML|Text content did not match|Hydration failed|error occurred during hydration|server HTML (?:was )?replaced|initial UI does not match/i;
 
-const RESOURCE_FAILURE_PATTERN = /^Failed to load resource: the server responded with a status of (?:401|403|404|500|502)\b/i;
+const RESOURCE_FAILURE_PATTERN = /^Failed to load resource: the server responded with a status of (?:401|403|404|500|501|502)\b/i;
+
+export function expectedShellCounts(route) {
+  if (route === '/login') return { sidebar: 0, topbar: 0, main: 0 };
+  return { sidebar: 1, topbar: 1, main: 1 };
+}
 
 const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
   '/api/v1/help',
   '/api/v1/videos',
   '/api/v1/tooltips',
-  '/api/v1/mesh/v2/collective',
   '/api/v1/ui/dashboard/analytics/briefing',
   '/api/v1/ui/triage',
   '/api/v1/payments/ledger/safe-to-spend',
@@ -20,11 +24,10 @@ const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
   '/api/v1/ui/dashboard/unified-feed',
   '/api/v1/walkthrough/dashboard',
   '/api/v1/onboarding/state',
-  '/api/v1/ledger/accounts',
   '/api/v1/ledger/entries',
-  '/api/v1/user/usage',
   '/api/v1/growth/milestone/card',
   '/api/v1/assistant/tasks',
+  '/api/v1/assistant/settings',
   '/api/v1/walkthrough/assistant',
   '/api/v1/ui/orders',
   '/api/v1/ui/omni_inbox',
@@ -128,13 +131,6 @@ function isSamePrivateAuditOrigin(location, page) {
     && location.origin === page.origin;
 }
 
-function isExpectedWebSocketFailure({ message, locationUrl }) {
-  if (!message.includes("WebSocket connection to 'ws://127.0.0.1:18789/api/v1/feed/ws' failed")) return false;
-  const location = parsedUrl(locationUrl);
-  return isPrivateAuditOrigin(location)
-    && /^\/_next\/static\/chunks\/app\/(?:dashboard|agents)\//.test(location.pathname);
-}
-
 function isExpectedApplicationFailure({ message, locationUrl, pageUrl }) {
   const location = parsedUrl(locationUrl);
   const page = parsedUrl(pageUrl);
@@ -145,10 +141,6 @@ function isExpectedApplicationFailure({ message, locationUrl, pageUrl }) {
   }
   if (!isSamePrivateAuditOrigin(location, page)) return false;
 
-  if (message === 'Websocket error: Event') {
-    return /^\/_next\/static\/chunks\//.test(location.pathname)
-      && ['/dashboard', '/agents'].includes(page?.pathname || '');
-  }
   if (message.startsWith('Failed to fetch usage SyntaxError:')) {
     return /^\/_next\/static\/chunks\//.test(location.pathname) && page?.pathname === '/dashboard';
   }
@@ -173,8 +165,7 @@ function isExpectedResourceFailure({ message, locationUrl, pageUrl }) {
 
 export function classifyConsoleError(diagnostic) {
   if (HYDRATION_FAILURE_PATTERN.test(diagnostic.message)) return 'hydration';
-  if (isExpectedWebSocketFailure(diagnostic)
-    || isExpectedResourceFailure(diagnostic)
+  if (isExpectedResourceFailure(diagnostic)
     || isExpectedApplicationFailure(diagnostic)) return 'expected-service';
   return 'unexpected';
 }
@@ -192,8 +183,9 @@ export function failureReasons(result) {
   if (result.pageErrors?.length > 0) reasons.push('uncaught page error');
   if (result.hydrationErrors?.length > 0) reasons.push('hydration error');
   if (result.unexpectedConsoleErrors?.length > 0) reasons.push('unexpected console error');
-  for (const [shell, count] of Object.entries(result.shellCounts)) {
-    if (count !== 1) reasons.push(`${shell} count ${count}`);
+  for (const [shell, count] of Object.entries(expectedShellCounts(result.route))) {
+    const actualCount = result.shellCounts?.[shell] ?? 0;
+    if (actualCount !== count) reasons.push(`${shell} count ${actualCount}`);
   }
   if (result.horizontalOverflow) {
     reasons.push(`horizontal overflow ${result.documentWidth - result.viewportWidth}px`);

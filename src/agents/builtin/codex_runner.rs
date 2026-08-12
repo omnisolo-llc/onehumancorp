@@ -556,12 +556,12 @@ impl AppServer {
             }
 
             #[async_trait::async_trait]
-            impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for LlmClientAdapter {
+            impl omnisolo_builtin_agent_core::expert_team::ExpertTeamLlmClient for LlmClientAdapter {
                 async fn chat(
                     &self,
-                    req: ohc_builtin_agent_core::types::ChatRequest,
+                    req: omnisolo_builtin_agent_core::types::ChatRequest,
                 ) -> Result<
-                    ohc_builtin_agent_core::types::ChatResponse,
+                    omnisolo_builtin_agent_core::types::ChatResponse,
                     Box<dyn std::error::Error + Send + Sync>,
                 > {
                     self.inner.chat(req).await
@@ -574,35 +574,35 @@ impl AppServer {
 
             // Expert Team Implementation
             let experts = vec![
-                ohc_builtin_agent_core::expert_team::DomainExpert {
+                omnisolo_builtin_agent_core::expert_team::DomainExpert {
                     role: "Industry Researcher".to_string(),
                     llm: adapter.clone(),
                 },
-                ohc_builtin_agent_core::expert_team::DomainExpert {
+                omnisolo_builtin_agent_core::expert_team::DomainExpert {
                     role: "Financial Analyst".to_string(),
                     llm: adapter.clone(),
                 },
-                ohc_builtin_agent_core::expert_team::DomainExpert {
+                omnisolo_builtin_agent_core::expert_team::DomainExpert {
                     role: "Strategic Analyst".to_string(),
                     llm: adapter.clone(),
                 },
-                ohc_builtin_agent_core::expert_team::DomainExpert {
+                omnisolo_builtin_agent_core::expert_team::DomainExpert {
                     role: "Process Supervisor".to_string(),
                     llm: adapter.clone(),
                 },
-                ohc_builtin_agent_core::expert_team::DomainExpert {
+                omnisolo_builtin_agent_core::expert_team::DomainExpert {
                     role: "Quality Auditor".to_string(),
                     llm: adapter.clone(),
                 },
             ];
 
-            let manager = ohc_builtin_agent_core::expert_team::ExpertTeamManager::new(
+            let manager = omnisolo_builtin_agent_core::expert_team::ExpertTeamManager::new(
                 "Project Director",
                 experts,
             );
 
             // Gate 1: Pre-flight
-            if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_flight(
+            if let Err(e) = omnisolo_builtin_agent_core::expert_team::QualityGates::pre_flight(
                 &manager,
                 &initial_message,
             ) {
@@ -619,7 +619,7 @@ impl AppServer {
                 return serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"jsonrpc": "2.0", "error": {"code": -32603, "message": "Internal error"}}"#.to_string());
             }
 
-            let mut trace = ohc_builtin_agent_core::expert_team::SkillTrace::new();
+            let mut trace = omnisolo_builtin_agent_core::expert_team::SkillTrace::new();
             match manager
                 .execute_parallel_tasks(&initial_message, &mut trace)
                 .await
@@ -627,7 +627,7 @@ impl AppServer {
                 Ok(summaries) => {
                     // Gate 2: Pre-merge
                     if let Err(e) =
-                        ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries)
+                        omnisolo_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries)
                     {
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
@@ -656,7 +656,7 @@ impl AppServer {
                         "Process Supervisor".to_string(),
                         "Quality Auditor".to_string(),
                     ];
-                    if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(
+                    if let Err(e) = omnisolo_builtin_agent_core::expert_team::QualityGates::pre_deliver(
                         &final_output,
                         &trace,
                         &expected_roles,
@@ -1474,9 +1474,9 @@ mod tests {
         impl crate::llm::LlmClient for DummyLlmClient {
             async fn chat(
                 &self,
-                _req: ohc_builtin_agent_core::types::ChatRequest,
+                _req: omnisolo_builtin_agent_core::types::ChatRequest,
             ) -> Result<
-                ohc_builtin_agent_core::types::ChatResponse,
+                omnisolo_builtin_agent_core::types::ChatResponse,
                 Box<dyn std::error::Error + Send + Sync>,
             > {
                 Err("Not implemented but returning properly to satisfy trait".into())
@@ -1533,7 +1533,7 @@ mod tests {
 mod tests_goose {
     use super::*;
     use crate::llm::LlmClient;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
     use std::sync::Arc;
 
     struct DummyLlm;

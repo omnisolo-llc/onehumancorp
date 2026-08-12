@@ -4,7 +4,7 @@
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);">
   <h2 style="margin-top: 0;">Welcome to the Edge LLM Offloading Protocol</h2>
-  <p>The OHC Hybrid Agentic OS uses the Edge LLM Offloading Protocol to intelligently transfer context and inference tasks from lightweight standalone desktops to heavy-duty cloud orchestration.</p>
+  <p>The OmniSolo Hybrid Agentic OS uses the Edge LLM Offloading Protocol to intelligently transfer context and inference tasks from lightweight standalone desktops to heavy-duty cloud orchestration.</p>
 </div>
 
 ## Offloading Endpoint
@@ -32,7 +32,7 @@
   "status": "accepted",
   "cloud_job_id": "job-cloud-456",
   "estimated_completion_ms": 1200,
-  "streaming_endpoint": "wss://gateway.onehumancorp.com/ws/llm/stream/job-cloud-456"
+  "streaming_endpoint": "wss://gateway.omnisolo.co/ws/llm/stream/job-cloud-456"
 }
 </code></pre>
 </div>

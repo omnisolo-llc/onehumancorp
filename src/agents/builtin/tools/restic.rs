@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -35,7 +35,7 @@ impl PydanticToolExecutor<ResticArgs> for ResticExecutor {
 
         let env_vars = vec![("RESTIC_PASSWORD".to_string(), password.clone())];
 
-        let mode = std::env::var("OHC_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
+        let mode = std::env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
         if mode == "cloud" {
             return Err(ToolError::LlmRecoverable("restic: unsupported in cloud mode".to_string()));
         }
@@ -152,7 +152,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_missing_restic_password_returns_error() {
-        temp_env::with_vars(vec![("RESTIC_PASSWORD", None::<&str>)], || {
+        temp_env::async_with_vars([("RESTIC_PASSWORD", None::<&str>)], async {
             let executor = ResticExecutor {
                 runner: Arc::new(MockRunner),
             };
@@ -169,15 +169,15 @@ mod tests {
                 }
                 other => panic!("Expected LlmRecoverable, got: {:?}", other),
             }
-        });
+        }).await;
     }
 
     #[tokio::test]
     async fn test_cloud_mode_returns_error() {
-        temp_env::with_vars(vec![
+        temp_env::async_with_vars([
             ("RESTIC_PASSWORD", Some("test_pass")),
-            ("OHC_EXECUTION_MODE", Some("cloud")),
-        ], || {
+            ("OMNISOLO_EXECUTION_MODE", Some("cloud")),
+        ], async {
             let executor = ResticExecutor {
                 runner: Arc::new(MockRunner),
             };
@@ -194,12 +194,16 @@ mod tests {
                 }
                 other => panic!("Expected LlmRecoverable, got: {:?}", other),
             }
-        });
+        }).await;
     }
 
     #[tokio::test]
-    async fn test_no_hardcoded_dummy_password() {
+    async fn test_restic_source_has_no_password_fallback() {
         let source = include_str!("restic.rs");
-        assert!(!source.contains("dummy_password"), "Hardcoded 'dummy_password' should have been removed");
+        let forbidden_token = ["dum", "my_", "pass", "word"].concat();
+        assert!(
+            !source.contains(&forbidden_token),
+            "legacy restic password fallback must be absent"
+        );
     }
 }

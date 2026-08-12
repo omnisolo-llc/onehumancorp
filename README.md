@@ -1,11 +1,11 @@
-# OmniSolo (formerly One Human Corp)
+# OmniSolo (formerly OmniSolo)
 
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
 ## Built-in Agent Harness
 
-The OmniSolo platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code. Note: One Human Corp was the beta name of the beta software, now formally named and launched as OmniSolo Desktop/Mobile/Cloud.
+The OmniSolo platform features a highly advanced, built-in Agent Harness (`omnisolo-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code. Note: OmniSolo was the beta name of the beta software, now formally named and launched as OmniSolo Desktop/Mobile/Cloud.
 
 ### Visual/Low-Code Orchestration
 
@@ -21,7 +21,7 @@ To begin your onboarding journey, we provide a **unified Master CLI** that handl
 From the root of the repository, you must explicitly run the onboarding CLI:
 
 ```bash
-./deploy/scripts/ohc_hybrid_cli.sh
+./deploy/scripts/omnisolo_hybrid_cli.sh
 ```
 
 **What this does:**
@@ -39,11 +39,11 @@ bazel run //deploy:load_all_images
 ./deploy/scripts/prepare-compose-env.sh
 docker compose --env-file .ohc-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
 ```
-This flow utilizes local `server`, `agent`, and `ohc-core` images without requiring an external pull. It also leverages your local cache for base images like Postgres and Valkey.
+This flow utilizes local `server`, `agent`, and `omnisolo-core` images without requiring an external pull. It also leverages your local cache for base images like Postgres and Valkey.
 
 ## Identity
 
-OmniSolo employs the **OHC-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
+OmniSolo employs the **OmniSolo-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
 
 The platform implements a hybrid identity model:
 - **Agent Identity**: Relies on SPIFFE/SPIRE for universal workload identity, ensuring every inter-agent communication and tool call is cryptographically signed and mTLS validated.
@@ -51,7 +51,7 @@ The platform implements a hybrid identity model:
 
 ## Product Vision & Market Strategy
 
-OmniSolo (formerly One Human Corp / OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
+OmniSolo (formerly OmniSolo / OmniSolo) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
 
 ## Architecture
 
@@ -59,8 +59,8 @@ The platform supports four operating modes:
 
 | Mode | Local footprint | Remote footprint | Notes |
 |------|-----------------|------------------|-------|
-| **Cloud-native shared service** | Tauri v2 desktop client | Rust API server, Postgres, agents, optional Valkey and PowerSync | Set `OHC_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
-| **Headless cloud API** | Tauri desktop client | API-only Rust server | Set `OHC_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
+| **Cloud-native shared service** | Tauri v2 desktop client | Rust API server, Postgres, agents, optional Valkey and PowerSync | Set `OMNISOLO_MULTITENANT=true`. Scale stateless API pods horizontally while Postgres remains the consistency boundary. |
+| **Headless cloud API** | Tauri desktop client | API-only Rust server | Set `OMNISOLO_HEADLESS=true` when the backend should expose APIs, health probes, metrics, and auth without serving the web UI. |
 | **Desktop standalone** | Tauri v2 desktop shell plus local Rust backend and SQLite-backed SIPDB | Optional public SaaS integrations only | Optimized for local resource usage; Valkey and PowerSync are not required for the standalone wrapper flow. |
 | **Single-machine integration stack** | Full local Docker Compose stack | None | Useful for development, demos, and end-to-end verification on one machine. |
 
@@ -98,13 +98,13 @@ The Swarm is powered by our custom orchestration engine which maintains stabilit
 
 ### Remote clients and standalone mode
 
-The Tauri v2 desktop app supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OHC server over the API.
+The Tauri v2 desktop app supports a configurable Backend URL and a standalone-mode toggle. In standalone mode the desktop app manages a local backend lifecycle. In remote-client mode the same app acts as a pure UI and talks to a cloud-hosted OmniSolo server over the API.
 
 Headless server deployments keep the API, auth, health probes, and metrics online while skipping static UI serving. That is the intended mode for mobile clients and desktop clients that should connect to cloud-hosted services instead of running a local backend.
 
 ### Multi-tenancy
 
-In cloud-native mode (`OHC_MULTITENANT=true`), tenant isolation is enforced in the
+In cloud-native mode (`OMNISOLO_MULTITENANT=true`), tenant isolation is enforced in the
 Rust server through authenticated `organization_id` claims, org-scoped service
 methods, and shared-database query filtering. The active server entrypoint is
 `src/server/lib.rs`, with Axum HTTP routes, tonic gRPC services, and service
@@ -141,7 +141,7 @@ Or you can use the automated script:
 bazelisk run //:deploy_dev
 ```
 
-> **Note:** If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing images for `onehumancorp/server:latest` or `valkey/pgvector`, the local-first Bazel build flow via `npx @bazel/bazelisk run //deploy:load_all_images` is the required primary path. Additionally, ensure you include the override file when running compose manually:
+> **Note:** If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing images for `omnisolo/server:latest` or `valkey/pgvector`, the local-first Bazel build flow via `npx @bazel/bazelisk run //deploy:load_all_images` is the required primary path. Additionally, ensure you include the override file when running compose manually:
 > ```bash
 > ./deploy/scripts/prepare-compose-env.sh
 > docker compose --env-file .ohc-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
@@ -158,7 +158,7 @@ Services:
 
 When the backend starts with an empty workforce, it now bootstraps an **internal default agent** backed by the built-in provider so a single-container deployment has an immediately available agent runtime.
 
-For API-only remote-client deployments, set `OHC_HEADLESS=true` on the server.
+For API-only remote-client deployments, set `OMNISOLO_HEADLESS=true` on the server.
 
 ### Bazel (full build + test)
 
@@ -239,32 +239,32 @@ bazelisk run //src/server:server
 | Variable | Description |
 |----------|-------------|
 | `GEMINI_API_KEY` | Google Gemini API key |
-| `MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows, AI judge scoring, and `OHC_LLM_PROVIDER=minimax` agent runs |
+| `MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows, AI judge scoring, and `OMNISOLO_LLM_PROVIDER=minimax` agent runs |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `OPENAI_API_KEY` | OpenAI API key |
-| `OHC_LLM_PROVIDER` | Builtin agent provider: `openai`, `openai-compatible`, `minimax`, `anthropic`, or `ollama` |
-| `OHC_LLM_MODEL` | Builtin agent model name. Defaults are provider-specific when unset |
-| `OHC_LLM_API_KEY` | Generic API key for `openai-compatible` providers, or fallback key for OpenAI/MiniMax |
-| `OHC_LLM_BASE_URL` | Generic OpenAI-compatible API root such as `https://api.example.com/v1`; endpoint URLs ending in `/chat/completions` are normalized |
-| `OPENAI_BASE_URL` | Optional OpenAI-compatible API root for `OHC_LLM_PROVIDER=openai` |
+| `OMNISOLO_LLM_PROVIDER` | Builtin agent provider: `openai`, `openai-compatible`, `minimax`, `anthropic`, or `ollama` |
+| `OMNISOLO_LLM_MODEL` | Builtin agent model name. Defaults are provider-specific when unset |
+| `OMNISOLO_LLM_API_KEY` | Generic API key for `openai-compatible` providers, or fallback key for OpenAI/MiniMax |
+| `OMNISOLO_LLM_BASE_URL` | Generic OpenAI-compatible API root such as `https://api.example.com/v1`; endpoint URLs ending in `/chat/completions` are normalized |
+| `OPENAI_BASE_URL` | Optional OpenAI-compatible API root for `OMNISOLO_LLM_PROVIDER=openai` |
 | `MINIMAX_BASE_URL` | Optional MiniMax-compatible API root; defaults to `https://api.minimax.chat/v1` |
-| `DATABASE_URL` | PostgreSQL DSN by default. Use a `sqlite://...` URL plus `OHC_SQLITE_KEY` for standalone SQLite-backed state |
-| `OHC_PORT` | HTTP/Axum port. Defaults to `18789` in the Rust server; Docker Compose maps the packaged server on `8080` |
-| `OHC_GRPC_PORT` | gRPC/tonic port. Defaults to `8081` |
-| `OHC_STANDALONE_MODE` | Set `true` to force standalone mode and SQLite enforcement |
-| `OHC_SQLITE_KEY` | Required when using standalone SQLite-backed state |
-| `OHC_MULTITENANT` | Set `true` for multi-tenant cloud-native mode |
-| `OHC_HEADLESS` | Set `true` for API-only/headless integration behavior |
-| `OHC_CORE_URL` | URL of the Rust `ohc-core` sidecar |
+| `DATABASE_URL` | PostgreSQL DSN by default. Use a `sqlite://...` URL plus `OMNISOLO_SQLITE_KEY` for standalone SQLite-backed state |
+| `OMNISOLO_PORT` | HTTP/Axum port. Defaults to `18789` in the Rust server; Docker Compose maps the packaged server on `8080` |
+| `OMNISOLO_GRPC_PORT` | gRPC/tonic port. Defaults to `8081` |
+| `OMNISOLO_STANDALONE_MODE` | Set `true` to force standalone mode and SQLite enforcement |
+| `OMNISOLO_SQLITE_KEY` | Required when using standalone SQLite-backed state |
+| `OMNISOLO_MULTITENANT` | Set `true` for multi-tenant cloud-native mode |
+| `OMNISOLO_HEADLESS` | Set `true` for API-only/headless integration behavior |
+| `OMNISOLO_CORE_URL` | URL of the Rust `omnisolo-core` sidecar |
 | `MCP_BUNDLE_DIR` | Directory for MCP bundles |
-| `OHC_BOOTSTRAP_ORG_ID` | Optional bootstrap tenant ID used to serve unauthenticated routes in multi-tenant mode |
-| `OHC_BOOTSTRAP_ORG_NAME` | Optional bootstrap tenant display name |
-| `OHC_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
-| `OHC_DEFAULT_AGENT_NAME` | Optional display name for the bootstrapped internal default agent |
-| `OHC_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
-| `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
-| `OHC_DEFAULT_TENANT_ID` | Default tenant used by local E2E login when the browser form does not submit an explicit organization ID; defaults to `e2e-tenant` in the test harness |
-| `OHC_LLM_CONFIG_PATH` | Optional Tauri/built-in agent provider config path. Defaults to `.ohc/ai-provider.json` |
+| `OMNISOLO_BOOTSTRAP_ORG_ID` | Optional bootstrap tenant ID used to serve unauthenticated routes in multi-tenant mode |
+| `OMNISOLO_BOOTSTRAP_ORG_NAME` | Optional bootstrap tenant display name |
+| `OMNISOLO_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
+| `OMNISOLO_DEFAULT_AGENT_NAME` | Optional display name for the bootstrapped internal default agent |
+| `OMNISOLO_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
+| `OMNISOLO_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
+| `OMNISOLO_DEFAULT_TENANT_ID` | Default tenant used by local E2E login when the browser form does not submit an explicit organization ID; defaults to `e2e-tenant` in the test harness |
+| `OMNISOLO_LLM_CONFIG_PATH` | Optional Tauri/built-in agent provider config path. Defaults to `.ohc/ai-provider.json` |
 
 Tauri packages static assets from `src/ui/tauri/next_out` via `src/ui/tauri/tauri.conf.json`. The `src/ui/next/out` tree is legacy/prototype output.
 
@@ -274,10 +274,10 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 
 ### Setup and Mode Switching (Manual)
 
-We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets. For day one setup, we recommend using the unified Master CLI (`./deploy/scripts/ohc_hybrid_cli.sh`) from the repository root instead.
+We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets. For day one setup, we recommend using the unified Master CLI (`./deploy/scripts/omnisolo_hybrid_cli.sh`) from the repository root instead.
 
-- **Initial Setup:** `./deploy/scripts/ohc-setup.sh` (Generates `.env`, verifies builds, and provisions the workspace)
-- **Mode Switching:** `source deploy/scripts/ohc-mode.sh [cloud|standalone|headless]` (Configures environment variables for the current terminal session)
+- **Initial Setup:** `./deploy/scripts/omnisolo-setup.sh` (Generates `.env`, verifies builds, and provisions the workspace)
+- **Mode Switching:** `source deploy/scripts/omnisolo-mode.sh [cloud|standalone|headless]` (Configures environment variables for the current terminal session)
 
 ### Build and Test
 

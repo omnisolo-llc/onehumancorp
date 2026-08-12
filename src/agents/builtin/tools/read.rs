@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_cast)]
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -190,7 +190,7 @@ mod tests {
 
         // 1. Try reading the whole file - should fail
         let args = json!({ "path": "jit_test_large.txt" });
-        let result: Result<String, ohc_builtin_agent_core::types::ToolError> =
+        let result: Result<String, omnisolo_builtin_agent_core::types::ToolError> =
             crate::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
@@ -205,7 +205,7 @@ mod tests {
             "start_line": 1,
             "end_line": 1200
         });
-        let result2: Result<String, ohc_builtin_agent_core::types::ToolError> =
+        let result2: Result<String, omnisolo_builtin_agent_core::types::ToolError> =
             crate::ToolExecutor::execute(&executor, args2).await;
         assert!(result2.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result2 {
@@ -220,7 +220,7 @@ mod tests {
             "start_line": 500,
             "end_line": 600
         });
-        let result3: Result<String, ohc_builtin_agent_core::types::ToolError> =
+        let result3: Result<String, omnisolo_builtin_agent_core::types::ToolError> =
             crate::ToolExecutor::execute(&executor, args3).await;
         assert!(result3.is_ok());
     }

@@ -4,7 +4,7 @@
 **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 
 ## 1. Overview
-The **Sub-Agent Orchestration Queue** is a critical component of the OHC Hybrid AI OS, enabling the system to spawn, manage, and monitor isolated sub-agents executing background tasks. This system ensures high availability, scalability, and robust state management for autonomous agent workloads.
+The **Sub-Agent Orchestration Queue** is a critical component of the OmniSolo Hybrid AI OS, enabling the system to spawn, manage, and monitor isolated sub-agents executing background tasks. This system ensures high availability, scalability, and robust state management for autonomous agent workloads.
 
 ## 2. Architecture
 The queue utilizes a state-machine driven backend to coordinate jobs.

@@ -21,7 +21,7 @@ export default function ViralCountdownWidgetPage() {
   const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
-  const [origin, setOrigin] = useState('https://ohc.app');
+  const [origin, setOrigin] = useState('https://cloud.omnisolo.co');
 
   useEffect(() => {
     setTargetDate(defaultTargetDate());
@@ -32,7 +32,7 @@ export default function ViralCountdownWidgetPage() {
         if (storedTenant) setTenant(storedTenant);
       }
     }
-    document.title = "Countdown Widget | OHC";
+    document.title = "Countdown Widget | OmniSolo";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +81,7 @@ export default function ViralCountdownWidgetPage() {
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
                 <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    Remove "Powered by OHC" Badge
+                    Remove "Powered by OmniSolo" Badge
                     {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                 </label>
              </div>
@@ -133,7 +133,7 @@ export default function ViralCountdownWidgetPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Countdown Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Countdown Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}
@@ -153,7 +153,7 @@ export default function ViralCountdownWidgetPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

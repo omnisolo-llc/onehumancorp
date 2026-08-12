@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use ohc_builtin_agent::agent::{Agent, AgentRunConfig, AgentEvent};
-    use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage, ToolError};
-    use ohc_builtin_agent::llm::LlmClient;
-    use ohc_builtin_agent::tools::{Tool, ToolExecutor};
+    use omnisolo_builtin_agent::agent::{Agent, AgentRunConfig, AgentEvent};
+    use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage, ToolError};
+    use omnisolo_builtin_agent::llm::LlmClient;
+    use omnisolo_builtin_agent::tools::{Tool, ToolExecutor};
     use std::sync::Arc;
 
     struct CompactionMockLlmClient {

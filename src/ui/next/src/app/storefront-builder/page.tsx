@@ -272,7 +272,7 @@ export default function StorefrontBuilderPage() {
             <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
             <div className="flex justify-end mb-4"><button id="storefront-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition-colors">Start Tour</button></div>
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Welcome to OHC Smart Builder</h1></WalkthroughTarget>
+              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Welcome to OmniSolo Smart Builder</h1></WalkthroughTarget>
               <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>
@@ -461,7 +461,7 @@ export default function StorefrontBuilderPage() {
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
           <div className="text-center mt-4 mb-8">
-            <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OHC</a>
+            <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OmniSolo</a>
           </div>
         </div>
 

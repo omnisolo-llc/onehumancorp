@@ -1,7 +1,7 @@
 # KAIROS Orchestration: Unified Architecture (Phase 4)
 
 ## Architecture Outline
-The OHC Swarm requires a durable database schema and microservices mapping to decompose high-level feature requests for the agent team, along with deep-deliberation cycles, a distributed state machine, background queuing logic, and a highly available realtime communication layer.
+The OmniSolo Swarm requires a durable database schema and microservices mapping to decompose high-level feature requests for the agent team, along with deep-deliberation cycles, a distributed state machine, background queuing logic, and a highly available realtime communication layer.
 
 ## KAIROS Triad
 1. Shared Task List: PostgreSQL distributed state machine.

@@ -20,7 +20,6 @@ const representativeProductRoutes = [
   '/booking-widget',
   '/storefront-widget',
   '/onboarding',
-  '/login',
 ] as const;
 
 const appRoot = process.env.SOURCE_REPO_ROOT
@@ -81,7 +80,6 @@ const routesWithSurfacePrimitives = new Set([
   '/integrations',
   '/calendar',
   '/website-builder',
-  '/login',
 ]);
 
 const normalizedSurfaceSelector = [
@@ -103,7 +101,8 @@ async function navigateToSettledApplicationPage(page: Page, route: string): Prom
       const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
       if (!response) throw new Error('navigation did not return a document response');
       if (response.status() < 500) {
-        await page.locator('.app-main').waitFor({ state: 'visible', timeout: 30_000 });
+        const settledMarker = route === '/login' ? page.locator('#login-title') : page.locator('.app-main');
+        await settledMarker.waitFor({ state: 'visible', timeout: 30_000 });
         await page.evaluate(() => new Promise<void>((resolve) => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         }));
@@ -210,6 +209,23 @@ test.describe('App shell visual consistency', () => {
       const response = await navigateToSettledApplicationPage(page, route);
 
       expect(response?.status(), `${route} returned an HTTP error`).toBeLessThan(500);
+
+      if (route === '/login') {
+        await expect(page.locator('.app-sidebar')).toHaveCount(0);
+        await expect(page.locator('.app-topbar')).toHaveCount(0);
+        await expect(page.locator('#login-title')).toHaveCount(1);
+
+        const dimensions = await page.evaluate(() => ({
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth,
+        }));
+        expect(
+          dimensions.documentWidth - dimensions.viewportWidth,
+          `${route} overflowed horizontally: ${JSON.stringify(dimensions)}`,
+        ).toBeLessThanOrEqual(1);
+        return;
+      }
+
       await expect(page.locator('.app-sidebar')).toHaveCount(1);
       await expect(page.locator('.app-topbar')).toHaveCount(1);
       await expect(page.locator('.app-main')).toHaveCount(1);
@@ -349,7 +365,6 @@ test.describe('Mobile global controls', () => {
 
   const collisionRoutes = [
     '/website-builder',
-    '/login',
     '/agent-marketplace',
     '/integrations',
     '/agents',
@@ -363,7 +378,7 @@ test.describe('Mobile global controls', () => {
         await navigateToSettledApplicationPage(page, route);
 
         const controlSelector = [
-          '#ohc-floating-help-btn',
+          '#omnisolo-floating-help-btn',
           '#ai-chat-trigger-btn',
           '[data-voice-assistant-surface="trigger"]',
         ].join(',');

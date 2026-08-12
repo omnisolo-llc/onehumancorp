@@ -44,7 +44,7 @@ test.describe('Extended Documentation & Help Features', () => {
 
     // Check that Swagger UI rendered the primary container and title
     await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('OHC Advanced API Reference')).toBeVisible();
+    await expect(page.getByText('OmniSolo Advanced API Reference')).toBeVisible();
   });
 
 });

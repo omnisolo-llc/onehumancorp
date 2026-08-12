@@ -329,7 +329,7 @@ pub async fn delete_tooltip(
 
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
-        HelpArticle { category: "Getting Started".to_string(), title: "Getting Started with Your Store".to_string(), desc: "Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.".to_string(), link: "/help/getting-started-1".to_string() },
+        HelpArticle { category: "Getting Started".to_string(), title: "Getting Started with Your Store".to_string(), desc: "Welcome to OmniSolo! Let's get your business online in under 10 minutes.".to_string(), link: "/help/getting-started-1".to_string() },
         HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/add-products".to_string() },
         HelpArticle { category: "Payments".to_string(), title: "Accepting Payments".to_string(), desc: "Learn how to accept credit cards and manage your payouts.".to_string(), link: "/help/accept-payments".to_string() },
         HelpArticle { category: "AI Agents".to_string(), title: "Activate AI Support".to_string(), desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(), link: "/help/ai-support".to_string() },
@@ -701,7 +701,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
             title: "Getting Started with Your Store".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
-        Welcome to OneHumanCorp! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
+        Welcome to OmniSolo! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Step 1: Tell us about your business</h2>
       <p class="text-gray-700 mb-4">
@@ -772,7 +772,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Viewing Your Bills</h2>
       <p class="text-gray-700 mb-4">
-        You can see a history of all the payments you have made to OneHumanCorp. This makes it easy to keep track of your expenses for your own records.
+        You can see a history of all the payments you have made to OmniSolo. This makes it easy to keep track of your expenses for your own records.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Inviting Team Members</h2>
       <p class="text-gray-700 mb-4">
@@ -900,7 +900,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
         "info": {
             "title": "API Documentation (for Advanced Users)",
             "version": "1.0.0",
-            "description": "OHC Advanced API Reference integrating with OneHumanCorp.",
+            "description": "OmniSolo Advanced API Reference integrating with OmniSolo.",
         },
         "servers": [
             {
@@ -1249,7 +1249,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
             "/api/v1/orgs/register": {
                 "post": {
                     "summary": "Register an Organization",
-                    "description": "Registers a new tenant organization in the multi-tenant OHC environment.",
+                    "description": "Registers a new tenant organization in the multi-tenant OmniSolo environment.",
                     "tags": ["Tenants"],
                     "requestBody": {
                         "required": true,
@@ -1446,6 +1446,13 @@ mod tests {
         // but for now let's just make sure it parses properly.
         let data = get_changelog_data();
         assert!(!data.is_empty());
+        assert!(data.iter().all(|section| {
+            section
+                .screenshot_url
+                .as_deref()
+                .map(|url| !url.contains("via.placeholder.com"))
+                .unwrap_or(true)
+        }));
     }
 
     #[tokio::test]

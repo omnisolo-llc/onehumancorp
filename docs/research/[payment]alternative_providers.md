@@ -8,11 +8,11 @@ Stripe is not available or preferred everywhere. Small business owners in LATAM,
 *   **Evaluation**: Mercado Pago dominates LATAM with Pix and Boleto support. Razorpay is essential for India (UPI). Adyen covers many but is geared towards enterprise.
 *   **Ease of Use**: Business owners connect their local provider via OAuth or API key. Checkout experience is localized for their customers.
 *   **Pricing**: Varies by provider; typically a percentage of the transaction.
-*   **Modes**: Cloud (webhooks handled by OHC servers). Standalone (requires secure local webhook relay or polling).
+*   **Modes**: Cloud (webhooks handled by OmniSolo servers). Standalone (requires secure local webhook relay or polling).
 
 ## Design Doc
-*   **Integration Trigger**: User selects their country in OHC and is offered relevant payment providers to connect.
-*   **Action**: During checkout, OHC routes the payment intent to the connected regional provider and listens for the success webhook.
+*   **Integration Trigger**: User selects their country in OmniSolo and is offered relevant payment providers to connect.
+*   **Action**: During checkout, OmniSolo routes the payment intent to the connected regional provider and listens for the success webhook.
 *   **User Interface**: Regional payment options added to the checkout flow.
 
 ## Implementation Prompt

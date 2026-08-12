@@ -66,7 +66,7 @@ test.describe('Documentation Features CUJ', () => {
     await page.goto('/api-docs');
 
     // Check title
-    await expect(page.locator('h1')).toContainText('OHC Advanced API Reference');
+    await expect(page.locator('h1')).toContainText('OmniSolo Advanced API Reference');
 
     // Hover the tooltip element
     const tooltipTarget = page.locator('#api-docs-tooltip');

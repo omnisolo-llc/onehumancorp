@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use async_recursion::async_recursion;
 use regex::Regex;
 use serde_json::json;

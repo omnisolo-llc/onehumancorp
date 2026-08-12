@@ -1,0 +1,202 @@
+backend:
+  autoscaling:
+    enabled: true
+    maxReplicas: 10
+    minReplicas: 1
+    targetCPUUtilizationPercentage: 85
+    targetMemoryUtilizationPercentage: 85
+  vpa:
+    enabled: true
+  headless: false
+  grpcTls:
+    # Cloud mode mTLS Secret keys: tls.crt, tls.key, and ca.crt.
+    existingSecret: ''
+  grpc:
+    port: 8081
+    # Additional in-cluster gRPC callers. Each entry must explicitly select
+    # both namespace and pod labels; an empty list permits only built-in peers.
+    allowedClients: []
+  agentAuth:
+    # Required in standalone mode. The Secret must contain the fixed keys
+    # `agentToken` and `authKey`; inline agent credentials are rejected.
+    # `authKey` is the HMAC-SHA256 verification key and must contain at least
+    # 32 bytes, matching src/agents/builtin/auth.rs.
+    existingSecret: ''
+  auth:
+    # Required in cloud mode. The Secret must contain the fixed key
+    # `jwtSecret`; inline JWT secrets are intentionally rejected.
+    existingSecret: ''
+  setup:
+    # Optional one-time bootstrap Secret. It must contain the fixed key `token`.
+    # The key reference is optional/fail-closed so the Secret can be removed
+    # after the initial admin has been created and the setup route disappears.
+    existingSecret: ''
+  image: omnisolo/server:latest
+  multiTenant: true
+  networkPolicy:
+    enabled: true
+  probes:
+    startup:
+      # Allow CPU-constrained first-run schema migrations up to five minutes.
+      failureThreshold: 60
+      periodSeconds: 5
+      timeoutSeconds: 2
+  replicas: 2
+  resources:
+    limits:
+      cpu: 100m
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+  service:
+    port: 8080
+cnpg:
+  clusterName: ohc-pg
+  database: ohc
+  enabled: false
+  instances: 3
+  owner: ohc
+  storage:
+    size: 10Gi
+fluentBit:
+  enabled: true
+  image: fluent/fluent-bit:latest
+  logLevel: info
+  resources:
+    limits:
+      cpu: 100m
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+kube-prometheus-stack:
+  enabled: true
+  grafana:
+    enabled: true
+    env:
+      GF_LOG_CONSOLE_FORMAT: json
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: "/etc/grafana/provisioning/dashboards/grafana-dashboard.json"
+      GF_FEATURE_TOGGLES_ENABLE: "newPanelChromeUI"
+    extraConfigmapMounts:
+    - configMap: omnisolo-grafana-custom-css
+      mountPath: /usr/share/grafana/public/css/custom.css
+      name: grafana-custom-css
+      readOnly: true
+      subPath: custom.css
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: '1'
+multiTenant:
+  enabled: true
+  maxOrgs: 5000
+  resources:
+    limits:
+      cpu: 100m
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+omnisoloCore:
+  autoscaling:
+    enabled: true
+    maxReplicas: 10
+    minReplicas: 1
+    targetCPUUtilizationPercentage: 85
+    targetMemoryUtilizationPercentage: 85
+  vpa:
+    enabled: true
+  enabled: true
+  image: omnisolo/mono-core:latest
+  networkPolicy:
+    enabled: true
+  replicas: 2
+  resources:
+    limits:
+      cpu: 100m
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+  service:
+    port: 18789
+powersync:
+  autoscaling:
+    enabled: true
+    maxReplicas: 10
+    minReplicas: 1
+    targetCPUUtilizationPercentage: 85
+    targetMemoryUtilizationPercentage: 85
+  vpa:
+    enabled: true
+  enabled: true
+  image: journeyapps/powersync-service:latest
+  dataSource:
+    # Required when powersync.enabled=true and cnpg.enabled=false. The Secret
+    # must contain the fixed key `uri` with the complete PostgreSQL URI.
+    existingSecret: ''
+  networkPolicy:
+    enabled: true
+  replicas: 2
+  resources:
+    limits:
+      cpu: 100m
+      memory: 256Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+  service:
+    port: 8081
+    targetPort: 8080
+    type: ClusterIP
+resourceQuota:
+  enabled: true
+  limits:
+    cpu: '50'
+    ephemeralStorage: 200Gi
+    memory: 100Gi
+    pods: '100'
+  requests:
+    cpu: '10'
+    ephemeralStorage: 50Gi
+    memory: 20Gi
+valkey:
+  dataStorage:
+    accessModes:
+    - ReadWriteOnce
+    className: ''
+    enabled: false
+    requestedSize: 1Gi
+  enabled: true
+  image:
+    pullPolicy: IfNotPresent
+    registry: docker.io
+    repository: valkey/valkey
+    tag: ''
+  podSecurityContext:
+    fsGroup: 1000
+    runAsGroup: 1000
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+  service:
+    port: 6379

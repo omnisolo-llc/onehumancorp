@@ -595,7 +595,7 @@ async fn handle_create_product(
         "organization_id": tenant_id,
     });
 
-    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+    let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
         agent_id: "system".to_string(),
         action: "ProductCreated".to_string(),
         status: "success".to_string(),

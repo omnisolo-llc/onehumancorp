@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Viral Powered By OHC Widget', () => {
+test.describe('Viral Powered By OmniSolo Widget', () => {
   test('should allow owner to configure the viral widget, view preview and trigger paywall', async ({ page, context }) => {
     // 1. Navigate to dashboard
     await page.goto('/dashboard');
@@ -24,7 +24,7 @@ test.describe('Viral Powered By OHC Widget', () => {
     await themeSelect.selectOption('dark');
 
     // 4. Try to remove branding, expect paywall
-    const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "Powered by OmniSolo" Badge/i });
     await removeBrandingCheckbox.click();
 
     await expect(page.getByRole('heading', { name: 'Upgrade to Remove Branding' })).toBeVisible();

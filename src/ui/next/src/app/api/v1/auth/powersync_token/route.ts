@@ -1,0 +1,8 @@
+import { proxyBackendRequest } from "@/lib/auth/backendTransport";
+
+export async function GET(request: Request): Promise<Response> {
+  return proxyBackendRequest(request, "/api/v1/auth/powersync_token", {
+    forwardQuery: false,
+    suppressRequestBody: true,
+  });
+}

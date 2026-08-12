@@ -161,7 +161,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_payout_with_pool() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = match sqlx::PgPool::connect(&db_url).await {
             Ok(pool) => pool,
             Err(_) => {
@@ -191,12 +191,12 @@ mod batching_cost_tests {
     #[test]
     fn test_batch_threshold_saves_fees() {
         let pool: Option<Arc<PgPool>> = None;
-        let threshold = crate::integrations::stripe::routing::PaymentRouter::BATCH_PAYOUT_THRESHOLD_CENTS;
+        let threshold = super::super::routing::PaymentRouter::BATCH_PAYOUT_THRESHOLD_CENTS;
         let batcher = PayoutBatcher::new(pool, threshold);
 
         // Simulating the routing check directly as that's what prevents unbatched fees
-        assert_eq!(crate::integrations::stripe::routing::PaymentRouter::should_batch_payout(1000), true);
-        assert_eq!(crate::integrations::stripe::routing::PaymentRouter::should_batch_payout(10000), false); // Threshold reached
+        assert!(super::super::routing::PaymentRouter::should_batch_payout(1000));
+        assert!(!super::super::routing::PaymentRouter::should_batch_payout(10000)); // Threshold reached
 
         // Verification that the batcher initializes correctly with the correct threshold.
         assert_eq!(batcher.batch_threshold_cents, 10000);

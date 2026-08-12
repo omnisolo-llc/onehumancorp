@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viral Giveaway Generator | OHC</title>
+  <title>Viral Giveaway Generator | OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -320,7 +320,7 @@
 
     <div class="branding-toggle-container">
       <div>
-        <span>Remove OHC Branding</span>
+        <span>Remove OmniSolo Branding</span>
         <span class="pro-badge">Pro Feature</span>
       </div>
       <label class="toggle-switch">
@@ -350,14 +350,14 @@
   <a href="/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
 
   <footer>
-    <a href="/api/v1/growth/referrals/click?target=/setup.html&ref=giveaway_footer" target="_blank" class="footer-link">⚡ Powered by OHC</a>
+    <a href="/api/v1/growth/referrals/click?target=/setup.html&ref=giveaway_footer" target="_blank" class="footer-link">⚡ Powered by OmniSolo</a>
   </footer>
 
   <div id="paywall-modal">
     <div class="paywall-content">
       <div style="font-size: 48px; margin-bottom: 15px;">⭐</div>
       <h3>Upgrade to Pro</h3>
-      <p>Removing the "Powered by OHC" branding is a Pro feature. Upgrade your workspace to build completely white-labeled experiences.</p>
+      <p>Removing the "Powered by OmniSolo" branding is a Pro feature. Upgrade your workspace to build completely white-labeled experiences.</p>
       <button onclick="window.location.href='/pricing.html'" style="width: 100%; margin-bottom: 10px;">View Plans</button>
       <button class="btn-secondary" onclick="document.getElementById('paywall-modal').style.display='none'" style="width: 100%;">Maybe Later</button>
     </div>
@@ -401,7 +401,7 @@
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
-              'x-spiffe-id': 'spiffe://onehumancorp.io/' + tenantId + '/agent1'
+              'x-spiffe-id': 'spiffe://omnisolo.io/' + tenantId + '/agent1'
           }
       }).then(res => res.json()).then(data => {
           const params = new URLSearchParams({
@@ -459,7 +459,7 @@
     document.getElementById('share-x-btn').addEventListener('click', () => {
         const title = document.getElementById('title').value.trim();
         const url = document.getElementById('generated-url').value;
-        const text = `I'm running a new giveaway: ${title}! Enter to win here:\n\n${url}\n\n⚡ Powered by OHC`;
+        const text = `I'm running a new giveaway: ${title}! Enter to win here:\n\n${url}\n\n⚡ Powered by OmniSolo`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
     });
   </script>

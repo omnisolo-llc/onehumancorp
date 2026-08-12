@@ -1,6 +1,6 @@
 use super::{Tool, ToolExecutor};
 use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use serde::Deserialize;
 use std::sync::Arc;
@@ -20,7 +20,7 @@ impl PydanticToolExecutor<LedgerArgs> for GetBalanceExecutor {
         &self,
         args: LedgerArgs,
     ) -> Result<String, ToolError> {
-        let tenant_id = std::env::var("OHC_TENANT_ID").unwrap_or_else(|_| "test_tenant".to_string());
+        let tenant_id = std::env::var("OMNISOLO_TENANT_ID").unwrap_or_else(|_| "test_tenant".to_string());
         let account_id = args.account_id.as_deref().unwrap_or("main");
 
         let mut client = LedgerServiceClient::connect("http://[::1]:50051")
@@ -76,7 +76,7 @@ impl PydanticToolExecutor<LedgerArgs> for GetStatementExecutor {
         &self,
         args: LedgerArgs,
     ) -> Result<String, ToolError> {
-        let tenant_id = std::env::var("OHC_TENANT_ID").unwrap_or_else(|_| "test_tenant".to_string());
+        let tenant_id = std::env::var("OMNISOLO_TENANT_ID").unwrap_or_else(|_| "test_tenant".to_string());
         let account_id = args.account_id.as_deref().unwrap_or("main");
 
         let mut client = LedgerServiceClient::connect("http://[::1]:50051")

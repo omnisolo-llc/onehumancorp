@@ -31,6 +31,6 @@ test.describe('Cart Recovery Feature', () => {
     await expect(page.locator('#draft-preview')).toContainText('Alice Tester');
     await expect(page.locator('#draft-preview')).toContainText('$120.00');
     await expect(page.locator('#draft-preview')).toContainText('COMEBACK');
-    await expect(page.locator('#draft-preview')).toContainText('Powered by OHC');
+    await expect(page.locator('#draft-preview')).toContainText('Powered by OmniSolo');
   });
 });

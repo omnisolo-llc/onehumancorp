@@ -1,7 +1,7 @@
-# OHC KAIROS: Hybrid Agentic OS Orchestration Master Blueprint
+# OmniSolo KAIROS: Hybrid Agentic OS Orchestration Master Blueprint
 
 ## 1. Vision
-The One Human Corp (OHC) AI OS relies on the KAIROS Orchestrator to decompose complex tasks, coordinate agent swarms via a realtime mesh, and consolidate state long-term.
+The OmniSolo (OmniSolo) AI OS relies on the KAIROS Orchestrator to decompose complex tasks, coordinate agent swarms via a realtime mesh, and consolidate state long-term.
 
 ## 2. Phase 1: Shared Task List (Decomposition)
 ### Database Schema (Cloud Native)

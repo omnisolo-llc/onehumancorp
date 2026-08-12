@@ -20,13 +20,13 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
         database_url: String::new(),
     };
 
-    let mut mode = env_vars.get("OHC_SOURCE_MODE").cloned().unwrap_or_default();
+    let mut mode = env_vars.get("OMNISOLO_SOURCE_MODE").cloned().unwrap_or_default();
     
     if mode.is_empty() {
         if env_vars.contains_key("KUBERNETES_SERVICE_HOST") {
             mode = "cloud".to_string();
             config.multi_tenant = true;
-        } else if let Some(endpoint) = env_vars.get("OHC_API_ENDPOINT") {
+        } else if let Some(endpoint) = env_vars.get("OMNISOLO_API_ENDPOINT") {
             if !endpoint.is_empty() {
                 mode = "thin_client".to_string();
             }
@@ -36,29 +36,29 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
     config.mode = mode.to_lowercase();
 
-    if let Some(mt) = env_vars.get("OHC_MULTITENANT") {
+    if let Some(mt) = env_vars.get("OMNISOLO_MULTITENANT") {
         if mt.to_lowercase() == "true" {
             config.multi_tenant = true;
         }
     }
 
-    if let Some(hl) = env_vars.get("OHC_HEADLESS") {
+    if let Some(hl) = env_vars.get("OMNISOLO_HEADLESS") {
         if hl.to_lowercase() == "true" {
             config.headless = true;
         }
     }
 
     if config.mode == "cloud" && !config.multi_tenant {
-        return Err("cloud mode requires OHC_MULTITENANT to be true".to_string());
+        return Err("cloud mode requires OMNISOLO_MULTITENANT to be true".to_string());
     }
 
     if config.mode == "cloud" {
-        let db_url = env_vars.get("OHC_DATABASE_URL").cloned().unwrap_or_default();
+        let db_url = env_vars.get("OMNISOLO_DATABASE_URL").cloned().unwrap_or_default();
         if db_url.is_empty() {
             if env_vars.contains_key("KUBERNETES_SERVICE_HOST") {
                 config.database_url = String::new();
             } else {
-                return Err("cloud mode requires OHC_DATABASE_URL".to_string());
+                return Err("cloud mode requires OMNISOLO_DATABASE_URL".to_string());
             }
         } else {
             config.database_url = db_url;
@@ -70,7 +70,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
 
     if config.mode == "standalone" {
-        let db_url = env_vars.get("OHC_DATABASE_URL").cloned().unwrap_or_default();
+        let db_url = env_vars.get("OMNISOLO_DATABASE_URL").cloned().unwrap_or_default();
         if db_url.is_empty() {
             config.database_url = "sqlite://local.db".to_string();
         } else {
@@ -79,15 +79,15 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
     }
 
     if config.mode == "thin_client" {
-        let endpoint = env_vars.get("OHC_API_ENDPOINT").cloned().unwrap_or_default();
+        let endpoint = env_vars.get("OMNISOLO_API_ENDPOINT").cloned().unwrap_or_default();
         if endpoint.is_empty() {
-            return Err("thin_client mode requires OHC_API_ENDPOINT".to_string());
+            return Err("thin_client mode requires OMNISOLO_API_ENDPOINT".to_string());
         }
         config.api_endpoint = endpoint;
     }
 
     let mut telemetry_enabled = false;
-    if let Some(tel) = env_vars.get("OHC_TELEMETRY_ENABLED") {
+    if let Some(tel) = env_vars.get("OMNISOLO_TELEMETRY_ENABLED") {
         if tel.to_lowercase() == "true" {
             telemetry_enabled = true;
         }
@@ -102,7 +102,7 @@ pub fn verify_environment(env_vars: &HashMap<String, String>) -> Result<EnvConfi
         config.telemetry_enabled = telemetry_enabled;
     } else {
         config.telemetry_enabled = true;
-        if let Some(tel) = env_vars.get("OHC_TELEMETRY_ENABLED") {
+        if let Some(tel) = env_vars.get("OMNISOLO_TELEMETRY_ENABLED") {
             if tel.to_lowercase() == "false" {
                 config.telemetry_enabled = false;
             }
@@ -120,8 +120,8 @@ mod tests {
     #[test]
     fn test_verify_environment_standalone() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
-        env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "standalone".to_string());
+        env.insert("OMNISOLO_MULTITENANT".to_string(), "false".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "standalone");
@@ -131,8 +131,8 @@ mod tests {
     #[test]
     fn test_verify_environment_cloud_invalid() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "cloud".to_string());
-        env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "cloud".to_string());
+        env.insert("OMNISOLO_MULTITENANT".to_string(), "false".to_string());
 
         let res = verify_environment(&env);
         assert!(res.is_err());
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn test_verify_environment_auto_detect_standalone() {
         let mut env = HashMap::new();
-        env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
+        env.insert("OMNISOLO_MULTITENANT".to_string(), "false".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "standalone");
@@ -151,7 +151,7 @@ mod tests {
     fn test_verify_environment_auto_detect_cloud() {
         let mut env = HashMap::new();
         env.insert("KUBERNETES_SERVICE_HOST".to_string(), "10.0.0.1".to_string());
-        env.insert("OHC_DATABASE_URL".to_string(), "postgresql://user:pass@localhost/db".to_string());
+        env.insert("OMNISOLO_DATABASE_URL".to_string(), "postgresql://user:pass@localhost/db".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "cloud");
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_verify_environment_auto_detect_thin_client() {
         let mut env = HashMap::new();
-        env.insert("OHC_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
+        env.insert("OMNISOLO_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
@@ -170,8 +170,8 @@ mod tests {
     #[test]
     fn test_verify_environment_standalone_telemetry() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
-        env.insert("OHC_TELEMETRY_ENABLED".to_string(), "true".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "standalone".to_string());
+        env.insert("OMNISOLO_TELEMETRY_ENABLED".to_string(), "true".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert!(config.telemetry_enabled);
@@ -180,8 +180,8 @@ mod tests {
     #[test]
     fn test_verify_environment_thin_client() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "thin_client".to_string());
-        env.insert("OHC_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "thin_client".to_string());
+        env.insert("OMNISOLO_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
@@ -192,7 +192,7 @@ mod tests {
     #[test]
     fn test_verify_environment_thin_client_missing_endpoint() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "thin_client".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "thin_client".to_string());
 
         let res = verify_environment(&env);
         assert!(res.is_err());
@@ -201,8 +201,8 @@ mod tests {
     #[test]
     fn test_verify_environment_cloud_database_url_required() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "cloud".to_string());
-        env.insert("OHC_MULTITENANT".to_string(), "true".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "cloud".to_string());
+        env.insert("OMNISOLO_MULTITENANT".to_string(), "true".to_string());
 
         let res = verify_environment(&env);
         assert!(res.is_err());
@@ -211,9 +211,9 @@ mod tests {
     #[test]
     fn test_verify_environment_cloud_database_url_success() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "cloud".to_string());
-        env.insert("OHC_MULTITENANT".to_string(), "true".to_string());
-        env.insert("OHC_DATABASE_URL".to_string(), "postgresql://user:pass@localhost/db".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "cloud".to_string());
+        env.insert("OMNISOLO_MULTITENANT".to_string(), "true".to_string());
+        env.insert("OMNISOLO_DATABASE_URL".to_string(), "postgresql://user:pass@localhost/db".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.database_url, "postgresql://user:pass@localhost/db");
@@ -222,8 +222,8 @@ mod tests {
     #[test]
     fn test_verify_environment_standalone_database_url_fallback() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
-        env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "standalone".to_string());
+        env.insert("OMNISOLO_MULTITENANT".to_string(), "false".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.database_url, "sqlite://local.db");
@@ -232,9 +232,9 @@ mod tests {
     #[test]
     fn test_verify_environment_standalone_database_url_explicit() {
         let mut env = HashMap::new();
-        env.insert("OHC_SOURCE_MODE".to_string(), "standalone".to_string());
-        env.insert("OHC_MULTITENANT".to_string(), "false".to_string());
-        env.insert("OHC_DATABASE_URL".to_string(), "sqlite://custom.db".to_string());
+        env.insert("OMNISOLO_SOURCE_MODE".to_string(), "standalone".to_string());
+        env.insert("OMNISOLO_MULTITENANT".to_string(), "false".to_string());
+        env.insert("OMNISOLO_DATABASE_URL".to_string(), "sqlite://custom.db".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.database_url, "sqlite://custom.db");

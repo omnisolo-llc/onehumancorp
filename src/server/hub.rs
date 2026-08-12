@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 use regex::Regex;
-use ::server_ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
+use ::server_omnisolo::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
@@ -495,7 +495,7 @@ impl Hub {
             target_role,
             pod_id,
             if instruction.contains("landing page") {
-                "Landing Page HTML generated with OHC tokens"
+                "Landing Page HTML generated with OmniSolo tokens"
             } else if instruction.contains("social copy") {
                 "Generated 3 posts for Valentine's Day campaign"
             } else if instruction.contains("fetch") {
@@ -753,19 +753,19 @@ impl Hub {
         let cloud_connected = mode != "standalone";
 
         let hybrid_mode_ready = if mode == "standalone" {
-            std::env::var("OHC_DATABASE_URL").is_ok() && db_ping > 0
+            std::env::var("OMNISOLO_DATABASE_URL").is_ok() && db_ping > 0
         } else {
             db_ping > 0
         };
 
         let mut checklist = Vec::new();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("postgres") {
+        if std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default().starts_with("postgres") {
             checklist.push("PostgreSQL Connected");
         }
         if std::env::var("REDIS_URL").is_ok() {
             checklist.push("Redis Available");
         }
-        if mode == "standalone" && (std::env::var("OHC_DATABASE_URL").is_err() || std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("sqlite")) {
+        if mode == "standalone" && (std::env::var("OMNISOLO_DATABASE_URL").is_err() || std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default().starts_with("sqlite")) {
             checklist.push("SQLite Standalone Enabled");
         }
 
@@ -818,10 +818,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_publish_mesh_event() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .connect_lazy(&db_url)
             .unwrap();
@@ -847,10 +847,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_sanitize_hub_event_redaction() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -891,10 +891,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_invalidation() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -956,11 +956,11 @@ mod tests {
     }
     #[tokio::test]
     async fn test_delegate_sub_task_invalid_sender() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -980,11 +980,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_sub_task_valid_hierarchy() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -1016,11 +1016,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_fork_agent() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
 
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -1101,11 +1101,11 @@ mod tests {
     #[tokio::test]
     async fn test_check_health() {
         // Skip test if no database is available
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         // Since test db is likely unmigrated/empty, we connect lazily
         let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(50))

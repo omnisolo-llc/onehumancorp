@@ -12,7 +12,7 @@ test.describe('Advisor Agent CUJ', () => {
       top_seller_name: 'Vegan Chocolate Cake'
     };
 
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
     const response = await request.post(`${apiBase}/api/v1/agents/webhook`, {
       data: {
         tenant_id: tenantId,

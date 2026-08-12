@@ -2,11 +2,11 @@
 
 ## Business Context
 - **Persona:** Carlos (Freelance Handyman) / Priya (Boutique Owner)
-- **Goal:** They have a physical product or service and need to accept a payment in person. They use their phone/desktop OHC app to ring up the item, generate a Stripe Terminal token, and complete a payment intent.
+- **Goal:** They have a physical product or service and need to accept a payment in person. They use their phone/desktop OmniSolo app to ring up the item, generate a Stripe Terminal token, and complete a payment intent.
 - **Verification:** The transaction completes successfully, reflects in their unified financial dashboard, and deducts inventory (if physical).
 
 ## Test Case 1: End-to-End In-Person Payment Flow
-1. **Login:** Log in as Carlos (or Priya) on the OHC app.
+1. **Login:** Log in as Carlos (or Priya) on the OmniSolo app.
 2. **Navigate:** Go to the "Operations" dashboard -> "POS / In-Person" tab.
 3. **Select Product:** Add a product/service to the cart (e.g., "Plumbing Fix" - $50.00).
 4. **Initiate Payment:** Click the "Charge $50.00" button.

@@ -17,7 +17,7 @@ export function WhatsAppSetup() {
     <div className="flex flex-col space-y-4 p-4 min-w-[375px] max-w-full">
       <h2 className="text-xl font-bold">Connect WhatsApp</h2>
       <p className="text-sm text-gray-500">
-        Connect your WhatsApp Business account to receive messages and reply directly from OneHumanCorp.
+        Connect your WhatsApp Business account to receive messages and reply directly from OmniSolo.
       </p>
       <Button
         onClick={handleConnect}

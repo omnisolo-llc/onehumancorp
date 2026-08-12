@@ -178,7 +178,7 @@ async fn handle_waitlist(
     Ok(Json(WaitlistResponse {
         success: true,
         position: 42,
-        referral_link: format!("https://ohc.app/waitlist?ref={}", req.tenant_id),
+        referral_link: format!("https://cloud.omnisolo.co/waitlist?ref={}", req.tenant_id),
     }))
 }
 
@@ -235,7 +235,7 @@ pub async fn handle_conversational_chat(
                 payload: serde_json::json!({"count": abandoned_count}),
             });
         } else {
-            response_text = "Your business is performing well! You have no abandoned carts at the moment. We could look into starting a new referral program to reach more customers.\n\n⚡ Powered by OHC".to_string();
+            response_text = "Your business is performing well! You have no abandoned carts at the moment. We could look into starting a new referral program to reach more customers.\n\n⚡ Powered by OmniSolo".to_string();
         }
     } else if lower.contains("rating") || lower.contains("reputation") || lower.contains("review") {
         let rating: f64 = sqlx::query_scalar("SELECT average_rating FROM reputation_profiles WHERE tenant_id = $1")
@@ -244,7 +244,7 @@ pub async fn handle_conversational_chat(
             .await
             .unwrap_or(0.0);
 
-        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.\n\n⚡ Powered by OHC", rating);
+        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.\n\n⚡ Powered by OmniSolo", rating);
         if rating < 4.5 {
              draft_action = Some(ChatDraftAction {
                 id: "start_review_campaign_action".to_string(),
@@ -262,7 +262,7 @@ pub async fn handle_conversational_chat(
             description: "Share your latest business milestone with your followers.".to_string(),
             action_type: "generate_social_post".to_string(),
             payload: serde_json::json!({
-                "content": "I just hit a new milestone! Thanks to everyone who supported us. Book your next appointment here: https://ohc.app/onboarding?ref=social-share \n\n⚡ Powered by OHC"
+                "content": "I just hit a new milestone! Thanks to everyone who supported us. Book your next appointment here: https://cloud.omnisolo.co/onboarding?ref=social-share \n\n⚡ Powered by OmniSolo"
             }),
         });
     }
@@ -800,7 +800,7 @@ async fn handle_job_board_generate(
     state.hub.append_recent_event(msg).await;
 
     Ok(Json(JobBoardGenerateResponse {
-        job_board_link: format!("https://ohc.app/jobs/{}", board_id),
+        job_board_link: format!("https://cloud.omnisolo.co/jobs/{}", board_id),
     }))
 }
 
@@ -912,12 +912,12 @@ async fn handle_promoter_generate(
 
     let desc = req.description.unwrap_or_else(|| "".to_string());
 
-    let provider_name = std::env::var("OHC_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
+    let provider_name = std::env::var("OMNISOLO_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
     let api_key = match provider_name.as_str() {
         "openai" => std::env::var("OPENAI_API_KEY").unwrap_or_default(),
         "minimax" => std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
         "anthropic" => std::env::var("ANTHROPIC_API_KEY").unwrap_or_default(),
-        _ => std::env::var("OHC_LLM_API_KEY").unwrap_or_default(),
+        _ => std::env::var("OMNISOLO_LLM_API_KEY").unwrap_or_default(),
     };
 
     if !api_key.is_empty() {
@@ -928,7 +928,7 @@ async fn handle_promoter_generate(
             req.name, desc
         );
 
-        let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
+        let model = std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
 
         let client = reqwest::Client::new();
         let body = serde_json::json!({
@@ -947,7 +947,7 @@ async fn handle_promoter_generate(
         } else if provider_name == "openai" {
              std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".to_string())
         } else {
-            std::env::var("OHC_LLM_BASE_URL").unwrap_or_default()
+            std::env::var("OMNISOLO_LLM_BASE_URL").unwrap_or_default()
         };
 
         let mut url = format!("{}/chat/completions", base_url);
@@ -1008,10 +1008,10 @@ async fn handle_promoter_generate(
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    // Append Powered by OHC
+    // Append Powered by OmniSolo
     for v in variants.iter_mut() {
-        if !v.content.contains("Powered by OHC") {
-            v.content.push_str("\n\n⚡ Powered by OHC");
+        if !v.content.contains("Powered by OmniSolo") {
+            v.content.push_str("\n\n⚡ Powered by OmniSolo");
         }
     }
 
@@ -1024,7 +1024,7 @@ async fn handle_generate_customer_referral(
 ) -> impl IntoResponse {
     let store = req.store_name.unwrap_or_else(|| "our store".to_string());
     let generated = format!(
-        "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.store/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ Powered by OHC",
+        "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://cloud.omnisolo.co/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ Powered by OmniSolo",
         store, store
     );
     Json(GenerateCustomerReferralResponse {
@@ -1042,11 +1042,11 @@ async fn handle_generate_cart(
     let discount_offer = req.discount_offer.unwrap_or_else(|| "10".to_string());
     let is_pro = req.is_pro.unwrap_or(false);
 
-    let branding = if is_pro { "".to_string() } else { "\n\n⚡ Powered by OHC".to_string() };
+    let branding = if is_pro { "".to_string() } else { "\n\n⚡ Powered by OmniSolo".to_string() };
     let cart_worth = if value.is_empty() { "".to_string() } else { format!(" worth {}", value) };
 
     let generated = format!(
-        "Subject: We saved your cart!\n\nHi {},\n\nWe noticed you left some great items in your cart{} at {}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to securely finish your checkout: https://ohc.store/checkout/recover\n\nUse code COMEBACK{} for {}% off your entire order!\n\nBest,\nThe {} Team{}",
+        "Subject: We saved your cart!\n\nHi {},\n\nWe noticed you left some great items in your cart{} at {}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to securely finish your checkout: https://cloud.omnisolo.co/checkout/recover\n\nUse code COMEBACK{} for {}% off your entire order!\n\nBest,\nThe {} Team{}",
         name, cart_worth, store_name, discount_offer, discount_offer, store_name, branding
     );
 
@@ -1101,10 +1101,10 @@ async fn handle_generate_subscription_offer(
     let discount = req.discount_percentage.unwrap_or_else(|| "10".to_string());
     let freq = req.frequency.unwrap_or_else(|| "monthly".to_string());
     let store_name = req.store_name.unwrap_or_else(|| "our store".to_string());
-    let branding = if req.brand_link.unwrap_or(false) { "\n\n⚡ Powered by OHC" } else { "" };
+    let branding = if req.brand_link.unwrap_or(false) { "\n\n⚡ Powered by OmniSolo" } else { "" };
 
     let generated = format!(
-        "Subject: Never run out of {} again!\n\nHi there,\n\nWe noticed you recently purchased {}. Did you know you can get it delivered automatically?\n\nSign up for our {} Subscribe & Save plan and get {}% off every order.\n\nReady to subscribe? Click here: https://ohc.store/subscribe\n\nBest,\nThe {} Team{}",
+        "Subject: Never run out of {} again!\n\nHi there,\n\nWe noticed you recently purchased {}. Did you know you can get it delivered automatically?\n\nSign up for our {} Subscribe & Save plan and get {}% off every order.\n\nReady to subscribe? Click here: https://cloud.omnisolo.co/subscribe\n\nBest,\nThe {} Team{}",
         product_name, product_name, freq, discount, store_name, branding
     );
 
@@ -1166,7 +1166,7 @@ async fn handle_send_receipt(
     let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
 
     let generated = format!(
-        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
+        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OmniSolo -->\n<a href=\"https://cloud.omnisolo.co/join?ref={}\">Powered by OmniSolo - Start your business today</a>",
         email, amount, order_id, tenant_id
     );
 
@@ -1278,7 +1278,7 @@ async fn handle_affiliate_generate_link(
         .await
     {
         Ok(_) => {
-            let affiliate_link = format!("https://ohc.store/ref/{}", affiliate_code);
+            let affiliate_link = format!("https://cloud.omnisolo.co/ref/{}", affiliate_code);
             Ok(Json(GenerateAffiliateLinkResponse { affiliate_link, affiliate_code }))
         }
         Err(e) => {
@@ -1415,7 +1415,7 @@ async fn handle_post_purchase_embed(
     let branding = if has_pro {
         "".to_string()
     } else {
-        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
+        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>"#, tenant)
     };
 
     let html = format!(
@@ -1468,7 +1468,7 @@ async fn handle_post_purchase_embed(
     <h3>Share and Get {discount_display} OFF</h3>
     <p>Share your link with friends. They get {discount_display} off their first order, and you get {discount_display} off your next!</p>
     <div class="input-group">
-        <input type="text" readonly value="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" id="ref-link" />
+        <input type="text" readonly value="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" id="ref-link" />
         <button onclick="copyLink(this)">Copy Link</button>
     </div>
     {branding}
@@ -1531,7 +1531,7 @@ async fn handle_customer_referral_embed(
     let branding = if has_pro {
         "".to_string()
     } else {
-        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>"#, tenant)
+        format!(r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>"#, tenant)
     };
 
     let html = format!(
@@ -1598,7 +1598,7 @@ async fn handle_customer_referral_embed(
         <div class="icon">🎁</div>
         <h2>Give ${give}, Get ${get}</h2>
         <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
-        <button class="button" onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
+        <button class="button" onclick="window.open('https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
         {branding}
     </div>
 </body>
@@ -1642,7 +1642,7 @@ pub async fn handle_one_tap_referral_embed(
     } else {
         format!(
             r#"<div style="margin-top: 16px; font-size: 11px; text-align: center;">
-                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=one_tap_referral_embed" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+                <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=one_tap_referral_embed" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>
             </div>"#,
             safe_tenant, muted_color
         )
@@ -1832,7 +1832,7 @@ async fn handle_viral_goal_tracker(
     let branding = if has_pro {
         "".to_string()
     } else {
-        format!(r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ Powered by OHC</div>"#)
+        format!(r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ Powered by OmniSolo</div>"#)
     };
 
     // Calculate current progress based on real DB values.
@@ -1932,7 +1932,7 @@ async fn handle_viral_goal_tracker(
             <span>{target} target</span>
         </div>
 
-        <button class="btn" onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share to reach goal</button>
+        <button class="btn" onclick="window.open('https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share to reach goal</button>
 
         {branding}
     </div>
@@ -1984,7 +1984,7 @@ async fn handle_storefront_embed(
 
     let branding = if !has_pro {
         format!(r#"<div class="footer">
-            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={safe_tenant}" target="_blank">⚡ Powered by OmniSolo</a>
         </div>"#)
     } else {
         "".to_string()
@@ -2058,7 +2058,7 @@ async fn handle_wrapped(
             top_product: "Vegan Celebration Cake".to_string(),
             ai_hours_saved: 124,
         },
-        share_text: "My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OHC Year in Review:".to_string(),
+        share_text: "My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OmniSolo Year in Review:".to_string(),
     })
 }
 
@@ -2130,7 +2130,7 @@ async fn handle_flash_sale_embed(
         <div class="code-box">{safe_code}</div>
 
         <div class="footer">
-            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank">⚡ Powered by OmniSolo</a>
         </div>
     </div>
 
@@ -2215,7 +2215,7 @@ async fn handle_og_card(
     }
 
     let branding = if !has_pro {
-        format!(r#"<text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>"#, text_color)
+        format!(r#"<text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{}" text-anchor="end" opacity="0.8">⚡ Powered by OmniSolo</text>"#, text_color)
     } else {
         "".to_string()
     };
@@ -2273,7 +2273,7 @@ async fn handle_check_milestones(
         Milestone {
             id: "10th_order".to_string(),
             title: "🎉 Milestone: 10th Order!".to_string(),
-            description: "You've successfully processed your 10th order on OHC.".to_string(),
+            description: "You've successfully processed your 10th order on OmniSolo.".to_string(),
             reached: reached_types.contains(&"10th_order".to_string()),
         },
         Milestone {
@@ -2285,7 +2285,7 @@ async fn handle_check_milestones(
         Milestone {
             id: "5_referrals".to_string(),
             title: "High Connector!".to_string(),
-            description: "You've successfully referred 5 other businesses to OHC.".to_string(),
+            description: "You've successfully referred 5 other businesses to OmniSolo.".to_string(),
             reached: reached_types.contains(&"5_referrals".to_string()),
         },
         Milestone {
@@ -2297,19 +2297,19 @@ async fn handle_check_milestones(
         Milestone {
             id: "50th_order".to_string(),
             title: "🔥 50th Order!".to_string(),
-            description: "You've successfully processed your 50th order on OHC.".to_string(),
+            description: "You've successfully processed your 50th order on OmniSolo.".to_string(),
             reached: reached_types.contains(&"50th_order".to_string()),
         },
         Milestone {
             id: "100_orders".to_string(),
             title: "📦 Century of Orders".to_string(),
-            description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
+            description: "You've successfully fulfilled 100 orders on OmniSolo!".to_string(),
             reached: reached_types.contains(&"100_orders".to_string()),
         },
         Milestone {
             id: "1000_orders".to_string(),
             title: "👑 1,000 Orders!".to_string(),
-            description: "A monumental achievement! 1,000 orders fulfilled on OHC!".to_string(),
+            description: "A monumental achievement! 1,000 orders fulfilled on OmniSolo!".to_string(),
             reached: reached_types.contains(&"1000_orders".to_string()),
         },
         Milestone {
@@ -2397,61 +2397,61 @@ async fn handle_get_milestone(
         "revenue_100k" => (
             "Six-Figure Club! 🌟",
             "You crossed $100k in revenue. Share to unlock $500 in credits.",
-            "I just hit $100k in revenue running my business on OHC! 🚀",
+            "I just hit $100k in revenue running my business on OmniSolo! 🚀",
             "$500 Credit"
         ),
         "1000_orders" => (
             "1,000th Order Delivered! 👑",
             "An incredible milestone! Share your success to unlock $100 in credits.",
-            "I just hit my 1,000th order using OHC to run my business! 🚀",
+            "I just hit my 1,000th order using OmniSolo to run my business! 🚀",
             "$100 Credit"
         ),
         "revenue_10k" => (
             "Five-Figure Club! 💎",
             "You crossed $10k in revenue. Share to unlock $75 in credits.",
-            "I just hit $10k in revenue running my business on OHC! 🚀",
+            "I just hit $10k in revenue running my business on OmniSolo! 🚀",
             "$75 Credit"
         ),
         "100_orders" => (
             "100th Order Delivered! 🎉",
-            "You're growing fast. Share your success to unlock $50 in OHC credits.",
-            "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
+            "You're growing fast. Share your success to unlock $50 in OmniSolo credits.",
+            "I just hit my 100th order using OmniSolo to run my business! 🚀 Check them out and get $50 off your first month:",
             "$50 Credit"
         ),
         "50th_order" => (
             "50th Order! 🔥",
-            "You're halfway to 100! Share your success to unlock $30 in OHC credits.",
-            "I just hit my 50th order using OHC! 🚀",
+            "You're halfway to 100! Share your success to unlock $30 in OmniSolo credits.",
+            "I just hit my 50th order using OmniSolo! 🚀",
             "$30 Credit"
         ),
         "revenue_1k" => (
             "Four-Figure Club! 💰",
             "You crossed $1k in revenue. Share to unlock $25 in credits.",
-            "I just hit my first $1k in revenue running my business on OHC! 🚀",
+            "I just hit my first $1k in revenue running my business on OmniSolo! 🚀",
             "$25 Credit"
         ),
         "10th_order" => (
             "10th Order! 📈",
             "Business is booming. Share your success to unlock $10 in credits.",
-            "I just hit my 10th order using OHC! 🚀 Get $50 off your first month:",
+            "I just hit my 10th order using OmniSolo! 🚀 Get $50 off your first month:",
             "$10 Credit"
         ),
         "5_referrals" => (
             "High Connector! 🤝",
             "You've referred 5 businesses. Share to unlock $100 in credits.",
-            "I just helped 5 other businesses start on OHC! 🚀 Get $50 off your first month:",
+            "I just helped 5 other businesses start on OmniSolo! 🚀 Get $50 off your first month:",
             "$100 Credit"
         ),
         "100_visitors" => (
             "100 Visitors! 🚀",
             "Traffic is soaring. Share to unlock $5 in credits.",
-            "I just had 100 visitors to my new OHC storefront! 🚀 Check it out and get $50 off your first month:",
+            "I just had 100 visitors to my new OmniSolo storefront! 🚀 Check it out and get $50 off your first month:",
             "$5 Credit"
         ),
         _ => (
             "First Sale! 💸",
             "You got your first sale! Share your success to unlock $5 in credits.",
-            "I just got my first sale using OHC to run my business! 🚀 Start your business and get $50 off your first month:",
+            "I just got my first sale using OmniSolo to run my business! 🚀 Start your business and get $50 off your first month:",
             "$5 Credit"
         ),
     };
@@ -2514,7 +2514,7 @@ pub async fn handle_get_referral_milestones(
         }),
         serde_json::json!({
             "target": 25,
-            "title": "OHC Ambassador",
+            "title": "OmniSolo Ambassador",
             "reward": "$500 Cash Bonus",
             "reached": total_referrals >= 25
         }),
@@ -2562,7 +2562,7 @@ pub async fn handle_get_milestone_card(
     let safe_business_name = escape_xml(&business_name);
 
     let (title, sub, icon, grad_start, grad_end) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
+        "first_sale" => ("First Sale!", "Unlocked on OmniSolo", "💰", "#667eea", "#764ba2"),
         "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
         "50th_order" => ("50th Order!", "Halfway to 100", "🔥", "#ff9a9e", "#fecfef"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
@@ -2571,13 +2571,13 @@ pub async fn handle_get_milestone_card(
         "revenue_10k" => ("Five-Figure Club", "Crossed $10k in Revenue!", "💎", "#a18cd1", "#fbc2eb"),
         "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
         "1000_orders" => ("1,000 Orders!", "A monumental achievement", "👑", "#f6d365", "#fda085"),
-        _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
+        _ => ("Success Milestone!", "Built with OmniSolo", "✨", "#667eea", "#764ba2"),
     };
 
     let branding = if !has_pro {
         format!(r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
-    <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
-    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OHC & get 14 days of Pro free</text>
+    <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OmniSolo</text>
+    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OmniSolo & get 14 days of Pro free</text>
   </a>"##, tenant_id)
     } else {
         "".to_string()
@@ -2695,7 +2695,7 @@ async fn handle_generate_discount_share(
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
     let uuid = uuid::Uuid::new_v4().to_string();
-    let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
+    let share_url = format!("https://cloud.omnisolo.co/discount/{}?tenant={}", uuid, tenant_id);
 
     // Track generation metrics
     // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,
@@ -2824,9 +2824,9 @@ async fn handle_referral_click_get(
 
     // Redirect user to the intended target (or dashboard if not specified)
     let redirect_url = if target_url.starts_with('/') {
-        format!("https://ohc.app{}", target_url)
+        format!("https://cloud.omnisolo.co{}", target_url)
     } else {
-        "https://ohc.app/dashboard".to_string()
+        "https://cloud.omnisolo.co/dashboard".to_string()
     };
 
     Ok(axum::response::Redirect::to(&redirect_url).into_response())
@@ -2954,7 +2954,7 @@ async fn handle_referral_generate(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://ohc.app/ref/{}", ref_code),
+                referral_link: format!("https://cloud.omnisolo.co/ref/{}", ref_code),
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -3020,7 +3020,7 @@ async fn handle_create_team_invite(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
-            let invite_link = format!("https://ohc.app/invite/{}", invite.id);
+            let invite_link = format!("https://cloud.omnisolo.co/invite/{}", invite.id);
             Ok(Json(CreateTeamInviteResponse { invite_link }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -3077,7 +3077,7 @@ mod tests {
     use sqlx::PgPool;
 
     pub(crate) async fn setup_db() -> PgPool {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(500))
@@ -3139,7 +3139,7 @@ mod tests {
             .unwrap();
         let review_body: GenerateReviewResponse = serde_json::from_slice(&review_body).unwrap();
         assert!(review_body.message.contains("unavailable"));
-        assert!(!review_body.message.contains("ohc.store/review"));
+        assert!(!review_body.message.contains("cloud.omnisolo.co/review"));
 
         let campaign = handle_send_campaign(
             Extension(state),
@@ -3222,7 +3222,7 @@ mod tests {
         assert!(html.contains("15% Off"));
         assert!(html.contains("Send to your buddy!"));
         assert!(html.contains("#1d1d1f")); // Dark theme bg
-        assert!(html.contains("Powered by OHC"));
+        assert!(html.contains("Powered by OmniSolo"));
     }
 
     #[tokio::test]
@@ -3253,7 +3253,7 @@ mod tests {
         let res = handle_create_team_invite(Extension(state.clone()), Extension(auth_info.clone()), Json(req)).await;
         assert!(res.is_ok());
         let create_res_json = res.unwrap().0;
-        assert!(create_res_json.invite_link.starts_with("https://ohc.app/invite/inv-"));
+        assert!(create_res_json.invite_link.starts_with("https://cloud.omnisolo.co/invite/inv-"));
 
         // Call get handler directly
         let query = GetTeamInvitesQuery {
@@ -3449,7 +3449,7 @@ mod tests {
         let json = res.unwrap().0;
         assert_eq!(json.success, true);
         assert_eq!(json.position, 42);
-        assert_eq!(json.referral_link, "https://ohc.app/waitlist?ref=test-tenant");
+        assert_eq!(json.referral_link, "https://cloud.omnisolo.co/waitlist?ref=test-tenant");
     }
 
     #[tokio::test]
@@ -3472,7 +3472,7 @@ mod tests {
 
         let res = handle_referral_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
         let ref_link = res.0.referral_link;
-        assert!(ref_link.starts_with("https://ohc.app/ref/"));
+        assert!(ref_link.starts_with("https://cloud.omnisolo.co/ref/"));
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE tenant_id = 'test-org' AND user_id = 'test-agent'")
             .fetch_one(&pool).await.unwrap();
@@ -3645,7 +3645,7 @@ mod tests {
         assert!(res_json.message.contains("worth $100.00"));
         assert!(res_json.message.contains("Bob Store"));
         assert!(res_json.message.contains("COMEBACK20"));
-        assert!(res_json.message.contains("Powered by OHC"));
+        assert!(res_json.message.contains("Powered by OmniSolo"));
     }
 
     #[tokio::test]
@@ -3727,7 +3727,7 @@ mod tests {
         let res = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
         let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
         let html = String::from_utf8(body_bytes.to_vec()).unwrap();
-        assert!(!html.contains("Powered by OHC"));
+        assert!(!html.contains("Powered by OmniSolo"));
 
         sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Free', 'free') ON CONFLICT (id) DO UPDATE SET plan_tier = 'free'")
             .bind("22222222-2222-2222-2222-222222222222")
@@ -3738,7 +3738,7 @@ mod tests {
         let res2 = super::handle_og_card(Extension(state.clone()), axum::extract::Query(query2)).await.into_response();
         let body_bytes2 = axum::body::to_bytes(res2.into_body(), usize::MAX).await.unwrap();
         let html2 = String::from_utf8(body_bytes2.to_vec()).unwrap();
-        assert!(html2.contains("Powered by OHC"));
+        assert!(html2.contains("Powered by OmniSolo"));
     }
 }
 
@@ -3841,7 +3841,7 @@ async fn handle_cloud_bridge_invite(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
-            let invite_link = format!("https://ohc.app/invite/{}", invite.id);
+            let invite_link = format!("https://cloud.omnisolo.co/invite/{}", invite.id);
             Ok(Json(CloudBridgeInviteResponse { invite_link }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -3870,7 +3870,7 @@ mod cloud_bridge_tests {
         assert!(html.contains("Summer Spin"));
         assert!(html.contains("test-tenant"));
         assert!(html.contains("Free Coffee"));
-        assert!(html.contains("Powered by OHC"));
+        assert!(html.contains("Powered by OmniSolo"));
     }
 
     #[tokio::test]
@@ -3892,7 +3892,7 @@ mod cloud_bridge_tests {
         assert!(html.contains("Give $15, Get $20"));
         assert!(html.contains("test-tenant"));
         assert!(html.contains("Give your friends $15 off"));
-        assert!(html.contains("Powered by OHC"));
+        assert!(html.contains("Powered by OmniSolo"));
     }
 
         #[tokio::test]
@@ -3923,7 +3923,7 @@ mod cloud_bridge_tests {
         assert!(html.contains("id=\"email\""));
         assert!(html.contains("id=\"birthday\""));
         assert!(html.contains("Join the Club"));
-        assert!(html.contains("Powered by OHC"));
+        assert!(html.contains("Powered by OmniSolo"));
 
         let query_no_branding = super::BirthdayClubEmbedQuery {
             tenant: Some("test-tenant-2".to_string()),
@@ -4018,7 +4018,7 @@ mod cloud_bridge_tests {
 
         assert!(html.contains("Test Title"));
         assert!(html.contains("test-tenant"));
-        assert!(html.contains("Powered by OHC"));
+        assert!(html.contains("Powered by OmniSolo"));
 
         let query_no_branding = super::ViralWidgetEmbedQuery { tenant: Some("test-tenant-2".to_string()), theme: None, title: Some("Test Title 2".to_string()), branding: Some(false) };
         let res_no_branding = super::handle_viral_widget_embed(Extension(state.clone()), axum::extract::Query(query_no_branding)).await.into_response();
@@ -4028,7 +4028,7 @@ mod cloud_bridge_tests {
 
         assert!(_html_nb.contains("Test Title 2"));
         assert!(_html_nb.contains("test-tenant-2"));
-        assert!(!_html_nb.contains("Powered by OHC"));
+        assert!(!_html_nb.contains("Powered by OmniSolo"));
     }
 
     use super::*;
@@ -4064,7 +4064,7 @@ mod cloud_bridge_tests {
         assert!(res.is_ok());
 
         let res_json = res.unwrap().0;
-        assert!(res_json.invite_link.starts_with("https://ohc.app/invite/"));
+        assert!(res_json.invite_link.starts_with("https://cloud.omnisolo.co/invite/"));
 
         let recent_events = state.hub.recent_events(10).await;
         assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
@@ -4195,10 +4195,10 @@ async fn handle_interactive_poll_embed(
     );
 
     if !hide_branding {
-        let origin = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://ohc.app".to_string());
+        let origin = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
         html.push_str(&format!(
             r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;">
-                <a href="{}/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+                <a href="{}/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>
             </div>"#,
             origin, tenant
         ));
@@ -4322,7 +4322,7 @@ async fn handle_spin_to_win_embed(
     </div>
 
     <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
-        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+        <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>
     </div>
 
     <script>
@@ -4502,10 +4502,10 @@ pub async fn handle_community_goal_embed(
             <span>Goal: {target}</span>
         </div>
 
-        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant_encoded}" target="_blank" class="btn" style="display: inline-block; text-decoration: none; text-align: center; box-sizing: border-box;">Share to reach goal</a>
+        <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant_encoded}" target="_blank" class="btn" style="display: inline-block; text-decoration: none; text-align: center; box-sizing: border-box;">Share to reach goal</a>
 
         <div class="footer">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant_encoded}&source=community_goal_embed" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant_encoded}&source=community_goal_embed" target="_blank">⚡ Powered by OmniSolo</a>
         </div>
     </div>
 </body>
@@ -4603,7 +4603,7 @@ pub async fn handle_viral_widget_embed(
     <div class="card">
         <h2>{title}</h2>
         <p>This is a viral widget for {tenant}. Share it with your friends!</p>
-        <button onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share Now</button>
+        <button onclick="window.open('https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share Now</button>
 "#,
         bg_color = bg_color,
         border_color = border_color,
@@ -4615,7 +4615,7 @@ pub async fn handle_viral_widget_embed(
     if show_branding {
         html.push_str(&format!(
             r#"        <div class="branding">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=viral_widget" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=viral_widget" target="_blank">⚡ Powered by OmniSolo</a>
         </div>"#
         ));
     }
@@ -4715,7 +4715,7 @@ pub async fn handle_embed_widget(
       <h3 style="margin:0 0 16px 0; font-size:16px;">Top Referrers</h3>
       {leaderboard_html}
       <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
-        <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={escaped_tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+        <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={escaped_tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>
       </div>
   </div>
 </body>
@@ -4743,7 +4743,7 @@ pub async fn handle_embed_widget(
   <button id="start-btn" data-type="{}">Start {}</button>
 
   <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 16px;">
-    <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+    <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>
   </div>
 
   <script>
@@ -4966,8 +4966,8 @@ pub async fn handle_promo_generate(
         occasion, discount
     );
 
-    if !generated.contains("Powered by OHC") {
-        generated.push_str("\n\n⚡ Powered by OHC");
+    if !generated.contains("Powered by OmniSolo") {
+        generated.push_str("\n\n⚡ Powered by OmniSolo");
     }
 
     axum::Json(GeneratePromoResponse {
@@ -5078,7 +5078,7 @@ pub async fn handle_discount_code_embed(
         "".to_string()
     } else {
         format!(
-            "<div style=\"margin-top: 10px; font-size: 12px;\"><a href=\"https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #6b7280; text-decoration: none; font-weight: 600;\">⚡ Powered by OHC</a></div>",
+            "<div style=\"margin-top: 10px; font-size: 12px;\"><a href=\"https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}\" target=\"_blank\" rel=\"noopener noreferrer\" style=\"color: #6b7280; text-decoration: none; font-weight: 600;\">⚡ Powered by OmniSolo</a></div>",
             tenant
         )
     };
@@ -5212,7 +5212,7 @@ pub async fn handle_footer_branding_embed(
 ) -> impl axum::response::IntoResponse {
     let tenant = query.tenant.as_deref().unwrap_or("embed");
     let style = query.style.as_deref().unwrap_or("pill");
-    let text = query.text.as_deref().unwrap_or("Powered by OHC");
+    let text = query.text.as_deref().unwrap_or("Powered by OmniSolo");
     let theme = query.theme.as_deref().unwrap_or("light");
 
     let safe_tenant = escape_html(tenant);
@@ -5241,7 +5241,7 @@ pub async fn handle_footer_branding_embed(
     }}
 
     var link = document.createElement('a');
-    link.href = 'https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=' + encodeURIComponent(tenant) + '&source=footer_branding';
+    link.href = 'https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=' + encodeURIComponent(tenant) + '&source=footer_branding';
     link.target = '_blank';
     link.style.textDecoration = 'none';
     link.style.display = 'flex';
@@ -5367,7 +5367,7 @@ pub async fn handle_waitlist_embed(
     } else {
         format!(
             r#"<div style="margin-top: 16px; font-size: 12px; text-align: center;">
-                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=waitlist_embed" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+                <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=waitlist_embed" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>
             </div>"#,
             safe_tenant, muted_color
         )
@@ -5555,7 +5555,7 @@ pub async fn handle_birthday_club_embed(
     } else {
         format!(
             r#"<div style="margin-top: 16px; font-size: 12px; text-align: center;">
-                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=birthday_club" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+                <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=birthday_club" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>
             </div>"#,
             safe_tenant, muted_color
         )
@@ -5773,7 +5773,7 @@ async fn handle_countdown_embed(
     let branding_html = if branding {
         format!(
             r#"<div style="margin-top: 16px; font-size: 12px; font-weight: 600; text-align: center;">
-                <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=countdown_embed" target="_blank" rel="noopener noreferrer" style="color: #86868b; text-decoration: none;">⚡ Powered by OHC</a>
+                <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=countdown_embed" target="_blank" rel="noopener noreferrer" style="color: #86868b; text-decoration: none;">⚡ Powered by OmniSolo</a>
             </div>"#,
             tenant
         )
@@ -5947,7 +5947,7 @@ async fn handle_testimonial_embed(
     if show_branding {
         html.push_str(&format!(
             r#"        <div class="branding">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=testimonial_embed" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=testimonial_embed" target="_blank">⚡ Powered by OmniSolo</a>
         </div>"#
         , tenant = tenant));
     }
@@ -6138,7 +6138,7 @@ async fn handle_viral_before_after_embed(
     if show_branding {
         html.push_str(&format!(
             r#"        <div class="branding">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=viral_before_after" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=viral_before_after" target="_blank">⚡ Powered by OmniSolo</a>
         </div>"#
         , tenant = tenant));
     }
@@ -6304,7 +6304,7 @@ pub async fn handle_review_reward_embed(
     if !hide_branding {
         html.push_str(&format!(
             r#"        <div class="branding" id="branding-footer">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=review_reward" target="_blank">⚡ Powered by OHC</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=review_reward" target="_blank">⚡ Powered by OmniSolo</a>
         </div>"#
         ));
     }
@@ -6399,7 +6399,7 @@ pub async fn handle_review_reward_submit(
     state.hub.append_recent_event(msg).await;
 
     let mock_customer_id = format!("review_customer_{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>());
-    let referral_link = crate::services::growth::referral_api::generate_referral_link(&mock_customer_id).unwrap_or_else(|_| "https://ohc.app/invite/default".to_string());
+    let referral_link = crate::services::growth::referral_api::generate_referral_link(&mock_customer_id).unwrap_or_else(|_| "https://cloud.omnisolo.co/invite/default".to_string());
 
     let msg2 = state.hub.sanitize_hub_event(serde_json::json!({
         "type": "growth.review_reward_generated",
@@ -6486,11 +6486,11 @@ pub async fn handle_secret_menu_embed(
         </div>
 
         <div style="margin: 32px 0 16px;">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed_x" target="_blank" class="share-btn btn-x" style="text-decoration: none;">
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed_x" target="_blank" class="share-btn btn-x" style="text-decoration: none;">
                 <svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
                 Share on X
             </a>
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed_wa" target="_blank" class="share-btn btn-wa" style="text-decoration: none;">
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed_wa" target="_blank" class="share-btn btn-wa" style="text-decoration: none;">
                 <svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                 Share on WhatsApp
             </a>
@@ -6504,7 +6504,7 @@ pub async fn handle_secret_menu_embed(
         </div>
 
         <div class="powered">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed" target="_blank">⚡ POWERED BY OHC GROWTH</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=secret_menu_embed" target="_blank">⚡ POWERED BY OmniSolo GROWTH</a>
         </div>
     </div>
 </body>

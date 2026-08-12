@@ -1,4 +1,4 @@
-# One Human Corp Documentation
+# OmniSolo Documentation
 
 This site is the canonical documentation root for the repository. It follows a markdown-first workflow: source content stays in `docs/`, primary site navigation is declared in `mkdocs.yml`, and the rendered website is generated from markdown at build time.
 

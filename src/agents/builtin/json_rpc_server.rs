@@ -256,7 +256,7 @@ mod tests {
         body::Body,
         http::{Request, StatusCode},
     };
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Usage};
     use std::sync::Arc;
     use tower::ServiceExt; // for `oneshot`
 

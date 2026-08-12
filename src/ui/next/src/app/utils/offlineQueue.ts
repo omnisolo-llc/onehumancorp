@@ -8,7 +8,7 @@ export interface OfflineAction {
   timestamp: number;
 }
 
-const DB_NAME = "OHC_Offline_Queue";
+const DB_NAME = "OMNISOLO_Offline_Queue";
 const STORE_NAME = "actions";
 const DB_VERSION = 1;
 

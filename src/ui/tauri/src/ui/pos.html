@@ -167,7 +167,7 @@
 </style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>OHC - Quick Charge</title>
+    <title>OmniSolo - Quick Charge</title>
     <script src="https://js.stripe.com/terminal/v1/"></script>
     <style>
       body {
@@ -1675,9 +1675,9 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -1725,7 +1725,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const t = e.target;
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
@@ -1739,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -1765,7 +1765,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
             }, 500); // 500ms long press
         }
     });
@@ -1815,9 +1815,9 @@ document.addEventListener('DOMContentLoaded', () => {
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -1861,14 +1861,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -1877,7 +1877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id], [data-tooltip]');
         if (target) {
-            const text = (window.OHC_TOOLTIPS && target.id && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
             if (text) {
                 window.touchTimer = setTimeout(() => {
                     showTooltip(e.touches ? e.touches[0] : e, text);
@@ -2004,7 +2004,7 @@ initWalkthrough();
 <script>
     // Offline Sync Logic (IndexedDB CRDT)
 
-    const DB_NAME = "OHC_Offline_Queue";
+    const DB_NAME = "OMNISOLO_Offline_Queue";
     const STORE_NAME = "actions";
     const DB_VERSION = 1;
 

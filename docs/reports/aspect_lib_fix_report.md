@@ -11,7 +11,7 @@
    - Verified that all unit tests (`pnpm vitest run`) now pass without missing dependency errors.
 2. **Visual Excellence Codebase Polish:**
    - Refactored `src/ui/next/src/components/layout/ErrorState.tsx` and `src/ui/next/src/components/layout/PageHeader.tsx`.
-   - Applied the mandatory "macOS Translucent Glass" aesthetic per OHC's design standards (`backdrop-blur-[30px]`, `backdrop-saturate-[2.1]`, translucent backgrounds with thin white borders).
+   - Applied the mandatory "macOS Translucent Glass" aesthetic per OmniSolo's design standards (`backdrop-blur-[30px]`, `backdrop-saturate-[2.1]`, translucent backgrounds with thin white borders).
    - Added `ErrorState.test.tsx` and `PageHeader.test.tsx` to ensure 100% test coverage for the changes and verify that all correct utility classes render on the modified components.
 3. **Execution Triage:**
    - Verified through log inspection that a major contributor to Bazel test timeouts in local runs is extreme action memory execution (e.g. `libsqlite3-sys` taking large compile times), leading to 400s cutoff limits. I bypassed this by allowing tests to run in the background during evaluation where necessary, and targeted UI testing directly using `vitest` to guarantee frontend validation stability.

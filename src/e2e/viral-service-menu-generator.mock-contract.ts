@@ -30,7 +30,7 @@ test.describe('Viral Service Menu Generator', () => {
         await expect(previewBox).toHaveClass(/dark/);
 
         // Verify the viral footer exists in the preview
-        const publicFooterLink = page.locator('#preview-branding', { hasText: '⚡ Powered by OHC' });
+        const publicFooterLink = page.locator('#preview-branding', { hasText: '⚡ Powered by OmniSolo' });
         await expect(publicFooterLink).toBeVisible();
 
         // Check the generated embed code
@@ -38,7 +38,7 @@ test.describe('Viral Service Menu Generator', () => {
         const embedCode = await page.locator('#embed-code').inputValue();
         expect(embedCode).toContain('data-title="Awesome E2E Services"');
         expect(embedCode).toContain('data-theme="dark"');
-        expect(embedCode).toContain('Powered by OHC');
+        expect(embedCode).toContain('Powered by OmniSolo');
     });
 
     test('should show soft paywall when attempting to remove branding without pro', async ({ page, adminUser, loginAs }) => {
@@ -76,7 +76,7 @@ test.describe('Viral Service Menu Generator', () => {
         await expect(paywallModal).not.toHaveClass(/active/);
 
         // Preview section should hide the branding
-        const brandingLink = page.locator('#preview-branding', { hasText: '⚡ Powered by OHC' });
+        const brandingLink = page.locator('#preview-branding', { hasText: '⚡ Powered by OmniSolo' });
         await expect(brandingLink).not.toBeVisible();
 
         // Generate link without branding
@@ -86,7 +86,7 @@ test.describe('Viral Service Menu Generator', () => {
 
         // The generated link should NOT include the branding parameter
         const embedCode = await page.locator('#embed-code').inputValue();
-        expect(embedCode).not.toContain('⚡ Powered by OHC');
+        expect(embedCode).not.toContain('⚡ Powered by OmniSolo');
         expect(embedCode).toContain('data-branding="false"');
     });
 });

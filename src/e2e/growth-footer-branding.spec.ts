@@ -14,7 +14,7 @@ test.describe('Growth: Footer Branding Loop Generator', () => {
 
     // Verify title and description
     await expect(page.locator('h1')).toHaveText('Footer Branding Loop Builder');
-    await expect(page.locator('text=Generate a "Powered by OHC" snippet')).toBeVisible();
+    await expect(page.locator('text=Generate a "Powered by OmniSolo" snippet')).toBeVisible();
 
     // Verify default state
     await expect(page.locator('id=badge-style')).toHaveValue('pill');
@@ -23,7 +23,7 @@ test.describe('Growth: Footer Branding Loop Generator', () => {
 
     // Verify live preview reflects default state
     await expect(page.locator('id=preview-badge-pill')).toBeVisible();
-    await expect(page.locator('id=preview-text-pill')).toHaveText('Powered by OHC');
+    await expect(page.locator('id=preview-text-pill')).toHaveText('Powered by OmniSolo');
     await expect(page.locator('id=preview-badge-footer')).not.toBeVisible();
 
     // Interact with form
@@ -33,7 +33,7 @@ test.describe('Growth: Footer Branding Loop Generator', () => {
     // Verify live preview updates
     await expect(page.locator('id=preview-badge-pill')).not.toBeVisible();
     await expect(page.locator('id=preview-badge-footer')).toBeVisible();
-    await expect(page.locator('id=preview-text-footer')).toHaveText('Made with OHC');
+    await expect(page.locator('id=preview-text-footer')).toHaveText('Made with OmniSolo');
 
     // Open embed code modal
     await page.click('id=get-code-btn');
@@ -44,7 +44,7 @@ test.describe('Growth: Footer Branding Loop Generator', () => {
     expect(code).toContain('footer-branding/embed.js');
     expect(code).toContain('tenant=');
     expect(code).toContain('style=footer');
-    expect(code).toContain('text=Made%20with%20OHC');
+    expect(code).toContain('text=Made%20with%20OmniSolo');
 
     // Close modal
     await page.click('id=close-embed-btn');

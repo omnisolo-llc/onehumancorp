@@ -18,7 +18,7 @@ test.describe('Viral Before/After Slider Loop', () => {
         });
         await page.reload();
 
-        await page.locator('label', { hasText: 'Remove "Powered by OHC" Badge' }).click();
+        await page.locator('label', { hasText: 'Remove "Powered by OmniSolo" Badge' }).click();
 
         await expect(page.locator('h2', { hasText: 'Upgrade to Remove Branding' })).toBeVisible();
 
@@ -55,8 +55,8 @@ test.describe('Viral Before/After Slider Loop', () => {
         const afterImg = page.locator('img.img-after');
         await expect(afterImg).toBeVisible();
 
-        // Verify the "Powered by OHC" viral loop branding
-        const footerLink = page.locator('a', { hasText: '⚡ Powered by OHC' });
+        // Verify the "Powered by OmniSolo" viral loop branding
+        const footerLink = page.locator('a', { hasText: '⚡ Powered by OmniSolo' });
         await expect(footerLink).toBeVisible();
 
         const href = await footerLink.getAttribute('href');
@@ -67,7 +67,7 @@ test.describe('Viral Before/After Slider Loop', () => {
     test('Renders public embed without branding when requested', async ({ page }) => {
         await page.goto('/api/v1/growth/viral-before-after/embed?tenant=e2e-tenant&title=My%20Awesome%20Work&branding=false');
 
-        const footerLink = page.locator('a', { hasText: '⚡ Powered by OHC' });
+        const footerLink = page.locator('a', { hasText: '⚡ Powered by OmniSolo' });
         await expect(footerLink).not.toBeVisible();
     });
 });

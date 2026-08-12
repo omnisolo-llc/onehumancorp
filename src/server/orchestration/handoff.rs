@@ -1,7 +1,7 @@
 use crate::db::{DbStore, DB};
-use ::server_ohc::orchestration::SyncStateHandoff;
+use ::server_omnisolo::orchestration::SyncStateHandoff;
 use crate::orchestration::mesh::TeammateMesh;
-use ohc_builtin_agent::mesh::transport::Message as MeshMessage;
+use omnisolo_builtin_agent::mesh::transport::Message as MeshMessage;
 use prost::Message;
 use std::sync::Arc;
 
@@ -85,7 +85,7 @@ impl HandoffManager {
                             },
                             "shared_tasks" => {
                                 // For shared_tasks, serialized_state is a SharedTask protobuf
-                                let payload_str = if let Ok(task) = ::server_ohc::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
+                                let payload_str = if let Ok(task) = ::server_omnisolo::orchestration::SharedTask::decode(&handoff.serialized_state[..]) {
                                     task.payload
                                 } else {
                                     String::from_utf8_lossy(&handoff.serialized_state).to_string()
@@ -165,7 +165,7 @@ impl HandoffManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use sqlx::Row;
     use std::str::FromStr;
@@ -456,7 +456,7 @@ mod tests {
 
         let cancel = manager.start_listener().await.unwrap();
 
-        let shared_task = ::server_ohc::orchestration::SharedTask {
+        let shared_task = ::server_omnisolo::orchestration::SharedTask {
             id: "task_123".to_string(),
             organization_id: "org_1".to_string(),
             parent_plan_id: "".to_string(),
@@ -529,7 +529,7 @@ mod tests {
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
-        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport = std::sync::Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));
@@ -586,7 +586,7 @@ mod tests {
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
-        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport = std::sync::Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));
@@ -620,7 +620,7 @@ mod tests {
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
-        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport = std::sync::Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));

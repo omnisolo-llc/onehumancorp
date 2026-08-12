@@ -34,7 +34,7 @@ export function AIFeaturePaywallWidget() {
     }
   };
 
-  const shareText = `Start your business on OHC! Use my link to get $50 off your first month: ${referralLink}`;
+  const shareText = `Start your business on OmniSolo! Use my link to get $50 off your first month: ${referralLink}`;
 
   const handleWhatsAppShare = () => {
      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');

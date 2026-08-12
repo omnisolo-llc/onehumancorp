@@ -1,9 +1,9 @@
 
 
-use ::server_ohc::organization::Organization;
-use ::server_ohc::organization::TeamMember;
-use ::server_ohc::organization::RoleProfile;
-use ::server_ohc::common::Role;
+use ::server_omnisolo::organization::Organization;
+use ::server_omnisolo::organization::TeamMember;
+use ::server_omnisolo::organization::RoleProfile;
+use ::server_omnisolo::common::Role;
 use chrono::{DateTime, Utc};
 
 pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {

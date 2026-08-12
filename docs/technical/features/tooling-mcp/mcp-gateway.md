@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-The OHC platform leverages the Model Context Protocol (MCP) to provide agents with a standardized, tool-agnostic interface to the external software ecosystem (GitHub, Jira, AWS, Slack, etc.). By abstracting vendor-specific APIs behind the MCP "Switchboard", we ensure that agents can focus on logic while the infrastructure handles authentication, routing, and rate-limiting.
+The OmniSolo platform leverages the Model Context Protocol (MCP) to provide agents with a standardized, tool-agnostic interface to the external software ecosystem (GitHub, Jira, AWS, Slack, etc.). By abstracting vendor-specific APIs behind the MCP "Switchboard", we ensure that agents can focus on logic while the infrastructure handles authentication, routing, and rate-limiting.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -16,7 +16,7 @@ The OHC platform leverages the Model Context Protocol (MCP) to provide agents wi
 - **Dynamic Discovery**: Agents can query the `/api/mcp/tools` endpoint to discover available capabilities at runtime.
 ### 2.2 Non-Goals
 - **Replacing Native Tooling**: We wrap existing tools; we do not build a new git client or Jira alternative.
-- **End-User Tooling**: The OHC MCP Gateway is for *agent workload* access, not direct human-to-tool interaction.
+- **End-User Tooling**: The OmniSolo MCP Gateway is for *agent workload* access, not direct human-to-tool interaction.
 
 ## 3. Detailed Design
 
@@ -63,7 +63,7 @@ MCP servers are deployed as independent sidecars or centralized deployments in K
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 
@@ -73,7 +73,7 @@ MCP servers are deployed as independent sidecars or centralized deployments in K
 - **Context Window Bloat:** Agent memory is forcefully summarized to fit within token limits, potentially losing subtle historical nuances.
 
 ### 3.4 Dynamic Tool Registration via MCP
-Current frameworks tightly couple agents to hardcoded tool schemas. OHC utilizes our unified **MCP Gateway (Switchboard)**, allowing instant, secure, and dynamic tool synthesis across entire federated clusters.
+Current frameworks tightly couple agents to hardcoded tool schemas. OmniSolo utilizes our unified **MCP Gateway (Switchboard)**, allowing instant, secure, and dynamic tool synthesis across entire federated clusters.
 - **Dynamic Registration**: Tools are discovered and registered via the SPIFFE-gated MCP Gateway.
 - **Runtime Binding**: Agents can query the registry and dynamically bind to necessary tools based on task requirements, minimizing error loops caused by missing hardcoded configurations.
 - **Seamless Integrations**: Supports a wide array of tools via standardized Model Context Protocols.

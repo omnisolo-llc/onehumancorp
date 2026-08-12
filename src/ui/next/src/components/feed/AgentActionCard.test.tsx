@@ -21,7 +21,7 @@ describe('AgentActionCard', () => {
     render(<AgentActionCard approval={defaultApproval} handleDecision={vi.fn()} queuedActionIds={new Set()} setEditingId={vi.fn()} editingId={null} setEditContent={vi.fn()} editContent="" editQuotePrice="" editQuoteScope="" setEditQuotePrice={vi.fn()} setEditQuoteScope={vi.fn()} />);
     expect(screen.getAllByText('Test event')[0]).toBeInTheDocument();
     expect(screen.getByTestId('feed-approve-btn')).toBeInTheDocument();
-    expect(screen.getByTestId('feed-dismiss-btn')).toBeInTheDocument();
+    expect(screen.getByTestId('feed-dismiss-btn')).toHaveClass('bg-red-100', 'text-red-700');
   });
 
   it('handles approve click', () => {

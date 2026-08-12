@@ -54,12 +54,12 @@ test.describe('Work-Intake Widget Growth Loop', () => {
     expect(codeValue).toContain('tenant=e2e-tenant');
     expect(codeValue).toContain('theme=dark');
     expect(codeValue).toContain('title=E2E%20Custom%20Request');
-    expect(codeValue).toContain('Powered by OHC'); // Verify the viral loop is intact
+    expect(codeValue).toContain('Powered by OmniSolo'); // Verify the viral loop is intact
   });
 
   test('should show soft paywall when attempting to remove branding', async ({ page }) => {
     // Check the remove branding checkbox
-    const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OHC" branding');
+    const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OmniSolo" branding');
     await removeBrandingCheckbox.check();
 
     // Verify soft paywall appears

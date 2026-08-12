@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     <button class="buy-button">Buy Now</button>
 
     <div class="footer">
-        Powered by <a href="https://ohc.app?ref=${safeTenant}" target="_blank">OHC</a>
+        Powered by <a href="https://cloud.omnisolo.co?ref=${safeTenant}" target="_blank">OmniSolo</a>
     </div>
 </body>
 </html>`;

@@ -134,8 +134,8 @@ impl Department for TranslationAgent {
                 let mut translated_name = format!("[{}] {}", lang, name);
                 let mut translated_desc = format!("[{}] {}", lang, description);
 
-                let raw_response = match std::env::var("OHC_TRANSLATION_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                let raw_response = match std::env::var("OMNISOLO_TRANSLATION_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                     .as_deref()
                 {
                     Ok("minimax") => {

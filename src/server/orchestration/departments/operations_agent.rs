@@ -43,7 +43,7 @@ impl Department for OperationsAgent {
             let booking_id = event.payload.get("booking_id").and_then(|v| v.as_str()).unwrap_or("");
 
             // Simple NLP parser using LLM
-            let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            let llm_res = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                 Ok("gemini") => {
                     crate::minimax::LocalLLMClient::new().reason(&format!("Extract a new proposed date and time from this reschedule request: '{}'. Return JSON {{ \"proposed_start_time\": \"YYYY-MM-DDTHH:MM:SSZ\" }}", message)).await
                 }
@@ -108,7 +108,7 @@ impl Department for OperationsAgent {
             tracing::info!("Operations Agent: Parsing voice intent from offline queue for tenant {}: {}", event.tenant_id, transcription);
 
             // Log intent to memory
-            let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
+            let record = omnisolo_builtin_agent::memory_store::EmbeddingRecord {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: event.tenant_id.clone(),
                 agent_id: "operations_agent".to_string(),
@@ -665,7 +665,7 @@ mod tests {
     use crate::orchestration::departments::orchestrator::Department;
     use crate::orchestration::departments::types::{ApprovalStatus, DepartmentType};
     use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use sqlx::sqlite::SqlitePoolOptions;
     use std::sync::Arc;
 

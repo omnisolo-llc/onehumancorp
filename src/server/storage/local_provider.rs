@@ -92,7 +92,7 @@ impl Provider for LocalProvider {
     }
 
     async fn get_blob_url(&self, key: &str) -> io::Result<String> {
-        if let Ok(cdn) = std::env::var("OHC_CDN_URL") {
+        if let Ok(cdn) = std::env::var("OMNISOLO_CDN_URL") {
             if !cdn.is_empty() {
                 let cdn = cdn.trim_end_matches('/');
                 let key = key.trim_start_matches('/');

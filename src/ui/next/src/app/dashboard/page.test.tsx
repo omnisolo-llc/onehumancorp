@@ -101,3 +101,27 @@ test('renders dashboard with actionable feed', async () => {
   expect(screen.getByText("My Plan")).toBeDefined();
 
 }, 30000);
+
+test('does not request dashboard APIs that have no server contract', async () => {
+  const requestedUrls: string[] = [];
+  global.fetch = vi.fn((url: string) => {
+    requestedUrls.push(url);
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+  }) as any;
+
+  const { act } = await import('@testing-library/react');
+  await act(async () => {
+    render(<TooltipProvider><Dashboard /></TooltipProvider>);
+  });
+
+  await waitFor(() => {
+    expect(screen.getByText('Action Required')).toBeDefined();
+  });
+
+  expect(requestedUrls).not.toContain('/api/v1/ledger/accounts');
+  expect(requestedUrls).not.toContain('/api/v1/user/usage');
+  expect(requestedUrls).not.toContain('/api/v1/mesh/v2/collective?action=getNearby');
+}, 30000);

@@ -6,8 +6,8 @@ use axum::{
     routing::get,
 };
 use ::server_common::Claims;
-use ::server_ohc::orchestration::{SyncMcpDeltasRequest, DeltaItem};
-use ::server_ohc::orchestration::sync_service_server::SyncService;
+use ::server_omnisolo::orchestration::{SyncMcpDeltasRequest, DeltaItem};
+use ::server_omnisolo::orchestration::sync_service_server::SyncService;
 use serde::Deserialize;
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::broadcast;
@@ -60,10 +60,10 @@ pub async fn power_sync_pull_handler(
     Json(_payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
-        Ok((tenant_id, agent_id)) => format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id),
+        Ok((tenant_id, agent_id)) => format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id),
         Err(e) => return e,
     };
-    let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPullRequest {});
+    let mut tonic_request = tonic::Request::new(::server_omnisolo::orchestration::PowerSyncPullRequest {});
 
     if let Ok(metadata_value) = spiffe_id_str.parse() {
         tonic_request.metadata_mut().insert("x-spiffe-id", metadata_value);
@@ -90,12 +90,12 @@ pub async fn power_sync_push_handler(
     Json(payload): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let spiffe_id_str = match validate_token_and_get_tenant(&pool, &headers).await {
-        Ok((tenant_id, agent_id)) => format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id),
+        Ok((tenant_id, agent_id)) => format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id),
         Err(e) => return e,
     };
     let payload_str = serde_json::to_string(&payload.get("payload").unwrap_or(&payload)).unwrap_or_else(|_| "[]".to_string());
 
-    let mut tonic_request = tonic::Request::new(::server_ohc::orchestration::PowerSyncPushRequest {
+    let mut tonic_request = tonic::Request::new(::server_omnisolo::orchestration::PowerSyncPushRequest {
         payload: payload_str,
     });
 
@@ -142,7 +142,7 @@ pub async fn sync_mcp_deltas_handler(
         Ok(t) => t,
         Err(e) => return e,
     };
-    let spiffe_id_str = format!("spiffe://onehumancorp.io/org/{}/agent/{}", tenant_id, agent_id);
+    let spiffe_id_str = format!("spiffe://omnisolo.io/org/{}/agent/{}", tenant_id, agent_id);
 
     if tenant_id.is_empty() {
         return (StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({

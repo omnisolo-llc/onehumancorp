@@ -2,15 +2,15 @@
 
 # KAIROS Master API Guide
 
-Welcome to the KAIROS Master API Guide, the central nervous system of the Agentic OS. This guide provides comprehensive, interactive, and diagram-driven insights into the Swarm Intelligence Protocol (OHC-SIP).
+Welcome to the KAIROS Master API Guide, the central nervous system of the Agentic OS. This guide provides comprehensive, interactive, and diagram-driven insights into the Swarm Intelligence Protocol (OmniSolo-SIP).
 
 ## 1. Zero Secrets Authentication Flow
 
-All endpoints in OHC are secured via SPIFFE/SPIRE zero-trust principles. We eliminate static API keys to ensure maximum security.
+All endpoints in OmniSolo are secured via SPIFFE/SPIRE zero-trust principles. We eliminate static API keys to ensure maximum security.
 
 ```mermaid
 graph TD
-    Client[Human CEO / External Tools] --> API[OHC Gateway]
+    Client[Human CEO / External Tools] --> API[OmniSolo Gateway]
     API --> Auth{SPIFFE / OIDC}
     Auth -->|Valid| Hub[Orchestration Hub]
     Auth -->|Invalid| 401[401 Unauthorized]
@@ -175,7 +175,7 @@ graph TD
 
 ## 5. AutoDream Pipeline
 
-The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session_data` and the runtime memory directory (`OHC_MEMORY_DIR`, typically `.ohc/runtime/memory`) into long-term vector embeddings in `pgvector`. This process runs autonomously as part of the backend orchestration loop.
+The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session_data` and the runtime memory directory (`OMNISOLO_MEMORY_DIR`, typically `.ohc/runtime/memory`) into long-term vector embeddings in `pgvector`. This process runs autonomously as part of the backend orchestration loop.
 
 ```mermaid
 graph TD
@@ -194,7 +194,7 @@ graph TD
 
 *   **Trigger Manual AutoDream Sync**
     *   **Endpoint:** `POST /api/v1/autodream/sync`
-    *   **Description:** Forces the background worker to scan any `*.yml` files in `OHC_MEMORY_DIR`, generate Minimax embeddings, and upsert them into `autodream_memories`.
+    *   **Description:** Forces the background worker to scan any `*.yml` files in `OMNISOLO_MEMORY_DIR`, generate Minimax embeddings, and upsert them into `autodream_memories`.
     *   **Payload Example:**
         ```json
         {
@@ -221,7 +221,7 @@ sequenceDiagram
     participant LLM as Embedding Model
     participant DB as pgvector
 
-    Worker->>FS: Writes Session Context to OHC_MEMORY_DIR
+    Worker->>FS: Writes Session Context to OMNISOLO_MEMORY_DIR
     AutoDream->>FS: Polling/Manual Sync Trigger
     AutoDream->>LLM: Pass text to Minimax/Ada
     LLM-->>AutoDream: Return 1536-dim Embedding

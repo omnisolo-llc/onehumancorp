@@ -142,8 +142,8 @@ impl OperationsWorker {
                 let mut attempts = 0;
                 while attempts < MAX_RETRIES {
                     let ai_op = async {
-                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                            let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                                 prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                 from_agent_id: "operations".into(),
                             };
@@ -374,8 +374,8 @@ impl OperationsWorker {
                                     let mut attempts = 0;
                                     while attempts < MAX_RETRIES {
                                         let ai_op = async {
-                                            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                                                let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                            if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                                let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                                                     prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                                     from_agent_id: "operations".into(),
                                                 };
@@ -514,7 +514,7 @@ impl OperationsWorker {
                         } else if order_count == 10 {
                             "You've reached 10 orders! Your business is gaining serious momentum."
                         } else {
-                            "You've successfully fulfilled 100 orders on OHC!"
+                            "You've successfully fulfilled 100 orders on OmniSolo!"
                         };
                         let milestone_id = Uuid::new_v4().to_string();
 
@@ -578,7 +578,7 @@ impl OperationsWorker {
                         } else if order_count == 10 {
                             "You've reached 10 orders! Your business is gaining serious momentum."
                         } else {
-                            "You've successfully fulfilled 100 orders on OHC!"
+                            "You've successfully fulfilled 100 orders on OmniSolo!"
                         };
                         let milestone_id = Uuid::new_v4().to_string();
 
@@ -773,8 +773,8 @@ impl CustomerSuccessWorker {
                 let mut attempts = 0;
                 while attempts < MAX_RETRIES {
                     let ai_op = async {
-                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                            let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                                 prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                 from_agent_id: "The Ambassador".into(),
                             };
@@ -1014,8 +1014,8 @@ impl PromoterWorker {
                                 let mut attempts = 0;
                                 while attempts < MAX_RETRIES {
                                     let ai_op = async {
-                                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                                            let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                            let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                                                 prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                                 from_agent_id: "The Promoter".into(),
                                             };
@@ -1054,8 +1054,8 @@ impl PromoterWorker {
                                     for platform in ["tiktok", "instagram", "facebook", "twitter", "linkedin"].iter() {
                                         if let Some(v) = obj.get_mut(*platform) {
                                             if let Some(s) = v.as_str() {
-                                                if !s.contains("Powered by OHC") {
-                                                    *v = serde_json::json!(format!("{}\n\n⚡ Powered by OHC", s));
+                                                if !s.contains("Powered by OmniSolo") {
+                                                    *v = serde_json::json!(format!("{}\n\n⚡ Powered by OmniSolo", s));
                                                 }
                                             }
                                         }
@@ -1143,8 +1143,8 @@ impl PromoterWorker {
                                 let mut attempts = 0;
                                 while attempts < MAX_RETRIES {
                                     let ai_op = async {
-                                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                                            let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                        if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                            let reason_req = ::server_omnisolo::orchestration::ReasonRequest {
                                                 prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                                                 from_agent_id: "setup_wizard".to_string(),
                                             };
@@ -1199,7 +1199,7 @@ impl PromoterWorker {
 
                                 let out_payload = serde_json::to_vec(&resolved_payload).unwrap_or_default();
 
-                                let out_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                                let out_event = ::server_omnisolo::orchestration::TeammateMeshEvent {
                                     agent_id: "promoter".to_string(),
                                     action: "StorefrontGenerated".to_string(),
                                     status: "completed".to_string(),
@@ -1384,9 +1384,9 @@ impl AdvisorWorker {
                     let mut attempts = 0;
                     while attempts < MAX_RETRIES {
                         let hub_op = async {
-                            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                                let publish_req = ::server_ohc::orchestration::PublishMeshEventRequest {
-                                    event: Some(::server_ohc::orchestration::MeshEvent {
+                            if let Ok(mut client) = ::server_omnisolo::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OMNISOLO_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                let publish_req = ::server_omnisolo::orchestration::PublishMeshEventRequest {
+                                    event: Some(::server_omnisolo::orchestration::MeshEvent {
                                         event_id: Uuid::new_v4().to_string(),
                                         topic: "tenant.report.weekly_health".to_string(),
                                         payload: serde_json::to_string(&payload).unwrap_or_default().into_bytes(),

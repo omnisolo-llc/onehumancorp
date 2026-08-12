@@ -2,7 +2,7 @@ use std::sync::Arc;
 use crate::db::DB;
 use sqlx::Row;
 use serde_json::json;
-use ::server_ohc::orchestration::{sync_service_client::SyncServiceClient, PowerSyncPushRequest, PowerSyncPullRequest};
+use ::server_omnisolo::orchestration::{sync_service_client::SyncServiceClient, PowerSyncPushRequest, PowerSyncPullRequest};
 use tonic::transport::Channel;
 use tonic::Request;
 use tonic::metadata::MetadataValue;
@@ -99,7 +99,7 @@ impl PowerSyncOrchestrator {
         });
 
         // Add internal auth using spiffe identity
-        let spiffe_id = format!("spiffe://onehumancorp.io/{}/system", "system");
+        let spiffe_id = format!("spiffe://omnisolo.io/{}/system", "system");
         req.metadata_mut().insert("x-spiffe-id", MetadataValue::try_from(spiffe_id.as_str()).unwrap());
 
         let start = std::time::Instant::now();
@@ -143,7 +143,7 @@ impl PowerSyncOrchestrator {
         let mut req = Request::new(PowerSyncPullRequest {});
 
         // Add internal auth using spiffe identity
-        let spiffe_id = format!("spiffe://onehumancorp.io/{}/system", "system");
+        let spiffe_id = format!("spiffe://omnisolo.io/{}/system", "system");
         req.metadata_mut().insert("x-spiffe-id", MetadataValue::try_from(spiffe_id.as_str()).unwrap());
 
         let res = client.power_sync_pull(req).await.map_err(|e| e.to_string())?;

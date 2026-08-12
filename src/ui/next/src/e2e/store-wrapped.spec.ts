@@ -2,20 +2,6 @@ import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Store Wrapped Growth Loop', () => {
     test('dashboard shows the Store Wrapped section and navigates to the wrapped page', async ({ page }) => {
-        // First log in
-        await page.goto('/login');
-
-        // Enter credentials and click login
-        const emailInput = page.getByPlaceholder('name@example.com', { exact: false });
-        // Look for any input if placeholder varies, try just locator
-        if (await emailInput.count() === 0) {
-           await page.locator('input[type="email"], input[name="email"], input[placeholder*="Email"]').first().fill('test@example.com');
-        } else {
-           await emailInput.first().fill('test@example.com');
-        }
-        await page.locator('input[type="password"], input[name="password"]').first().fill('password123');
-        await page.locator('button:has-text("Sign in"), button:has-text("Login")').first().click();
-
         // Go to dashboard
         await page.goto('/dashboard');
 
@@ -39,7 +25,7 @@ test.describe('Store Wrapped Growth Loop', () => {
         await expect(mainHeading).toBeVisible();
 
         // Ensure the referral growth loop is intact
-        const poweredBy = page.locator('a', { hasText: '⚡ Powered by OHC' });
+        const poweredBy = page.locator('a', { hasText: '⚡ Powered by OmniSolo' });
         await expect(poweredBy).toBeVisible();
 
         const shareTitle = page.locator('h2:has-text("Share Your Success")');

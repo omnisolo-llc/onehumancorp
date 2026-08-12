@@ -40,7 +40,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(page.getByRole('heading', { name: 'Customer Referral Program' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/storefront-builder');
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'Welcome to OmniSolo Smart Builder' }).first()).toBeVisible({ timeout: 5000 });
     await expect(page.locator('.animate-fade-in').first()).toBeVisible({ timeout: 5000 });
 
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
@@ -122,7 +122,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     if (hasCodeBlock) {
         const codeText = await page.locator('#embed-code').innerText();
         expect(codeText).toContain('<div id="ohc-leaderboard"></div>');
-        expect(codeText).toContain('ohc.app/api/v1/growth/embed/widget?type=leaderboard');
+        expect(codeText).toContain('cloud.omnisolo.co/api/v1/growth/embed/widget?type=leaderboard');
     }
     await page.goto('/ui/viral-pwyw-generator.html');
     await page.waitForTimeout(1000);

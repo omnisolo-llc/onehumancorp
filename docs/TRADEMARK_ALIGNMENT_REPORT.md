@@ -1,6 +1,6 @@
 # Trademark Alignment & Feature Completeness Report
 
-This document systematically maps every single phrase, clause, and business feature from the **One Human Corp (OHC) Trademark Application** (saved as `trademark.tmp`) directly to its implementation files in the repository.
+This document systematically maps every single phrase, clause, and business feature from the **OmniSolo (OmniSolo) Trademark Application** (saved as `trademark.tmp`) directly to its implementation files in the repository.
 
 Every listed feature is fully implemented, verified, and backed by robust Rust (Axum, Tokio, SQLx) backend microservices and TypeScript/React (Next.js 15.3, Tailwind) frontend consoles.
 
@@ -9,7 +9,7 @@ Every listed feature is fully implemented, verified, and backed by robust Rust (
 ## I. Summary of Compliance
 * **Trademark Scope**: 39 legal-clause categories spanning Multi-Agent Swarms, Core Productivity, E-commerce Storefronts, Client Portal, Shipping/Logistics, CRM/Sales, Helpdesk Ticketing, Unified Inbox, Invoicing/Estimates, Expense/Bookkeeping, HR/Payroll, Zero-Trust Access, and Database Sync.
 * **Codebase Alignment Status**: **100% Fully Implemented & Covered**.
-* **Test Verification**: Verified by **184 unit and integration tests** in the Rust backend (`ohc-mono`) and **11 responsive UI vitest suites** on the Next.js frontend (`src/ui/next`).
+* **Test Verification**: Verified by **184 unit and integration tests** in the Rust backend (`omnisolo`) and **11 responsive UI vitest suites** on the Next.js frontend (`src/ui/next`).
 
 ---
 
@@ -46,7 +46,7 @@ Every listed feature is fully implemented, verified, and backed by robust Rust (
 ## III. Core Product Architectural Strengths
 
 ### 1. Hybrid Architecture (Cloud-Native + Offline-First Standalone)
-Unlike traditional SaaS platforms (e.g. Shopify, Wix) which require persistent cloud connections, OHC employs a hybrid design. When connectivity is interrupted, the system leverages local SQLite databases with PowerSync synchronization, keeping local transactions active and queuing cloud syncing.
+Unlike traditional SaaS platforms (e.g. Shopify, Wix) which require persistent cloud connections, OmniSolo employs a hybrid design. When connectivity is interrupted, the system leverages local SQLite databases with PowerSync synchronization, keeping local transactions active and queuing cloud syncing.
 
 ### 2. Multi-Agent Swarm Orchestration (KAIROS)
 Under the hood, our custom **KAIROS** engine decomposes macro goals (such as generating marketing funnels or performing end-of-month accounting) into smaller, acyclic graph tasks handled autonomously by specialized sub-agents. These agents coordinate concurrently via an Actor-model message passing system backed by NATS.
@@ -62,4 +62,4 @@ All business workflows are locked behind a zero-trust model utilizing SPIFFE/SPI
 2. **Next.js UI Integration Suite**: Tested with `vitest run ai-workspace` on the Next.js frontend showing **11 passed tests out of 11**.
 3. **Integration Test Suite**: Tested with specialized TCP mock-server setups across all third-party integrations (Slack, Google, Outlook, Salesforce, QuickBooks, etc.), with **all 184 tests passing successfully**.
 
-**Conclusion**: The One Human Corp codebase is 100% aligned with, and fully implements, every feature mentioned in the trademark application.
+**Conclusion**: The OmniSolo codebase is 100% aligned with, and fully implements, every feature mentioned in the trademark application.

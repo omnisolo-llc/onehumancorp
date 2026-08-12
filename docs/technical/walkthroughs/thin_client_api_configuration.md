@@ -2,7 +2,7 @@
 
 # Remote API Endpoints Configuration Walkthrough
 
-Welcome to the One Human Corp (OHC) interactive walkthrough for configuring Remote API Endpoints in **Thin Client Mode**.
+Welcome to the OmniSolo (OmniSolo) interactive walkthrough for configuring Remote API Endpoints in **Thin Client Mode**.
 
 ## Architecture & Flow
 
@@ -10,9 +10,9 @@ In Thin Client Mode, the Mobile/Desktop UI connects directly to the Cloud via AP
 
 ```mermaid
 sequenceDiagram
-    participant Client as OHC Thin Client (Mobile/Desktop)
+    participant Client as OmniSolo Thin Client (Mobile/Desktop)
     participant SPIFFE as SPIFFE/SPIRE Identity Provider
-    participant Gateway as OHC API Gateway
+    participant Gateway as OmniSolo API Gateway
     participant Cloud as KAIROS Cloud Services
 
     Client->>SPIFFE: Request Identity Token (OAuth/mTLS)
@@ -35,6 +35,6 @@ sequenceDiagram
 
 ## Endpoint Setup
 
-To configure your Thin Client to connect to your preferred OHC Central Orchestrator, navigate to `Settings -> Network -> Remote Endpoints` and input the secure, SPIFFE-authenticated API gateway URL.
+To configure your Thin Client to connect to your preferred OmniSolo Central Orchestrator, navigate to `Settings -> Network -> Remote Endpoints` and input the secure, SPIFFE-authenticated API gateway URL.
 
 </div>

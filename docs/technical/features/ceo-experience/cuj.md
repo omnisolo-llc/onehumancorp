@@ -13,14 +13,14 @@ A high-level view of how the human CEO manages the AI workforce from the "Missio
 
 | Step | User Action | System Trigger | Resulting State | Verification |
 |------|-------------|----------------|-----------------|--------------|
-| 1 | Login to OHC Platform | OIDC Auth Flow | Dashboard loads | User info displayed |
+| 1 | Login to OmniSolo Platform | OIDC Auth Flow | Dashboard loads | User info displayed |
 | 2 | Check "Active Mission" | API GET `/api/meetings` | Transcript loaded | Messages scroll |
 | 3 | Hire a new agent | CEO selects `SWE` in Org Chart | `ohc-operator` provisions pod | Pod shows "Running" |
 | 4 | Approve a PR merge | CEO clicks "Approve" | Agent receives `APPROVAL` event | Code merges |
 
 ## 3. Implementation Details
 - **Architecture**: A React/Vite/Next.js frontend fetching data from the Rust backend via REST and Server-Sent Events (SSE).
-- **Deployment**: Deployed via the OHC Kubernetes Operator. The dashboard acts as the primary control plane for the `HoldingCompany` CRD.
+- **Deployment**: Deployed via the OmniSolo Kubernetes Operator. The dashboard acts as the primary control plane for the `HoldingCompany` CRD.
 - **State Management**: The UI is fully real-time. Actions like "Hire Agent" immediately update the append-only `events.jsonl` Postgres log.
 
 ## 4. Edge Cases

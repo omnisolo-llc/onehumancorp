@@ -4,7 +4,7 @@
 Implement an Autonomous AI Voice Attendant for Zero-Drop Call Management
 
 ## Problem Statement
-Small business owners like Carlos (handyman) and Fatima (food cart operator) rely heavily on phone calls for leads, quotes, and pre-orders. However, they are often in the middle of a job or serving customers, causing them to miss critical calls. Missed calls equal lost revenue and poor customer experience. A non-technical business owner needs an AI agent that can answer the phone 24/7, converse naturally in multiple languages, take messages, schedule appointments, handle basic FAQs ("Are you open today?"), and securely record this information directly into their OneHumanCorp app without any manual intervention.
+Small business owners like Carlos (handyman) and Fatima (food cart operator) rely heavily on phone calls for leads, quotes, and pre-orders. However, they are often in the middle of a job or serving customers, causing them to miss critical calls. Missed calls equal lost revenue and poor customer experience. A non-technical business owner needs an AI agent that can answer the phone 24/7, converse naturally in multiple languages, take messages, schedule appointments, handle basic FAQs ("Are you open today?"), and securely record this information directly into their OmniSolo app without any manual intervention.
 
 ## Research Report
 *   **Target Personas:** Handymen, food carts, tutors, service providers where hands are often full.
@@ -12,7 +12,7 @@ Small business owners like Carlos (handyman) and Fatima (food cart operator) rel
     *   *Traditional Voicemail:* Passive, leads to hang-ups.
     *   *Shopify/Wix:* Lack native voice AI solutions for inbound calls.
     *   *Standalone tools (e.g., Bland AI, Vapi):* Powerful but require integration (API keys, webhooks) which fails the "no code" requirement for our users.
-*   **Gap Analysis:** OHC needs a natively integrated, turnkey Voice AI that routes phone numbers directly to an autonomous agent capable of mutating the business state (booking, ordering, taking messages) seamlessly.
+*   **Gap Analysis:** OmniSolo needs a natively integrated, turnkey Voice AI that routes phone numbers directly to an autonomous agent capable of mutating the business state (booking, ordering, taking messages) seamlessly.
 *   **Key Requirements:**
     *   Real-time latency (<800ms response time).
     *   Multilingual support (e.g., Arabic/English for Fatima).
@@ -75,10 +75,10 @@ erDiagram
 *   **Data Minimization:** PII (credit cards) should be recognized and handled via a secure DTMF/PCI-compliant offramp, not stored in plain text transcripts.
 
 ## Implementation Prompt
-**Objective:** Build the foundational infrastructure for the Autonomous AI Voice Attendant that can receive inbound SIP trunks/calls, stream audio to a conversational AI model, and execute function calls against the OHC backend.
+**Objective:** Build the foundational infrastructure for the Autonomous AI Voice Attendant that can receive inbound SIP trunks/calls, stream audio to a conversational AI model, and execute function calls against the OmniSolo backend.
 
 **User Journey (CUJ):**
-As a small business owner, I want to provision a phone number in the OHC app with one tap. When a customer calls that number, an AI answers immediately, converses naturally, answers FAQs based on my business profile, and logs a summary of the call in my inbox.
+As a small business owner, I want to provision a phone number in the OmniSolo app with one tap. When a customer calls that number, an AI answers immediately, converses naturally, answers FAQs based on my business profile, and logs a summary of the call in my inbox.
 
 **Acceptance Criteria:**
 1.  Establish a mechanism to provision and map phone numbers to tenant IDs.

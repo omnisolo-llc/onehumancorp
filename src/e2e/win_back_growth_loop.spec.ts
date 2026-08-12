@@ -55,8 +55,8 @@ test.describe('Customer Win-back Campaign Growth Loop', () => {
     await expect(draft).toContainText("Subject: We miss you!", { timeout: 15000 });
     await expect(draft).toContainText("20% off your next order");
 
-    // Verify the "Powered by OHC" viral loop branding is inside the generated draft
-    await expect(draft).toContainText('Powered by OHC');
+    // Verify the "Powered by OmniSolo" viral loop branding is inside the generated draft
+    await expect(draft).toContainText('Powered by OmniSolo');
 
     // 8. Test sending the campaign
     // Instead of evaluate, we click via Playwright to ensure React events fire

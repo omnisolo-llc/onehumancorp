@@ -1,11 +1,11 @@
 # Title: Integration Blueprint: Hybrid Blob Storage MCP
 
 ## Problem Statement
-While OHC agents have robust data synchronization for structured SQLite-to-Postgres data, there is a lack of a unified interface for handling unstructured blob storage across both environments. Local agents need a way to seamlessly read and write large files, images, and binary artifacts to local file systems (when running standalone) and effortlessly synchronize or route these blobs to cloud-based object storage (like AWS S3 or GCP Cloud Storage) when operating in the multi-tenant Postgres cloud environment. This capability is missing from the current Model Context Protocol (MCP) toolset.
+While OmniSolo agents have robust data synchronization for structured SQLite-to-Postgres data, there is a lack of a unified interface for handling unstructured blob storage across both environments. Local agents need a way to seamlessly read and write large files, images, and binary artifacts to local file systems (when running standalone) and effortlessly synchronize or route these blobs to cloud-based object storage (like AWS S3 or GCP Cloud Storage) when operating in the multi-tenant Postgres cloud environment. This capability is missing from the current Model Context Protocol (MCP) toolset.
 
 ## Research Report
 Current blob storage solutions in MCP are highly fragmented. Local tools like Replit's file system agents focus purely on the local disk, whereas cloud tools focus heavily on S3/GCP APIs.
-- **Competitors:** Existing MCP file servers are usually strictly local or strictly cloud. OHC's value lies in seamless hybrid transitions.
+- **Competitors:** Existing MCP file servers are usually strictly local or strictly cloud. OmniSolo's value lies in seamless hybrid transitions.
 - **Proposed Solution:** Implement an application-level Hybrid Blob Storage MCP tool that provides a unified `ReadBlob`/`WriteBlob` API. The tool will intelligently inspect the running environment (Standalone vs Cloud-native) and persist blobs either to a temporary local file system directory created via `os.MkdirAll` (when running standalone) or an S3-compatible backend, ensuring agents don't need to change their logic based on where they are deployed. Do NOT create hidden directories like `.ohc/` in the repository root.
 
 ## Design Doc

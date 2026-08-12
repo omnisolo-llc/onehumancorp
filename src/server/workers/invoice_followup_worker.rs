@@ -74,7 +74,7 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
                 if !comms_context.is_empty() {
                     let prompt = format!("You are an AI financial assistant. Analyze the recent communication history with this customer regarding their overdue invoice. Is there a clear promise to pay soon (e.g., 'I will pay on Friday')? If so, reply with EXACTLY 'PROMISE_DETECTED'. If not, draft a polite, context-aware invoice reminder tailored for the '{}' channel based on the conversation history (e.g., acknowledging what they last said, keeping it concise if it's SMS/WhatsApp). Here is the communication history:\n\n{}", target_channel, comms_context);
 
-                    let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                    let llm_res = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                         Ok("minimax") => {
                             if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
                                 crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await

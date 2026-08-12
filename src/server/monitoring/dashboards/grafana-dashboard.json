@@ -35,7 +35,7 @@
       "id": 728404,
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOmniSolo Premium Telemetry"
       },
       "title": "Aesthetic Mandate Injector",
       "transparent": true,
@@ -121,7 +121,7 @@
           "refId": "A"
         }
       ],
-      "title": "OHC CPU Usage",
+      "title": "OmniSolo CPU Usage",
       "type": "timeseries",
       "transparent": true
     },
@@ -136,7 +136,7 @@
       },
       "id": 3,
       "options": {
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Infrastructure Dashboard",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOmniSolo Premium Infrastructure Dashboard",
         "mode": "html"
       },
       "transparent": true
@@ -155,7 +155,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "OHC Infrastructure Dashboard",
+  "title": "OmniSolo Infrastructure Dashboard",
   "uid": "ohc-infra-dash",
   "version": 1
 }

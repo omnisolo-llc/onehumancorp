@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Cart Recovery E2E', () => {
-  test('should display Powered by OHC component when generating draft', async ({ page }) => {
+  test('should display Powered by OmniSolo component when generating draft', async ({ page }) => {
     // Navigate using relative URL
     await page.goto('/cart-recovery');
 
@@ -12,10 +12,10 @@ test.describe('Cart Recovery E2E', () => {
     await page.getByRole('button', { name: 'Generate AI Campaign' }).click();
 
     // The mock or actual logic might take a bit. Wait for draft.
-    // Once it loads, check that the PoweredByOHC footer is there
+    // Once it loads, check that the PoweredByOmniSolo footer is there
     // Using string matching to avoid locator issues
     await page.waitForTimeout(2000);
     const html = await page.innerHTML('body');
-    expect(html).toMatch(/Powered by OHC/i);
+    expect(html).toMatch(/Powered by OmniSolo/i);
   });
 });

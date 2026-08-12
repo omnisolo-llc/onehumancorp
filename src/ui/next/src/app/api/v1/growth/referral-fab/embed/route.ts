@@ -76,7 +76,7 @@ export async function GET(request: Request) {
 
     const brandingHtml = ${removeBranding} ? '' : \`
         <div style="margin-top: 12px; text-align: center; font-size: 11px; font-weight: 500;">
-            <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a>
+            <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OmniSolo</a>
         </div>
     \`;
 
@@ -93,7 +93,7 @@ export async function GET(request: Request) {
 
         <div id="ohc-referral-success" style="display: none; flex-direction: column; gap: 12px;">
             <div style="color: #10b981; font-weight: 500; font-size: 14px;">Here is your link!</div>
-            <input type="text" id="ohc-referral-link" readonly value="https://ohc.app/share?ref=${encodedTenant}_xyz" style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; box-sizing: border-box; background: #f3f4f6; color: #374151;" />
+            <input type="text" id="ohc-referral-link" readonly value="https://cloud.omnisolo.co/share?ref=${encodedTenant}_xyz" style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; box-sizing: border-box; background: #f3f4f6; color: #374151;" />
             <button id="ohc-copy-btn" style="width: 100%; padding: 10px; background-color: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: background-color 0.2s;">
                 Copy Link
             </button>

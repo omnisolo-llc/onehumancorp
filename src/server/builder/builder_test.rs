@@ -13,10 +13,10 @@ fn test_site_structure_query_uses_single_join_for_pages_and_blocks() {
 }
 
 async fn setup_db() -> Option<(PgPool, Uuid)> {
-    if std::env::var("OHC_DATABASE_URL").is_err() {
+    if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return None; // If no DB is available, tests will simply return/pass without error.
     }
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
     let tenant_id = Uuid::new_v4();
     let tenant_id_clone = tenant_id.clone();
 
@@ -339,7 +339,7 @@ async fn test_builder_generate_and_publish_draft() {
         .unwrap();
     assert_eq!(res.status(), 200);
     let toolbox_site: super::api::SiteResponse = res.json().await.unwrap();
-    assert!(toolbox_site.domain.as_deref().unwrap_or("").ends_with(".ohc.store"));
+    assert!(toolbox_site.domain.as_deref().unwrap_or("").ends_with(".cloud.omnisolo.co"));
 
     // 1. Mock Generate Storefront instead of hitting external APIs.
     let draft = super::api::StoreProfile {

@@ -80,7 +80,7 @@ pub async fn intercept_order(
         Tenant: {tenant_id}. Input: {raw_input}"
     );
 
-    let raw = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+    let raw = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
         Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY")

@@ -1,4 +1,4 @@
-# OHC Interactive API Playbook
+# OmniSolo Interactive API Playbook
 
 <style>
   .glass-container {
@@ -14,7 +14,7 @@
 
 <div class="glass-container">
   <h2>Authentication & AuthZ</h2>
-  <p>The OHC Hybrid Agentic OS uses SPIFFE/SPIRE for zero-trust native identity. Short-lived JWTs/SVIDs authenticate instances and requests.</p>
+  <p>The OmniSolo Hybrid Agentic OS uses SPIFFE/SPIRE for zero-trust native identity. Short-lived JWTs/SVIDs authenticate instances and requests.</p>
 </div>
 
 <div class="glass-container">

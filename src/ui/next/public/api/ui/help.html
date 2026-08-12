@@ -385,11 +385,11 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
-            window.OHC_TOOLTIPS = {
+            window.OMNISOLO_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
@@ -439,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[data-tooltip]');
         if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target.closest('[data-tooltip]');
         if (target) {
             touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
             }, 500); // 500ms long press
         }
     });
@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         </div>
         <div id="ohc-help-messages">
-            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OmniSolo today?</div>
         </div>
 
         <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
@@ -890,11 +890,11 @@ document.addEventListener('DOMContentLoaded', () => {
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
-            window.OHC_TOOLTIPS = {
+            window.OMNISOLO_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
@@ -935,14 +935,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });

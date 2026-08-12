@@ -11,7 +11,7 @@ A high-level testing strategy for the Extensible Skill Import Framework (Phase 3
 
 ## 2. Test Strategy
 - **Unit Testing:** Focus on verifying the `SkillBlueprint` schema validation, context conflict resolution, and Directed Acyclic Graph (DAG) checks for the organizational hierarchy.
-- **Integration Testing:** Verify the interaction between the OHC Hub, Postgres DB, and the `ohc-operator` when instantiating new `RoleProfile` Custom Resource Definitions (CRDs).
+- **Integration Testing:** Verify the interaction between the OmniSolo Hub, Postgres DB, and the `ohc-operator` when instantiating new `RoleProfile` Custom Resource Definitions (CRDs).
 - **End-to-End (E2E) Testing:** Validate the entire "Skill Import to Execution" flow via the CEO Dashboard.
 
 ## 3. Test Cases

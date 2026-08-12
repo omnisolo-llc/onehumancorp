@@ -27,9 +27,9 @@ impl SandboxedCommandRunner {
     }
 
     fn execution_mode() -> String {
-        std::env::var("OHC_AGENT_EXECUTION_MODE")
-            .or_else(|_| std::env::var("OHC_EXECUTION_MODE"))
-            .or_else(|_| std::env::var("OHC_SOURCE_MODE"))
+        std::env::var("OMNISOLO_AGENT_EXECUTION_MODE")
+            .or_else(|_| std::env::var("OMNISOLO_EXECUTION_MODE"))
+            .or_else(|_| std::env::var("OMNISOLO_SOURCE_MODE"))
             .unwrap_or_else(|_| "standalone".to_string())
             .to_lowercase()
     }
@@ -93,7 +93,7 @@ impl SandboxedCommandRunner {
         // Multi-backend argument mapping based on selected runtime
         match runtime {
             "ssh" => {
-                let target = std::env::var("OHC_AGENT_SSH_TARGET").unwrap_or_else(|_| "localhost".to_string());
+                let target = std::env::var("OMNISOLO_AGENT_SSH_TARGET").unwrap_or_else(|_| "localhost".to_string());
                 let mut ssh_args = vec![target];
                 let mut env_prefix = String::new();
                 for (key, value) in envs {
@@ -103,7 +103,7 @@ impl SandboxedCommandRunner {
                 ssh_args
             },
             "singularity" => {
-                let image = std::env::var("OHC_AGENT_SINGULARITY_IMAGE")
+                let image = std::env::var("OMNISOLO_AGENT_SINGULARITY_IMAGE")
                     .unwrap_or_else(|_| "ubuntu.sif".to_string());
                 let mut exec_args = vec!["exec".to_string()];
 
@@ -129,7 +129,7 @@ impl SandboxedCommandRunner {
                 exec_args
             },
             "daytona" => {
-                let workspace = std::env::var("OHC_AGENT_DAYTONA_WORKSPACE")
+                let workspace = std::env::var("OMNISOLO_AGENT_DAYTONA_WORKSPACE")
                     .unwrap_or_else(|_| "default".to_string());
                 let mut exec_args = vec!["execute".to_string(), workspace];
 
@@ -153,7 +153,7 @@ impl SandboxedCommandRunner {
             },
             _ => {
                 // Default Docker / Podman mapping
-                let image = std::env::var("OHC_AGENT_CONTAINER_IMAGE")
+                let image = std::env::var("OMNISOLO_AGENT_CONTAINER_IMAGE")
                     .unwrap_or_else(|_| "alpine:3.20".to_string());
                 let workspace = sandbox_dir
                     .or(current_dir)
@@ -164,7 +164,7 @@ impl SandboxedCommandRunner {
                     "run".to_string(),
                     "--rm".to_string(),
                     "--network".to_string(),
-                    std::env::var("OHC_AGENT_CONTAINER_NETWORK").unwrap_or_else(|_| "none".to_string()),
+                    std::env::var("OMNISOLO_AGENT_CONTAINER_NETWORK").unwrap_or_else(|_| "none".to_string()),
                     "-v".to_string(),
                     format!("{}:/workspace", workspace.display()),
                     "-w".to_string(),
@@ -206,7 +206,7 @@ impl CommandRunner for SandboxedCommandRunner {
         current_dir: Option<&Path>,
         envs: Vec<(String, String)>,
     ) -> io::Result<Output> {
-        let backend_env = std::env::var("OHC_AGENT_COMMAND_BACKEND")
+        let backend_env = std::env::var("OMNISOLO_AGENT_COMMAND_BACKEND")
             .unwrap_or_default()
             .to_lowercase();
         let execution_mode = Self::execution_mode();
@@ -215,7 +215,7 @@ impl CommandRunner for SandboxedCommandRunner {
             // Retrieve cached runtime based on backend
             static RUNTIME: OnceLock<Option<String>> = OnceLock::new();
             let runtime_opt = RUNTIME.get_or_init(|| {
-                let current_backend = std::env::var("OHC_AGENT_COMMAND_BACKEND").unwrap_or_default().to_lowercase();
+                let current_backend = std::env::var("OMNISOLO_AGENT_COMMAND_BACKEND").unwrap_or_default().to_lowercase();
                 Self::find_container_runtime(&current_backend)
             }).clone();
 

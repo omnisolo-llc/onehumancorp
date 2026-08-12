@@ -83,8 +83,8 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
         .add_source(::config::File::with_name("ohc").required(false))
         .add_source(::config::File::with_name("~/.openclaw/ohc").required(false))
 
-        // Env vars with OHC_ prefix
-        .add_source(::config::Environment::with_prefix("OHC"))
+        // Env vars with OMNISOLO_ prefix
+        .add_source(::config::Environment::with_prefix("OmniSolo"))
 
         // Env vars without prefix (for standard ones like DATABASE_URL)
         .add_source(::config::Environment::default())
@@ -137,7 +137,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
     fn enforce(&self, mut cfg: AppConfig) -> AppConfig {
         let is_test = std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
         let env_standalone =
-            std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+            std::env::var("OMNISOLO_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
         let has_database_source =
             cfg.database_url.is_some() || std::env::var_os("DATABASE_URL_FILE").is_some();
         let is_standalone = env_standalone || cfg.standalone || (!is_test && !has_database_source);
@@ -153,7 +153,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
             if db_url.starts_with("sqlite://") {
                 db_url.split('?').next().unwrap_or(db_url).to_string()
             } else {
-                tracing::info!("standalone: non-SQLite OHC_DATABASE_URL is ignored in standalone desktop builds; using SQLite");
+                tracing::info!("standalone: non-SQLite OMNISOLO_DATABASE_URL is ignored in standalone desktop builds; using SQLite");
                 default_sqlite_url
             }
         } else {
@@ -168,12 +168,12 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
                 base_sqlite_url // Let db.rs handle pragma key via connection options
-            } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+            } else if let Ok(_fallback_key) = std::env::var("OMNISOLO_SQLITE_KEY") {
                 base_sqlite_url
             } else {
                 base_sqlite_url
             }
-        } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+        } else if let Ok(_fallback_key) = std::env::var("OMNISOLO_SQLITE_KEY") {
             base_sqlite_url
         } else {
             base_sqlite_url
@@ -255,7 +255,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         cfg.multitenant = false;
 
         // Strict opt-in constraint for local sovereignty in standalone
-        let explicit_opt_in = std::env::var("OHC_TELEMETRY_ENABLED").map(|s| s.to_lowercase() == "true").unwrap_or(false);
+        let explicit_opt_in = std::env::var("OMNISOLO_TELEMETRY_ENABLED").map(|s| s.to_lowercase() == "true").unwrap_or(false);
         if explicit_opt_in {
             tracing::info!("standalone: Telemetry explicitly opted-in by user.");
             cfg.telemetry_enabled = true;
@@ -281,8 +281,8 @@ mod tests {
         // Ensure environment doesn't interfere
         // SAFETY: Test-only code removing environment variables
         unsafe {
-            env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("OHC_DATABASE_URL");
+            env::remove_var("OMNISOLO_LISTEN_ADDR");
+            env::remove_var("OMNISOLO_DATABASE_URL");
         }
 
         let cfg = load().unwrap();
@@ -296,8 +296,8 @@ mod tests {
         let _lock = ENV_MUTEX.lock().unwrap();
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
-            env::set_var("OHC_LISTEN_ADDR", ":9999");
-            env::set_var("OHC_DATABASE_URL", "postgres://localhost/testdb");
+            env::set_var("OMNISOLO_LISTEN_ADDR", ":9999");
+            env::set_var("OMNISOLO_DATABASE_URL", "postgres://localhost/testdb");
         }
 
         let cfg = load().unwrap();
@@ -306,8 +306,8 @@ mod tests {
 
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
-            env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("OHC_DATABASE_URL");
+            env::remove_var("OMNISOLO_LISTEN_ADDR");
+            env::remove_var("OMNISOLO_DATABASE_URL");
         }
     }
 
@@ -320,8 +320,8 @@ mod tests {
                 ("TEST_TMPDIR", None::<&str>),
                 ("DATABASE_URL", None::<&str>),
                 ("DATABASE_URL_FILE", Some("/run/secrets/database-url")),
-                ("OHC_DATABASE_URL", None::<&str>),
-                ("OHC_STANDALONE_MODE", None::<&str>),
+                ("OMNISOLO_DATABASE_URL", None::<&str>),
+                ("OMNISOLO_STANDALONE_MODE", None::<&str>),
             ],
             || {
                 let cfg = load().unwrap();
@@ -335,7 +335,7 @@ mod tests {
         let _lock = ENV_MUTEX.lock().unwrap();
         // SAFETY: Test-only code setting environment variables
         unsafe {
-            env::set_var("OHC_TELEMETRY_ENABLED", "true");
+            env::set_var("OMNISOLO_TELEMETRY_ENABLED", "true");
         }
 
         let cfg = load().unwrap();
@@ -343,14 +343,14 @@ mod tests {
 
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
-            env::set_var("OHC_TELEMETRY_ENABLED", "false");
+            env::set_var("OMNISOLO_TELEMETRY_ENABLED", "false");
         }
 
         let cfg2 = load().unwrap();
         assert!(!(cfg2.telemetry_enabled));
 
         unsafe {
-            env::remove_var("OHC_TELEMETRY_ENABLED");
+            env::remove_var("OMNISOLO_TELEMETRY_ENABLED");
         }
     }
 
@@ -358,9 +358,9 @@ mod tests {
     fn test_standalone_mode_enforcer_default() {
         let _lock = ENV_MUTEX.lock().unwrap();
         unsafe {
-            env::set_var("OHC_STANDALONE_MODE", "true");
-            env::remove_var("OHC_DATABASE_URL");
-            env::remove_var("OHC_TELEMETRY_ENABLED");
+            env::set_var("OMNISOLO_STANDALONE_MODE", "true");
+            env::remove_var("OMNISOLO_DATABASE_URL");
+            env::remove_var("OMNISOLO_TELEMETRY_ENABLED");
         }
 
         let cfg = load().unwrap();
@@ -371,7 +371,7 @@ mod tests {
         assert!(cfg.database_url.unwrap().starts_with("sqlite://"));
 
         unsafe {
-            env::remove_var("OHC_STANDALONE_MODE");
+            env::remove_var("OMNISOLO_STANDALONE_MODE");
         }
     }
 
@@ -379,8 +379,8 @@ mod tests {
     fn test_standalone_mode_enforcer_with_telemetry_opt_in() {
         let _lock = ENV_MUTEX.lock().unwrap();
         unsafe {
-            env::set_var("OHC_STANDALONE_MODE", "true");
-            env::set_var("OHC_TELEMETRY_ENABLED", "true");
+            env::set_var("OMNISOLO_STANDALONE_MODE", "true");
+            env::set_var("OMNISOLO_TELEMETRY_ENABLED", "true");
         }
 
         let cfg = load().unwrap();
@@ -388,8 +388,8 @@ mod tests {
         assert!(cfg.telemetry_enabled); // Opted-in!
 
         unsafe {
-            env::remove_var("OHC_STANDALONE_MODE");
-            env::remove_var("OHC_TELEMETRY_ENABLED");
+            env::remove_var("OMNISOLO_STANDALONE_MODE");
+            env::remove_var("OMNISOLO_TELEMETRY_ENABLED");
         }
     }
 
@@ -397,7 +397,7 @@ mod tests {
     fn test_standalone_mode_enforcer_with_redis_ignored() {
         let _lock = ENV_MUTEX.lock().unwrap();
         unsafe {
-            env::set_var("OHC_STANDALONE_MODE", "true");
+            env::set_var("OMNISOLO_STANDALONE_MODE", "true");
             env::set_var("REDIS_URL", "redis://localhost:6379");
         }
 
@@ -407,7 +407,7 @@ mod tests {
         assert!(cfg.redis_url.is_none());
 
         unsafe {
-            env::remove_var("OHC_STANDALONE_MODE");
+            env::remove_var("OMNISOLO_STANDALONE_MODE");
             env::remove_var("REDIS_URL");
         }
     }

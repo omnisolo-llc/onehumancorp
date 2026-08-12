@@ -41,7 +41,7 @@ async fn five_redirect_chain(Path(step): Path<usize>) -> impl IntoResponse {
 
 #[tokio::test]
 async fn webfetch_rejects_private_addresses_without_sending_request() {
-    temp_env::async_with_vars([("OHC_AGENT_ALLOW_PRIVATE_NETWORK", None::<&str>)], async {
+    temp_env::async_with_vars([("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", None::<&str>)], async {
         let count = Arc::new(AtomicUsize::new(0));
         let app = Router::new()
             .route("/", get(counted_response))
@@ -65,7 +65,7 @@ async fn webfetch_rejects_private_addresses_without_sending_request() {
 #[tokio::test]
 async fn webfetch_rejects_oversized_chunked_responses() {
     temp_env::async_with_vars(
-        [("OHC_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))],
+        [("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))],
         async {
             let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
             let address = listener.local_addr().unwrap();
@@ -100,7 +100,7 @@ async fn webfetch_rejects_oversized_chunked_responses() {
 
 #[tokio::test]
 async fn webfetch_rejects_more_than_five_redirects() {
-    temp_env::async_with_vars([("OHC_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))], async {
+    temp_env::async_with_vars([("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))], async {
         let app = Router::new().route("/redirect/{step}", get(redirect_chain));
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
@@ -133,7 +133,7 @@ async fn webfetch_rejects_redirect_targets_on_loopback() {
 
 #[tokio::test]
 async fn webfetch_allows_exactly_five_redirects() {
-    temp_env::async_with_vars([("OHC_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))], async {
+    temp_env::async_with_vars([("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))], async {
         let app = Router::new().route("/five/{step}", get(five_redirect_chain));
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
@@ -153,7 +153,7 @@ async fn webfetch_allows_exactly_five_redirects() {
 
 #[tokio::test]
 async fn webfetch_truncates_multibyte_text_on_a_character_boundary() {
-    temp_env::async_with_vars([("OHC_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))], async {
+    temp_env::async_with_vars([("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))], async {
         let body = "a".to_string() + &"🧪".repeat(10_001);
         let app = Router::new().route("/unicode", get(move || async move { body.clone() }));
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

@@ -40,7 +40,7 @@ pub struct CapturePaymentIntentResponse {
     pub error_message: Option<String>,
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
@@ -878,7 +878,7 @@ pub async fn commit_inventory_handler(
                             event_type: "POS_SALE_COMPLETED".to_string(),
                             payload: event_payload,
                         };
-                        let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+                        let _ = hub.publish_mesh_event(::server_omnisolo::orchestration::MeshEvent {
                             event_id: uuid::Uuid::new_v4().to_string(),
                             topic: "pos_sales".to_string(),
                             payload: serde_json::to_vec(&event).unwrap_or_default(),
@@ -1088,7 +1088,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_commit_inventory_low_stock() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -1128,7 +1128,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_commit_inventory_records_order() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }

@@ -11,18 +11,18 @@ Based on a comprehensive market audit of 60 unique competitive sources and platf
 - **73%** of 1-star reviews for top competitors cite confusing menus, technical jargon, and manual configuration during setup.
 - **Shopify Magic / Sidekick** acts as a reactive assistant (a "co-pilot"), requiring the user to prompt it for help. It does not autonomously complete the setup loop.
 - **AI-Native Builders (Durable, 10Web)** can generate a landing page in 30 seconds but fail at deeply integrated catalog management and real commerce workflows.
-- OHC needs to bridge this gap by replacing manual configuration with proactive, autonomous agent actions ("The Manager Agent").
+- OmniSolo needs to bridge this gap by replacing manual configuration with proactive, autonomous agent actions ("The Manager Agent").
 
 ## Design Doc
 - **Core Entity Types:** `ProductImage`, `ProductListing`, `ProductVariant`, `AI_Suggestion`.
 - **Key Relationships:** 1:1 mapping between raw image upload and an `AI_Suggestion` draft. The draft becomes a live `ProductListing` upon user approval.
 - **Integration Points:** Mobile client camera API -> KAIROS Orchestration Hub -> Vision AI Model (for image parsing) -> The Manager Agent (for copywriting/pricing strategy) -> Postgres DB.
 - **UI Wireframes/Screen Flow (375px Mobile First):**
-  1. User opens the OHC mobile app and clicks the main "+" FAB (Floating Action Button).
+  1. User opens the OmniSolo mobile app and clicks the main "+" FAB (Floating Action Button).
   2. Camera opens. User snaps a photo of their product (e.g., a custom cake).
   3. A loading skeleton appears: "The Manager Agent is preparing your listing..."
   4. The Activity Feed surfaces an "Approval Card". It displays the auto-cropped image (background removed), an auto-generated compelling description, suggested pricing (based on local market data), and detected variants.
-  5. User taps "Approve". The item is instantly live on their OHC Storefront.
+  5. User taps "Approve". The item is instantly live on their OmniSolo Storefront.
 - **AI Agent Integration:**
   - **Vision Agent:** Analyzes the raw photo, removes the background, and identifies the core product.
   - **The Manager Agent:** Drafts the SEO-optimized copy, determines initial pricing estimates, and formulates standard variants.

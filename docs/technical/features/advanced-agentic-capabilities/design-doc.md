@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-20
 
 ## 1. Overview
-The "Advanced Agentic Capabilities" initiative represents Phase 8 of the One Human Corp (OHC) Strategic Roadmap. Its objective is to integrate the most critical features identified across leading AI frameworks (CrewAI, AutoGen, LangGraph) to establish OHC as the definitive orchestration platform. This design addresses the core challenge of scaling autonomous multi-agent systems efficiently, directly mitigating "Agent Amnesia," static tool binding, and orchestration context bloat.
+The "Advanced Agentic Capabilities" initiative represents Phase 8 of the OmniSolo (OmniSolo) Strategic Roadmap. Its objective is to integrate the most critical features identified across leading AI frameworks (CrewAI, AutoGen, LangGraph) to establish OmniSolo as the definitive orchestration platform. This design addresses the core challenge of scaling autonomous multi-agent systems efficiently, directly mitigating "Agent Amnesia," static tool binding, and orchestration context bloat.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -19,12 +19,12 @@ The "Advanced Agentic Capabilities" initiative represents Phase 8 of the One Hum
 
 ### 2.2 Non-Goals
 - Real-time video stream processing for multimodal reasoning (initial focus is on static image/UI frames).
-- Creating new foundational multimodal models (OHC will consume existing capabilities via API providers).
-- Developing a custom graph execution engine from scratch (OHC will leverage LangGraph-style checkpointing patterns integrated natively with K8s).
+- Creating new foundational multimodal models (OmniSolo will consume existing capabilities via API providers).
+- Developing a custom graph execution engine from scratch (OmniSolo will leverage LangGraph-style checkpointing patterns integrated natively with K8s).
 
 ## 3. Detailed Design
 ### 3.1 Stateful Episodic Memory & Checkpointing
-To resolve "Agent Amnesia," OHC shifts from massive in-memory chat arrays to an append-only, distributed event log architecture.
+To resolve "Agent Amnesia," OmniSolo shifts from massive in-memory chat arrays to an append-only, distributed event log architecture.
 - **Checkpointer Store**: A dedicated LangGraph Checkpointer connected to a persistent PostgreSQL backend.
 - **State Threads**: Every virtual meeting room or long-running objective operates within a distinct `thread_id`.
 - **Graph State Sync**: As agents progress, the execution path is iteratively snapshotted. Agents only receive the most recent checkpoint state and active transitions.
@@ -32,7 +32,7 @@ To resolve "Agent Amnesia," OHC shifts from massive in-memory chat arrays to an 
 - **CSI Snapshots**: K8s CSI Snapshots allow the CEO to arbitrarily "roll back" the state of a specific `Subsidiary` CRD (including LangGraph checkpoints) within 5 seconds.
 
 ### 3.2 Dynamic Tool Discovery via MCP
-Current frameworks couple agents to hardcoded OpenAPI schemas. OHC utilizes the unified **MCP Gateway (Switchboard)** to allow zero-trust, RBAC-enforced runtime tool synthesis.
+Current frameworks couple agents to hardcoded OpenAPI schemas. OmniSolo utilizes the unified **MCP Gateway (Switchboard)** to allow zero-trust, RBAC-enforced runtime tool synthesis.
 - **Dynamic Registration**: Tools are discovered and registered via the SPIFFE-gated MCP Gateway.
 - **Runtime Binding**: Agents can query the registry and dynamically bind to necessary tools based on task requirements, minimizing error loops caused by missing hardcoded configurations.
 
@@ -43,7 +43,7 @@ Over-reliance on OCR middleware introduces latency and loss of spatial context.
 
 ### 3.4 Hierarchical Task Delegation
 Monolithic context bloat occurs when a single agent attempts to orchestrate a massive software project.
-- **Dynamic Provisioning**: OHC's CRD structure (`TeamMember`, `Subsidiary`) inherently models hierarchies. Manager agents can trigger a `/scale` endpoint to dynamically allocate VRAM quotas and spawn specialized sub-agents.
+- **Dynamic Provisioning**: OmniSolo's CRD structure (`TeamMember`, `Subsidiary`) inherently models hierarchies. Manager agents can trigger a `/scale` endpoint to dynamically allocate VRAM quotas and spawn specialized sub-agents.
 - **Narrow Contexts**: Sub-agents operate with strictly defined context bounds, ensuring optimal token allocation per task.
 
 ### 3.5 Stateful Execution Graph (LangGraph)
@@ -64,7 +64,7 @@ Traditional static prompting chains fail at handling cyclic workflows (looping, 
 - **Hardcoded Tool Chains**: Defining specific tools per agent role in static configuration. Rejected as it severely limits flexibility and extensibility when importing new Skill Blueprints.
 
 ### 3.6 Human-in-the-Loop (HITL) Handoff UI
-Orchestrators struggle to seamlessly hand off critical tasks to human operators without losing context. OHC implements a native K8s-backed "Warm Handoff" UI, directly integrating visual ground truth (screenshots) and SPIFFE-gated confidence approvals.
+Orchestrators struggle to seamlessly hand off critical tasks to human operators without losing context. OmniSolo implements a native K8s-backed "Warm Handoff" UI, directly integrating visual ground truth (screenshots) and SPIFFE-gated confidence approvals.
 - **Handoff Generation**: When an agent encounters an ambiguous state, a predefined high-risk operation, or a cyclic hallucination, it pauses its execution graph.
 - **Visual Ground Truth**: The system captures and bundles the agent's recent context, intent, and visual state (e.g., screenshots, UI diffs) into a structured Handoff package.
 - **Approval Gating**: Human managers review the package in the CEO Dashboard and provide cryptographically signed approval tokens to resume or abort the execution thread.

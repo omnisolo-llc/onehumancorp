@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>One-Tap Referral Generator | OHC</title>
+  <title>One-Tap Referral Generator | OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -334,7 +334,7 @@
 
       <div class="branding-toggle">
         <div>
-          <label style="margin-bottom: 0;">Remove "Powered by OHC" Badge</label>
+          <label style="margin-bottom: 0;">Remove "Powered by OmniSolo" Badge</label>
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Requires Pro subscription</div>
         </div>
         <label class="switch">
@@ -356,7 +356,7 @@
         <input type="email" class="widget-input" placeholder="Friend's email address" readonly>
         <button class="widget-btn">Send Invite</button>
         <div id="preview-branding">
-          <a href="#" class="widget-brand">⚡ Powered by OHC</a>
+          <a href="#" class="widget-brand">⚡ Powered by OmniSolo</a>
         </div>
       </div>
     </div>
@@ -382,7 +382,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p class="modal-desc">Make the widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p class="modal-desc">Make the widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
       <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
         <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #1DA1F2; margin-top: 0;">Share on X to Unlock 7 Days</button>
         <button class="primary-btn" id="upgrade-btn" style="margin-top: 0;">Upgrade to Pro</button>
@@ -463,10 +463,10 @@
       });
 
       generateBtn.addEventListener('click', () => {
-        const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
+        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
         const url = `${origin}/api/v1/growth/one-tap-referral/embed?tenant=${encodeURIComponent(state.tenant)}&reward=${encodeURIComponent(state.reward)}&desc=${encodeURIComponent(state.desc)}&theme=${state.theme}&hide_branding=${state.removeBranding}`;
 
-        const code = `<iframe src="${url}" width="100%" height="280" style="border:none;border-radius:16px;overflow:hidden;max-width:320px;" title="OHC One-Tap Referral"></iframe>`;
+        const code = `<iframe src="${url}" width="100%" height="280" style="border:none;border-radius:16px;overflow:hidden;max-width:320px;" title="OmniSolo One-Tap Referral"></iframe>`;
 
         embedCode.value = code;
         embedModal.classList.add('active');
@@ -491,7 +491,7 @@
 
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
-          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out my new One-Tap Referral Widget built with OneHumanCorp! 🚀 https://ohc.app')}`;
+          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent('Check out my new One-Tap Referral Widget built with OmniSolo! 🚀 https://cloud.omnisolo.co')}`;
           window.open(shareUrl, '_blank');
 
           shareToUnlockBtn.style.display = 'none';

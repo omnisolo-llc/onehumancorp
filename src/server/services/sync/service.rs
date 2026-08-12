@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::sync_service_server::SyncService;
+use ::server_omnisolo::orchestration::*;
+use ::server_omnisolo::orchestration::sync_service_server::SyncService;
 use crate::sip::SipDB;
 
 pub struct MySyncService {
@@ -410,7 +410,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push_and_pull() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             // Only run e2e flow if real test db is available. Dummy will fail.
             return;
@@ -435,7 +435,7 @@ mod tests {
         }]).to_string();
 
         let mut push_req = Request::new(PowerSyncPushRequest { payload: payload_json });
-        push_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/system".parse().unwrap());
+        push_req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/system/system".parse().unwrap());
 
         let push_resp = service.power_sync_push(push_req).await.unwrap();
         assert_eq!(push_resp.get_ref().status, "ok");

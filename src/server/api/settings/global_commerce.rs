@@ -73,7 +73,7 @@ pub async fn update_settings(
     }
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/", axum::routing::get(get_settings).put(update_settings))
         .with_state(hub)

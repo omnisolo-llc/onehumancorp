@@ -1,12 +1,12 @@
 # Research Report: Autonomous Fractional Local Delivery Network (AFLDN)
 
 ## Problem Statement
-Small business owners like Maya (the baker) and Fatima (the food cart operator) struggle with last-mile local delivery. Third-party apps (UberEats, DoorDash) charge exorbitant commissions (up to 30%), eating entirely into SMB margins. Managing in-house drivers is too complex (coordinating schedules, routing, payments) for a non-technical owner. They need a zero-commission, flat-fee, or fully autonomous way to offer local delivery to their customers, seamlessly integrated into the OHC order flow.
+Small business owners like Maya (the baker) and Fatima (the food cart operator) struggle with last-mile local delivery. Third-party apps (UberEats, DoorDash) charge exorbitant commissions (up to 30%), eating entirely into SMB margins. Managing in-house drivers is too complex (coordinating schedules, routing, payments) for a non-technical owner. They need a zero-commission, flat-fee, or fully autonomous way to offer local delivery to their customers, seamlessly integrated into the OmniSolo order flow.
 
 ## Research Report
 - **Market Gap:** Shopify offers local delivery settings, but leaves the *execution* entirely to the merchant (routing apps, hiring drivers). Wix and Squarespace similarly just offer "shipping zones." DoorDash/UberEats own the network but extract punitive fees.
-- **The Opportunity:** OHC can pioneer a "Fractional Delivery Mesh." Imagine a collective of local independent couriers (or just local teenagers with bikes/cars) who can sign up via a localized OHC portal. When Maya gets a cake order for Friday, OHC's Operations Agent automatically broadcasts a delivery bounty to the local mesh.
-- **Competitive Advantage:** OHC brings the demand (the merchants) and the software (routing, payouts via Stripe Connect) without charging the 30% take rate. Merchants can even bring their *own* dedicated drivers into the mesh, and OHC handles the routing and payment calculation automatically.
+- **The Opportunity:** OmniSolo can pioneer a "Fractional Delivery Mesh." Imagine a collective of local independent couriers (or just local teenagers with bikes/cars) who can sign up via a localized OmniSolo portal. When Maya gets a cake order for Friday, OmniSolo's Operations Agent automatically broadcasts a delivery bounty to the local mesh.
+- **Competitive Advantage:** OmniSolo brings the demand (the merchants) and the software (routing, payouts via Stripe Connect) without charging the 30% take rate. Merchants can even bring their *own* dedicated drivers into the mesh, and OmniSolo handles the routing and payment calculation automatically.
 
 ## Design Doc
 ### Architecture

@@ -21,7 +21,7 @@ The latest interrupted attempt provided strong but incomplete evidence:
 - The standalone release installed.
 - `kubectl get pods` showed `ohc-standalone-backend-6c7f54c499-plrmg` as `1/1 Running` and Ready.
 - Previous standalone logs showed SQLite migrations, `Initialized InProcessTransport`, built-in-agent mesh subscriptions, `auth.config.ready` for `Standalone`, and both listeners starting.
-- This proves `OHC_AGENT_TOKEN` plus `OHC_AGENT_AUTH_KEY` are accepted and the original CrashLoopBackOff is fixed.
+- This proves `OMNISOLO_AGENT_TOKEN` plus `OMNISOLO_AGENT_AUTH_KEY` are accepted and the original CrashLoopBackOff is fixed.
 - The interruption occurred before the standalone REST smoke printed its results and before Bazel emitted a terminal exit code, so `//deploy:kind_e2e_test` must still be rerun to completion.
 - The leaked disposable cluster `ohc-e2e-8875` was explicitly deleted. `kind get clusters` returned only `kind` at handoff.
 - No detached `bazel ... kind_e2e_test` or `kind_e2e_test.sh` process remained at handoff.
@@ -85,21 +85,21 @@ Run this in a stable terminal and allow it to finish without starting a competin
 The first complete Kind run passed every cloud/web check, then standalone failed with:
 
 ```text
-invalid builtin agent authentication configuration: configure OHC_AGENT_TOKEN or OHC_AGENT_SPIFFE_ID
+invalid builtin agent authentication configuration: configure OMNISOLO_AGENT_TOKEN or OMNISOLO_AGENT_SPIFFE_ID
 ```
 
-The chart was updated with `backend.agentAuth.existingSecret` and projected `OHC_AGENT_TOKEN` from Secret key `agentToken`. A second run then failed with:
+The chart was updated with `backend.agentAuth.existingSecret` and projected `OMNISOLO_AGENT_TOKEN` from Secret key `agentToken`. A second run then failed with:
 
 ```text
-invalid builtin agent authentication configuration: OHC_AGENT_AUTH_KEY is required in token mode
+invalid builtin agent authentication configuration: OMNISOLO_AGENT_AUTH_KEY is required in token mode
 ```
 
 `src/agents/builtin/auth.rs` requires a separate HMAC-SHA256 verification key of at least 32 bytes. The final implementation now:
 
-- documents Secret keys `agentToken` and `authKey` in `deploy/helm/ohc/values.yaml`;
+- documents Secret keys `agentToken` and `authKey` in `deploy/helm/omnisolo/values.yaml`;
 - requires `backend.agentAuth.existingSecret` in standalone mode;
 - rejects inline token/key and unsupported file variables;
-- projects `OHC_AGENT_TOKEN` and `OHC_AGENT_AUTH_KEY` from the same Secret;
+- projects `OMNISOLO_AGENT_TOKEN` and `OMNISOLO_AGENT_AUTH_KEY` from the same Secret;
 - generates independent ephemeral token/key material in `deploy/tests/kind_e2e_test.sh`;
 - checks both projections in `deploy/tests/e2e_ci_execution_contract_test.sh`.
 
@@ -109,9 +109,9 @@ The fast contract was observed red before implementation and green afterward.
 
 - `src/agents/builtin/auth.rs`: source of truth for token/HMAC and SPIFFE authentication requirements.
 - `src/server/lib.rs`: server startup, standalone auth initialization, mesh transport retry, HTTP/gRPC listeners.
-- `deploy/helm/ohc/values.yaml`: public Helm Secret interfaces and runtime defaults.
-- `deploy/helm/ohc/templates/backend-deployment.yaml`: fail-closed validation, Secret projection, security context, probes.
-- `deploy/helm/ohc/templates/default-deny-network-policy.yaml`: release-scoped default deny.
+- `deploy/helm/omnisolo/values.yaml`: public Helm Secret interfaces and runtime defaults.
+- `deploy/helm/omnisolo/templates/backend-deployment.yaml`: fail-closed validation, Secret projection, security context, probes.
+- `deploy/helm/omnisolo/templates/default-deny-network-policy.yaml`: release-scoped default deny.
 - `deploy/tests/kind_e2e_test.sh`: authoritative cloud and standalone disposable-cluster acceptance test.
 - `deploy/tests/e2e_ci_execution_contract_test.sh`: fast Helm/E2E/security text contract.
 - `deploy/tests/docker_compose_e2e_test.sh`: real container-stack smoke test.
@@ -126,7 +126,7 @@ The fast contract was observed red before implementation and green afterward.
 
 ## Task 1: finish the authoritative Kind gate
 
-- [x] Add a failing fast contract for missing `OHC_AGENT_AUTH_KEY` projection.
+- [x] Add a failing fast contract for missing `OMNISOLO_AGENT_AUTH_KEY` projection.
 - [x] Implement Secret-backed `authKey` projection and independent key generation.
 - [x] Run shell syntax checks.
 - [x] Run `bazel test //deploy:e2e_ci_execution_contract_test --nocache_test_results --test_output=errors` and observe PASS.
@@ -316,7 +316,7 @@ gh run view "${run_id}" --json jobs --jq '.jobs[] | {name,conclusion,url}'
 2026-07-18 e2e_ci_execution_contract_test before auth-key implementation: EXPECTED FAIL
 2026-07-18 e2e_ci_execution_contract_test after auth-key implementation: PASS
 2026-07-18 prior Kind cloud/web section: PASS
-2026-07-18 prior Kind standalone failure: OHC_AGENT_AUTH_KEY missing
+2026-07-18 prior Kind standalone failure: OMNISOLO_AGENT_AUTH_KEY missing
 2026-07-18 auth-key-fixed standalone pod readiness spot-check: PASS
 2026-07-18 latest Kind cloud/web section after auth-key fix: PASS
 2026-07-18 latest standalone pod after auth-key fix: 1/1 Ready

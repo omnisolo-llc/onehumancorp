@@ -21,7 +21,7 @@ export default function ViralGoalTrackerPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
     }
-    document.title = "Viral Goal Tracker | OHC";
+    document.title = "Viral Goal Tracker | OmniSolo";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,9 +31,9 @@ export default function ViralGoalTrackerPage() {
     }
   };
 
-  const origin = typeof window !== 'undefined' && window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : (typeof window !== 'undefined' ? window.location.origin : '');
+  const origin = typeof window !== 'undefined' && window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : (typeof window !== 'undefined' ? window.location.origin : '');
   const embedUrl = `${origin}/api/v1/growth/viral-goal-tracker?tenant=${tenant}&theme=${theme}&target=${target}&reward=${encodeURIComponent(reward)}&hideBranding=${hasPro}`;
-  const embedCode = `<iframe src="${embedUrl}" width="100%" height="220" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Viral Goal Tracker"></iframe>`;
+  const embedCode = `<iframe src="${embedUrl}" width="100%" height="220" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Viral Goal Tracker"></iframe>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -78,7 +78,7 @@ export default function ViralGoalTrackerPage() {
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
                 <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    Remove "Powered by OHC" Badge
+                    Remove "Powered by OmniSolo" Badge
                     {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                 </label>
              </div>
@@ -119,7 +119,7 @@ export default function ViralGoalTrackerPage() {
               {!hasPro && (
                  <div className="text-center">
                     <a href="#" className={`text-xs font-medium hover:underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400 hover:text-gray-600'}`}>
-                       ⚡ Powered by OHC
+                       ⚡ Powered by OmniSolo
                     </a>
                  </div>
               )}
@@ -145,7 +145,7 @@ export default function ViralGoalTrackerPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Goal Tracker Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Goal Tracker Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

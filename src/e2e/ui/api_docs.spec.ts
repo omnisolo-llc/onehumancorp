@@ -12,7 +12,7 @@ test.describe('API Documentation', () => {
     await expect(swaggerUIContainer).toBeVisible({ timeout: 15000 });
 
     // Check for the title inside Swagger UI
-    const apiTitle = page.getByText('OHC Advanced API Reference');
+    const apiTitle = page.getByText('OmniSolo Advanced API Reference');
     await expect(apiTitle).toBeVisible();
   });
 });

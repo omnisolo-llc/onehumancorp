@@ -23,7 +23,6 @@ import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { ReviewFeedCard } from './ReviewFeedCard';
 
-import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { GrowBusinessCard } from "./GrowBusinessCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
@@ -110,10 +109,6 @@ export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
-  const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
-  const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
-  const [ledgerLoading, setLedgerLoading] = useState(true);
-
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -123,7 +118,6 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<any[]>([]);
   const [initialTriage, setInitialTriage] = useState<any[]>([]);
   const [userName, setUserName] = useState("Human");
-  const [remainingActions, setRemainingActions] = useState<number | null>(null);
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
@@ -230,33 +224,10 @@ export default function Dashboard() {
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const ledgerPromise = fetch("/api/v1/ledger/accounts")
-          .then(res => res.ok ? res.json() : null)
-          .catch(() => null);
-
-        const usagePromise = fetch('/api/v1/user/usage')
-          .then(res => res.ok ? res.json() : null)
-          .catch(() => null);
-
-        const [unifiedData, onboardingData, ledgerData, usageData] = await Promise.all([
+        const [unifiedData, onboardingData] = await Promise.all([
           unifiedPromise,
           onboardingPromise,
-          ledgerPromise,
-          usagePromise,
         ]);
-
-        if (usageData && usageData.remainingActions !== undefined) {
-           setRemainingActions(usageData.remainingActions);
-        }
-
-        if (ledgerData && ledgerData.accounts) {
-          const mainAccount = ledgerData.accounts.find((a: any) => a.name === "main");
-          if (mainAccount) {
-            setLedgerBalance(mainAccount.balance);
-            setLedgerCurrency(mainAccount.currency);
-          }
-        }
-        setLedgerLoading(false);
 
         const approvalsData = unifiedData?.pending_approvals || [];
         const agentFeedData = { items: unifiedData?.agent_feed || [] };
@@ -385,8 +356,6 @@ export default function Dashboard() {
       <AIUsageLimitWidget />
 
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
-      <NeighborhoodPulseCard tenant={tenantId()} />
-
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />
       <AIFeaturePaywallWidget />
@@ -747,7 +716,7 @@ export default function Dashboard() {
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Zero-Click Builder</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate a business in 30 seconds to show friends how fast OHC is.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Generate a business in 30 seconds to show friends how fast OmniSolo is.</p>
             </Link>
 
             <Link href="/referrals" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
@@ -756,7 +725,7 @@ export default function Dashboard() {
                 <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Referrals</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OmniSolo and earn premium credits.</p>
             </Link>
 
             <Link href="/referrals" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
@@ -791,7 +760,7 @@ export default function Dashboard() {
                 <div className="text-cyan-600 dark:text-cyan-400 font-semibold text-sm bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-full">Billing</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OmniSolo.</p>
             </Link>
 
             <Link href="/pos/terminal" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
@@ -1145,14 +1114,14 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create engaging polls to capture leads and customer preferences.</p>
             </Link>
             </WithTooltip>
-            <WithTooltip id="trial-extension-tooltip" defaultText="Request Pro activation through the OHC entitlement service after sharing.">
+            <WithTooltip id="trial-extension-tooltip" defaultText="Request Pro activation through the OmniSolo entitlement service after sharing.">
             <Link href="/trial-extension" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
                 <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Extension</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Interactive Trial Extension</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Request Pro activation through the OHC entitlement service after sharing.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Request Pro activation through the OmniSolo entitlement service after sharing.</p>
             </Link>
             </WithTooltip>
 

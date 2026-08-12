@@ -1,11 +1,11 @@
 'use client';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
 import { InteractiveWalkthrough, WalkthroughTarget } from '../../components/Walkthrough';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { useProPlan } from '../components/useProPlan';
-import { useAgentWebSocket } from '../../hooks/useAgentWebSocket';
+import { useAuthenticatedPolling } from '../../hooks/useAuthenticatedPolling';
 import {
   automations,
   connectors,
@@ -133,47 +133,33 @@ export default function AgentsPage() {
     () => [...allCatalog].sort((a, b) => b.usageCount - a.usageCount).slice(0, 3),
     [allCatalog],
   );
-  useEffect(() => {
-    async function fetchAll() {
-      try {
-        const [approvalsRes, feedRes, workflowsRes] = await Promise.all([
-          fetch('/api/v1/agents/approvals'),
-          fetch('/api/v1/agents/approvals/activity'),
-          fetch('/api/v1/agents/workflows'),
-        ]);
+  const fetchAll = useCallback(async () => {
+    try {
+      const [approvalsRes, feedRes, workflowsRes] = await Promise.all([
+        fetch('/api/v1/agents/approvals'),
+        fetch('/api/v1/agents/approvals/activity'),
+        fetch('/api/v1/agents/workflows'),
+      ]);
 
-        const [approvalsData, feedData, workflowsData] = await Promise.all([
-          approvalsRes.ok ? approvalsRes.json() : Promise.resolve({ pending_approvals: [] }),
-          feedRes.ok ? feedRes.json() : Promise.resolve({ pending_approvals: [] }),
-          workflowsRes.ok ? workflowsRes.json() : Promise.resolve({ workflows: [] })
-        ]);
+      const [approvalsData, feedData, workflowsData] = await Promise.all([
+        approvalsRes.ok ? approvalsRes.json() : Promise.resolve({ pending_approvals: [] }),
+        feedRes.ok ? feedRes.json() : Promise.resolve({ pending_approvals: [] }),
+        workflowsRes.ok ? workflowsRes.json() : Promise.resolve({ workflows: [] })
+      ]);
 
-        setApprovals(approvalsData.pending_approvals || []);
-        setFeed(feedData.pending_approvals || []);
-        setWorkflows(workflowsData.workflows || []);
-      } catch (err) {
-        console.error('Failed to fetch initial agent data concurrently:', err);
-      }
+      setApprovals(approvalsData.pending_approvals || []);
+      setFeed(feedData.pending_approvals || []);
+      setWorkflows(workflowsData.workflows || []);
+    } catch (err) {
+      console.error('Failed to fetch agent data concurrently:', err);
     }
-    fetchAll();
   }, []);
-  const feedWsUrl = (() => {
-    if (typeof window === 'undefined') return '';
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
-  })();
 
-  useAgentWebSocket({
-    url: feedWsUrl,
-    onMessage: (item: any) => {
-      if (!item?.id || !item?.description) return;
-      setFeed((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-      if (String(item.status || '').toLowerCase().includes('draft')) {
-        setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-      }
-    },
-  });
+  useEffect(() => {
+    void fetchAll();
+  }, [fetchAll]);
+
+  useAuthenticatedPolling({ onPoll: fetchAll });
   function summon(item: ExpertCatalogItem) {
     setSelected(item);
     setModel(item.model);
@@ -344,7 +330,7 @@ export default function AgentsPage() {
               type="button"
               onClick={async () => {
                 if (typeof window !== 'undefined') {
-                  window.open?.('https://twitter.com/intent/tweet?text=I%20am%20trying%20OHC%20Expert%20Center', '_blank');
+                  window.open?.('https://twitter.com/intent/tweet?text=I%20am%20trying%20OmniSolo%20Expert%20Center', '_blank');
                 }
                 if (await claimTrial()) setShowPaywall(false);
               }}

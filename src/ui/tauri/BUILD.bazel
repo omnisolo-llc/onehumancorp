@@ -78,7 +78,7 @@ pub fn tauri_context() -> Context<tauri::Wry> {
     let config: Config = serde_json::from_str(include_str!("tauri_config.json")).expect("failed to parse tauri_config.json");
     let assets = TauriAssets {};
     let package_info = tauri::PackageInfo {
-        name: "OHC".into(),
+        name: "OmniSolo".into(),
         version: "0.4.45".parse().expect("invalid version"),
         authors: "",
         description: "",
@@ -143,7 +143,7 @@ rust_library(
         "OUT_DIR": "bazel-out/k8-fastbuild/bin/src/ui/tauri",
     },
     rustc_flags = [
-        "--cfg=ohc_bazel_tauri_context",
+        "--cfg=omnisolo_bazel_tauri_context",
     ],
     target_compatible_with = select({
         ":tauri_enabled": [],
@@ -194,7 +194,7 @@ TAURI_MOBILE_SRCS = glob([
     "//src/server/harness:Cargo.toml",
     "//src/server/integrations/stripe:Cargo.toml",
     "//src/server/integrations/task_scheduler:Cargo.toml",
-    "//src/server/ohc:Cargo.toml",
+    "//src/server/omnisolo:Cargo.toml",
     "//src/server/integrations/zoom:Cargo.toml",
     "//src/server/integrations/google_calendar:Cargo.toml",
     "//src/server/utils:Cargo.toml",

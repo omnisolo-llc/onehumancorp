@@ -2,7 +2,7 @@
 
 # Hybrid Troubleshooting Guide
 
-Welcome to the One Human Corp troubleshooting guide for the Hybrid Architecture (OHC-HA).
+Welcome to the OmniSolo troubleshooting guide for the Hybrid Architecture (OmniSolo-HA).
 
 ## 1. Cloud vs. Standalone Mode Debugging
 
@@ -10,7 +10,7 @@ Use the following diagnostic flow to resolve state mismatch issues between the C
 
 ```mermaid
 graph TD
-    A[Agent Reports Task Failure] --> B{Is OHC_STANDALONE set?}
+    A[Agent Reports Task Failure] --> B{Is OMNISOLO_STANDALONE set?}
     B -- Yes (SQLite) --> C[Check Local .ohc/runtime/status]
     B -- No (Postgres) --> D[Check Kubernetes Pod Logs]
     C --> E[Verify SQLite locks: FOR UPDATE SKIP LOCKED emulation]

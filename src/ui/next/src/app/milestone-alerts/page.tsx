@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
 interface Milestone {
   id: string;
@@ -66,7 +66,7 @@ export default function MilestoneAlertsPage() {
   const getShareText = () => {
     const activeM = milestones.find(m => m.id === selectedMilestone);
     const title = activeM ? activeM.title.replace('🎉 Milestone: ', '') : 'huge business milestone';
-    return `I just hit a huge business milestone (🎉 Milestone: ${title}) using OHC! Launch your own store today: ${shareTarget} ⚡ Powered by OHC`;
+    return `I just hit a huge business milestone (🎉 Milestone: ${title}) using OmniSolo! Launch your own store today: ${shareTarget} ⚡ Powered by OmniSolo`;
   };
 
   return (
@@ -252,10 +252,10 @@ export default function MilestoneAlertsPage() {
         </section>
       </main>
 
-      <PoweredByOHC tenantId={tenantId} />
+      <PoweredByOmniSolo tenantId={tenantId} />
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

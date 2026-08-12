@@ -1,5 +1,6 @@
 import { test as base, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { authenticateRequest } from './authenticate';
+import { E2E_SEED_DATA } from '../ui/next/src/lib/e2eSeedData';
 
 export const E2E_ADMIN_USER = {
   email: 'test@example.com',
@@ -24,8 +25,7 @@ export const E2E_MEMBER_USER = {
 
 type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_UNLIMITED_ADMIN_USER | typeof E2E_MEMBER_USER;
 
-async function loginAs(page: Page, user: E2EUser) {
-  const baseURL = process.env.BASE_URL ?? 'http://127.0.0.1:18789';
+async function loginAsAtBaseURL(page: Page, user: E2EUser, baseURL: string) {
   await authenticateRequest(page.request, {
     username: user.email,
     password: user.password,
@@ -50,7 +50,9 @@ export const test = base.extend<{
   unlimitedAdminUser: typeof E2E_UNLIMITED_ADMIN_USER;
   memberUser: typeof E2E_MEMBER_USER;
   loginAs: (page: Page, user: E2EUser) => Promise<void>;
+  anonymousPage: Page;
   memberPage: Page;
+  seedData: typeof E2E_SEED_DATA;
 }>({
   adminUser: async ({}, use) => {
     await use(E2E_ADMIN_USER);
@@ -61,24 +63,46 @@ export const test = base.extend<{
   memberUser: async ({}, use) => {
     await use(E2E_MEMBER_USER);
   },
-  loginAs: async ({}, use) => {
-    await use(loginAs);
+  loginAs: async ({ baseURL }, use) => {
+    if (!baseURL) throw new Error('Playwright baseURL is required for E2E login.');
+    await use((page, user) => loginAsAtBaseURL(page, user, baseURL));
+  },
+  seedData: async ({}, use) => {
+    await use(E2E_SEED_DATA);
   },
   context: async ({ context }, use) => {
     rejectNetworkStubbing(context);
     await use(context);
   },
-  page: async ({ page, adminUser }, use) => {
+  page: async ({ page }, use) => {
     rejectNetworkStubbing(page.context(), page);
-    await loginAs(page, adminUser);
     await use(page);
   },
-  memberPage: async ({ browser, memberUser }, use) => {
-    const page = await browser.newPage();
+  anonymousPage: async ({ browser, baseURL, contextOptions }, use) => {
+    if (!baseURL) throw new Error('Playwright baseURL is required for anonymous E2E pages.');
+    const context = await browser.newContext({
+      ...contextOptions,
+      baseURL,
+      storageState: { cookies: [], origins: [] },
+    });
+    rejectNetworkStubbing(context);
+    const page = await context.newPage();
     rejectNetworkStubbing(page.context(), page);
-    await loginAs(page, memberUser);
     await use(page);
-    await page.close();
+    await context.close();
+  },
+  memberPage: async ({ browser, memberUser, baseURL, contextOptions }, use) => {
+    if (!baseURL) throw new Error('Playwright baseURL is required for member E2E pages.');
+    const context = await browser.newContext({
+      ...contextOptions,
+      baseURL,
+      storageState: { cookies: [], origins: [] },
+    });
+    const page = await context.newPage();
+    rejectNetworkStubbing(context, page);
+    await loginAsAtBaseURL(page, memberUser, baseURL);
+    await use(page);
+    await context.close();
   },
 });
 
@@ -98,6 +122,7 @@ export async function adminPage(
   } else {
       throw new Error('No valid browser or page object provided to adminPage');
   }
-  await loginAs(page, E2E_ADMIN_USER);
+  if (page.url() === 'about:blank') await page.goto('/login');
+  await loginAsAtBaseURL(page, E2E_ADMIN_USER, new URL(page.url()).origin);
   return page;
 }

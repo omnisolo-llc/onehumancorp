@@ -43,7 +43,7 @@ test.describe('Documentation UI Components', () => {
         // Wait for agent reply
         const reply = page.locator('.ohc-chat-msg.agent').last();
         await expect(reply).toBeVisible();
-        await expect(reply).toContainText('Welcome to One Human Corp');
+        await expect(reply).toContainText('Welcome to OmniSolo');
     });
 
 });

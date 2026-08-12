@@ -1,5 +1,5 @@
 // SOTA Harness Pattern: Pydantic-first tool schema validation.
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::json;
 use std::sync::Arc;
 use std::path::PathBuf;

@@ -282,7 +282,7 @@ mod chaos_db_tests {
     }
     #[tokio::test]
     async fn test_chaos_parity_audit_sqlite_postgres_identical_queries() {
-        let pg_url = std::env::var("OHC_DATABASE_URL")
+        let pg_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pg_pool = match crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(200))
@@ -353,7 +353,7 @@ mod chaos_db_tests {
 
     #[tokio::test]
     async fn test_chaos_parity_audit_comprehensive() {
-        let pg_url = std::env::var("OHC_DATABASE_URL")
+        let pg_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pg_pool = match crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(200))

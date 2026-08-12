@@ -28,7 +28,7 @@ describe('EventRSVPBuilderPage', () => {
     render(<EventRSVPBuilderPage />);
 
     // Click checkbox
-    const checkbox = screen.getByLabelText(/Remove "Powered by OHC"/i);
+    const checkbox = screen.getByLabelText(/Remove "Powered by OmniSolo"/i);
     // fireEvent.click on a checkbox naturally changes its state before the event handler is called in react testing library in some versions.
     // It's a controlled component, so we just check that the paywall appears
     fireEvent.click(checkbox); // This triggers the modal

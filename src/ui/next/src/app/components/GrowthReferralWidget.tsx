@@ -50,7 +50,7 @@ export default function GrowthReferralWidget() {
   const handleWhatsApp = () => {
     if (referralLink) {
       const url = `https://wa.me/?text=${encodeURIComponent(
-        `Hey! I use OneHumanCorp to run my business. It's super easy. Check it out: ${referralLink}`
+        `Hey! I use OmniSolo to run my business. It's super easy. Check it out: ${referralLink}`
       )}`;
       window.open(url, '_blank');
     }
@@ -59,7 +59,7 @@ export default function GrowthReferralWidget() {
   const handleTwitter = () => {
     if (referralLink) {
       const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        `Hey! I use OneHumanCorp to run my business. It's super easy. Check it out: ${referralLink}\n\n⚡ Powered by OHC`
+        `Hey! I use OmniSolo to run my business. It's super easy. Check it out: ${referralLink}\n\n⚡ Powered by OmniSolo`
       )}`;
       window.open(url, '_blank');
     }
@@ -149,7 +149,7 @@ export default function GrowthReferralWidget() {
               <button
                 onClick={() => {
                   const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'default-team') : 'default-team';
-                  navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ Powered by OHC</a></div>`);
+                  navigator.clipboard.writeText(`<iframe src="https://cloud.omnisolo.co/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ Powered by OmniSolo</a></div>`);
                   alert('Embed code copied to clipboard!');
                 }}
                 className="w-full app-button min-h-[44px] bg-[#0071E3] hover:bg-blue-700 text-white border-none py-3 px-6 text-sm rounded-md"
@@ -171,7 +171,7 @@ export default function GrowthReferralWidget() {
               You just hit a major milestone! Let your network know that your business is booming.
             </p>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent('I just hit my 10th order on OHC! Check it out: https://ohc.app/invite/default-team')}`}
+              href={`https://wa.me/?text=${encodeURIComponent('I just hit my 10th order on OmniSolo! Check it out: https://cloud.omnisolo.co/invite/default-team')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 app-button min-h-[44px] bg-[#25D366] hover:bg-[#1ebd5a] text-white py-2 px-4 rounded-md text-sm font-semibold transition-colors"

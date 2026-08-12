@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::ops_service_server::OpsService;
+use ::server_omnisolo::orchestration::*;
+use ::server_omnisolo::orchestration::ops_service_server::OpsService;
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
 use crate::hub::Hub;
@@ -451,7 +451,7 @@ impl OpsService for MyOpsService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_ohc::orchestration::{
+    use ::server_omnisolo::orchestration::{
         EmptyRequest, CreateIncidentRequest, IncidentStatusRequest, CreateComputeProfileRequest,
         GetClusterStatusRequest, CreateBudgetAlertRequest, CreatePipelineRequest,
         PipelinePromoteRequest, UpdatePipelineStatusRequest,

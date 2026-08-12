@@ -7,7 +7,7 @@
 **Last Updated:** [Date]
 
 ## 1. Overview
-A technical summary of the problem space, the proposed solution, and the overall impact on the OHC ecosystem.
+A technical summary of the problem space, the proposed solution, and the overall impact on the OmniSolo ecosystem.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

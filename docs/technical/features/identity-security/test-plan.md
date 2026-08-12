@@ -11,7 +11,7 @@ A high-level summary of the testing strategy for the Hybrid Identity Management 
 
 ## 2. Test Strategy
 - **Unit Testing:** Focus on isolated components for identity issuance, role validation, and JWT/SVID parsing.
-- **Integration Testing:** Verify communication between the OHC Hub, SPIRE Server, and OIDC providers.
+- **Integration Testing:** Verify communication between the OmniSolo Hub, SPIRE Server, and OIDC providers.
 - **End-to-End (E2E) Testing:** Validate the complete hiring flow, approval gating mechanism, and multi-cluster federation.
 
 ## 3. Test Cases

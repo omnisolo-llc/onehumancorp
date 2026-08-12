@@ -7,9 +7,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-#[cfg(ohc_bazel_package)]
+#[cfg(omnisolo_bazel_package)]
 use ::server_lib::autodream::AutoDreamWorker;
-#[cfg(not(ohc_bazel_package))]
+#[cfg(not(omnisolo_bazel_package))]
 use crate::autodream::AutoDreamWorker;
 
 #[derive(Deserialize)]
@@ -86,7 +86,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_autodream_sync_endpoint() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 

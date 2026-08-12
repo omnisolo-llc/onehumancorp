@@ -8,7 +8,7 @@ use opentelemetry::global;
 use opentelemetry::trace::Tracer;
 
 fn task_claim_timeout() -> std::time::Duration {
-    std::env::var("OHC_TASK_CLAIM_TIMEOUT_MS")
+    std::env::var("OMNISOLO_TASK_CLAIM_TIMEOUT_MS")
         .ok()
         .and_then(|raw| raw.parse::<u64>().ok())
         .map(std::time::Duration::from_millis)
@@ -989,7 +989,7 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1026,7 +1026,7 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1145,7 +1145,7 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1182,7 +1182,7 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1264,11 +1264,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_dag_dependencies_postgres() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return; // Skip if no PG DB available for test
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         if !database_url.contains("test") {
             return;
         }
@@ -1307,7 +1307,7 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1344,7 +1344,7 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1470,7 +1470,7 @@ mod tests {
             async fn subscribe(
                 &self,
                 _topic: &str,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1507,7 +1507,7 @@ mod tests {
             }
             async fn subscribe_state_handoff(
                 &self,
-                _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+                _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
             ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
                 Ok(Box::new(|| {}))
             }
@@ -1561,7 +1561,7 @@ mod chaos_tests {
         async fn subscribe(
             &self,
             _topic: &str,
-            _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+            _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
         ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
             Ok(Box::new(|| {}))
         }
@@ -1598,7 +1598,7 @@ mod chaos_tests {
         }
         async fn subscribe_state_handoff(
             &self,
-            _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>,
+            _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>,
         ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
             Ok(Box::new(|| {}))
         }
@@ -1611,7 +1611,7 @@ mod chaos_tests {
         // Also simulate >2s backend latency to verify fail-safe behavior
 
         unsafe {
-            std::env::set_var("OHC_TASK_CLAIM_TIMEOUT_MS", "50");
+            std::env::set_var("OMNISOLO_TASK_CLAIM_TIMEOUT_MS", "50");
         }
 
         let database_url = "sqlite::memory:";
@@ -1694,7 +1694,7 @@ mod chaos_tests {
         );
 
         unsafe {
-            std::env::remove_var("OHC_TASK_CLAIM_TIMEOUT_MS");
+            std::env::remove_var("OMNISOLO_TASK_CLAIM_TIMEOUT_MS");
         }
     }
     #[tokio::test]
@@ -1703,7 +1703,7 @@ mod chaos_tests {
         // "Run concurrent load tests: 10 simultaneous business owners in Standalone mode"
 
         unsafe {
-            std::env::set_var("OHC_TASK_CLAIM_TIMEOUT_MS", "100");
+            std::env::set_var("OMNISOLO_TASK_CLAIM_TIMEOUT_MS", "100");
         }
 
         let database_url = "sqlite::memory:";
@@ -1782,7 +1782,7 @@ mod chaos_tests {
         );
 
         unsafe {
-            std::env::remove_var("OHC_TASK_CLAIM_TIMEOUT_MS");
+            std::env::remove_var("OMNISOLO_TASK_CLAIM_TIMEOUT_MS");
         }
     }
 }

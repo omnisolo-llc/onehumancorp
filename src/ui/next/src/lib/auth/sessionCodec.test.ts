@@ -32,17 +32,17 @@ const encode = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64url");
 
 async function activeRing(id = "prod-v1", bytes = ACTIVE_BYTES): Promise<SessionKeyRing> {
   return parseSessionKeyRing({
-    OHC_WEB_SESSION_KEY_ID: id,
-    OHC_WEB_SESSION_SECRET: encode(bytes),
+    OMNISOLO_WEB_SESSION_KEY_ID: id,
+    OMNISOLO_WEB_SESSION_SECRET: encode(bytes),
   });
 }
 
 async function rotatedRing(): Promise<SessionKeyRing> {
   return parseSessionKeyRing({
-    OHC_WEB_SESSION_KEY_ID: "prod-v2",
-    OHC_WEB_SESSION_SECRET: encode(PREVIOUS_BYTES),
-    OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1",
-    OHC_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
+    OMNISOLO_WEB_SESSION_KEY_ID: "prod-v2",
+    OMNISOLO_WEB_SESSION_SECRET: encode(PREVIOUS_BYTES),
+    OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1",
+    OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
   });
 }
 

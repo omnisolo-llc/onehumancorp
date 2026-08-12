@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
@@ -35,7 +35,7 @@ fn private_network_allowed() -> bool {
     if legacy_allowed {
         LEGACY_PRIVATE_NETWORK_WARNING.call_once(|| {
             tracing::warn!(
-                "MCPANY_DANGEROUS_ALLOW_LOCAL_IPS is deprecated; use OHC_AGENT_ALLOW_PRIVATE_NETWORK=true"
+                "MCPANY_DANGEROUS_ALLOW_LOCAL_IPS is deprecated; use OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK=true"
             );
         });
     }

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-/// Represents a discrete unit of work to be executed by a sub-agent within the OHC ecosystem.
+/// Represents a discrete unit of work to be executed by a sub-agent within the OmniSolo ecosystem.
 /// Jobs are multi-tenant aware and support exponential backoff for retries.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {

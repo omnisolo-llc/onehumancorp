@@ -53,7 +53,7 @@ test.describe('Interactive Poll Generator E2E', () => {
     await page.goto('/interactive-poll-generator');
 
     // Try to check the remove branding box
-    await page.getByLabel(/Remove OHC Branding/).check();
+    await page.getByLabel(/Remove OmniSolo Branding/).check();
 
     // Verify paywall modal appears
     await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();

@@ -33,7 +33,7 @@ async fn test_acquire_resource_standalone_lock() {
 
 #[tokio::test]
 async fn test_redis_lock_guard_drop_safety() {
-    let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    let redis_url = std::env::var("OMNISOLO_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
     let client = match redis::Client::open(redis_url.clone()) {
         Ok(c) => c,
         Err(_) => return,

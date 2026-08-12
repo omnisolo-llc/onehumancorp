@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-Automated Implementation Pipelines enable AI agents (SWEs, DevOps) to autonomously execute the full software development lifecycle (SDLC). This includes code generation, automated testing via Bazel, security scanning, and deployment to dynamic staging environments, all orchestrated by the OHC `Hub`.
+Automated Implementation Pipelines enable AI agents (SWEs, DevOps) to autonomously execute the full software development lifecycle (SDLC). This includes code generation, automated testing via Bazel, security scanning, and deployment to dynamic staging environments, all orchestrated by the OmniSolo `Hub`.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -15,7 +15,7 @@ Automated Implementation Pipelines enable AI agents (SWEs, DevOps) to autonomous
 - **Verification-First**: No code is merged unless `bazel test //...` passes in an isolated runner.
 - **Self-Healing**: Automatic rollback if the `readiness` probe fails post-deployment.
 ### 2.2 Non-Goals
-- **Replacing CI Engines**: OHC integrates with GitHub Actions/Jenkins/BuildBuddy, it does not replace them.
+- **Replacing CI Engines**: OmniSolo integrates with GitHub Actions/Jenkins/BuildBuddy, it does not replace them.
 - **Manual Hotfixes**: All production changes must flow through the pipeline (No manual `kubectl apply`).
 
 ## 3. Detailed Design
@@ -25,7 +25,7 @@ Automated Implementation Pipelines enable AI agents (SWEs, DevOps) to autonomous
 sequenceDiagram
     participant PM as PM Agent
     participant SWE as SWE Agent
-    participant Hub as OHC Hub
+    participant Hub as OmniSolo Hub
     participant CI as CI Runner (Bazel)
     participant CEO as Human CEO
 
@@ -62,7 +62,7 @@ CI runners are dynamically provisioned as Kubernetes `Jobs`. Build caching is ha
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

@@ -36,7 +36,7 @@ export default function RootLayout({
               <PublicAwareApplicationFrame
                 applicationWidgets={
                   <>
-                    <WalkthroughTarget id="ohc-floating-help-widget"><HelpWidget /></WalkthroughTarget>
+                    <WalkthroughTarget id="omnisolo-floating-help-widget"><HelpWidget /></WalkthroughTarget>
                     <HelpChat />
                     <NetworkStatusIndicator />
                     <SyncManagerInitializer />

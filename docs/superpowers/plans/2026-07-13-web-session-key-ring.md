@@ -46,8 +46,8 @@ import { parseSessionKeyRing } from "./sessionKeys";
 
 const encode = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64url");
 const activeEnv = () => ({
-  OHC_WEB_SESSION_KEY_ID: "prod-v1",
-  OHC_WEB_SESSION_SECRET: encode(ACTIVE_BYTES),
+  OMNISOLO_WEB_SESSION_KEY_ID: "prod-v1",
+  OMNISOLO_WEB_SESSION_SECRET: encode(ACTIVE_BYTES),
 });
 
 describe("active web-session key", () => {
@@ -57,18 +57,18 @@ describe("active web-session key", () => {
     expect(ring.active.id).toBe("prod-v1");
     expect(Array.from(ring.active.key)).toEqual(Array.from(ACTIVE_BYTES));
     expect(ring.previous).toBeUndefined();
-    expect(JSON.stringify(ring)).not.toContain(env.OHC_WEB_SESSION_SECRET);
+    expect(JSON.stringify(ring)).not.toContain(env.OMNISOLO_WEB_SESSION_SECRET);
   });
 
-  it.each(["OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET"])("requires %s", (name) => {
+  it.each(["OMNISOLO_WEB_SESSION_KEY_ID", "OMNISOLO_WEB_SESSION_SECRET"])("requires %s", (name) => {
     const env: Record<string, string> = activeEnv();
     delete env[name];
     expect(() => parseSessionKeyRing(env)).toThrow(`${name} is required`);
   });
 
   it.each(["", " space", "slash/id", "x".repeat(33)])("rejects active key id %j", (id) => {
-    expect(() => parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_KEY_ID: id })).toThrow(
-      "OHC_WEB_SESSION_KEY_ID must match [A-Za-z0-9._-]{1,32}",
+    expect(() => parseSessionKeyRing({ ...activeEnv(), OMNISOLO_WEB_SESSION_KEY_ID: id })).toThrow(
+      "OMNISOLO_WEB_SESSION_KEY_ID must match [A-Za-z0-9._-]{1,32}",
     );
   });
 
@@ -84,8 +84,8 @@ describe("active web-session key", () => {
     ["ascending counter", encode(Uint8Array.from({ length: 32 }, (_, index) => index))],
     ["descending counter", encode(Uint8Array.from({ length: 32 }, (_, index) => 255 - index))],
   ])("rejects structurally weak or malformed material: %s", (_case, secret) => {
-    expect(() => parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_SECRET: secret })).toThrow(
-      "OHC_WEB_SESSION_SECRET must be canonical base64url for acceptable 32-byte key material",
+    expect(() => parseSessionKeyRing({ ...activeEnv(), OMNISOLO_WEB_SESSION_SECRET: secret })).toThrow(
+      "OMNISOLO_WEB_SESSION_SECRET must be canonical base64url for acceptable 32-byte key material",
     );
   });
 });
@@ -148,7 +148,7 @@ function parseKey(env: Env, idName: string, secretName: string): SessionKey {
 }
 
 export function parseSessionKeyRing(env: Env): SessionKeyRing {
-  return { active: parseKey(env, "OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET") };
+  return { active: parseKey(env, "OMNISOLO_WEB_SESSION_KEY_ID", "OMNISOLO_WEB_SESSION_SECRET") };
 }
 ```
 
@@ -163,38 +163,38 @@ describe("previous web-session key", () => {
   it("accepts one distinct previous key", () => {
     const ring = parseSessionKeyRing({
       ...activeEnv(),
-      OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
-      OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
+      OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
+      OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
     });
     expect(ring.previous?.id).toBe("prod-v0");
     expect(Array.from(ring.previous?.key ?? [])).toEqual(Array.from(PREVIOUS_BYTES));
   });
 
   it("requires a complete pair", () => {
-    expect(() => parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0" })).toThrow(
+    expect(() => parseSessionKeyRing({ ...activeEnv(), OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0" })).toThrow(
       "previous key id and secret must be configured together",
     );
-    expect(() => parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES) })).toThrow(
+    expect(() => parseSessionKeyRing({ ...activeEnv(), OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES) })).toThrow(
       "previous key id and secret must be configured together",
     );
   });
 
   it("requires distinct ids and material", () => {
     expect(() => parseSessionKeyRing({
-      ...activeEnv(), OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1", OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
+      ...activeEnv(), OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1", OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
     })).toThrow("previous key id must differ from active key id");
     expect(() => parseSessionKeyRing({
-      ...activeEnv(), OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0", OHC_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
+      ...activeEnv(), OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0", OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
     })).toThrow("previous key material must differ from active key material");
   });
 
   it("applies id and material validation to the previous key", () => {
     expect(() => parseSessionKeyRing({
-      ...activeEnv(), OHC_WEB_SESSION_PREVIOUS_KEY_ID: "bad/id", OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
-    })).toThrow("OHC_WEB_SESSION_PREVIOUS_KEY_ID must match [A-Za-z0-9._-]{1,32}");
+      ...activeEnv(), OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "bad/id", OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
+    })).toThrow("OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID must match [A-Za-z0-9._-]{1,32}");
     expect(() => parseSessionKeyRing({
-      ...activeEnv(), OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0", OHC_WEB_SESSION_PREVIOUS_SECRET: encode(new Uint8Array(32)),
-    })).toThrow("OHC_WEB_SESSION_PREVIOUS_SECRET must be canonical base64url for acceptable 32-byte key material");
+      ...activeEnv(), OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0", OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(new Uint8Array(32)),
+    })).toThrow("OMNISOLO_WEB_SESSION_PREVIOUS_SECRET must be canonical base64url for acceptable 32-byte key material");
   });
 });
 ```
@@ -207,14 +207,14 @@ Replace only `parseSessionKeyRing` with:
 
 ```ts
 export function parseSessionKeyRing(env: Env): SessionKeyRing {
-  const active = parseKey(env, "OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET");
-  const previousId = env.OHC_WEB_SESSION_PREVIOUS_KEY_ID;
-  const previousSecret = env.OHC_WEB_SESSION_PREVIOUS_SECRET;
+  const active = parseKey(env, "OMNISOLO_WEB_SESSION_KEY_ID", "OMNISOLO_WEB_SESSION_SECRET");
+  const previousId = env.OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID;
+  const previousSecret = env.OMNISOLO_WEB_SESSION_PREVIOUS_SECRET;
   if ((previousId === undefined) !== (previousSecret === undefined)) {
     throw new Error("previous key id and secret must be configured together");
   }
   if (previousId === undefined) return { active };
-  const previous = parseKey(env, "OHC_WEB_SESSION_PREVIOUS_KEY_ID", "OHC_WEB_SESSION_PREVIOUS_SECRET");
+  const previous = parseKey(env, "OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID", "OMNISOLO_WEB_SESSION_PREVIOUS_SECRET");
   if (previous.id === active.id) throw new Error("previous key id must differ from active key id");
   if (previous.key.every((byte, index) => byte === active.key[index])) {
     throw new Error("previous key material must differ from active key material");

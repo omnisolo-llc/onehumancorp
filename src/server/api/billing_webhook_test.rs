@@ -9,7 +9,7 @@ use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 use crate::db::DB;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::mesh::CentrifugeNode;
-use ohc_builtin_agent::mesh::transport::InProcessTransport;
+use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
 use std::sync::Arc;
 
 #[test]

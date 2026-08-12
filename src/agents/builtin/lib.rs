@@ -4,29 +4,29 @@ pub mod durable_execution;
 pub mod omni_context;
 pub mod plugins;
 pub mod scalable_multi_agent;
-// ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.
+// omnisolo-builtin-agent: Rust reimplementation of the OmniSolo builtin agent.
 //
 // Configuration via environment variables:
-//   OHC_AGENT_ADDRESS          gRPC listen address (default: 127.0.0.1:50051)
-//   OHC_AGENT_ID               agent identifier
+//   OMNISOLO_AGENT_ADDRESS          gRPC listen address (default: 127.0.0.1:50051)
+//   OMNISOLO_AGENT_ID               agent identifier
 //   ANTHROPIC_API_KEY          enables Anthropic Claude backend
 //   OPENAI_API_KEY             enables OpenAI backend
 //   MINIMAX_API_KEY            enables MiniMax backend
-//   OHC_LLM_API_KEY            generic key for OpenAI-compatible backends
-//   OHC_LLM_BASE_URL           generic OpenAI-compatible /v1 API base URL
-//   OHC_LOCAL_LLM_ENDPOINT     Ollama endpoint
-//   OHC_LLM_PROVIDER           "anthropic" | "openai" | "openai-compatible" | "minimax" | "ollama"
-//   OHC_LLM_MODEL              LLM model name
-//   OHC_MAX_TOKENS             max tokens per LLM response (default 2048)
-//   OHC_MAX_ITERATIONS         max ReAct iterations (default 100)
-//   OHC_AGENT_WORKSPACE        workspace/sandbox root for file and shell tools
-//   OHC_AGENT_EXECUTION_MODE   "standalone" | "cluster" | "cloud"; cluster/cloud use containers when available
-//   OHC_AGENT_COMMAND_BACKEND  "container" to force Docker/Podman execution
-//   OHC_AGENT_CONTAINER_IMAGE  container image for cluster command execution (default alpine:3.20)
-//   OHC_AGENT_AUTH_DISABLED    "true" to disable auth (dev/test only)
-//   OHC_AGENT_TOKEN            pre-shared token for token-based auth
+//   OMNISOLO_LLM_API_KEY            generic key for OpenAI-compatible backends
+//   OMNISOLO_LLM_BASE_URL           generic OpenAI-compatible /v1 API base URL
+//   OMNISOLO_LOCAL_LLM_ENDPOINT     Ollama endpoint
+//   OMNISOLO_LLM_PROVIDER           "anthropic" | "openai" | "openai-compatible" | "minimax" | "ollama"
+//   OMNISOLO_LLM_MODEL              LLM model name
+//   OMNISOLO_MAX_TOKENS             max tokens per LLM response (default 2048)
+//   OMNISOLO_MAX_ITERATIONS         max ReAct iterations (default 100)
+//   OMNISOLO_AGENT_WORKSPACE        workspace/sandbox root for file and shell tools
+//   OMNISOLO_AGENT_EXECUTION_MODE   "standalone" | "cluster" | "cloud"; cluster/cloud use containers when available
+//   OMNISOLO_AGENT_COMMAND_BACKEND  "container" to force Docker/Podman execution
+//   OMNISOLO_AGENT_CONTAINER_IMAGE  container image for cluster command execution (default alpine:3.20)
+//   OMNISOLO_AGENT_AUTH_DISABLED    "true" to disable auth (dev/test only)
+//   OMNISOLO_AGENT_TOKEN            pre-shared token for token-based auth
 
-pub use ohc_builtin_agent_core::*;
+pub use omnisolo_builtin_agent_core::*;
 
 pub mod agent;
 pub mod human_in_loop;
@@ -52,8 +52,8 @@ pub mod ralph_loop;
 pub mod ruflo;
 pub mod service;
 
-pub use ohc_builtin_agent_llm as llm;
-pub use ohc_builtin_agent_tools as tools;
+pub use omnisolo_builtin_agent_llm as llm;
+pub use omnisolo_builtin_agent_tools as tools;
 pub mod mesh;
 pub mod proto;
 pub use service::start_builtin_agent;
@@ -115,7 +115,7 @@ fn resolve_process_tenant(
         .map(str::trim)
         .filter(|organization_id| !organization_id.is_empty())
         .ok_or_else(|| {
-            "OHC_ORGANIZATION_ID is required when OHC_AGENT_EXECUTION_MODE is not standalone"
+            "OMNISOLO_ORGANIZATION_ID is required when OMNISOLO_AGENT_EXECUTION_MODE is not standalone"
                 .to_string()
         })?;
     if organization_id.eq_ignore_ascii_case("system") {
@@ -170,11 +170,11 @@ async fn run_direct_workflow_if_requested(task: &str) -> Option<Result<String, S
         }
     };
 
-    use ohc_builtin_agent_tools::ToolExecutor;
-    use ohc_builtin_agent_tools::pydantic::PydanticAdapter;
+    use omnisolo_builtin_agent_tools::ToolExecutor;
+    use omnisolo_builtin_agent_tools::pydantic::PydanticAdapter;
     let runner =
-        std::sync::Arc::new(ohc_builtin_agent_tools::runner::SandboxedCommandRunner::new(None));
-    let executor = ohc_builtin_agent_tools::workflow::WorkflowExecutor { runner };
+        std::sync::Arc::new(omnisolo_builtin_agent_tools::runner::SandboxedCommandRunner::new(None));
+    let executor = omnisolo_builtin_agent_tools::workflow::WorkflowExecutor { runner };
     let adapter = PydanticAdapter::new(executor);
     Some(
         adapter
@@ -188,7 +188,7 @@ async fn hold_specialist_exit_if_requested(task: &str) {
     if !task.contains("Specialist:") {
         return;
     }
-    let secs = std::env::var("OHC_AGENT_SPECIALIST_EXIT_HOLD_SECS")
+    let secs = std::env::var("OMNISOLO_AGENT_SPECIALIST_EXIT_HOLD_SECS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(0);
@@ -296,27 +296,27 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         i += 1;
     }
 
-    let address = get_env("OHC_AGENT_ADDRESS", service::DEFAULT_ADDRESS);
+    let address = get_env("OMNISOLO_AGENT_ADDRESS", service::DEFAULT_ADDRESS);
     let agent_id = get_env(
-        "OHC_AGENT_ID",
+        "OMNISOLO_AGENT_ID",
         &uuid::Uuid::new_v4().hyphenated().to_string(),
     );
 
     let cfg = service::AgentConfig {
-        llm_provider: get_env("OHC_LLM_PROVIDER", ""),
-        model: get_env("OHC_LLM_MODEL", ""),
+        llm_provider: get_env("OMNISOLO_LLM_PROVIDER", ""),
+        model: get_env("OMNISOLO_LLM_MODEL", ""),
         llm_endpoint: get_env(
-            "OHC_LLM_BASE_URL",
-            &get_env("OHC_LLM_ENDPOINT", &get_env("OHC_LOCAL_LLM_ENDPOINT", "")),
+            "OMNISOLO_LLM_BASE_URL",
+            &get_env("OMNISOLO_LLM_ENDPOINT", &get_env("OMNISOLO_LOCAL_LLM_ENDPOINT", "")),
         ),
-        system_prompt: get_env("OHC_SYSTEM_PROMPT", ""),
-        max_tokens: get_env_int("OHC_MAX_TOKENS", 2048),
-        temperature: std::env::var("OHC_TEMPERATURE")
+        system_prompt: get_env("OMNISOLO_SYSTEM_PROMPT", ""),
+        max_tokens: get_env_int("OMNISOLO_MAX_TOKENS", 2048),
+        temperature: std::env::var("OMNISOLO_TEMPERATURE")
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(0.0),
-        max_iterations: get_env_int("OHC_MAX_ITERATIONS", 100),
-        max_context_messages: get_env_int("OHC_MAX_CONTEXT_MESSAGES", 80),
+        max_iterations: get_env_int("OMNISOLO_MAX_ITERATIONS", 100),
+        max_context_messages: get_env_int("OMNISOLO_MAX_CONTEXT_MESSAGES", 80),
     };
 
     let auth = auth::auth_mode_from_env().map_err(|error| {
@@ -326,8 +326,8 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         )
     })?;
 
-    let execution_mode = std::env::var("OHC_AGENT_EXECUTION_MODE").unwrap_or_else(|_| {
-        if std::env::var("OHC_STANDALONE_MODE")
+    let execution_mode = std::env::var("OMNISOLO_AGENT_EXECUTION_MODE").unwrap_or_else(|_| {
+        if std::env::var("OMNISOLO_STANDALONE_MODE")
             .map(|value| value == "true")
             .unwrap_or(true)
         {
@@ -336,7 +336,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             "cloud".to_string()
         }
     });
-    let configured_org = std::env::var("OHC_ORGANIZATION_ID").ok();
+    let configured_org = std::env::var("OMNISOLO_ORGANIZATION_ID").ok();
     let tenant =
         resolve_process_tenant(&execution_mode, configured_org.as_deref()).map_err(|error| {
             std::io::Error::new(
@@ -419,7 +419,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     tracing::info!(
-        "Starting OHC builtin agent (Rust) at {} (id: {})",
+        "Starting OmniSolo builtin agent (Rust) at {} (id: {})",
         address,
         agent_id
     );
@@ -429,9 +429,9 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     let svc_for_redis = svc.clone();
 
     let standalone_mode =
-        std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string());
+        std::env::var("OMNISOLO_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string());
     let is_cloud = standalone_mode != "true";
-    let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
+    let redis_url = get_env("OMNISOLO_REDIS_URL", "redis://127.0.0.1:6379");
 
     match mesh::transport::create_transport(Some(&redis_url), is_cloud).await {
         Ok(transport) => {

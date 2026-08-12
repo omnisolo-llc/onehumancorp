@@ -37,7 +37,7 @@
     </style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OHC Setup</title>
+    <title>OmniSolo Setup</title>
     <style>
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -122,7 +122,7 @@
   </head>
   <body>
     <div class="container glassmorphism" id="main-view">
-      <h1>Welcome to OHC</h1>
+      <h1>Welcome to OmniSolo</h1>
       <p>Let's get your workspace set up.</p>
       <button id="start-btn" style="margin-bottom: 10px;">Start Onboarding</button>
       <button id="instant-build-btn" style="background-color: transparent; color: #0066FF; border: 1px solid #0066FF; box-shadow: none;">Instant Build</button>
@@ -201,9 +201,9 @@
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -247,14 +247,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -262,9 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             window.touchTimer = setTimeout(() => {
-                showTooltip(e.touches[0], window.OHC_TOOLTIPS[target.id]);
+                showTooltip(e.touches[0], window.OMNISOLO_TOOLTIPS[target.id]);
             }, 500); // 500ms long press
         }
     });
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchend', (e) => {
         clearTimeout(window.touchTimer);
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchcancel', (e) => {
         clearTimeout(window.touchTimer);
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });

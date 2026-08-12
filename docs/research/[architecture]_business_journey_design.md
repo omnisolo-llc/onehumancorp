@@ -1,7 +1,7 @@
 # Business Journey Architecture
 
 ## 1. Overview
-The Business Journey Architecture maps the complete lifecycle of a non-technical user (persona) on the OneHumanCorp (OHC) platform. It covers everything from initial discovery and onboarding to activation, retention, revenue scaling, and referral. The architecture ensures that a user can go from zero to a fully operational business in under 10 minutes from a mobile device (375px baseline width), with AI agents invisibly handling the underlying complexity.
+The Business Journey Architecture maps the complete lifecycle of a non-technical user (persona) on the OmniSolo (OmniSolo) platform. It covers everything from initial discovery and onboarding to activation, retention, revenue scaling, and referral. The architecture ensures that a user can go from zero to a fully operational business in under 10 minutes from a mobile device (375px baseline width), with AI agents invisibly handling the underlying complexity.
 
 ## 2. Core Personas & Journeys
 
@@ -15,14 +15,14 @@ The journeys are designed to accommodate the distinct needs of our core personas
 ## 3. Journey Phases
 
 ### 3.1 Acquisition
-*   **Entry Points**: Organic search, targeted Instagram/TikTok ads, or referrals from existing OHC users (e.g., "Powered by OHC" badge on a link-in-bio).
+*   **Entry Points**: Organic search, targeted Instagram/TikTok ads, or referrals from existing OmniSolo users (e.g., "Powered by OmniSolo" badge on a link-in-bio).
 *   **Landing Page**: A clear, jargon-free CTA ("Launch your business in 10 minutes"). Emphasizes the "No Code, No Servers" promise and mobile accessibility.
 
 ### 3.2 Onboarding (Zero → Live in 10 Mins)
 The onboarding flow is a guided conversational wizard powered by the AI Marketing & Advertising Agent ("The Promoter").
 1.  **Business Name & Type**: User inputs name and selects category (e.g., "Food & Beverage", "Services").
 2.  **Core Needs Assessment**: User selects what they want to do (e.g., "Take bookings", "Sell online").
-3.  **Visual Identity**: AI generates a preliminary storefront design based on the business type, utilizing the OHC Premium Token library (Glassmorphism, Outfit/Inter typography).
+3.  **Visual Identity**: AI generates a preliminary storefront design based on the business type, utilizing the OmniSolo Premium Token library (Glassmorphism, Outfit/Inter typography).
 4.  **First Catalog Item/Service**: User adds their first product/service (e.g., Maya adds a "Custom Vanilla Cake").
 
 ### 3.3 Activation (Day 1 Success)
@@ -39,7 +39,7 @@ The onboarding flow is a guided conversational wizard powered by the AI Marketin
 *   **Upgrade Flow**: A seamless transition to the Starter ($9/mo) or Pro ($29/mo) tier, highlighting the unlocked value (e.g., unlimited products, custom domain, full AI agent access).
 
 ### 3.6 Referral
-*   **Viral Loop**: Existing users share their storefront link or link-in-bio. The "Powered by OHC" badge serves as passive marketing.
+*   **Viral Loop**: Existing users share their storefront link or link-in-bio. The "Powered by OmniSolo" badge serves as passive marketing.
 *   **Incentive**: Referral rewards tracked by the Sales & Acquisition Agent.
 
 ## 4. Architecture Diagrams
@@ -49,7 +49,7 @@ The onboarding flow is a guided conversational wizard powered by the AI Marketin
 ```mermaid
 sequenceDiagram
     participant M as Maya (Mobile User)
-    participant App as OHC Mobile App
+    participant App as OmniSolo Mobile App
     participant MA as Marketing Agent (Promoter)
     participant Op as Operations Agent (Manager)
     participant CS as Customer Success Agent (Ambassador)
@@ -81,7 +81,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant C as Carlos (Android User)
-    participant App as OHC Mobile App
+    participant App as OmniSolo Mobile App
     participant MA as Marketing Agent (Promoter)
     participant SA as Sales Agent (Salesperson)
     participant Op as Operations Agent (Manager)
@@ -109,7 +109,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant P as Priya (Mobile/Desktop User)
-    participant App as OHC App
+    participant App as OmniSolo App
     participant Op as Operations Agent (Manager)
     participant MA as Marketing Agent (Promoter)
     participant Stripe as Stripe Terminal/Online
@@ -137,7 +137,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant L as Leo (Mobile User)
-    participant App as OHC App
+    participant App as OmniSolo App
     participant MA as Marketing Agent (Promoter)
     participant Op as Operations Agent (Manager)
     participant CS as Customer Success Agent (Ambassador)
@@ -165,7 +165,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant F as Fatima (Low-end Android User)
-    participant App as OHC App (Arabic/English)
+    participant App as OmniSolo App (Arabic/English)
     participant MA as Marketing Agent (Promoter)
     participant Op as Operations Agent (Manager)
     participant Stripe as Stripe (Payments)

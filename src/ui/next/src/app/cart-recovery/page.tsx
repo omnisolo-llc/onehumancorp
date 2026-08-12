@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { useProPlan } from '../components/useProPlan';
 
 
@@ -53,7 +53,7 @@ export default function CartRecoveryPage() {
   const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just set up automated abandoned cart recovery for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just set up automated abandoned cart recovery for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
     if (!await claimTrial()) return;
     setShowSoftPaywall(false);
     setTrialStatus('Pro access activated.');
@@ -155,7 +155,7 @@ export default function CartRecoveryPage() {
                     {generatedDraft}
                   </pre>
                   <div className="mt-4 pt-4 border-t border-gray-200">
-                    <PoweredByOHC tenantId="my-store" />
+                    <PoweredByOmniSolo tenantId="my-store" />
                   </div>
                 </div>
 
@@ -218,7 +218,7 @@ export default function CartRecoveryPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

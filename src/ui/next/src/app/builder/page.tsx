@@ -527,18 +527,18 @@ export default function BuilderPage() {
           {/* Growth Loop: Embeddable Storefront Widget */}
           <div className="w-full glassmorphism backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
             <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Sell Anywhere 💻</h2>
-            <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
+            <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OmniSolo storefront on your existing website, blog, or partner pages.</p>
             <div className="app-card dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] border border-white/50 dark:border-white/10 rounded-[16px] p-3 relative">
                 <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
 <script src="/embed.js" data-store="${tenantId}"></script>
 <div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
+  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OmniSolo</b></a>
 </div>`}
                 </pre>
                 <button
                     onClick={() => {
-                        const code = `<div id="ohc-embed-root"></div>\n<script src="/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
+                        const code = `<div id="ohc-embed-root"></div>\n<script src="/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="/onboarding?ref=${tenantId}" style="color: #646b78; text-decoration: none;">Powered by <b>OmniSolo</b></a>\n</div>`;
                         navigator.clipboard.writeText(code);
                         setSaveMessage("Embed code copied.");
                     }}
@@ -579,7 +579,7 @@ export default function BuilderPage() {
                 WhatsApp
               </a>
               <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just launched my new business on OHC! Check it out: ${liveUrl}`)}`}
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just launched my new business on OmniSolo! Check it out: ${liveUrl}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 bg-black text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
@@ -760,7 +760,7 @@ export default function BuilderPage() {
             </button>
           </WithTooltip>
             {!isPremium && (
-              <WithTooltip id="remove-branding-tooltip" defaultText="Upgrade to Premium to remove OHC branding.">
+              <WithTooltip id="remove-branding-tooltip" defaultText="Upgrade to Premium to remove OmniSolo branding.">
               <button
                 className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-[30px] saturate-[210%] border border-[#0066FF]/30 rounded-[8px] inline-flex items-center justify-center gap-2"
                 onClick={() => setShowUpgradeModal(true)}
@@ -810,7 +810,7 @@ export default function BuilderPage() {
               <div className="space-y-3 mb-6 font-inter text-sm">
                 <div className="flex items-center gap-3">
                   <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span className="text-gray-700 dark:text-gray-300">Remove "Powered by OHC" footer</span>
+                  <span className="text-gray-700 dark:text-gray-300">Remove "Powered by OmniSolo" footer</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -845,7 +845,7 @@ export default function BuilderPage() {
         .animate-slide-up { animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }

@@ -2,7 +2,7 @@
 
 # KAIROS AutoDream CLI: Interactive Guide
 
-Welcome to the AutoDream CLI interactive guide. This tool allows developers and administrators to interface with the AutoDream memory consolidation engine directly from the command line, enabling robust testing, debugging, and manual operations within the OHC ecosystem.
+Welcome to the AutoDream CLI interactive guide. This tool allows developers and administrators to interface with the AutoDream memory consolidation engine directly from the command line, enabling robust testing, debugging, and manual operations within the OmniSolo ecosystem.
 
 ## AutoDream Proactive State Machine
 

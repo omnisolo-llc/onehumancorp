@@ -418,7 +418,7 @@ mod tests {
             store: crate::db::DbStore::Sqlite(pool.clone()),
         };
 
-        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport = std::sync::Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let orchestrator = std::sync::Arc::new(crate::orchestration::departments::DepartmentOrchestrator::new(std::sync::Arc::new(db.clone()), mesh));
 

@@ -12,7 +12,7 @@ describe('HybridLandingPage', () => {
     render(<HybridLandingPage />);
 
     // Check main headings
-    expect(screen.getByText('OHC Hybrid OS')).toBeDefined();
+    expect(screen.getByText('OmniSolo Hybrid OS')).toBeDefined();
 
     // Check card 1: Local Sovereignty
     expect(screen.getByText('Local Sovereignty')).toBeDefined();

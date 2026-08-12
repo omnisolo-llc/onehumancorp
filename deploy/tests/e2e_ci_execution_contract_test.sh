@@ -24,13 +24,13 @@ require_literal 'backend.agentAuth.existingSecret is required in standalone mode
   "Standalone Helm deployments must require Secret-backed built-in-agent authentication."
 require_literal 'key: agentToken' "$backend_template" \
   "Helm backend deployment must read its built-in-agent token from the fixed Secret key."
-require_literal '- name: OHC_AGENT_AUTH_KEY' "$backend_template" \
+require_literal '- name: OMNISOLO_AGENT_AUTH_KEY' "$backend_template" \
   "Helm backend deployment must project the standalone built-in-agent HMAC key."
 require_literal 'key: authKey' "$backend_template" \
   "Helm backend deployment must read its built-in-agent HMAC key from the fixed Secret key."
 require_literal '--from-literal=authKey="${AGENT_AUTH_KEY}"' "$kind_script" \
   "Kind E2E must populate the standalone built-in-agent HMAC key."
-require_literal 'backend.env.OHC_AGENT_AUTH_KEY' "$backend_template" \
+require_literal 'backend.env.OMNISOLO_AGENT_AUTH_KEY' "$backend_template" \
   "Helm must reject inline standalone built-in-agent HMAC keys."
 
 reject_literal() {
@@ -71,7 +71,7 @@ grep -Fq 'crictl pull "${image}"' "$kind_script" || {
   exit 1
 }
 
-grep -Fq 'cp -RL "${REPO_ROOT}/deploy/helm/ohc/." "${CHART_DIR}/"' "$kind_script" || {
+grep -Fq 'cp -RL "${REPO_ROOT}/deploy/helm/omnisolo/." "${CHART_DIR}/"' "$kind_script" || {
   echo "Kind E2E must copy Helm chart contents into its writable temporary chart root" >&2
   exit 1
 }
@@ -95,7 +95,7 @@ grep -Fq 'existingSecret:' "$chart_values" || {
   echo "Helm values must expose an existing Secret for backend gRPC TLS." >&2
   exit 1
 }
-for variable in OHC_GRPC_TLS_CERT_PATH OHC_GRPC_TLS_KEY_PATH OHC_GRPC_CLIENT_CA_PATH; do
+for variable in OMNISOLO_GRPC_TLS_CERT_PATH OMNISOLO_GRPC_TLS_KEY_PATH OMNISOLO_GRPC_CLIENT_CA_PATH; do
   grep -Fq -- "- name: ${variable}" "$backend_template" || {
     echo "Helm backend deployment does not configure ${variable}." >&2
     exit 1
@@ -126,7 +126,7 @@ grep -Fq 'backend.grpcTls.existingSecret=${GRPC_TLS_SECRET_NAME}' "$kind_script"
   echo "Kind cloud smoke must install the chart with its gRPC TLS Secret." >&2
   exit 1
 }
-grep -Fq 'backend.env.OHC_AUTH_RATE_LIMIT_DEPLOYMENT=single-instance' "$kind_script" || {
+grep -Fq 'backend.env.OMNISOLO_AUTH_RATE_LIMIT_DEPLOYMENT=single-instance' "$kind_script" || {
   echo "Kind cloud smoke must declare its single-instance auth rate-limit topology." >&2
   exit 1
 }
@@ -137,9 +137,9 @@ grep -Fq 'backend.agentAuth.existingSecret=${AGENT_AUTH_SECRET_NAME}' "$kind_scr
 
 # The one-time bootstrap helper must fail closed and use only the versioned,
 # setup-token-protected endpoint.
-require_literal 'read_secret OHC_SETUP_TOKEN OHC_SETUP_TOKEN_FILE' "$bootstrap_script" \
+require_literal 'read_secret OMNISOLO_SETUP_TOKEN OMNISOLO_SETUP_TOKEN_FILE' "$bootstrap_script" \
   "Bootstrap helper must continue to support direct and file-backed setup tokens."
-require_literal 'OHC_SETUP_TOKEN_FILE' "$bootstrap_script" \
+require_literal 'OMNISOLO_SETUP_TOKEN_FILE' "$bootstrap_script" \
   "Bootstrap helper must support a setup-token secret file."
 require_literal 'SETUP_ADMIN_INIT_PASSWORD_FILE' "$bootstrap_script" \
   "Bootstrap helper must support an admin-password secret file."
@@ -155,7 +155,7 @@ require_literal '${SERVER_URL}/api/v1/setup/admin' "$bootstrap_script" \
   "Bootstrap helper must call the versioned setup endpoint."
 require_literal '${SERVER_URL}/api/v1/auth/login' "$bootstrap_script" \
   "Bootstrap helper must verify configured admin credentials after an already-initialized response."
-require_literal 'Authorization: Bearer ${OHC_SETUP_TOKEN}' "$bootstrap_script" \
+require_literal 'Authorization: Bearer ${OMNISOLO_SETUP_TOKEN}' "$bootstrap_script" \
   "Bootstrap helper must authenticate with the setup bearer token."
 require_literal '--connect-timeout' "$bootstrap_script" \
   "Bootstrap helper network calls must have a connection deadline."
@@ -218,7 +218,7 @@ bootstrap_output="${contract_tmp}/bootstrap-output"
 if PATH="${contract_tmp}/bin:${PATH}" \
   BOOTSTRAP_CONTRACT_MARKER="${contract_tmp}/marker" \
   BOOTSTRAP_CONTRACT_REQUEST="${contract_tmp}/request" \
-  OHC_SETUP_TOKEN_FILE="${contract_tmp}/secrets/setup-token" \
+  OMNISOLO_SETUP_TOKEN_FILE="${contract_tmp}/secrets/setup-token" \
   SETUP_ADMIN_INIT_USERNAME='contract-admin' \
   SETUP_ADMIN_INIT_EMAIL='contract-admin@example.test' \
   SETUP_ADMIN_INIT_PASSWORD_FILE="${contract_tmp}/secrets/admin-password" \
@@ -244,7 +244,7 @@ if PATH="${contract_tmp}/bin:${PATH}" \
   BOOTSTRAP_CONTRACT_REQUEST="${contract_tmp}/request" \
   BOOTSTRAP_CONTRACT_SETUP_STATUS=409 \
   BOOTSTRAP_CONTRACT_LOGIN_STATUS=401 \
-  OHC_SETUP_TOKEN_FILE="${contract_tmp}/secrets/setup-token" \
+  OMNISOLO_SETUP_TOKEN_FILE="${contract_tmp}/secrets/setup-token" \
   SETUP_ADMIN_INIT_USERNAME='contract-admin' \
   SETUP_ADMIN_INIT_EMAIL='contract-admin@example.test' \
   SETUP_ADMIN_INIT_PASSWORD_FILE="${contract_tmp}/secrets/admin-password" \
@@ -257,7 +257,7 @@ if ! PATH="${contract_tmp}/bin:${PATH}" \
   BOOTSTRAP_CONTRACT_REQUEST="${contract_tmp}/request" \
   BOOTSTRAP_CONTRACT_SETUP_STATUS=409 \
   BOOTSTRAP_CONTRACT_LOGIN_STATUS=200 \
-  OHC_SETUP_TOKEN_FILE="${contract_tmp}/secrets/setup-token" \
+  OMNISOLO_SETUP_TOKEN_FILE="${contract_tmp}/secrets/setup-token" \
   SETUP_ADMIN_INIT_USERNAME='contract-admin' \
   SETUP_ADMIN_INIT_EMAIL='contract-admin@example.test' \
   SETUP_ADMIN_INIT_PASSWORD_FILE="${contract_tmp}/secrets/admin-password" \
@@ -314,10 +314,10 @@ require_literal 'existingSecret:' "$chart_values" \
   "Helm values must expose backend.setup.existingSecret."
 require_literal '$setupSecret' "$backend_template" \
   "Helm backend deployment must consume backend.setup.existingSecret."
-require_literal 'hasKey $backendEnv "OHC_SETUP_TOKEN"' "$backend_template" \
-  "backend.env.OHC_SETUP_TOKEN must override setup Secret injection."
-require_literal 'name: OHC_SETUP_TOKEN' "$backend_template" \
-  "Helm backend deployment must inject OHC_SETUP_TOKEN."
+require_literal 'hasKey $backendEnv "OMNISOLO_SETUP_TOKEN"' "$backend_template" \
+  "backend.env.OMNISOLO_SETUP_TOKEN must override setup Secret injection."
+require_literal 'name: OMNISOLO_SETUP_TOKEN' "$backend_template" \
+  "Helm backend deployment must inject OMNISOLO_SETUP_TOKEN."
 require_literal 'secretKeyRef:' "$backend_template" \
   "Helm backend setup token must use secretKeyRef."
 require_literal 'key: token' "$backend_template" \
@@ -342,7 +342,7 @@ require_literal 'backend.auth.existingSecret is required in cloud mode' "$backen
   "Cloud Helm deployments must require the chart-managed JWT Secret."
 require_literal 'backend.env.JWT_SECRET and backend.env.JWT_SECRET_FILE are not supported in cloud mode' "$backend_template" \
   "Cloud Helm deployments must reject inline or unmounted JWT secret sources."
-require_literal 'hasKey $backendEnv "OHC_SETUP_TOKEN_FILE"' "$backend_template" \
+require_literal 'hasKey $backendEnv "OMNISOLO_SETUP_TOKEN_FILE"' "$backend_template" \
   "Helm must not combine direct and file-backed setup token sources."
 if grep -Eq '^[[:space:]]+(token|setupToken):' "$chart_values"; then
   echo "Helm values must never accept a plaintext setup token." >&2
@@ -350,7 +350,7 @@ if grep -Eq '^[[:space:]]+(token|setupToken):' "$chart_values"; then
 fi
 
 # Compose must pass setup inputs to both participants and exercise server-init.
-require_literal 'OHC_SETUP_TOKEN_FILE:' "$compose_manifest" \
+require_literal 'OMNISOLO_SETUP_TOKEN_FILE:' "$compose_manifest" \
   "Compose server must read its setup token from a secret file."
 require_literal 'JWT_SECRET_FILE:' "$compose_manifest" \
   "Compose server must read its JWT secret from a secret file."
@@ -360,7 +360,7 @@ require_literal 'DATABASE_URL_FILE:' "$compose_manifest" \
   "Compose server must read its database URL from a secret file."
 require_literal 'POSTGRES_PASSWORD_FILE:' "$compose_manifest" \
   "Compose Postgres must read its password from a secret file."
-require_literal '${OHC_DOCKER_POWERSYNC_PORT:-127.0.0.1:8082}:8080' "$compose_manifest" \
+require_literal '${OMNISOLO_DOCKER_POWERSYNC_PORT:-127.0.0.1:8082}:8080' "$compose_manifest" \
   "Compose PowerSync must not collide with the backend gRPC host port."
 require_literal 'SETUP_ADMIN_INIT_EMAIL:' "$compose_manifest" \
   "Compose bootstrap must receive the admin email."

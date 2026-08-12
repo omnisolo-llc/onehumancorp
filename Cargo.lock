@@ -174,7 +174,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -185,7 +185,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2251,7 +2251,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.2",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2676,7 +2676,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3862,7 +3862,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.3",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -4220,7 +4220,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5101,7 +5101,7 @@ dependencies = [
  "png 0.18.1",
  "serde",
  "thiserror 2.0.18",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -5316,7 +5316,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5732,7 +5732,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc-mono"
+name = "oid-registry"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bedf36ffb6ba96c2eb7144ef6270557b52e54b20c0a8e1eb2ff99a6c6959bff"
+dependencies = [
+ "asn1-rs 0.5.2",
+]
+
+[[package]]
+name = "oid-registry"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12f40cff3dde1b6087cc5d5f5d4d65712f34016a03ed60e9c08dcc392736b5b7"
+dependencies = [
+ "asn1-rs 0.7.2",
+]
+
+[[package]]
+name = "omnisolo"
 version = "0.4.47"
 dependencies = [
  "aes-gcm",
@@ -5757,7 +5775,7 @@ dependencies = [
  "lettre",
  "libc",
  "libsqlite3-sys",
- "ohc_builtin_agent",
+ "omnisolo_builtin_agent",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -5820,8 +5838,8 @@ dependencies = [
  "server_integrations_teams",
  "server_integrations_twilio",
  "server_integrations_zoom",
- "server_ohc",
  "server_oidc",
+ "server_omnisolo",
  "server_pricing",
  "server_telemetry",
  "server_utils",
@@ -5849,7 +5867,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc_builtin_agent"
+name = "omnisolo_builtin_agent"
 version = "0.1.0"
 dependencies = [
  "async-nats",
@@ -5865,9 +5883,9 @@ dependencies = [
  "glob",
  "hex",
  "hmac",
- "ohc_builtin_agent_core",
- "ohc_builtin_agent_llm",
- "ohc_builtin_agent_tools",
+ "omnisolo_builtin_agent_core",
+ "omnisolo_builtin_agent_llm",
+ "omnisolo_builtin_agent_tools",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -5881,7 +5899,7 @@ dependencies = [
  "serde",
  "serde_json",
  "server_harness",
- "server_ohc",
+ "server_omnisolo",
  "server_pricing",
  "server_telemetry",
  "sha2",
@@ -5907,7 +5925,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc_builtin_agent_core"
+name = "omnisolo_builtin_agent_core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -5929,11 +5947,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc_builtin_agent_llm"
+name = "omnisolo_builtin_agent_llm"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "ohc_builtin_agent_core",
+ "omnisolo_builtin_agent_core",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
@@ -5942,7 +5960,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ohc_builtin_agent_tools"
+name = "omnisolo_builtin_agent_tools"
 version = "0.1.0"
 dependencies = [
  "async-recursion",
@@ -5952,15 +5970,15 @@ dependencies = [
  "chrono",
  "dashmap 5.5.3",
  "glob",
- "ohc_builtin_agent_core",
- "ohc_builtin_agent_llm",
+ "omnisolo_builtin_agent_core",
+ "omnisolo_builtin_agent_llm",
  "once_cell",
  "qrcode",
  "regex",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
- "server_ohc",
+ "server_omnisolo",
  "server_pricing",
  "sqlx",
  "temp-env",
@@ -5975,24 +5993,6 @@ dependencies = [
  "url",
  "urlencoding",
  "uuid",
-]
-
-[[package]]
-name = "oid-registry"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bedf36ffb6ba96c2eb7144ef6270557b52e54b20c0a8e1eb2ff99a6c6959bff"
-dependencies = [
- "asn1-rs 0.5.2",
-]
-
-[[package]]
-name = "oid-registry"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12f40cff3dde1b6087cc5d5f5d4d65712f34016a03ed60e9c08dcc392736b5b7"
-dependencies = [
- "asn1-rs 0.7.2",
 ]
 
 [[package]]
@@ -6208,7 +6208,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d8fae84b431384b68627d0f9b3b1245fcf9f46f6c0e3dc902e9dce64edd1967"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -6689,7 +6689,7 @@ dependencies = [
  "aes-gcm",
  "aes-kw",
  "argon2",
- "base64 0.22.1",
+ "base64 0.21.7",
  "bitfield",
  "block-padding",
  "blowfish",
@@ -7163,7 +7163,7 @@ version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be769465445e8c1474e9c5dac2018218498557af32d9ed057325ec9a41ae81bf"
 dependencies = [
- "heck 0.5.0",
+ "heck 0.4.1",
  "itertools 0.14.0",
  "log",
  "multimap",
@@ -7312,7 +7312,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls 0.23.40",
- "socket2 0.6.3",
+ "socket2 0.5.10",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -7349,7 +7349,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.3",
+ "socket2 0.5.10",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -8058,7 +8058,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8185,7 +8185,7 @@ dependencies = [
  "security-framework 3.7.0",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8877,8 +8877,8 @@ dependencies = [
  "serde_json",
  "server_common",
  "server_config",
- "server_ohc",
  "server_oidc",
+ "server_omnisolo",
  "sha2",
  "sqlx",
  "temp-env",
@@ -8898,6 +8898,8 @@ dependencies = [
  "serde",
  "server_config",
  "sqlx",
+ "temp-env",
+ "tempfile",
 ]
 
 [[package]]
@@ -8906,6 +8908,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "serde",
+ "temp-env",
  "tracing",
 ]
 
@@ -9315,13 +9318,13 @@ name = "server_integrations_pubsub"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "ohc_builtin_agent",
+ "omnisolo_builtin_agent",
  "prost 0.13.5",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
  "server_integrations_core",
- "server_ohc",
+ "server_omnisolo",
  "sqlx",
  "tokio",
  "tracing",
@@ -9556,16 +9559,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "server_ohc"
-version = "0.1.0"
-dependencies = [
- "prost 0.13.5",
- "serde",
- "tonic 0.12.3",
- "tonic-build",
-]
-
-[[package]]
 name = "server_oidc"
 version = "0.1.0"
 dependencies = [
@@ -9579,6 +9572,16 @@ dependencies = [
  "temp-env",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "server_omnisolo"
+version = "0.1.0"
+dependencies = [
+ "prost 0.13.5",
+ "serde",
+ "tonic 0.12.3",
+ "tonic-build",
 ]
 
 [[package]]
@@ -9915,7 +9918,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a766e1110788c36f4fa1c2b71b387a7815aa65f88ce0229841826633d93723e"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -11094,7 +11097,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -11123,7 +11126,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -11805,7 +11808,7 @@ dependencies = [
  "png 0.18.1",
  "serde",
  "thiserror 2.0.18",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -12764,7 +12767,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]

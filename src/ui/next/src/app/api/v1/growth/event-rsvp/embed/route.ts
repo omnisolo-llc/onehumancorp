@@ -112,7 +112,7 @@ export async function GET(request: Request) {
 
             ${rawBranding ? `
             <div class="footer">
-                <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_event_rsvp_widget" target="_blank">⚡ Powered by OHC</a>
+                <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_event_rsvp_widget" target="_blank">⚡ Powered by OmniSolo</a>
             </div>
             ` : ''}
         </div>
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
             ${rawBranding ? `
                 <div style="background:${inputBg};padding:16px;border-radius:12px;border:1px solid ${border};margin-bottom:8px;">
                     <p style="margin-top:0;font-size:13px;font-weight:600;">Want to host your own events?</p>
-                    <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_event_rsvp_success" target="_blank" class="rsvp-button" style="background:#111827;padding:10px 0;font-size:13px;margin-top:12px;">Get Started with OHC</a>
+                    <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_event_rsvp_success" target="_blank" class="rsvp-button" style="background:#111827;padding:10px 0;font-size:13px;margin-top:12px;">Get Started with OmniSolo</a>
                 </div>
             ` : ''}
         </div>

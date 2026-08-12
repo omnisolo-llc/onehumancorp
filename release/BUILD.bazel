@@ -1,4 +1,4 @@
-# Cross-platform release packaging for the OHC application binaries.
+# Cross-platform release packaging for the OmniSolo application binaries.
 #
 # CI builds this package once per platform config, then renames the generic
 # archive to include the resolved target triple before uploading it.
@@ -60,7 +60,7 @@ config_setting(
     ],
 )
 
-OHC_UNIX_ARCHIVE_NAME = select({
+OMNISOLO_UNIX_ARCHIVE_NAME = select({
     ":linux_arm64": "ohc-aarch64-unknown-linux-gnu.tar.gz",
     ":linux_x86_64": "ohc-x86_64-unknown-linux-gnu.tar.gz",
     ":macos_aarch64": "ohc-aarch64-apple-darwin.tar.gz",
@@ -68,7 +68,7 @@ OHC_UNIX_ARCHIVE_NAME = select({
     "//conditions:default": "ohc-application.tar.gz",
 })
 
-OHC_WINDOWS_ARCHIVE_NAME = select({
+OMNISOLO_WINDOWS_ARCHIVE_NAME = select({
     ":windows_arm64": "ohc-aarch64-pc-windows-msvc.zip",
     ":windows_x86_64": "ohc-x86_64-pc-windows-gnu.zip",
     "//conditions:default": "ohc-application.zip",
@@ -83,12 +83,12 @@ selects.config_setting_group(
 )
 
 pkg_files(
-    name = "ohc_unix_files",
+    name = "omnisolo_unix_files",
     srcs = [
         "//src/server",
     ],
     renames = {
-        "//src/server:server": "bin/ohc-server",
+        "//src/server:server": "bin/omnisolo-server",
     },
     strip_prefix = strip_prefix.from_pkg(),
     target_compatible_with = select({
@@ -99,14 +99,14 @@ pkg_files(
 )
 
 pkg_files(
-    name = "ohc_cluster_unix_files",
+    name = "omnisolo_cluster_unix_files",
     srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
+        "//src/agents/builtin:omnisolo-builtin-agent",
         "//src/server",
     ],
     renames = {
-        "//src/agents/builtin:ohc-builtin-agent": "bin/ohc-builtin-agent",
-        "//src/server:server": "bin/ohc-server",
+        "//src/agents/builtin:omnisolo-builtin-agent": "bin/omnisolo-builtin-agent",
+        "//src/server:server": "bin/omnisolo-server",
     },
     strip_prefix = strip_prefix.from_pkg(),
     target_compatible_with = select({
@@ -122,7 +122,7 @@ pkg_files(
         "//src/server",
     ],
     renames = {
-        "//src/server:server": "ohc-server.exe",
+        "//src/server:server": "omnisolo-server.exe",
     },
     strip_prefix = strip_prefix.from_pkg(),
     target_compatible_with = select({
@@ -132,14 +132,14 @@ pkg_files(
 )
 
 pkg_files(
-    name = "ohc_cluster_windows_files",
+    name = "omnisolo_cluster_windows_files",
     srcs = [
-        "//src/agents/builtin:ohc-builtin-agent",
+        "//src/agents/builtin:omnisolo-builtin-agent",
         "//src/server",
     ],
     renames = {
-        "//src/agents/builtin:ohc-builtin-agent": "ohc-builtin-agent.exe",
-        "//src/server:server": "ohc-server.exe",
+        "//src/agents/builtin:omnisolo-builtin-agent": "omnisolo-builtin-agent.exe",
+        "//src/server:server": "omnisolo-server.exe",
     },
     strip_prefix = strip_prefix.from_pkg(),
     target_compatible_with = select({
@@ -149,10 +149,10 @@ pkg_files(
 )
 
 pkg_tar(
-    name = "ohc_unix_archive",
-    srcs = [":ohc_unix_files"],
+    name = "omnisolo_unix_archive",
+    srcs = [":omnisolo_unix_files"],
     extension = "tar.gz",
-    package_file_name = OHC_UNIX_ARCHIVE_NAME,
+    package_file_name = OMNISOLO_UNIX_ARCHIVE_NAME,
     target_compatible_with = select({
         "//:linux": [],
         "//:macos": [],
@@ -161,8 +161,8 @@ pkg_tar(
 )
 
 pkg_tar(
-    name = "ohc_cluster_unix_archive",
-    srcs = [":ohc_cluster_unix_files"],
+    name = "omnisolo_cluster_unix_archive",
+    srcs = [":omnisolo_cluster_unix_files"],
     extension = "tar.gz",
     package_file_name = "ohc-cluster.tar.gz",
     target_compatible_with = select({
@@ -175,7 +175,7 @@ pkg_tar(
 pkg_zip(
     name = "ohc_windows_archive",
     srcs = [":ohc_windows_files"],
-    package_file_name = OHC_WINDOWS_ARCHIVE_NAME,
+    package_file_name = OMNISOLO_WINDOWS_ARCHIVE_NAME,
     target_compatible_with = select({
         "//:windows": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -183,8 +183,8 @@ pkg_zip(
 )
 
 pkg_zip(
-    name = "ohc_cluster_windows_archive",
-    srcs = [":ohc_cluster_windows_files"],
+    name = "omnisolo_cluster_windows_archive",
+    srcs = [":omnisolo_cluster_windows_files"],
     package_file_name = "ohc-cluster.zip",
     target_compatible_with = select({
         "//:windows": [],
@@ -193,11 +193,11 @@ pkg_zip(
 )
 
 pkg_deb(
-    name = "ohc_deb",
+    name = "omnisolo_deb",
     architecture = "amd64",
-    data = ":ohc_unix_archive",
-    description = "One Human Corp application bundle",
-    maintainer = "One Human Corp <support@onehumancorp.com>",
+    data = ":omnisolo_unix_archive",
+    description = "OmniSolo application bundle",
+    maintainer = "OmniSolo <support@omnisolo.co>",
     package = "ohc",
     priority = "optional",
     section = "utils",
@@ -211,11 +211,11 @@ pkg_deb(
 pkg_rpm(
     name = "ohc_rpm",
     package_name = "ohc",
-    srcs = [":ohc_unix_files"],
-    description = "One Human Corp application bundle",
+    srcs = [":omnisolo_unix_files"],
+    description = "OmniSolo application bundle",
     license = "Apache-2.0",
     release = "1",
-    summary = "One Human Corp application bundle",
+    summary = "OmniSolo application bundle",
     tags = ["manual"],
     target_compatible_with = select({
         ":linux_with_rpmbuild": [],
@@ -228,10 +228,10 @@ filegroup(
     name = "release_archive",
     srcs = select({
         "//:linux": [
-            ":ohc_unix_archive",
+            ":omnisolo_unix_archive",
         ],
         "//:macos": [
-            ":ohc_unix_archive",
+            ":omnisolo_unix_archive",
         ],
         "//:windows": [
             ":ohc_windows_archive",
@@ -244,13 +244,13 @@ filegroup(
     name = "cluster_release_archive",
     srcs = select({
         "//:linux": [
-            ":ohc_cluster_unix_archive",
+            ":omnisolo_cluster_unix_archive",
         ],
         "//:macos": [
-            ":ohc_cluster_unix_archive",
+            ":omnisolo_cluster_unix_archive",
         ],
         "//:windows": [
-            ":ohc_cluster_windows_archive",
+            ":omnisolo_cluster_windows_archive",
         ],
         "//conditions:default": [],
     }),
@@ -260,16 +260,16 @@ filegroup(
     name = "all_release_artifacts",
     srcs = select({
         "//:linux": [
-            ":ohc_cluster_unix_archive",
-            ":ohc_deb",
-            ":ohc_unix_archive",
+            ":omnisolo_cluster_unix_archive",
+            ":omnisolo_deb",
+            ":omnisolo_unix_archive",
         ],
         "//:macos": [
-            ":ohc_cluster_unix_archive",
-            ":ohc_unix_archive",
+            ":omnisolo_cluster_unix_archive",
+            ":omnisolo_unix_archive",
         ],
         "//:windows": [
-            ":ohc_cluster_windows_archive",
+            ":omnisolo_cluster_windows_archive",
             ":ohc_windows_archive",
         ],
         "//conditions:default": [],

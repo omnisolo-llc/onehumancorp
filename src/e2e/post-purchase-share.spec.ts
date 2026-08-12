@@ -11,11 +11,11 @@ test.describe('Post-Purchase Share Widget Generator', () => {
         // Verify page loads with the builder
         await expect(page.getByRole('heading', { name: 'Post-Purchase Share Widget' })).toBeVisible();
 
-        // Verify "Powered by OHC" watermark is present by default in the live preview
-        await expect(page.getByRole('link', { name: /Powered by OHC/i })).toBeVisible();
+        // Verify "Powered by OmniSolo" watermark is present by default in the live preview
+        await expect(page.getByRole('link', { name: /Powered by OmniSolo/i })).toBeVisible();
 
         // Try to toggle "Remove Branding"
-        await page.getByLabel(/Remove "Powered by OHC"/).click();
+        await page.getByLabel(/Remove "Powered by OmniSolo"/).click();
 
         // Verify soft paywall pops up
         await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
@@ -39,11 +39,11 @@ test.describe('Post-Purchase Share Widget Generator', () => {
 
         // Verify modal closes and checkbox is now checked
         await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeHidden({ timeout: 5000 });
-        const checkbox = page.getByLabel(/Remove "Powered by OHC"/);
+        const checkbox = page.getByLabel(/Remove "Powered by OmniSolo"/);
         await expect(checkbox).toBeChecked();
 
         // Verify branding is removed from preview
-        await expect(page.getByRole('link', { name: /Powered by OHC/i })).toBeHidden();
+        await expect(page.getByRole('link', { name: /Powered by OmniSolo/i })).toBeHidden();
 
         // Verify embed API HTML renders successfully (integration with backend)
         const response = await page.request.get('/api/v1/growth/post-purchase/embed?tenant=test-tenant&discount=20pct&hideBranding=false');
@@ -52,13 +52,13 @@ test.describe('Post-Purchase Share Widget Generator', () => {
 
         // Check for presence of discount text and branding
         expect(html).toContain('Share and Get 20% OFF');
-        expect(html).toContain('⚡ Powered by OHC');
+        expect(html).toContain('⚡ Powered by OmniSolo');
 
         // Verify hideBranding parameter works on API
         const responseNoBranding = await page.request.get('/api/v1/growth/post-purchase/embed?tenant=test-tenant&discount=20pct&hideBranding=true');
         expect(responseNoBranding.ok()).toBeTruthy();
         const htmlNoBranding = await responseNoBranding.text();
-        expect(htmlNoBranding).not.toContain('⚡ Powered by OHC');
+        expect(htmlNoBranding).not.toContain('⚡ Powered by OmniSolo');
     });
 
     test('Smoke test: post_purchase_share_widget', async ({ page, request }) => {

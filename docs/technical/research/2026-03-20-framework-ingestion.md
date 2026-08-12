@@ -6,20 +6,20 @@
 
 ## 1. Executive Summary
 
-This document outlines the strategic ingestion of the top 50 features identified across leading AI frameworks (CrewAI, AutoGen, Claude Code, LangGraph, etc.) and analyzes the critical gaps in the current One Human Corp (OHC) architecture. The objective is to merge these features seamlessly into our Kubernetes/LangGraph-based "Hybrid Agentic OS" while prioritizing token efficiency and minimal latency.
+This document outlines the strategic ingestion of the top 50 features identified across leading AI frameworks (CrewAI, AutoGen, Claude Code, LangGraph, etc.) and analyzes the critical gaps in the current OmniSolo (OmniSolo) architecture. The objective is to merge these features seamlessly into our Kubernetes/LangGraph-based "Hybrid Agentic OS" while prioritizing token efficiency and minimal latency.
 
 ## 2. Top 5 Urgent Gaps Analysis
 
-After mapping the 50 features to the current OHC roadmap, the following 5 areas represent the most critical and urgent gaps requiring immediate design and implementation:
+After mapping the 50 features to the current OmniSolo roadmap, the following 5 areas represent the most critical and urgent gaps requiring immediate design and implementation:
 
 1.  **Gap #1: Long-Term Episodic Memory (High Traffic, High Feasibility)**
-    *   **Current State:** OHC utilizes short-term context boundaries and CSI snapshots for persistence, but agents lack a shared, cross-session semantic memory to recall past successes, tool usages, or user preferences.
+    *   **Current State:** OmniSolo utilizes short-term context boundaries and CSI snapshots for persistence, but agents lack a shared, cross-session semantic memory to recall past successes, tool usages, or user preferences.
     *   **Impact:** Leads to redundant token consumption (agents repeatedly learning the same context) and degraded user experience.
 2.  **Gap #2: Dynamic Tool Discovery via MCP (High Traffic, High Feasibility)**
-    *   **Current State:** OHC uses an MCP Gateway, but tools are statically configured. Agents cannot autonomously search a registry for new tools when current ones fail.
+    *   **Current State:** OmniSolo uses an MCP Gateway, but tools are statically configured. Agents cannot autonomously search a registry for new tools when current ones fail.
     *   **Impact:** Brittleness in workflows. If an agent needs a specialized capability (e.g., an unfamiliar API), the workflow halts and requires manual CEO intervention.
 3.  **Gap #3: Stateful Execution Graphs (High Traffic, High Feasibility)**
-    *   **Current State:** OHC relies on asynchronous pub/sub and "Virtual Meetings," which can be non-deterministic and hard to trace.
+    *   **Current State:** OmniSolo relies on asynchronous pub/sub and "Virtual Meetings," which can be non-deterministic and hard to trace.
     *   **Impact:** Lack of cyclic, stateful workflows makes error recovery, self-reflection, and retry logic inefficient and prone to looping, burning tokens.
 4.  **Gap #4: Native Vision & Multimodal Reasoning (High Traffic, High Feasibility)**
     *   **Current State:** Agents primarily rely on text and JSON data passing.
@@ -31,14 +31,14 @@ After mapping the 50 features to the current OHC roadmap, the following 5 areas 
 ## 3. Design Hook: Gap #1 - Long-Term Episodic Memory
 
 ### 3.1 Problem Statement
-Agents within the OHC ecosystem currently lack cross-session semantic memory. Every new task begins with an empty context window (aside from system prompts), leading to repeated token expenditures as agents rediscover information, recreate successful tool configurations, and re-learn CEO preferences.
+Agents within the OmniSolo ecosystem currently lack cross-session semantic memory. Every new task begins with an empty context window (aside from system prompts), leading to repeated token expenditures as agents rediscover information, recreate successful tool configurations, and re-learn CEO preferences.
 
 ### 3.2 Strategic Objective
 Implement a shared, persistent episodic memory layer utilizing a vector database, accessible by all agents within a specific `Subsidiary` CRD. The design must be token-efficient, leveraging similarity searches to only inject highly relevant past experiences into the current context window.
 
 ### 3.3 Proposed Architecture (K8s / LangGraph Integration)
 
-We will introduce a new module to the OHC Architecture: **The Memory Fabric (Module 7)**.
+We will introduce a new module to the OmniSolo Architecture: **The Memory Fabric (Module 7)**.
 
 **Components:**
 1.  **Vector Store StatefulSet:** Deploy a highly available, lightweight vector database (e.g., Qdrant or Milvus) as a K8s StatefulSet within the `HoldingCompany` namespace.
@@ -50,7 +50,7 @@ We will introduce a new module to the OHC Architecture: **The Memory Fabric (Mod
 2.  **Retrieval (Pre-Task):** Before a new LangGraph workflow starts, an "Intent Pre-Processor" queries the Vector DB using the new task description. The top *k* relevant past experiences are retrieved.
 3.  **Context Injection (Token Efficient):** Instead of dumping the full text of past experiences into the prompt, the system injects a highly compressed "Experience Summary" (e.g., "On 2024-03-10, you successfully resolved a similar Kubernetes DNS issue by checking CoreDNS config maps using tool `kubectl_get`. Focus there first.").
 
-**OHC Advantage:**
+**OmniSolo Advantage:**
 *   **Token Efficiency:** By offloading long-term context to a vector database and only retrieving relevant summaries, we drastically reduce the token count per LLM call compared to maintaining massive rolling context windows.
 *   **Infrastructure Synergy:** Because the Vector DB is managed via K8s, it integrates seamlessly with our CSI Snapshotting strategy. An organization's entire memory state can be backed up and restored instantly along with its filesystem and agent configurations.
 *   **Multi-Tenant Isolation:** The Vector DB utilizes namespaces corresponding to our `Subsidiary` CRDs, ensuring zero data leakage between different isolated parts of the conglomerate.

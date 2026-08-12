@@ -125,7 +125,7 @@ export default function ChangelogPage() {
 
           <div className="mt-10 text-center">
             <a
-              href="https://onehumancorp.com/changelog"
+              href="https://cloud.omnisolo.co/changelog"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#0071E3] dark:text-blue-400 font-bold hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50/80 dark:bg-blue-900/20 px-8 py-4 rounded-full border border-blue-100 dark:border-blue-800/50 inline-block shadow-sm backdrop-blur-xl saturate-[210%] transition-all hover:shadow-md hover:-translate-y-0.5"

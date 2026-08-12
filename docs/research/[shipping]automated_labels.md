@@ -8,11 +8,11 @@ Business owners selling physical goods waste hours manually entering addresses i
 *   **Evaluation**: Both Shippo and EasyPost aggregate dozens of carriers (USPS, UPS, FedEx, DHL). Shippo has slightly better out-of-the-box rates for small users.
 *   **Ease of Use**: Business owner sets up box sizes. The system automatically buys and downloads the PDF label when an order is packed.
 *   **Pricing**: Usually a few cents per label plus the actual postage cost.
-*   **Modes**: Cloud (API keys managed by OHC). Standalone (user needs their own Shippo/EasyPost account).
+*   **Modes**: Cloud (API keys managed by OmniSolo). Standalone (user needs their own Shippo/EasyPost account).
 
 ## Design Doc
 *   **Integration Trigger**: An order containing physical products is marked as "Packed".
-*   **Action**: OHC requests a shipping label from the API using the customer's address and the predefined box size, then saves the tracking number and PDF.
+*   **Action**: OmniSolo requests a shipping label from the API using the customer's address and the predefined box size, then saves the tracking number and PDF.
 *   **User Interface**: A "Print Label" button on the order details page and automatic tracking emails sent to the customer.
 
 ## Implementation Prompt

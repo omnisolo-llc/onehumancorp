@@ -1,7 +1,7 @@
 # Hybrid MCP Config Sync
 
 ## Overview
-While OHC supports basic database and file state synchronization via emerging hybrid tools, Enterprise deployments often utilize disparate configuration systems (e.g. centralized Consul vs. local .env / JSON files) in their Cloud versus Standalone environments. A critical gap exists: Agents operating locally in a standalone mode must be able to securely read local configs and selectively sync them back to the multi-tenant Enterprise Vault in the Cloud via an MCP interface, ensuring configuration continuity when moving from local development to cloud production.
+While OmniSolo supports basic database and file state synchronization via emerging hybrid tools, Enterprise deployments often utilize disparate configuration systems (e.g. centralized Consul vs. local .env / JSON files) in their Cloud versus Standalone environments. A critical gap exists: Agents operating locally in a standalone mode must be able to securely read local configs and selectively sync them back to the multi-tenant Enterprise Vault in the Cloud via an MCP interface, ensuring configuration continuity when moving from local development to cloud production.
 
 ## Architecture
 The Hybrid Config Sync MCP Tool operates as an interface for configuration propagation:

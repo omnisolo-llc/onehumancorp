@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Kind cluster end-to-end smoke test for the OHC platform.
+# Kind cluster end-to-end smoke test for the OmniSolo platform.
 #
 # This test:
 #   1. Creates a temporary Kind cluster
 #   2. Builds and loads Docker images into the cluster
 #   3. Installs Valkey and PostgreSQL for cloud/web mode
-#   4. Installs the OHC application chart in cloud/web mode
+#   4. Installs the OmniSolo application chart in cloud/web mode
 #   5. Runs REST API smoke tests
-#   6. Installs the OHC application chart in standalone/desktop mode
+#   6. Installs the OmniSolo application chart in standalone/desktop mode
 #   7. Runs the same REST API smoke tests against SQLite-backed standalone mode
 #   8. Cleans up the cluster on exit
 #
@@ -131,7 +131,7 @@ SETUP_TOKEN="$(openssl rand -hex 32)"
 JWT_SECRET="$(openssl rand -hex 32)"
 AGENT_TOKEN="$(openssl rand -hex 32)"
 AGENT_AUTH_KEY="$(openssl rand -hex 32)"
-ADMIN_PASSWORD="OHC-E2E-Aa1-$(openssl rand -hex 24)"
+ADMIN_PASSWORD="OmniSolo-E2E-Aa1-$(openssl rand -hex 24)"
 
 # ── Locate repo root (works both inside and outside Bazel sandbox) ────────────
 if [[ -n "${TEST_SRCDIR:-}" ]]; then
@@ -145,7 +145,7 @@ fi
 log "Repo root: ${REPO_ROOT}"
 
 CHART_DIR="$(mktemp -d "${TEST_TMPDIR:-/tmp}/ohc-chart.XXXXXX")"
-cp -RL "${REPO_ROOT}/deploy/helm/ohc/." "${CHART_DIR}/"
+cp -RL "${REPO_ROOT}/deploy/helm/omnisolo/." "${CHART_DIR}/"
 chmod -R u+w "${CHART_DIR}"
 
 COMMON_HELM_SMOKE_ARGS=(
@@ -158,7 +158,7 @@ COMMON_HELM_SMOKE_ARGS=(
   --set backend.resources.limits.memory=1Gi
   --set valkey.enabled=false
   --set cnpg.enabled=false
-  --set ohcCore.enabled=false
+  --set omnisoloCore.enabled=false
   --set powersync.enabled=false
   --set kube-prometheus-stack.enabled=false
   --set fluentBit.enabled=false
@@ -174,17 +174,17 @@ CLOUD_HELM_SMOKE_ARGS=(
   --set valkey.image.tag=8-alpine
   --set-string backend.grpcTls.existingSecret=${GRPC_TLS_SECRET_NAME}
   --set-string backend.env.DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
-  --set-string backend.env.OHC_STANDALONE_MODE=false
-  --set-string backend.env.OHC_AUTH_RATE_LIMIT_DEPLOYMENT=single-instance
+  --set-string backend.env.OMNISOLO_STANDALONE_MODE=false
+  --set-string backend.env.OMNISOLO_AUTH_RATE_LIMIT_DEPLOYMENT=single-instance
 )
 
 STANDALONE_HELM_SMOKE_ARGS=(
   "${COMMON_HELM_SMOKE_ARGS[@]}"
   --set multiTenant.enabled=false
   --set-string backend.env.DATABASE_URL=sqlite:///tmp/ohc-standalone/standalone.db
-  --set-string backend.env.OHC_SQLITE_KEY=kind-e2e-standalone-sqlite-key
-  --set-string backend.env.OHC_STANDALONE_MODE=true
-  --set-string backend.env.OHC_TELEMETRY_ENABLED=false
+  --set-string backend.env.OMNISOLO_SQLITE_KEY=kind-e2e-standalone-sqlite-key
+  --set-string backend.env.OMNISOLO_STANDALONE_MODE=true
+  --set-string backend.env.OMNISOLO_TELEMETRY_ENABLED=false
   --set-string backend.agentAuth.existingSecret=${AGENT_AUTH_SECRET_NAME}
 )
 
@@ -227,14 +227,14 @@ if [[ -n "${TEST_SRCDIR:-}" ]]; then
 
   log "Executing server loader: ${SERVER_LOADER}"
   "${SERVER_LOADER}"
-  docker tag onehumancorp/server:latest onehumancorp/server:e2e
+  docker tag omnisolo/server:latest omnisolo/server:e2e
 else
   require_tool bazelisk
   log "Manual run detected. Building server image via Bazel..."
   bazelisk run //deploy:server_load
   bazelisk build //deploy:grpc_mtls_probe
   GRPC_PROBE="$(bazelisk cquery --output=files //deploy:grpc_mtls_probe | head -1)"
-  docker tag onehumancorp/server:latest onehumancorp/server:e2e
+  docker tag omnisolo/server:latest omnisolo/server:e2e
 fi
 
 # ── Add Helm repos ─────────────────────────────────────────────────────────────
@@ -298,10 +298,10 @@ install_ohc_release() {
   local mode_name="$2"
   shift 2
 
-  log "Installing OHC Helm chart (${mode_name}) ..."
+  log "Installing OmniSolo Helm chart (${mode_name}) ..."
   helm upgrade --install "${release_name}" "${CHART_DIR}" \
     --namespace "${NAMESPACE}" \
-    --set backend.image=onehumancorp/server:e2e \
+    --set backend.image=omnisolo/server:e2e \
     "$@"
 
   kubectl rollout status \
@@ -517,7 +517,7 @@ helm lint "${CHART_DIR}" "${STANDALONE_HELM_SMOKE_ARGS[@]}"
 helm template "${STANDALONE_RELEASE_NAME}" "${CHART_DIR}" "${STANDALONE_HELM_SMOKE_ARGS[@]}" > /dev/null
 
 log "Loading images into Kind cluster ..."
-  kind load docker-image onehumancorp/server:e2e --name "${CLUSTER_NAME}"
+  kind load docker-image omnisolo/server:e2e --name "${CLUSTER_NAME}"
   ensure_image_loaded_in_kind pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
   ensure_image_loaded_in_kind valkey/valkey:8-alpine@sha256:94365b275456ae14621001c03556c732b1d93a0cdeacc317d1bdd52eba680885
 

@@ -44,7 +44,7 @@ pub struct AddCartItemRequest {
     pub unit_price_cents: i64,
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/", axum::routing::post(create_cart_handler))
         .route("/{cart_id}", axum::routing::get(get_cart_handler))

@@ -37,7 +37,7 @@
     </style>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Affiliate Badge Builder | OHC</title>
+  <title>Affiliate Badge Builder | OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -227,7 +227,7 @@
 
       <div class="form-group">
         <label for="badgeText">Badge Text</label>
-        <input type="text" id="badgeText" value="Powered by OHC">
+        <input type="text" id="badgeText" value="Powered by OmniSolo">
       </div>
 
       <div class="form-group">
@@ -253,7 +253,7 @@
       <div class="preview-box">
         <div id="badgeElement" class="badge-preview light">
           <span class="icon">⚡</span>
-          <span id="badgeTextPreview">Powered by OHC</span>
+          <span id="badgeTextPreview">Powered by OmniSolo</span>
         </div>
       </div>
 
@@ -277,13 +277,13 @@
       const copyBtn = document.getElementById('copyBtn');
       const linkPreview = document.getElementById('linkPreview');
 
-      const originUrl = window.location.origin.includes('file://') ? 'https://ohc.app' : window.location.origin;
+      const originUrl = window.location.origin.includes('file://') ? 'https://cloud.omnisolo.co' : window.location.origin;
       const targetUrl = `${originUrl}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}&source=affiliate_badge`;
 
       linkPreview.textContent = targetUrl;
 
       function updatePreview() {
-        const text = badgeText.value || 'Powered by OHC';
+        const text = badgeText.value || 'Powered by OmniSolo';
         const theme = badgeTheme.value;
 
         badgeTextPreview.textContent = text;
@@ -302,7 +302,7 @@
           iconColor = '#4f46e5';
         }
 
-        const codeSnippet = `<!-- OHC Affiliate Badge -->
+        const codeSnippet = `<!-- OmniSolo Affiliate Badge -->
 <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; border-radius: 9999px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s ease; ${inlineStyle}" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';" onmouseout="this.style.opacity='1'; this.style.transform='none';">
   <span style="font-size: 16px; color: ${iconColor};">⚡</span>
   ${text}

@@ -1,17 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../../../e2e/fixtures';
 
 test.describe('Subscription Replenishment Engine Feed E2E', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test('should display subscription replenishment recommendation in the feed and allow approval', async ({ page }) => {
     test.setTimeout(180000);
-
-    // 1. Log in
-    await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill('test@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Navigate to the unified agent feed
     await page.goto('/feed');

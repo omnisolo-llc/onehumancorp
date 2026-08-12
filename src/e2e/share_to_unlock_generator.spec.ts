@@ -34,6 +34,6 @@ test.describe('Share To Unlock Generator Growth Loop', () => {
         await expect(page.locator('text=Free Shipping')).toBeVisible();
 
         // Check the footer viral link
-        await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).toBeVisible();
+        await expect(page.locator('a', { hasText: '⚡ Powered by OmniSolo' })).toBeVisible();
     });
 });

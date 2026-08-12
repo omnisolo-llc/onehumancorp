@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use ::server_ohc::invoice::*;
-use ::server_ohc::invoice::invoice_service_server::InvoiceService;
+use ::server_omnisolo::invoice::*;
+use ::server_omnisolo::invoice::invoice_service_server::InvoiceService;
 use axum::{extract::{State, Extension, Path}, http::StatusCode, response::IntoResponse, routing::{get, post, put}, Json, Router};
 use serde::Deserialize;
 use ::server_common::Claims;
@@ -462,7 +462,7 @@ pub struct InvoiceStandardView {
     pub updated_at: i64,
 }
 
-pub fn map_invoices_for_mobile(invoices: Vec<::server_ohc::invoice::Invoice>) -> Vec<InvoiceMobileView> {
+pub fn map_invoices_for_mobile(invoices: Vec<::server_omnisolo::invoice::Invoice>) -> Vec<InvoiceMobileView> {
     invoices.into_iter().map(|inv| InvoiceMobileView {
         id: inv.id,
         client_name: inv.client_name,
@@ -478,7 +478,7 @@ pub fn map_invoices_for_mobile(invoices: Vec<::server_ohc::invoice::Invoice>) ->
     }).collect()
 }
 
-pub fn map_invoices_standard(invoices: Vec<::server_ohc::invoice::Invoice>) -> Vec<InvoiceStandardView> {
+pub fn map_invoices_standard(invoices: Vec<::server_omnisolo::invoice::Invoice>) -> Vec<InvoiceStandardView> {
     invoices.into_iter().map(|inv| InvoiceStandardView {
         id: inv.id,
         client_id: inv.client_id,
@@ -598,7 +598,7 @@ mod tests {
     use super::*;
     use crate::db::DB;
     use crate::hub::Hub;
-    use ::server_ohc::invoice::{CreateInvoiceRequest, InvoiceLineItem, UpdateInvoiceStatusRequest};
+    use ::server_omnisolo::invoice::{CreateInvoiceRequest, InvoiceLineItem, UpdateInvoiceStatusRequest};
 
     #[tokio::test]
     async fn test_invoice_logic() {
@@ -663,7 +663,7 @@ mod payload_tests {
 
     #[test]
     fn test_invoice_mobile_payload_optimization() {
-        let inv = ::server_ohc::invoice::Invoice {
+        let inv = ::server_omnisolo::invoice::Invoice {
             id: "inv-1".to_string(),
             client_id: "client-1".to_string(),
             client_name: "John Doe".to_string(),
@@ -680,7 +680,7 @@ mod payload_tests {
             amount_paid_cents: 0,
             stripe_invoice_id: "in_123".to_string(),
             stripe_payment_link: "https://stripe.com/pay/123".to_string(),
-            line_items: vec![::server_ohc::invoice::InvoiceLineItem {
+            line_items: vec![::server_omnisolo::invoice::InvoiceLineItem {
                 id: "li-1".to_string(),
                 invoice_id: "inv-1".to_string(),
                 description: "Test".to_string(),

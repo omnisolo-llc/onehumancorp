@@ -30,7 +30,7 @@ impl TaskSchedulerManager {
     }
 
     pub fn from_env(queue: Box<dyn TaskQueue>) -> Self {
-        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
+        let is_cloud = std::env::var("OMNISOLO_MULTITENANT").unwrap_or_default() == "true";
         Self::new(queue, is_cloud)
     }
 
@@ -132,13 +132,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_from_env() {
-        temp_env::with_var("OHC_MULTITENANT", Some("true"), || {
+        temp_env::with_var("OMNISOLO_MULTITENANT", Some("true"), || {
             let queue = Box::new(MemoryTaskQueue::new());
             let manager = TaskSchedulerManager::from_env(queue);
             assert!(manager.is_cloud);
         });
 
-        temp_env::with_var("OHC_MULTITENANT", None::<&str>, || {
+        temp_env::with_var("OMNISOLO_MULTITENANT", None::<&str>, || {
             let queue = Box::new(MemoryTaskQueue::new());
             let manager = TaskSchedulerManager::from_env(queue);
             assert!(!manager.is_cloud);

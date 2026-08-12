@@ -124,7 +124,7 @@ function GiveawayEnterContent() {
 
                 {showBranding && (
                 <div className="mt-8">
-                  <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OHC</a>
+                  <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OmniSolo</a>
                 </div>
                 )}
             </div>
@@ -132,7 +132,7 @@ function GiveawayEnterContent() {
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         @keyframes fade-in-up {

@@ -65,7 +65,7 @@ test.describe('Mobile POS - Offline Outbox Sync', () => {
     // Verify it's in the IndexedDB offline queue
     const queueData = await page.evaluate(async () => {
         return new Promise<string>((resolve) => {
-            const req = window.indexedDB.open('OHC_Offline_Queue', 1);
+            const req = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
             req.onsuccess = (e) => {
                 const db = (e.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains('actions')) return resolve('[]');

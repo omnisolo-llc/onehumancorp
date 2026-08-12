@@ -319,7 +319,7 @@ async fn get_inventory_handler(
     if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.is_err() {
         return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-    let rows = sqlx::query("SELECT id, title, description, price_cents, currency, inventory_count, is_subscribable, subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
+    let rows = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await;
@@ -361,6 +361,26 @@ mod tests {
         };
         assert_eq!(adj.item_id, "test_item");
         assert_eq!(adj.quantity_change, -1);
+    }
+
+    #[test]
+    fn postgres_inventory_query_columns_have_an_active_migration() {
+        let migration = include_str!("../migrations/1010_product_subscription_fields.sql");
+        for column in [
+            "is_subscribable",
+            "subscription_frequency",
+            "subscription_discount_percent",
+        ] {
+            assert!(
+                migration.contains(&format!("ADD COLUMN IF NOT EXISTS {column}")),
+                "missing PostgreSQL products migration for {column}"
+            );
+        }
+
+        let source = include_str!("pos.rs");
+        assert!(source.contains("COALESCE(price_cents, 0) AS price_cents"));
+        assert!(source.contains("COALESCE(currency, 'USD') AS currency"));
+        assert!(source.contains("COALESCE(inventory_count, 0) AS inventory_count"));
     }
 
     #[tokio::test]

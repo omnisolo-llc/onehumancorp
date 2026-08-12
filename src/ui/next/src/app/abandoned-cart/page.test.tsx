@@ -55,7 +55,7 @@ describe('AbandonedCartPage', () => {
     expect(screen.getByText('Generating...')).toBeDefined();
 
     await waitFor(() => {
-      expect(screen.getByText((content, element) => content.includes(mockMessage) && content.includes('⚡ Powered by OHC'))).toBeDefined();
+      expect(screen.getByText((content, element) => content.includes(mockMessage) && content.includes('⚡ Powered by OmniSolo'))).toBeDefined();
     });
 
     expect(global.fetch).toHaveBeenCalledWith('/api/v1/growth/campaign/generate-cart', expect.objectContaining({

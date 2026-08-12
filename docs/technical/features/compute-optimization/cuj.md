@@ -19,7 +19,7 @@ The CEO utilizes the Compute Optimization layer to ensure their highest-priority
 | 4 | Throttle department | CEO edits quota | Scheduler evicts pods | Agents restart on CPU nodes |
 
 ## 3. Implementation Details
-- **Architecture**: The OHC Kubernetes Operator watches for `TeamMember` resource changes and applies `nodeSelector` and `tolerations` dynamically based on the project priority.
+- **Architecture**: The OmniSolo Kubernetes Operator watches for `TeamMember` resource changes and applies `nodeSelector` and `tolerations` dynamically based on the project priority.
 - **Stack**: Rust, OpenTelemetry for scraping VRAM usage.
 - **State Serialization**: Checkpointers allow seamless movement of agents between GPU and CPU nodes during throttling.
 

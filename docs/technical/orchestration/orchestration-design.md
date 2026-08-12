@@ -1,7 +1,7 @@
 # KAIROS Orchestration Design
 
 ## Overview
-The KAIROS Orchestrator provides absolute autonomy for the OHC Swarm. It requires a distributed state machine mapped to both Cloud-Native and Standalone Desktop environments.
+The KAIROS Orchestrator provides absolute autonomy for the OmniSolo Swarm. It requires a distributed state machine mapped to both Cloud-Native and Standalone Desktop environments.
 
 ## Phase 1: Shared Task List (The Brain)
 A durable distributed state machine for swarm tasks (`swarm_tasks` and `shared_tasks`).

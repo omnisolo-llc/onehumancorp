@@ -77,7 +77,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Navigate to the mock index
     await page.goto('http://mock/index.html');
 
-    await expect(page.getByRole('heading', { name: "Welcome to OHC" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Welcome to OmniSolo" })).toBeVisible();
     await page.getByRole('button', { name: 'Start Onboarding' }).click();
 
     // We mocked start btn but it relies on index.html script redirect, which might be intercepted or missing full context in playwright mock scheme.

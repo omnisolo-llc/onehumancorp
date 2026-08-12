@@ -25,7 +25,7 @@ export default function GiveawayGeneratorPage() {
 
   const generateLink = () => {
     setIsGenerating(true);
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co';
     const brandingParam = removeBranding ? '&branding=false' : '';
     const link = `${origin}/giveaway/enter?tenant=${encodeURIComponent(tenant)}&title=${encodeURIComponent(title || 'Enter our Giveaway!')}&description=${encodeURIComponent(description)}${brandingParam}`;
     setGiveawayLink(link);
@@ -47,7 +47,7 @@ export default function GiveawayGeneratorPage() {
 
   const claimTrialExtension = async () => {
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just launched a viral giveaway for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just launched a viral giveaway for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
     if (!await claimTrial()) return;
     setShowSoftPaywall(false);
     generateLink();
@@ -119,7 +119,7 @@ export default function GiveawayGeneratorPage() {
                     <div className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5 shadow-sm"></div>
                   </div>
                   <label htmlFor="removeBranding" className="text-sm text-gray-700 font-medium cursor-pointer flex-1 select-none">
-                      Remove "Powered by OHC" branding
+                      Remove "Powered by OmniSolo" branding
                   </label>
                   {!hasPro && (
                       <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-1 rounded">Pro</span>
@@ -194,7 +194,7 @@ export default function GiveawayGeneratorPage() {
 
                      {!removeBranding && (
                      <div className="mt-8">
-                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OHC</a>
+                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors">⚡ Powered by OmniSolo</a>
                      </div>
                      )}
                  </div>
@@ -245,7 +245,7 @@ export default function GiveawayGeneratorPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

@@ -33,13 +33,13 @@ export default function ViralPostGeneratorPage() {
 
   const handleGenerate = () => {
     if (!productName || !keyBenefit) return;
-    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.\n\nShop now: https://${tenantId}.ohc.app\n\n${!removeBranding ? '⚡ Powered by OHC' : ''}`;
+    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.\n\nShop now: https://${tenantId}.cloud.omnisolo.co\n\n${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`;
     setGeneratedPost(post);
   };
 
   const claimTrialExtension = async () => {
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenantId}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
     if (!await claimTrial()) return;
     setRemoveBranding(true);
     setShowPaywall(false);
@@ -103,7 +103,7 @@ export default function ViralPostGeneratorPage() {
                             className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                         />
                         <div>
-                            <span className="text-sm font-medium text-gray-900">Remove "Powered by OHC" branding</span>
+                            <span className="text-sm font-medium text-gray-900">Remove "Powered by OmniSolo" branding</span>
                             <p className="text-xs text-gray-500 mt-1">Make the post 100% white-labeled. Requires Pro plan.</p>
                         </div>
                         </label>
@@ -176,7 +176,7 @@ export default function ViralPostGeneratorPage() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-8 text-sm leading-relaxed">
-              Make the post 100% white-labeled. Upgrade to Pro to remove the "Powered by OHC" watermark.
+              Make the post 100% white-labeled. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
 
             <button
@@ -199,7 +199,7 @@ export default function ViralPostGeneratorPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

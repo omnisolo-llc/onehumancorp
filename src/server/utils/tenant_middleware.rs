@@ -9,7 +9,7 @@ use serde_json::json;
 fn is_multitenant_mode() -> bool {
     #[cfg(test)]
     {
-        if let Ok(val) = std::env::var("OHC_MULTITENANT") {
+        if let Ok(val) = std::env::var("OMNISOLO_MULTITENANT") {
             return val == "true";
         }
     }
@@ -233,7 +233,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_url_encoded_tenant_id_spoofing() {
-        temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+        temp_env::async_with_vars([("OMNISOLO_MULTITENANT", Some("true"))], async {
             let app = setup_router(true);
 
             // Attempting to spoof `tenant_1` with URL encoding

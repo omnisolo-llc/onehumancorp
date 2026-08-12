@@ -722,9 +722,9 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     env:
-      OHC_REQUIRE_POSTGRES_TESTS: "1"
-      OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security
-      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security
+      OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"
+      OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security
+      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security
     steps:
       - uses: actions/checkout@v6
 
@@ -746,7 +746,7 @@ jobs:
 
       - name: Provision and verify non-superuser application role
         run: |
-          psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<'SQL'
+          psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<'SQL'
           DO $$
           BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ohc_bypassrls') THEN
@@ -763,7 +763,7 @@ jobs:
           GRANT CONNECT ON DATABASE ohc_security TO ohc_security_test;
           SQL
 
-          psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<'SQL'
+          psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<'SQL'
           DO $$
           BEGIN
             IF NOT EXISTS (

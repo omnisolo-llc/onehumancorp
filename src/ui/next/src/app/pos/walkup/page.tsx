@@ -58,7 +58,7 @@ export default function WalkupOrderPage() {
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col">
           <p className="text-gray-600 mb-6 text-center font-medium">
-            Enter or say the customer's request in their language. OHC will translate it and structure the order automatically.
+            Enter or say the customer's request in their language. OmniSolo will translate it and structure the order automatically.
           </p>
 
           <textarea

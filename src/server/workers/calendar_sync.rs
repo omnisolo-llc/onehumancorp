@@ -74,7 +74,7 @@ async fn sync_all_calendars(redis_client: &redis::Client) -> Result<(), String> 
                 }
             }
 
-            // Push OHC bookings to Google Calendar
+            // Push OmniSolo bookings to Google Calendar
             if let Err(e) = push_bookings_to_calendar(&tenant_id, &provider_client).await {
                 tracing::error!("Failed to push bookings for tenant {}: {}", tenant_id, e); // pii-safe
             }
@@ -110,7 +110,7 @@ async fn push_bookings_to_calendar(
 
         let et = end_time.unwrap_or_else(|| start_time + chrono::Duration::hours(1));
 
-        let summary = format!("OHC Booking: {}", booking_id);
+        let summary = format!("OmniSolo Booking: {}", booking_id);
 
         // This is a naive sync. Real implementation would check sync_metadata to avoid creating duplicates.
         if let Err(e) = provider_client.create_event(&summary, &start_time.to_rfc3339(), &et.to_rfc3339()).await {

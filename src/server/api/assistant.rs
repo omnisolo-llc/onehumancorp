@@ -2171,9 +2171,9 @@ mod real_feature_state_tests {
     }
 
     async fn isolated_postgres_pool() -> Option<(sqlx::PgPool, sqlx::PgPool, String, String)> {
-        let database_url = std::env::var("OHC_TEST_POSTGRES_URL")
+        let database_url = std::env::var("OMNISOLO_TEST_POSTGRES_URL")
             .ok()
-            .or_else(|| std::env::var("OHC_DATABASE_URL").ok())?;
+            .or_else(|| std::env::var("OMNISOLO_DATABASE_URL").ok())?;
         if !database_url.starts_with("postgres") {
             return None;
         }
@@ -2643,7 +2643,7 @@ async fn synthesize_customer_memory(
 
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
-    let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+    let llm_res = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
         Ok("gemini") => {
             crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
         }

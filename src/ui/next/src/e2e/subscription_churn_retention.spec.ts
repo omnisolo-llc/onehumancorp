@@ -1,16 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '../../../../e2e/fixtures';
 
 test.describe('Agentic Subscription Retention & Churn Prediction Feed E2E', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('should display subscription churn win-back recommendation in the feed and allow approval', async ({ page }) => {
+  test('should display subscription churn win-back recommendation in the feed and allow approval', async ({ anonymousPage }) => {
     test.setTimeout(180000);
+    const page = anonymousPage;
 
     // 1. Log in as Leo
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill('leo@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Log In' }).click();
+    await page.getByRole('textbox', { name: 'Email or username' }).fill('leo@example.com');
+    await page.getByRole('textbox', { name: 'Password' }).fill('password123');
+    await page.getByRole('button', { name: 'Log in' }).click();
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Navigate to the unified agent feed

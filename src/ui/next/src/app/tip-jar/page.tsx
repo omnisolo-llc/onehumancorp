@@ -22,7 +22,7 @@ export default function TipJarWidgetGenerator() {
     setIsClient(true);
   }, []);
 
-  const embedUrl = `https://ohc.app/api/v1/growth/tip-jar/embed?tenant=${encodeURIComponent(tenant)}&name=${encodeURIComponent(displayName)}&message=${encodeURIComponent(message)}&amounts=${encodeURIComponent(amounts)}&theme=${theme}&branding=${!removeBranding}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/tip-jar/embed?tenant=${encodeURIComponent(tenant)}&name=${encodeURIComponent(displayName)}&message=${encodeURIComponent(message)}&amounts=${encodeURIComponent(amounts)}&theme=${theme}&branding=${!removeBranding}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="320" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
@@ -43,7 +43,7 @@ export default function TipJarWidgetGenerator() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Head>
-        <title>Tip Jar Widget Builder | OHC</title>
+        <title>Tip Jar Widget Builder | OmniSolo</title>
       </Head>
 
       <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
@@ -131,7 +131,7 @@ export default function TipJarWidgetGenerator() {
                             className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
                         />
                         <div>
-                            <span className="text-sm font-medium text-gray-900">Remove "Powered by OHC" Badge</span>
+                            <span className="text-sm font-medium text-gray-900">Remove "Powered by OmniSolo" Badge</span>
                             <p className="text-xs text-gray-500 mt-1">Requires Pro plan or higher.</p>
                         </div>
                     </label>
@@ -206,7 +206,7 @@ export default function TipJarWidgetGenerator() {
                         {!removeBranding && (
                             <div className={`mt-2 pt-3 border-t text-center text-xs ${theme === 'dark' ? 'border-gray-700 text-gray-400' : 'border-gray-100 text-gray-500'}`}>
                                 <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="font-bold hover:underline" style={{ color: '#6b7280' }}>
-                                    ⚡ Powered by OHC
+                                    ⚡ Powered by OmniSolo
                                 </a>
                             </div>
                         )}
@@ -292,7 +292,7 @@ export default function TipJarWidgetGenerator() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Tip Jar 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark and keep all your tips.
+              Make the Tip Jar 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark and keep all your tips.
             </p>
 
             <button
@@ -306,7 +306,7 @@ export default function TipJarWidgetGenerator() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
 

@@ -8,7 +8,7 @@ export default function ViralGrowthWidget({
 }) {
   const [copied, setCopied] = useState(false);
 
-  const referralLink = `https://ohc.app/join/${tenantId}`;
+  const referralLink = `https://cloud.omnisolo.co/join/${tenantId}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -46,7 +46,7 @@ export default function ViralGrowthWidget({
 
       <div className="grid grid-cols-2 w-full gap-3 max-w-md">
         <a
-          href={`https://twitter.com/intent/tweet?text=I%20run%20my%20business%20on%20OHC.%20Join%20me!&url=${encodeURIComponent(referralLink)}`}
+          href={`https://twitter.com/intent/tweet?text=I%20run%20my%20business%20on%20OmniSolo.%20Join%20me!&url=${encodeURIComponent(referralLink)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 py-3 bg-[#000000] hover:bg-gray-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
@@ -55,7 +55,7 @@ export default function ViralGrowthWidget({
           Post
         </a>
         <a
-          href={`https://wa.me/?text=${encodeURIComponent(`I run my business on OHC. Join me! ${referralLink}`)}`}
+          href={`https://wa.me/?text=${encodeURIComponent(`I run my business on OmniSolo. Join me! ${referralLink}`)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-sm font-bold transition-all shadow-sm"

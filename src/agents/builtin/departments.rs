@@ -71,7 +71,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates promotional content: flyers, banners, email campaigns\n\
                 - Analyzes what marketing is working and what isn't\n\
                 - Creates QR codes, link-in-bio pages, and shareable storefront links\n\
-                - Proactively injects 'Powered by OHC' referral loops across widgets and forms to drive acquisition").leak(),
+                - Proactively injects 'Powered by OmniSolo' referral loops across widgets and forms to drive acquisition").leak(),
             allowed_tools: vec![
                 "write",
                 "websearch",

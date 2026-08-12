@@ -2,7 +2,7 @@
 
 # AutoDream Sync Daemon Walkthrough
 
-Welcome to the AutoDream Sync Daemon guide. This walkthrough explains how the OHC Hybrid Architecture synchronizes local Standalone intelligence (SQLite) up to the multitenant Cloud (PostgreSQL).
+Welcome to the AutoDream Sync Daemon guide. This walkthrough explains how the OmniSolo Hybrid Architecture synchronizes local Standalone intelligence (SQLite) up to the multitenant Cloud (PostgreSQL).
 
 ## 1. The Sync Lifecycle
 

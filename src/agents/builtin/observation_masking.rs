@@ -1,5 +1,5 @@
 #![allow(clippy::all)]
-use ohc_builtin_agent_core::types::{Message, Role};
+use omnisolo_builtin_agent_core::types::{Message, Role};
 use serde_json::Value;
 
 /// Master Catalog B.4: Context Management: Master Catalog: JetBrains Observation Masking.
@@ -354,7 +354,7 @@ pub fn apply_observation_masking(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::ToolResult;
+    use omnisolo_builtin_agent_core::types::ToolResult;
 
     #[test]
     fn test_apply_observation_masking() {
@@ -490,7 +490,7 @@ mod tests {
 #[cfg(test)]
 mod additional_tests {
     use super::*;
-    use ohc_builtin_agent_core::types::ToolResult;
+    use omnisolo_builtin_agent_core::types::ToolResult;
 
     #[test]
     fn test_mask_large_array_truncation() {

@@ -39,8 +39,8 @@ impl AutoDreamWorker {
                 }
 
                 let repository = match &db.store {
-                    crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-                    crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                    crate::db::DbStore::Postgres => omnisolo_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                    crate::db::DbStore::Sqlite(sqlite_pool) => omnisolo_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
                 };
 
                 let stale_threshold = chrono::Utc::now() - chrono::Duration::days(180);
@@ -136,8 +136,8 @@ impl AutoDreamWorker {
 
     async fn resolve_conflicts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let repository = match &db.store {
-            crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-            crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+            crate::db::DbStore::Postgres => omnisolo_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+            crate::db::DbStore::Sqlite(sqlite_pool) => omnisolo_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
         };
 
         let resolved_count = repository.auto_resolve_conflicts().await.map_err(|e| e.to_string())?;
@@ -199,7 +199,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<::server_ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
+    pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<::server_omnisolo::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
         let tracer = global::tracer("ohc.autodream");
         let _span = tracer.start("autodream_search_memories");
         debug!("AutoDream: searching memories with limit {}", limit);
@@ -215,7 +215,7 @@ impl AutoDreamWorker {
 
             for row in rows {
                 use sqlx::Row;
-                results.push(::server_ohc::orchestration::TruthSearchResult {
+                results.push(::server_omnisolo::orchestration::TruthSearchResult {
                     id: row.get("id"),
                     content: row.get("content"),
                     score: 1.0,
@@ -236,7 +236,7 @@ impl AutoDreamWorker {
             for row in rows {
                 use sqlx::Row;
                 let score: f64 = row.get("similarity_score");
-                results.push(::server_ohc::orchestration::TruthSearchResult {
+                results.push(::server_omnisolo::orchestration::TruthSearchResult {
                     id: row.get("id"),
                     content: row.get("content"),
                     score: score as f64,
@@ -326,7 +326,7 @@ impl AutoDreamWorker {
     }
 
     async fn process_fs_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
-        let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
+        let memory_dir = std::env::var("OMNISOLO_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
         
         if !path.exists() {
@@ -409,7 +409,7 @@ impl AutoDreamWorker {
 
                         let embedding_vec: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_else(|_| vec![0.0; 1536]);
 
-                        let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
+                        let record = ::omnisolo_builtin_agent::memory_store::EmbeddingRecord {
                             id: mem_id,
                             tenant_id: "system".to_string(),
                             agent_id: "system_agent".to_string(),
@@ -425,8 +425,8 @@ impl AutoDreamWorker {
                         };
 
                         let repository = match &db.store {
-                            crate::db::DbStore::Postgres => ::ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-                            crate::db::DbStore::Sqlite(sqlite_pool) => ::ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                            crate::db::DbStore::Postgres => ::omnisolo_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                            crate::db::DbStore::Sqlite(sqlite_pool) => ::omnisolo_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
                         };
 
                         if let Err(e) = repository.upsert(&record).await {
@@ -460,7 +460,7 @@ mod tests {
     #[test]
     async fn test_autodream_worker_init() {
         // Skip actual db execution to prevent CI timeouts
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -493,11 +493,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_consolidate_agent_task_memories_empty() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
         let pool = crate::db::secure_pg_pool_options()
 
             .acquire_timeout(std::time::Duration::from_millis(50))

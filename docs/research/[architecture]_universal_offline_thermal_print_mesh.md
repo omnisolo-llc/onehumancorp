@@ -8,7 +8,7 @@ Fatima (Food Cart, 50) and Priya (Boutique Owner, 35) require physical outputs t
     *   **Square POS**: Requires specific, proprietary, or certified hardware models. Fails completely if the tablet loses its connection, and setup involves manual Bluetooth pairing.
     *   **Shopify POS**: Similar hardware lock-in; relies heavily on the iPad’s native network stack. Printing customized physical kitchen tickets often requires third-party paid apps.
     *   **Toast (Restaurant POS)**: Very robust kitchen printing but requires professional installation of hardwired network infrastructure, completely failing the "launch in 10 minutes from a phone" mandate.
-*   **The OHC Differentiator**: OHC must introduce an autonomous, zero-config device mesh. The mobile app automatically discovers Bluetooth, USB, or local Wi-Fi thermal printers and KDS screens, forming a resilient local p2p mesh. If the primary cloud connection drops, the app caches the print jobs locally and immediately spools them to the discovered hardware using embedded, generic ESC/POS drivers.
+*   **The OmniSolo Differentiator**: OmniSolo must introduce an autonomous, zero-config device mesh. The mobile app automatically discovers Bluetooth, USB, or local Wi-Fi thermal printers and KDS screens, forming a resilient local p2p mesh. If the primary cloud connection drops, the app caches the print jobs locally and immediately spools them to the discovered hardware using embedded, generic ESC/POS drivers.
 
 ## Design Doc
 
@@ -16,10 +16,10 @@ Fatima (Food Cart, 50) and Priya (Boutique Owner, 35) require physical outputs t
 ```mermaid
 graph TD;
     KAIROS[KAIROS Orchestration Hub] --> Gateway[Zero-Trust Edge Gateway];
-    Gateway --> OHC_Mobile[OHC App: Mobile/Tablet Client];
+    Gateway --> OMNISOLO_Mobile[OmniSolo App: Mobile/Tablet Client];
 
     subgraph Offline-First Device Mesh
-        OHC_Mobile --> PrintSpooler[Local Print Spooler & DB];
+        OMNISOLO_Mobile --> PrintSpooler[Local Print Spooler & DB];
         PrintSpooler --> BleDiscovery[Bluetooth/BLE Auto-Discovery];
         PrintSpooler --> WifiDiscovery[mDNS/Bonjour Auto-Discovery];
 
@@ -64,7 +64,7 @@ erDiagram
 ### Execution Sequence
 ```mermaid
 sequenceDiagram
-    participant App as OHC Mobile App
+    participant App as OmniSolo Mobile App
     participant Spooler as Local Print Spooler
     participant DB as Local SQLite (SIPDB)
     participant Mesh as Hybrid Event Mesh
@@ -107,7 +107,7 @@ sequenceDiagram
 *   **Offline Capability**: 100% of printing functionality must work without a WAN connection, relying purely on LAN/PAN.
 
 ## Implementation Prompt
-**Objective**: Implement the Universal Offline-First Hardware & Thermal Print Mesh to enable zero-config, offline-capable ESC/POS printing from the OHC mobile client.
+**Objective**: Implement the Universal Offline-First Hardware & Thermal Print Mesh to enable zero-config, offline-capable ESC/POS printing from the OmniSolo mobile client.
 
 **User Journey (CUJ) & Acceptance Criteria**:
 1.  **Zero-Config Discovery**: The app must automatically discover local network (mDNS) and Bluetooth ESC/POS printers and present them in a unified UI.

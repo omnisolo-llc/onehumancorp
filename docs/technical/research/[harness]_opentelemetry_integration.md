@@ -3,18 +3,18 @@
 # [harness] Integrate OpenTelemetry for Agent Harness Sandbox Violations
 
 ## Problem Statement
-The current OHC Agent Harness lacks real-time observability for sandbox violations, making it difficult to debug execution constraints and monitor potential malicious sub-agent activity. Without structured telemetry, we cannot proactively identify edge cases where agents fail due to overly restrictive permissions.
+The current OmniSolo Agent Harness lacks real-time observability for sandbox violations, making it difficult to debug execution constraints and monitor potential malicious sub-agent activity. Without structured telemetry, we cannot proactively identify edge cases where agents fail due to overly restrictive permissions.
 
 ## Research Report & Competitive Analysis
 Analysis of the leaked **Claude Code Agent Harness** (v2.1.88) reveals a sophisticated `SandboxViolationStore` that actively tracks, bubbles up, and logs sandbox violations during terminal executions. Their harness utilizes Bubblewrap (`bwrap`) alongside an AST validator to intercept unauthorized commands and path traversals, emitting detailed context back to the user and their backend.
 
 Other frameworks, like **OpenClaw**, rely heavily on basic runner logs, lacking the deep integration into a central telemetry system. **Gstack** focuses on isolated workspaces but does not mandate strict metric emissions for capability denial.
 
-To achieve "Absolute Autonomy" and "Full-Spectrum Observability," OHC must integrate OpenTelemetry directly into the harness to export these violations as structured Prometheus metrics, bridging the gap identified between OHC's current regex-based sandboxing and Claude's deep structural telemetry.
+To achieve "Absolute Autonomy" and "Full-Spectrum Observability," OmniSolo must integrate OpenTelemetry directly into the harness to export these violations as structured Prometheus metrics, bridging the gap identified between OmniSolo's current regex-based sandboxing and Claude's deep structural telemetry.
 
 ### Comparative Matrix
 
-| Feature | OHC Hybrid Architecture (Current) | Claude Code Harness | Gap / Opportunity |
+| Feature | OmniSolo Hybrid Architecture (Current) | Claude Code Harness | Gap / Opportunity |
 | :--- | :--- | :--- | :--- |
 | **Sandbox Isolation** | Regex-based (`bash_sandbox`) | `bwrap` + AST Validation | **Critical**: Requires deep OS-level sandboxing |
 | **Violation Tracking**| Ephemeral logs | `SandboxViolationStore` | **High**: Need durable metric emissions |

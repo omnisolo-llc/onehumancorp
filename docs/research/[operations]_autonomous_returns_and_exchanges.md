@@ -1,17 +1,17 @@
 # Title: Autonomous Returns & Exchanges Operations Engine
 
 ## Problem Statement
-For OneHumanCorp’s core personas selling physical products—like Priya (boutique owner) and Maya (baker)—managing returns and exchanges is a massive operational headache and a major friction point for their customers. When a customer wants to return a dress that doesn't fit or a damaged item, the business owner currently has to manually approve the request, manually log into a shipping carrier (like USPS or ShipStation) to generate a return label, email that label to the customer, wait for the package, inspect it, manually restock the inventory, and finally process the refund via Stripe. This process takes days and hours of manual work. Competitor platforms force the business owner to act as a full-time logistics manager. Small business owners need an autonomous system that instantly handles return requests, generates labels, updates inventory upon scan, and issues refunds without the owner lifting a finger—unless an exception requires approval.
+For OmniSolo’s core personas selling physical products—like Priya (boutique owner) and Maya (baker)—managing returns and exchanges is a massive operational headache and a major friction point for their customers. When a customer wants to return a dress that doesn't fit or a damaged item, the business owner currently has to manually approve the request, manually log into a shipping carrier (like USPS or ShipStation) to generate a return label, email that label to the customer, wait for the package, inspect it, manually restock the inventory, and finally process the refund via Stripe. This process takes days and hours of manual work. Competitor platforms force the business owner to act as a full-time logistics manager. Small business owners need an autonomous system that instantly handles return requests, generates labels, updates inventory upon scan, and issues refunds without the owner lifting a finger—unless an exception requires approval.
 
 ## Research Report
 **Market Gap Analysis:**
 - **Shopify:** Offers basic native returns, but fully automated return portals, label generation, and automated instant exchanges usually require expensive third-party apps like Loop Returns or Returnly. The default experience still requires significant manual merchant intervention.
 - **Wix & Squarespace:** Both require manual review, label creation, and manual refund processing. No built-in autonomous return agents exist.
 - **GoDaddy:** Highly manual return process. Essentially just email-based customer service.
-- **Current OHC State:** Missing a dedicated returns workflow. Inventory and payment refunds exist as separate primitives but are not orchestrated by an autonomous agent.
+- **Current OmniSolo State:** Missing a dedicated returns workflow. Inventory and payment refunds exist as separate primitives but are not orchestrated by an autonomous agent.
 
 **Proposed Solution:**
-Introduce an "Autonomous Returns & Exchanges Engine" managed by the OHC Operations AI Agent. When a customer initiates a return via the merchant's OHC storefront or through SMS/WhatsApp (e.g., replying "I need to return this"), the Operations Agent instantly validates the return against the merchant's policy, autonomously generates a printable/QR return shipping label, provides tracking, and coordinates with the Finance Agent to issue the refund once the package is scanned by the carrier. For Maya or Priya, the entire process is invisible, only appearing as a notification: "Return completed & restocked."
+Introduce an "Autonomous Returns & Exchanges Engine" managed by the OmniSolo Operations AI Agent. When a customer initiates a return via the merchant's OmniSolo storefront or through SMS/WhatsApp (e.g., replying "I need to return this"), the Operations Agent instantly validates the return against the merchant's policy, autonomously generates a printable/QR return shipping label, provides tracking, and coordinates with the Finance Agent to issue the refund once the package is scanned by the carrier. For Maya or Priya, the entire process is invisible, only appearing as a notification: "Return completed & restocked."
 
 ## Design Doc
 
@@ -95,7 +95,7 @@ sequenceDiagram
 ## Implementation Prompt
 **For the Engineering Swarm:**
 Implement the backend orchestration and mobile UI for the "Autonomous Returns & Exchanges Engine".
-- **CUJ (Customer User Journey):** Priya’s customer, Alex, buys a sweater but it doesn't fit. Alex opens the OHC store link, taps "Return", and selects "Too small". The OHC Operations Agent instantly checks Priya's 30-day policy, approves it, and displays a USPS QR code. The next day, Alex drops it at the post office. The carrier scan triggers a webhook, prompting the Finance Agent to refund Alex's card. Priya simply sees a mobile notification: "Return for Sweater completed. $45 refunded, inventory updated."
+- **CUJ (Customer User Journey):** Priya’s customer, Alex, buys a sweater but it doesn't fit. Alex opens the OmniSolo store link, taps "Return", and selects "Too small". The OmniSolo Operations Agent instantly checks Priya's 30-day policy, approves it, and displays a USPS QR code. The next day, Alex drops it at the post office. The carrier scan triggers a webhook, prompting the Finance Agent to refund Alex's card. Priya simply sees a mobile notification: "Return for Sweater completed. $45 refunded, inventory updated."
 - **Acceptance Criteria:**
   - Create the `RETURN_POLICY` and `RETURN_REQUEST` tenant-isolated data models.
   - Build the Operations Agent workflow that intercepts a return request, validates against policy, and integrates with the existing shipping provider module to generate a return label/QR.

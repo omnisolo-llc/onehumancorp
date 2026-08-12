@@ -103,7 +103,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     await page.goto('/api/v1/ui/dashboard.html');
 
     // Check tooltips registry is available
-    const tooltips = await page.evaluate(() => window['OHC_TOOLTIPS']);
+    const tooltips = await page.evaluate(() => window['OMNISOLO_TOOLTIPS']);
     expect(tooltips).toBeDefined();
     expect(tooltips['dashboard-walkthrough-btn']).toBe('Take a tour of the dashboard');
   });

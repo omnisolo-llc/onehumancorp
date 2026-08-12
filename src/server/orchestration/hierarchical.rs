@@ -12,7 +12,7 @@ impl K8sOperatorDelegator {
         // Simulating result execution directly to demonstrate result aggregation and context isolation.
         // It pretends to execute the task in an isolated context and return a mock aggregated result.
         let result_data = if instruction.contains("landing page") {
-            "Landing Page HTML generated with OHC tokens"
+            "Landing Page HTML generated with OmniSolo tokens"
         } else if instruction.contains("social copy") {
             "Generated 3 posts for Valentine's Day campaign"
         } else if instruction.contains("fetch") {

@@ -77,8 +77,8 @@ EXPECTED_POSTGRES_TOOLCHAIN_LINES = (
     "sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
 )
 
-ADMIN_PSQL_HEREDOC = 'psql "$OHC_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
-APP_PSQL_HEREDOC = 'psql "$OHC_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
+ADMIN_PSQL_HEREDOC = 'psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
+APP_PSQL_HEREDOC = 'psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 EXPECTED_WORKFLOW_DEFAULTS = ("defaults:", "  run:", "    shell: bash")
 EXPECTED_WORKFLOW_ENV = ("env:", '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"')
 EXPECTED_POSTGRES_JOB_KEYS = (
@@ -95,9 +95,9 @@ EXPECTED_REQUIRED_JOB_KEYS = ("name", "needs", "if", "runs-on", "timeout-minutes
 EXPECTED_CHANGES_JOB_KEYS = ("name", "runs-on", "timeout-minutes", "outputs", "steps")
 EXPECTED_POSTGRES_ENV = (
     "    env:",
-    '      OHC_REQUIRE_POSTGRES_TESTS: "1"',
-    "      OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security",
-    "      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
+    '      OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"',
+    "      OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security",
+    "      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
 )
 EXPECTED_REQUIRED_ENV = (
     "        env:",
@@ -391,9 +391,9 @@ def check_workflow(path: Path) -> None:
         ("    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}", "markdown-only skip policy"),
         ("    services:", "PostgreSQL service"),
         ("        image: pgvector/pgvector:pg16", "pgvector image"),
-        ('      OHC_REQUIRE_POSTGRES_TESTS: "1"', "required test environment"),
-        ("      OHC_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security", "admin URL"),
-        ("      OHC_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security", "application-role URL"),
+        ('      OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"', "required test environment"),
+        ("      OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security", "admin URL"),
+        ("      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security", "application-role URL"),
     ):
         require_active(security, exact, context)
     postgres_env = mapping_block(security, "env", 4)

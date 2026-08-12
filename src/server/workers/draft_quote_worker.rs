@@ -1,10 +1,10 @@
 use crate::api::quotes::QuoteLineItemRequest;
 use crate::db::DB;
-use crate::orchestration::queue::ohc_job_queue::OHCJob;
+use crate::orchestration::queue::omnisolo_job_queue::OmniSoloJob;
 use crate::orchestration::queue::worker_pool::JobHandler;
 use async_trait::async_trait;
-use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
+use omnisolo_builtin_agent::gpt_researcher::ResearcherLlmClient;
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -48,7 +48,7 @@ impl ResearcherLlmClient for AdapterLlm {
                 r#"[{{"description":"Generated Item","unit_price_cents":1000,"quantity":2,"is_optional":false,"service_item_id":null}}]"#.to_string()
             }
         } else {
-            let client = ::ohc_builtin_agent::llm::minimax::MiniMaxClient::from_env().unwrap();
+            let client = ::omnisolo_builtin_agent::llm::minimax::MiniMaxClient::from_env().unwrap();
             let res = client.chat(req.clone()).await?;
             res.message.content
         };
@@ -72,7 +72,7 @@ impl DraftQuoteWorker {
 
 #[async_trait]
 impl JobHandler for DraftQuoteWorker {
-    fn handle(&self, job: OHCJob) -> tokio::task::JoinHandle<Result<(), String>> {
+    fn handle(&self, job: OmniSoloJob) -> tokio::task::JoinHandle<Result<(), String>> {
         let db = self.db.clone();
         tokio::spawn(async move {
             let payload: serde_json::Value =

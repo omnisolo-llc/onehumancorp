@@ -97,12 +97,12 @@ pub async fn run_health_monitor(
 mod tests {
     use super::*;
 
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
 
     #[tokio::test]
     async fn test_health_monitor_fires_unresponsive_agent() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -115,7 +115,7 @@ mod tests {
         let hub = Arc::new(Hub::new(tx, pg_pool));
 
         // Register an idle agent
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: "agent_idle".to_string(),
             name: "Idle Agent".to_string(),
             role: "test".to_string(),
@@ -125,7 +125,7 @@ mod tests {
         }).await;
 
         // Register a busy agent
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: "agent_busy".to_string(),
             name: "Busy Agent".to_string(),
             role: "test".to_string(),
@@ -159,8 +159,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_cloud_retry() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -171,7 +171,7 @@ mod tests {
         let (tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(tx, pg_pool));
 
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: "agent_cloud".to_string(),
             name: "Cloud Agent".to_string(),
             role: "test".to_string(),
@@ -180,7 +180,7 @@ mod tests {
             provider_type: "test".to_string(),
         }).await;
 
-        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let transport = omnisolo_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
         let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
         let monitor_hub = hub.clone();
@@ -196,8 +196,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_health_monitor_sync_probe() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+        if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -208,7 +208,7 @@ mod tests {
         let (tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(tx, pg_pool));
 
-        let transport = ohc_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
+        let transport = omnisolo_builtin_agent::mesh::transport::create_transport(None, false).await.unwrap();
         let centrifuge_node = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
         let monitor_mesh: Arc<dyn TeammateMesh> = centrifuge_node.clone();
         let monitor_hub = hub.clone();

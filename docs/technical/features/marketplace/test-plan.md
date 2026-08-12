@@ -1,17 +1,17 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Test Plan: "One Human Corp" Marketplace
+# Test Plan: "OmniSolo" Marketplace
 
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-A high-level summary of the testing strategy for the "One Human Corp" Marketplace feature, ensuring the successful download, parsing, validation, and deployment of community-driven agents.
+A high-level summary of the testing strategy for the "OmniSolo" Marketplace feature, ensuring the successful download, parsing, validation, and deployment of community-driven agents.
 
 ## 2. Test Strategy
 - **Unit Testing:** Focus on verifying the schema validation logic for imported `SkillBlueprints`.
-- **Integration Testing:** Verify communication between the OHC Hub API and the mock Marketplace backend.
+- **Integration Testing:** Verify communication between the OmniSolo Hub API and the mock Marketplace backend.
 - **End-to-End (E2E) Testing:** Validate the entire installation flow in the Dashboard UI.
 
 ## 3. Test Cases
@@ -35,7 +35,7 @@ A high-level summary of the testing strategy for the "One Human Corp" Marketplac
 
 ## 4. Edge Cases & Error Handling
 - **Tool Resolution**: Ensure the UI blocks full deployment of an agent if required MCP connections are missing.
-- **Malformed Payloads**: Ensure invalid JSON responses from the marketplace do not crash the OHC Hub (fail gracefully with user-facing alerts).
+- **Malformed Payloads**: Ensure invalid JSON responses from the marketplace do not crash the OmniSolo Hub (fail gracefully with user-facing alerts).
 
 ## 5. Security & Safety
 - **Strict Parsing**: Validate every string against a regex to prevent prompt injection via malicious `RoleProfile` descriptions.

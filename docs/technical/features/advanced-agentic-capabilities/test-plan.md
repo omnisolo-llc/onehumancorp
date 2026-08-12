@@ -11,7 +11,7 @@ A high-level summary of the testing strategy for the Advanced Agentic Capabiliti
 
 ## 2. Test Strategy
 - **Unit Testing:** Focus on verifying the LangGraph checkpointer state logic and semantic distillation triggers.
-- **Integration Testing:** Verify communication between the OHC Hub, Postgres DB, and MCP Gateway for dynamic tool binding.
+- **Integration Testing:** Verify communication between the OmniSolo Hub, Postgres DB, and MCP Gateway for dynamic tool binding.
 - **End-to-End (E2E) Testing:** Validate the entire hierarchical task delegation, multimodal parsing, and CSI snapshot recovery flow.
 
 ## 3. Test Cases

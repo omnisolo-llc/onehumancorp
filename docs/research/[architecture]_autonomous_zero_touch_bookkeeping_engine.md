@@ -12,8 +12,8 @@ Research consistently shows that administrative tasks, particularly bookkeeping 
 *   **Wix/Squarespace**: Offer basic revenue tracking but lack deep, automated expense reconciliation and tax preparation features.
 *   **Stripe/Square**: Excellent at transaction processing, but still require integration into an accounting suite for full tax and expense management.
 
-### The OHC Opportunity
-By deeply integrating our hybrid mesh architecture with an AI Finance Department, OneHumanCorp can offer a truly "invisible" bookkeeping engine. When a transaction occurs (either incoming revenue or outgoing expense via linked cards/bank feeds), the AI agent instantly categorizes it, asks clarifying questions only if necessary via a simple push notification or text (e.g., "Was this $50 Home Depot charge for the Smith job or general supplies?"), and automatically updates a strictly isolated, multi-tenant ledger.
+### The OmniSolo Opportunity
+By deeply integrating our hybrid mesh architecture with an AI Finance Department, OmniSolo can offer a truly "invisible" bookkeeping engine. When a transaction occurs (either incoming revenue or outgoing expense via linked cards/bank feeds), the AI agent instantly categorizes it, asks clarifying questions only if necessary via a simple push notification or text (e.g., "Was this $50 Home Depot charge for the Smith job or general supplies?"), and automatically updates a strictly isolated, multi-tenant ledger.
 
 ## Design Doc
 

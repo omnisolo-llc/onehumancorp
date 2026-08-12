@@ -26,6 +26,7 @@ function FieldOpsJobsPageContent() {
   const { data: offlineJobs } = useQuery<Appointment>('SELECT * FROM appointments ORDER BY scheduled_start_time ASC');
   const [agentSuggestion, setAgentSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [delayAction, setDelayAction] = useState<{
     jobId: string;
     subsequentCount: number;
@@ -56,8 +57,12 @@ function FieldOpsJobsPageContent() {
 
     // Fetch initial schedule
     if (navigator.onLine) {
-      fetch("/api/v1/field-ops/appointments")
-        .then((res) => res.json())
+      // The authenticated proxy replaces this marker with the verified session tenant.
+      fetch("/api/v1/field-ops/appointments?tenant_id=authenticated")
+        .then((res) => {
+          if (!res.ok) throw new Error(`schedule request failed with HTTP ${res.status}`);
+          return res.json();
+        })
         .then(async (data) => {
           if (data.appointments) {
             setJobs(data.appointments);
@@ -77,8 +82,8 @@ function FieldOpsJobsPageContent() {
           }
           setLoading(false);
         })
-        .catch((err) => {
-          console.error("Failed to load appointments", err);
+        .catch(() => {
+          setLoadError("We couldn't load today's schedule. Try again later.");
           setLoading(false);
         });
     } else {
@@ -370,6 +375,12 @@ function FieldOpsJobsPageContent() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {loadError && (
+        <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {loadError}
         </div>
       )}
 

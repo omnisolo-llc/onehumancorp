@@ -13,9 +13,9 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
 
-// Mock PoweredByOHC component
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+// Mock PoweredByOmniSolo component
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />,
 }));
 
 describe('WaitlistPage', () => {
@@ -43,7 +43,7 @@ describe('WaitlistPage', () => {
     expect(screen.getByText('Join the Waitlist')).toBeDefined();
   });
 
-  it('handles successful form submission and shows success state with PoweredByOHC component', async () => {
+  it('handles successful form submission and shows success state with PoweredByOmniSolo component', async () => {
     const mockResponse = {
       ok: true,
       json: async () => ({
@@ -78,8 +78,8 @@ describe('WaitlistPage', () => {
     expect(screen.getByText("You're #42 on the list!")).toBeDefined();
     expect(screen.getByText('Move up the list!')).toBeDefined();
 
-    // Verify PoweredByOHC component is rendered in success state
-    expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
+    // Verify PoweredByOmniSolo component is rendered in success state
+    expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
   });
 
   it('handles submission errors', async () => {

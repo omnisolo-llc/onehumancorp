@@ -41,7 +41,7 @@ describe('WorkIntakeWidgetPage', () => {
     expect(textarea).toBeDefined();
     expect(textarea.value).toContain('tenant=test-tenant');
     expect(textarea.value).toContain('title=Custom%20Request');
-    expect(textarea.value).toContain('Powered by OHC');
+    expect(textarea.value).toContain('Powered by OmniSolo');
   });
 
   it('encodes hostile tenant and title values in copied HTML attributes', () => {
@@ -64,7 +64,7 @@ describe('WorkIntakeWidgetPage', () => {
     render(<WorkIntakeWidgetPage />);
 
     // Click checkbox
-    const checkbox = screen.getByLabelText('Remove "Powered by OHC" branding');
+    const checkbox = screen.getByLabelText('Remove "Powered by OmniSolo" branding');
     fireEvent.click(checkbox);
 
     // Check if soft paywall shows up

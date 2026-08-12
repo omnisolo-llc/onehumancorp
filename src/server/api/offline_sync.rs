@@ -53,7 +53,7 @@ async fn validate_token_and_get_tenant(pool: &sqlx::PgPool, headers: &axum::http
 }
 
 pub async fn offline_sync_handler(
-    State((db, mesh)): State<(sqlx::PgPool, Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>)>,
+    State((db, mesh)): State<(sqlx::PgPool, Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>)>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<OfflineSyncRequest>,
 ) -> impl IntoResponse {
@@ -361,7 +361,7 @@ pub async fn offline_sync_handler(
                     if let Err(e) = db_tx.commit().await { return Err(e.to_string()); }
 
                     // Publish mesh event
-                    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                    let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
                         action: "InventoryUpdated".to_string(),
                         agent_id: "system".to_string(),
                         status: "".to_string(),
@@ -499,7 +499,7 @@ pub async fn offline_sync_handler(
 
                         db_tx.commit().await.unwrap();
 
-                        let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                        let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
                             action: "InventoryUpdated".to_string(),
                             agent_id: "system".to_string(),
                             status: "".to_string(),
@@ -759,7 +759,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_events_success() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -804,7 +804,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_events_idempotent() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -849,7 +849,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_events_conflict() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -897,7 +897,7 @@ mod tests {
     }
     use super::*;
     use axum::http::HeaderMap;
-    use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
+    use omnisolo_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport};
     #[allow(unused_imports)]
     use sqlx::postgres::PgPoolOptions;
 
@@ -917,7 +917,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_success_and_negative_guard() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
@@ -1024,7 +1024,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_offline_sync_field_service_mutations() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }

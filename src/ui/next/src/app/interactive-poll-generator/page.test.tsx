@@ -10,9 +10,9 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-// Mock the PoweredByOHC component to avoid complex rendering issues in tests
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc">Powered by OHC</div>,
+// Mock the PoweredByOmniSolo component to avoid complex rendering issues in tests
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo">Powered by OmniSolo</div>,
 }));
 
 describe('Interactive Poll Generator UI', () => {
@@ -39,8 +39,8 @@ describe('Interactive Poll Generator UI', () => {
     expect(screen.queryAllByText('Vanilla').length).toBeGreaterThan(0);
     expect(screen.queryAllByText('Strawberry').length).toBeGreaterThan(0);
 
-    // Check Powered By OHC is visible by default
-    expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
+    // Check Powered By OmniSolo is visible by default
+    expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
   });
 
   test('allows changing the question and options', () => {

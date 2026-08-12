@@ -4,7 +4,7 @@ use axum::{
     http::HeaderMap,
 };
 use std::sync::Arc;
-use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
+use omnisolo_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use serde::Deserialize;
@@ -260,7 +260,7 @@ mod tests {
     };
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+    use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
     use tokio_tungstenite::connect_async;
     use tokio_tungstenite::tungstenite::Message as TungsteniteMessage;
 
@@ -305,7 +305,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
         // Test receiving a message from server to client (subscribe)
-        let srv_msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let srv_msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "test".to_string(),
             action: "test_chan".to_string(),
             status: "ok".to_string(),

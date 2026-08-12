@@ -6,7 +6,7 @@
 **Status:** Approved for Implementation
 
 <h2>Executive Summary</h2>
-This document provides the architectural blueprints for the OHC Swarm core functionalities: Shared Task List, Teammate Mesh APIs, and AutoDream Data Pipelines. This design ensures that One Human Corp (OHC) operates seamlessly as a Hybrid Agentic OS, balancing cloud-native scalability with standalone desktop privacy.
+This document provides the architectural blueprints for the OmniSolo Swarm core functionalities: Shared Task List, Teammate Mesh APIs, and AutoDream Data Pipelines. This design ensures that OmniSolo (OmniSolo) operates seamlessly as a Hybrid Agentic OS, balancing cloud-native scalability with standalone desktop privacy.
 
 <h2>1. Phase 1: Shared Task List (Decomposition)</h2>
 The Shared Task List empowers the swarm by tracking complex task dependencies via a distributed state machine.

@@ -5,12 +5,12 @@ For online service providers like Leo (music tutor), manually creating a Zoom li
 
 ## Research Report
 - **Target Tools**: Zoom API, Google Meet API (via Google Workspace integration).
-- **Competitive Analysis**: Calendly does this perfectly. OHC needs parity to be viable for online consultants/tutors.
+- **Competitive Analysis**: Calendly does this perfectly. OmniSolo needs parity to be viable for online consultants/tutors.
 - **Ease of Use**: User authenticates their Zoom or Google account once.
 - **Pricing**: Free APIs, though Zoom requires the user to have a licensed Zoom account for meetings over 40 minutes.
 - **Reputation**: Essential tools for remote work and online services.
 - **Advantages and Risks**: Creates a fully automated tutoring business. Risk is OAuth token expiration leading to failed meeting creations.
-- **Cloud vs Standalone**: Same constraints as Calendars. Works perfectly in Cloud. Standalone may have trouble with OAuth redirects unless routed through OHC Cloud.
+- **Cloud vs Standalone**: Same constraints as Calendars. Works perfectly in Cloud. Standalone may have trouble with OAuth redirects unless routed through OmniSolo Cloud.
 
 ## Design Doc
 - **Integration Flow**: When setting up a service, the user selects "Location: Online Video Call" and connects their Zoom or Google account.

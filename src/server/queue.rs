@@ -471,7 +471,7 @@ impl Worker {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
                             tracing::debug!("Worker processing job: {}", job.id);
-                            let handle_res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), self.handler.handle(job.clone())).await;
+                            let handle_res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), self.handler.handle(job.clone())).await;
                             let handler_res = match handle_res {
                                 Ok(Ok(())) => Ok(()),
                                 Ok(Err(e)) => Err(e),
@@ -591,7 +591,7 @@ impl WorkerPool {
                                 Ok(payload) => {
                                     tracing::debug!("Worker {} processing job", i);
                                     let handle_res = tokio::time::timeout(
-                                        ohc_builtin_agent::agent::agent_task_timeout(),
+                                        omnisolo_builtin_agent::agent::agent_task_timeout(),
                                         handler.handle(payload),
                                     ).await;
                                     match handle_res {
@@ -806,7 +806,7 @@ impl QueueManager {
                                 let mut attempts = job.payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                                 let max_attempts = job.payload.get("max_attempts").and_then(|v| v.as_i64()).unwrap_or(3) as i32;
                                 attempts += 1;
-                                let handle_res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), handler(job.clone())).await;
+                                let handle_res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), handler(job.clone())).await;
                                 let handler_res = match handle_res {
                                     Ok(Ok(())) => Ok(()),
                                     Ok(Err(e)) => Err(e),
@@ -1203,7 +1203,7 @@ impl TaskQueue for RedisTaskQueue {
         let mut conn = self.get_connection().await?;
         let mut pipe = redis::pipe();
         for job in jobs {
-            let queue_job = ::server_ohc::interop::QueueJob {
+            let queue_job = ::server_omnisolo::interop::QueueJob {
                 id: job.id,
                 tenant_id: job.tenant_id,
                 parent_task_id: job.parent_task_id,
@@ -1226,7 +1226,7 @@ impl TaskQueue for RedisTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
-        let queue_job = ::server_ohc::interop::QueueJob {
+        let queue_job = ::server_omnisolo::interop::QueueJob {
             id: job.id,
             tenant_id: job.tenant_id,
             parent_task_id: job.parent_task_id,
@@ -1264,7 +1264,7 @@ impl TaskQueue for RedisTaskQueue {
             .map_err(|e| e.to_string())?;
             
         if let Some((_, payload_bytes)) = result {
-            if let Ok(queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+            if let Ok(queue_job) = <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
                 let job = Job {
                     id: queue_job.id.clone(),
                     tenant_id: queue_job.tenant_id,
@@ -1296,7 +1296,7 @@ impl TaskQueue for RedisTaskQueue {
         let processing_key = format!("{}_processing", self.queue_name);
         let result: Option<Vec<u8>> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if let Some(payload_bytes) = result {
-            if let Ok(queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+            if let Ok(queue_job) = <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
                 if queue_job.tenant_id != tenant_id {
                     return Err("tenant mismatch".to_string());
                 }
@@ -1312,7 +1312,7 @@ impl TaskQueue for RedisTaskQueue {
         let processing_key = format!("{}_processing", self.queue_name);
         let result: Option<Vec<u8>> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if let Some(payload_bytes) = result {
-            if let Ok(queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+            if let Ok(queue_job) = <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
                 if queue_job.tenant_id != tenant_id {
                     return Err("tenant mismatch".to_string());
                 }
@@ -1324,7 +1324,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
-        let queue_job = ::server_ohc::interop::QueueJob {
+        let queue_job = ::server_omnisolo::interop::QueueJob {
             id: job.id,
             tenant_id: job.tenant_id,
             parent_task_id: job.parent_task_id,
@@ -1364,7 +1364,7 @@ impl TaskQueue for RedisTaskQueue {
         let mut stale_count = 0;
 
         for (job_id, payload_bytes) in hash_map {
-            if let Ok(mut queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+            if let Ok(mut queue_job) = <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
                 if queue_job.updated_at_ms < stale_threshold_ms {
                     // Fail the job and remove from processing queue
                     queue_job.status = "FAILED".to_string();
@@ -1393,7 +1393,7 @@ impl TaskQueue for RedisTaskQueue {
             let stagnant_threshold_ms = (Utc::now() - chrono::Duration::hours(24)).timestamp_millis();
 
             for item in items {
-                if let Ok(queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&item[..]) {
+                if let Ok(queue_job) = <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&item[..]) {
                     if queue_job.status == "QUEUED" && queue_job.created_at_ms < stagnant_threshold_ms {
                         // Use LREM to safely remove just this specific stagnant item payload.
                         // LREM key 1 value removes the first occurrence of the exact value.
@@ -1451,7 +1451,7 @@ mod tests {
     async fn test_task_queue_service_push_claim() {
         // Create an actual pool to hit a local database for integration testing.
         // During CI, we assume postgres is available at this URL.
-        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pool = crate::db::secure_pg_pool_options()
 
 
@@ -1504,7 +1504,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_queue_manager_tenant_isolation() {
-        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pool = crate::db::secure_pg_pool_options()
                 .connect_lazy(&db_url)
                 .unwrap();
@@ -1590,7 +1590,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_queue_service_fail_task() {
-        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pool = crate::db::secure_pg_pool_options()
 
                 .connect_lazy(&db_url)
@@ -1642,7 +1642,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_queue_service_with_dependencies() {
-        if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(db_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pool = crate::db::secure_pg_pool_options()
 
 

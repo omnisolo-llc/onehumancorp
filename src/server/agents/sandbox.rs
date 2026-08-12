@@ -64,12 +64,12 @@ impl LocalEnvironment {
 
         // Scrub sensitive environment variables to prevent secrets leaking into sandboxed commands
         for var in &[
-            "OHC_API_KEY",
+            "OMNISOLO_API_KEY",
             "GH_TOKEN",
             "GITHUB_TOKEN",
             "OTEL_EXPORTER_OTLP_HEADERS",
-            "OHC_SQLITE_KEY",
-            "OHC_SQLITE_ENCRYPTION_KEY",
+            "OMNISOLO_SQLITE_KEY",
+            "OMNISOLO_SQLITE_ENCRYPTION_KEY",
             "JWT_SECRET",
             "MINIMAX_API_KEY",
             "OPENAI_API_KEY",
@@ -81,9 +81,9 @@ impl LocalEnvironment {
             "TWILIO_AUTH_TOKEN",
             "RESTIC_PASSWORD",
             "MERCADOPAGO_ACCESS_TOKEN",
-            "OHC_POWERSYNC_PRIV_KEY",
+            "OMNISOLO_POWERSYNC_PRIV_KEY",
             "DATABASE_URL",
-            "OHC_DATABASE_URL",
+            "OMNISOLO_DATABASE_URL",
             "REDIS_URL",
             "VALKEY_URL",
             "NATS_URL",

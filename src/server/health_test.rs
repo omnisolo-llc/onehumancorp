@@ -7,8 +7,8 @@ use crate::api::health::health_handler;
 
 #[tokio::test]
 async fn test_health_handler_success() {
-    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+    let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
@@ -50,8 +50,8 @@ async fn test_health_handler_success() {
 async fn test_setup_health_check_endpoint() {
     use crate::services::onboarding::onboarding_agent::OnboardingAgent;
 
-    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+    let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
@@ -95,7 +95,7 @@ async fn test_setup_health_check_endpoint() {
         })
         .unwrap();
 
-    let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+    let transport: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> = Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
 
     // We need to provide the MeshTransport state because the router expects it
     let app = crate::api::onboarding::router(agent, auth_store).with_state(transport);

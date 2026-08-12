@@ -289,7 +289,7 @@
 
     <button class="btn-submit" id="submit-btn" disabled>Submit Review</button>
 
-    <div class="branding">⚡ Powered by OHC</div>
+    <div class="branding">⚡ Powered by OmniSolo</div>
   </div>
 
   <!-- Success View (Hidden initially) -->
@@ -311,7 +311,7 @@
             <h3>Get 15% Off Your Next Order</h3>
           </div>
           <p class="reward-text">
-            Share this link with friends. They get 15% off, and you get 15% off when they buy! ⚡ Powered by OHC
+            Share this link with friends. They get 15% off, and you get 15% off when they buy! ⚡ Powered by OmniSolo
           </p>
 
 
@@ -325,7 +325,7 @@
           </div>
 
           <div class="copy-group" style="margin-top: 16px;">
-            <input type="text" class="copy-input" id="referral-link" readonly value="https://ohc.app/invite?ref=demo" />
+            <input type="text" class="copy-input" id="referral-link" readonly value="https://cloud.omnisolo.co/invite?ref=demo" />
             <button class="btn-copy" id="copy-btn">Copy</button>
           </div>
         </div>
@@ -418,7 +418,7 @@
             }),
           });
 
-          let link = 'https://ohc.app/invite?ref=demo';
+          let link = 'https://cloud.omnisolo.co/invite?ref=demo';
           if (response.ok) {
             const data = await response.json();
             if (data.referral_link) {
@@ -429,7 +429,7 @@
           showSuccess(link);
         } catch (error) {
           console.error("Error submitting review:", error);
-          showSuccess('https://ohc.app/invite?ref=demo');
+          showSuccess('https://cloud.omnisolo.co/invite?ref=demo');
         }
       });
 

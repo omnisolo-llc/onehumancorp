@@ -4,10 +4,12 @@ import { chromium } from '@playwright/test';
 import {
   HYDRATION_FAILURE_PATTERN,
   classifyConsoleError,
+  expectedShellCounts,
   failureReasons,
   isCoverageComplete,
   shouldFailAudit,
 } from './visual-audit-policy.mjs';
+import { loginForVisualAudit } from './visual-audit-auth.mjs';
 import { discoverPageRoutes, shardAuditCases } from './visual-audit-routes.mjs';
 
 const baseUrl = process.env.VISUAL_AUDIT_BASE_URL || 'http://127.0.0.1:3000';
@@ -39,16 +41,27 @@ function base64url(value) {
 }
 
 async function createAuditSessionCookie() {
-  const keyId = process.env.OHC_WEB_SESSION_KEY_ID;
-  const encodedSecret = process.env.OHC_WEB_SESSION_SECRET;
+  const keyId = process.env.OMNISOLO_WEB_SESSION_KEY_ID;
+  const encodedSecret = process.env.OMNISOLO_WEB_SESSION_SECRET;
   if (!keyId || !encodedSecret) {
-    throw new Error('OHC_WEB_SESSION_KEY_ID and OHC_WEB_SESSION_SECRET are required for authenticated visual auditing');
+    throw new Error('OMNISOLO_WEB_SESSION_KEY_ID and OMNISOLO_WEB_SESSION_SECRET are required for authenticated visual auditing');
   }
   const keyBytes = Buffer.from(encodedSecret, 'base64url');
   if (keyBytes.byteLength !== 32) throw new Error('visual audit session secret must contain 32 bytes');
+  const authOrigin = process.env.VISUAL_AUDIT_AUTH_URL
+    || process.env.OMNISOLO_BACKEND_URL
+    || process.env.BACKEND_URL;
+  const auditSession = await loginForVisualAudit({
+    authOrigin,
+    username: process.env.VISUAL_AUDIT_USERNAME,
+    password: process.env.VISUAL_AUDIT_PASSWORD,
+    organizationId: process.env.VISUAL_AUDIT_ORGANIZATION_ID,
+  });
   const origin = new URL(baseUrl).origin;
   const cookieName = new URL(origin).protocol === 'https:' ? '__Host-ohc_session' : 'ohc_session';
   const now = Math.floor(Date.now() / 1000);
+  const expiresAt = Math.min(now + 3_600, auditSession.expiresAt);
+  if (expiresAt <= now) throw new Error('visual audit login returned an already expired token');
   const protectedSegment = base64url(JSON.stringify({
     alg: 'dir',
     enc: 'A256GCM',
@@ -58,14 +71,9 @@ async function createAuditSessionCookie() {
   const payload = Buffer.from(JSON.stringify({
     version: 1,
     iat: now,
-    exp: now + 3_600,
-    accessToken: 'visual-audit-backend-token',
-    user: {
-      id: 'visual-audit-user',
-      username: 'Visual Audit',
-      roles: ['ADMIN'],
-      organizationId: 'visual-audit-organization',
-    },
+    exp: expiresAt,
+    accessToken: auditSession.accessToken,
+    user: auditSession.user,
     aud: origin,
     purpose: cookieName,
   }));
@@ -225,9 +233,15 @@ try {
         });
         result.status = response?.status() ?? null;
         result.finalPathname = new URL(page.url()).pathname;
-        await page.waitForFunction(() => document.querySelectorAll('.app-sidebar').length === 1
-          && document.querySelectorAll('.app-topbar').length === 1
-          && document.querySelectorAll('.app-main').length === 1, undefined, { timeout: 30_000 });
+        const expectedShell = expectedShellCounts(auditCase.route);
+        if (auditCase.route === '/login') {
+          await page.locator('#login-title').waitFor({ state: 'visible', timeout: 30_000 });
+        } else {
+          await page.waitForFunction((shell) => document.querySelectorAll('.app-sidebar').length === shell.sidebar
+            && document.querySelectorAll('.app-topbar').length === shell.topbar
+            && document.querySelectorAll('.app-main').length === shell.main,
+          expectedShell, { timeout: 30_000 });
+        }
         if (auditCase.route === '/inbox') {
           await page.getByTestId('inbox-settled').waitFor({ state: 'visible', timeout: 30_000 });
         }

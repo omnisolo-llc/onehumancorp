@@ -280,10 +280,10 @@ impl ClaudeSubagentSpawner {
                 let end = std::cmp::min(i + CHUNK_SIZE_CHARS, chars.len());
                 let chunk: String = chars[i..end].iter().collect();
 
-                let req = ohc_builtin_agent_core::types::ChatRequest {
+                let req = omnisolo_builtin_agent_core::types::ChatRequest {
                     model: config.model.clone(),
                     system: ::server_pricing::compression::reduce_tokens(system_prompt),
-                    messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
+                    messages: vec![omnisolo_builtin_agent_core::types::Message::user(chunk)],
                     tools: vec![],
                     max_tokens: 2000,
                     temperature: 0.0,
@@ -314,10 +314,10 @@ impl ClaudeSubagentSpawner {
         // The instructions say: "Subagents return 1k-2k token condensed summaries".
         // Let's do one final pass if it wasn't condensed yet (i.e. length was <= TARGET_CHARS_MAX but we still want a clean summary).
         if raw_output.len() == current_text.len() && current_text.len() > 1000 {
-            let req = ohc_builtin_agent_core::types::ChatRequest {
+            let req = omnisolo_builtin_agent_core::types::ChatRequest {
                 model: config.model.clone(),
                 system: ::server_pricing::compression::reduce_tokens(system_prompt),
-                messages: vec![ohc_builtin_agent_core::types::Message::user(current_text)],
+                messages: vec![omnisolo_builtin_agent_core::types::Message::user(current_text)],
                 tools: vec![],
                 max_tokens: 2000,
                 temperature: 0.0,
@@ -353,9 +353,9 @@ mod tests {
     impl crate::llm::LlmClient for MockLlmClient {
         async fn chat(
             &self,
-            _req: ohc_builtin_agent_core::types::ChatRequest,
+            _req: omnisolo_builtin_agent_core::types::ChatRequest,
         ) -> Result<
-            ohc_builtin_agent_core::types::ChatResponse,
+            omnisolo_builtin_agent_core::types::ChatResponse,
             Box<dyn std::error::Error + Send + Sync>,
         > {
             let mut resps = self.responses.lock().unwrap();
@@ -365,8 +365,8 @@ mod tests {
                 "default".to_string()
             };
 
-            let message = ohc_builtin_agent_core::types::Message {
-                role: ohc_builtin_agent_core::types::Role::Assistant,
+            let message = omnisolo_builtin_agent_core::types::Message {
+                role: omnisolo_builtin_agent_core::types::Role::Assistant,
                 content,
                 tool_calls: vec![],
                 tool_results: vec![],
@@ -374,7 +374,7 @@ mod tests {
                 previous_response_id: None,
             };
 
-            Ok(ohc_builtin_agent_core::types::ChatResponse {
+            Ok(omnisolo_builtin_agent_core::types::ChatResponse {
                 message,
                 usage: Default::default(),
                 response_id: None,
@@ -391,13 +391,13 @@ mod tests {
         impl crate::llm::LlmClient for BadLlmClient {
             async fn chat(
                 &self,
-                _req: ohc_builtin_agent_core::types::ChatRequest,
+                _req: omnisolo_builtin_agent_core::types::ChatRequest,
             ) -> Result<
-                ohc_builtin_agent_core::types::ChatResponse,
+                omnisolo_builtin_agent_core::types::ChatResponse,
                 Box<dyn std::error::Error + Send + Sync>,
             > {
-                let message = ohc_builtin_agent_core::types::Message {
-                    role: ohc_builtin_agent_core::types::Role::Assistant,
+                let message = omnisolo_builtin_agent_core::types::Message {
+                    role: omnisolo_builtin_agent_core::types::Role::Assistant,
                     content: "A".repeat(9000), // always returns > 8000
                     tool_calls: vec![],
                     tool_results: vec![],
@@ -405,7 +405,7 @@ mod tests {
                     previous_response_id: None,
                 };
 
-                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                Ok(omnisolo_builtin_agent_core::types::ChatResponse {
                     message,
                     usage: Default::default(),
                     response_id: None,
@@ -682,9 +682,9 @@ mod tests {
         impl crate::llm::LlmClient for CondensingLlmClient {
             async fn chat(
                 &self,
-                _req: ohc_builtin_agent_core::types::ChatRequest,
+                _req: omnisolo_builtin_agent_core::types::ChatRequest,
             ) -> Result<
-                ohc_builtin_agent_core::types::ChatResponse,
+                omnisolo_builtin_agent_core::types::ChatResponse,
                 Box<dyn std::error::Error + Send + Sync>,
             > {
                 let mut count = self.call_count.lock().unwrap();
@@ -699,8 +699,8 @@ mod tests {
                     "Unexpected extra call".to_string()
                 };
 
-                let message = ohc_builtin_agent_core::types::Message {
-                    role: ohc_builtin_agent_core::types::Role::Assistant,
+                let message = omnisolo_builtin_agent_core::types::Message {
+                    role: omnisolo_builtin_agent_core::types::Role::Assistant,
                     content,
                     tool_calls: vec![],
                     tool_results: vec![],
@@ -708,7 +708,7 @@ mod tests {
                     previous_response_id: None,
                 };
 
-                Ok(ohc_builtin_agent_core::types::ChatResponse {
+                Ok(omnisolo_builtin_agent_core::types::ChatResponse {
                     message,
                     usage: Default::default(),
                     response_id: None,

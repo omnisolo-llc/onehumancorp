@@ -33,7 +33,7 @@ test.describe('Viral Giveaway Loop', () => {
     // We mock localStorage if needed, but fixtures set it.
     await page.evaluate(() => { localStorage.setItem('has_pro', 'true'); window.dispatchEvent(new Event('storage')); });
 
-    const generatorFooterLink = page.locator('a', { hasText: '⚡ Powered by OHC' }).first();
+    const generatorFooterLink = page.locator('a', { hasText: '⚡ Powered by OmniSolo' }).first();
     await expect(generatorFooterLink).toBeVisible();
 
     const generateBtn = page.getByRole('button', { name: 'Generate Giveaway Link' });
@@ -55,8 +55,8 @@ test.describe('Viral Giveaway Loop', () => {
     await expect(publicPage.getByRole('heading', { name: 'Win a Free iPad!' })).toBeVisible();
     await expect(publicPage.getByText('Enter your email to win an iPad')).toBeVisible();
 
-    // Verify "Powered by OHC" footer
-    const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OHC' }).first();
+    // Verify "Powered by OmniSolo" footer
+    const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OmniSolo' }).first();
     await expect(footerLink).toBeVisible();
     const footerHref = await footerLink.getAttribute('href');
     expect(footerHref).toContain('/api/v1/growth/referrals/click');
@@ -116,7 +116,7 @@ test.describe('Viral Giveaway Loop', () => {
     await expect(page.locator('text=Pro Feature')).not.toBeVisible();
 
     // Preview section should hide the branding
-    await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
+    await expect(page.locator('a', { hasText: '⚡ Powered by OmniSolo' })).not.toBeVisible();
 
     const generateBtn = page.getByRole('button', { name: 'Generate Giveaway Link' });
     await expect(generateBtn).toBeEnabled();
@@ -131,8 +131,8 @@ test.describe('Viral Giveaway Loop', () => {
     const publicPage = await context.newPage();
     await publicPage.goto(generatedUrl);
 
-    // Verify "Powered by OHC" footer is not present
-    await expect(publicPage.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
+    // Verify "Powered by OmniSolo" footer is not present
+    await expect(publicPage.locator('a', { hasText: '⚡ Powered by OmniSolo' })).not.toBeVisible();
 
     await publicPage.close();
   });
@@ -156,8 +156,8 @@ test.describe('Viral Giveaway Loop', () => {
   test('should hide footer when branding=false is in the url', async ({ page }) => {
     await page.goto('/giveaway/enter?branding=false');
 
-    // Verify "Powered by OHC" footer is not present
-    await expect(page.locator('a', { hasText: '⚡ Powered by OHC' })).not.toBeVisible();
+    // Verify "Powered by OmniSolo" footer is not present
+    await expect(page.locator('a', { hasText: '⚡ Powered by OmniSolo' })).not.toBeVisible();
   });
 
 });

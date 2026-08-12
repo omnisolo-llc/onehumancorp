@@ -10,7 +10,7 @@ Small business owners like Maya (baker), Carlos (handyman), Priya (boutique owne
 - **Shopify:** Offers Customer profiles, but it heavily relies on email/phone matching at checkout. Omnichannel messaging (like merging an Instagram DM with an in-store POS transaction) requires third-party apps like Gorgias or Klaviyo, which are expensive and complex to set up.
 - **Wix:** Provides a CRM (Ascend) that captures form submissions and store orders, but lacks native invisible identity resolution across external social channels like WhatsApp and tap-to-pay offline events without manual entry.
 - **Square / GoDaddy:** Square excels at in-person identity (linking cards to phone numbers), but struggles to bring that context into social media DMs. GoDaddy has a unified inbox, but identity resolution is basic.
-- **Opportunity for OneHumanCorp:** By building an *Invisible Omnichannel Customer Identity Graph*, OHC can automatically link a customer's WhatsApp number, Instagram handle, email, phone number, and physical credit card token (from Tap-to-Pay) into a single, secure customer entity. This allows AI agents to provide hyper-personalized responses (e.g., "Hi Sarah, do you want to reorder your usual vegan cake?") regardless of the channel.
+- **Opportunity for OmniSolo:** By building an *Invisible Omnichannel Customer Identity Graph*, OmniSolo can automatically link a customer's WhatsApp number, Instagram handle, email, phone number, and physical credit card token (from Tap-to-Pay) into a single, secure customer entity. This allows AI agents to provide hyper-personalized responses (e.g., "Hi Sarah, do you want to reorder your usual vegan cake?") regardless of the channel.
 
 ## Design Doc
 

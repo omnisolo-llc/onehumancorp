@@ -28,7 +28,7 @@ mod parity_tests {
     }
 
     async fn setup_postgres_db() -> Option<Arc<DB>> {
-        if let Ok(url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(url) = std::env::var("OMNISOLO_DATABASE_URL") {
             if url.starts_with("postgres") {
                 let pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(100))
                     .connect(&url)

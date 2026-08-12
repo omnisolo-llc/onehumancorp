@@ -6,7 +6,7 @@ use sqlx::{PgPool, Row};
 use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
-use ohc_builtin_agent::llm::LlmClient;
+use omnisolo_builtin_agent::llm::LlmClient;
 
 pub const CART_RECOVERY_JOB_TYPE: &str = "cart_recovery";
 
@@ -37,8 +37,8 @@ impl Default for CartRecoveryConfig {
         Self {
             abandoned_after: Duration::minutes(60),
             batch_limit: 50,
-            checkout_base_url: std::env::var("OHC_CHECKOUT_BASE_URL")
-                .unwrap_or_else(|_| "https://app.onehumancorp.com".to_string()),
+            checkout_base_url: std::env::var("OMNISOLO_CHECKOUT_BASE_URL")
+                .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string()),
         }
     }
 }
@@ -157,7 +157,7 @@ pub struct CartRecoveryService<S, D> {
 }
 
 fn build_recovery_llm_client() -> Option<Arc<dyn LlmClient>> {
-    let key = std::env::var("OHC_LLM_API_KEY")
+    let key = std::env::var("OMNISOLO_LLM_API_KEY")
         .or_else(|_| std::env::var("OPENAI_API_KEY"))
         .unwrap_or_default();
 
@@ -166,20 +166,20 @@ fn build_recovery_llm_client() -> Option<Arc<dyn LlmClient>> {
     }
 
     let endpoint = std::env::var("OPENAI_BASE_URL")
-        .or_else(|_| std::env::var("OHC_OPENAI_BASE_URL"))
-        .or_else(|_| std::env::var("OHC_LLM_BASE_URL"))
-        .or_else(|_| std::env::var("OHC_LLM_ENDPOINT"))
+        .or_else(|_| std::env::var("OMNISOLO_OPENAI_BASE_URL"))
+        .or_else(|_| std::env::var("OMNISOLO_LLM_BASE_URL"))
+        .or_else(|_| std::env::var("OMNISOLO_LLM_ENDPOINT"))
         .ok();
 
-    let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
+    let model = std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
 
     let mut config = if let Some(endpoint) = endpoint {
-        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
+        omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
     } else {
-        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
+        omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
     };
     config.default_model = Some(model);
-    Some(Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config)))
+    Some(Arc::new(omnisolo_builtin_agent::llm::openai::OpenAIClient::from_config(config)))
 }
 
 pub struct CartRecoveryJobProcessor<D> {
@@ -280,7 +280,7 @@ impl HttpCartRecoveryDeliveryProvider {
             "personalizations": [{
                 "to": [{"email": to}]
             }],
-            "from": {"email": "no-reply@onehumancorp.com"},
+            "from": {"email": "no-reply@omnisolo.co"},
             "subject": payload.subject.as_str(),
             "content": [{"type": "text/plain", "value": payload.body.as_str()}]
         });
@@ -464,10 +464,10 @@ async fn recovery_message_for(
             business_name, customer_name, amount, checkout_type, checkout_url, customer_name, business_name
         );
 
-        let req = ohc_builtin_agent::types::ChatRequest {
+        let req = omnisolo_builtin_agent::types::ChatRequest {
             model: "default".to_string(),
             system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-            messages: vec![ohc_builtin_agent::types::Message::user(&::server_pricing::compression::reduce_tokens(&user_prompt))],
+            messages: vec![omnisolo_builtin_agent::types::Message::user(&::server_pricing::compression::reduce_tokens(&user_prompt))],
             tools: vec![],
             max_tokens: 500,
             temperature: 0.7,
@@ -476,7 +476,7 @@ async fn recovery_message_for(
         if let Ok(resp) = llm_client.chat(req).await {
             let generated = resp.message.content.trim();
             if !generated.is_empty() {
-                body = format!("{}\n\n⚡ Powered by OHC", generated);
+                body = format!("{}\n\n⚡ Powered by OmniSolo", generated);
             }
         }
     }
@@ -618,7 +618,7 @@ impl PostgresQueueRecoveryDispatcher {
     }
 
     pub fn from_env(pool: Arc<PgPool>) -> Self {
-        let enabled = std::env::var("OHC_CART_RECOVERY_AGENT_QUEUE_ENABLED")
+        let enabled = std::env::var("OMNISOLO_CART_RECOVERY_AGENT_QUEUE_ENABLED")
             .map(|value| matches!(value.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
             .unwrap_or(false);
         Self::new(pool, enabled)
@@ -638,7 +638,7 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
     ) -> Result<RecoveryDispatchReceipt, CartRecoveryError> {
         if !self.enabled {
             return Err(CartRecoveryError::MissingProviderConfig(
-                "OHC_CART_RECOVERY_AGENT_QUEUE_ENABLED is not enabled".to_string(),
+                "OMNISOLO_CART_RECOVERY_AGENT_QUEUE_ENABLED is not enabled".to_string(),
             ));
         }
 
@@ -835,7 +835,7 @@ where
 pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>) {
     let scan_pool = pool.clone();
     tokio::spawn(async move {
-        let interval_seconds = std::env::var("OHC_CART_RECOVERY_SCAN_INTERVAL_SECONDS")
+        let interval_seconds = std::env::var("OMNISOLO_CART_RECOVERY_SCAN_INTERVAL_SECONDS")
             .ok()
             .and_then(|value| value.parse::<u64>().ok())
             .unwrap_or(300)
@@ -862,7 +862,7 @@ pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>) {
     });
 
     tokio::spawn(async move {
-        let interval_seconds = std::env::var("OHC_CART_RECOVERY_DISPATCH_INTERVAL_SECONDS")
+        let interval_seconds = std::env::var("OMNISOLO_CART_RECOVERY_DISPATCH_INTERVAL_SECONDS")
             .ok()
             .and_then(|value| value.parse::<u64>().ok())
             .unwrap_or(15)

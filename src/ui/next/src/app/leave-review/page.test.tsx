@@ -25,7 +25,7 @@ describe('LeaveReviewPage', () => {
     expect(screen.getByText('How was your experience?')).toBeDefined();
     expect(screen.getByText('Order #123')).toBeDefined();
     expect(screen.getByText('Submit Review')).toBeDefined();
-    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
+    expect(screen.getByText('⚡ Powered by OmniSolo')).toBeDefined();
   });
 
   it('does not fabricate review or referral success after a 5-star review', async () => {

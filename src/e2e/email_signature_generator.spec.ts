@@ -25,7 +25,7 @@ test.describe('Email Signature Generator Viral Loop', () => {
     await expect(previewContainer).toContainText('Chief E2E Tester');
 
     // 5. Verify the viral loop backlink is present
-    await expect(previewContainer).toContainText('One Human Corp');
+    await expect(previewContainer).toContainText('OmniSolo');
     await expect(previewContainer.locator('a[href*="api/v1/growth/referrals/click"]')).toBeVisible();
 
     // 6. Click "Copy Signature HTML" button
@@ -37,7 +37,7 @@ test.describe('Email Signature Generator Viral Loop', () => {
 
   test('should show soft paywall when attempting to remove branding', async ({ page }) => {
     // Check the remove branding checkbox
-    const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OHC" branding');
+    const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OmniSolo" branding');
     await removeBrandingCheckbox.click();
 
     // Verify soft paywall appears

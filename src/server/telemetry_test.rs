@@ -105,7 +105,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_buffer_metric_persistence() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -131,7 +131,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_metrics() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -146,7 +146,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_token_burn_rate_predicted_24h() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -172,7 +172,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_llm_call_cost() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return,
@@ -200,7 +200,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_agent_cost() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -236,7 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_api_call_cost() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -263,7 +263,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_swarm_job_latency_by_entity() {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -291,15 +291,15 @@ mod tests {
     #[test]
     fn test_buffer_metric_respects_standalone() {
         let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
-        temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true"))], || {
+        temp_env::with_vars(vec![("OMNISOLO_STANDALONE_MODE", Some("true"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        // Ensure OHC_STANDALONE_MODE is true. Telemetry should be ignored
+        // Ensure OMNISOLO_STANDALONE_MODE is true. Telemetry should be ignored
 
         let labels = json!({"user_id": "standalone_test"});
         let res: Result<(), _> = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
@@ -320,15 +320,15 @@ mod tests {
     #[test]
     fn test_buffer_metric_i64_respects_standalone() {
         let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
-        temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true"))], || {
+        temp_env::with_vars(vec![("OMNISOLO_STANDALONE_MODE", Some("true"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        // Ensure OHC_STANDALONE_MODE is true. Telemetry should be ignored
+        // Ensure OMNISOLO_STANDALONE_MODE is true. Telemetry should be ignored
         let labels = json!({"user_id": "standalone_test_i64"});
         let res: Result<(), _> = ::server_telemetry::buffer_metric_i64(&pool, "test_standalone_i64", "counter", 1, labels).await;
         assert!(res.is_ok());
@@ -348,9 +348,9 @@ mod tests {
     #[test]
     fn test_record_rag_escalation_telemetry_respects_standalone() {
         let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
-        temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true"))], || {
+        temp_env::with_vars(vec![("OMNISOLO_STANDALONE_MODE", Some("true"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -382,16 +382,16 @@ mod tests {
         let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
         temp_env::with_vars(
             [
-                ("OHC_STANDALONE_MODE", Some("true")),
-                ("OHC_TELEMETRY_ENABLED", Some("false")),
-                ("OHC_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
-                ("OHC_SQLITE_KEY", Some("test-key")),
+                ("OMNISOLO_STANDALONE_MODE", Some("true")),
+                ("OMNISOLO_TELEMETRY_ENABLED", Some("false")),
+                ("OMNISOLO_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OMNISOLO_SQLITE_KEY", Some("test-key")),
             ],
             || {
                 let config = ::server_config::load().unwrap();
 
                 // Assert that the config logic matches the policy:
-                // If OHC_STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=false, telemetry should NOT run.
+                // If OMNISOLO_STANDALONE_MODE=true and OMNISOLO_TELEMETRY_ENABLED=false, telemetry should NOT run.
                 let should_start_telemetry = config.telemetry_enabled;
 
                 assert!(!(should_start_telemetry));
@@ -404,15 +404,15 @@ mod tests {
         let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
         temp_env::with_vars(
             [
-                ("OHC_STANDALONE_MODE", Some("true")),
-                ("OHC_TELEMETRY_ENABLED", Some("true")),
-                ("OHC_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
-                ("OHC_SQLITE_KEY", Some("test-key")),
+                ("OMNISOLO_STANDALONE_MODE", Some("true")),
+                ("OMNISOLO_TELEMETRY_ENABLED", Some("true")),
+                ("OMNISOLO_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OMNISOLO_SQLITE_KEY", Some("test-key")),
             ],
             || {
                 let config = ::server_config::load().unwrap();
 
-                // If OHC_STANDALONE_MODE=true and OHC_TELEMETRY_ENABLED=true, telemetry SHOULD run.
+                // If OMNISOLO_STANDALONE_MODE=true and OMNISOLO_TELEMETRY_ENABLED=true, telemetry SHOULD run.
                 let should_start_telemetry = config.telemetry_enabled;
 
                 assert!(should_start_telemetry);
@@ -429,7 +429,7 @@ async fn test_queue_length_gauge_initialization() {
 
 #[tokio::test]
 async fn test_record_queue_length_with_deployment_mode() {
-    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
     let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
         Ok(Ok(p)) => p,
         _ => return, // Gracefully exit if DB is not available in sandbox or times out
@@ -451,28 +451,28 @@ async fn test_record_queue_length_with_deployment_mode() {
 }
 #[test]
 fn test_standalone_wrapper_audit() {
-    let mut script_path = std::path::PathBuf::from("deploy/scripts/ohc-standalone.sh");
+    let mut script_path = std::path::PathBuf::from("deploy/scripts/omnisolo-standalone.sh");
     if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
-        script_path = std::path::PathBuf::from(workspace_dir).join("deploy/scripts/ohc-standalone.sh");
+        script_path = std::path::PathBuf::from(workspace_dir).join("deploy/scripts/omnisolo-standalone.sh");
     } else if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
-        script_path = std::path::PathBuf::from(runfiles_dir).join("ohc/deploy/scripts/ohc-standalone.sh");
+        script_path = std::path::PathBuf::from(runfiles_dir).join("ohc/deploy/scripts/omnisolo-standalone.sh");
     }
     if !script_path.exists() {
-        script_path = std::path::PathBuf::from("deploy/scripts/ohc-standalone.sh");
+        script_path = std::path::PathBuf::from("deploy/scripts/omnisolo-standalone.sh");
     }
-    let content = std::fs::read_to_string(script_path).expect("Failed to read ohc-standalone.sh script");
+    let content = std::fs::read_to_string(script_path).expect("Failed to read omnisolo-standalone.sh script");
 
-    let expected_telemetry_check = r#"if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
-  export OHC_TELEMETRY_ENABLED=false
+    let expected_telemetry_check = r#"if [ "$OMNISOLO_TELEMETRY_ENABLED" != "true" ]; then
+  export OMNISOLO_TELEMETRY_ENABLED=false
   export DISABLE_TELEMETRY=true
 else
-  export OHC_TELEMETRY_ENABLED=true
+  export OMNISOLO_TELEMETRY_ENABLED=true
   unset DISABLE_TELEMETRY
 fi"#;
 
     assert!(
         content.contains(expected_telemetry_check),
-        "Local Sovereignty violation: ohc-standalone.sh does not properly strictly enforce OHC_TELEMETRY_ENABLED opt-in boundary."
+        "Local Sovereignty violation: omnisolo-standalone.sh does not properly strictly enforce OMNISOLO_TELEMETRY_ENABLED opt-in boundary."
     );
 }
 
@@ -757,15 +757,15 @@ fn test_record_error_signal() {
     #[test]
     fn test_telemetry_standalone_strict_override() {
         // Enforce Local Sovereignty
-        // Ensures that OHC_STANDALONE_MODE properly overrides any implicit telemetry activation.
-        // It must default to false unless OHC_TELEMETRY_ENABLED is explicitly "true".
+        // Ensures that OMNISOLO_STANDALONE_MODE properly overrides any implicit telemetry activation.
+        // It must default to false unless OMNISOLO_TELEMETRY_ENABLED is explicitly "true".
         let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
         temp_env::with_vars(
             [
-                ("OHC_STANDALONE_MODE", Some("true")),
-                ("OHC_TELEMETRY_ENABLED", None::<&str>), // No explicit opt-in
-                ("OHC_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
-                ("OHC_SQLITE_KEY", Some("test-key")),
+                ("OMNISOLO_STANDALONE_MODE", Some("true")),
+                ("OMNISOLO_TELEMETRY_ENABLED", None::<&str>), // No explicit opt-in
+                ("OMNISOLO_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OMNISOLO_SQLITE_KEY", Some("test-key")),
             ],
             || {
                 let config = ::server_config::load().unwrap();
@@ -781,7 +781,7 @@ fn test_categorize_stuck_error_signal() {
 #[test]
 fn test_record_harness_init_latency_respects_standalone() {
     let _lock = crate::tests::ENV_MUTEX.lock().unwrap();
-    temp_env::with_vars(vec![("OHC_STANDALONE_MODE", Some("true")), ("OHC_TELEMETRY_ENABLED", None::<&str>)], || {
+    temp_env::with_vars(vec![("OMNISOLO_STANDALONE_MODE", Some("true")), ("OMNISOLO_TELEMETRY_ENABLED", None::<&str>)], || {
         // Without opt-in, telemetry is disabled in standalone mode.
         // It shouldn't panic, and logic inside should early return.
         ::server_telemetry::record_harness_init_latency(1.23);
@@ -798,8 +798,8 @@ fn test_telemetry_network_disk_usage() {
     // With telemetry disabled, running sync_metrics should just return Ok(()) instead of trying to hit the dummy network
     temp_env::with_vars(
         [
-            ("OHC_STANDALONE_MODE", Some("true")),
-            ("OHC_TELEMETRY_ENABLED", Some("false")),
+            ("OMNISOLO_STANDALONE_MODE", Some("true")),
+            ("OMNISOLO_TELEMETRY_ENABLED", Some("false")),
         ],
         || {
             std::thread::spawn(|| {

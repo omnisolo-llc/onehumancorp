@@ -7,6 +7,7 @@ use axum::{
     routing::post,
 };
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 use std::sync::Arc;
 
 #[derive(Deserialize)]
@@ -63,6 +64,52 @@ fn valid_customer_email(value: &str) -> bool {
         && value.len() <= 320
         && !value.chars().any(char::is_whitespace)
         && !value.contains('\0')
+}
+
+fn valid_customer_id(value: &str) -> bool {
+    let value = value.trim();
+    !value.is_empty()
+        && value.len() <= 128
+        && value
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.'))
+}
+
+fn required_deposit_cents(price_cents: i64, metadata: &serde_json::Value) -> Option<i64> {
+    if metadata
+        .get("requires_deposit")
+        .and_then(serde_json::Value::as_bool)
+        != Some(true)
+    {
+        return None;
+    }
+    let amount = metadata
+        .get("deposit_amount_cents")
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or(price_cents);
+    (amount > 0).then_some(amount.min(price_cents))
+}
+
+fn booking_feed_payloads(
+    booking_id: &str,
+    service_id: &str,
+    start_time: &str,
+    end_time: &str,
+) -> (serde_json::Value, serde_json::Value) {
+    (
+        serde_json::json!({
+            "booking_id": booking_id,
+            "service_id": service_id,
+            "start_time": start_time,
+            "end_time": end_time,
+            "description": "New booking request",
+        }),
+        serde_json::json!({
+            "action_type": "approve_booking",
+            "feature_type": "booking_approval",
+            "booking_id": booking_id,
+        }),
+    )
 }
 
 fn frontend_url() -> Result<reqwest::Url, String> {
@@ -186,6 +233,41 @@ mod tests {
         assert!(valid_customer_email("jane@example.com"));
         assert!(!valid_customer_email("jane.example.com"));
         assert!(!valid_customer_email("jane@localhost"));
+        assert!(valid_customer_id("e2e-customer-bakery"));
+        assert!(!valid_customer_id("../../other-tenant"));
+    }
+
+    #[test]
+    fn checkout_is_required_only_when_product_metadata_requires_a_deposit() {
+        assert_eq!(required_deposit_cents(7_500, &serde_json::json!({})), None);
+        assert_eq!(
+            required_deposit_cents(
+                7_500,
+                &serde_json::json!({"requires_deposit": true, "deposit_amount_cents": 2_500}),
+            ),
+            Some(2_500),
+        );
+        assert_eq!(
+            required_deposit_cents(
+                7_500,
+                &serde_json::json!({"requires_deposit": true, "deposit_amount_cents": 20_000}),
+            ),
+            Some(7_500),
+        );
+    }
+
+    #[test]
+    fn booking_feed_item_contains_an_actionable_approval() {
+        let (context, action) = booking_feed_payloads(
+            "booking-1",
+            "service-1",
+            "2026-08-10T09:00:00Z",
+            "2026-08-10T10:00:00Z",
+        );
+        assert_eq!(context["booking_id"], "booking-1");
+        assert_eq!(action["action_type"], "approve_booking");
+        assert_eq!(action["feature_type"], "booking_approval");
+        assert_eq!(action["booking_id"], "booking-1");
     }
 
     #[test]
@@ -243,16 +325,17 @@ async fn handle_reserve(
             .into_response();
     };
     let supplied_customer_id = match payload.customer_id.as_deref() {
-        Some(customer_id) => match uuid::Uuid::parse_str(customer_id) {
-            Ok(customer_id) => Some(customer_id),
-            Err(_) => {
+        Some(customer_id) => {
+            if valid_customer_id(customer_id) {
+                Some(customer_id.trim().to_string())
+            } else {
                 return (
                     StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({"error": "invalid customer_id"})),
                 )
                     .into_response();
             }
-        },
+        }
         None => None,
     };
     let customer_name = payload.customer_name.as_deref().map(str::trim);
@@ -300,8 +383,8 @@ async fn handle_reserve(
         Some(customer_id)
     } else {
         let email = customer_email.expect("validated customer email");
-        match sqlx::query_scalar::<_, uuid::Uuid>(
-            "SELECT id::uuid FROM customers WHERE tenant_id = $1 AND lower(email) = lower($2) ORDER BY created_at ASC LIMIT 1",
+        match sqlx::query_scalar::<_, String>(
+            "SELECT id FROM customers WHERE tenant_id = $1 AND lower(email) = lower($2) ORDER BY created_at ASC LIMIT 1",
         )
         .bind(&tenant_id)
         .bind(email)
@@ -310,11 +393,11 @@ async fn handle_reserve(
         {
             Ok(Some(customer_id)) => Some(customer_id),
             Ok(None) => {
-                let customer_id = uuid::Uuid::new_v4();
+                let customer_id = uuid::Uuid::new_v4().to_string();
                 if let Err(error) = sqlx::query(
                     "INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)",
                 )
-                .bind(customer_id)
+                .bind(&customer_id)
                 .bind(&tenant_id)
                 .bind(customer_name.expect("validated customer name"))
                 .bind(email)
@@ -343,15 +426,15 @@ async fn handle_reserve(
 
     let booking_id = uuid::Uuid::new_v4().to_string();
 
-    let price = match sqlx::query_scalar::<_, i64>(
-        "SELECT price_cents FROM services WHERE id = $1 AND tenant_id = $2",
+    let product = match sqlx::query(
+        "SELECT price_cents, metadata FROM products WHERE id = $1 AND tenant_id = $2",
     )
     .bind(&payload.service_id)
     .bind(&tenant_id)
     .fetch_optional(&mut *tx)
     .await
     {
-        Ok(Some(price)) => price,
+        Ok(Some(product)) => product,
         Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
@@ -368,6 +451,11 @@ async fn handle_reserve(
                 .into_response();
         }
     };
+    let price_cents: i64 = product.try_get("price_cents").unwrap_or(0);
+    let metadata: serde_json::Value = product
+        .try_get("metadata")
+        .unwrap_or_else(|_| serde_json::json!({}));
+    let deposit_cents = required_deposit_cents(price_cents, &metadata);
 
     let claimed_slot = sqlx::query(
         "UPDATE availability_blocks SET is_available = false WHERE tenant_id = $1 AND service_id = $2 AND start_time = $3 AND end_time = $4 AND is_available = true RETURNING id",
@@ -397,14 +485,14 @@ async fn handle_reserve(
         }
     }
 
-    let booking_status = if price > 0 {
+    let booking_status = if deposit_cents.is_some() {
         "pending_payment"
     } else {
         "pending"
     };
     let res = sqlx::query(
         r#"
-        INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status)
+        INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#,
     )
@@ -434,20 +522,22 @@ async fn handle_reserve(
 
     // Add feed item within the same transaction as the reservation.
     let feed_id = uuid::Uuid::new_v4().to_string();
+    let (feed_context, proposed_action) = booking_feed_payloads(
+        &booking_id,
+        &payload.service_id,
+        &payload.start_time,
+        &payload.end_time,
+    );
     let feed_result = sqlx::query(
         r#"
-        INSERT INTO agent_feed (id, tenant_id, event_source, lifecycle_state, context_payload)
-        VALUES ($1, $2, 'booking_request', 'new', $3)
+        INSERT INTO agent_feed_items (id, tenant_id, event_source, lifecycle_state, context_payload, proposed_action)
+        VALUES ($1, $2, 'booking_request', 'PENDING_APPROVAL', $3, $4)
         "#,
     )
     .bind(&feed_id)
     .bind(&tenant_id)
-    .bind(serde_json::json!({
-        "booking_id": booking_id,
-        "service_id": payload.service_id,
-        "start_time": payload.start_time,
-        "end_time": payload.end_time
-    }))
+    .bind(feed_context)
+    .bind(proposed_action)
     .execute(&mut *tx)
     .await;
     if let Err(error) = feed_result {
@@ -458,7 +548,7 @@ async fn handle_reserve(
         )
             .into_response();
     }
-    let checkout_url = if price > 0 {
+    let checkout_url = if let Some(deposit_cents) = deposit_cents {
         match create_booking_checkout(
             &booking_id,
             &tenant_id,
@@ -466,7 +556,7 @@ async fn handle_reserve(
             &c_id
                 .expect("booking customer is always resolved")
                 .to_string(),
-            price,
+            deposit_cents,
         )
         .await
         {

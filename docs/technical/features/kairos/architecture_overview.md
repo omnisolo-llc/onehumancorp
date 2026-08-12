@@ -3,7 +3,7 @@
 <h1 class="ohc-premium-header">KAIROS Orchestration: Architecture Overview</h1>
 
 ## 1. Executive Summary
-The KAIROS Orchestrator serves as the core intelligence engine of the OHC Swarm. Its responsibility is to translate high-level human directives into structured, executable tasks. KAIROS operates natively across both Cloud-Native Kubernetes clusters (via PostgreSQL, Redis) and Standalone Desktop deployments (via SQLite, in-memory structures), ensuring continuous autonomy and maximum efficiency without deadlocks.
+The KAIROS Orchestrator serves as the core intelligence engine of the OmniSolo Swarm. Its responsibility is to translate high-level human directives into structured, executable tasks. KAIROS operates natively across both Cloud-Native Kubernetes clusters (via PostgreSQL, Redis) and Standalone Desktop deployments (via SQLite, in-memory structures), ensuring continuous autonomy and maximum efficiency without deadlocks.
 
 ## 2. Component Breakdown
 

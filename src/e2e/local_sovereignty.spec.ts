@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('OHC: Local Sovereignty UI Tests', () => {
+test.describe('OmniSolo: Local Sovereignty UI Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/settings');
     await expect(page.locator('h1', { hasText: 'Workspace Settings' }).first()).toBeVisible({ timeout: 45000 });
@@ -37,7 +37,7 @@ test.describe('OHC: Local Sovereignty UI Tests', () => {
     const toggleLabel = page.getByText('Enable Product Telemetry (Standalone Mode)');
     await expect(toggleLabel).toBeVisible();
 
-    const toggleDescription = page.getByText('Shares anonymous usage data to help us improve OHC. Explicit opt-in required for Standalone Mode.');
+    const toggleDescription = page.getByText('Shares anonymous usage data to help us improve OmniSolo. Explicit opt-in required for Standalone Mode.');
     await expect(toggleDescription).toBeVisible();
   });
 

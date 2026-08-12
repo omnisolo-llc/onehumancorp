@@ -148,10 +148,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_incident() {
-        if std::env::var("DATABASE_URL").is_err() && std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("DATABASE_URL").is_err() && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
-        let database_url = std::env::var("OHC_DATABASE_URL").or_else(|_| std::env::var("DATABASE_URL")).unwrap();
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").or_else(|_| std::env::var("DATABASE_URL")).unwrap();
         let pool = PgPool::connect(&database_url).await.unwrap();
 
         let claims = Claims {

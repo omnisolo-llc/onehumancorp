@@ -60,7 +60,7 @@ impl InteractiveWizard {
             }}\n\
             </style>\n\
             <div class=\"wizard-glassmorphism\">\n\
-              <h2 style=\"margin-top: 0; font-weight: 600; font-size: 24px;\">OHC Interactive Setup ({})</h2>\n\
+              <h2 style=\"margin-top: 0; font-weight: 600; font-size: 24px;\">OmniSolo Interactive Setup ({})</h2>\n\
               <p style=\"font-size: 16px; line-height: 1.5; margin-bottom: 0;\">Please review your configuration options.</p>\n\
             </div>",
             mode

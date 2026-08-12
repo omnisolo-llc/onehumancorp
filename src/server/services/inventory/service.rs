@@ -757,7 +757,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_commit_inventory_low_stock() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -805,7 +805,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_reserve_inventory_concurrent_redlock() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 
@@ -830,7 +830,7 @@ mod tests {
             .execute(&pool)
             .await;
 
-        let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        let redis_url = std::env::var("OMNISOLO_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
         let redis_client_opt = redis::Client::open(redis_url).ok();
 
         let service = Arc::new(InventoryService::new( redis_client_opt));
@@ -851,7 +851,7 @@ mod tests {
 
         let success_count = (if res1.success { 1 } else { 0 }) + (if res2.success { 1 } else { 0 });
 
-        if std::env::var("OHC_REDIS_URL").is_ok() {
+        if std::env::var("OMNISOLO_REDIS_URL").is_ok() {
             assert_eq!(success_count, 1, "Only one concurrent request should acquire the lock");
             let failed_res = if res1.success { res2 } else { res1 };
             assert_eq!(failed_res.error_message, "Item is currently being checked out by another customer.");

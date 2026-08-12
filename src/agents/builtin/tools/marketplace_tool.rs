@@ -1,5 +1,5 @@
 use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::json;
 use serde::Deserialize;
 use std::sync::Arc;

@@ -222,16 +222,16 @@ async fn generate_proposal(
         let mut llm_matched = false;
 
         if !key.is_empty() {
-            let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gemini-pro".to_string());
-            let endpoint = std::env::var("OHC_LLM_ENDPOINT").ok();
+            let model = std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "gemini-pro".to_string());
+            let endpoint = std::env::var("OMNISOLO_LLM_ENDPOINT").ok();
 
             let mut config = if let Some(endpoint) = endpoint {
-                ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key.clone(), endpoint, Some(model.clone()))
+                omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key.clone(), endpoint, Some(model.clone()))
             } else {
-                ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key.clone())
+                omnisolo_builtin_agent::llm::openai::OpenAIClientConfig::openai(key.clone())
             };
             config.default_model = Some(model.clone());
-            let llm = ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config);
+            let llm = omnisolo_builtin_agent::llm::openai::OpenAIClient::from_config(config);
 
             let prompt = format!(
                 "You are the Estimator Agent for a service business. You have the following service catalog:
@@ -243,8 +243,8 @@ Task: Extract the scope of work and identify the closest matching service from t
                 catalog_json, request.message
             );
 
-            let req = ohc_builtin_agent::types::ChatRequest {
-                messages: vec![ohc_builtin_agent::types::Message::user(&prompt)],
+            let req = omnisolo_builtin_agent::types::ChatRequest {
+                messages: vec![omnisolo_builtin_agent::types::Message::user(&prompt)],
                 model,
                 temperature: 0.0,
                 max_tokens: 512,
@@ -252,7 +252,7 @@ Task: Extract the scope of work and identify the closest matching service from t
                 tools: vec![],
             };
 
-            use ohc_builtin_agent::llm::LlmClient;
+            use omnisolo_builtin_agent::llm::LlmClient;
             if let Ok(resp) = llm.chat(req).await {
                 let content = resp.message.content.trim();
                 let clean_content = if content.starts_with("```json") {

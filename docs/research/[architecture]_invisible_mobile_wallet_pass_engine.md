@@ -2,11 +2,11 @@
 Invisible Mobile Wallet Pass Engine (Apple/Google Wallet)
 
 ## Problem Statement
-Small business owners like Leo (music tutor) and Carlos (handyman) rely on customer appointments and bookings, but frequently deal with no-shows. Maya (baker) offers loyalty punch cards, but physical cards get lost, and users forget they have them. Customers want a seamless, digital way to store their bookings, receipts, and loyalty cards directly on their phones. OHC needs an invisible engine that automatically issues Apple Wallet and Google Wallet passes for every booking, digital ticket, and loyalty program, keeping the business front-and-center on the customer's device.
+Small business owners like Leo (music tutor) and Carlos (handyman) rely on customer appointments and bookings, but frequently deal with no-shows. Maya (baker) offers loyalty punch cards, but physical cards get lost, and users forget they have them. Customers want a seamless, digital way to store their bookings, receipts, and loyalty cards directly on their phones. OmniSolo needs an invisible engine that automatically issues Apple Wallet and Google Wallet passes for every booking, digital ticket, and loyalty program, keeping the business front-and-center on the customer's device.
 
 ## Research Report
-- **Codebase & Competitor Audit**: Shopify has some third-party apps for Apple Wallet loyalty, but they are expensive and complex. Wix Bookings sends emails, but no native Apple Wallet integration. OHC's current booking and loyalty architecture lacks a unified capability to generate cryptographically signed `.pkpass` files or Google Wallet objects.
-- **The Gap**: We need an architecture that seamlessly hooks into the OHC event mesh (booking confirmed, loyalty point earned) and automatically issues a digital pass. This pass must be dynamically updated (e.g., if a booking time changes, the pass updates instantly via APNs).
+- **Codebase & Competitor Audit**: Shopify has some third-party apps for Apple Wallet loyalty, but they are expensive and complex. Wix Bookings sends emails, but no native Apple Wallet integration. OmniSolo's current booking and loyalty architecture lacks a unified capability to generate cryptographically signed `.pkpass` files or Google Wallet objects.
+- **The Gap**: We need an architecture that seamlessly hooks into the OmniSolo event mesh (booking confirmed, loyalty point earned) and automatically issues a digital pass. This pass must be dynamically updated (e.g., if a booking time changes, the pass updates instantly via APNs).
 - **Data & Market Validation**: Studies show that Apple Wallet / Google Wallet passes have a 90% retention rate on devices, far higher than dedicated apps. Passes also support location-based lock screen notifications (e.g., "Your appointment with Carlos is in 1 hour" appearing when the customer is near the location).
 
 ## Design Doc
@@ -14,22 +14,22 @@ Small business owners like Leo (music tutor) and Carlos (handyman) rely on custo
 ```mermaid
 sequenceDiagram
     participant Customer
-    participant OHC_Core_API
+    participant OMNISOLO_Core_API
     participant Event_Mesh
     participant Wallet_Agent
     participant APNs (Apple)
     participant DB (PostgreSQL)
 
-    Customer->>OHC_Core_API: Books Appointment (Leo's Music)
-    OHC_Core_API->>Event_Mesh: Emit `booking.confirmed`
+    Customer->>OMNISOLO_Core_API: Books Appointment (Leo's Music)
+    OMNISOLO_Core_API->>Event_Mesh: Emit `booking.confirmed`
     Event_Mesh->>Wallet_Agent: Trigger Pass Generation
     Wallet_Agent->>DB: Fetch Tenant Config (Apple certs/colors)
     Wallet_Agent->>Wallet_Agent: Generate .pkpass (Signed)
-    Wallet_Agent->>OHC_Core_API: Store Pass URL
-    OHC_Core_API-->>Customer: Return Booking Page with "Add to Apple Wallet"
+    Wallet_Agent->>OMNISOLO_Core_API: Store Pass URL
+    OMNISOLO_Core_API-->>Customer: Return Booking Page with "Add to Apple Wallet"
 
     Note over Customer, APNs: When Booking Updates
-    OHC_Core_API->>Event_Mesh: Emit `booking.updated`
+    OMNISOLO_Core_API->>Event_Mesh: Emit `booking.updated`
     Event_Mesh->>Wallet_Agent: Process Update
     Wallet_Agent->>APNs: Send Push Notification (Update Pass)
     APNs->>Customer: Pass Updates silently & shows notification
@@ -42,7 +42,7 @@ sequenceDiagram
 
 ### Data Model & Invariants
 - **Pass Entity**: `WalletPass { id, tenant_id, pass_type, template_id, status }`
-- **Multi-Tenant Isolation**: Apple Developer certificates for `.pkpass` signing can be unified under OHC's umbrella cert, with pass identifiers (e.g., `pass.store.ohc.maya-cakes`) dynamically generated. The DB must strictly isolate pass records by `tenant_id`.
+- **Multi-Tenant Isolation**: Apple Developer certificates for `.pkpass` signing can be unified under OmniSolo's umbrella cert, with pass identifiers (e.g., `pass.store.ohc.maya-cakes`) dynamically generated. The DB must strictly isolate pass records by `tenant_id`.
 
 ### AI Department Coordination
 - **Marketing Agent**: Suggests the owner turn on Apple Wallet loyalty cards. Automatically designs the pass using the tenant's brand colors (Glassmorphism design tokens) and logo.
@@ -56,7 +56,7 @@ sequenceDiagram
 **To Implementer Agent:**
 Design and implement the Mobile Wallet Pass Engine within the Rust backend.
 1. Create a background worker that listens for `booking.confirmed` and `loyalty.earned` events to generate Apple Wallet (`.pkpass`) and Google Wallet objects.
-2. Implement the cryptographic signing logic for `.pkpass` files using OHC's master certificates.
+2. Implement the cryptographic signing logic for `.pkpass` files using OmniSolo's master certificates.
 3. Create API endpoints for device registration and pass updates (to support Apple APNs push notifications for dynamic passes).
 4. Ensure all wallet passes adhere strictly to multi-tenant boundaries and store their state in PostgreSQL.
 

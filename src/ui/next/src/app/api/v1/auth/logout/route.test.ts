@@ -24,8 +24,8 @@ async function dependencies(fetchImpl: typeof fetch): Promise<LogoutDependencies
   return {
     config,
     ring: await parseSessionKeyRing({
-      OHC_WEB_SESSION_KEY_ID: "test-v1",
-      OHC_WEB_SESSION_SECRET: base64url(Uint8Array.from([
+      OMNISOLO_WEB_SESSION_KEY_ID: "test-v1",
+      OMNISOLO_WEB_SESSION_SECRET: base64url(Uint8Array.from([
         91, 14, 203, 72, 177, 39, 244, 6, 128, 55, 162, 19, 230, 76, 9, 211,
         33, 170, 84, 237, 117, 8, 194, 61, 156, 225, 42, 99, 188, 5, 215, 66,
       ])),

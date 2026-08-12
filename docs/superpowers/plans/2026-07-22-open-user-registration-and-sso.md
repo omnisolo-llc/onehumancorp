@@ -9,7 +9,7 @@
 **Tech Stack:** Rust, Axum, Serde, sqlx, Git, Bazel.
 
 ## Global Constraints
-- Naming rules: Setting name `registration_enabled` (env OHC_REGISTRATION_ENABLED).
+- Naming rules: Setting name `registration_enabled` (env OMNISOLO_REGISTRATION_ENABLED).
 - Security rule: Enforce `registration_enabled` check strictly (return 403 Forbidden with `{"error": "registration closed"}` if disabled).
 - Database constraint: Generate unique UUIDs for new organization IDs and user IDs.
 

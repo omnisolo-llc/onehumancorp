@@ -1,21 +1,21 @@
-# OHC Research: Agent Harness & Sandbox Audit
+# OmniSolo Research: Agent Harness & Sandbox Audit
 
 **Date:** April 2026
 **Author:** Principal Product Researcher & Oracle (L7)
 **Status:** FINAL
-**Classification:** OHC-TOP-SECRET
+**Classification:** OmniSolo-TOP-SECRET
 
 ## Executive Summary
 
-To achieve OHC's mission of building the world's most autonomous and aesthetically superior Agentic OS, we must master the **Agent Harness** — the environment where AI agents interact with the real world. This audit analyzes leading competitors (Claude Code, OpenClaw, Hermes, Gstack) and contrasts their isolation strategies with OHC's current KAIROS architecture.
+To achieve OmniSolo's mission of building the world's most autonomous and aesthetically superior Agentic OS, we must master the **Agent Harness** — the environment where AI agents interact with the real world. This audit analyzes leading competitors (Claude Code, OpenClaw, Hermes, Gstack) and contrasts their isolation strategies with OmniSolo's current KAIROS architecture.
 
-The current OHC `bash_sandbox` is functional but primitive (regex-based). To reach "Claude-Class" maturity, OHC must transition to **Kernel-level isolation (Namespaces/Cgroups)** and implement a **Premium Permission Guardrail System**.
+The current OmniSolo `bash_sandbox` is functional but primitive (regex-based). To reach "Claude-Class" maturity, OmniSolo must transition to **Kernel-level isolation (Namespaces/Cgroups)** and implement a **Premium Permission Guardrail System**.
 
 ---
 
 ## Competitive Landscape: The Harness War
 
-| Feature | OHC (KAIROS) | Claude Code | OpenClaw | Hermes Agent |
+| Feature | OmniSolo (KAIROS) | Claude Code | OpenClaw | Hermes Agent |
 | :--- | :--- | :--- | :--- | :--- |
 | **Isolation Tech** | Regex Filtering | Native Sandbox (gVisor/macOS) | Docker Containers | Subprocess / Nix |
 | **Network Control** | None | Host Whitelisting | Docker Network | Limited |
@@ -35,12 +35,12 @@ OpenClaw treats every agent as a disposable container.
 - **Media Staging**: Automatically moves files into the container's workspace before execution.
 - **Security Audits**: Continuous auditing of the Docker config to prevent privilege escalation.
 
-### 3. OHC Gap Analysis (The "Valley of Vulnerability")
+### 3. OmniSolo Gap Analysis (The "Valley of Vulnerability")
 Our current implementation in `src/server/bash_sandbox/sandbox.go` relies on `regexp.MustCompile` to block `sudo`, `rm -rf /`, etc. This is easily bypassed via encoding tricks or symlinks.
 
 ---
 
-## Architectural Synthesis: The OHC KAIROS Harness
+## Architectural Synthesis: The OmniSolo KAIROS Harness
 
 ```mermaid
 graph TD
@@ -92,4 +92,4 @@ graph TD
 ---
 
 > "Absolute autonomy requires absolute security. We don't ask for permission; we build the walls that make permission unnecessary."
-> — *OHC Vision 2026*
+> — *OmniSolo Vision 2026*

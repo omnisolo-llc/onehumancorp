@@ -10,7 +10,7 @@ test.describe('Viral Booking Footer', () => {
             <html>
                 <body>
                     <h2>How can we help you?</h2>
-                    <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=test-tenant-123">⚡ Powered by OHC</a>
+                    <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=test-tenant-123">⚡ Powered by OmniSolo</a>
                 </body>
             </html>
         `;
@@ -20,8 +20,8 @@ test.describe('Viral Booking Footer', () => {
         // Verify we are on the booking page
         await expect(page.locator('text=How can we help you?')).toBeVisible();
 
-        // Check for the "⚡ Powered by OHC" footer
-        const brandingLink = page.locator('a', { hasText: '⚡ Powered by OHC' });
+        // Check for the "⚡ Powered by OmniSolo" footer
+        const brandingLink = page.locator('a', { hasText: '⚡ Powered by OmniSolo' });
         await expect(brandingLink).toBeVisible();
 
         // Validate the referral link structure matches the expected format

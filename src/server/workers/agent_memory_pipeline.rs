@@ -21,7 +21,7 @@ pub struct DefaultMemorySummaryApi;
 #[async_trait]
 impl MemorySummaryApi for DefaultMemorySummaryApi {
     async fn summarize(&self, prompt: &str) -> Result<String, String> {
-        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+        match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
             Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(prompt).await,
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
@@ -430,7 +430,7 @@ impl AgentMemoryPipeline {
 
     pub async fn process_fs_memories(&self) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir =
-            std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".agent-task/memory".to_string());
+            std::env::var("OMNISOLO_MEMORY_DIR").unwrap_or_else(|_| ".agent-task/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
 
         if !path.exists() {
@@ -613,7 +613,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_memory_pipeline_postgres() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 

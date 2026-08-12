@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use ohc_builtin_agent::memory_store::{EmbeddingRecord, VectorRepository};
+    use omnisolo_builtin_agent::memory_store::{EmbeddingRecord, VectorRepository};
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use sqlx::Row;
     use std::str::FromStr;

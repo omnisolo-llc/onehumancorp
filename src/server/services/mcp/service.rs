@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::mcp_service_server::McpService;
+use ::server_omnisolo::orchestration::*;
+use ::server_omnisolo::orchestration::mcp_service_server::McpService;
 use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
 use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
@@ -345,14 +345,14 @@ impl McpService for MyMcpService {
 mod tests {
     use super::*;
     use tonic::Request;
-    use ::server_ohc::orchestration::{SyncMissionsRequest, SyncContextRequest};
+    use ::server_omnisolo::orchestration::{SyncMissionsRequest, SyncContextRequest};
 
     #[tokio::test]
     async fn test_sync_missions_unauthenticated() {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -370,7 +370,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -393,7 +393,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -405,7 +405,7 @@ mod tests {
             org_id: "org-1".to_string(),
             agent_id: "agent-1".to_string(),
         });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org-1/agent-1".parse().unwrap());
 
         let resp = service.sync_missions(req).await;
         if let Err(status) = resp {
@@ -418,7 +418,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let pool_opts = crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(500)).max_connections(1);
         let pool = pool_opts.connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-        if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
+        if std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
@@ -435,7 +435,7 @@ mod tests {
             org_id: "org-1".to_string(),
             agent_id: "agent-1".to_string(),
         });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/org-1/agent-1".parse().unwrap());
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://omnisolo.io/org-1/agent-1".parse().unwrap());
 
         // This will attempt an insert into DB, but since test env may not be running PG properly, it might fail internal, but at least not unauthenticated
         let resp = service.sync_context(req).await;

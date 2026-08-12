@@ -19,14 +19,14 @@ async function dependencies(
   overrides: Partial<BackendTransportDependencies> = {},
 ): Promise<BackendTransportDependencies> {
   const config = parseAuthRuntimeConfig({
-    OHC_WEB_CANONICAL_ORIGIN: "https://app.example.com",
+    OMNISOLO_WEB_CANONICAL_ORIGIN: "https://app.example.com",
     BACKEND_URL: "https://api.example.com",
   });
   return {
     config,
     ring: await parseSessionKeyRing({
-      OHC_WEB_SESSION_KEY_ID: "test-v1",
-      OHC_WEB_SESSION_SECRET: SECRET,
+      OMNISOLO_WEB_SESSION_KEY_ID: "test-v1",
+      OMNISOLO_WEB_SESSION_SECRET: SECRET,
     }),
     now: () => NOW,
     fetchImpl,

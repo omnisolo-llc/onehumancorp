@@ -13,7 +13,7 @@ Communication Fragmentation: Small business owners interact with customers acros
   - Opening Instagram, then WhatsApp, then Email every morning to check for orders or questions.
   - Forgetting which app a specific customer used to ask a question.
   - Inability to link a DM conversation to an actual order or customer profile.
-- **OHC Solution:** Centralize all incoming communications into a single, beautifully designed, mobile-first inbox within the OHC platform. Make the channel source invisible to the workflow.
+- **OmniSolo Solution:** Centralize all incoming communications into a single, beautifully designed, mobile-first inbox within the OmniSolo platform. Make the channel source invisible to the workflow.
 
 ## Design Doc
 ### High-Level Architecture
@@ -32,7 +32,7 @@ Communication Fragmentation: Small business owners interact with customers acros
 - **Context Panel:** While in a chat, the user can pull down or tap a top-bar icon to instantly see the customer's profile, past order history, and lifetime value without leaving the conversation.
 
 ## Implementation Prompt
-Build a single, unified inbox within the OHC app that aggregates messages from various channels (Instagram, WhatsApp, Email, Web). Implement the backend normalization layer to handle different external API payloads and standardize them. Create the real-time routing mechanisms to deliver messages to the frontend. On the frontend, design and implement a premium, mobile-first chat interface that masks the complexity of the underlying channels and deeply integrates with the CRM to display customer context alongside the conversation.
+Build a single, unified inbox within the OmniSolo app that aggregates messages from various channels (Instagram, WhatsApp, Email, Web). Implement the backend normalization layer to handle different external API payloads and standardize them. Create the real-time routing mechanisms to deliver messages to the frontend. On the frontend, design and implement a premium, mobile-first chat interface that masks the complexity of the underlying channels and deeply integrates with the CRM to display customer context alongside the conversation.
 
 ## Priority
 P1

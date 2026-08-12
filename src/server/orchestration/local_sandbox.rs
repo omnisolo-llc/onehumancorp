@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
-use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig, ViolationEvent};
+use crate::orchestration::sandbox::{OmniSoloSandboxManager, SandboxConfig, ViolationEvent};
 use crate::orchestration::sandbox_ask::SandboxAskCallback;
 use crate::agents::sandbox::LocalEnvironment;
 
@@ -19,7 +19,7 @@ impl LocalSandbox {
 }
 
 #[async_trait]
-impl OHCSandboxManager for LocalSandbox {
+impl OmniSoloSandboxManager for LocalSandbox {
     async fn execute(&self, cmd: &str) -> Result<(bool, String, String), ViolationEvent> {
         // Check deny-list directories
         for deny_dir in &self.config.deny_list_dirs {

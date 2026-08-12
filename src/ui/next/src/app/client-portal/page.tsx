@@ -524,7 +524,7 @@ export default function ClientPortalPage() {
                               className="mt-0.5"
                             />
                             <label htmlFor="consent" className="text-[10px] text-slate-500 leading-normal">
-                              I consent to sign digitally and agree to authorize One Human Corp and its AI Swarms to initiate the scheduled work upon verification.
+                              I consent to sign digitally and agree to authorize OmniSolo and its AI Swarms to initiate the scheduled work upon verification.
                             </label>
                           </div>
                           <button
@@ -953,7 +953,7 @@ export default function ClientPortalPage() {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
                     <div>
-                      <h3 className="font-bold text-xs">OHC Automated Support</h3>
+                      <h3 className="font-bold text-xs">OmniSolo Automated Support</h3>
                       <p className="text-[9px] text-slate-400">Response time: &lt; 1 minute</p>
                     </div>
                   </div>

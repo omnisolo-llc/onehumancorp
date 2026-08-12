@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Json},
+    extract::{Extension, State, Json},
     response::IntoResponse,
     http::StatusCode,
     routing::post,
@@ -7,10 +7,10 @@ use axum::{
 };
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct WalkupPayload {
-    pub tenant_id: String,
     pub message: String,
 }
 
@@ -25,39 +25,56 @@ pub struct AppState {
     pub db: Arc<crate::db::DB>,
 }
 
-#[allow(dead_code)]
 pub fn walkup_routes<S: Clone + Send + Sync + 'static>(state: AppState) -> Router<S> {
     Router::new()
         .route("/", post(handle_walkup))
         .with_state(state)
 }
 
-#[allow(dead_code)]
+fn signed_tenant_id(claims: &::server_common::Claims) -> Option<&str> {
+    claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|tenant| !tenant.is_empty() && !tenant.eq_ignore_ascii_case("system"))
+}
+
 pub async fn handle_walkup(
     State(state): State<AppState>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<WalkupPayload>,
 ) -> impl IntoResponse {
-    let tenant_id = &payload.tenant_id;
+    let Some(tenant_id) = signed_tenant_id(&claims) else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(WalkupResponse { success: false, structured_order: None }),
+        )
+            .into_response();
+    };
     let message = &payload.message;
-    let pool = &state.db.pool;
 
     let target_language: String = {
-        let prefs_row = sqlx::query(
-            "SELECT language_preference FROM tenants WHERE id = $1"
-        )
-        .bind(tenant_id)
-        .fetch_optional(pool)
-        .await
-        .unwrap_or(None);
-
-        match prefs_row {
-            Some(r) => {
-                use sqlx::Row;
-                let lang: Option<String> = r.get("language_preference");
-                lang.unwrap_or_else(|| "en".to_string())
-            }
-            None => "en".to_string(),
-        }
+        let language = match &state.db.store {
+            crate::db::DbStore::Postgres => sqlx::query(
+                "SELECT language_preference FROM tenants WHERE id = $1",
+            )
+            .bind(tenant_id)
+            .fetch_optional(&state.db.pool)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|row| row.try_get::<Option<String>, _>("language_preference").ok().flatten()),
+            crate::db::DbStore::Sqlite(pool) => sqlx::query(
+                "SELECT language_preference FROM tenants WHERE id = ?",
+            )
+            .bind(tenant_id)
+            .fetch_optional(pool)
+            .await
+            .ok()
+            .flatten()
+            .and_then(|row| row.try_get::<Option<String>, _>("language_preference").ok().flatten()),
+        };
+        language.unwrap_or_else(|| "en".to_string())
     };
 
     let prompt = format!(
@@ -65,8 +82,8 @@ pub async fn handle_walkup(
         target_language, message
     );
 
-    let raw_response = match std::env::var("OHC_TRANSLATION_LLM_PROVIDER")
-        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+    let raw_response = match std::env::var("OMNISOLO_TRANSLATION_LLM_PROVIDER")
+        .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
         .as_deref()
     {
         Ok("minimax") => {
@@ -86,18 +103,60 @@ pub async fn handle_walkup(
         let translated_text = translated_json.get("translated_text").and_then(|v| v.as_str()).unwrap_or(message);
 
         if intent == "Order" {
-            let _ = sqlx::query(
-                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'Multilingual Interceptor Agent', 'high', $3, 'pending')"
-            )
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind(tenant_id)
-            .bind(translated_text)
-            .execute(pool)
-            .await;
+            let item_id = uuid::Uuid::new_v4().to_string();
+            match &state.db.store {
+                crate::db::DbStore::Postgres => {
+                    let _ = sqlx::query(
+                        "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'Multilingual Interceptor Agent', 'high', $3, 'pending')",
+                    )
+                    .bind(&item_id)
+                    .bind(tenant_id)
+                    .bind(translated_text)
+                    .execute(&state.db.pool)
+                    .await;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let _ = sqlx::query(
+                        "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, 'Multilingual Interceptor Agent', 'high', ?, 'pending')",
+                    )
+                    .bind(&item_id)
+                    .bind(tenant_id)
+                    .bind(translated_text)
+                    .execute(pool)
+                    .await;
+                }
+            }
 
             return (StatusCode::OK, Json(WalkupResponse { success: true, structured_order: Some(translated_text.to_string()) })).into_response();
         }
     }
 
     (StatusCode::OK, Json(WalkupResponse { success: true, structured_order: None })).into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::signed_tenant_id;
+
+    fn claims(organization_id: Option<&str>) -> ::server_common::Claims {
+        ::server_common::Claims {
+            sub: "user-1".into(),
+            exp: i64::MAX,
+            iat: 0,
+            organization_id: organization_id.map(str::to_string),
+            username: String::new(),
+            email: String::new(),
+            roles: vec![],
+            session_id: None,
+            jti: String::new(),
+        }
+    }
+
+    #[test]
+    fn walkup_tenant_comes_only_from_verified_non_system_claims() {
+        assert_eq!(signed_tenant_id(&claims(Some(" tenant-7 "))), Some("tenant-7"));
+        assert_eq!(signed_tenant_id(&claims(None)), None);
+        assert_eq!(signed_tenant_id(&claims(Some("system"))), None);
+        assert_eq!(signed_tenant_id(&claims(Some("  "))), None);
+    }
 }

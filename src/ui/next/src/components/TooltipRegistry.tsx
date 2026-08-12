@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from 'next/navigation';
 
 type TooltipContextType = {
   activeTooltip: string | null;
@@ -17,14 +18,14 @@ const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
 
 declare global {
   interface Window {
-    OHC_TOOLTIPS?: Record<string, string>;
+    OMNISOLO_TOOLTIPS?: Record<string, string>;
   }
 }
 
 export const DEFAULT_TOOLTIPS: Record<string, string> = {
   "help-nav-tooltip": "Open the Help Center to find guides, videos, and contact support.",
   "api-docs-tooltip": "Direct API access is for developers.",
-  "changelog-nav-tooltip": "See what's new in the latest OneHumanCorp updates.",
+  "changelog-nav-tooltip": "See what's new in the latest OmniSolo updates.",
   "dashboard-walkthrough-btn": "Take a quick tour of the dashboard.",
   "help-advanced-toggle-tooltip": "Show advanced developer options.",
   "help-btn-tooltip-appshell": "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
@@ -36,8 +37,11 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
   const [tooltipText, setTooltipText] = useState<string>("");
   const [tooltips, setTooltips] = useState<Record<string, string>>(DEFAULT_TOOLTIPS);
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname === '/login') return;
+
     const abortController = new AbortController();
     const fetchTooltips = async () => {
       try {
@@ -51,7 +55,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
             Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
           );
           setTooltips(prev => ({ ...prev, ...safeTooltips }));
-          window.OHC_TOOLTIPS = { ...(window.OHC_TOOLTIPS || {}), ...safeTooltips };
+          window.OMNISOLO_TOOLTIPS = { ...(window.OMNISOLO_TOOLTIPS || {}), ...safeTooltips };
         }
       } catch {
         // Built-in tooltip copy remains available while the optional service is offline.
@@ -59,7 +63,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     };
     fetchTooltips();
     return () => { abortController.abort(); };
-  }, []);
+  }, [pathname]);
 
   const [windowWidth, setWindowWidth] = useState(1000);
 

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 use tokio::time::{sleep, Duration};
-use crate::orchestration::queue::OHCJobQueue;
+use crate::orchestration::queue::OmniSoloJobQueue;
 use crate::orchestration::queue::redis_lock::RedisLock;
 use serde_json::Value;
 
@@ -22,7 +22,7 @@ impl AgentActionWorker {
         });
     }
 
-    pub async fn process_job(&self, job: crate::orchestration::queue::ohc_job_queue::OHCJob, queue: &OHCJobQueue, redis_lock: &RedisLock) {
+    pub async fn process_job(&self, job: crate::orchestration::queue::omnisolo_job_queue::OmniSoloJob, queue: &OmniSoloJobQueue, redis_lock: &RedisLock) {
         let parsed: Result<Value, _> = serde_json::from_str(&job.payload);
         if let Ok(payload) = parsed {
             let tenant_id = &job.tenant_id;
@@ -107,7 +107,7 @@ impl AgentActionWorker {
 
     async fn run(&self) {
         let pool_arc = Arc::new(self.pool.clone());
-        let queue = OHCJobQueue::new(pool_arc.clone());
+        let queue = OmniSoloJobQueue::new(pool_arc.clone());
         let redis_lock = match RedisLock::new(&self.redis_url) {
             Ok(l) => l,
             Err(e) => {

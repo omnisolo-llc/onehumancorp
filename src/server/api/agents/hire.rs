@@ -82,7 +82,7 @@ async fn hire_handler(
         payload.provider_type.clone()
     };
 
-    let agent = ::server_ohc::orchestration::Agent {
+    let agent = ::server_omnisolo::orchestration::Agent {
         id: agent_id.clone(),
         name: payload.name.clone(),
         role: payload.role.clone(),
@@ -93,14 +93,14 @@ async fn hire_handler(
 
     hub.register_agent(agent).await;
     let model = if payload.model.trim().is_empty() {
-        std::env::var("OHC_LLM_MODEL")
+        std::env::var("OMNISOLO_LLM_MODEL")
             .or_else(|_| std::env::var("MINIMAX_MODEL"))
             .unwrap_or_else(|_| "MiniMax-M3".to_string())
     } else {
         payload.model.clone()
     };
     let workflow_task = format!(
-        "A newly hired OHC agent named '{}' with role '{}' should start improving the business now. \
+        "A newly hired OmniSolo agent named '{}' with role '{}' should start improving the business now. \
          Run a practical business operating swarm for this company, identify the highest leverage work, \
          and assign concrete next actions to specialist agents. Use model {}.",
         payload.name, payload.role, model
@@ -145,8 +145,8 @@ pub struct MarketplaceQuery {
 }
 
 pub async fn list_marketplace_agents(Query(query): Query<MarketplaceQuery>) -> impl IntoResponse {
-    let provider = Box::new(ohc_builtin_agent::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string())));
-    let marketplace = ohc_builtin_agent::tools::marketplace::MarketplaceClient::new(provider);
+    let provider = Box::new(omnisolo_builtin_agent::tools::marketplace::HttpMarketplaceProvider::new(&std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_else(|_| "https://marketplace.example.com".to_string())));
+    let marketplace = omnisolo_builtin_agent::tools::marketplace::MarketplaceClient::new(provider);
 
     let q = query.q.unwrap_or_default();
 

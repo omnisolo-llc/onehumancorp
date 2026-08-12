@@ -12,8 +12,8 @@ const PREVIOUS_BYTES = Uint8Array.from([
 
 const encode = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64url");
 const activeEnv = () => ({
-  OHC_WEB_SESSION_KEY_ID: "prod-v1",
-  OHC_WEB_SESSION_SECRET: encode(ACTIVE_BYTES),
+  OMNISOLO_WEB_SESSION_KEY_ID: "prod-v1",
+  OMNISOLO_WEB_SESSION_SECRET: encode(ACTIVE_BYTES),
 });
 
 describe("active web-session key", () => {
@@ -26,17 +26,17 @@ describe("active web-session key", () => {
     expect(ring.active.key.usages).toEqual(["encrypt", "decrypt"]);
     await expect(crypto.subtle.exportKey("raw", ring.active.key)).rejects.toThrow();
     expect(ring.previous).toBeUndefined();
-    expect(JSON.stringify(ring)).not.toContain(env.OHC_WEB_SESSION_SECRET);
+    expect(JSON.stringify(ring)).not.toContain(env.OMNISOLO_WEB_SESSION_SECRET);
     expect(JSON.stringify(ring)).toBe('{"active":{"id":"prod-v1","key":{}}}');
   });
 
-  it.each(["OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET"])("requires %s", async (name) => {
+  it.each(["OMNISOLO_WEB_SESSION_KEY_ID", "OMNISOLO_WEB_SESSION_SECRET"])("requires %s", async (name) => {
     const env: Record<string, string> = activeEnv();
     delete env[name];
     await expect(parseSessionKeyRing(env)).rejects.toThrow(`${name} is required`);
   });
 
-  it.each(["OHC_WEB_SESSION_KEY_ID", "OHC_WEB_SESSION_SECRET"])("rejects empty required value %s", async (name) => {
+  it.each(["OMNISOLO_WEB_SESSION_KEY_ID", "OMNISOLO_WEB_SESSION_SECRET"])("rejects empty required value %s", async (name) => {
     await expect(parseSessionKeyRing({ ...activeEnv(), [name]: "" })).rejects.toThrow(
       `${name} is required`,
     );
@@ -44,8 +44,8 @@ describe("active web-session key", () => {
 
   it.each([" space", "slash/id", "x".repeat(33)])("rejects active key id %j", async (id) => {
     await expect(
-      parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_KEY_ID: id }),
-    ).rejects.toThrow("OHC_WEB_SESSION_KEY_ID must match [A-Za-z0-9._-]{1,32}");
+      parseSessionKeyRing({ ...activeEnv(), OMNISOLO_WEB_SESSION_KEY_ID: id }),
+    ).rejects.toThrow("OMNISOLO_WEB_SESSION_KEY_ID must match [A-Za-z0-9._-]{1,32}");
   });
 
   it.each([
@@ -65,9 +65,9 @@ describe("active web-session key", () => {
     ["descending counter", encode(Uint8Array.from({ length: 32 }, (_, index) => 255 - index))],
   ])("rejects structurally weak or malformed material: %s", async (_case, secret) => {
     await expect(
-      parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_SECRET: secret }),
+      parseSessionKeyRing({ ...activeEnv(), OMNISOLO_WEB_SESSION_SECRET: secret }),
     ).rejects.toThrow(
-      "OHC_WEB_SESSION_SECRET must be canonical base64url for acceptable 32-byte key material",
+      "OMNISOLO_WEB_SESSION_SECRET must be canonical base64url for acceptable 32-byte key material",
     );
   });
 
@@ -95,8 +95,8 @@ describe("previous web-session key", () => {
   it("imports one distinct previous key as decrypt-only without exposing material", async () => {
     const env = {
       ...activeEnv(),
-      OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
-      OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
+      OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
+      OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
     };
     const ring = await parseSessionKeyRing(env);
     expect(ring.previous?.id).toBe("prod-v0");
@@ -111,12 +111,12 @@ describe("previous web-session key", () => {
 
   it("requires a complete pair", async () => {
     await expect(
-      parseSessionKeyRing({ ...activeEnv(), OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0" }),
+      parseSessionKeyRing({ ...activeEnv(), OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0" }),
     ).rejects.toThrow("previous key id and secret must be configured together");
     await expect(
       parseSessionKeyRing({
         ...activeEnv(),
-        OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
+        OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
       }),
     ).rejects.toThrow("previous key id and secret must be configured together");
   });
@@ -125,15 +125,15 @@ describe("previous web-session key", () => {
     await expect(
       parseSessionKeyRing({
         ...activeEnv(),
-        OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1",
-        OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
+        OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v1",
+        OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
       }),
     ).rejects.toThrow("previous key id must differ from active key id");
     await expect(
       parseSessionKeyRing({
         ...activeEnv(),
-        OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
-        OHC_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
+        OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
+        OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(ACTIVE_BYTES),
       }),
     ).rejects.toThrow("previous key material must differ from active key material");
   });
@@ -142,18 +142,18 @@ describe("previous web-session key", () => {
     await expect(
       parseSessionKeyRing({
         ...activeEnv(),
-        OHC_WEB_SESSION_PREVIOUS_KEY_ID: "bad/id",
-        OHC_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
+        OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "bad/id",
+        OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(PREVIOUS_BYTES),
       }),
-    ).rejects.toThrow("OHC_WEB_SESSION_PREVIOUS_KEY_ID must match [A-Za-z0-9._-]{1,32}");
+    ).rejects.toThrow("OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID must match [A-Za-z0-9._-]{1,32}");
     await expect(
       parseSessionKeyRing({
         ...activeEnv(),
-        OHC_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
-        OHC_WEB_SESSION_PREVIOUS_SECRET: encode(new Uint8Array(32)),
+        OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: "prod-v0",
+        OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: encode(new Uint8Array(32)),
       }),
     ).rejects.toThrow(
-      "OHC_WEB_SESSION_PREVIOUS_SECRET must be canonical base64url for acceptable 32-byte key material",
+      "OMNISOLO_WEB_SESSION_PREVIOUS_SECRET must be canonical base64url for acceptable 32-byte key material",
     );
   });
 });

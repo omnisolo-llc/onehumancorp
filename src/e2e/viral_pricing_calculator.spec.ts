@@ -31,7 +31,7 @@ test.describe('Viral AI Pricing Calculator Widget', () => {
     expect(embedText).toContain('Advanced SEO Consulting');
     expect(embedText).toContain('1500');
     expect(embedText).toContain('<iframe');
-    expect(embedText).toContain('Powered by OHC');
+    expect(embedText).toContain('Powered by OmniSolo');
   });
 
   test('should copy the embed code to clipboard', async ({ page, context }) => {
@@ -55,7 +55,7 @@ test.describe('Viral AI Pricing Calculator Widget', () => {
             return await navigator.clipboard.readText();
         });
         expect(clipboardText).toContain('<iframe');
-        expect(clipboardText).toContain('Powered by OHC');
+        expect(clipboardText).toContain('Powered by OmniSolo');
     } catch (e) {
         console.warn('Clipboard read failed (expected in some headless environments): ', e);
     }

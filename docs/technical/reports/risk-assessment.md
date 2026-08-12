@@ -4,7 +4,7 @@
 
 ## Phase 1: Risk Assessment of Hybrid Environment Changes
 **Classifier Logic:** Claude-style "Security Risk Classifier"
-**Target:** `onehumancorp/mono` proposed tool uses and recent architectural shifts.
+**Target:** `omnisolo/mono` proposed tool uses and recent architectural shifts.
 
 | Subsystem / PR Topic | Risk Level | Rationale |
 |----------------------|------------|-----------|

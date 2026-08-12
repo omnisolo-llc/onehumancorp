@@ -31,7 +31,7 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
         await expect(modalHeader).toBeVisible();
 
         // The textarea should contain the iframe snippet
-        const textarea = page.locator('textarea').filter({ hasText: '<iframe src="https://ohc.app/api/v1/growth/work-intake/embed' });
+        const textarea = page.locator('textarea').filter({ hasText: '<iframe src="https://cloud.omnisolo.co/api/v1/growth/work-intake/embed' });
         await expect(textarea).toBeVisible();
 
         // Verify the HTML snippet structure includes the custom title encoded
@@ -59,7 +59,7 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
 
         // Ensure the referral growth loop is intact in the footer
         expect(html).toContain('Powered by');
-        expect(html).toContain('OHC');
+        expect(html).toContain('OmniSolo');
         expect(html).toContain('/onboarding?ref=my-business');
 
         // Test POST submit endpoint
@@ -82,6 +82,6 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
 
         // Confirm viral loop is still present on success screen
         expect(submitHtml).toContain('Powered by');
-        expect(submitHtml).toContain('OHC');
+        expect(submitHtml).toContain('OmniSolo');
     });
 });

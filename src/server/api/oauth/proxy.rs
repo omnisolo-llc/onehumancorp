@@ -57,7 +57,7 @@ pub async fn handle_oauth_callback(
             let actual_state = parts[2];
 
             // Redirect to the standalone instance via the tunnel proxy
-            let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
+            let tunnel_base_url = std::env::var("OMNISOLO_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
             if tunnel_base_url.starts_with("http://127.0.0.1:") || tunnel_base_url.starts_with("http://localhost:") {
@@ -110,7 +110,7 @@ pub async fn handle_oauth_callback(
     "OAuth callback received. You can close this window.".into_response()
 }
 
-pub fn router() -> Router<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router() -> Router<std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
     Router::new()
         .route("/callback", get(handle_oauth_callback))
 }

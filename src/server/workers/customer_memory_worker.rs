@@ -146,7 +146,7 @@ impl CustomerMemoryWorker {
 
                 while retry_count < max_retries {
                     let llm_call = async {
-                        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                        match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                             Ok("minimax") => {
                                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
                                 if !api_key.is_empty() {

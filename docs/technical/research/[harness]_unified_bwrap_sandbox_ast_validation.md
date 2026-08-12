@@ -1,12 +1,12 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# 🔬 OHC Market Research Report: Agent Harness Isolation & AST Validation
+# 🔬 OmniSolo Market Research Report: Agent Harness Isolation & AST Validation
 
 ## Title
 Implement Unified Bwrap Sandboxing & AST Bash Validation Engine
 
 ## Problem Statement
-The OHC Agentic OS requires absolute autonomy safely. Currently, OHC's local agent harness lacks robust boundary constraints when executing shell commands, allowing agents broad access to the host's filesystem and network. This exposes the host to unintended modification and network exfiltration. Competitive products (e.g., Claude Code) utilize deep, OS-level namespaces and abstract syntax tree (AST) validation to enforce zero-trust execution. To achieve safe Swarm Intelligence, OHC must adopt an airtight execution harness natively integrated with our KAIROS orchestration engine.
+The OmniSolo Agentic OS requires absolute autonomy safely. Currently, OmniSolo's local agent harness lacks robust boundary constraints when executing shell commands, allowing agents broad access to the host's filesystem and network. This exposes the host to unintended modification and network exfiltration. Competitive products (e.g., Claude Code) utilize deep, OS-level namespaces and abstract syntax tree (AST) validation to enforce zero-trust execution. To achieve safe Swarm Intelligence, OmniSolo must adopt an airtight execution harness natively integrated with our KAIROS orchestration engine.
 
 ## Research Report
 ### Target Analyzed: Leaked Claude Code (v2.1.88)
@@ -28,9 +28,9 @@ On Linux, the harness exclusively executes agent commands within `bwrap` (Bubble
 - Before execution, Claude Code's `BashTool` parses the raw bash string using a Tree-sitter AST or `shell-quote` equivalent.
 - This allows it to reliably block destructive shell injections, such as `>()`, backslash-escaped operators, UNC paths, and quote desynchronizations—which simple regexes fail to catch.
 
-### Comparative Matrix: OHC vs Market
+### Comparative Matrix: OmniSolo vs Market
 
-| Feature Capability | OHC Current State | Market Standard (Claude Code) | Gap Impact |
+| Feature Capability | OmniSolo Current State | Market Standard (Claude Code) | Gap Impact |
 | :--- | :--- | :--- | :--- |
 | **Command Execution** | Raw `exec.Command` | Wrapped via `SandboxManager` & AST Validator | 🚨 Critical (P0) |
 | **OS Sandboxing** | None (Host Default) | Bubblewrap namespaces & Seccomp filters | 🚨 Critical (P0) |

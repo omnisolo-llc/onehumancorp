@@ -48,7 +48,7 @@ rust_library(
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -56,7 +56,7 @@ rust_library(
     deps = [
         "//src/server:server_lib",
         "//src/agents/builtin:core",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",
@@ -97,7 +97,7 @@ rust_library(
         "//src/server/integrations/taxjar:server_integrations_taxjar",
         "//src/server/integrations/zoom:server_integrations_zoom",
         "//src/server/integrations/restic:server_integrations_restic",
-        "//src/server/ohc:server_ohc",
+        "//src/server/omnisolo:server_omnisolo",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
         "//src/server/services/b2b:server_services_b2b",
@@ -169,7 +169,7 @@ rust_test(
     ],
     crate = ":server_integrations",
     edition = "2024",
-    rustc_flags = ["--cfg=ohc_bazel"],
+    rustc_flags = ["--cfg=omnisolo_bazel"],
     env = {
         "RUST_TEST_THREADS": "1",
     },

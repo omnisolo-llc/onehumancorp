@@ -26,6 +26,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
     const currentStep = steps[currentStepIndex];
     const targetElement = document.getElementById(currentStep.targetId);
+    setTargetRect(null);
 
     if (targetElement) {
       // Scroll into view gently if needed
@@ -85,13 +86,47 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
   if (targetRect) {
     const margin = 16;
-    const position = currentStep.position || 'bottom';
+    const estimatedBubbleWidth = 300;
+    const estimatedBubbleHeight = 240;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const requestedPosition = currentStep.position || 'bottom';
+    let position = requestedPosition;
+
+    if (requestedPosition === 'top' && targetRect.top < estimatedBubbleHeight + margin) {
+      position = 'bottom';
+    } else if (
+      requestedPosition === 'bottom'
+      && viewportHeight - targetRect.bottom < estimatedBubbleHeight + margin
+    ) {
+      position = 'top';
+    } else if (requestedPosition === 'left' && targetRect.left < estimatedBubbleWidth + margin) {
+      position = 'right';
+    } else if (
+      requestedPosition === 'right'
+      && viewportWidth - targetRect.right < estimatedBubbleWidth + margin
+    ) {
+      position = 'left';
+    }
+
+    const clamp = (value: number, minimum: number, maximum: number) =>
+      Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+    const centeredLeft = clamp(
+      targetRect.left + (targetRect.width / 2),
+      margin + (estimatedBubbleWidth / 2),
+      viewportWidth - margin - (estimatedBubbleWidth / 2),
+    );
+    const centeredTop = clamp(
+      targetRect.top + (targetRect.height / 2),
+      margin + (estimatedBubbleHeight / 2),
+      viewportHeight - margin - (estimatedBubbleHeight / 2),
+    );
 
     switch (position) {
       case 'bottom':
         bubbleStyle = {
           top: targetRect.bottom + margin,
-          left: targetRect.left + (targetRect.width / 2),
+          left: centeredLeft,
           transform: 'translateX(-50%)'
         };
         arrowClass = "bottom-full left-1/2 -translate-x-1/2 border-b-white/90 border-x-transparent border-t-0 border-8";
@@ -99,14 +134,14 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       case 'top':
         bubbleStyle = {
           top: targetRect.top - margin,
-          left: targetRect.left + (targetRect.width / 2),
+          left: centeredLeft,
           transform: 'translate(-50%, -100%)'
         };
         arrowClass = "top-full left-1/2 -translate-x-1/2 border-t-white/90 border-x-transparent border-b-0 border-8";
         break;
       case 'right':
          bubbleStyle = {
-          top: targetRect.top + (targetRect.height / 2),
+          top: centeredTop,
           left: targetRect.right + margin,
           transform: 'translateY(-50%)'
         };
@@ -114,7 +149,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         break;
       case 'left':
          bubbleStyle = {
-          top: targetRect.top + (targetRect.height / 2),
+          top: centeredTop,
           left: targetRect.left - margin,
           transform: 'translate(-100%, -50%)'
         };
@@ -128,7 +163,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Target Highlight Overlay (using box-shadow to punch a hole) */}
       {targetRect && (
         <div
-          id="walkthrough-overlay" className="ohc-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
+          id="walkthrough-overlay" className="omnisolo-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
           style={{
             zIndex: 9999,
             top: targetRect.top - 4,
@@ -144,7 +179,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
         id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in"
+        className="omnisolo-walkthrough-bubble fixed z-[10000] backdrop-blur-[30px] saturate-[210%] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-walkthrough-in"
         style={bubbleStyle}
       >
         {targetRect && (
@@ -153,7 +188,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
         <div className="flex justify-between items-start mb-3">
           <h4 className="font-bold font-outfit text-gray-900 dark:text-gray-100 text-lg leading-tight pr-4">{currentStep.title}</h4>
-          <button onClick={handleSkip} id="wt-close" className="wt-close text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] rounded-full p-1.5 transition-all flex-shrink-0">
+          <button onClick={handleSkip} id="wt-close" aria-label="Close walkthrough" className="wt-close text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-black/10 hover:bg-black/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] rounded-full p-1.5 transition-all flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -175,11 +210,11 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes pop-in {
-          0% { opacity: 0; transform: scale(0.9) ${bubbleStyle.transform}; }
-          100% { opacity: 1; transform: scale(1) ${bubbleStyle.transform}; }
+        @keyframes walkthrough-fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
         }
-        .animate-pop-in { animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-walkthrough-in { animation: walkthrough-fade-in 0.15s ease-out forwards; }
       `}} />
     </>
   );

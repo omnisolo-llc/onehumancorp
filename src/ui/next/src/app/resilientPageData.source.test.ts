@@ -33,7 +33,7 @@ describe("page rendering resilience", () => {
 
   it("does not request a QR code for an empty target URL", () => {
     expect(page("qr-code-generator/page.tsx"))
-      .toContain("useState('https://ohc.app/my-store')");
+      .toContain("useState('https://cloud.omnisolo.co/my-store')");
   });
 
   it("keeps handled optional-help failures out of the error console", () => {
@@ -70,7 +70,7 @@ describe("page rendering resilience", () => {
     for (const route of [
       "viral-challenge-generator",
       "viral-goal-tracker",
-      "viral-powered-by-ohc-widget",
+      "viral-powered-by-omnisolo-widget",
       "interactive-insight-widget",
       "viral-countdown-widget",
       "viral-leaderboard-generator",

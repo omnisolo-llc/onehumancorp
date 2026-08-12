@@ -40,7 +40,7 @@ export default function PreOrderWidgetPage() {
   const handleShareToUnlock = async () => {
     setIsUnlocking(true);
     setEntitlementError(null);
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I configured a pre-order widget with OHC: ${window.location.origin}/onboarding?ref=${tenant}`)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I configured a pre-order widget with OmniSolo: ${window.location.origin}/onboarding?ref=${tenant}`)}`, '_blank');
     try {
       const response = await fetch('/api/v1/growth/trial-extension/claim', { method: 'POST' });
       if (!response.ok) throw new Error('Trial activation is unavailable.');
@@ -127,7 +127,7 @@ export default function PreOrderWidgetPage() {
               />
               <div className="flex flex-col">
                  <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                   Remove "Powered by OHC" branding
+                   Remove "Powered by OmniSolo" branding
                  </label>
                  {!hasPro && !removeBranding && (
                    <span className="text-xs text-amber-600 dark:text-amber-500 font-medium mt-1">Requires Pro or Share to Unlock ✨</span>
@@ -180,7 +180,7 @@ export default function PreOrderWidgetPage() {
 
               {!removeBranding && (
                 <div style={{ fontFamily: 'sans-serif', textAlign: 'center', fontSize: '12px', marginTop: '16px' }}>
-                    <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OHC</a>
+                    <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OmniSolo</a>
                 </div>
               )}
 
@@ -204,11 +204,11 @@ export default function PreOrderWidgetPage() {
               <div className="bg-gray-100 dark:bg-black/50 p-4 rounded-xl font-mono text-sm text-gray-800 dark:text-gray-200 overflow-x-auto mb-6">
                 {`<div id="ohc-pre-order-widget" data-product="${productName}" data-offer="${offerText}" data-theme="${theme}" data-tenant="${tenant}"></div>`}
                 <br/>
-                {`<script src="https://assets.onehumancorp.com/widgets/pre-order.js" async></script>`}
+                {`<script src="https://assets.omnisolo.co/widgets/pre-order.js" async></script>`}
                 {!removeBranding && (
                   <>
                     <br/>
-                    {`<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://app.onehumancorp.com/onboarding?ref=${tenant}" target="_blank" rel="noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`}
+                    {`<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/onboarding?ref=${tenant}" target="_blank" rel="noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`}
                   </>
                 )}
               </div>
@@ -239,7 +239,7 @@ export default function PreOrderWidgetPage() {
               </div>
               <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-3">Upgrade to Pro</h2>
               <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm leading-relaxed">
-                Make the Pre-Order Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+                Make the Pre-Order Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
               </p>
 
               <button

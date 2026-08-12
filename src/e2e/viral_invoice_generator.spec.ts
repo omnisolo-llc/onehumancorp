@@ -49,7 +49,7 @@ test.describe('Viral Invoice Generator Loop', () => {
     await expect(page.getByText('$2500.00')).toBeVisible();
 
     // Verify the viral loop footer
-    const poweredByLink = page.locator('a', { hasText: 'Powered by OHC' }).last();
+    const poweredByLink = page.locator('a', { hasText: 'Powered by OmniSolo' }).last();
     await expect(poweredByLink).toBeVisible();
 
     const onboardingHref = await poweredByLink.getAttribute('href');

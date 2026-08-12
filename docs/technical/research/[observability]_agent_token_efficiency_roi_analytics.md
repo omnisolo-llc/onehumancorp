@@ -4,7 +4,7 @@
 Agent Token Efficiency & ROI Analytics
 
 ## Problem Statement
-The OHC swarm consumes significant LLM tokens across various providers. While we have basic counters for token usage and burn-rate forecasts, we lack **context-aware efficiency metrics**. We cannot currently answer:
+The OmniSolo swarm consumes significant LLM tokens across various providers. While we have basic counters for token usage and burn-rate forecasts, we lack **context-aware efficiency metrics**. We cannot currently answer:
 1. **Tokens Per Successful Task**: Which agents or models are most "efficient" at completing tasks with the fewest tokens?
 2. **Cost-to-Success Ratio**: What is the USD cost of a successful task completion versus a failed one?
 3. **Redundant Reasoning Waste**: How many tokens are spent in `REVISION_REQUIRED` states or `FAILED` attempts compared to productive output?

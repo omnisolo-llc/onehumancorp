@@ -71,7 +71,7 @@ mod tests {
     #[tokio::test]
     async fn test_cuj_stress_workspaces_cloud_mode() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(database_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pool = sqlx::postgres::PgPoolOptions::new()
                 .max_connections(20)
                 .connect(&database_url)
@@ -194,7 +194,7 @@ mod tests {
         impl TeammateMesh for LocalLatencyMockMesh {
             async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl: u64) -> Result<bool, String> {
                 tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
                 Ok(true)
@@ -205,7 +205,7 @@ mod tests {
             async fn ping(&self) -> Result<(), String> { Ok(()) }
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
         }
 
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
@@ -247,7 +247,7 @@ mod tests {
         impl TeammateMesh for InstantMockMesh {
             async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl: u64) -> Result<bool, String> {
                 // If CPU is starved, this future might not be polled promptly
                 Ok(true)
@@ -258,7 +258,7 @@ mod tests {
             async fn ping(&self) -> Result<(), String> { Ok(()) }
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
         }
 
         let db2 = Arc::new(DB {
@@ -721,7 +721,7 @@ mod tests {
         impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
             async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
@@ -729,7 +729,7 @@ mod tests {
             async fn ping(&self) -> Result<(), String> { Ok(()) }
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(omnisolo_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
         }
 
         let mesh = Arc::new(DummyMesh);
@@ -1024,7 +1024,7 @@ mod tests {
     async fn test_ml_resilience_60s_timeout_rule() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
 
-        let timeout_duration = ohc_builtin_agent::agent::agent_task_timeout();
+        let timeout_duration = omnisolo_builtin_agent::agent::agent_task_timeout();
         assert_eq!(timeout_duration.as_secs(), 60, "Agent tasks must have a strictly enforced 60s timeout");
 
         let result = tokio::time::timeout(timeout_duration, async {
@@ -1322,7 +1322,7 @@ mod tests {
         assert_eq!(count_total, 50, "Total count should be exactly the sum without leakage");
 
         // Postgres Parity Logic
-        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(database_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pg_pool = sqlx::postgres::PgPoolOptions::new()
                 .max_connections(5)
                 .connect(&database_url)
@@ -1497,7 +1497,7 @@ mod parity_auditing_tests {
 
         // 2. Postgres Setup (if available)
         let mut pg_pool_opt = None;
-        if let Ok(database_url) = std::env::var("OHC_DATABASE_URL") {
+        if let Ok(database_url) = std::env::var("OMNISOLO_DATABASE_URL") {
             let pg_pool = PgPoolOptions::new().max_connections(5).connect(&database_url).await.unwrap();
 
             let table_suffix = uuid::Uuid::new_v4().to_string().replace("-", "_");

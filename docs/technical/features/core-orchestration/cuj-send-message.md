@@ -40,7 +40,7 @@ Collaboration is happening in a virtual meeting room, and the human manager need
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 </div>

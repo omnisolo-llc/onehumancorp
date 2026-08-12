@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
+use ::server_omnisolo::orchestration::*;
+use ::server_omnisolo::orchestration::agent_manager_service_server::AgentManagerService;
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
 use crate::hub::Hub;
@@ -66,7 +66,7 @@ impl MyAgentManagerService {
         let task_queue = tasks_res.unwrap();
         let queue_length = task_queue.len() as i32;
         let proto_task_queue = task_queue.into_iter().map(|t| t.into_proto()).collect();
-        let mut proto_task_queue_mut: Vec<::server_ohc::orchestration::SharedTask> = proto_task_queue;
+        let mut proto_task_queue_mut: Vec<::server_omnisolo::orchestration::SharedTask> = proto_task_queue;
         if mobile_optimized {
             for task in proto_task_queue_mut.iter_mut() {
                 task.description.clear();
@@ -260,8 +260,8 @@ impl AgentManagerService for MyAgentManagerService {
         let now = Utc::now();
         let identities = agents.into_iter().map(|a| AgentIdentity {
             agent_id: a.id.clone(),
-            svid: format!("spiffe://onehumancorp.io/org/{org_id}/agent/{}", a.id),
-            trust_domain: "onehumancorp.io".to_string(),
+            svid: format!("spiffe://omnisolo.io/org/{org_id}/agent/{}", a.id),
+            trust_domain: "omnisolo.io".to_string(),
             issued_at_unix: now.timestamp(),
             expires_at_unix: (now + chrono::Duration::hours(24)).timestamp(),
         }).collect();
@@ -410,7 +410,7 @@ mod tests {
     fn request_for_org<T>(message: T, org_id: &str) -> Request<T> {
         let mut request = Request::new(message);
         let identity = format!(
-            "spiffe://onehumancorp.io/org/{org_id}/agent/test-agent"
+            "spiffe://omnisolo.io/org/{org_id}/agent/test-agent"
         );
         request
             .metadata_mut()
@@ -560,7 +560,7 @@ mod tests {
         };
         let mut request = Request::new(req);
         let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
+        metadata.insert("x-spiffe-id", "spiffe://omnisolo.io/org/system/agent/test".parse().unwrap());
         *request.metadata_mut() = metadata;
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -580,7 +580,7 @@ mod tests {
         };
         let mut fire_request = Request::new(fire_req);
         let mut metadata2 = tonic::metadata::MetadataMap::new();
-        metadata2.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
+        metadata2.insert("x-spiffe-id", "spiffe://omnisolo.io/org/system/agent/test".parse().unwrap());
         *fire_request.metadata_mut() = metadata2;
         fire_request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -599,7 +599,7 @@ mod tests {
         let req = EmptyRequest {};
         let mut request = Request::new(req);
         let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
+        metadata.insert("x-spiffe-id", "spiffe://omnisolo.io/org/system/agent/test".parse().unwrap());
         *request.metadata_mut() = metadata;
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -620,7 +620,7 @@ mod tests {
         };
         let mut request = Request::new(req);
         let mut metadata = tonic::metadata::MetadataMap::new();
-        metadata.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
+        metadata.insert("x-spiffe-id", "spiffe://omnisolo.io/org/system/agent/test".parse().unwrap());
         *request.metadata_mut() = metadata;
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -637,7 +637,7 @@ mod tests {
         };
         let mut restore_request = Request::new(restore_req);
         let mut metadata2 = tonic::metadata::MetadataMap::new();
-        metadata2.insert("x-spiffe-id", "spiffe://onehumancorp.io/org/system/agent/test".parse().unwrap());
+        metadata2.insert("x-spiffe-id", "spiffe://omnisolo.io/org/system/agent/test".parse().unwrap());
         *restore_request.metadata_mut() = metadata2;
         restore_request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -660,7 +660,7 @@ mod benchmark_tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, crate::db::get_pool().clone()));
 
-        hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_omnisolo::orchestration::Agent {
             id: "agent_1".to_string(),
             name: "Test Agent".to_string(),
             role: "assistant".to_string(),

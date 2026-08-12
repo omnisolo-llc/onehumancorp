@@ -7,12 +7,12 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-The **B2B Agent Exchange** allows two independent OHC organizations (e.g., `acme.corp` and `globex.com`) to bridge their AI workforces. This enables use cases like automated procurement (Acme's Buyer Agent negotiating with Globex's Sales Agent) or shared project management.
+The **B2B Agent Exchange** allows two independent OmniSolo organizations (e.g., `acme.corp` and `globex.com`) to bridge their AI workforces. This enables use cases like automated procurement (Acme's Buyer Agent negotiating with Globex's Sales Agent) or shared project management.
 
 ## 2. Technical Architecture
 
 ### 2.1 Trust Domain Peering
-OHC uses SPIFFE federation to establish trust.
+OmniSolo uses SPIFFE federation to establish trust.
 - **OIDC Discovery**: Each organization publishes its JWKS (JSON Web Key Set) at a public endpoint (e.g., `https://ohc.acme.corp/.well-known/jwks.json`).
 - **Mutual Trust**: Org-A imports Org-B's OIDC issuer, allowing Org-A's Hub to verify SVIDs presented by Org-B's agents.
 
@@ -66,7 +66,7 @@ struct TrustAgreement {
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

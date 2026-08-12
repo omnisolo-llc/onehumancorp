@@ -88,7 +88,7 @@ struct CreateWorkflowRequest {
 }
 
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
-static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
+static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<omnisolo_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
 static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCache<Option<(String, String)>>> = std::sync::OnceLock::new();
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
@@ -274,7 +274,7 @@ async fn proxy_agent_rpc_handler(
             .into_response();
     }
 
-    let raw_origin = std::env::var("OHC_AGENT_URL")
+    let raw_origin = std::env::var("OMNISOLO_AGENT_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let Ok(url) = agent_rpc_url(&raw_origin) else {
         return (
@@ -297,7 +297,7 @@ async fn proxy_agent_rpc_handler(
         .header("x-tenant-id", tenant_id)
         .header("x-user-id", &claims.sub)
         .json(&payload);
-    if let Ok(token) = std::env::var("OHC_AGENT_TOKEN") {
+    if let Ok(token) = std::env::var("OMNISOLO_AGENT_TOKEN") {
         if !token.trim().is_empty() {
             request = request.bearer_auth(token);
         }
@@ -715,8 +715,8 @@ pub fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
 }
 
 pub fn workflow_agent_binary() -> String {
-    std::env::var("OHC_BUILTIN_AGENT_BINARY")
-        .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
+    std::env::var("OMNISOLO_BUILTIN_AGENT_BINARY")
+        .or_else(|_| std::env::var("OMNISOLO_AGENT_BINARY"))
         .unwrap_or_else(|_| {
             if crate::is_standalone_runtime() {
                 if let Ok(exe_path) = std::env::current_exe() {
@@ -774,8 +774,8 @@ pub fn dispatch_workflow(record: WorkflowRecord) {
     tokio::spawn(async move {
         if crate::is_standalone_runtime() {
             if let Some(svc) = BUILTIN_AGENT_SERVICE.get() {
-                use ohc_builtin_agent::proto::agent_service::agent_service_server::AgentService;
-                let req = ohc_builtin_agent::proto::agent_service::SubAgentRequest {
+                use omnisolo_builtin_agent::proto::agent_service::agent_service_server::AgentService;
+                let req = omnisolo_builtin_agent::proto::agent_service::SubAgentRequest {
                     task: task.clone(),
                     working_dir: String::new(),
                     parent_context_json: String::new(),
@@ -934,12 +934,12 @@ pub mod services {
     pub mod sync;
     pub mod chat;
 
-    #[cfg(not(ohc_bazel))]
+    #[cfg(not(omnisolo_bazel))]
     pub mod intake;
 
-    #[cfg(ohc_bazel)]
+    #[cfg(omnisolo_bazel)]
     pub use ::server_services_b2b as b2b;
-    #[cfg(not(ohc_bazel))]
+    #[cfg(not(omnisolo_bazel))]
     pub mod b2b;
     pub mod integration;
     pub mod ops;
@@ -1051,9 +1051,9 @@ fn grpc_tls_config_from_pem(
             .filter(|bytes| !bytes.is_empty())
             .ok_or_else(|| format!("{name} is required and must not be empty in cloud mode"))
     };
-    let cert = require("OHC_GRPC_TLS_CERT_PATH", cert)?;
-    let key = require("OHC_GRPC_TLS_KEY_PATH", key)?;
-    let client_ca = require("OHC_GRPC_CLIENT_CA_PATH", client_ca)?;
+    let cert = require("OMNISOLO_GRPC_TLS_CERT_PATH", cert)?;
+    let key = require("OMNISOLO_GRPC_TLS_KEY_PATH", key)?;
+    let client_ca = require("OMNISOLO_GRPC_CLIENT_CA_PATH", client_ca)?;
 
     Ok(Some(
         tonic::transport::ServerTlsConfig::new()
@@ -1089,43 +1089,43 @@ fn grpc_tls_config_from_env(
 
     grpc_tls_config_from_pem(
         false,
-        Some(read("OHC_GRPC_TLS_CERT_PATH")?),
-        Some(read("OHC_GRPC_TLS_KEY_PATH")?),
-        Some(read("OHC_GRPC_CLIENT_CA_PATH")?),
+        Some(read("OMNISOLO_GRPC_TLS_CERT_PATH")?),
+        Some(read("OMNISOLO_GRPC_TLS_KEY_PATH")?),
+        Some(read("OMNISOLO_GRPC_CLIENT_CA_PATH")?),
     )
     .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidInput, error))
 }
 
 pub mod proto {
     pub mod interop {
-        pub use ::server_ohc::interop::*;
+        pub use ::server_omnisolo::interop::*;
     }
     pub mod mcp_proxy {
-        pub use ::server_ohc::mcp_proxy::*;
+        pub use ::server_omnisolo::mcp_proxy::*;
     }
     pub mod orchestration {
-        pub use ::server_ohc::orchestration::*;
+        pub use ::server_omnisolo::orchestration::*;
     }
     pub mod billing {
-        pub use ::server_ohc::billing::*;
+        pub use ::server_omnisolo::billing::*;
     }
     pub mod agent {
-        pub use ::server_ohc::agent::*;
+        pub use ::server_omnisolo::agent::*;
         pub mod service {
-            pub use ::server_ohc::agent::service::*;
+            pub use ::server_omnisolo::agent::service::*;
         }
     }
     pub mod organization {
-        pub use ::server_ohc::organization::*;
+        pub use ::server_omnisolo::organization::*;
     }
     pub mod common {
-        pub use ::server_ohc::common::*;
+        pub use ::server_omnisolo::common::*;
     }
     pub mod inventory {
-        pub use ::server_ohc::inventory::*;
+        pub use ::server_omnisolo::inventory::*;
     }
     pub mod app {
-        pub use ::server_ohc::app::*;
+        pub use ::server_omnisolo::app::*;
     }
 }
 
@@ -1536,8 +1536,8 @@ impl HubService for MyHubService {
 
     async fn route_semantic(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::SemanticRoutingRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::SemanticRoutingResponse>, tonic::Status> {
+        request: tonic::Request<::server_omnisolo::orchestration::SemanticRoutingRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::SemanticRoutingResponse>, tonic::Status> {
         let req = request.into_inner();
         let internal_req = crate::orchestration::router::SemanticRoutingRequest {
             tenant_id: req.tenant_id,
@@ -1546,7 +1546,7 @@ impl HubService for MyHubService {
         };
 
         match self.hub.semantic_router.route(&internal_req) {
-            Ok(res) => Ok(tonic::Response::new(::server_ohc::orchestration::SemanticRoutingResponse {
+            Ok(res) => Ok(tonic::Response::new(::server_omnisolo::orchestration::SemanticRoutingResponse {
                 tenant_id: res.tenant_id,
                 target_department: res.target_department.to_string(),
                 confidence_score: res.confidence_score,
@@ -1686,8 +1686,8 @@ impl HubService for MyHubService {
 
     async fn get_my_plan(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::MyPlanResponse>, tonic::Status> {
+        request: tonic::Request<::server_omnisolo::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::MyPlanResponse>, tonic::Status> {
                 let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
@@ -1718,7 +1718,7 @@ impl HubService for MyHubService {
         let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
         let next_bill_estimated = total_cost_cents;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
+        Ok(tonic::Response::new(::server_omnisolo::orchestration::MyPlanResponse {
             current_plan: plan_name,
             ai_actions_used: ai_used as i32,
             ai_actions_limit: ai_limit,
@@ -1730,12 +1730,12 @@ impl HubService for MyHubService {
 
     async fn get_cost_dashboard(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::CostDashboardResponse>, tonic::Status> {
+        request: tonic::Request<::server_omnisolo::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::CostDashboardResponse>, tonic::Status> {
                 let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
-        static COST_DASHBOARD_CACHE: std::sync::OnceLock<server_utils::cache::HybridCache<::server_ohc::orchestration::CostDashboardResponse>> = std::sync::OnceLock::new();
+        static COST_DASHBOARD_CACHE: std::sync::OnceLock<server_utils::cache::HybridCache<::server_omnisolo::orchestration::CostDashboardResponse>> = std::sync::OnceLock::new();
         let cache = COST_DASHBOARD_CACHE.get_or_init(|| server_utils::cache::HybridCache::new(self.hub.redis_client()));
         let cache_key = format!("cost_dashboard:{}", tenant_id);
         if let Some(cached) = cache.get(&cache_key).await {
@@ -1855,7 +1855,7 @@ impl HubService for MyHubService {
         let budget_manager = ::server_pricing::budget::BudgetManager::new(budget_limit);
         let budget_health_alert = budget_manager.is_projected_cost_over_threshold(projected_cents);
 
-        let response = ::server_ohc::orchestration::CostDashboardResponse {
+        let response = ::server_omnisolo::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0).round() as i64,
             total_costs: (total_costs_f64 * 100.0).round() as i64,
             projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
@@ -1873,13 +1873,13 @@ impl HubService for MyHubService {
             api_cost: api_cost_cents,
             budget_health_alert,
             trend: if trend.is_empty() { "stable".to_string() } else { "up".to_string() },
-            agent_costs: agent_costs_res.unwrap_or_else(|_| vec![]).into_iter().map(|r| ::server_ohc::orchestration::AgentCostProto {
+            agent_costs: agent_costs_res.unwrap_or_else(|_| vec![]).into_iter().map(|r| ::server_omnisolo::orchestration::AgentCostProto {
                 agent_name: format!("Agent {}", r.agent_id), // Default formatting
                 agent_id: r.agent_id,
                 cost: r.cost_cents,
             }).collect(),
-            department_tier_usage: Some(::server_ohc::orchestration::DepartmentTierUsageResponseProto {
-                departments: department_res.unwrap_or_else(|_| crate::api::billing_api::empty_department_tier_usage_response()).departments.into_iter().map(|d| ::server_ohc::orchestration::DepartmentUsageProto {
+            department_tier_usage: Some(::server_omnisolo::orchestration::DepartmentTierUsageResponseProto {
+                departments: department_res.unwrap_or_else(|_| crate::api::billing_api::empty_department_tier_usage_response()).departments.into_iter().map(|d| ::server_omnisolo::orchestration::DepartmentUsageProto {
                     department_id: d.id,
                     department_name: d.department_type,
                     cost: (d.actions_used as i64) * 10, // approximate cost mapping
@@ -1894,8 +1894,8 @@ impl HubService for MyHubService {
 
     async fn select_plan(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::SelectPlanRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::SelectPlanResponse>, tonic::Status> {
+        request: tonic::Request<::server_omnisolo::orchestration::SelectPlanRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::SelectPlanResponse>, tonic::Status> {
                 let tenant_id = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .map(|a| a.org_id.clone())
             .filter(|id| !id.is_empty())
@@ -1932,7 +1932,7 @@ impl HubService for MyHubService {
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::SelectPlanResponse {
+        Ok(tonic::Response::new(::server_omnisolo::orchestration::SelectPlanResponse {
             success: true,
             checkout_url: url,
         }))
@@ -1940,8 +1940,8 @@ impl HubService for MyHubService {
 
     async fn cancel_subscription(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::CancelSubscriptionRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::CancelSubscriptionResponse>, tonic::Status> {
+        request: tonic::Request<::server_omnisolo::orchestration::CancelSubscriptionRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::CancelSubscriptionResponse>, tonic::Status> {
         let req = request.into_inner();
         let stripe_key = std::env::var("STRIPE_API_KEY")
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
@@ -1952,24 +1952,24 @@ impl HubService for MyHubService {
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::CancelSubscriptionResponse {
+        Ok(tonic::Response::new(::server_omnisolo::orchestration::CancelSubscriptionResponse {
             success: true,
         }))
     }
 
     async fn download_invoice(
         &self,
-        _request: tonic::Request<::server_ohc::orchestration::DownloadInvoiceRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::DownloadInvoiceResponse>, tonic::Status> {
-        Ok(tonic::Response::new(::server_ohc::orchestration::DownloadInvoiceResponse {
+        _request: tonic::Request<::server_omnisolo::orchestration::DownloadInvoiceRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::DownloadInvoiceResponse>, tonic::Status> {
+        Ok(tonic::Response::new(::server_omnisolo::orchestration::DownloadInvoiceResponse {
             pdf_url: "https://invoice.stripe.com/...".to_string(),
         }))
     }
 
     async fn create_terminal_connection_token(
         &self,
-        request: tonic::Request<::server_ohc::orchestration::CreateTerminalTokenRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::CreateTerminalTokenResponse>, tonic::Status> {
+        request: tonic::Request<::server_omnisolo::orchestration::CreateTerminalTokenRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::CreateTerminalTokenResponse>, tonic::Status> {
         let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
         let tenant_id = auth_info.map(|i| i.org_id).ok_or_else(|| tonic::Status::unauthenticated("Missing authentication context"))?;
 
@@ -1980,7 +1980,7 @@ impl HubService for MyHubService {
         let token = client.create_terminal_connection_token(&tenant_id).await
             .map_err(|e| tonic::Status::internal(e))?;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::CreateTerminalTokenResponse {
+        Ok(tonic::Response::new(::server_omnisolo::orchestration::CreateTerminalTokenResponse {
             success: true,
             token,
         }))
@@ -2006,8 +2006,8 @@ impl HubService for MyHubService {
 
     async fn handle_config_wizard(
         &self,
-        _request: tonic::Request<::server_ohc::orchestration::AgentConfig>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
+        _request: tonic::Request<::server_omnisolo::orchestration::AgentConfig>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received ConfigWizard request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -2017,8 +2017,8 @@ impl HubService for MyHubService {
 
     async fn handle_prompt_tuning(
         &self,
-        _request: tonic::Request<::server_ohc::orchestration::PromptTuningConfig>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
+        _request: tonic::Request<::server_omnisolo::orchestration::PromptTuningConfig>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received PromptTuning request in wizard service");
         Ok(tonic::Response::new(WizardResponse {
             success: true,
@@ -2422,7 +2422,7 @@ impl HubService for MyHubService {
     async fn create_task(
         &self,
         request: Request<CreateTaskRequest>,
-    ) -> Result<Response<::server_ohc::orchestration::SharedTask>, Status> {
+    ) -> Result<Response<::server_omnisolo::orchestration::SharedTask>, Status> {
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
             "default_org".to_string(),
@@ -2432,7 +2432,7 @@ impl HubService for MyHubService {
             req.priority,
         ).map_err(|e| Status::internal(e))?;
         
-        Ok(Response::new(::server_ohc::orchestration::SharedTask {
+        Ok(Response::new(::server_omnisolo::orchestration::SharedTask {
             id: task.id,
             organization_id: task.organization_id,
             parent_plan_id: task.parent_plan_id,
@@ -2456,7 +2456,7 @@ impl HubService for MyHubService {
         }))
     }
 
-    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::SharedTask, Status>> + Send>>;
+    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<::server_omnisolo::orchestration::SharedTask, Status>> + Send>>;
     
     async fn poll_tasks(
         &self,
@@ -2465,8 +2465,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
         
-        let mapped_tasks: Vec<Result<::server_ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
-            Ok(::server_ohc::orchestration::SharedTask {
+        let mapped_tasks: Vec<Result<::server_omnisolo::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
+            Ok(::server_omnisolo::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -2547,7 +2547,7 @@ async fn get_pending_approvals(
         let limit = 100;
         let approvals = self.dept_orchestrator.get_pending_approvals(&req.organization_id, None, limit).await;
 
-        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = approvals.into_iter().map(|task| {
+        let mapped_tasks: Vec<::server_omnisolo::orchestration::SharedTask> = approvals.into_iter().map(|task| {
             let mut proposed_content = "".to_string();
             if let Some(payload) = &task.payload {
                 if let Some(draft) = payload.get("draft_copy") {
@@ -2564,7 +2564,7 @@ async fn get_pending_approvals(
                 proposed_content = serde_json::to_string(&task.payload.unwrap()).unwrap_or_default();
             }
 
-            ::server_ohc::orchestration::SharedTask {
+            ::server_omnisolo::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.tenant_id,
                 parent_plan_id: "".to_string(),
@@ -2714,7 +2714,7 @@ async fn get_pending_approvals(
 
     async fn publish_mesh_event(
         &self,
-        request: Request<::server_ohc::orchestration::PublishMeshEventRequest>,
+        request: Request<::server_omnisolo::orchestration::PublishMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let md = request.metadata();
         let spiffe_id = crate::auth::extract_spiffe_id_from_metadata(md)
@@ -2811,7 +2811,7 @@ async fn get_pending_approvals(
         &self,
         request: Request<InviteRequest>,
     ) -> Result<Response<InviteResponse>, Status> {
-        let tenant_id = request.metadata().get("x-ohc-tenant-id").map(|v| v.to_str().unwrap_or("")).unwrap_or("").to_string();
+        let tenant_id = request.metadata().get("x-omnisolo-tenant-id").map(|v| v.to_str().unwrap_or("")).unwrap_or("").to_string();
         let req = request.into_inner();
         
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
@@ -2843,10 +2843,10 @@ async fn get_pending_approvals(
 
     async fn get_meetings(
         &self,
-        _request: tonic::Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<tonic::Response<::server_ohc::orchestration::GetMeetingsResponse>, tonic::Status> {
+        _request: tonic::Request<::server_omnisolo::orchestration::EmptyRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::orchestration::GetMeetingsResponse>, tonic::Status> {
         let meetings = self.hub.get_meetings();
-        Ok(tonic::Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
+        Ok(tonic::Response::new(::server_omnisolo::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
 }
@@ -2931,15 +2931,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         database.backend() != crate::persistence::DatabaseBackend::MySql
     });
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
-    if std::env::var("OHC_AGENT_TOKEN").is_err() && std::env::var("OHC_AGENT_SPIFFE_ID").is_err() {
+    if std::env::var("OMNISOLO_AGENT_TOKEN").is_err() && std::env::var("OMNISOLO_AGENT_SPIFFE_ID").is_err() {
         unsafe {
-            std::env::set_var("OHC_AGENT_TOKEN", "e2e-dummy-token");
-            std::env::set_var("OHC_AGENT_AUTH_KEY", "e2e-dummy-key-that-is-at-least-thirty-two-bytes-long");
+            std::env::set_var("OMNISOLO_AGENT_TOKEN", "e2e-dummy-token");
+            std::env::set_var("OMNISOLO_AGENT_AUTH_KEY", "e2e-dummy-key-that-is-at-least-thirty-two-bytes-long");
         }
     }
     let builtin_agent_auth = if standalone {
         Some(
-            ohc_builtin_agent::auth::auth_mode_from_env().map_err(|error| {
+            omnisolo_builtin_agent::auth::auth_mode_from_env().map_err(|error| {
                 std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     format!("invalid builtin agent authentication configuration: {error}"),
@@ -2957,7 +2957,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::persistence::migration::migrate(database).await?;
     }
 
-    let grpc_port = std::env::var("OHC_GRPC_PORT")
+    let grpc_port = std::env::var("OMNISOLO_GRPC_PORT")
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(8081);
@@ -2974,8 +2974,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
-        crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-        crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+        crate::db::DbStore::Postgres => omnisolo_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+        crate::db::DbStore::Sqlite(sqlite_pool) => omnisolo_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
     let cb = std::sync::Arc::new(|msg: &str, _err: &str| { ::server_telemetry::record_error_signal(msg); }) as std::sync::Arc<dyn Fn(&str, &str) + Send + Sync>; let consolidation_worker = std::sync::Arc::new(crate::workers::memory::MemoryConsolidationWorker::new(vector_repo.clone(), std::time::Duration::from_secs(3600), 180, 20, 2, vec!["TASK_SUMMARY".to_string(), "NOTES".to_string(), "SESSION_DATA".to_string(), "NOTE".to_string(), "SUMMARY".to_string(), "CS_NOTE".to_string(), "AGENT_ACTION".to_string()], Some(cb)));
     if legacy_sqlx_background_enabled {
@@ -3137,8 +3137,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let cfg = crate::config::get();
         let _db_path = cfg.database_url.as_ref()
             .and_then(|url| url.strip_prefix("sqlite://"))
-            .map(|s| s.split('?').next().unwrap_or("ohc-standalone.db"))
-            .unwrap_or("ohc-standalone.db");
+            .map(|s| s.split('?').next().unwrap_or("omnisolo-standalone.db"))
+            .unwrap_or("omnisolo-standalone.db");
         #[cfg(unix)]
         {
             use std::fs::OpenOptions;
@@ -3167,7 +3167,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     const MESH_TRANSPORT_STARTUP_ATTEMPTS: u32 = 30;
     let mut attempt = 1;
     let mesh_transport = loop {
-        match ohc_builtin_agent::mesh::transport::create_transport(
+        match omnisolo_builtin_agent::mesh::transport::create_transport(
             redis_url.as_deref(),
             is_cloud,
         )
@@ -3272,7 +3272,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 return;
             }
         };
-        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+        let msg = ::server_omnisolo::orchestration::TeammateMeshEvent {
             agent_id: "system".to_string(),
             action: event_type,
             status: "ok".to_string(),
@@ -3316,7 +3316,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let builtin_mesh = handoff_mesh.clone();
         let builtin_auth = builtin_agent_auth.expect("standalone auth was initialized");
         tokio::spawn(async move {
-            let agent_id = std::env::var("OHC_AGENT_ID")
+            let agent_id = std::env::var("OMNISOLO_AGENT_ID")
                 .unwrap_or_else(|_| uuid::Uuid::new_v4().hyphenated().to_string());
 
             // Cross-Mode Health Monitoring: Builtin Agent Heartbeat
@@ -3338,15 +3338,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
             let _health_cancel = builtin_mesh.start_health_responder().await;
 
-            let cfg = ohc_builtin_agent::service::AgentConfig {
-                llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
-                model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
-                llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
+            let cfg = omnisolo_builtin_agent::service::AgentConfig {
+                llm_provider: std::env::var("OMNISOLO_LLM_PROVIDER").unwrap_or_default(),
+                model: std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_default(),
+                llm_endpoint: std::env::var("OMNISOLO_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
                 system_prompt: ::server_pricing::compression::reduce_tokens(
-                    &std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default(),
+                    &std::env::var("OMNISOLO_SYSTEM_PROMPT").unwrap_or_default(),
                 ),
                 max_tokens: {
-                    let parsed = std::env::var("OHC_MAX_TOKENS")
+                    let parsed = std::env::var("OMNISOLO_MAX_TOKENS")
                         .ok()
                         .and_then(|v| v.parse().ok())
                         .unwrap_or(2048);
@@ -3358,22 +3358,22 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         parsed
                     }
                 },
-                temperature: std::env::var("OHC_TEMPERATURE")
+                temperature: std::env::var("OMNISOLO_TEMPERATURE")
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(0.0),
-                max_iterations: std::env::var("OHC_MAX_ITERATIONS")
+                max_iterations: std::env::var("OMNISOLO_MAX_ITERATIONS")
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(100),
-                max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES")
+                max_context_messages: std::env::var("OMNISOLO_MAX_CONTEXT_MESSAGES")
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(80),
             };
             let agent_id_clone = agent_id.clone();
             let mut svc_impl =
-                ohc_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, builtin_auth);
+                omnisolo_builtin_agent::service::AgentServiceImpl::new(agent_id, cfg, builtin_auth);
             svc_impl.init_memory().await;
             let svc = std::sync::Arc::new(svc_impl);
             let _ = BUILTIN_AGENT_SERVICE.set(svc.clone());
@@ -3392,7 +3392,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }
             });
 
-            ohc_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
+            omnisolo_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
         });
     } else {
         tracing::info!("Skipping in-process builtin agent; cluster mode expects a separate ohc-builtin-agent binary");
@@ -5382,7 +5382,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
     let limit_ledger = 50i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") }
+            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM omnisolo_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM omnisolo_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2") }
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(&db.pool)
@@ -5407,7 +5407,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                 }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") }
+            if mobile_optimized { sqlx::query("SELECT id, event_type, department, created_at FROM omnisolo_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") } else { sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM omnisolo_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?") }
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(pool)
@@ -6687,8 +6687,8 @@ async fn create_ui_bom_item_handler(
     let db_for_sales = db.clone();
     let settings_store = crate::settings::Store::global();
     let is_standalone = crate::is_standalone_runtime();
-    let ohc_job_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
-        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "ohc_job_queue").unwrap())
+    let omnisolo_job_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "omnisolo_job_queue").unwrap())
     } else {
         match &db.store {
             crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone())),
@@ -6696,12 +6696,12 @@ async fn create_ui_bom_item_handler(
         }
     };
 
-    let ohc_job_queue_clone = ohc_job_queue.clone();
+    let omnisolo_job_queue_clone = omnisolo_job_queue.clone();
     tokio::spawn(async move {
         loop {
-            if let Ok(Some(job)) = ohc_job_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
+            if let Ok(Some(job)) = omnisolo_job_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
                 tracing::info!("Processing sub-agent job: {}", job.id);
-                let _ = ohc_job_queue_clone.complete(&job.id, &job.tenant_id).await;
+                let _ = omnisolo_job_queue_clone.complete(&job.id, &job.tenant_id).await;
             }
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
@@ -6717,7 +6717,7 @@ async fn create_ui_bom_item_handler(
             std::sync::Arc::new(queue)
         }
     };
-    let dynamic_workflow_state_dir = std::env::var("OHC_DYNAMIC_WORKFLOW_STATE_DIR")
+    let dynamic_workflow_state_dir = std::env::var("OMNISOLO_DYNAMIC_WORKFLOW_STATE_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| std::path::PathBuf::from(".ohc/dynamic-workflows"));
     let dynamic_workflow_manager = std::sync::Arc::new(
@@ -7669,7 +7669,7 @@ async fn create_ui_bom_item_handler(
         ))
         .merge(api::realtime::router())
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
-        .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .nest("/api/v1/omnisolo_job_queue", api::omnisolo_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
@@ -7909,11 +7909,11 @@ async fn create_ui_bom_item_handler(
             relay_webhook_router,
             http_auth_store.clone(),
         ))
-        .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
-            default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::ollama::OllamaClient::new("http://localhost:11434")), vec![])),
+        .merge(omnisolo_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(omnisolo_builtin_agent::visual_workflow_client::VisualWorkflowState {
+            default_agent: std::sync::Arc::new(omnisolo_builtin_agent::agent::Agent::new(std::sync::Arc::new(omnisolo_builtin_agent::llm::ollama::OllamaClient::new("http://localhost:11434")), vec![])),
             tools: vec![],
             sub_agents: std::collections::HashMap::new(),
-            default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
+            default_config: omnisolo_builtin_agent::agent::AgentRunConfig::default(),
         })).layer(axum::middleware::from_fn_with_state(
             http_auth_store.clone(),
             ::server_auth::strict_bearer_auth_middleware,
@@ -7947,7 +7947,7 @@ async fn create_ui_bom_item_handler(
         .merge(oauth_callback_router)
         .fallback(api_not_found_handler);
 
-    let port = std::env::var("OHC_PORT")
+    let port = std::env::var("OMNISOLO_PORT")
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(18789);
@@ -7983,13 +7983,13 @@ async fn create_ui_bom_item_handler(
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if legacy_sqlx_background_enabled && ::server_config::is_telemetry_enabled() {
-        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let cloud_url = std::env::var("OMNISOLO_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(db.pool.clone(), cloud_url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Parallel);
         telemetry_daemon.start();
     }
 
     if is_cloud && legacy_sqlx_background_enabled {
-        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let cloud_url = std::env::var("OMNISOLO_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let power_sync_orchestrator = Arc::new(crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(db.clone(), cloud_url.clone()));
         power_sync_orchestrator.start().await;
 
@@ -8062,8 +8062,8 @@ async fn create_ui_bom_item_handler(
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
     let is_standalone_prune = crate::is_standalone_runtime();
-    let ohc_job_queue_prune: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone_prune && std::env::var("REDIS_URL").is_ok() {
-        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "ohc_job_queue").unwrap())
+    let omnisolo_job_queue_prune: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone_prune && std::env::var("REDIS_URL").is_ok() {
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "omnisolo_job_queue").unwrap())
     } else {
         match &db.store {
             crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(hub_for_sched.pool.clone())),
@@ -8087,12 +8087,12 @@ async fn create_ui_bom_item_handler(
                         ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stagnant missions");
                         tracing::trace!("failed to cleanup stagnant missions: {}", e);
                     }
-                    let job_queue = crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
+                    let job_queue = crate::orchestration::queue::omnisolo_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
                         ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale ohc jobs");
                         tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
                     }
-                    if let Err(e) = ohc_job_queue_prune.cleanup_stale_jobs().await {
+                    if let Err(e) = omnisolo_job_queue_prune.cleanup_stale_jobs().await {
                         ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale sub agent jobs");
                         tracing::trace!("failed to cleanup stale sub agent jobs: {}", e);
                     }
@@ -8151,9 +8151,9 @@ async fn create_ui_bom_item_handler(
 
     grpc_server
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), spiffe_interceptor))
-        .add_service(::server_ohc::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
-        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(
+        .add_service(::server_omnisolo::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), spiffe_interceptor))
+        .add_service(::server_omnisolo::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
+        .add_service(::server_omnisolo::orchestration::auth_service_server::AuthServiceServer::new(
             ::server_auth::AuthServiceServerImpl::new(
                 store,
                 if standalone {
@@ -8164,13 +8164,13 @@ async fn create_ui_bom_item_handler(
             ),
         ))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
-        .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
-        .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
+        .add_service(::server_omnisolo::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
+        .add_service(::server_omnisolo::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
-        .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client() }, spiffe_interceptor))
-        .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
-        .add_service(::server_ohc::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
-        .add_service(::server_ohc::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))
+        .add_service(::server_omnisolo::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client() }, spiffe_interceptor))
+        .add_service(::server_omnisolo::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
+        .add_service(::server_omnisolo::inventory::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
+        .add_service(::server_omnisolo::orchestration::sync_service_server::SyncServiceServer::with_interceptor(crate::services::sync::service::MySyncService::new(db.pool.clone()), spiffe_interceptor))
 
         .serve(addr)
         .await?;
@@ -8452,9 +8452,9 @@ mod tests {
 
     async fn isolated_omni_postgres_pool(
     ) -> Option<(sqlx::PgPool, sqlx::PgPool, String, String)> {
-        let database_url = std::env::var("OHC_TEST_POSTGRES_URL")
+        let database_url = std::env::var("OMNISOLO_TEST_POSTGRES_URL")
             .ok()
-            .or_else(|| std::env::var("OHC_DATABASE_URL").ok())?;
+            .or_else(|| std::env::var("OMNISOLO_DATABASE_URL").ok())?;
         if !database_url.starts_with("postgres") {
             return None;
         }
