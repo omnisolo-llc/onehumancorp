@@ -11,20 +11,39 @@ use super::{
 type CommandResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
 pub fn database_url_from_environment() -> CommandResult<DatabaseUrl> {
-    let direct = std::env::var("DATABASE_URL").ok();
-    let legacy = std::env::var("OHC_DATABASE_URL").ok();
-    if direct.is_some() && legacy.is_some() {
+    let canonical_direct = std::env::var_os("DATABASE_URL").is_some();
+    let legacy_direct = std::env::var_os("OHC_DATABASE_URL").is_some();
+    if canonical_direct && legacy_direct {
         return Err("DATABASE_URL and OHC_DATABASE_URL cannot both be set".into());
     }
-    direct
-        .or(legacy)
-        .filter(|value| !value.trim().is_empty())
-        .map(DatabaseUrl::new)
-        .ok_or_else(|| "DATABASE_URL is required".into())
+
+    let value_environment_variable = if legacy_direct {
+        "OHC_DATABASE_URL"
+    } else {
+        "DATABASE_URL"
+    };
+    ::server_common::secret_source::load_optional_secret(
+        value_environment_variable,
+        "DATABASE_URL_FILE",
+    )?
+    .map(String::from_utf8)
+    .transpose()?
+    .map(DatabaseUrl::new)
+    .ok_or_else(|| "DATABASE_URL is required".into())
 }
 
 pub async fn connect_from_environment() -> CommandResult<AppDatabase> {
     let url = database_url_from_environment()?;
+    if url.expose_for_connection().starts_with("sqlite:") {
+        let key = std::env::var("OHC_SQLITE_KEY")
+            .map_err(|_| "OHC_SQLITE_KEY is required for encrypted SQLite storage")?;
+        if key.trim().is_empty() {
+            return Err("OHC_SQLITE_KEY cannot be empty for encrypted SQLite storage".into());
+        }
+        return Ok(
+            AppDatabase::connect_with_sqlcipher_key(url.expose_for_connection(), &key).await?,
+        );
+    }
     Ok(AppDatabase::connect(url.expose_for_connection()).await?)
 }
 

@@ -105,6 +105,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:catalog.rs",
     "//src/server/api:fulfillment.rs",
     "//src/server/api:shipping.rs",
+    "//src/server/api:settings/mod.rs",
+    "//src/server/api:settings/global_commerce.rs",
     "//src/server/api:setup.rs",
     "//src/server/api/booking:mod.rs",
 
@@ -410,6 +412,16 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "auth_contract_sources",
+    srcs = [
+        "lib.rs",
+        "//src/server/persistence:commands.rs",
+        "//src/server/persistence:migration.rs",
+    ],
+    visibility = ["//src/server/auth:__pkg__"],
+)
+
 # build_script removed as protos are now built with Bazel rules
 
 rust_library(
@@ -626,6 +638,7 @@ rust_test(
     deps = [
         "@crates//:sea-orm",
         "@crates//:serde",
+        "@crates//:tempfile",
         "@crates//:tokio",
     ],
 )
@@ -635,6 +648,7 @@ rust_test(
     size = "small",
     srcs = [
         "persistence_commands_test.rs",
+        "//src/server/auth:seaorm_store_source",
         "//src/server/persistence:capabilities.rs",
         "//src/server/persistence:commands.rs",
         "//src/server/persistence:connection.rs",
@@ -644,11 +658,14 @@ rust_test(
     edition = "2024",
     deps = [
         "//src/server/auth:server_auth",
+        "//src/server/common:server_common",
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:sea-orm",
         "@crates//:serde",
         "@crates//:serde_json",
+        "@crates//:temp-env",
+        "@crates//:tempfile",
         "@crates//:tokio",
         "@crates//:uuid",
     ],

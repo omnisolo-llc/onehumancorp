@@ -11,6 +11,7 @@ pub struct CatalogProduct {
     pub item_type: Option<String>,
     pub price_cents: i64,
     pub inventory_count: i32,
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Debug)]
@@ -21,6 +22,7 @@ pub struct NewProduct {
     pub item_type: Option<String>,
     pub price_cents: i64,
     pub inventory_count: i32,
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Clone)]
@@ -55,6 +57,7 @@ impl CatalogRepository {
                 item_type: row.item_type,
                 price_cents: row.price_cents.unwrap_or_default(),
                 inventory_count: row.inventory_count.unwrap_or_default(),
+                metadata: row.metadata,
             })
             .collect())
     }
@@ -72,6 +75,7 @@ impl CatalogRepository {
             item_type: Set(product.item_type),
             price_cents: Set(Some(product.price_cents)),
             inventory_count: Set(Some(product.inventory_count)),
+            metadata: Set(product.metadata),
             created_at: Set(Some(now)),
             updated_at: Set(Some(now)),
         }
@@ -84,6 +88,7 @@ impl CatalogRepository {
             item_type: row.item_type,
             price_cents: row.price_cents.unwrap_or_default(),
             inventory_count: row.inventory_count.unwrap_or_default(),
+            metadata: row.metadata,
         })
     }
 }

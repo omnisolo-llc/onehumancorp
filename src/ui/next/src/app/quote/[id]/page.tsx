@@ -1,167 +1,162 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { CheckCircle2, RefreshCw } from "lucide-react";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+
+type Quote = Readonly<{
+  id: string;
+  status: string;
+  total_amount_cents: number | null;
+  required_deposit_cents: number | null;
+}>;
+
+type QuoteLineItem = Readonly<{
+  id: string;
+  description: string;
+  unit_price_cents: number;
+  quantity: number;
+}>;
+
+type QuoteResponse = Readonly<{ quote: Quote; line_items: QuoteLineItem[] }>;
+
+const QUOTE_ID = /^[A-Za-z0-9._-]{1,128}$/;
+
+function parseQuote(value: unknown): QuoteResponse | null {
+  if (value === null || typeof value !== "object") return null;
+  const candidate = value as Partial<QuoteResponse>;
+  if (candidate.quote === null || typeof candidate.quote !== "object") return null;
+  if (!Array.isArray(candidate.line_items)) return null;
+  if (typeof candidate.quote.id !== "string" || typeof candidate.quote.status !== "string") return null;
+  const validItems = candidate.line_items.every((item) => item !== null
+    && typeof item === "object"
+    && typeof item.id === "string"
+    && typeof item.description === "string"
+    && Number.isSafeInteger(item.unit_price_cents)
+    && Number.isSafeInteger(item.quantity));
+  return validItems ? candidate as QuoteResponse : null;
+}
+
+function formatMoney(cents: number | null) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" })
+    .format((cents ?? 0) / 100);
+}
 
 export default function InteractiveQuotePage() {
-    const params = useParams();
-    const router = useRouter();
-    const quoteId = params.id;
+  const params = useParams();
+  const rawId = params.id;
+  const quoteId = typeof rawId === "string" && QUOTE_ID.test(rawId) ? rawId : null;
+  const [quote, setQuote] = useState<QuoteResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [accepting, setAccepting] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const [quote, setQuote] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [selectedDate, setSelectedDate] = useState<string>("");
-    const [paying, setPaying] = useState(false);
-    const [paid, setPaid] = useState(false);
-
-    useEffect(() => {
-        const fetchQuote = async () => {
-            try {
-                const res = await fetch(`/api/quotes/${quoteId}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setQuote(data);
-                } else {
-                    console.error("Failed to fetch quote");
-                }
-            } catch (err) {
-                console.error("Error fetching quote:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchQuote();
-    }, [quoteId]);
-
-    const handlePayDeposit = async () => {
-        setPaying(true);
-        try {
-            const res = await fetch(`/api/quotes/${quoteId}/pay`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    payment_method_id: "pm_card_visa",
-                    calendar_event_id: selectedDate
-                }),
-            });
-            if (res.ok) {
-                setPaid(true);
-            } else {
-                console.error("Payment failed");
-            }
-        } catch (err) {
-            console.error("Payment error:", err);
-        } finally {
-            setPaying(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
-                <div className="text-center text-gray-500 animate-pulse">Loading quote...</div>
-            </div>
-        );
+  const loadQuote = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (quoteId === null) throw new Error("invalid quote");
+      const response = await fetch(`/api/v1/quotes/${encodeURIComponent(quoteId)}`, {
+        cache: "no-store",
+        signal,
+      });
+      const parsed = parseQuote(await response.json());
+      if (!response.ok || parsed === null) throw new Error("quote unavailable");
+      setQuote(parsed);
+      setAccepted(parsed.quote.status === "ACCEPTED");
+    } catch (loadError) {
+      if (loadError instanceof DOMException && loadError.name === "AbortError") return;
+      setQuote(null);
+      setError("This quote is unavailable.");
+    } finally {
+      setLoading(false);
     }
+  }, [quoteId]);
 
-    if (!quote) {
-        return (
-            <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
-                <div className="text-center text-red-500">Quote not found.</div>
-            </div>
-        );
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadQuote(controller.signal);
+    return () => controller.abort();
+  }, [loadQuote]);
+
+  async function acceptQuote() {
+    if (quoteId === null || accepting) return;
+    setAccepting(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/v1/quotes/${encodeURIComponent(quoteId)}/accept`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+      });
+      if (!response.ok) throw new Error("acceptance rejected");
+      setAccepted(true);
+    } catch {
+      setError("The quote could not be accepted. Try again.");
+    } finally {
+      setAccepting(false);
     }
+  }
 
-    if (paid) {
-        return (
-            <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
-                <div className="glassmorphism p-8 rounded-[32px] border border-white/40 shadow-xl max-w-sm w-full text-center">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-green-600 text-3xl">✓</span>
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2 font-outfit">Deposit Paid!</h2>
-                    <p className="text-gray-600 mb-6">Your appointment is confirmed. The remaining balance will be invoiced after the work is completed.</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold rounded-[16px] transition-colors"
-                    >
-                        View Receipt
-                    </button>
-                </div>
-            </div>
-        );
-    }
+  if (loading) return <p className="py-10 text-sm text-gray-600" role="status">Loading quote...</p>;
 
+  if (quote === null) {
     return (
-        <div className="min-h-screen bg-[#F5F5F7] p-4 flex flex-col items-center">
-            {/* Mobile-first constraints max-w-[375px] */}
-            <div className="w-full max-w-[375px] mx-auto pb-20">
-                <header className="py-6 text-center">
-                    <h1 className="text-xl font-bold font-outfit text-gray-900">Your Quote</h1>
-                    <p className="text-sm text-gray-500">Ref: {quoteId?.toString().substring(0, 8)}</p>
-                </header>
-
-                <main className="space-y-4">
-                    <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-md bg-white/60 backdrop-blur-md">
-                        <h2 className="text-lg font-bold text-gray-900 mb-4">{quote.quote?.service_name || "Quote"}</h2>
-
-                        <div className="space-y-3 mb-6">
-                            {quote.line_items?.map((item: any, i: number) => (
-                                <div key={i} className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-600">{item.description} (x{item.quantity})</span>
-                                    <span className="font-semibold text-gray-900">${(item.unit_price_cents * item.quantity / 100).toFixed(2)}</span>
-                                </div>
-                            ))}
-                            <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-                                <span className="font-medium text-gray-900">Total Estimate</span>
-                                <span className="font-bold text-gray-900">${(quote.quote?.total_amount_cents / 100).toFixed(2)}</span>
-                            </div>
-                        </div>
-
-                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm font-medium text-blue-900">Required Deposit</span>
-                                <span className="text-lg font-bold text-blue-600">${(quote.quote?.required_deposit_cents / 100).toFixed(2)}</span>
-                            </div>
-                            <p className="text-xs text-blue-700/70">To secure your booking</p>
-                        </div>
-                    </div>
-
-                    <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-md bg-white/60 backdrop-blur-md">
-                        <h3 className="text-md font-bold text-gray-900 mb-3">Confirm Date</h3>
-                        <input
-                            type="datetime-local"
-                            data-testid="quote-date-selector"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white/80 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        />
-                    </div>
-                </main>
-
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-gray-200 flex justify-center z-50">
-                    <div className="w-full max-w-[375px]">
-                        <button
-                            data-testid="pay-deposit-button"
-                            onClick={handlePayDeposit}
-                            disabled={paying || !selectedDate}
-                            className="w-full py-4 px-6 bg-black text-white font-bold rounded-[20px] transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg"
-                        >
-                            {paying ? (
-                                <span className="animate-pulse">Processing...</span>
-                            ) : (
-                                <>
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                    Pay ${(quote.quote?.required_deposit_cents / 100).toFixed(2)} Deposit
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div className="app-panel max-w-lg rounded-lg p-5">
+        <p className="text-sm text-red-700 dark:text-red-300" role="alert">{error}</p>
+        <button className="app-button mt-4 inline-flex items-center gap-2" onClick={() => void loadQuote()} type="button">
+          <RefreshCw aria-hidden="true" className="h-4 w-4" />
+          Retry
+        </button>
+      </div>
     );
+  }
+
+  if (accepted) {
+    return (
+      <section className="app-panel max-w-lg rounded-lg p-6 text-center" role="status">
+        <CheckCircle2 aria-hidden="true" className="mx-auto h-10 w-10 text-green-600" />
+        <h2 className="mt-3 text-xl font-semibold">Quote accepted</h2>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+          The business has been notified and can continue scheduling the work.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl space-y-5">
+      <section className="app-panel rounded-lg p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase text-gray-500">Quote</p>
+            <p className="mt-1 font-mono text-sm text-gray-600 dark:text-gray-300">{quote.quote.id}</p>
+          </div>
+          <p className="text-2xl font-semibold">{formatMoney(quote.quote.total_amount_cents)}</p>
+        </div>
+        <div className="mt-5 divide-y divide-gray-200 dark:divide-gray-700">
+          {quote.line_items.map((item) => (
+            <div className="flex items-start justify-between gap-4 py-3 text-sm" key={item.id}>
+              <span>{item.description} x{item.quantity}</span>
+              <span className="font-medium">{formatMoney(item.unit_price_cents * item.quantity)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-blue-50 p-4 text-sm text-blue-950 dark:bg-blue-950/30 dark:text-blue-100">
+          <span>Required deposit</span>
+          <strong>{formatMoney(quote.quote.required_deposit_cents)}</strong>
+        </div>
+      </section>
+
+      {error && <p className="text-sm text-red-700 dark:text-red-300" role="alert">{error}</p>}
+      <button
+        className="app-button min-h-11 bg-[#0066FF] px-5 py-2.5 font-semibold text-white disabled:opacity-60"
+        disabled={accepting}
+        onClick={() => void acceptQuote()}
+        type="button"
+      >
+        {accepting ? "Accepting..." : "Accept quote"}
+      </button>
+    </div>
+  );
 }

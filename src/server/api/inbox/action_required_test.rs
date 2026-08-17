@@ -1,33 +1,32 @@
-use axum::{body::Body, http::{Request, StatusCode}};
+use axum::{
+    body::Body,
+    http::{Request, StatusCode},
+};
 use std::sync::Arc;
 use tower::ServiceExt;
 
 use crate::db::{DB, DbStore};
 
-fn auth_store_and_token(organization_id: &str) -> (Arc<::server_auth::Store>, String) {
-    auth_store_and_token_with_roles(organization_id, vec!["ADMIN".to_string()])
+async fn auth_store_and_token(organization_id: &str) -> (Arc<::server_auth::Store>, String) {
+    auth_store_and_token_with_roles(organization_id, vec!["ADMIN".to_string()]).await
 }
 
-fn auth_store_and_token_with_roles(
+async fn auth_store_and_token_with_roles(
     organization_id: &str,
     roles: Vec<String>,
 ) -> (Arc<::server_auth::Store>, String) {
     let store = Arc::new(::server_auth::Store::new());
-    let now = chrono::Utc::now();
-    let token = store
-        .issue_token(&::server_auth::User {
-            id: "user-a".to_string(),
-            username: "user-a".to_string(),
-            email: "user-a@example.com".to_string(),
-            password_hash: String::new(),
+    let user = store
+        .create_user(
+            "user-a".to_string(),
+            "user-a@example.com".to_string(),
+            "test-password".to_string(),
             roles,
-            active: true,
-            organization_id: Some(organization_id.to_string()),
-            created_at: now,
-            updated_at: now,
-            oidc_subject: None,
-        })
+            organization_id.to_string(),
+        )
+        .await
         .unwrap();
+    let token = store.issue_token(&user).unwrap();
     (store, token)
 }
 
@@ -40,7 +39,8 @@ async fn test_viewer_cannot_manage_action_required_drafts() {
     let (auth_store, token) = auth_store_and_token_with_roles(
         "12345678-1234-1234-1234-123456789012",
         vec!["VIEWER".to_string()],
-    );
+    )
+    .await;
     let app = super::action_required::router(db, auth_store);
     let response = app
         .oneshot(
@@ -65,12 +65,7 @@ async fn test_list_pending_drafts_unauthorized() {
     let app = super::action_required::router(db, Arc::new(::server_auth::Store::new()));
 
     let response = app
-        .oneshot(
-            Request::builder()
-                .uri("/")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -154,7 +149,7 @@ async fn test_approve_draft_invalid_draft_id() {
         store: DbStore::Postgres,
     });
 
-    let (auth_store, token) = auth_store_and_token("12345678-1234-1234-1234-123456789012");
+    let (auth_store, token) = auth_store_and_token("12345678-1234-1234-1234-123456789012").await;
     let app = super::action_required::router(db, auth_store);
 
     let response = app
@@ -179,7 +174,7 @@ async fn test_edit_draft_invalid_draft_id() {
         store: DbStore::Postgres,
     });
 
-    let (auth_store, token) = auth_store_and_token("12345678-1234-1234-1234-123456789012");
+    let (auth_store, token) = auth_store_and_token("12345678-1234-1234-1234-123456789012").await;
     let app = super::action_required::router(db, auth_store);
 
     let response = app

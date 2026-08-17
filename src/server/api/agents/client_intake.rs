@@ -55,7 +55,7 @@ struct LocalLlm;
 #[async_trait::async_trait]
 impl ResearcherLlmClient for LocalLlm {
     async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
+        let is_test_mode = cfg!(test);
         let mut prompt = req.system.clone();
         for msg in &req.messages {
             prompt.push_str("\n\n");

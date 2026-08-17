@@ -1,3 +1,4 @@
+// Historical non-executable contract: migrate to database-seeded records before restoring as E2E.
 import { test, expect } from '@playwright/test';
 
 test.describe('Nora Autonomous Proposal Intake Flow', () => {

@@ -5,6 +5,7 @@ describe("resolveShellRoute", () => {
   test.each([
     "/onboarding",
     "/booking-widget",
+    "/client-portal",
     "/storefront-widget",
     "/website-builder",
   ])("assigns formerly standalone route %s to the guard", (pathname) => {

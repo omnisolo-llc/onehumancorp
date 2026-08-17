@@ -876,7 +876,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "KAIROS Hybrid Metrics",
-  "uid": "kairos-hybrid-metrics",
+  "title": "KAIROS Hybrid Metrics (Legacy)",
+  "uid": "kairos-hybrid-metrics-legacy",
   "version": 1
 }

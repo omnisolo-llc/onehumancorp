@@ -1,3 +1,4 @@
+// Historical non-executable contract: migrate to authenticated database seed before restoring as E2E.
 import { expect, test } from '@playwright/test';
 
 test.describe('Dashboard Triage Action Feed Edit UI', () => {

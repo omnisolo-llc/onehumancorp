@@ -1,3 +1,4 @@
+// Historical non-executable contract: migrate to the real-stack fixture before restoring as E2E.
 import { test, expect } from '@playwright/test';
 import { setupTestEnv, teardownTestEnv, loginAsE2eTenant } from './test_utils';
 

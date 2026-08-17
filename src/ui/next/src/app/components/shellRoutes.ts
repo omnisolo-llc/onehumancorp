@@ -16,7 +16,6 @@ const pageOwnedExactRoutes = new Set([
   "/analytics",
   "/assistant",
   "/business-analytics",
-  "/client-portal",
   "/cost-dashboard",
   "/dashboard",
   "/dashboard/campaigns",

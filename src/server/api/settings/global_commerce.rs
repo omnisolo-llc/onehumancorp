@@ -1,80 +1,157 @@
-use axum::{extract::State, Json, response::IntoResponse, http::StatusCode};
+use axum::{
+    Json, Router,
+    extract::{Extension, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::get,
+};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use crate::hub::Hub;
+use sqlx::{PgPool, Row};
 
-#[derive(Serialize, Deserialize)]
+const SUPPORTED_CURRENCIES: [&str; 6] = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY"];
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GlobalCommerceSettings {
     pub base_currency: String,
     pub enabled_currencies: Vec<String>,
 }
 
-pub async fn get_settings(
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
-) -> axum::response::Response {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
-        Some(_) => "default".to_string(),
-        None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
-    };
+fn authenticated_tenant(claims: &::server_common::Claims) -> Result<&str, StatusCode> {
+    claims
+        .organization_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|tenant_id| !tenant_id.is_empty())
+        .ok_or(StatusCode::UNAUTHORIZED)
+}
 
-    let pool = &hub.pool;
-    let row = sqlx::query("SELECT base_currency, enabled_currencies FROM tenants WHERE id = $1").bind(&tenant_id)
-        .fetch_optional(pool)
+fn valid_settings(settings: &GlobalCommerceSettings) -> bool {
+    let supported = |currency: &str| SUPPORTED_CURRENCIES.contains(&currency);
+    !settings.enabled_currencies.is_empty()
+        && settings.enabled_currencies.len() <= SUPPORTED_CURRENCIES.len()
+        && supported(&settings.base_currency)
+        && settings
+            .enabled_currencies
+            .iter()
+            .all(|currency| supported(currency))
+        && settings
+            .enabled_currencies
+            .iter()
+            .filter(|currency| *currency == &settings.base_currency)
+            .count()
+            == 1
+        && settings
+            .enabled_currencies
+            .iter()
+            .enumerate()
+            .all(|(index, currency)| !settings.enabled_currencies[..index].contains(currency))
+}
+
+async fn get_settings(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> Response {
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return status.into_response(),
+    };
+    let row = sqlx::query("SELECT base_currency, enabled_currencies FROM tenants WHERE id = $1")
+        .bind(tenant_id)
+        .fetch_optional(&pool)
         .await;
 
     match row {
         Ok(Some(record)) => {
-            use sqlx::Row;
-            let base_currency: Option<String> = record.try_get("base_currency").ok();
-            let enabled_currencies: Option<serde_json::Value> = record.try_get("enabled_currencies").ok();
-            let enabled = enabled_currencies
-                .and_then(|v| serde_json::from_value(v).ok())
-                .unwrap_or_else(|| vec!["USD".to_string()]);
-
-            let settings = GlobalCommerceSettings {
-                base_currency: base_currency.unwrap_or_else(|| "USD".to_string()),
-                enabled_currencies: enabled,
-            };
-            (StatusCode::OK, Json(serde_json::json!({ "tenant": settings }))).into_response()
-        },
-        Ok(None) => (StatusCode::NOT_FOUND, "Tenant not found").into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            let base_currency = record
+                .try_get::<Option<String>, _>("base_currency")
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| "USD".to_string());
+            let enabled_currencies = record
+                .try_get::<Option<serde_json::Value>, _>("enabled_currencies")
+                .ok()
+                .flatten()
+                .and_then(|value| serde_json::from_value(value).ok())
+                .unwrap_or_else(|| vec![base_currency.clone()]);
+            Json(serde_json::json!({
+                "tenant": GlobalCommerceSettings { base_currency, enabled_currencies }
+            }))
+            .into_response()
+        }
+        Ok(None) => StatusCode::NOT_FOUND.into_response(),
+        Err(error) => {
+            tracing::error!(error = %error, "global commerce settings lookup failed");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }
 
-pub async fn update_settings(
-    State(hub): State<Arc<Hub>>,
-    request: axum::extract::Request,
-) -> axum::response::Response {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
-        Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
-        Some(_) => "default".to_string(),
-        None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+async fn update_settings(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(settings): Json<GlobalCommerceSettings>,
+) -> Response {
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return status.into_response(),
     };
-
-    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.unwrap();
-    let payload: GlobalCommerceSettings = serde_json::from_slice(&body_bytes).unwrap();
-
-    let pool = &hub.pool;
-    let enabled_json = serde_json::to_value(&payload.enabled_currencies).unwrap_or(serde_json::json!(["USD"]));
-
-    let res = sqlx::query("UPDATE tenants SET base_currency = $1, enabled_currencies = $2 WHERE id = $3")
-    .bind(payload.base_currency)
-    .bind(enabled_json)
+    if !valid_settings(&settings) {
+        return (StatusCode::BAD_REQUEST, "invalid currency settings").into_response();
+    }
+    let enabled = match serde_json::to_value(&settings.enabled_currencies) {
+        Ok(enabled) => enabled,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
+    let result = sqlx::query(
+        "UPDATE tenants SET base_currency = $1, enabled_currencies = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3",
+    )
+    .bind(settings.base_currency)
+    .bind(enabled)
     .bind(tenant_id)
-    .execute(pool)
+    .execute(&pool)
     .await;
 
-    match res {
-        Ok(_) => (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+    match result {
+        Ok(result) if result.rows_affected() == 1 => {
+            Json(serde_json::json!({ "success": true })).into_response()
+        }
+        Ok(_) => StatusCode::NOT_FOUND.into_response(),
+        Err(error) => {
+            tracing::error!(error = %error, "global commerce settings update failed");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
-    axum::Router::new()
-        .route("/", axum::routing::get(get_settings).put(update_settings))
-        .with_state(hub)
+pub fn router<S>() -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+    PgPool: axum::extract::FromRef<S>,
+{
+    Router::new().route("/", get(get_settings).put(update_settings))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn currency_settings_are_bounded_and_include_the_base_once() {
+        assert!(valid_settings(&GlobalCommerceSettings {
+            base_currency: "EUR".to_string(),
+            enabled_currencies: vec!["USD".to_string(), "EUR".to_string()],
+        }));
+        assert!(!valid_settings(&GlobalCommerceSettings {
+            base_currency: "EUR".to_string(),
+            enabled_currencies: vec!["USD".to_string()],
+        }));
+        assert!(!valid_settings(&GlobalCommerceSettings {
+            base_currency: "USD".to_string(),
+            enabled_currencies: vec!["USD".to_string(), "USD".to_string()],
+        }));
+        assert!(!valid_settings(&GlobalCommerceSettings {
+            base_currency: "BTC".to_string(),
+            enabled_currencies: vec!["BTC".to_string()],
+        }));
+    }
 }

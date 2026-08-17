@@ -1,3 +1,4 @@
+// Historical non-executable contract for the removed simulated client portal.
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Client Hub Portal E2E Flow', () => {

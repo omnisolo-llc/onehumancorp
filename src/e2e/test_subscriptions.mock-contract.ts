@@ -1,3 +1,4 @@
+// Historical non-executable contract: remove network substitution before restoring as E2E.
 import { test, expect } from './fixtures';
 
 test.describe('AI-Driven Subscription & Membership Lifecycle Management', () => {
