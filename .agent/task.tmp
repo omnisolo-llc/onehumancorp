@@ -31,7 +31,7 @@ bazel test //... --nocache_test_results --test_output=errors
 
 ## Current delivery state
 
-All repository implementation, review, local verification, Git, and LAN-serving work is complete. The application commit `e72136f00a8c9cbafe133103bc8c84c47028a470` was rebased onto the latest `origin/main`, passed the exact uncached Bazel aggregate gate, and was pushed normally with `0 0` local/remote parity.
+All repository implementation, review, and local verification work is complete. The application commit `e72136f00a8c9cbafe133103bc8c84c47028a470`, dependency-security follow-up `de547e35b`, and final authenticated route-wiring closeout are included on `main`. The delivery uses the normal rebase-and-push procedure documented below; final local/remote parity must be `0 0`.
 
 GitHub Actions run `32013400972` was created for that exact SHA, but GitHub refused to start its first job because recent account payments failed or the Actions spending limit must be increased. The repository jobs therefore never executed: the change-detection job failed with no steps, the Bazel, Playwright, dependency, Kind, Docker, and PostgreSQL jobs were skipped, and the required aggregator remained queued. This is an external account/billing blocker, not a demonstrated code failure. After billing or the spending limit is corrected, rerun the workflow for the final pushed SHA and require every applicable job to pass.
 
@@ -96,6 +96,8 @@ The real application is currently served on the private LAN at `http://192.168.8
 
 - Cloud mode uses Secret-backed JWT and mTLS/SPIFFE configuration and rejects incomplete settings.
 - Standalone mode projects the built-in agent token and independent HMAC auth key from a Secret.
+- Documentation and job-queue routes now reuse the application's existing `Arc<DB>` request extension. The previous registrations wrapped it in a second `Arc`, inserted `Arc<Arc<DB>>`, and caused authenticated help, video, tooltip, walkthrough, and job-queue handlers to fail extension extraction at runtime.
+- A Bazel-registered server regression rejects any recurrence of the double-wrapped database extension pattern.
 - Helm security contexts, probes, resource limits, default-deny policy, and monitoring rendering contracts are covered.
 - Kind acceptance covers cloud/web and standalone/desktop flows with real databases and authenticated mutations.
 - Docker Compose acceptance covers the real container stack.
@@ -103,13 +105,26 @@ The real application is currently served on the private LAN at `http://192.168.8
 
 ### Dependency security
 
-The August 2026 production advisories found during review were fixed by upgrading/pinning:
+The August 2026 JavaScript advisories and actionable Rust advisories found during review were fixed by upgrading/pinning:
 
 - `dompurify` to `^3.4.13`
 - `js-yaml` to `4.3.1`
 - `nanoid` to `3.3.18`
+- Next.js to `^15.5.21`; the npm lock resolves `15.5.23`
+- CLI transitive `brace-expansion` to `5.0.9`
+- CLI transitive `postcss` to `8.5.23`
+- CLI transitive `undici` to `7.29.0`
+- `lettre` to `0.11.22`
+- `quinn-proto` to `0.11.15`
 
-Root and UI npm/pnpm manifests and lockfiles were regenerated. Deprecated UI pnpm package-level build metadata was removed while the workspace allow/build settings were preserved.
+Root, UI, and CLI npm/pnpm manifests and lockfiles were regenerated consistently. Deprecated UI pnpm package-level build metadata was removed while the workspace allow/build settings were preserved. The security source change is commit `de547e35b`.
+
+Residual Rust advisories are constrained by the latest compatible Tauri dependency graph and were not hidden, dismissed, or patched unsafely:
+
+- `glib 0.18.5` remains in the Linux desktop runtime through Tauri's GTK3 stack. The advisory requires `glib >=0.20`, while current Tauri `2.11.5` still resolves GTK/glib `0.18`; forcing a semver-incompatible transitive version would not be a valid fix.
+- `rustls-webpki 0.101.7` and `0.102.8` remain only in the Tauri CLI's macOS signing toolchain. Current `tauri-cli 2.11.4` resolves `tauri-macos-sign 2.3.4`, which pins the older `apple-codesign 0.27` graph. The application runtime path resolves fixed `rustls-webpki 0.103.13`.
+
+Recheck the Tauri graph when upstream releases a compatible GTK3/glib security update and when `tauri-cli` adopts a newer `apple-codesign`. Do not suppress these alerts merely to make the count zero.
 
 ## Important Bazel fixes made during aggregate verification
 
@@ -119,6 +134,7 @@ Root and UI npm/pnpm manifests and lockfiles were regenerated. Deprecated UI pnp
 4. The API aggregate target exposed stale auth fixtures that issued tokens without persisting users. Fixtures now use `Store::create_user`, preserving strict production authentication.
 5. The agent stream router test constructed a Tokio-dependent lazy pool outside a runtime. The test now runs under `#[tokio::test]`.
 6. Realtime WebSocket auth previously allowed the upgrade extractor to return 400 before invalid tickets were checked. Ticket validation now precedes upgrade extraction, and replay is verified over a real loopback WebSocket handshake.
+7. Final browser inspection exposed authenticated 500 responses from help, video, and tooltip routes. Axum reported a missing `Arc<DB>` extension because route registration inserted `Arc<Arc<DB>>`; all affected documentation and job-queue registrations now insert the existing shared handle directly, with an aggregate-test regression.
 
 ## Verification evidence
 
@@ -139,7 +155,29 @@ Executed 124 out of 124 tests: 124 tests pass
 Exit code: 0
 ```
 
-The final post-visual-fix run took 1929.821 seconds. After the commit and the clean rebase check, the exact command was run again and passed 124/124 in 1933.053 seconds. An earlier full pass before disabling the visual overlay also completed 124/124.
+The final post-visual-fix run took 1929.821 seconds. After the application commit and clean rebase check, the exact command passed 124/124 in 1933.053 seconds. After dependency-security commit `de547e35b`, the exact uncached command passed again: 124/124 in 3068.365 seconds.
+
+After the authenticated documentation-route fix and its registered regression, the exact uncached command passed once more: 124/124 in 2969.281 seconds. This is the authoritative final source-state gate.
+
+### Full repository build
+
+Run after the final dependency update:
+
+```bash
+bazel build //...
+```
+
+Result on 2026-08-17:
+
+```text
+Found 379 targets
+Build completed successfully
+8,455 / 8,455 actions completed
+Elapsed time: 1227.836s
+Exit code: 0
+```
+
+This includes server/UI/deployment artifacts, OCI packaging, the Tauri CLI, and Android AAB/APK outputs. Third-party Gradle/Tauri deprecation messages were warnings only.
 
 ### Focused Rust/Bazel regression targets
 
@@ -154,6 +192,8 @@ The final post-visual-fix run took 1929.821 seconds. After the commit and the cl
 //deploy:operational_api_contract_test: PASS
 //src/e2e:playwright_spec_coverage: PASS
 ```
+
+The core server target includes `production_router_inserts_the_shared_database_extension_without_double_wrapping`; its red/green cycle first failed on the deployed route pattern and then passed after the route registrations were corrected.
 
 ### Browser and visual verification
 
@@ -171,6 +211,7 @@ Manually inspected final screenshots include:
 - tablet login, verify-email, inbox, and client portal;
 - desktop login, register, verify-email, inbox, client portal, and long dashboard content;
 - real client-portal plan/account values and database-backed inbox empty state;
+- authenticated help articles and ten video guides after the final backend restart, at 390-pixel mobile and 1440-pixel desktop widths;
 - no Next development overlay, incoherent overlap, horizontal overflow, duplicate authenticated chrome, or mock image/data placeholder.
 
 ### Real deployment tests
@@ -194,16 +235,18 @@ git diff --check: PASS
 
 Repository-wide `cargo fmt --all -- --check` reports broad pre-existing/user formatting drift outside this scoped delivery, so only changed Rust files were formatted. Aggregate Bazel tests are the mandatory repository gate and pass.
 
-### Production dependency audits
+### Dependency audits
 
 ```text
-root `pnpm audit --prod`: no known vulnerabilities
-UI `pnpm audit --prod`: no known vulnerabilities
-root `npm audit --omit=dev`: 0 vulnerabilities
-UI `npm audit --omit=dev`: 0 vulnerabilities
+root `npm audit`: 0 vulnerabilities
+UI `npm audit`: 0 vulnerabilities
+CLI `npm audit`: 0 vulnerabilities
+root `pnpm audit`: no known vulnerabilities
+UI `pnpm audit`: no known vulnerabilities
+CLI `pnpm audit`: no known vulnerabilities
 ```
 
-`cargo deny` was not installed in the local toolchain (`cargo: no such command: deny`). No success claim is made for that unavailable local command; applicable CI security checks still must be observed after push.
+These are full audits including development dependencies, not production-only filters. `cargo deny` was not installed in the local toolchain (`cargo: no such command: deny`). The remaining Tauri-constrained Rust advisories are documented above; no success claim is made for the unavailable local command, and applicable CI security checks still must be observed after push.
 
 ### Cache/executor policy
 
@@ -278,6 +321,9 @@ GET http://127.0.0.1:18789/api/v1/health: healthy cloud-mode response
 GET http://127.0.0.1:3000/login: HTTP 200
 GET http://192.168.8.35:3000/login: HTTP 200
 Real seeded-user login through Next: HTTP 200
+Authenticated GET /api/v1/help through Next: HTTP 200, 7 articles
+Authenticated GET /api/v1/videos through Next: HTTP 200, 10 videos
+Authenticated GET /api/v1/tooltips through Next: HTTP 200, 19 tooltips
 Authenticated client portal: Free plan and 1 active plan
 Seeded product: Vegan Celebration Cake
 Persisted image: /dashboard_with_charts.png, complete, 1280x720
