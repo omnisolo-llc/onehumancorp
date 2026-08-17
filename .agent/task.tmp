@@ -31,17 +31,11 @@ bazel test //... --nocache_test_results --test_output=errors
 
 ## Current delivery state
 
-Application implementation, focused validation, the real browser visual audit, and the mandatory local Bazel aggregate gate are complete on the current worktree.
+All repository implementation, review, local verification, Git, and LAN-serving work is complete. The application commit `e72136f00a8c9cbafe133103bc8c84c47028a470` was rebased onto the latest `origin/main`, passed the exact uncached Bazel aggregate gate, and was pushed normally with `0 0` local/remote parity.
 
-At the time of this ledger update, the following delivery steps remain:
+GitHub Actions run `32013400972` was created for that exact SHA, but GitHub refused to start its first job because recent account payments failed or the Actions spending limit must be increased. The repository jobs therefore never executed: the change-detection job failed with no steps, the Bazel, Playwright, dependency, Kind, Docker, and PostgreSQL jobs were skipped, and the required aggregator remained queued. This is an external account/billing blocker, not a demonstrated code failure. After billing or the spending limit is corrected, rerun the workflow for the final pushed SHA and require every applicable job to pass.
 
-1. Review the complete Git inventory and staged diff for generated or sensitive artifacts.
-2. Commit all authorized changes.
-3. Fetch and rebase onto the latest `origin/main`.
-4. If the rebase changes source or resolves conflicts, rerun the exact Bazel aggregate gate.
-5. Push `main` normally and verify local/remote parity.
-6. Watch all applicable GitHub Actions jobs for the pushed SHA and fix any demonstrated failure without skips, mocks, or security weakening.
-7. Start the real backend and Next.js UI bound to `0.0.0.0`, verify them, and record the LAN URL in the final response.
+The real application is currently served on the private LAN at `http://192.168.8.35:3000`. Next is bound to `0.0.0.0:3000`; the compiled Rust backend is bound to `0.0.0.0:18789` and `0.0.0.0:50052`; it uses the real PostgreSQL and Valkey instances on loopback ports. The deterministic E2E SQL seed was reapplied before startup.
 
 ## Completed implementation
 
@@ -145,7 +139,7 @@ Executed 124 out of 124 tests: 124 tests pass
 Exit code: 0
 ```
 
-The final post-visual-fix run took 1929.821 seconds. An earlier full pass before disabling the visual overlay also completed 124/124, and the source-changing UI fix was followed by the final full rerun above.
+The final post-visual-fix run took 1929.821 seconds. After the commit and the clean rebase check, the exact command was run again and passed 124/124 in 1933.053 seconds. An earlier full pass before disabling the visual overlay also completed 124/124.
 
 ### Focused Rust/Bazel regression targets
 
@@ -274,3 +268,19 @@ After GitHub Actions is green, start only real services and bind the UI to all i
 5. Leave the processes running and report `http://LAN_IP:PORT`.
 
 Do not serve a mock API, static fake-data build, or Playwright-only fixture server.
+
+## Final LAN verification
+
+The currently running LAN stack passed these checks:
+
+```text
+GET http://127.0.0.1:18789/api/v1/health: healthy cloud-mode response
+GET http://127.0.0.1:3000/login: HTTP 200
+GET http://192.168.8.35:3000/login: HTTP 200
+Real seeded-user login through Next: HTTP 200
+Authenticated client portal: Free plan and 1 active plan
+Seeded product: Vegan Celebration Cake
+Persisted image: /dashboard_with_charts.png, complete, 1280x720
+```
+
+The runtime uses fresh process-local authentication material generated at startup. No runtime secret is written to this ledger or committed to Git.
