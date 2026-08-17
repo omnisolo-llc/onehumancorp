@@ -750,6 +750,7 @@ SERVER_LIB_TEST_GROUPS = {
         "test_fork_agent",
         "pipeline::tests::test_handle_spec_approved",
         "pipeline::tests::test_parse_spec_approved",
+        "production_router_inserts_the_shared_database_extension_without_double_wrapping",
         "test_publish_mesh_event",
         "rust_server_does_not_register_legacy_browser_application_routes",
         "test_sanitize_hub_event_redaction",

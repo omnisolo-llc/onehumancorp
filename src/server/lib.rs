@@ -7669,7 +7669,7 @@ async fn create_ui_bom_item_handler(
         ))
         .merge(api::realtime::router())
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
-        .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(std::sync::Arc::new(db.clone()))))
+        .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(db.clone())))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
@@ -7748,27 +7748,27 @@ async fn create_ui_bom_item_handler(
         ))
         .with_state(mesh_transport)
         .route("/api/v1/help", axum::routing::get(crate::api::docs::list_articles)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(axum::extract::Extension(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/help/search", axum::routing::get(crate::api::docs::search_articles)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(axum::extract::Extension(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips", axum::routing::get(crate::api::docs::get_tooltips)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(axum::extract::Extension(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips", axum::routing::post(crate::api::docs::update_tooltip)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(axum::extract::Extension(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(axum::extract::Extension(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(axum::extract::Extension(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/videos", axum::routing::get(crate::api::docs::list_videos)
-            .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+            .layer(axum::extract::Extension(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/changelog", axum::routing::get(crate::api::docs::get_changelog)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
@@ -8272,6 +8272,25 @@ mod tests {
             );
         }
         assert!(production_source.contains(".fallback(api_not_found_handler)"));
+    }
+
+    #[test]
+    fn production_router_inserts_the_shared_database_extension_without_double_wrapping() {
+        let source = include_str!("lib.rs");
+        let production_source = source
+            .rsplit_once("\n#[cfg(test)]\nmod tests {")
+            .expect("server source must retain its final test-module boundary")
+            .0;
+
+        assert!(
+            !production_source.contains(
+                ".layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))"
+            ),
+            "db is already Arc<DB>; double wrapping inserts Arc<Arc<DB>> and breaks handlers"
+        );
+        assert!(production_source.contains(
+            ".layer(axum::extract::Extension(db.clone()))"
+        ));
     }
 
     #[test]
