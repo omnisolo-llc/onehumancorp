@@ -1,6 +1,6 @@
 use sqlx::Row;
 pub mod persistence;
-#[cfg(test)]
+#[cfg(all(test, not(ohc_bazel)))]
 mod persistence_commands_test;
 pub mod rag_sync;
 pub mod redis_pool;
@@ -7676,6 +7676,10 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/v1/proposals", api::proposals::router().with_state(db.pool.clone()))
+        .nest(
+            "/api/v1/settings/global-commerce",
+            api::settings::global_commerce::router().with_state(db.pool.clone()),
+        )
         .nest(
             "/api/v1/booking/request",
             api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()).route_layer(

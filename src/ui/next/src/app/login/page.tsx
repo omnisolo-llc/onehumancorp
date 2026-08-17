@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, type FormEvent, useEffect, useState } from "react";
+import { PublicAuthShell } from "@/app/components/PublicAuthShell";
 import { safeReturnPath } from "@/lib/auth/url";
 
 const GENERIC_ERROR = "We couldn't sign you in. Check your details and try again.";
@@ -69,16 +70,9 @@ function LoginForm() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-4 font-outfit dark:bg-gray-900 sm:p-6">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-md items-center justify-center sm:min-h-[calc(100vh-3rem)]">
-        <section
-          aria-labelledby="login-title"
-          className="glassmorphism w-full rounded-[24px] border border-white/20 p-6 shadow-2xl sm:p-10"
-        >
+    <PublicAuthShell>
+        <div aria-labelledby="login-title">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0066FF] text-xl font-bold text-white shadow-lg">
-              O
-            </div>
             <h1 id="login-title" className="text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
               Sign in to OHC
             </h1>
@@ -93,7 +87,7 @@ function LoginForm() {
               <input
                 autoComplete="username"
                 autoFocus
-                className="glassmorphism min-h-[52px] w-full rounded-xl px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
+                className="glassmorphism min-h-[52px] w-full rounded-lg px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
                 disabled={pending}
                 maxLength={254}
                 onChange={(event) => setIdentifier(event.target.value)}
@@ -106,7 +100,7 @@ function LoginForm() {
               Password
               <input
                 autoComplete="current-password"
-                className="glassmorphism min-h-[52px] w-full rounded-xl px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
+                className="glassmorphism min-h-[52px] w-full rounded-lg px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
                 disabled={pending}
                 maxLength={1024}
                 onChange={(event) => setPassword(event.target.value)}
@@ -120,7 +114,7 @@ function LoginForm() {
               Organization <span className="font-normal text-gray-500">(optional for standalone)</span>
               <input
                 autoComplete="organization"
-                className="glassmorphism min-h-[52px] w-full rounded-xl px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
+                className="glassmorphism min-h-[52px] w-full rounded-lg px-4 text-base text-[#1D1D1F] outline-none transition focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 dark:text-[#F5F5F7]"
                 disabled={pending}
                 maxLength={128}
                 onChange={(event) => setOrganization(event.target.value)}
@@ -130,14 +124,14 @@ function LoginForm() {
 
             <div aria-live="polite" className="min-h-6">
               {error && (
-                <p role="alert" className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+                <p role="alert" className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
                   {error}
                 </p>
               )}
             </div>
 
             <button
-              className="min-h-[54px] w-full rounded-xl bg-[#1D1D1F] p-4 font-bold text-white shadow-[0_4px_14px_0_rgba(0,0,0,0.3)] transition hover:bg-black active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-[#1D1D1F] dark:hover:bg-gray-200"
+              className="min-h-[54px] w-full rounded-lg bg-[#1D1D1F] p-4 font-bold text-white shadow-[0_4px_14px_0_rgba(0,0,0,0.3)] transition hover:bg-black active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-[#1D1D1F] dark:hover:bg-gray-200"
               disabled={pending}
               type="submit"
             >
@@ -151,7 +145,7 @@ function LoginForm() {
               <div className="flex flex-col gap-3">
                 {providers.map((provider) => (
                   <Link
-                    className="min-h-[50px] rounded-xl border border-gray-300 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-800 transition hover:border-[#0066FF] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                    className="min-h-[50px] rounded-lg border border-gray-300 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-800 transition hover:border-[#0066FF] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                     href={`/api/v1/auth/oidc/${provider.key}?next=${encodeURIComponent(next)}`}
                     key={provider.key}
                   >
@@ -165,9 +159,8 @@ function LoginForm() {
           <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
             Need an account? <Link className="font-semibold text-[#0066FF]" href="/register">Check registration</Link>
           </p>
-        </section>
-      </div>
-    </main>
+        </div>
+    </PublicAuthShell>
   );
 }
 
@@ -175,11 +168,11 @@ export default function Login() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6 font-outfit dark:bg-gray-900">
+        <PublicAuthShell>
           <p className="text-sm text-gray-600 dark:text-gray-300" role="status">
             Loading sign in…
           </p>
-        </main>
+        </PublicAuthShell>
       }
     >
       <LoginForm />

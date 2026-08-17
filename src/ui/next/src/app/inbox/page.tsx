@@ -16,6 +16,8 @@ type Message = {
   status?: string;
   sender_id?: string;
   customer_id?: string;
+  checkout_link?: string;
+  proposed_product_id?: string;
   created_at?: string;
 };
 
@@ -125,7 +127,7 @@ function CustomerContextCard({ customerId }: { customerId: string }) {
   if (summary.total_interactions === 0 && summary.segments.length === 0) return null;
 
   return (
-    <div className="mt-4 rounded-xl border border-gray-100 bg-blue-50/50 p-4 dark:border-white/10 dark:bg-blue-900/10">
+    <div className="mt-4 rounded-lg border border-gray-100 bg-blue-50/50 p-4 dark:border-white/10 dark:bg-blue-900/10">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Unified Customer Memory</h3>
         <span className="app-badge good">{summary.total_interactions} interactions</span>

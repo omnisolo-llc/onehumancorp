@@ -37,4 +37,24 @@ if grep -Fq 'PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"' "$runner"; t
   exit 1
 fi
 
+if ! grep -Eq 'next dev .*--webpack([[:space:]]|$)' "$runner"; then
+  echo "Playwright runner must use webpack because Turbopack rejects Bazel's symlinked runfiles workspace" >&2
+  exit 1
+fi
+
+if ! grep -Eq 'curl .*--fail.*"\$BASE_URL/login"' "$runner"; then
+  echo "Playwright runner must reject non-successful Next readiness responses" >&2
+  exit 1
+fi
+
+if ! grep -Eq 'curl .*--max-time[=[:space:]]+5.*"\$BASE_URL/login"' "$runner"; then
+  echo "Playwright runner must bound each Next readiness request" >&2
+  exit 1
+fi
+
+if ! grep -Eq 'tar .*--dereference' "$runner"; then
+  echo "Playwright runner must materialize Bazel source symlinks in the writable Next workspace" >&2
+  exit 1
+fi
+
 echo "npm Playwright $package_version uses hermetic Chrome for Testing $module_version"

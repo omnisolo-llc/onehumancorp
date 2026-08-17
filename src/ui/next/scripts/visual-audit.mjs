@@ -6,6 +6,7 @@ import {
   classifyConsoleError,
   failureReasons,
   isCoverageComplete,
+  PUBLIC_AUTH_ROUTES,
   shouldFailAudit,
 } from './visual-audit-policy.mjs';
 import { discoverPageRoutes, shardAuditCases } from './visual-audit-routes.mjs';
@@ -124,6 +125,7 @@ function emptyMetrics(viewport) {
     documentWidth: null,
     horizontalOverflow: false,
     shellCounts: {
+      auth: 0,
       sidebar: 0,
       topbar: 0,
       main: 0,
@@ -182,7 +184,7 @@ try {
 
     try {
       context = await browser.newContext({ viewport: auditCase.viewport });
-      if (auditCase.route !== '/login') {
+      if (!PUBLIC_AUTH_ROUTES.has(auditCase.route)) {
         await context.addCookies([auditSessionCookie]);
       }
       page = await context.newPage();
@@ -225,9 +227,12 @@ try {
         });
         result.status = response?.status() ?? null;
         result.finalPathname = new URL(page.url()).pathname;
-        await page.waitForFunction(() => document.querySelectorAll('.app-sidebar').length === 1
-          && document.querySelectorAll('.app-topbar').length === 1
-          && document.querySelectorAll('.app-main').length === 1, undefined, { timeout: 30_000 });
+        await page.waitForFunction((publicRoute) => publicRoute
+          ? document.querySelectorAll('[data-auth-shell]').length === 1
+          : document.querySelectorAll('.app-sidebar').length === 1
+            && document.querySelectorAll('.app-topbar').length === 1
+            && document.querySelectorAll('.app-main').length === 1,
+        PUBLIC_AUTH_ROUTES.has(auditCase.route), { timeout: 30_000 });
         if (auditCase.route === '/inbox') {
           await page.getByTestId('inbox-settled').waitFor({ state: 'visible', timeout: 30_000 });
         }
@@ -274,6 +279,7 @@ try {
               documentWidth,
               horizontalOverflow: documentWidth > viewportWidth + 1,
               shellCounts: {
+                auth: document.querySelectorAll('[data-auth-shell]').length,
                 sidebar: document.querySelectorAll('.app-sidebar').length,
                 topbar: document.querySelectorAll('.app-topbar').length,
                 main: document.querySelectorAll('.app-main').length,

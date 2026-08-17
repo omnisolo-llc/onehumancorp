@@ -2,9 +2,16 @@ exports_files(["Cargo.toml"])
 
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
+filegroup(
+    name = "seaorm_store_source",
+    srcs = ["seaorm_store.rs"],
+    visibility = ["//src/server:__pkg__"],
+)
+
 rust_library(
     name = "server_auth",
     compile_data = [
+        "//src/server:auth_contract_sources",
         "//src/server/migrations",
         "//src/ui/next:auth_limits",
     ],

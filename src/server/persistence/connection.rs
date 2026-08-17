@@ -12,11 +12,33 @@ pub struct AppDatabase {
 
 impl AppDatabase {
     pub async fn connect(url: &str) -> Result<Self, sea_orm::DbErr> {
+        Self::connect_with_optional_sqlcipher_key(url, None).await
+    }
+
+    pub async fn connect_with_sqlcipher_key(url: &str, key: &str) -> Result<Self, sea_orm::DbErr> {
+        Self::connect_with_optional_sqlcipher_key(url, Some(key)).await
+    }
+
+    async fn connect_with_optional_sqlcipher_key(
+        url: &str,
+        sqlcipher_key: Option<&str>,
+    ) -> Result<Self, sea_orm::DbErr> {
         let mut options = ConnectOptions::new(url.to_owned());
         options
             .max_connections(20)
             .min_connections(1)
             .sqlx_logging(false);
+        if let Some(key) = sqlcipher_key {
+            let pragma_key = format!("'{}'", key.replace('\'', "''"));
+            options
+                .sqlcipher_key(pragma_key)
+                .map_sqlx_sqlite_opts(|options| {
+                    options
+                        .pragma("cipher", "'sqlcipher'")
+                        .pragma("cipher_page_size", "4096")
+                        .pragma("cipher_compatibility", "4")
+                });
+        }
         let connection = Database::connect(options).await?;
         let backend = match connection.get_database_backend() {
             sea_orm::DatabaseBackend::MySql => DatabaseBackend::MySql,

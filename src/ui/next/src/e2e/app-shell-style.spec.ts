@@ -18,10 +18,22 @@ const representativeProductRoutes = [
   '/visual-workflow',
   '/website-builder',
   '/booking-widget',
+  '/client-portal',
   '/storefront-widget',
   '/onboarding',
-  '/login',
 ] as const;
+
+const publicApplicationRoutes = new Set([
+  '/login',
+  '/register',
+  '/verify-email',
+]);
+
+const visualInspectionRoutes = new Set([
+  '/client-portal',
+  '/dashboard',
+  '/inbox',
+]);
 
 const appRoot = process.env.SOURCE_REPO_ROOT
   ? path.join(process.env.SOURCE_REPO_ROOT, 'src/ui/next/src/app')
@@ -69,7 +81,9 @@ const viewports = {
 } as const;
 
 const representativeViewports = {
-  mobile: viewports.mobile,
+  mobile: { width: 375, height: 812 },
+  tablet: { width: 768, height: 1024 },
+  desktop: { width: 1280, height: 900 },
 } as const;
 
 const routesWithSurfacePrimitives = new Set([
@@ -81,7 +95,6 @@ const routesWithSurfacePrimitives = new Set([
   '/integrations',
   '/calendar',
   '/website-builder',
-  '/login',
 ]);
 
 const normalizedSurfaceSelector = [
@@ -97,13 +110,17 @@ const transientNavigationFailure = /net::ERR_(?:CONNECTION_REFUSED|CONNECTION_RE
 
 async function navigateToSettledApplicationPage(page: Page, route: string): Promise<Response> {
   const failures: string[] = [];
+  const isPublicRoute = publicApplicationRoutes.has(route);
+
+  if (isPublicRoute) await page.context().clearCookies();
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
       const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
       if (!response) throw new Error('navigation did not return a document response');
       if (response.status() < 500) {
-        await page.locator('.app-main').waitFor({ state: 'visible', timeout: 30_000 });
+        await page.locator(isPublicRoute ? '[data-auth-shell]' : '.app-main')
+          .waitFor({ state: 'visible', timeout: 30_000 });
         await page.evaluate(() => new Promise<void>((resolve) => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         }));
@@ -203,17 +220,34 @@ async function expectVoiceSurfacesClear(page: Page) {
   expect(violations).toEqual([]);
 }
 
+async function waitForVisualData(page: Page, route: string) {
+  if (route === '/inbox') {
+    await expect(page.getByTestId('inbox-settled')).toBeVisible({ timeout: 30_000 });
+  }
+  if (route === '/client-portal') {
+    await expect(page.locator('[data-client-portal-state="settled"]')).toBeVisible({ timeout: 30_000 });
+  }
+}
+
 test.describe('App shell visual consistency', () => {
   for (const route of allApplicationRoutes) {
-    test(`${route} renders one desktop product shell without document overflow`, async ({ page }) => {
+    test(`${route} renders one desktop application layout without document overflow`, async ({ page }, testInfo) => {
       await page.setViewportSize(viewports.desktop);
       const response = await navigateToSettledApplicationPage(page, route);
 
       expect(response?.status(), `${route} returned an HTTP error`).toBeLessThan(500);
-      await expect(page.locator('.app-sidebar')).toHaveCount(1);
-      await expect(page.locator('.app-topbar')).toHaveCount(1);
-      await expect(page.locator('.app-main')).toHaveCount(1);
-      await expectVoiceSurfacesClear(page);
+      if (publicApplicationRoutes.has(route)) {
+        await expect(page.locator('[data-auth-shell]')).toHaveCount(1);
+        await expect(page.locator('.app-sidebar')).toHaveCount(0);
+        await expect(page.locator('.app-topbar')).toHaveCount(0);
+        await expect(page.locator('.app-main')).toHaveCount(0);
+      } else {
+        await expect(page.locator('[data-auth-shell]')).toHaveCount(0);
+        await expect(page.locator('.app-sidebar')).toHaveCount(1);
+        await expect(page.locator('.app-topbar')).toHaveCount(1);
+        await expect(page.locator('.app-main')).toHaveCount(1);
+        await expectVoiceSurfacesClear(page);
+      }
 
       const dimensions = await page.evaluate(() => ({
         documentWidth: document.documentElement.scrollWidth,
@@ -223,12 +257,20 @@ test.describe('App shell visual consistency', () => {
         dimensions.documentWidth - dimensions.viewportWidth,
         `${route} overflowed horizontally: ${JSON.stringify(dimensions)}`,
       ).toBeLessThanOrEqual(1);
+
+      if (publicApplicationRoutes.has(route) || visualInspectionRoutes.has(route)) {
+        await waitForVisualData(page, route);
+        await testInfo.attach(`desktop-1440-${route.slice(1) || 'home'}`, {
+          body: await page.screenshot({ fullPage: true }),
+          contentType: 'image/png',
+        });
+      }
     });
   }
 
   for (const [viewportName, viewport] of Object.entries(representativeViewports)) {
     for (const route of representativeProductRoutes) {
-      test(`${route} at ${viewportName} uses one product shell without overflow and normalized surfaces`, async ({ page }) => {
+      test(`${route} at ${viewportName} uses one product shell without overflow and normalized surfaces`, async ({ page }, testInfo) => {
         const hydrationFailures: string[] = [];
         const pageErrors: string[] = [];
         if (route === '/inbox') {
@@ -329,6 +371,47 @@ test.describe('App shell visual consistency', () => {
           expect(hydrationFailures, 'inbox emitted hydration mismatch/replacement errors').toEqual([]);
           expect(pageErrors, 'inbox emitted uncaught page errors').toEqual([]);
         }
+
+        if (visualInspectionRoutes.has(route)) {
+          await waitForVisualData(page, route);
+          await testInfo.attach(`${viewportName}-${route.slice(1)}`, {
+            body: await page.screenshot({ fullPage: true }),
+            contentType: 'image/png',
+          });
+        }
+      });
+    }
+  }
+});
+
+test.describe('Public authentication layout', () => {
+  for (const [viewportName, viewport] of Object.entries({
+    mobile: { width: 375, height: 812 },
+    tablet: { width: 768, height: 1024 },
+    desktop: { width: 1280, height: 900 },
+  })) {
+    for (const route of publicApplicationRoutes) {
+      test(`${route} at ${viewportName} uses the isolated auth layout`, async ({ page }, testInfo) => {
+        await page.setViewportSize(viewport);
+        await navigateToSettledApplicationPage(page, route);
+
+        await expect(page.locator('[data-auth-shell]')).toHaveCount(1);
+        await expect(page.locator('.app-shell')).toHaveCount(0);
+        await expect(page.locator([
+          '#ohc-floating-help-btn',
+          '#ai-chat-trigger-btn',
+          '[data-voice-assistant-root]',
+        ].join(','))).toHaveCount(0);
+        const dimensions = await page.evaluate(() => ({
+          documentWidth: document.documentElement.scrollWidth,
+          viewportWidth: window.innerWidth,
+        }));
+        expect(dimensions.documentWidth - dimensions.viewportWidth).toBeLessThanOrEqual(1);
+
+        await testInfo.attach(`${viewportName}-${route.slice(1)}`, {
+          body: await page.screenshot({ fullPage: true }),
+          contentType: 'image/png',
+        });
       });
     }
   }
@@ -349,7 +432,6 @@ test.describe('Mobile global controls', () => {
 
   const collisionRoutes = [
     '/website-builder',
-    '/login',
     '/agent-marketplace',
     '/integrations',
     '/agents',

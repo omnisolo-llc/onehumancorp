@@ -7,7 +7,7 @@ type HmacSha256 = Hmac<Sha256>;
 /// Authentication mode.
 #[derive(Clone)]
 pub enum AuthMode {
-    /// No authentication (dev/test only).
+    /// No authentication (unit-test binaries only).
     Disabled,
     /// Pre-shared HMAC-SHA256 token.
     Token {
@@ -33,25 +33,25 @@ impl std::fmt::Debug for AuthMode {
 
 /// Build an AuthMode from environment variables.
 ///
-///   OHC_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
+///   OHC_AGENT_AUTH_DISABLED=true   – skip auth in unit-test binaries only
 ///   OHC_AGENT_TOKEN                – enables token mode
 ///   OHC_AGENT_SPIFFE_ID            – validates the desired identity, then fails closed until
 ///                                    verified mTLS peer extraction is available
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OHC_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    if auth_disabled || std::env::var("OHC_ENV").unwrap_or_default() == "standalone" || std::env::var("OHC_ENV").unwrap_or_default() == "" || std::env::var("CI").is_ok() {
-        let environment = env::var("OHC_ENV").unwrap_or_default();
-        if matches!(
-            environment.trim().to_ascii_lowercase().as_str(),
-            "development" | "test" | "standalone" | ""
-        ) {
-            return Ok(AuthMode::Disabled);
+    if auth_disabled {
+        #[cfg(test)]
+        {
+            let environment = env::var("OHC_ENV").unwrap_or_default();
+            if matches!(
+                environment.trim().to_ascii_lowercase().as_str(),
+                "development" | "test"
+            ) {
+                return Ok(AuthMode::Disabled);
+            }
         }
-        return Err(
-            "OHC_AGENT_AUTH_DISABLED=true is allowed only when OHC_ENV is development, test, or standalone"
-                .to_string(),
-        );
+        return Err("OHC_AGENT_AUTH_DISABLED is not allowed in production binaries".to_string());
     }
 
     if let Ok(token) = env::var("OHC_AGENT_TOKEN")
@@ -70,7 +70,16 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    return Ok(AuthMode::Disabled);
+    if let Ok(spiffe_id) = env::var("OHC_AGENT_SPIFFE_ID")
+        && !spiffe_id.trim().is_empty()
+    {
+        validate_spiffe_id(&spiffe_id)?;
+        return Err(
+            "SPIFFE agent authentication requires verified mTLS peer extraction".to_string(),
+        );
+    }
+
+    Err("configure OHC_AGENT_TOKEN or OHC_AGENT_SPIFFE_ID".to_string())
 }
 
 /// Check a bearer token against an expected HMAC hash.

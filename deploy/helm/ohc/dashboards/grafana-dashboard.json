@@ -155,7 +155,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "OHC Infrastructure Dashboard",
-  "uid": "ohc-infra-dash",
+  "title": "OHC Infrastructure Overview",
+  "uid": "ohc-infra-overview",
   "version": 1
 }

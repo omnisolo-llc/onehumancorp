@@ -1,3 +1,4 @@
+// Historical non-executable contract: remove network substitution before restoring as E2E.
 import { test, expect } from '@playwright/test';
 
 test.describe('Omni Inbox Agentic Triage', () => {

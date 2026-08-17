@@ -121,17 +121,20 @@ async fn handle_get_products(
         Ok(rows) => {
             let products: Vec<Product> = rows
                 .into_iter()
-                .map(|row| Product {
-                    id: row.id,
-                    name: row.title.clone(),
-                    title: row.title,
-                    description: row.description,
-                    item_type: row.item_type,
-                    price_cents: Some(row.price_cents),
-                    price: row.price_cents as f64 / 100.0,
-                    inventory_count: Some(row.inventory_count),
-                    image_url: None,
-                    variants: None,
+                .map(|row| {
+                    let image_url = bounded_product_image_url(row.metadata.as_ref());
+                    Product {
+                        id: row.id,
+                        name: row.title.clone(),
+                        title: row.title,
+                        description: row.description,
+                        item_type: row.item_type,
+                        price_cents: Some(row.price_cents),
+                        price: row.price_cents as f64 / 100.0,
+                        inventory_count: Some(row.inventory_count),
+                        image_url,
+                        variants: None,
+                    }
                 })
                 .collect();
             (StatusCode::OK, Json(products)).into_response()
@@ -293,6 +296,7 @@ async fn handle_create_product(
                 item_type: Some(payload.item_type),
                 price_cents: (price * 100.0).round() as i64,
                 inventory_count: 100,
+                metadata: None,
             })
             .await
         {

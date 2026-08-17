@@ -22,6 +22,18 @@ async function routeFiles(directory) {
   return nested.flat();
 }
 
+async function productionSourceFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) return productionSourceFiles(file);
+    if (!/\.(?:ts|tsx)$/.test(entry.name)) return [];
+    if (/\.(?:test|spec)\.[^.]+$|\.mock-contract\.[^.]+$/.test(entry.name)) return [];
+    return [file];
+  }));
+  return nested.flat();
+}
+
 async function exists(file) {
   try {
     await access(file);
@@ -61,4 +73,16 @@ test("every Next.js API route is namespaced under /api/v1", async () => {
     .map((routeFile) => path.relative(appRoot, routeFile));
 
   expect(legacyRoutes).toEqual([]);
+});
+
+test("every production UI call uses the versioned internal API prefix", async () => {
+  const violations = [];
+  for (const file of await productionSourceFiles(appRoot)) {
+    const source = withoutComments(await readFile(file, "utf8"));
+    for (const match of source.matchAll(/["'`]\/api\/(?!v1(?:\/|[?"'`]))[^"'`\s]*/g)) {
+      violations.push(`${path.relative(appRoot, file)}: ${match[0]}`);
+    }
+  }
+
+  expect(violations).toEqual([]);
 });
