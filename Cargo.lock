@@ -8892,6 +8892,7 @@ dependencies = [
  "serde_json",
  "server_common",
  "server_telemetry",
+ "sha2",
  "sqlx",
  "tokio",
  "tracing",
