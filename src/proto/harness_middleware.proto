@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package omnisolo.harness.middleware.v1;
+
+message WorkerControlEnvelope {
+  uint32 protocol_version = 1;
+  string worker_id = 2;
+  string runtime_id = 3;
+  string kind = 4;
+  string correlation_id = 5;
+  string idempotency_key = 6;
+  uint64 capability_version = 7;
+  string payload_schema = 8;
+  uint32 payload_version = 9;
+  bytes payload = 10;
+  map<string, string> extensions = 11;
+}
+
+message SessionOperationEnvelope {
+  uint32 protocol_version = 1;
+  string tenant_id = 2;
+  string session_id = 3;
+  string operation_id = 4;
+  int64 operation_generation = 5;
+  string fencing_token = 6;
+  string kind = 7;
+  string task_id = 8;
+  string correlation_id = 9;
+  string idempotency_key = 10;
+  string payload_schema = 11;
+  uint32 payload_version = 12;
+  bytes payload = 13;
+  map<string, string> extensions = 14;
+}
+
+message AttemptCommandEnvelope {
+  uint32 protocol_version = 1;
+  string tenant_id = 2;
+  string session_id = 3;
+  string task_id = 4;
+  string attempt_id = 5;
+  string turn_id = 6;
+  string command_id = 7;
+  string lease_id = 8;
+  int64 lease_generation = 9;
+  string fencing_token = 10;
+  string kind = 11;
+  string correlation_id = 12;
+  string idempotency_key = 13;
+  string payload_schema = 14;
+  uint32 payload_version = 15;
+  bytes payload = 16;
+  map<string, string> extensions = 17;
+}
+
+message EventDeliveryEnvelope {
+  uint32 protocol_version = 1;
+  string tenant_id = 2;
+  string session_id = 3;
+  string task_id = 4;
+  string turn_id = 5;
+  string source_attempt_id = 6;
+  string ingest_attempt_id = 7;
+  string event_id = 8;
+  int64 durable_sequence = 9;
+  string delivery_stream_id = 10;
+  int64 delivery_sequence = 11;
+  string payload_schema = 12;
+  uint32 payload_version = 13;
+  bytes payload = 14;
+  int64 lease_generation = 15;
+  string fencing_token = 16;
+}
+
+message ArtifactReference {
+  string artifact_id = 1;
+  string kind = 2;
+  string name = 3;
+  string media_type = 4;
+  uint64 byte_length = 5;
+  string sha256 = 6;
+  string authorized_storage_ref = 7;
+}
+
+message ModelRuntimeInference {
+  uint32 protocol_version = 1;
+  string request_id = 2;
+  string model_binding_id = 3;
+  string runtime_id = 4;
+  string worker_id = 5;
+  string capacity_lease_id = 6;
+  int64 capacity_generation = 7;
+  string fencing_token = 8;
+  string request_digest = 9;
+  string model_revision = 10;
+  uint64 stream_sequence = 11;
+  string status = 12;
+  bytes content = 13;
+  bool authoritative_final = 14;
+  uint64 input_tokens = 15;
+  uint64 output_tokens = 16;
+  uint64 cached_tokens = 17;
+  string finish_reason = 18;
+  map<string, string> extensions = 19;
+}

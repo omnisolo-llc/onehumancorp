@@ -17,6 +17,7 @@ exports_files([
     "skills.proto",
     "invoice.proto",
     "inbox.proto",
+    "harness_middleware.proto",
 ], visibility = ["//visibility:public"])
 
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
@@ -341,6 +342,18 @@ proto_rust_library(
     name = "inventory",
     proto = ":inventory_proto",
     use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "harness_middleware_proto",
+    srcs = ["harness_middleware.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "harness_middleware",
+    proto = ":harness_middleware_proto",
     visibility = ["//visibility:public"],
 )
 
