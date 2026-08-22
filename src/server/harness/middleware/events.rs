@@ -19,6 +19,7 @@ pub enum EventStoreError {
     ParentNotDurable(Uuid),
     ParentNotEarlier(Uuid),
     Cycle,
+    DuplicateEventId(Uuid),
     MissingEvent(Uuid),
     BranchHeadConflict {
         expected: Option<Uuid>,
@@ -86,6 +87,10 @@ impl EventStore {
                 }
                 return Err(EventStoreError::IdempotencyConflict);
             }
+        }
+
+        if self.events.contains_key(&event.event_id) {
+            return Err(EventStoreError::DuplicateEventId(event.event_id));
         }
 
         self.validate_parents(&event)?;
@@ -401,6 +406,28 @@ mod tests {
             store.append(conflict, None, None),
             Err(EventStoreError::IdempotencyConflict)
         );
+    }
+
+    #[test]
+    fn duplicate_event_ids_are_rejected_without_overwriting_history() {
+        let session_id = Uuid::new_v4();
+        let event_id = Uuid::new_v4();
+        let mut store = EventStore::new();
+        let original = event(
+            session_id,
+            event_id,
+            EventDurability::Durable,
+            ReplayRequirement::Required,
+        );
+        store.append(original.clone(), None, None).unwrap();
+
+        let mut duplicate = original;
+        duplicate.payload = json!({"text": "different payload"});
+        assert_eq!(
+            store.append(duplicate, None, None),
+            Err(EventStoreError::DuplicateEventId(event_id))
+        );
+        assert_eq!(store.replay(session_id, 1, 1)[0].payload, json!({"text": "hello"}));
     }
 
     #[test]

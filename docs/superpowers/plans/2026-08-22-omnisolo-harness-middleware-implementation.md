@@ -27,7 +27,7 @@ The implementation is intentionally split by invariant boundary:
 - `src/server/harness/BUILD.bazel`: keep Bazel source/dependency coverage aligned with Cargo.
 - `src/proto/harness_middleware.proto`: versioned worker and inference protocol definitions.
 - `src/proto/BUILD.bazel` and `src/server/ohc/{build.rs,mod.rs,BUILD.bazel}`: generate and expose the new protobuf types.
-- `src/server/db/migrations/`: add canonical tables and fence-safe constraints after pure storage semantics are fixed.
+- `src/server/migrations/`: add canonical tables and fence-safe constraints after pure storage semantics are fixed.
 - `src/server/harness/middleware_tests.rs`: cross-module integration tests that exercise handoff, replay, stale workers, capsules, and inference recovery.
 
 Every production function added in these files receives a direct unit test or is covered by an integration test that invokes the real function. Test fixtures contain no credentials, live process handles, or provider calls.
@@ -42,7 +42,7 @@ Every production function added in these files receives a direct unit test or is
 - Modify: `src/server/harness/BUILD.bazel`
 - Test: `src/server/harness/middleware/types.rs` inline tests
 
-- [ ] **Step 1: Write failing serialization and identity tests**
+- [x] **Step 1: Write failing serialization and identity tests**
 
 Add tests for stable string IDs, actor stripping, typed content, optional fields, and round-trip JSON. The first test must prove a portable historical actor cannot serialize authenticated principal references or native aliases:
 
@@ -61,7 +61,7 @@ fn historical_actor_is_authority_free() {
 
 Also cover `ContentPart` variants, digest-bearing artifacts, model/runtime descriptors, task-level attempts with no turn, and explicit `None` versus empty collections.
 
-- [ ] **Step 2: Run the focused tests and verify RED**
+- [x] **Step 2: Run the focused tests and verify RED**
 
 Run:
 
@@ -71,7 +71,7 @@ cargo test -p server_harness middleware::types -- --nocapture
 
 Expected: compilation or test failures because the middleware module and types do not exist yet.
 
-- [ ] **Step 3: Implement the minimal typed contract**
+- [x] **Step 3: Implement the minimal typed contract**
 
 Define serde-compatible types with explicit tagged unions and no `serde_json::Value` in fields whose semantics are canonical. Use `String` IDs at the boundary, `DateTime<Utc>` for timestamps, `Option<T>` for absent values, and `BTreeMap` for deterministic extension maps. Include:
 
@@ -87,7 +87,7 @@ pub struct HistoricalActor {
 
 `HistoricalActor` must be constructed only from the authority-free projection. Keep native IDs, principal references, instructions, credentials, and live handles out of it by type design. Add `ModelRuntimeDescriptor` fields for managed APIs, OpenAI-compatible endpoints, local processes, Kubernetes services, serving engine, model revision, GPU/resource profile, placement, capacity, and health without requiring any specific engine.
 
-- [ ] **Step 4: Run focused tests and inspect serialized fixtures**
+- [x] **Step 4: Run focused tests and inspect serialized fixtures**
 
 Run the focused test command again and a deterministic fixture command:
 
@@ -98,7 +98,7 @@ cargo test -p server_harness --doc
 
 Expected: all type tests pass and JSON output contains no unstable map ordering.
 
-- [ ] **Step 5: Commit the type foundation**
+- [x] **Step 5: Commit the type foundation**
 
 ```bash
 git add src/server/harness/middleware src/server/harness/mod.rs src/server/harness/Cargo.toml src/server/harness/BUILD.bazel
@@ -113,7 +113,7 @@ git commit -m "feat: add harness middleware canonical types"
 - Modify: `src/server/harness/middleware/mod.rs`
 - Test: inline lifecycle and lease tests
 
-- [ ] **Step 1: Write failing transition and fencing tests**
+- [x] **Step 1: Write failing transition and fencing tests**
 
 Cover legal transitions, terminal immutability, compare-and-swap, stale generation rejection, lease expiry, and a partitioned worker after reassignment:
 
@@ -129,7 +129,7 @@ fn stale_worker_cannot_mutate_after_reassignment() {
 
 Test every canonical state family from the design, including task-level handoff, open turn across failed attempts, binding transitions, and exact duplicate terminal events.
 
-- [ ] **Step 2: Run tests to verify RED**
+- [x] **Step 2: Run tests to verify RED**
 
 ```bash
 cargo test -p server_harness middleware::lifecycle middleware::lease -- --nocapture
@@ -137,11 +137,11 @@ cargo test -p server_harness middleware::lifecycle middleware::lease -- --nocapt
 
 Expected: missing types/functions or failing assertions.
 
-- [ ] **Step 3: Implement transition tables and fence validation**
+- [x] **Step 3: Implement transition tables and fence validation**
 
 Use typed enums for session, task, turn, attempt, tool, interaction, process, binding, lease, and handoff states. Each projection stores `state_version`; `transition(expected_version, next)` rejects stale versions and illegal edges. Make terminal states immutable except for a new retry/recovery operation. A `Lease` exposes a monotonically increasing generation and `FenceToken`; validation compares both attempt ownership and generation.
 
-- [ ] **Step 4: Run focused tests and property-like transition coverage**
+- [x] **Step 4: Run focused tests and property-like transition coverage**
 
 ```bash
 cargo test -p server_harness middleware::lifecycle middleware::lease -- --nocapture
@@ -149,7 +149,7 @@ cargo test -p server_harness middleware::lifecycle middleware::lease -- --nocapt
 
 Expected: all transition paths and stale-worker cases pass with no warnings from the new module.
 
-- [ ] **Step 5: Commit lifecycle primitives**
+- [x] **Step 5: Commit lifecycle primitives**
 
 ```bash
 git add src/server/harness/middleware/lifecycle.rs src/server/harness/middleware/lease.rs src/server/harness/middleware/mod.rs
@@ -163,21 +163,21 @@ git commit -m "feat: add harness lifecycle and lease fencing"
 - Modify: `src/server/harness/middleware/mod.rs`
 - Test: inline event-log tests
 
-- [ ] **Step 1: Write failing event-log tests**
+- [x] **Step 1: Write failing event-log tests**
 
 Cover durable sequence allocation, transient delivery sequence gaps, duplicate idempotency, stale ingest rejection, source-attempt preservation, branch head compare-and-swap, ancestor closure, cycles, cross-session parents, and required-event durability.
 
-- [ ] **Step 2: Run RED tests**
+- [x] **Step 2: Run RED tests**
 
 ```bash
 cargo test -p server_harness middleware::events -- --nocapture
 ```
 
-- [ ] **Step 3: Implement the in-memory authoritative event store**
+- [x] **Step 3: Implement the in-memory authoritative event store**
 
 Define `EventEnvelope` with separate `source_attempt_id` and `ingest_attempt_id`, lease generation/fence token, durable/delivery sequences, branch/parent IDs, idempotency key, replay requirement, provenance, and payload. `EventStore::append` must validate the current lease before assigning a durable sequence. Required replay events must be durable; transient events receive only delivery sequence. Parent checks require same session, earlier sequence, existence, and acyclicity. Branch head updates use expected-head compare-and-swap.
 
-- [ ] **Step 4: Run event tests and a replay fixture**
+- [x] **Step 4: Run event tests and a replay fixture**
 
 ```bash
 cargo test -p server_harness middleware::events -- --nocapture
@@ -185,7 +185,7 @@ cargo test -p server_harness middleware::events -- --nocapture
 
 Verify replay uses durable sequence ranges, ignores dropped transient deltas, and rejects missing ancestor closure.
 
-- [ ] **Step 5: Commit event semantics**
+- [x] **Step 5: Commit event semantics**
 
 ```bash
 git add src/server/harness/middleware/events.rs src/server/harness/middleware/mod.rs
@@ -200,25 +200,25 @@ git commit -m "feat: add fenced canonical event log"
 - Modify: `src/server/harness/middleware/mod.rs`
 - Test: inline capsule tests and `src/server/harness/middleware_tests.rs`
 
-- [ ] **Step 1: Write failing capsule tests**
+- [x] **Step 1: Write failing capsule tests**
 
 Test allowlisted record generation, stripping of native records and authority fields, secret/raw-reasoning canaries in instructions/tool outputs/artifacts/extensions, ancestor closure, portable context checkpoints, severity-based loss blocking, report-digest acknowledgement, and deterministic rendering of unsupported records as historical data.
 
-- [ ] **Step 2: Run RED tests**
+- [x] **Step 2: Run RED tests**
 
 ```bash
 cargo test -p server_harness middleware::capsule middleware_tests -- --nocapture
 ```
 
-- [ ] **Step 3: Implement the allowlist and loss report**
+- [x] **Step 3: Implement the allowlist and loss report**
 
 Define `SessionCapsule`, `PortableContextCheckpoint`, `LossReport`, and `LossEntry`. Build capsules from explicit canonical record variants rather than serializing arbitrary session structs. Reject unknown record kinds/fields, native-record references, live grants, credentials, raw chain-of-thought, and privileged imported actor content. Bind the capsule to a durable event range, branch closure, workspace/artifact digests, redaction policy version, and manifest digest.
 
-- [ ] **Step 4: Implement handoff phases in memory**
+- [x] **Step 4: Implement handoff phases in memory**
 
 Define `HandoffOperation` and the durable phase transitions `requested`, `fencing`, `quiescing`, `snapshotting`, `compiling`, `awaiting_loss_ack`, `target_creating`, `activating`, `completed`, `failed`, and `cancelled`. Add scope-aware fencing and require a report-digest-bound interaction before activation when acknowledgement is required.
 
-- [ ] **Step 5: Run integration tests**
+- [x] **Step 5: Run integration tests**
 
 ```bash
 cargo test -p server_harness middleware::capsule middleware_tests -- --nocapture
@@ -226,7 +226,7 @@ cargo test -p server_harness middleware::capsule middleware_tests -- --nocapture
 
 The tests must prove no source and target writable bindings coexist and that changing a loss report invalidates the previous acknowledgement.
 
-- [ ] **Step 6: Commit capsule and handoff logic**
+- [x] **Step 6: Commit capsule and handoff logic**
 
 ```bash
 git add src/server/harness/middleware/capsule.rs src/server/harness/middleware/events.rs src/server/harness/middleware/mod.rs src/server/harness/middleware_tests.rs
@@ -241,27 +241,27 @@ git commit -m "feat: add portable harness session capsules"
 - Modify: `src/server/harness/middleware/mod.rs`
 - Test: inline inference tests
 
-- [ ] **Step 1: Write failing runtime admission tests**
+- [x] **Step 1: Write failing runtime admission tests**
 
 Cover worker registration, capability matching, capacity leasing, idempotent pre-admission retry, fenced stale capacity holders, streaming, cancellation, final usage commit, and uncertain post-admission recovery.
 
-- [ ] **Step 2: Run RED tests**
+- [x] **Step 2: Run RED tests**
 
 ```bash
 cargo test -p server_harness middleware::inference -- --nocapture
 ```
 
-- [ ] **Step 3: Implement durable in-memory inference state**
+- [x] **Step 3: Implement durable in-memory inference state**
 
 Define runtime worker/capacity lease/request/admission/final response records and the lifecycle `queued -> capacity_leased -> admitted -> streaming -> completed|failed|cancelled|uncertain`. Admission binds request digest, model binding, runtime worker and capacity generation. Every stream/final mutation validates the capacity fence; pre-admission retry is safe, post-admission missing terminal state becomes uncertain unless the request is explicitly replayable.
 
-- [ ] **Step 4: Run inference tests**
+- [x] **Step 4: Run inference tests**
 
 ```bash
 cargo test -p server_harness middleware::inference -- --nocapture
 ```
 
-- [ ] **Step 5: Commit inference contracts**
+- [x] **Step 5: Commit inference contracts**
 
 ```bash
 git add src/server/harness/middleware/inference.rs src/server/harness/middleware/types.rs src/server/harness/middleware/mod.rs
@@ -280,32 +280,32 @@ git commit -m "feat: add fenced model runtime admission"
 - Modify: `src/server/harness/middleware/mod.rs`
 - Test: Rust envelope tests and protobuf encode/decode tests
 
-- [ ] **Step 1: Write failing envelope tests**
+- [x] **Step 1: Write failing envelope tests**
 
 Test that worker-control messages do not require session IDs, session-operation messages require operation fencing, attempt commands require task/attempt/lease fencing, task-level commands allow no turn ID, and protobuf round trips preserve unknown-safe version fields.
 
-- [ ] **Step 2: Run RED tests**
+- [x] **Step 2: Run RED tests**
 
 ```bash
 cargo test -p server_harness middleware::worker -- --nocapture
 ```
 
-- [ ] **Step 3: Define the versioned protobuf contract**
+- [x] **Step 3: Define the versioned protobuf contract**
 
 Use separate messages for worker control, session operations, attempt commands, event delivery, artifact references, and model-runtime inference. Include tenant/session/task/turn/attempt IDs where applicable, operation or lease generation, fencing token, capability version, correlation ID, idempotency key, replay cursor, and payload schema/version. Do not expose ACP/native wire shapes as this internal contract.
 
-- [ ] **Step 4: Add generated bindings to both Cargo and Bazel paths**
+- [x] **Step 4: Add generated bindings to both Cargo and Bazel paths**
 
 Follow the existing `server_ohc` `tonic::include_proto!` and Bazel re-export patterns. Preserve current generated modules and add a separate `harness_middleware` namespace.
 
-- [ ] **Step 5: Run focused wire tests and compile checks**
+- [x] **Step 5: Run focused wire tests and compile checks**
 
 ```bash
 cargo test -p server_harness middleware::worker -- --nocapture
 cargo check -p server_ohc -p server_harness -p ohc_builtin_agent
 ```
 
-- [ ] **Step 6: Commit the wire contract**
+- [x] **Step 6: Commit the wire contract**
 
 ```bash
 git add src/proto/harness_middleware.proto src/proto/BUILD.bazel src/server/ohc src/server/harness/middleware/worker.rs src/server/harness/middleware/mod.rs
@@ -315,25 +315,25 @@ git commit -m "feat: add harness worker protocol"
 ### Task 7: Durable Database Schema and Fence Constraints
 
 **Files:**
-- Create: `src/server/db/migrations/216_harness_middleware.sql`
+- Create: `src/server/migrations/218_harness_middleware.sql`
 - Modify: `src/server/db.rs` only if migration registration is required
 - Test: `src/server/db` migration tests and SQL contract tests
 
-- [ ] **Step 1: Write failing schema contract tests**
+- [x] **Step 1: Write failing schema contract tests**
 
 Assert that the migration contains tenant keys, typed identity/order columns, session/task/turn/attempt/binding/lease tables, event parent and branch constraints, command inbox/outbox, model runtime admissions, capsule manifests, and unique active read-write binding scope constraints. Assert the migration rejects stale lease generations in its update predicates or stored procedures.
 
-- [ ] **Step 2: Run RED schema tests**
+- [x] **Step 2: Run RED schema tests**
 
 ```bash
 cargo test -p ohc-mono harness_middleware_schema -- --nocapture
 ```
 
-- [ ] **Step 3: Implement the forward-only migration**
+- [x] **Step 3: Implement the forward-only migration**
 
 Use the repository's tenant isolation and PostgreSQL/SQLite-compatible migration conventions. Store query-critical identity, sequence, state version, lease generation, fencing token, digest, and timestamps in typed columns; use JSONB for PostgreSQL variable payloads and TEXT containing canonical JSON for SQLite variable payloads. Add indexes for `(tenant_id, session_id, durable_sequence)`, active scope bindings, lease expiry, inbox idempotency, and inference admission.
 
-- [ ] **Step 4: Run migration tests against the supported local backend**
+- [x] **Step 4: Run migration tests against the supported local backend**
 
 ```bash
 cargo test -p ohc-mono harness_middleware_schema -- --nocapture
@@ -341,10 +341,10 @@ cargo test -p ohc-mono harness_middleware_schema -- --nocapture
 
 Expected: migration applies to the repository's test database, tenant isolation remains enabled, and duplicate/stale writes are rejected.
 
-- [ ] **Step 5: Commit durable schema**
+- [x] **Step 5: Commit durable schema**
 
 ```bash
-git add src/server/db/migrations/216_harness_middleware.sql src/server/db.rs
+git add src/server/migrations/218_harness_middleware.sql src/server/db.rs
 git commit -m "feat: add harness middleware persistence schema"
 ```
 
@@ -358,32 +358,32 @@ git commit -m "feat: add harness middleware persistence schema"
 - Modify: `src/proto/agent_service.proto` and `src/proto/interop.proto` only through additive fields
 - Test: `src/agents/builtin/middleware_integration_tests.rs`
 
-- [ ] **Step 1: Write failing integration tests**
+- [x] **Step 1: Write failing integration tests**
 
 Use a deterministic fake OmniSolo provider and tool executor to prove one run emits canonical session/task/turn/attempt events, preserves the legacy `RunTaskEvent` projection, records tool and usage data, and rejects stale worker output.
 
-- [ ] **Step 2: Run RED integration tests**
+- [x] **Step 2: Run RED integration tests**
 
 ```bash
 cargo test -p ohc_builtin_agent middleware_integration -- --nocapture
 ```
 
-- [ ] **Step 3: Add the OmniSolo adapter boundary**
+- [x] **Step 3: Add the OmniSolo adapter boundary**
 
 Map current `AgentEvent` values into canonical events with generated IDs, source/ingest attempt provenance, durable sequence assignment, and the existing stream as a read projection. Keep existing behavior and public fields additive. Do not create or rename a Codex runner file.
 
-- [ ] **Step 4: Add capsule import/export hooks**
+- [x] **Step 4: Add capsule import/export hooks**
 
 Expose explicit create/resume/handoff commands through the existing service layer, with fresh policy/capability checks and workspace/artifact references. Legacy opaque handoff bytes remain readable only through a versioned legacy importer and never become canonical state.
 
-- [ ] **Step 5: Run targeted and regression tests**
+- [x] **Step 5: Run targeted and regression tests**
 
 ```bash
 cargo test -p ohc_builtin_agent middleware_integration -- --nocapture
 cargo test -p server_harness
 ```
 
-- [ ] **Step 6: Commit OmniSolo integration**
+- [x] **Step 6: Commit OmniSolo integration**
 
 ```bash
 git add src/agents/builtin src/proto src/server/harness
@@ -398,15 +398,15 @@ git commit -m "feat: connect OmniSolo harness to canonical middleware"
 - Modify: `src/server/harness/BUILD.bazel` to include `tests/middleware_conformance.rs`
 - Modify: this plan only to record completed commands
 
-- [ ] **Step 1: Add protocol-neutral conformance fixtures**
+- [x] **Step 1: Add protocol-neutral conformance fixtures**
 
 Fixtures cover durable/transient replay, branch closure, content redaction, tool effects, approvals, compaction, workspace digests, native extension exclusion, model capability matching, and loss reports.
 
-- [ ] **Step 2: Add failure-injection tests**
+- [x] **Step 2: Add failure-injection tests**
 
 Exercise stale worker writes, lease reassignment, checkpoint crash windows, handoff concurrency, source/target writer exclusivity, gateway restart after uncertain model admission, and duplicate delivery. Use deterministic clocks and in-memory stores so tests are repeatable.
 
-- [ ] **Step 3: Run focused, package, and workspace verification**
+- [x] **Step 3: Run focused, package, and workspace verification**
 
 ```bash
 cargo fmt --all -- --check
@@ -418,7 +418,7 @@ cargo test --workspace
 
 The existing baseline currently has unrelated failures in Stripe test imports and Restic async test closures. Those failures must remain separately identified; all new middleware packages and tests must pass independently, and no new warnings/errors may be introduced.
 
-- [ ] **Step 4: Run Bazel targets when the executable is installed**
+- [x] **Step 4: Run Bazel targets when the executable is installed**
 
 ```bash
 command -v bazel
@@ -427,7 +427,7 @@ bazel test //src/server/harness:server_harness_test //src/agents/builtin:ohc_bui
 
 If `command -v bazel` exits non-zero, record that Bazel verification was unavailable and retain the Cargo verification output.
 
-- [ ] **Step 5: Review the complete diff and commit test fixtures**
+- [x] **Step 5: Review the complete diff and commit test fixtures**
 
 ```bash
 git diff --check
@@ -437,6 +437,22 @@ git commit -m "test: add harness middleware conformance coverage"
 ```
 
 ## Plan Self-Review
+
+## Implementation Status
+
+The implementation is complete on the `feat/omnisolo-harness-middleware` worktree. The canonical middleware, portable capsule, lease/event fencing, model-runtime admission, worker envelopes, PostgreSQL migration, OmniSolo adapter, legacy projections, typed NATS capsule operations, and conformance fixtures are present. The existing OmniSolo harness remains the native adapter; no `codex_runner.rs` was introduced.
+
+Final verification evidence:
+
+- `cargo test -p server_harness -- --nocapture` via the final coverage run: 98 unit tests, 5 conformance tests, and 2 schema-contract tests passed.
+- `cargo test -p ohc_builtin_agent middleware --lib -- --nocapture`: 7 bridge/integration tests passed.
+- `cargo test -p server_ohc -- --nocapture`: 2 protobuf round-trip tests passed.
+- `cargo test -p ohc-mono --test harness_middleware_interop -- --nocapture`: 2 typed capsule transport tests passed.
+- `cargo check -p ohc-mono --lib`, `git diff --check`, targeted `rustfmt --check`, and `bazel query //src/proto:harness_middleware_prost` passed.
+- `cargo fmt --all -- --check` remains red because the repository has extensive unrelated pre-existing formatting drift; targeted rustfmt checks for every changed standalone middleware file pass.
+- `cargo llvm-cov` all-target reports cover the server middleware modules and bridge; the bridge is 100% line/function and 99% region covered. The server middleware suite covers the major state, fencing, replay, capsule, inference, worker, and integration paths.
+- Local PostgreSQL migration validation applied the migration, exercised tenant RLS and cross-tenant trigger rejection, and cleaned up its temporary schema/role.
+- The repository-level migration test still cannot compile because of the unrelated existing `src/server/integrations/whatsapp_cloud/client_test.rs` `crate::client` import. The bounded Bazel test build reached analysis but timed out after 120 seconds while compiling external dependencies.
 
 - **Spec coverage:** Tasks 1-3 cover canonical identity, lifecycle, leases, event ordering, provenance, and branches. Task 4 covers the portable capsule and handoff. Task 5 covers future open-source model runtimes. Task 6 covers independently scalable worker communication. Task 7 covers durable state. Task 8 preserves and integrates the OmniSolo harness and legacy projections. Task 9 covers failure injection and full verification.
 - **Security coverage:** Credentials, live grants, native records, raw reasoning, privileged actors, stale leases, and unsnapshotted effects are tested as explicit rejection cases.

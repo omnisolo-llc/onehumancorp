@@ -82,6 +82,7 @@ pub enum InferenceError {
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct RuntimeWorker {
     pub worker_id: String,
+    pub tenant_id: Option<String>,
     pub runtime_id: String,
     pub model_revisions: BTreeSet<String>,
     pub capabilities: BTreeSet<String>,
@@ -94,6 +95,11 @@ pub struct RuntimeWorker {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct InferenceRequest {
     pub request_id: Uuid,
+    pub tenant_id: Option<String>,
+    pub session_id: Option<Uuid>,
+    pub task_id: Option<Uuid>,
+    pub turn_id: Option<Uuid>,
+    pub attempt_id: Option<Uuid>,
     pub model_binding_id: Uuid,
     pub model: ModelDescriptor,
     pub request_digest: String,
@@ -116,6 +122,11 @@ impl InferenceRequest {
     ) -> Self {
         Self {
             request_id,
+            tenant_id: None,
+            session_id: None,
+            task_id: None,
+            turn_id: None,
+            attempt_id: None,
             model_binding_id,
             model,
             request_digest: request_digest.into(),
@@ -125,6 +136,22 @@ impl InferenceRequest {
             state: InferenceState::Queued,
             state_version: 0,
         }
+    }
+
+    pub fn with_scope(
+        mut self,
+        tenant_id: impl Into<String>,
+        session_id: Uuid,
+        task_id: Option<Uuid>,
+        turn_id: Option<Uuid>,
+        attempt_id: Option<Uuid>,
+    ) -> Self {
+        self.tenant_id = Some(tenant_id.into());
+        self.session_id = Some(session_id);
+        self.task_id = task_id;
+        self.turn_id = turn_id;
+        self.attempt_id = attempt_id;
+        self
     }
 }
 
@@ -161,6 +188,11 @@ pub struct CapacityLease {
 pub struct InferenceAdmission {
     pub admission_id: Uuid,
     pub request_id: Uuid,
+    pub tenant_id: Option<String>,
+    pub session_id: Option<Uuid>,
+    pub task_id: Option<Uuid>,
+    pub turn_id: Option<Uuid>,
+    pub attempt_id: Option<Uuid>,
     pub model_binding_id: Uuid,
     pub request_digest: String,
     pub worker_id: String,
@@ -255,6 +287,11 @@ impl InferenceGateway {
         let admission = InferenceAdmission {
             admission_id,
             request_id,
+            tenant_id: request.tenant_id.clone(),
+            session_id: request.session_id,
+            task_id: request.task_id,
+            turn_id: request.turn_id,
+            attempt_id: request.attempt_id,
             model_binding_id: request.model_binding_id,
             request_digest: request.request_digest.clone(),
             worker_id: worker_id.clone(),
@@ -521,6 +558,30 @@ impl InferenceGateway {
         Ok(())
     }
 
+    /// Resolves an uncertain post-admission execution without reusing its lost
+    /// capacity lease. Re-execution remains a separate, explicit operation.
+    pub fn cancel_uncertain(&mut self, admission_id: Uuid) -> Result<(), InferenceError> {
+        let request_id = self
+            .admissions
+            .get(&admission_id)
+            .ok_or(InferenceError::AdmissionNotFound)?
+            .request_id;
+        let admission = self
+            .admissions
+            .get_mut(&admission_id)
+            .ok_or(InferenceError::AdmissionNotFound)?;
+        if admission.state != InferenceState::Uncertain {
+            return Err(InferenceError::InvalidInferenceState);
+        }
+        admission.state = InferenceState::Cancelled;
+        admission.state_version += 1;
+        if let Some(request) = self.requests.get_mut(&request_id) {
+            request.state = InferenceState::Cancelled;
+            request.state_version += 1;
+        }
+        Ok(())
+    }
+
     pub fn admission(&self, admission_id: Uuid) -> Option<&InferenceAdmission> {
         self.admissions.get(&admission_id)
     }
@@ -539,6 +600,12 @@ impl InferenceGateway {
             .find(|worker| {
                 worker.state == WorkerState::Ready
                     && worker.leased_slots < worker.capacity_slots
+                    && request.tenant_id.as_ref().is_none_or(|tenant_id| {
+                        worker
+                            .tenant_id
+                            .as_ref()
+                            .is_some_and(|worker_tenant_id| worker_tenant_id == tenant_id)
+                    })
                     && request.context_tokens <= worker.max_context_tokens
                     && request
                         .model
@@ -649,6 +716,7 @@ mod tests {
     fn worker(worker_id: &str, revision: &str, capabilities: &[&str], slots: u32) -> RuntimeWorker {
         RuntimeWorker {
             worker_id: worker_id.to_owned(),
+            tenant_id: Some("tenant-1".to_owned()),
             runtime_id: "runtime-1".to_owned(),
             model_revisions: BTreeSet::from([revision.to_owned()]),
             capabilities: capabilities
@@ -707,6 +775,51 @@ mod tests {
         assert_eq!(admission.state, InferenceState::Admitted);
         assert_eq!(gateway.worker("worker-1").unwrap().leased_slots, 1);
         assert_eq!(admission.request_digest, "digest-1");
+    }
+
+    #[test]
+    fn scoped_admission_preserves_session_task_lineage() {
+        let mut gateway = InferenceGateway::new();
+        gateway
+            .register_worker(worker("worker-1", "rev-1", &["tool_use"], 1))
+            .unwrap();
+        let request_id = Uuid::new_v4();
+        let session_id = Uuid::new_v4();
+        let task_id = Uuid::new_v4();
+        let turn_id = Uuid::new_v4();
+        let attempt_id = Uuid::new_v4();
+        let request = request(request_id, "digest-scoped", &["tool_use"], 4_000, false).with_scope(
+            "tenant-1",
+            session_id,
+            Some(task_id),
+            Some(turn_id),
+            Some(attempt_id),
+        );
+        gateway.submit(request).unwrap();
+
+        let admission = gateway.admit(request_id).unwrap();
+        assert_eq!(admission.tenant_id.as_deref(), Some("tenant-1"));
+        assert_eq!(admission.session_id, Some(session_id));
+        assert_eq!(admission.task_id, Some(task_id));
+        assert_eq!(admission.turn_id, Some(turn_id));
+        assert_eq!(admission.attempt_id, Some(attempt_id));
+    }
+
+    #[test]
+    fn admission_does_not_cross_tenant_worker_boundaries() {
+        let mut gateway = InferenceGateway::new();
+        let mut worker = worker("worker-tenant-a", "rev-1", &["tool_use"], 1);
+        worker.tenant_id = Some("tenant-a".to_owned());
+        gateway.register_worker(worker).unwrap();
+
+        let request = request(Uuid::new_v4(), "digest-tenant", &["tool_use"], 100, true)
+            .with_scope("tenant-b", Uuid::new_v4(), None, None, None);
+        let request_id = request.request_id;
+        gateway.submit(request).unwrap();
+        assert_eq!(
+            gateway.admit(request_id),
+            Err(InferenceError::NoCompatibleCapacity)
+        );
     }
 
     #[test]
@@ -928,6 +1041,16 @@ mod tests {
         assert_eq!(
             gateway.retry_uncertain(non_replayable.admission_id, true),
             Err(InferenceError::UncertainExecution)
+        );
+        gateway
+            .cancel_uncertain(non_replayable.admission_id)
+            .unwrap();
+        assert_eq!(
+            gateway
+                .admission(non_replayable.admission_id)
+                .unwrap()
+                .state,
+            InferenceState::Cancelled
         );
     }
 

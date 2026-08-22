@@ -47,11 +47,14 @@ use crate::proto::agent_service::{
     SubAgentRequest, SubAgentResponse, ToolsetConfig, agent_service_server::AgentService,
 };
 use crate::tools::{SharedMailbox, SharedTaskStore, Tool, sendmessage::Mailbox, task::TaskStore};
+use server_harness::middleware::adapter::{OmniSoloHarnessAdapter, OmniSoloRunConfig};
+use server_harness::middleware::capsule::{PortableRecord, SessionCapsule};
 use serde_json::Value;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::sync::RwLock;
+use uuid::Uuid;
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
 const AGENT_VERSION: &str = "1.0.0";
@@ -85,6 +88,24 @@ pub struct AgentServiceImpl {
 
 #[derive(Clone, Copy, Debug)]
 struct TrustedInProcessRequest;
+
+fn emit_middleware_event(
+    middleware_run: &mut OmniSoloHarnessAdapter,
+    sender: &mpsc::Sender<Result<RunTaskEvent, Status>>,
+    event: &AgentEvent,
+) {
+    let projected = match crate::middleware::record_agent_event(middleware_run, event) {
+        Ok(projected) => projected,
+        Err(error) => {
+            tracing::warn!(
+                ?error,
+                "middleware projection rejected an OmniSolo event"
+            );
+            crate::middleware::legacy_projection(event)
+        }
+    };
+    let _ = sender.try_send(Ok(projected));
+}
 
 async fn load_cascading_agents_md(
     current_dir: &std::path::Path,
@@ -962,10 +983,141 @@ impl AgentService for AgentServiceImpl {
             &task_req.model,
             &task_req.llm_endpoint,
         );
-        let run_cfg = self
-            .build_run_config(&task_req, &task_req.department, &llm)
+        let imported_capsule = if task_req.session_capsule_json.trim().is_empty() {
+            None
+        } else {
+            let capsule: SessionCapsule = serde_json::from_str(&task_req.session_capsule_json)
+                .map_err(|error| Status::invalid_argument(format!("invalid session capsule: {error}")))?;
+            capsule
+                .verify_integrity()
+                .map_err(|error| Status::invalid_argument(format!("invalid session capsule: {error:?}")))?;
+            Some(capsule)
+        };
+        let capsule_task = imported_capsule.as_ref().and_then(|capsule| {
+            capsule.records.iter().find_map(|record| match record {
+                PortableRecord::Task(task) => Some(task),
+                _ => None,
+            })
+        });
+        let capsule_session = imported_capsule.as_ref().and_then(|capsule| {
+            capsule.records.iter().find_map(|record| match record {
+                PortableRecord::Session(session) => Some(session),
+                _ => None,
+            })
+        });
+        let task = if let Some(capsule_task) = capsule_task {
+            if !task_req.task.trim().is_empty()
+                && task_req.task.trim() != capsule_task.objective.trim()
+            {
+                return Err(Status::invalid_argument(
+                    "task objective conflicts with imported session capsule",
+                ));
+            }
+            capsule_task.objective.clone()
+        } else {
+            task_req.task.clone()
+        };
+        let mut run_config_request = task_req.clone();
+        run_config_request.task = task.clone();
+        let mut run_cfg = self
+            .build_run_config(&run_config_request, &task_req.department, &llm)
             .await;
-        let task = task_req.task.clone();
+        let harness_id = if task_req.harness_id.trim().is_empty() {
+            "omnisolo".to_owned()
+        } else {
+            task_req.harness_id.clone()
+        };
+        if let Some(capsule) = imported_capsule.as_ref() {
+            OmniSoloHarnessAdapter::import_capsule(
+                &capsule,
+                self.tenant.as_str(),
+                &harness_id,
+            )
+            .map_err(|error| Status::invalid_argument(format!("session capsule rejected: {error:?}")))?;
+        }
+        let mut middleware_config = OmniSoloRunConfig::new(self.tenant.as_str(), task.clone())
+            .with_harness(harness_id)
+            .with_worker(if task_req.worker_id.trim().is_empty() {
+                self.agent_id.clone()
+            } else {
+                task_req.worker_id.clone()
+            });
+        if let Some(session) = capsule_session {
+            middleware_config = middleware_config.with_session_metadata(
+                session.project_id.clone(),
+                session.workspace_id.clone(),
+                session.title.clone(),
+                session.labels.iter().cloned().collect(),
+                session.tags.clone(),
+            );
+        } else if let Some(capsule) = imported_capsule.as_ref() {
+            middleware_config = middleware_config.with_session_metadata(
+                capsule.manifest.project_id.clone(),
+                capsule.manifest.workspace_id.clone(),
+                capsule.manifest.title.clone(),
+                capsule.manifest.labels.iter().cloned().collect(),
+                capsule.manifest.tags.clone(),
+            );
+        }
+        let capsule_has_turn = imported_capsule.as_ref().is_some_and(|capsule| {
+            capsule
+                .records
+                .iter()
+                .any(|record| matches!(record, PortableRecord::Turn(_)))
+        });
+        if task_req.create_turn || capsule_has_turn {
+            middleware_config = middleware_config.with_turn();
+        }
+        if let Some(capsule) = imported_capsule.as_ref() {
+            if !task_req.session_id.trim().is_empty() {
+                let requested_session_id = Uuid::parse_str(&task_req.session_id).map_err(|_| {
+                    Status::invalid_argument("session_id must be a UUID when importing a capsule")
+                })?;
+                if requested_session_id != capsule.manifest.session_id {
+                    return Err(Status::invalid_argument(
+                        "session_id conflicts with imported session capsule",
+                    ));
+                }
+            }
+            middleware_config = middleware_config.with_session_id(capsule.manifest.session_id);
+        } else if !task_req.session_id.trim().is_empty() {
+            let session_id = Uuid::parse_str(&task_req.session_id)
+                .map_err(|_| Status::invalid_argument("session_id must be a UUID"))?;
+            middleware_config = middleware_config.with_session_id(session_id);
+        }
+        if let Some(capsule_task) = capsule_task {
+            if !task_req.task_id.trim().is_empty() {
+                let requested_task_id = Uuid::parse_str(&task_req.task_id).map_err(|_| {
+                    Status::invalid_argument("task_id must be a UUID when importing a capsule")
+                })?;
+                if requested_task_id != capsule_task.task_id {
+                    return Err(Status::invalid_argument(
+                        "task_id conflicts with imported session capsule",
+                    ));
+                }
+            }
+            middleware_config = middleware_config.with_task_id(capsule_task.task_id);
+        } else if !task_req.task_id.trim().is_empty() {
+            let task_id = Uuid::parse_str(&task_req.task_id)
+                .map_err(|_| Status::invalid_argument("task_id must be a UUID"))?;
+            middleware_config = middleware_config.with_task_id(task_id);
+        }
+        if !task_req.project_id.trim().is_empty() {
+            middleware_config.project_id = Some(task_req.project_id.clone());
+        }
+        if !task_req.workspace_id.trim().is_empty() {
+            middleware_config.workspace_id = Some(task_req.workspace_id.clone());
+        }
+        if !task_req.idempotency_key.trim().is_empty() {
+            middleware_config = middleware_config.with_idempotency_key(task_req.idempotency_key.clone());
+        }
+        if let Some(capsule) = imported_capsule.as_ref() {
+            let mut context = run_cfg.injected_context.take().unwrap_or_default();
+            context.extend(crate::middleware::portable_messages(capsule));
+            run_cfg.injected_context = Some(context);
+        }
+        let mut middleware_run = OmniSoloHarnessAdapter::start(middleware_config)
+            .map_err(|error| Status::internal(format!("failed to initialize middleware run: {error:?}")))?;
         let memory = self.memory.clone();
         let memory_tenant = self.tenant.clone();
         let memory_agent_id = self.agent_id.clone();
@@ -1002,13 +1154,18 @@ impl AgentService for AgentServiceImpl {
 
         let (tx, rx) = mpsc::channel::<Result<RunTaskEvent, Status>>(64);
 
-        // Send RUN_STARTED immediately.
+        // Send RUN_STARTED immediately, preserving the legacy projection while
+        // attaching the canonical middleware identity.
+        let initial_event = middleware_run
+            .events()
+            .first()
+            .cloned()
+            .expect("middleware adapter emits a start event");
         let _ = tx
-            .send(Ok(RunTaskEvent {
-                r#type: EventType::RunStarted as i32,
-                iteration: 0,
-                ..Default::default()
-            }))
+            .send(Ok(crate::middleware::enrich_legacy_projection(
+                crate::middleware::legacy_projection(&AgentEvent::RunStarted { iteration: 0 }),
+                &initial_event,
+            )))
             .await;
 
         let agent_clone = agent.clone();
@@ -1016,94 +1173,11 @@ impl AgentService for AgentServiceImpl {
 
         tokio::spawn(async move {
             let tx_clone = tx.clone();
-
-            let mut on_event = |evt: AgentEvent| {
-                let pb = match evt {
-                    AgentEvent::RunStarted { iteration } => RunTaskEvent {
-                        r#type: EventType::RunStarted as i32,
-                        iteration,
-                        ..Default::default()
-                    },
-                    AgentEvent::IterationStarted {
-                        iteration,
-                        message_count,
-                    } => RunTaskEvent {
-                        r#type: EventType::IterationStarted as i32,
-                        iteration,
-                        message_count: message_count as i32,
-                        ..Default::default()
-                    },
-                    AgentEvent::CheckpointSaved { iteration, path } => RunTaskEvent {
-                        r#type: EventType::TextChunk as i32,
-                        content: format!(
-                            "[Checkpoint Saved: Iteration {}, Path: {}]\n",
-                            iteration, path
-                        ),
-                        ..Default::default()
-                    },
-                    AgentEvent::TextChunk { content } => RunTaskEvent {
-                        r#type: EventType::TextChunk as i32,
-                        content,
-                        ..Default::default()
-                    },
-                    AgentEvent::CostUpdate { total_cost_usd } => RunTaskEvent {
-                        r#type: EventType::TextChunk as i32,
-                        content: format!("[Cost Updated] Session Cost: ${:.6}\n", total_cost_usd),
-                        ..Default::default()
-                    },
-                    AgentEvent::ToolCall {
-                        name,
-                        args_json,
-                        result,
-                        iteration,
-                    } => RunTaskEvent {
-                        r#type: EventType::ToolCall as i32,
-                        tool_name: name,
-                        tool_args_json: args_json,
-                        tool_result: result,
-                        iteration,
-                        ..Default::default()
-                    },
-                    AgentEvent::TaskComplete { content } => RunTaskEvent {
-                        r#type: EventType::TaskComplete as i32,
-                        content,
-                        ..Default::default()
-                    },
-                    AgentEvent::TaskError { error } => RunTaskEvent {
-                        r#type: EventType::TaskError as i32,
-                        error,
-                        ..Default::default()
-                    },
-                    AgentEvent::UserInterventionRequired { error } => RunTaskEvent {
-                        r#type: EventType::TaskError as i32,
-                        error: format!("USER INTERVENTION REQUIRED: {}", error),
-                        ..Default::default()
-                    },
-                    AgentEvent::Handoff { target_agent } => RunTaskEvent {
-                        r#type: EventType::Handoff as i32,
-                        content: format!("HANDOFF REQUESTED TO: {}", target_agent),
-                        ..Default::default()
-                    },
-                    AgentEvent::RewindOccurred {
-                        iteration,
-                        checkpoint_id,
-                        reason,
-                    } => RunTaskEvent {
-                        r#type: EventType::TextChunk as i32,
-                        content: format!(
-                            "[Rewind Occurred at Iteration {}: Checkpoint {}, Reason: {}]\n",
-                            iteration, checkpoint_id, reason
-                        ),
-                        ..Default::default()
-                    },
-                    AgentEvent::GuardrailTripped { reason } => RunTaskEvent {
-                        r#type: EventType::TaskError as i32,
-                        content: format!("Guardrail Tripped: {}", reason),
-                        ..Default::default()
-                    },
-                };
-                let _ = tx_clone.try_send(Ok(pb));
-            };
+            let recovery_worker_id = middleware_run
+                .attempt()
+                .worker_id
+                .clone()
+                .unwrap_or_else(|| "omnisolo-recovery".to_owned());
 
             let mut attempt = 0;
             let max_attempts = 3;
@@ -1111,22 +1185,46 @@ impl AgentService for AgentServiceImpl {
 
             while attempt < max_attempts {
                 attempt += 1;
-                let res = tokio::select! {
-                    biased;
-                    _ = tx.closed() => return,
-                    res = tokio::time::timeout(
-                        crate::agent::agent_task_timeout(),
-                        agent_clone.run(&run_cfg, &task, &mut on_event),
-                    ) => res,
+                let res = {
+                    let mut on_event = |evt: AgentEvent| {
+                        emit_middleware_event(&mut middleware_run, &tx_clone, &evt);
+                    };
+                    let res = tokio::select! {
+                        biased;
+                        _ = tx.closed() => return,
+                        res = tokio::time::timeout(
+                            crate::agent::agent_task_timeout(),
+                            agent_clone.run(&run_cfg, &task, &mut on_event),
+                        ) => res,
+                    };
+                    res
                 };
 
                 match res {
                     Ok(Ok(content)) => {
+                        if !middleware_run.attempt().state.is_terminal() {
+                            emit_middleware_event(
+                                &mut middleware_run,
+                                &tx_clone,
+                                &AgentEvent::TaskComplete {
+                                    content: content.clone(),
+                                },
+                            );
+                        }
                         last_result = Ok(content);
                         break;
                     }
                     Ok(Err(e)) => {
                         let err_str = e.to_string().to_lowercase();
+                        if !middleware_run.attempt().state.is_terminal() {
+                            emit_middleware_event(
+                                &mut middleware_run,
+                                &tx_clone,
+                                &AgentEvent::TaskError {
+                                    error: e.to_string(),
+                                },
+                            );
+                        }
                         if (err_str.contains("timeout")
                             || err_str.contains("rate limit")
                             || err_str.contains("unavailable"))
@@ -1138,6 +1236,11 @@ impl AgentService for AgentServiceImpl {
                                 _ = tx.closed() => return,
                                 _ = tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)) => {}
                             }
+                            if let Err(error) = middleware_run
+                                .begin_recovery_attempt(recovery_worker_id.clone())
+                            {
+                                tracing::warn!(?error, "failed to create middleware recovery attempt");
+                            }
                             continue;
                         }
                         last_result = Err(e);
@@ -1148,11 +1251,22 @@ impl AgentService for AgentServiceImpl {
                             "AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).",
                             attempt
                         );
-                        on_event(AgentEvent::TaskError {
-                            error: "PAUSED".to_string(),
-                        });
+                        if !middleware_run.attempt().state.is_terminal() {
+                            emit_middleware_event(
+                                &mut middleware_run,
+                                &tx_clone,
+                                &AgentEvent::TaskError {
+                                    error: "PAUSED".to_string(),
+                                },
+                            );
+                        }
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
+                            if let Err(error) = middleware_run
+                                .begin_recovery_attempt(recovery_worker_id.clone())
+                            {
+                                tracing::warn!(?error, "failed to create middleware recovery attempt");
+                            }
                             continue;
                         }
                     }
@@ -1702,6 +1816,7 @@ pub async fn start_builtin_agent(
                     department,
                     enable_tools_gating: false,
                     enable_tao_orchestration_loop: false,
+                    ..Default::default()
                 };
 
                 let svc = svc.clone();

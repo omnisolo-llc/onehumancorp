@@ -1,4 +1,5 @@
 pub mod capsule;
+pub mod adapter;
 pub mod events;
 pub mod inference;
 pub mod lease;

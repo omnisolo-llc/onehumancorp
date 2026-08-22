@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -9,9 +9,10 @@ use uuid::Uuid;
 use super::events::EventStore;
 use super::lifecycle::{HandoffState, LifecycleError, LifecycleState, VersionedState};
 use super::types::{
-    ArtifactKind, ArtifactRef, BindingAccessMode, BindingState, ContentPart, JsonMap, Message,
-    MessageRole, MessageStatus, ModelDescriptor, Session, SessionBinding, SessionState, Task,
-    TaskKind, TaskState, Turn,
+    ArtifactKind, ArtifactRef, Attempt, AttemptKind, AttemptState, BindingAccessMode, BindingScope,
+    BindingState, ContentPart, HistoricalActor, JsonMap, Message, MessageRole, MessageStatus,
+    ModelDescriptor, Session, SessionBinding, SessionState, Task, TaskKind, TaskResult, TaskState,
+    Turn,
 };
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Ord, PartialOrd, Serialize)]
@@ -93,8 +94,16 @@ pub struct PortableSession {
     pub labels: Vec<String>,
     pub tags: BTreeMap<String, String>,
     pub state: SessionState,
+    pub state_version: i64,
+    pub parent_session_id: Option<Uuid>,
+    pub root_session_id: Uuid,
+    pub fork_source_event_id: Option<Uuid>,
+    pub active_task_id: Option<Uuid>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub last_active_at: Option<DateTime<Utc>>,
+    pub retention_class: Option<String>,
+    pub data_classification: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -102,16 +111,44 @@ pub struct PortableTask {
     pub task_id: Uuid,
     pub session_id: Uuid,
     pub parent_task_id: Option<Uuid>,
+    pub parent_attempt_id: Option<Uuid>,
     pub kind: TaskKind,
     pub objective: String,
     pub state: TaskState,
+    pub state_version: i64,
     pub dependency_task_ids: Vec<Uuid>,
+    pub owner_actor: Option<HistoricalActor>,
     pub input_message_ids: Vec<Uuid>,
     pub output_message_ids: Vec<Uuid>,
     pub artifact_ids: Vec<Uuid>,
+    pub terminal_result: Option<PortableTaskResult>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub started_at: Option<DateTime<Utc>>,
     pub finished_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct PortableTaskResult {
+    pub status: String,
+    pub summary: Option<String>,
+    pub output_message_ids: Vec<Uuid>,
+    pub artifact_ids: Vec<Uuid>,
+    pub error_code: Option<String>,
+    pub completed_at: DateTime<Utc>,
+}
+
+impl From<&TaskResult> for PortableTaskResult {
+    fn from(result: &TaskResult) -> Self {
+        Self {
+            status: result.status.clone(),
+            summary: result.summary.clone(),
+            output_message_ids: result.output_message_ids.clone(),
+            artifact_ids: result.artifact_ids.clone(),
+            error_code: result.error_code.clone(),
+            completed_at: result.completed_at,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -121,12 +158,34 @@ pub struct PortableTurn {
     pub session_id: Uuid,
     pub sequence: i64,
     pub state: super::types::TurnState,
+    pub state_version: i64,
     pub input_message_id: Option<Uuid>,
     pub output_message_ids: Vec<Uuid>,
     pub stop_reason: Option<String>,
+    pub error_code: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct PortableAttempt {
+    pub attempt_id: Uuid,
+    pub session_id: Uuid,
+    pub task_id: Uuid,
+    pub turn_id: Option<Uuid>,
+    pub parent_attempt_id: Option<Uuid>,
+    pub kind: AttemptKind,
+    pub state: AttemptState,
+    pub state_version: i64,
+    pub actor: Option<HistoricalActor>,
+    pub harness_id: String,
+    pub model_runtime_id: Option<String>,
+    pub worker_id: Option<String>,
+    pub runtime_config_snapshot_id: Option<Uuid>,
+    pub metadata: JsonMap,
+    pub started_at: DateTime<Utc>,
+    pub finished_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -212,6 +271,7 @@ pub enum PortableRecord {
     Session(PortableSession),
     Task(PortableTask),
     Turn(PortableTurn),
+    Attempt(PortableAttempt),
     Message(PortableMessage),
     Artifact(PortableArtifact),
     RuntimeConfig(PortableRuntimeConfig),
@@ -231,6 +291,7 @@ pub enum CanonicalRecord {
     Session(Session),
     Task(Task),
     Turn(Turn),
+    Attempt(Attempt),
     Message(Message),
     Artifact(ArtifactRef),
     RuntimeConfig(RuntimeConfigInput),
@@ -268,6 +329,22 @@ pub struct SessionManifest {
     pub created_at: DateTime<Utc>,
     pub tenant_id: String,
     pub session_id: Uuid,
+    pub project_id: Option<String>,
+    pub workspace_id: Option<String>,
+    pub title: Option<String>,
+    pub labels: Vec<String>,
+    pub tags: BTreeMap<String, String>,
+    pub session_state: SessionState,
+    pub session_state_version: i64,
+    pub session_created_at: DateTime<Utc>,
+    pub session_updated_at: DateTime<Utc>,
+    pub last_active_at: Option<DateTime<Utc>>,
+    pub parent_session_id: Option<Uuid>,
+    pub root_session_id: Uuid,
+    pub fork_source_event_id: Option<Uuid>,
+    pub active_task_id: Option<Uuid>,
+    pub retention_class: Option<String>,
+    pub data_classification: Option<String>,
     pub source_binding_id: Option<Uuid>,
     pub target_harness_id: String,
     pub handoff_id: Uuid,
@@ -309,6 +386,173 @@ impl SessionCapsule {
             || self.manifest.event_ancestor_ids != self.event_ancestor_ids
         {
             return Err(CapsuleError::IntegrityMismatch("event_pointers".to_owned()));
+        }
+        let ancestor_ids = self
+            .event_ancestor_ids
+            .iter()
+            .copied()
+            .collect::<BTreeSet<_>>();
+        if ancestor_ids.len() != self.event_ancestor_ids.len()
+            || self.event_ancestor_ids.iter().any(Uuid::is_nil)
+            || self
+                .head_event_id
+                .is_some_and(|head_event_id| !ancestor_ids.contains(&head_event_id))
+            || self.head_event_id.is_none() && !self.event_ancestor_ids.is_empty()
+        {
+            return Err(CapsuleError::IntegrityMismatch("event_pointers".to_owned()));
+        }
+        if self.manifest.tenant_id.trim().is_empty()
+            || self.manifest.capsule_id.is_nil()
+            || self.manifest.session_id.is_nil()
+            || self.manifest.handoff_id.is_nil()
+            || self.manifest.root_session_id.is_nil()
+            || self.manifest.target_harness_id.trim().is_empty()
+            || self.manifest.producer.trim().is_empty()
+            || self.manifest.redaction_policy_id.trim().is_empty()
+            || self.manifest.minimum_reader_version == 0
+            || self.manifest.compiler_version == 0
+            || self.manifest.schema_version == 0
+            || self.manifest.redaction_policy_version == 0
+            || self
+                .manifest
+                .source_binding_id
+                .is_some_and(|binding_id| binding_id.is_nil())
+            || self
+                .manifest
+                .branch_id
+                .is_some_and(|branch_id| branch_id.is_nil())
+            || self.manifest.from_durable_sequence < 0
+            || self.manifest.to_durable_sequence < self.manifest.from_durable_sequence
+        {
+            return Err(CapsuleError::IntegrityMismatch(
+                "manifest_identity".to_owned(),
+            ));
+        }
+
+        let mut session_record_seen = false;
+        let mut task_ids = BTreeSet::new();
+        let mut turn_ids = BTreeSet::new();
+        let mut attempt_ids = BTreeSet::new();
+        for record in &self.records {
+            match record {
+                PortableRecord::Session(session) => {
+                    if session_record_seen
+                        || session.session_id.is_nil()
+                        || session.session_id != self.manifest.session_id
+                        || session.tenant_id != self.manifest.tenant_id
+                        || session.project_id != self.manifest.project_id
+                        || session.workspace_id != self.manifest.workspace_id
+                        || session.title != self.manifest.title
+                        || session.labels != self.manifest.labels
+                        || session.tags != self.manifest.tags
+                        || session.state != self.manifest.session_state
+                        || session.state_version != self.manifest.session_state_version
+                        || session.parent_session_id != self.manifest.parent_session_id
+                        || session.root_session_id != self.manifest.root_session_id
+                        || session.fork_source_event_id != self.manifest.fork_source_event_id
+                        || session.active_task_id != self.manifest.active_task_id
+                        || session.created_at != self.manifest.session_created_at
+                        || session.updated_at != self.manifest.session_updated_at
+                        || session.last_active_at != self.manifest.last_active_at
+                        || session.retention_class != self.manifest.retention_class
+                        || session.data_classification != self.manifest.data_classification
+                    {
+                        return Err(CapsuleError::IntegrityMismatch(
+                            "record_identity".to_owned(),
+                        ));
+                    }
+                    session_record_seen = true;
+                }
+                PortableRecord::Task(task) => {
+                    if task.task_id.is_nil()
+                        || task.session_id != self.manifest.session_id
+                        || !task_ids.insert(task.task_id)
+                    {
+                        return Err(CapsuleError::IntegrityMismatch(
+                            "record_identity".to_owned(),
+                        ));
+                    }
+                }
+                PortableRecord::Turn(turn) => {
+                    if turn.turn_id.is_nil()
+                        || turn.session_id != self.manifest.session_id
+                        || !turn_ids.insert(turn.turn_id)
+                    {
+                        return Err(CapsuleError::IntegrityMismatch(
+                            "record_identity".to_owned(),
+                        ));
+                    }
+                }
+                PortableRecord::Attempt(attempt) => {
+                    if attempt.attempt_id.is_nil()
+                        || attempt.harness_id.trim().is_empty()
+                        || attempt.session_id != self.manifest.session_id
+                        || !attempt_ids.insert(attempt.attempt_id)
+                    {
+                        return Err(CapsuleError::IntegrityMismatch(
+                            "record_identity".to_owned(),
+                        ));
+                    }
+                }
+                PortableRecord::Message(message) => {
+                    if message.message_id.is_nil() || message.session_id != self.manifest.session_id
+                    {
+                        return Err(CapsuleError::IntegrityMismatch(
+                            "record_identity".to_owned(),
+                        ));
+                    }
+                }
+                _ => {}
+            }
+        }
+        for record in &self.records {
+            match record {
+                PortableRecord::Turn(turn)
+                    if (!task_ids.is_empty() && !task_ids.contains(&turn.task_id)) =>
+                {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
+                }
+                PortableRecord::Task(task)
+                    if task.parent_task_id.is_some_and(|parent_task_id| {
+                        !task_ids.is_empty() && !task_ids.contains(&parent_task_id)
+                    }) || task.parent_attempt_id.is_some_and(|attempt_id| {
+                        !attempt_ids.is_empty() && !attempt_ids.contains(&attempt_id)
+                    }) || task.dependency_task_ids.iter().any(|dependency_task_id| {
+                        !task_ids.is_empty() && !task_ids.contains(dependency_task_id)
+                    }) =>
+                {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
+                }
+                PortableRecord::Attempt(attempt)
+                    if (!task_ids.is_empty() && !task_ids.contains(&attempt.task_id))
+                        || attempt.turn_id.is_some_and(|turn_id| {
+                            !turn_ids.is_empty() && !turn_ids.contains(&turn_id)
+                        })
+                        || attempt.parent_attempt_id.is_some_and(|parent_id| {
+                            !attempt_ids.is_empty() && !attempt_ids.contains(&parent_id)
+                        }) =>
+                {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
+                }
+                PortableRecord::Message(message)
+                    if message.task_id.is_some_and(|task_id| {
+                        !task_ids.is_empty() && !task_ids.contains(&task_id)
+                    }) || message.turn_id.is_some_and(|turn_id| {
+                        !turn_ids.is_empty() && !turn_ids.contains(&turn_id)
+                    }) =>
+                {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
+                }
+                _ => {}
+            }
         }
         Ok(())
     }
@@ -399,6 +643,7 @@ impl CapsuleCompiler {
             });
         }
 
+        let portable_session = project_session(&input.session, "session", &mut losses);
         let mut records = Vec::new();
         for (index, record) in input.records.iter().enumerate() {
             let path = format!("records[{index}]");
@@ -431,13 +676,29 @@ impl CapsuleCompiler {
 
         let manifest = SessionManifest {
             capsule_id: input.capsule_id,
-            schema_version: 1,
-            minimum_reader_version: 1,
+            schema_version: 2,
+            minimum_reader_version: 2,
             producer: self.producer.clone(),
-            compiler_version: 1,
+            compiler_version: 2,
             created_at: input.created_at,
-            tenant_id: input.session.tenant_id.clone(),
-            session_id: input.session.session_id,
+            tenant_id: portable_session.tenant_id.clone(),
+            session_id: portable_session.session_id,
+            project_id: portable_session.project_id.clone(),
+            workspace_id: portable_session.workspace_id.clone(),
+            title: portable_session.title.clone(),
+            labels: portable_session.labels.clone(),
+            tags: portable_session.tags.clone(),
+            session_state: portable_session.state.clone(),
+            session_state_version: portable_session.state_version,
+            session_created_at: portable_session.created_at,
+            session_updated_at: portable_session.updated_at,
+            last_active_at: portable_session.last_active_at,
+            parent_session_id: portable_session.parent_session_id,
+            root_session_id: portable_session.root_session_id,
+            fork_source_event_id: portable_session.fork_source_event_id,
+            active_task_id: portable_session.active_task_id,
+            retention_class: portable_session.retention_class.clone(),
+            data_classification: portable_session.data_classification.clone(),
             source_binding_id: input.source_binding_id,
             target_harness_id: input.target_harness_id,
             handoff_id: input.handoff_id,
@@ -451,7 +712,7 @@ impl CapsuleCompiler {
             redaction_policy_id: self.redaction_policy_id.clone(),
             redaction_policy_version: self.redaction_policy_version,
         };
-        Ok(SessionCapsule {
+        let capsule = SessionCapsule {
             manifest_digest: sha256_json(&manifest),
             record_digest: sha256_json(&records),
             loss_report_digest: sha256_json(&report),
@@ -460,7 +721,9 @@ impl CapsuleCompiler {
             manifest,
             records,
             loss_report: report,
-        })
+        };
+        capsule.verify_integrity()?;
+        Ok(capsule)
     }
 
     pub fn compile_from_event_head(
@@ -483,47 +746,73 @@ enum RecordProjectionError {
     Unsafe(LossEntry),
 }
 
+fn project_session(session: &Session, path: &str, losses: &mut Vec<LossEntry>) -> PortableSession {
+    PortableSession {
+        session_id: session.session_id,
+        tenant_id: session.tenant_id.clone(),
+        project_id: session.project_id.clone(),
+        workspace_id: session.workspace_id.clone(),
+        title: session
+            .title
+            .as_ref()
+            .map(|title| redact_text(&format!("{path}.title"), title, losses)),
+        labels: session
+            .labels
+            .iter()
+            .enumerate()
+            .map(|(index, label)| redact_text(&format!("{path}.labels[{index}]"), label, losses))
+            .collect(),
+        tags: redact_string_map(&format!("{path}.tags"), &session.tags, losses),
+        state: session.state.clone(),
+        state_version: session.state_version,
+        parent_session_id: session.parent_session_id,
+        root_session_id: session.root_session_id,
+        fork_source_event_id: session.fork_source_event_id,
+        active_task_id: session.active_task_id,
+        created_at: session.created_at,
+        updated_at: session.updated_at,
+        last_active_at: session.last_active_at,
+        retention_class: session.retention_class.clone(),
+        data_classification: session.data_classification.clone(),
+    }
+}
+
 fn project_record(
     record: &CanonicalRecord,
     path: &str,
     losses: &mut Vec<LossEntry>,
 ) -> Result<Option<PortableRecord>, RecordProjectionError> {
     match record {
-        CanonicalRecord::Session(session) => {
-            let title = session
-                .title
-                .as_ref()
-                .map(|title| redact_text(&format!("{path}.title"), title, losses));
-            let tags = redact_string_map(&format!("{path}.tags"), &session.tags, losses);
-            Ok(Some(PortableRecord::Session(PortableSession {
-                session_id: session.session_id,
-                tenant_id: session.tenant_id.clone(),
-                project_id: session.project_id.clone(),
-                workspace_id: session.workspace_id.clone(),
-                title,
-                labels: session.labels.iter().cloned().collect(),
-                tags,
-                state: session.state.clone(),
-                created_at: session.created_at,
-                updated_at: session.updated_at,
-            })))
-        }
+        CanonicalRecord::Session(session) => Ok(Some(PortableRecord::Session(project_session(
+            session, path, losses,
+        )))),
         CanonicalRecord::Task(task) => Ok(Some(PortableRecord::Task(PortableTask {
             task_id: task.task_id,
             session_id: task.session_id,
             parent_task_id: task.parent_task_id,
+            parent_attempt_id: task.parent_attempt_id,
             kind: task.kind.clone(),
             objective: redact_text(&format!("{path}.objective"), &task.objective, losses),
             state: task.state.clone(),
+            state_version: task.state_version,
             dependency_task_ids: task.dependency_task_ids.clone(),
+            owner_actor: task
+                .owner_actor
+                .as_ref()
+                .map(super::types::HistoricalActor::from),
             input_message_ids: task.input_message_ids.clone(),
             output_message_ids: task.output_message_ids.clone(),
             artifact_ids: task.artifact_ids.clone(),
+            terminal_result: task.terminal_result.as_ref().map(PortableTaskResult::from),
             created_at: task.created_at,
             updated_at: task.updated_at,
+            started_at: task.started_at,
             finished_at: task.finished_at,
         }))),
         CanonicalRecord::Turn(turn) => Ok(Some(PortableRecord::Turn(project_turn(turn)))),
+        CanonicalRecord::Attempt(attempt) => Ok(Some(PortableRecord::Attempt(project_attempt(
+            attempt, path, losses,
+        )))),
         CanonicalRecord::Message(message) => Ok(Some(PortableRecord::Message(project_message(
             message, path, losses,
         )))),
@@ -595,6 +884,30 @@ fn project_record(
     }
 }
 
+fn project_attempt(attempt: &Attempt, path: &str, losses: &mut Vec<LossEntry>) -> PortableAttempt {
+    PortableAttempt {
+        attempt_id: attempt.attempt_id,
+        session_id: attempt.session_id,
+        task_id: attempt.task_id,
+        turn_id: attempt.turn_id,
+        parent_attempt_id: attempt.parent_attempt_id,
+        kind: attempt.kind.clone(),
+        state: attempt.state.clone(),
+        state_version: attempt.state_version,
+        actor: attempt
+            .actor
+            .as_ref()
+            .map(super::types::HistoricalActor::from),
+        harness_id: attempt.harness_id.clone(),
+        model_runtime_id: attempt.model_runtime_id.clone(),
+        worker_id: attempt.worker_id.clone(),
+        runtime_config_snapshot_id: attempt.runtime_config_snapshot_id,
+        metadata: redact_json_map(&format!("{path}.metadata"), &attempt.metadata, losses),
+        started_at: attempt.started_at,
+        finished_at: attempt.finished_at,
+    }
+}
+
 fn project_turn(turn: &Turn) -> PortableTurn {
     PortableTurn {
         turn_id: turn.turn_id,
@@ -602,9 +915,11 @@ fn project_turn(turn: &Turn) -> PortableTurn {
         session_id: turn.session_id,
         sequence: turn.sequence,
         state: turn.state.clone(),
+        state_version: turn.state_version,
         input_message_id: turn.input_message_id,
         output_message_ids: turn.output_message_ids.clone(),
         stop_reason: turn.stop_reason.clone(),
+        error_code: turn.error_code.clone(),
         created_at: turn.created_at,
         updated_at: turn.updated_at,
         completed_at: turn.completed_at,
@@ -999,7 +1314,11 @@ impl HandoffOperation {
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub enum HandoffError {
     OperationNotFound,
+    OperationAlreadyExists,
     BindingNotFound,
+    BindingAlreadyExists,
+    InvalidBinding,
+    InvalidScope,
     SourceNotActive,
     SourceStillWritable,
     DuplicateWritableBinding,
@@ -1024,6 +1343,21 @@ impl HandoffCoordinator {
     }
 
     pub fn register_binding(&mut self, binding: SessionBinding) -> Result<(), HandoffError> {
+        if binding.binding_id.is_nil()
+            || binding.session_id.is_nil()
+            || binding.harness_id.trim().is_empty()
+            || binding.workspace_mutation_scope_id.trim().is_empty()
+            || binding.generation <= 0
+            || matches!(
+                (&binding.scope, binding.task_id),
+                (BindingScope::Session, Some(_)) | (BindingScope::Task, None)
+            )
+        {
+            return Err(HandoffError::InvalidBinding);
+        }
+        if self.bindings.contains_key(&binding.binding_id) {
+            return Err(HandoffError::BindingAlreadyExists);
+        }
         if binding.state == BindingState::Active
             && binding.access_mode == BindingAccessMode::ReadWrite
             && self.bindings.values().any(|existing| {
@@ -1041,6 +1375,12 @@ impl HandoffCoordinator {
     }
 
     pub fn begin(&mut self, operation: HandoffOperation) -> Result<Uuid, HandoffError> {
+        if operation.operation_id.is_nil() || operation.target_harness_id.trim().is_empty() {
+            return Err(HandoffError::InvalidScope);
+        }
+        if self.operations.contains_key(&operation.operation_id) {
+            return Err(HandoffError::OperationAlreadyExists);
+        }
         let source = self
             .bindings
             .get(&operation.source_binding_id)
@@ -1050,6 +1390,22 @@ impl HandoffCoordinator {
         }
         if source.state != BindingState::Active {
             return Err(HandoffError::SourceNotActive);
+        }
+        let scoped_task_id = match &operation.scope {
+            HandoffScope::Session => None,
+            HandoffScope::Task { task_id } => Some(*task_id),
+        };
+        if operation.task_id != scoped_task_id
+            || source.task_id != operation.task_id
+            || (matches!(&operation.scope, HandoffScope::Session)
+                && source.scope != BindingScope::Session)
+            || (matches!(&operation.scope, HandoffScope::Task { .. })
+                && source.scope != BindingScope::Task)
+        {
+            return Err(HandoffError::InvalidScope);
+        }
+        if operation.state != HandoffState::Requested || operation.state_version != 0 {
+            return Err(HandoffError::InvalidPhase);
         }
         let operation_id = operation.operation_id;
         self.operations.insert(operation_id, operation);
@@ -1191,6 +1547,12 @@ impl HandoffCoordinator {
         }
         if target.session_id != operation.session_id
             || target.harness_id != operation.target_harness_id
+            || target.scope
+                != match &operation.scope {
+                    HandoffScope::Session => BindingScope::Session,
+                    HandoffScope::Task { .. } => BindingScope::Task,
+                }
+            || target.task_id != operation.task_id
         {
             return Err(HandoffError::BindingMismatch);
         }
@@ -1420,6 +1782,69 @@ mod tests {
         assert_eq!(
             corrupt.verify_integrity(),
             Err(CapsuleError::IntegrityMismatch("loss_report".to_owned()))
+        );
+    }
+
+    #[test]
+    fn capsule_integrity_rejects_cross_session_portable_records() {
+        let session = session();
+        let capsule = compiler()
+            .compile(input(
+                session.clone(),
+                vec![CanonicalRecord::Message(message(session.session_id))],
+            ))
+            .unwrap();
+        let mut corrupt = capsule.clone();
+        if let Some(PortableRecord::Message(message)) = corrupt.records.first_mut() {
+            message.session_id = Uuid::new_v4();
+        }
+        corrupt.record_digest = sha256_json(&corrupt.records);
+
+        assert_eq!(
+            corrupt.verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "record_identity".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn capsule_manifest_carries_session_lineage_and_policy_metadata() {
+        let mut session = session();
+        let parent_session_id = Uuid::new_v4();
+        let fork_source_event_id = Uuid::new_v4();
+        let active_task_id = Uuid::new_v4();
+        session.parent_session_id = Some(parent_session_id);
+        session.root_session_id = parent_session_id;
+        session.fork_source_event_id = Some(fork_source_event_id);
+        session.active_task_id = Some(active_task_id);
+        session.retention_class = Some("long-term".to_owned());
+        session.data_classification = Some("confidential".to_owned());
+
+        let capsule = compiler()
+            .compile(input(session.clone(), Vec::new()))
+            .unwrap();
+
+        assert_eq!(capsule.manifest.project_id, session.project_id);
+        assert_eq!(capsule.manifest.workspace_id, session.workspace_id);
+        assert_eq!(capsule.manifest.title, session.title);
+        assert_eq!(capsule.manifest.labels, vec!["coding"]);
+        assert_eq!(capsule.manifest.tags, session.tags);
+        assert_eq!(capsule.manifest.session_state, session.state);
+        assert_eq!(
+            capsule.manifest.parent_session_id,
+            session.parent_session_id
+        );
+        assert_eq!(capsule.manifest.root_session_id, session.root_session_id);
+        assert_eq!(
+            capsule.manifest.fork_source_event_id,
+            session.fork_source_event_id
+        );
+        assert_eq!(capsule.manifest.active_task_id, session.active_task_id);
+        assert_eq!(capsule.manifest.retention_class, session.retention_class);
+        assert_eq!(
+            capsule.manifest.data_classification,
+            session.data_classification
         );
     }
 

@@ -47,6 +47,7 @@ pub mod memory_exhaustive_tests;
 pub mod memory_store;
 pub mod openhands;
 pub mod openhands_runner;
+pub mod middleware;
 pub mod prompt_construction;
 pub mod ralph_loop;
 pub mod ruflo;
@@ -85,6 +86,9 @@ pub mod agentic_seek;
 pub mod pi;
 pub mod ruflo_plugins;
 pub mod tool_executor_engine;
+
+#[cfg(test)]
+mod middleware_integration_tests;
 
 fn get_env(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())

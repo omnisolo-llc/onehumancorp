@@ -49,6 +49,7 @@ impl FenceToken {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub enum FenceError {
+    InvalidGeneration,
     StaleGeneration,
     WrongLease,
     WrongAttempt,
@@ -132,6 +133,9 @@ impl Lease {
     }
 
     pub fn validate_at(&self, token: FenceToken, now: DateTime<Utc>) -> Result<(), FenceError> {
+        if self.generation <= 0 || token.generation <= 0 {
+            return Err(FenceError::InvalidGeneration);
+        }
         if token.generation != self.generation {
             return Err(FenceError::StaleGeneration);
         }
@@ -247,5 +251,20 @@ mod tests {
         let mut overflow = Lease::active("attempt-2", i64::MAX);
         assert_eq!(overflow.reassign(), Err(LeaseError::GenerationOverflow));
         assert_eq!(overflow.generation, i64::MAX);
+    }
+
+    #[test]
+    fn lease_fences_reject_non_positive_generations() {
+        let lease = Lease::active("attempt-1", 0);
+        assert_eq!(
+            lease.validate(lease.token()),
+            Err(FenceError::InvalidGeneration)
+        );
+
+        let lease = Lease::active("attempt-2", 1);
+        assert_eq!(
+            lease.validate(FenceToken::new(0)),
+            Err(FenceError::InvalidGeneration)
+        );
     }
 }

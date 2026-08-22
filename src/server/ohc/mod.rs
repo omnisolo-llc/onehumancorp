@@ -177,4 +177,44 @@ mod tests {
         assert_eq!(decoded.payload_version, 7);
         assert_eq!(decoded.extensions["future_field"], "enabled");
     }
+
+    #[test]
+    fn harness_inference_proto_round_trip_preserves_session_scope() {
+        let message = harness_middleware::ModelRuntimeInference {
+            protocol_version: 1,
+            request_id: "request-1".to_owned(),
+            model_binding_id: "binding-1".to_owned(),
+            runtime_id: "runtime-1".to_owned(),
+            worker_id: "worker-1".to_owned(),
+            capacity_lease_id: "capacity-1".to_owned(),
+            capacity_generation: 4,
+            fencing_token: "fence-4".to_owned(),
+            request_digest: "digest-1".to_owned(),
+            model_revision: "rev-1".to_owned(),
+            stream_sequence: 2,
+            status: "streaming".to_owned(),
+            content: b"chunk".to_vec(),
+            authoritative_final: false,
+            input_tokens: 10,
+            output_tokens: 3,
+            cached_tokens: 1,
+            finish_reason: String::new(),
+            extensions: Default::default(),
+            tenant_id: "tenant-1".to_owned(),
+            session_id: "session-1".to_owned(),
+            task_id: "task-1".to_owned(),
+            turn_id: "turn-1".to_owned(),
+            attempt_id: "attempt-1".to_owned(),
+            correlation_id: "corr-1".to_owned(),
+            idempotency_key: "request-1".to_owned(),
+        };
+        let decoded = harness_middleware::ModelRuntimeInference::decode(
+            message.encode_to_vec().as_slice(),
+        )
+        .unwrap();
+        assert_eq!(decoded, message);
+        assert_eq!(decoded.session_id, "session-1");
+        assert_eq!(decoded.task_id, "task-1");
+        assert_eq!(decoded.capacity_generation, 4);
+    }
 }

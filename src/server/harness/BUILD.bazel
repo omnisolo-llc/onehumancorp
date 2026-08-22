@@ -1,4 +1,8 @@
-exports_files(["Cargo.toml"])
+exports_files(
+    ["Cargo.toml", "tests/middleware_conformance.rs", "tests/schema_contract.rs"]
+    + glob(["tests/fixtures/harness_middleware/*.json"]),
+    visibility = ["//visibility:public"],
+)
 
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
@@ -20,6 +24,7 @@ rust_library(
         "mcp/mod.rs",
         "mcp/client.rs",
         "middleware/mod.rs",
+        "middleware/adapter.rs",
         "middleware/types.rs",
         "middleware/lifecycle.rs",
         "middleware/lease.rs",
@@ -56,6 +61,7 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 rust_test(
     name = "server_harness_test",
     crate = ":server_harness",
+    data = glob(["tests/fixtures/harness_middleware/*.json"]),
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

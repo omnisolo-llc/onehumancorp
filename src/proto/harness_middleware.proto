@@ -102,4 +102,11 @@ message ModelRuntimeInference {
   uint64 cached_tokens = 17;
   string finish_reason = 18;
   map<string, string> extensions = 19;
+  string tenant_id = 20;
+  string session_id = 21;
+  string task_id = 22;
+  string turn_id = 23;
+  string attempt_id = 24;
+  string correlation_id = 25;
+  string idempotency_key = 26;
 }

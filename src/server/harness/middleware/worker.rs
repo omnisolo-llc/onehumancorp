@@ -151,7 +151,7 @@ impl SessionOperationEnvelope {
         if self.operation_id.is_nil() {
             return Err(EnvelopeError::MissingOperationId);
         }
-        if self.operation_generation < 0 {
+        if self.operation_generation <= 0 {
             return Err(EnvelopeError::InvalidOperationGeneration);
         }
         if self.fencing_token.is_empty() {
@@ -235,7 +235,7 @@ impl AttemptCommandEnvelope {
         if self.lease_id.is_nil() {
             return Err(EnvelopeError::MissingLeaseId);
         }
-        if self.lease_generation < 0 {
+        if self.lease_generation <= 0 {
             return Err(EnvelopeError::InvalidLeaseGeneration);
         }
         if self.fencing_token.is_empty() {
@@ -261,6 +261,19 @@ mod tests {
         envelope.validate().unwrap();
         assert!(envelope.session_id.is_none());
         assert_eq!(envelope.kind, WorkerControlKind::Heartbeat);
+
+        let mut missing_worker = envelope.clone();
+        missing_worker.worker_id.clear();
+        assert_eq!(
+            missing_worker.validate(),
+            Err(EnvelopeError::MissingWorkerId)
+        );
+        let mut missing_runtime = envelope;
+        missing_runtime.runtime_id.clear();
+        assert_eq!(
+            missing_runtime.validate(),
+            Err(EnvelopeError::MissingRuntimeId)
+        );
     }
 
     #[test]
@@ -280,6 +293,32 @@ mod tests {
         assert_eq!(
             missing_fence.validate(),
             Err(EnvelopeError::MissingFencingToken)
+        );
+
+        let mut zero_generation = envelope.clone();
+        zero_generation.operation_generation = 0;
+        assert_eq!(
+            zero_generation.validate(),
+            Err(EnvelopeError::InvalidOperationGeneration)
+        );
+
+        let mut missing_tenant = envelope.clone();
+        missing_tenant.tenant_id.clear();
+        assert_eq!(
+            missing_tenant.validate(),
+            Err(EnvelopeError::MissingTenantId)
+        );
+        let mut missing_session = envelope.clone();
+        missing_session.session_id = Uuid::nil();
+        assert_eq!(
+            missing_session.validate(),
+            Err(EnvelopeError::MissingSessionId)
+        );
+        let mut missing_operation = envelope;
+        missing_operation.operation_id = Uuid::nil();
+        assert_eq!(
+            missing_operation.validate(),
+            Err(EnvelopeError::MissingOperationId)
         );
     }
 
@@ -302,6 +341,47 @@ mod tests {
         let mut missing_task = envelope.clone();
         missing_task.task_id = None;
         assert_eq!(missing_task.validate(), Err(EnvelopeError::MissingTaskId));
+
+        let mut zero_generation = envelope.clone();
+        zero_generation.lease_generation = 0;
+        assert_eq!(
+            zero_generation.validate(),
+            Err(EnvelopeError::InvalidLeaseGeneration)
+        );
+
+        let mut missing_tenant = envelope.clone();
+        missing_tenant.tenant_id.clear();
+        assert_eq!(
+            missing_tenant.validate(),
+            Err(EnvelopeError::MissingTenantId)
+        );
+        let mut missing_session = envelope.clone();
+        missing_session.session_id = Uuid::nil();
+        assert_eq!(
+            missing_session.validate(),
+            Err(EnvelopeError::MissingSessionId)
+        );
+        let mut missing_attempt = envelope.clone();
+        missing_attempt.attempt_id = Uuid::nil();
+        assert_eq!(
+            missing_attempt.validate(),
+            Err(EnvelopeError::MissingAttemptId)
+        );
+        let mut missing_command = envelope.clone();
+        missing_command.command_id = Uuid::nil();
+        assert_eq!(
+            missing_command.validate(),
+            Err(EnvelopeError::MissingCommandId)
+        );
+        let mut missing_lease = envelope.clone();
+        missing_lease.lease_id = Uuid::nil();
+        assert_eq!(missing_lease.validate(), Err(EnvelopeError::MissingLeaseId));
+        let mut missing_fence = envelope;
+        missing_fence.fencing_token.clear();
+        assert_eq!(
+            missing_fence.validate(),
+            Err(EnvelopeError::MissingFencingToken)
+        );
     }
 
     #[test]
