@@ -6,7 +6,7 @@
 
 **Architecture:** Add a focused `server_harness::middleware` module that owns protocol-neutral data contracts and pure state machines. The existing OmniSolo agent and future adapters consume these contracts; no new Codex-specific runner is created. Durable database and external harness adapters are integrated only after the pure contracts prove their invariants.
 
-**Tech Stack:** Rust 2024, serde/serde_json, chrono, UUID, SHA-256, Tokio tests, protobuf/tonic for the worker wire contract, and the existing PostgreSQL/SQLite migration conventions.
+**Tech Stack:** Rust 2024, serde/serde_json, chrono, UUID, SHA-256, Tokio tests, protobuf/tonic for the worker wire contract, and the existing PostgreSQL/MySQL/SQLite migration conventions.
 
 ---
 
@@ -316,7 +316,9 @@ git commit -m "feat: add harness worker protocol"
 
 **Files:**
 - Create: `src/server/migrations/218_harness_middleware.sql`
-- Modify: `src/server/db.rs` only if migration registration is required
+- Create: `src/server/db/migrations/218_harness_middleware_mysql.sql`
+- Create: `src/server/db/sql_middleware.rs`
+- Modify: `src/server/db.rs` to route MySQL through the SQL middleware
 - Test: `src/server/db` migration tests and SQL contract tests
 
 - [x] **Step 1: Write failing schema contract tests**
@@ -331,15 +333,16 @@ cargo test -p ohc-mono harness_middleware_schema -- --nocapture
 
 - [x] **Step 3: Implement the forward-only migration**
 
-Use the repository's tenant isolation and PostgreSQL/SQLite-compatible migration conventions. Store query-critical identity, sequence, state version, lease generation, fencing token, digest, and timestamps in typed columns; use JSONB for PostgreSQL variable payloads and TEXT containing canonical JSON for SQLite variable payloads. Add indexes for `(tenant_id, session_id, durable_sequence)`, active scope bindings, lease expiry, inbox idempotency, and inference admission.
+Use the repository's tenant isolation conventions through a dialect-aware SQL middleware. Keep PostgreSQL's RLS, triggers, partial indexes, and JSONB migration; provide a native MySQL 8.0.13+ companion with JSON, InnoDB foreign keys, nullable unique sequence keys, and a migration marker protected by `GET_LOCK`. Store query-critical identity, sequence, state version, lease generation, fencing token, digest, and timestamps in typed columns on both backends. Add indexes for `(tenant_id, session_id, durable_sequence)`, active scope bindings, lease expiry, inbox idempotency, and inference admission.
 
 - [x] **Step 4: Run migration tests against the supported local backend**
 
 ```bash
 cargo test -p ohc-mono harness_middleware_schema -- --nocapture
+OMNISOLO_HARNESS_MYSQL_URL=mysql://... cargo test -p ohc-mono --test harness_middleware_interop mysql_harness_middleware_migration_is_idempotent -- --ignored --nocapture
 ```
 
-Expected: migration applies to the repository's test database, tenant isolation remains enabled, and duplicate/stale writes are rejected.
+Expected: both dialect migrations apply, the MySQL path is idempotent across repeated pod starts, tenant isolation remains enabled, and duplicate/stale writes are rejected.
 
 - [x] **Step 5: Commit durable schema**
 
@@ -440,7 +443,7 @@ git commit -m "test: add harness middleware conformance coverage"
 
 ## Implementation Status
 
-The implementation is complete on the `feat/omnisolo-harness-middleware` worktree. The canonical middleware, portable capsule, lease/event fencing, model-runtime admission, worker envelopes, PostgreSQL migration, OmniSolo adapter, legacy projections, typed NATS capsule operations, and conformance fixtures are present. The existing OmniSolo harness remains the native adapter; no `codex_runner.rs` was introduced.
+The implementation is complete on the `feat/omnisolo-harness-middleware` worktree. The canonical middleware, portable capsule, lease/event fencing, model-runtime admission, worker envelopes, PostgreSQL and MySQL migrations behind the SQL middleware, OmniSolo adapter, legacy projections, typed NATS capsule operations, and conformance fixtures are present. The existing OmniSolo harness remains the native adapter; no `codex_runner.rs` was introduced.
 
 Final verification evidence:
 
@@ -452,6 +455,7 @@ Final verification evidence:
 - `cargo fmt --all -- --check` remains red because the repository has extensive unrelated pre-existing formatting drift; targeted rustfmt checks for every changed standalone middleware file pass.
 - `cargo llvm-cov` all-target reports cover the server middleware modules and bridge; the bridge is 100% line/function and 99% region covered. The server middleware suite covers the major state, fencing, replay, capsule, inference, worker, and integration paths.
 - Local PostgreSQL migration validation applied the migration, exercised tenant RLS and cross-tenant trigger rejection, and cleaned up its temporary schema/role.
+- Local MySQL 8.0.46 validation applied all 22 canonical tables, accepted the tenant-aware foreign keys and checks, rejected a cross-tenant task reference, and passed the Rust idempotency test twice against the same database.
 - The repository-level migration test still cannot compile because of the unrelated existing `src/server/integrations/whatsapp_cloud/client_test.rs` `crate::client` import. The bounded Bazel test build reached analysis but timed out after 120 seconds while compiling external dependencies.
 
 - **Spec coverage:** Tasks 1-3 cover canonical identity, lifecycle, leases, event ordering, provenance, and branches. Task 4 covers the portable capsule and handoff. Task 5 covers future open-source model runtimes. Task 6 covers independently scalable worker communication. Task 7 covers durable state. Task 8 preserves and integrates the OmniSolo harness and legacy projections. Task 9 covers failure injection and full verification.

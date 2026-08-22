@@ -19,6 +19,7 @@ SERVER_RS_SRCS = [
     "chaos_network_test.rs",
     "crypto.rs",
     "db.rs",
+    "//src/server/db:sql_middleware.rs",
     "hub.rs",
     "lib.rs",
     "offline/mod.rs",
@@ -448,8 +449,9 @@ rust_library(
     compile_data = [
         "//:CHANGELOG.md",
         "//src/server/migrations",
+        "//src/server/db:embedsrcs",
     ],
-    data = ["//src/server/migrations"],
+    data = ["//src/server/migrations", "//src/server/db:embedsrcs"],
     edition = "2021",
     rustc_flags = ["--cfg=ohc_bazel"],
     proc_macro_deps = [

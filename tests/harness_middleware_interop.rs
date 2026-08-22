@@ -8,6 +8,46 @@ use server_harness::middleware::capsule::{PortableRecord, SessionCapsule};
 use server_lib::interop::protocol::{HarnessCapsuleOperation, InteropProtocol};
 use server_lib::msgbus::{Bus, MemoryBus, Message};
 
+#[tokio::test]
+#[ignore = "requires OMNISOLO_HARNESS_MYSQL_URL pointing at a disposable MySQL 8 database"]
+async fn mysql_harness_middleware_migration_is_idempotent() {
+    let url = std::env::var("OMNISOLO_HARNESS_MYSQL_URL")
+        .expect("OMNISOLO_HARNESS_MYSQL_URL must be set for this test");
+    let pool = sqlx::mysql::MySqlPoolOptions::new()
+        .max_connections(2)
+        .connect(&url)
+        .await
+        .expect("connect to MySQL test database");
+
+    server_lib::db::sql_middleware::run_mysql_harness_middleware_migration(&pool)
+        .await
+        .expect("apply MySQL harness middleware migration");
+    server_lib::db::sql_middleware::run_mysql_harness_middleware_migration(&pool)
+        .await
+        .expect("reapply MySQL harness middleware migration");
+
+    let table_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM information_schema.tables \
+         WHERE table_schema = DATABASE() \
+           AND table_name LIKE 'harness_%' \
+           AND table_name <> 'harness_middleware_schema_migrations'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("count MySQL harness tables");
+    let migration_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM harness_middleware_schema_migrations WHERE version = ?",
+    )
+    .bind(server_lib::db::sql_middleware::HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+    .fetch_one(&pool)
+    .await
+    .expect("read MySQL harness migration marker");
+
+    assert_eq!(table_count, 22);
+    assert_eq!(migration_count, 1);
+    pool.close().await;
+}
+
 fn test_capsule() -> SessionCapsule {
     let mut adapter = OmniSoloHarnessAdapter::start(
         OmniSoloRunConfig::new("tenant_interop", "transfer this task").with_turn(),
