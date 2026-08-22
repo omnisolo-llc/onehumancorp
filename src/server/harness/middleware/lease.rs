@@ -36,6 +36,15 @@ impl FenceToken {
             generation,
         }
     }
+
+    pub fn value(&self) -> String {
+        match (&self.lease_id, &self.attempt_id) {
+            (Some(lease_id), Some(attempt_id)) => {
+                format!("{lease_id}:{attempt_id}:{}", self.generation)
+            }
+            _ => format!("generation:{}", self.generation),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
