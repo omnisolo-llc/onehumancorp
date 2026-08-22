@@ -1,6 +1,12 @@
 # Codex Harness Parity and App Server Compatibility Design
 
-**Status:** Expanded design pending review; implementation has not started.
+> **Superseded:** This design is retained as historical research. The approved
+> architecture is now the harness-neutral middleware and portable session
+> capsule described in
+> `2026-08-22-omnisolo-harness-middleware-design.md`. Do not implement new
+> harness integration work from this document.
+
+**Status:** Superseded; do not use for implementation planning.
 
 ## Goal
 
@@ -586,9 +592,8 @@ existing entry points continue to use the same agent and state services.
 - **Operational pressure:** bound queues, serialize shared mutations, expose
   diagnostics, and make shutdown drain active work predictably.
 
-## Review Gate
+## Historical Review Gate
 
-This expanded design supersedes the earlier stable-core-only proposal. After
-written approval of this document, create the detailed implementation plan with
-exact files, tests, and phase checkpoints. Production code changes begin only
-after that plan is reviewed.
+This was the review gate before the architecture changed. It is retained only
+to explain the document's history and has no current approval or implementation
+authority.
