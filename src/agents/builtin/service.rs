@@ -47,9 +47,9 @@ use crate::proto::agent_service::{
     SubAgentRequest, SubAgentResponse, ToolsetConfig, agent_service_server::AgentService,
 };
 use crate::tools::{SharedMailbox, SharedTaskStore, Tool, sendmessage::Mailbox, task::TaskStore};
+use serde_json::Value;
 use server_harness::middleware::adapter::{OmniSoloHarnessAdapter, OmniSoloRunConfig};
 use server_harness::middleware::capsule::{PortableRecord, SessionCapsule};
-use serde_json::Value;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
@@ -97,10 +97,7 @@ fn emit_middleware_event(
     let projected = match crate::middleware::record_agent_event(middleware_run, event) {
         Ok(projected) => projected,
         Err(error) => {
-            tracing::warn!(
-                ?error,
-                "middleware projection rejected an OmniSolo event"
-            );
+            tracing::warn!(?error, "middleware projection rejected an OmniSolo event");
             crate::middleware::legacy_projection(event)
         }
     };
@@ -987,10 +984,12 @@ impl AgentService for AgentServiceImpl {
             None
         } else {
             let capsule: SessionCapsule = serde_json::from_str(&task_req.session_capsule_json)
-                .map_err(|error| Status::invalid_argument(format!("invalid session capsule: {error}")))?;
-            capsule
-                .verify_integrity()
-                .map_err(|error| Status::invalid_argument(format!("invalid session capsule: {error:?}")))?;
+                .map_err(|error| {
+                    Status::invalid_argument(format!("invalid session capsule: {error}"))
+                })?;
+            capsule.verify_integrity().map_err(|error| {
+                Status::invalid_argument(format!("invalid session capsule: {error:?}"))
+            })?;
             Some(capsule)
         };
         let capsule_task = imported_capsule.as_ref().and_then(|capsule| {
@@ -1028,12 +1027,10 @@ impl AgentService for AgentServiceImpl {
             task_req.harness_id.clone()
         };
         if let Some(capsule) = imported_capsule.as_ref() {
-            OmniSoloHarnessAdapter::import_capsule(
-                &capsule,
-                self.tenant.as_str(),
-                &harness_id,
-            )
-            .map_err(|error| Status::invalid_argument(format!("session capsule rejected: {error:?}")))?;
+            OmniSoloHarnessAdapter::import_capsule(&capsule, self.tenant.as_str(), &harness_id)
+                .map_err(|error| {
+                    Status::invalid_argument(format!("session capsule rejected: {error:?}"))
+                })?;
         }
         let mut middleware_config = OmniSoloRunConfig::new(self.tenant.as_str(), task.clone())
             .with_harness(harness_id)
@@ -1109,15 +1106,18 @@ impl AgentService for AgentServiceImpl {
             middleware_config.workspace_id = Some(task_req.workspace_id.clone());
         }
         if !task_req.idempotency_key.trim().is_empty() {
-            middleware_config = middleware_config.with_idempotency_key(task_req.idempotency_key.clone());
+            middleware_config =
+                middleware_config.with_idempotency_key(task_req.idempotency_key.clone());
         }
         if let Some(capsule) = imported_capsule.as_ref() {
             let mut context = run_cfg.injected_context.take().unwrap_or_default();
             context.extend(crate::middleware::portable_messages(capsule));
             run_cfg.injected_context = Some(context);
         }
-        let mut middleware_run = OmniSoloHarnessAdapter::start(middleware_config)
-            .map_err(|error| Status::internal(format!("failed to initialize middleware run: {error:?}")))?;
+        let mut middleware_run =
+            OmniSoloHarnessAdapter::start(middleware_config).map_err(|error| {
+                Status::internal(format!("failed to initialize middleware run: {error:?}"))
+            })?;
         let memory = self.memory.clone();
         let memory_tenant = self.tenant.clone();
         let memory_agent_id = self.agent_id.clone();
@@ -1236,10 +1236,13 @@ impl AgentService for AgentServiceImpl {
                                 _ = tx.closed() => return,
                                 _ = tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)) => {}
                             }
-                            if let Err(error) = middleware_run
-                                .begin_recovery_attempt(recovery_worker_id.clone())
+                            if let Err(error) =
+                                middleware_run.begin_recovery_attempt(recovery_worker_id.clone())
                             {
-                                tracing::warn!(?error, "failed to create middleware recovery attempt");
+                                tracing::warn!(
+                                    ?error,
+                                    "failed to create middleware recovery attempt"
+                                );
                             }
                             continue;
                         }
@@ -1262,10 +1265,13 @@ impl AgentService for AgentServiceImpl {
                         }
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
-                            if let Err(error) = middleware_run
-                                .begin_recovery_attempt(recovery_worker_id.clone())
+                            if let Err(error) =
+                                middleware_run.begin_recovery_attempt(recovery_worker_id.clone())
                             {
-                                tracing::warn!(?error, "failed to create middleware recovery attempt");
+                                tracing::warn!(
+                                    ?error,
+                                    "failed to create middleware recovery attempt"
+                                );
                             }
                             continue;
                         }

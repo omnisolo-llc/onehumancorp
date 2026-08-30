@@ -1,21 +1,37 @@
 // SOTA Harness Pattern: Pydantic-first tool schema validation.
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::json;
-use std::sync::Arc;
-use std::path::PathBuf;
-use regex::Regex;
 use once_cell::sync::Lazy;
+use regex::Regex;
+use serde_json::json;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+};
 
 // Keep regexes as fallback
-static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait|type|const|static|impl(?:\s*<[^>]*>)?)\s+([a-zA-Z0-9_!:]+)(?:\s+for\s+[a-zA-Z0-9_!:]+)?").expect("should succeed in test"));
-static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
-static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
-static GO_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(func|type)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
-static CPP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:virtual\s+|static\s+)?(?:[a-zA-Z0-9_:]+(?:<[^>]+>)?\s+)+(?:\*|&)?\s*([a-zA-Z0-9_:]+)\s*\([^\)]*\)\s*(?:const)?\s*(?:override)?\s*(?:;|\{)|class\s+([a-zA-Z0-9_]+)|struct\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
-static JAVA_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:public|private|protected)?\s*(?:static)?\s*(?:final)?\s*(?:class|interface|enum|record)\s+([a-zA-Z0-9_]+)|^\s*(?:public|private|protected)?\s*(?:static)?\s*(?:final)?\s*[\w<>\[\]]+\s+([a-zA-Z0-9_]+)\s*\([^)]*\)").expect("should succeed in test"));
-static RB_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(class|module|def)\s+([a-zA-Z0-9_:]+)").expect("should succeed in test"));
+static RS_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait|type|const|static|impl(?:\s*<[^>]*>)?)\s+([a-zA-Z0-9_!:]+)(?:\s+for\s+[a-zA-Z0-9_!:]+)?").expect("should succeed in test")
+});
+static PY_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:async\s+)?(def|class)\s+([a-zA-Z0-9_]+)").expect("should succeed in test")
+});
+static TS_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").expect("should succeed in test")
+});
+static GO_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^\s*(func|type)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
+static CPP_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:virtual\s+|static\s+)?(?:[a-zA-Z0-9_:]+(?:<[^>]+>)?\s+)+(?:\*|&)?\s*([a-zA-Z0-9_:]+)\s*\([^\)]*\)\s*(?:const)?\s*(?:override)?\s*(?:;|\{)|class\s+([a-zA-Z0-9_]+)|struct\s+([a-zA-Z0-9_]+)").expect("should succeed in test")
+});
+static JAVA_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(?:public|private|protected)?\s*(?:static)?\s*(?:final)?\s*(?:class|interface|enum|record)\s+([a-zA-Z0-9_]+)|^\s*(?:public|private|protected)?\s*(?:static)?\s*(?:final)?\s*[\w<>\[\]]+\s+([a-zA-Z0-9_]+)\s*\([^)]*\)").expect("should succeed in test")
+});
+static RB_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^\s*(class|module|def)\s+([a-zA-Z0-9_:]+)").expect("should succeed in test")
+});
 
 /// SOTA Harness Pattern: Aider: RepoMap for large codebases.
 /// Generates a compact summary of the repository's architecture including file structure and basic symbol signatures.
@@ -58,7 +74,9 @@ impl RepoMapExecutor {
                     // Prevent slicing panic by checking if match_end is valid
                     if match_end <= line.len() {
                         let remainder = &line[match_end..];
-                        if remainder.trim_start().starts_with('(') || remainder.trim_start().starts_with('<') {
+                        if remainder.trim_start().starts_with('(')
+                            || remainder.trim_start().starts_with('<')
+                        {
                             let end_idx = remainder.find('{').unwrap_or(remainder.len());
                             let end_idx2 = remainder.find(';').unwrap_or(remainder.len());
                             sig.push_str(&remainder[..std::cmp::min(end_idx, end_idx2)]);
@@ -81,7 +99,14 @@ impl RepoMapExecutor {
         unique_sigs
     }
 
-    fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize, exclude_dirs: &Vec<String>, include_symbols: bool) -> Result<String, std::io::Error> {
+    fn generate_map_recursive(
+        dir: PathBuf,
+        prefix: String,
+        current_depth: usize,
+        max_depth: usize,
+        exclude_dirs: &Vec<String>,
+        include_symbols: bool,
+    ) -> Result<String, std::io::Error> {
         let mut map = String::new();
         if !dir.is_dir() {
             return Ok(map);
@@ -95,14 +120,27 @@ impl RepoMapExecutor {
             let name = entry.file_name().to_string_lossy().to_string();
 
             // Skip common hidden or build directories
-            if name.starts_with('.') || name == "target" || name == "node_modules" || name == "dist" || name == "build" || exclude_dirs.contains(&name) {
+            if name.starts_with('.')
+                || name == "target"
+                || name == "node_modules"
+                || name == "dist"
+                || name == "build"
+                || exclude_dirs.contains(&name)
+            {
                 continue;
             }
 
             if path.is_dir() {
                 map.push_str(&format!("{}📁 {}/\n", prefix, name));
                 if current_depth < max_depth {
-                    map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix), current_depth + 1, max_depth, exclude_dirs, include_symbols)?);
+                    map.push_str(&Self::generate_map_recursive(
+                        path,
+                        format!("{}  ", prefix),
+                        current_depth + 1,
+                        max_depth,
+                        exclude_dirs,
+                        include_symbols,
+                    )?);
                 } else {
                     map.push_str(&format!("{}  ... (max depth reached)\n", prefix));
                 }
@@ -112,14 +150,20 @@ impl RepoMapExecutor {
                 // Read file to extract signatures only if include_symbols is true
                 if include_symbols {
                     if let Some(ext) = path.extension().and_then(|e| e.to_str())
-                        && let Ok(content) = std::fs::read_to_string(&path) {
-                            let sigs = Self::extract_signatures(&content, ext);
-                            for sig in sigs.iter().take(10) { // Limit to top 10 signatures per file to keep it compact
-                                map.push_str(&format!("{}  │ {}\n", prefix, sig));
-                            }
-                            if sigs.len() > 10 {
-                                map.push_str(&format!("{}  │ ... ({} more)\n", prefix, sigs.len() - 10));
-                            }
+                        && let Ok(content) = std::fs::read_to_string(&path)
+                    {
+                        let sigs = Self::extract_signatures(&content, ext);
+                        for sig in sigs.iter().take(10) {
+                            // Limit to top 10 signatures per file to keep it compact
+                            map.push_str(&format!("{}  │ {}\n", prefix, sig));
+                        }
+                        if sigs.len() > 10 {
+                            map.push_str(&format!(
+                                "{}  │ ... ({} more)\n",
+                                prefix,
+                                sigs.len() - 10
+                            ));
+                        }
                     }
                 }
             }
@@ -143,29 +187,45 @@ impl PydanticToolExecutor<RepoMapArgs> for RepoMapExecutor {
         // Fix path traversal: canonicalize both paths and verify target is within workspace
         let abs_workspace = std::fs::canonicalize(&self.workspace_path)
             .unwrap_or_else(|_| self.workspace_path.clone());
-        let abs_target = std::fs::canonicalize(&target_path)
-            .map_err(|_| ToolError::LlmRecoverable(format!("Path does not exist: {}", target_path.display())))?;
+        let abs_target = std::fs::canonicalize(&target_path).map_err(|_| {
+            ToolError::LlmRecoverable(format!("Path does not exist: {}", target_path.display()))
+        })?;
 
         if !abs_target.starts_with(&abs_workspace) {
-            return Err(ToolError::LlmRecoverable("Path Traversal Denied: target path is outside the workspace directory.".to_string()));
+            return Err(ToolError::LlmRecoverable(
+                "Path Traversal Denied: target path is outside the workspace directory."
+                    .to_string(),
+            ));
         }
 
         if !abs_target.exists() {
-             return Err(ToolError::LlmRecoverable(format!("Path does not exist: {}", abs_target.display())));
+            return Err(ToolError::LlmRecoverable(format!(
+                "Path does not exist: {}",
+                abs_target.display()
+            )));
         }
 
         let exclude_dirs = args.exclude_dirs.unwrap_or_default();
         let include_symbols = args.include_symbols.unwrap_or(true);
-        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth, &exclude_dirs, include_symbols))
-            .await
-            .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
-            .map_err(|e| ToolError::Transient(e.to_string()))?;
+        let map = tokio::task::spawn_blocking(move || {
+            RepoMapExecutor::generate_map_recursive(
+                abs_target.clone(),
+                "".to_string(),
+                0,
+                max_depth,
+                &exclude_dirs,
+                include_symbols,
+            )
+        })
+        .await
+        .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
+        .map_err(|e| ToolError::Transient(e.to_string()))?;
 
         let mut final_output = format!("RepoMap for {}:\n", target_path.display());
         if map.is_empty() {
-             final_output.push_str("(Empty or access denied)");
+            final_output.push_str("(Empty or access denied)");
         } else {
-             final_output.push_str(&map);
+            final_output.push_str(&map);
         }
 
         Ok(final_output)
@@ -220,30 +280,54 @@ mod tests {
         std::fs::create_dir(&src_dir).expect("should succeed in test");
 
         let rs_file = src_dir.join("main.rs");
-        std::fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n").expect("should succeed in test");
+        std::fs::write(
+            &rs_file,
+            "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n",
+        )
+        .expect("should succeed in test");
 
         let py_file = src_dir.join("utils.py");
-        std::fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").expect("should succeed in test");
+        std::fs::write(
+            &py_file,
+            "def do_something():\n  pass\n\nclass Data:\n  pass\n",
+        )
+        .expect("should succeed in test");
 
         let ts_file = src_dir.join("app.ts");
-        std::fs::write(&ts_file, "export function init() {
+        std::fs::write(
+            &ts_file,
+            "export function init() {
   // Initialization logic
-}\ninterface Config {}\n").expect("should succeed in test");
+}\ninterface Config {}\n",
+        )
+        .expect("should succeed in test");
 
         let go_file = src_dir.join("server.go");
-        std::fs::write(&go_file, "package main\nfunc StartServer() {
+        std::fs::write(
+            &go_file,
+            "package main\nfunc StartServer() {
 	// Server start logic
-}\ntype Handler struct {}\n").expect("should succeed in test");
+}\ntype Handler struct {}\n",
+        )
+        .expect("should succeed in test");
 
         let cpp_file = src_dir.join("engine.cpp");
-        std::fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").expect("should succeed in test");
+        std::fs::write(
+            &cpp_file,
+            "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n",
+        )
+        .expect("should succeed in test");
 
         let java_file = src_dir.join("Server.java");
-        std::fs::write(&java_file, "public class Server {\n  public static void main() {}\n}\n").expect("should succeed in test");
+        std::fs::write(
+            &java_file,
+            "public class Server {\n  public static void main() {}\n}\n",
+        )
+        .expect("should succeed in test");
 
         let rb_file = src_dir.join("utils.rb");
-        std::fs::write(&rb_file, "class Utils\n  def helper\n  end\nend\n").expect("should succeed in test");
-
+        std::fs::write(&rb_file, "class Utils\n  def helper\n  end\nend\n")
+            .expect("should succeed in test");
 
         // Should ignore hidden and target
         let hidden_dir = root.join(".git");
@@ -252,7 +336,10 @@ mod tests {
         std::fs::create_dir(&target_dir).expect("should succeed in test");
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
-        let result = executor.execute_typed(serde_json::from_value(json!({})).unwrap()).await.expect("should succeed in test");
+        let result = executor
+            .execute_typed(serde_json::from_value(json!({})).unwrap())
+            .await
+            .expect("should succeed in test");
 
         assert!(result.contains("RepoMap for"));
         assert!(result.contains("📁 src/"));
@@ -262,7 +349,8 @@ mod tests {
         assert!(result.contains("│ fn helper()"));
 
         assert!(result.contains("📄 utils.py"));
-        println!("RESULT: {}", result); assert!(result.contains("│ def do_something()"));
+        println!("RESULT: {}", result);
+        assert!(result.contains("│ def do_something()"));
         assert!(result.contains("│ class Data"));
 
         assert!(result.contains("📄 app.ts"));
@@ -285,7 +373,6 @@ mod tests {
         assert!(result.contains("│ class Utils"));
         assert!(result.contains("│ def helper"));
 
-
         assert!(!result.contains(".git"));
         assert!(!result.contains("target"));
     }
@@ -307,7 +394,10 @@ mod extra_tests {
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
 
-        let result = executor.execute_typed(serde_json::from_value(json!({})).unwrap()).await.expect("should succeed");
+        let result = executor
+            .execute_typed(serde_json::from_value(json!({})).unwrap())
+            .await
+            .expect("should succeed");
 
         assert!(result.contains("│ pub fn hello()"));
         assert!(result.contains("│ struct Example"));
@@ -334,20 +424,29 @@ mod extra_tests {
         let executor = RepoMapExecutor::new(root.to_path_buf());
 
         // Depth 0: only d1
-        let res0 = executor.execute_typed(serde_json::from_value(json!({"max_depth": 0})).unwrap()).await.expect("should succeed in test");
+        let res0 = executor
+            .execute_typed(serde_json::from_value(json!({"max_depth": 0})).unwrap())
+            .await
+            .expect("should succeed in test");
         assert!(res0.contains("📁 d1/"));
         assert!(res0.contains("... (max depth reached)"));
         assert!(!res0.contains("d2/"));
 
         // Depth 1: d1 -> d2
-        let res1 = executor.execute_typed(serde_json::from_value(json!({"max_depth": 1})).unwrap()).await.expect("should succeed in test");
+        let res1 = executor
+            .execute_typed(serde_json::from_value(json!({"max_depth": 1})).unwrap())
+            .await
+            .expect("should succeed in test");
         assert!(res1.contains("📁 d1/"));
         assert!(res1.contains("📁 d2/"));
         assert!(res1.contains("... (max depth reached)"));
         assert!(!res1.contains("d3/"));
 
         // Depth 2: d1 -> d2 -> d3
-        let res2 = executor.execute_typed(serde_json::from_value(json!({"max_depth": 2})).unwrap()).await.expect("should succeed in test");
+        let res2 = executor
+            .execute_typed(serde_json::from_value(json!({"max_depth": 2})).unwrap())
+            .await
+            .expect("should succeed in test");
         assert!(res2.contains("📁 d1/"));
         assert!(res2.contains("📁 d2/"));
         assert!(res2.contains("📁 d3/"));
@@ -355,7 +454,10 @@ mod extra_tests {
         assert!(!res2.contains("f3.rs"));
 
         // Depth 3: d1 -> d2 -> d3 -> f3.rs
-        let res3 = executor.execute_typed(serde_json::from_value(json!({"max_depth": 3})).unwrap()).await.expect("should succeed in test");
+        let res3 = executor
+            .execute_typed(serde_json::from_value(json!({"max_depth": 3})).unwrap())
+            .await
+            .expect("should succeed in test");
         assert!(res3.contains("📁 d1/"));
         assert!(res3.contains("📁 d2/"));
         assert!(res3.contains("📁 d3/"));
@@ -368,7 +470,9 @@ mod extra_tests {
         let dir = tempdir().expect("should succeed in test");
         let root = dir.path();
         let executor = RepoMapExecutor::new(root.to_path_buf());
-        let result = executor.execute_typed(serde_json::from_value(json!({"path": "../out_of_bounds"})).unwrap()).await;
+        let result = executor
+            .execute_typed(serde_json::from_value(json!({"path": "../out_of_bounds"})).unwrap())
+            .await;
         assert!(result.is_err());
     }
 
@@ -381,12 +485,16 @@ mod extra_tests {
         std::fs::create_dir(&src_dir).expect("should succeed in test");
 
         let rs_file = src_dir.join("main.rs");
-        std::fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\n").expect("should succeed in test");
+        std::fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\n")
+            .expect("should succeed in test");
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
 
         // Test with include_symbols = false
-        let result_no_symbols = executor.execute_typed(serde_json::from_value(json!({"include_symbols": false})).unwrap()).await.expect("should succeed in test");
+        let result_no_symbols = executor
+            .execute_typed(serde_json::from_value(json!({"include_symbols": false})).unwrap())
+            .await
+            .expect("should succeed in test");
 
         assert!(result_no_symbols.contains("📁 src/"));
         assert!(result_no_symbols.contains("📄 main.rs"));
@@ -394,7 +502,10 @@ mod extra_tests {
         assert!(!result_no_symbols.contains("│ struct User"));
 
         // Test default behavior (include_symbols = true)
-        let result_with_symbols = executor.execute_typed(serde_json::from_value(json!({})).unwrap()).await.expect("should succeed in test");
+        let result_with_symbols = executor
+            .execute_typed(serde_json::from_value(json!({})).unwrap())
+            .await
+            .expect("should succeed in test");
 
         assert!(result_with_symbols.contains("📁 src/"));
         assert!(result_with_symbols.contains("📄 main.rs"));

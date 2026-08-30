@@ -427,7 +427,10 @@ mod tests {
             store.append(duplicate, None, None),
             Err(EventStoreError::DuplicateEventId(event_id))
         );
-        assert_eq!(store.replay(session_id, 1, 1)[0].payload, json!({"text": "hello"}));
+        assert_eq!(
+            store.replay(session_id, 1, 1)[0].payload,
+            json!({"text": "hello"})
+        );
     }
 
     #[test]
@@ -687,6 +690,76 @@ mod tests {
         assert_eq!(
             store.ancestor_closure(session_id, missing),
             Err(EventStoreError::MissingEvent(missing))
+        );
+    }
+
+    #[test]
+    fn ancestor_walk_rejects_cross_session_cycles_and_non_earlier_parents() {
+        let session_id = Uuid::new_v4();
+        let other_session = Uuid::new_v4();
+        let mut store = EventStore::new();
+        let root = event(
+            session_id,
+            Uuid::new_v4(),
+            EventDurability::Durable,
+            ReplayRequirement::Required,
+        );
+        let root_id = root.event_id;
+        store.append(root, None, None).unwrap();
+        assert_eq!(
+            store.ancestor_closure(other_session, root_id),
+            Err(EventStoreError::CrossSessionParent)
+        );
+
+        let mut cyclic = store.events.get(&root_id).unwrap().clone();
+        cyclic.parent_event_ids = vec![root_id];
+        store.events.insert(root_id, cyclic);
+        assert_eq!(
+            store.ancestor_closure(session_id, root_id),
+            Err(EventStoreError::Cycle)
+        );
+
+        let mut store = EventStore::new();
+        let mut parent = event(
+            session_id,
+            Uuid::new_v4(),
+            EventDurability::Durable,
+            ReplayRequirement::Required,
+        );
+        let parent_id = parent.event_id;
+        store.append(parent.clone(), None, None).unwrap();
+        parent.durable_sequence = Some(store.next_durable_sequence + 1);
+        store.events.insert(parent_id, parent);
+        let mut child = event(
+            session_id,
+            Uuid::new_v4(),
+            EventDurability::Durable,
+            ReplayRequirement::Required,
+        );
+        child.parent_event_ids = vec![parent_id];
+        assert_eq!(
+            store.append(child, None, None),
+            Err(EventStoreError::ParentNotEarlier(parent_id))
+        );
+
+        let attempt_id = Uuid::new_v4();
+        let lease = Lease::active(attempt_id.to_string(), 1);
+        let lease_id = lease.lease_id;
+        let token = lease.token();
+        store.register_lease(lease);
+        let mut mismatched_generation = event(
+            session_id,
+            Uuid::new_v4(),
+            EventDurability::Durable,
+            ReplayRequirement::Required,
+        );
+        mismatched_generation.ingest_attempt_id = Some(attempt_id);
+        mismatched_generation.lease_id = Some(lease_id);
+        mismatched_generation.lease_generation = Some(2);
+        mismatched_generation.fencing_token = Some(token.value());
+        assert_eq!(
+            store.append(mismatched_generation, Some(token), None),
+            Err(EventStoreError::Fence(FenceError::StaleGeneration))
         );
     }
 }

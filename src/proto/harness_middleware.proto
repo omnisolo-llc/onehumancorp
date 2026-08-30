@@ -31,6 +31,13 @@ message SessionOperationEnvelope {
   uint32 payload_version = 12;
   bytes payload = 13;
   map<string, string> extensions = 14;
+  string worker_id = 15;
+  string pool_id = 16;
+  string harness_id = 17;
+  uint64 capability_version = 18;
+  string binding_id = 19;
+  int64 binding_generation = 20;
+  string workspace_mutation_scope_id = 21;
 }
 
 message AttemptCommandEnvelope {
@@ -51,6 +58,11 @@ message AttemptCommandEnvelope {
   uint32 payload_version = 15;
   bytes payload = 16;
   map<string, string> extensions = 17;
+  string worker_id = 18;
+  string harness_id = 19;
+  uint64 capability_version = 20;
+  string binding_id = 21;
+  int64 binding_generation = 22;
 }
 
 message EventDeliveryEnvelope {
@@ -109,4 +121,84 @@ message ModelRuntimeInference {
   string attempt_id = 24;
   string correlation_id = 25;
   string idempotency_key = 26;
+}
+
+message WorkerHealthRequest {
+  uint32 protocol_version = 1;
+  string worker_id = 2;
+  string harness_id = 3;
+  string pool_id = 4;
+}
+
+message WorkerHealthResponse {
+  uint32 protocol_version = 1;
+  string worker_id = 2;
+  bool ready = 3;
+  bool accepting_new_attempts = 4;
+  uint64 active_attempts = 5;
+  uint64 capability_version = 6;
+}
+
+message WorkerControlResponse {
+  uint32 protocol_version = 1;
+  bool accepted = 2;
+  bool duplicate = 3;
+  string error = 4;
+}
+
+message SessionOperationResponse {
+  uint32 protocol_version = 1;
+  bool accepted = 2;
+  bool duplicate = 3;
+  string error = 4;
+  string payload_schema = 5;
+  uint32 payload_version = 6;
+  bytes payload = 7;
+}
+
+message AttemptCommandResponse {
+  uint32 protocol_version = 1;
+  bool accepted = 2;
+  bool duplicate = 3;
+  string error = 4;
+}
+
+message WorkerExchangeEnvelope {
+  uint32 protocol_version = 1;
+  string tenant_id = 2;
+  string session_id = 3;
+  string task_id = 4;
+  string attempt_id = 5;
+  string worker_id = 6;
+  string harness_id = 7;
+  string pool_id = 8;
+  string lease_id = 9;
+  int64 lease_generation = 10;
+  string fencing_token = 11;
+  string kind = 12;
+  string idempotency_key = 13;
+  string payload_schema = 14;
+  uint32 payload_version = 15;
+  bytes payload = 16;
+  string artifact_digest = 17;
+  map<string, string> extensions = 18;
+}
+
+message WorkerExchangeResponse {
+  uint32 protocol_version = 1;
+  bool accepted = 2;
+  bool duplicate = 3;
+  string error = 4;
+  bytes payload = 5;
+}
+
+service HarnessWorkerService {
+  rpc Health(WorkerHealthRequest) returns (WorkerHealthResponse);
+  rpc Control(WorkerControlEnvelope) returns (WorkerControlResponse);
+  rpc SessionOperation(SessionOperationEnvelope) returns (SessionOperationResponse);
+  rpc AttemptCommand(AttemptCommandEnvelope) returns (stream EventDeliveryEnvelope);
+  rpc Interaction(WorkerExchangeEnvelope) returns (WorkerExchangeResponse);
+  rpc Artifact(WorkerExchangeEnvelope) returns (WorkerExchangeResponse);
+  rpc Workspace(WorkerExchangeEnvelope) returns (WorkerExchangeResponse);
+  rpc NativeRecord(WorkerExchangeEnvelope) returns (WorkerExchangeResponse);
 }

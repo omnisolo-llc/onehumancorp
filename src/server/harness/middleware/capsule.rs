@@ -1,18 +1,24 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 use super::events::EventStore;
 use super::lifecycle::{HandoffState, LifecycleError, LifecycleState, VersionedState};
+use super::local_services::{
+    LOCAL_SERVICE_BUNDLE_SCHEMA, LocalServiceBinding, LocalServiceBundle,
+};
 use super::types::{
     ArtifactKind, ArtifactRef, Attempt, AttemptKind, AttemptState, BindingAccessMode, BindingScope,
-    BindingState, ContentPart, HistoricalActor, JsonMap, Message, MessageRole, MessageStatus,
-    ModelDescriptor, Session, SessionBinding, SessionState, Task, TaskKind, TaskResult, TaskState,
-    Turn,
+    BindingState, CapabilitySnapshot, Compaction, ContentAnnotation, ContentPart, ErrorRecord,
+    Goal, HistoricalActor, Interaction, JsonMap, Message, MessageRole, MessageStatus,
+    ModelDescriptor, NativeRecord, NativeRecordSet, Plan, Process, ProcessChunk,
+    RuntimeConfigSnapshot, Session, SessionBinding, SessionState, Task, TaskKind, TaskResult,
+    TaskState, Todo, ToolCall, ToolDefinitionSnapshot, ToolProgress, ToolResultRecord, Turn,
+    UsageRecord, WorkspaceDescriptor, WorkspaceSnapshot, sensitive_json_key, sensitive_json_text,
 };
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Ord, PartialOrd, Serialize)]
@@ -63,12 +69,9 @@ impl LossReport {
     }
 
     pub fn requires_ack(&self) -> bool {
-        self.entries.iter().any(|entry| {
-            entry.acknowledgement_required
-                || matches!(
-                    entry.severity,
-                    LossSeverity::Required | LossSeverity::Unsafe
-                )
+        self.entries.iter().any(|entry| match entry.severity {
+            LossSeverity::Required | LossSeverity::Unsafe => true,
+            LossSeverity::Info | LossSeverity::Warning => entry.acknowledgement_required,
         })
     }
 }
@@ -276,12 +279,29 @@ pub enum PortableRecord {
     Artifact(PortableArtifact),
     RuntimeConfig(PortableRuntimeConfig),
     ToolResult(PortableToolResult),
+    ToolDefinition(ToolDefinitionSnapshot),
+    ToolCall(ToolCall),
+    ToolProgress(ToolProgress),
+    ToolResultRecord(ToolResultRecord),
     Interaction(PortableStructuredRecord),
     Plan(PortableStructuredRecord),
     Todo(PortableStructuredRecord),
     Goal(PortableStructuredRecord),
     Process(PortableStructuredRecord),
     WorkspaceSnapshot(PortableStructuredRecord),
+    TypedInteraction(Interaction),
+    TypedPlan(Plan),
+    TypedTodo(Todo),
+    TypedGoal(Goal),
+    TypedProcess(Process),
+    TypedProcessChunk(ProcessChunk),
+    TypedWorkspaceDescriptor(WorkspaceDescriptor),
+    TypedWorkspaceSnapshot(WorkspaceSnapshot),
+    RuntimeConfigSnapshot(RuntimeConfigSnapshot),
+    Usage(UsageRecord),
+    Error(ErrorRecord),
+    Compaction(Compaction),
+    CapabilitySnapshot(CapabilitySnapshot),
     ContextCheckpoint(PortableContextCheckpoint),
     HistoricalData(HistoricalData),
 }
@@ -300,6 +320,25 @@ pub enum CanonicalRecord {
         content: Vec<ContentPart>,
         metadata: BTreeMap<String, String>,
     },
+    ToolDefinition(ToolDefinitionSnapshot),
+    ToolCall(ToolCall),
+    ToolProgress(ToolProgress),
+    ToolResultRecord(ToolResultRecord),
+    Interaction(Interaction),
+    Plan(Plan),
+    Todo(Todo),
+    Goal(Goal),
+    Process(Process),
+    ProcessChunk(ProcessChunk),
+    WorkspaceDescriptor(WorkspaceDescriptor),
+    WorkspaceSnapshot(WorkspaceSnapshot),
+    RuntimeConfigSnapshot(RuntimeConfigSnapshot),
+    Usage(UsageRecord),
+    Error(ErrorRecord),
+    Compaction(Compaction),
+    CapabilitySnapshot(CapabilitySnapshot),
+    NativeRecordSet(NativeRecordSet),
+    NativeRecordTyped(NativeRecord),
     ContextCheckpoint(PortableContextCheckpoint),
     NativeRecord {
         kind: String,
@@ -355,6 +394,8 @@ pub struct SessionManifest {
     pub event_ancestor_ids: Vec<Uuid>,
     pub workspace_snapshot_digests: Vec<String>,
     pub artifact_digests: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub local_service_bindings: Vec<LocalServiceBinding>,
     pub redaction_policy_id: String,
     pub redaction_policy_version: u32,
 }
@@ -426,6 +467,20 @@ impl SessionCapsule {
         {
             return Err(CapsuleError::IntegrityMismatch(
                 "manifest_identity".to_owned(),
+            ));
+        }
+        let local_services = LocalServiceBundle {
+            schema: LOCAL_SERVICE_BUNDLE_SCHEMA.to_owned(),
+            bindings: self.manifest.local_service_bindings.clone(),
+        };
+        if local_services.validate().is_err()
+            || local_services.bindings.iter().any(|binding| {
+                binding.tenant_id != self.manifest.tenant_id
+                    || binding.session_id != self.manifest.session_id
+            })
+        {
+            return Err(CapsuleError::IntegrityMismatch(
+                "local_service_bindings".to_owned(),
             ));
         }
 
@@ -502,6 +557,11 @@ impl SessionCapsule {
                         ));
                     }
                 }
+                record if !typed_record_identity_is_valid(record, self.manifest.session_id) => {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
+                }
                 _ => {}
             }
         }
@@ -558,6 +618,62 @@ impl SessionCapsule {
     }
 }
 
+fn typed_record_identity_is_valid(record: &PortableRecord, session_id: Uuid) -> bool {
+    match record {
+        PortableRecord::ToolDefinition(value) => !value.snapshot_id.is_nil(),
+        PortableRecord::ToolCall(value) => {
+            !value.tool_call_id.is_nil()
+                && value.session_id == session_id
+                && !value.task_id.is_nil()
+                && !value.attempt_id.is_nil()
+        }
+        PortableRecord::ToolProgress(value) => {
+            !value.progress_id.is_nil() && !value.tool_call_id.is_nil()
+        }
+        PortableRecord::ToolResultRecord(value) => {
+            !value.tool_call_id.is_nil()
+                && value.session_id == session_id
+                && !value.task_id.is_nil()
+                && !value.attempt_id.is_nil()
+        }
+        PortableRecord::TypedInteraction(value) => {
+            !value.interaction_id.is_nil() && value.session_id == session_id
+        }
+        PortableRecord::TypedPlan(value) => {
+            !value.plan_id.is_nil() && value.session_id == session_id
+        }
+        PortableRecord::TypedTodo(value) => {
+            !value.todo_id.is_nil() && value.session_id == session_id
+        }
+        PortableRecord::TypedGoal(value) => {
+            !value.goal_id.is_nil() && value.session_id == session_id
+        }
+        PortableRecord::TypedProcess(value) => {
+            !value.process_id.is_nil()
+                && value.session_id == session_id
+                && !value.task_id.is_nil()
+                && !value.attempt_id.is_nil()
+        }
+        PortableRecord::TypedProcessChunk(value) => {
+            !value.chunk_id.is_nil() && !value.process_id.is_nil()
+        }
+        PortableRecord::TypedWorkspaceDescriptor(value) => {
+            !value.descriptor_id.is_nil() && value.session_id == session_id
+        }
+        PortableRecord::TypedWorkspaceSnapshot(value) => {
+            !value.snapshot_id.is_nil() && value.session_id == session_id
+        }
+        PortableRecord::RuntimeConfigSnapshot(value) => !value.snapshot_id.is_nil(),
+        PortableRecord::Usage(value) => !value.usage_id.is_nil() && value.session_id == session_id,
+        PortableRecord::Error(value) => !value.error_id.is_nil() && value.session_id == session_id,
+        PortableRecord::Compaction(value) => {
+            !value.compaction_id.is_nil() && value.session_id == session_id
+        }
+        PortableRecord::CapabilitySnapshot(value) => !value.snapshot_id.is_nil(),
+        _ => true,
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub enum CapsuleError {
     UnsafeLoss(Vec<LossEntry>),
@@ -581,6 +697,7 @@ pub struct CapsuleCompileInput {
     pub records: Vec<CanonicalRecord>,
     pub workspace_snapshot_digests: Vec<String>,
     pub artifact_digests: Vec<String>,
+    pub local_service_bindings: Vec<LocalServiceBinding>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -600,6 +717,7 @@ impl Clone for CapsuleCompileInput {
             records: self.records.clone(),
             workspace_snapshot_digests: self.workspace_snapshot_digests.clone(),
             artifact_digests: self.artifact_digests.clone(),
+            local_service_bindings: self.local_service_bindings.clone(),
             created_at: self.created_at,
         }
     }
@@ -709,6 +827,7 @@ impl CapsuleCompiler {
             event_ancestor_ids: input.event_ancestor_ids.clone(),
             workspace_snapshot_digests: input.workspace_snapshot_digests,
             artifact_digests: input.artifact_digests,
+            local_service_bindings: input.local_service_bindings,
             redaction_policy_id: self.redaction_policy_id.clone(),
             redaction_policy_version: self.redaction_policy_version,
         };
@@ -831,6 +950,119 @@ fn project_record(
             content: project_content(content, path, losses),
             metadata: redact_string_map(&format!("{path}.metadata"), metadata, losses),
         }))),
+        CanonicalRecord::ToolDefinition(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::ToolDefinition,
+        )),
+        CanonicalRecord::ToolCall(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::ToolCall,
+        )),
+        CanonicalRecord::ToolProgress(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::ToolProgress,
+        )),
+        CanonicalRecord::ToolResultRecord(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::ToolResultRecord,
+        )),
+        CanonicalRecord::Interaction(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::TypedInteraction,
+        )),
+        CanonicalRecord::Plan(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::TypedPlan,
+        )),
+        CanonicalRecord::Todo(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::TypedTodo,
+        )),
+        CanonicalRecord::Goal(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::TypedGoal,
+        )),
+        CanonicalRecord::Process(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::TypedProcess,
+        )),
+        CanonicalRecord::ProcessChunk(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::TypedProcessChunk,
+        )),
+        CanonicalRecord::WorkspaceDescriptor(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::TypedWorkspaceDescriptor,
+        )),
+        CanonicalRecord::WorkspaceSnapshot(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::TypedWorkspaceSnapshot,
+        )),
+        CanonicalRecord::RuntimeConfigSnapshot(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::RuntimeConfigSnapshot,
+        )),
+        CanonicalRecord::Usage(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::Usage,
+        )),
+        CanonicalRecord::Error(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::Error,
+        )),
+        CanonicalRecord::Compaction(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::Compaction,
+        )),
+        CanonicalRecord::CapabilitySnapshot(value) => Ok(project_typed_record(
+            value,
+            path,
+            losses,
+            PortableRecord::CapabilitySnapshot,
+        )),
+        CanonicalRecord::NativeRecordSet(_) | CanonicalRecord::NativeRecordTyped(_) => {
+            losses.push(LossEntry {
+                source_path: path.to_owned(),
+                reason: "native record sets are excluded from cross-harness capsules".to_owned(),
+                severity: LossSeverity::Info,
+                target_representation: None,
+                acknowledgement_required: false,
+                capability: Some("native_rehydration".to_owned()),
+            });
+            Ok(None)
+        }
         CanonicalRecord::ContextCheckpoint(checkpoint) => Ok(Some(
             PortableRecord::ContextCheckpoint(project_checkpoint(checkpoint, path, losses)),
         )),
@@ -882,6 +1114,41 @@ fn project_record(
             Ok(None)
         }
     }
+}
+
+fn project_typed_record<T, P, F>(
+    record: &T,
+    path: &str,
+    losses: &mut Vec<LossEntry>,
+    constructor: F,
+) -> Option<PortableRecord>
+where
+    T: Serialize,
+    P: DeserializeOwned,
+    F: FnOnce(P) -> PortableRecord,
+{
+    // All canonical typed records are serde-derived; redaction must preserve
+    // their schema before the target-specific deserialization below. A
+    // redaction that removes a required field is a required handoff loss.
+    let value = serde_json::to_value(record).expect("canonical typed record must serialize");
+    let redacted = redact_json(path, &value, losses);
+    let value = match serde_json::from_value(redacted) {
+        Ok(value) => value,
+        Err(error) => {
+            losses.push(LossEntry {
+                source_path: path.to_owned(),
+                reason: format!(
+                    "typed record cannot be projected after portable redaction: {error}"
+                ),
+                severity: LossSeverity::Required,
+                target_representation: Some("historical_data".to_owned()),
+                acknowledgement_required: true,
+                capability: Some("typed_record_projection".to_owned()),
+            });
+            return None;
+        }
+    };
+    Some(constructor(value))
 }
 
 fn project_attempt(attempt: &Attempt, path: &str, losses: &mut Vec<LossEntry>) -> PortableAttempt {
@@ -1055,12 +1322,12 @@ fn project_content(
             match part {
                 ContentPart::Text { text, annotations } => Some(ContentPart::Text {
                     text: redact_text(&part_path, text, losses),
-                    annotations: annotations.clone(),
+                    annotations: project_annotations(annotations, &part_path, losses),
                 }),
                 ContentPart::ReasoningSummary { text, annotations } => {
                     Some(ContentPart::ReasoningSummary {
                         text: redact_text(&part_path, text, losses),
-                        annotations: annotations.clone(),
+                        annotations: project_annotations(annotations, &part_path, losses),
                     })
                 }
                 ContentPart::EmbeddedResource { media_type, data } => {
@@ -1146,24 +1413,58 @@ fn redact_string_map(
 ) -> BTreeMap<String, String> {
     values
         .iter()
-        .map(|(key, value)| {
-            (
-                key.clone(),
-                redact_text(&format!("{path}.{key}"), value, losses),
-            )
+        .filter_map(|(key, value)| {
+            if non_portable_json_key(key) {
+                record_nonportable_key(&format!("{path}.{key}"), losses);
+                None
+            } else {
+                Some((
+                    key.clone(),
+                    redact_text(&format!("{path}.{key}"), value, losses),
+                ))
+            }
         })
         .collect()
 }
 
 fn redact_json_map(path: &str, values: &JsonMap, losses: &mut Vec<LossEntry>) -> JsonMap {
-    match redact_json(
-        path,
-        &Value::Object(values.clone().into_iter().collect()),
-        losses,
-    ) {
-        Value::Object(values) => values.into_iter().collect(),
-        _ => JsonMap::new(),
-    }
+    values
+        .iter()
+        .filter_map(|(key, value)| {
+            if non_portable_json_key(key) {
+                record_nonportable_key(&format!("{path}.{key}"), losses);
+                None
+            } else {
+                Some((
+                    key.clone(),
+                    redact_json(&format!("{path}.{key}"), value, losses),
+                ))
+            }
+        })
+        .collect()
+}
+
+fn project_annotations(
+    annotations: &[ContentAnnotation],
+    path: &str,
+    losses: &mut Vec<LossEntry>,
+) -> Vec<ContentAnnotation> {
+    annotations
+        .iter()
+        .enumerate()
+        .map(|(index, annotation)| {
+            let annotation_path = format!("{path}.annotations[{index}]");
+            let mut projected = annotation.clone();
+            projected.annotation_type = redact_text(
+                &format!("{annotation_path}.annotation_type"),
+                &annotation.annotation_type,
+                losses,
+            );
+            projected.data =
+                redact_json_map(&format!("{annotation_path}.data"), &annotation.data, losses);
+            projected
+        })
+        .collect()
 }
 
 fn project_model_descriptor(
@@ -1212,11 +1513,7 @@ fn project_checkpoint(
 }
 
 fn redact_text(path: &str, text: &str, losses: &mut Vec<LossEntry>) -> String {
-    let lower = text.to_ascii_lowercase();
-    let secret = ["api_key=", "password=", "token=", "bearer ", "-----begin"]
-        .iter()
-        .any(|marker| lower.contains(marker));
-    if !secret {
+    if !sensitive_json_text(text) {
         return text.to_owned();
     }
     losses.push(LossEntry {
@@ -1243,16 +1540,49 @@ fn redact_json(path: &str, value: &Value, losses: &mut Vec<LossEntry>) -> Value 
         Value::Object(values) => Value::Object(
             values
                 .iter()
-                .map(|(key, value)| {
-                    (
-                        key.clone(),
-                        redact_json(&format!("{path}.{key}"), value, losses),
-                    )
+                .filter_map(|(key, value)| {
+                    if non_portable_json_key(key) {
+                        record_nonportable_key(&format!("{path}.{key}"), losses);
+                        None
+                    } else {
+                        Some((
+                            key.clone(),
+                            redact_json(&format!("{path}.{key}"), value, losses),
+                        ))
+                    }
                 })
                 .collect::<Map<String, Value>>(),
         ),
         other => other.clone(),
     }
+}
+
+fn record_nonportable_key(path: &str, losses: &mut Vec<LossEntry>) {
+    losses.push(LossEntry {
+        source_path: path.to_owned(),
+        reason: "authority, credential, or live runtime state is not portable".to_owned(),
+        severity: LossSeverity::Info,
+        target_representation: None,
+        acknowledgement_required: false,
+        capability: Some("portable_redaction".to_owned()),
+    });
+}
+
+fn non_portable_json_key(key: &str) -> bool {
+    sensitive_json_key(key)
+        || matches!(
+            key,
+            "native_aliases"
+                | "native_provenance"
+                | "native_session_id"
+                | "native_cursor"
+                | "resume_token"
+                | "fencing_token"
+                | "lease_id"
+                | "process_handle"
+                | "pid"
+                | "pty"
+        )
 }
 
 fn sha256_json<T: Serialize>(value: &T) -> String {
@@ -1605,15 +1935,12 @@ mod tests {
     use std::collections::BTreeSet;
 
     use chrono::{TimeZone, Utc};
+    use serde::de::DeserializeOwned;
     use serde_json::json;
     use uuid::Uuid;
 
     use super::super::lifecycle::HandoffState;
-    use super::super::types::{
-        ActorDescriptor, ArtifactKind, ArtifactRef, BindingAccessMode, BindingScope, BindingState,
-        ContentPart, Message, MessageRole, MessageStatus, ModelDescriptor, ModelProvider, Session,
-        SessionBinding, SessionState,
-    };
+    use super::super::types::*;
     use super::*;
 
     fn session() -> Session {
@@ -1696,6 +2023,7 @@ mod tests {
             records,
             workspace_snapshot_digests: vec!["tree-sha".to_owned()],
             artifact_digests: vec!["artifact-sha".to_owned()],
+            local_service_bindings: Vec::new(),
             created_at: Utc.timestamp_opt(1_700_000_100, 0).single().unwrap(),
         }
     }
@@ -1791,17 +2119,248 @@ mod tests {
         let capsule = compiler()
             .compile(input(
                 session.clone(),
-                vec![CanonicalRecord::Message(message(session.session_id))],
+                vec![
+                    CanonicalRecord::Session(session.clone()),
+                    CanonicalRecord::Message(message(session.session_id)),
+                ],
             ))
             .unwrap();
         let mut corrupt = capsule.clone();
-        if let Some(PortableRecord::Message(message)) = corrupt.records.first_mut() {
-            message.session_id = Uuid::new_v4();
-        }
+        let message = corrupt
+            .records
+            .iter_mut()
+            .find_map(|record| match record {
+                PortableRecord::Message(message) => Some(message),
+                _ => None,
+            })
+            .expect("compiled capsule contains a message");
+        message.session_id = Uuid::new_v4();
         corrupt.record_digest = sha256_json(&corrupt.records);
 
         assert_eq!(
             corrupt.verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "record_identity".to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn capsule_integrity_rejects_each_legacy_record_identity_guard() {
+        let session = session();
+        let session_id = session.session_id;
+        let timestamp = session.created_at;
+        let source = compiler()
+            .compile(input(
+                session.clone(),
+                vec![
+                    CanonicalRecord::Unsupported {
+                        kind: "future.unknown".to_owned(),
+                        summary: "historical record".to_owned(),
+                    },
+                    CanonicalRecord::Session(session.clone()),
+                ],
+            ))
+            .unwrap();
+        let valid_session = source
+            .records
+            .into_iter()
+            .find_map(|record| match record {
+                PortableRecord::Session(value) => Some(value),
+                _ => None,
+            })
+            .expect("compiled session record is present");
+        let with_records = |records: Vec<PortableRecord>| {
+            let mut capsule = compiler()
+                .compile(input(session.clone(), Vec::new()))
+                .unwrap();
+            capsule.records = records;
+            capsule.record_digest = sha256_json(&capsule.records);
+            capsule
+        };
+        let assert_invalid = |record: PortableRecord| {
+            assert_eq!(
+                with_records(vec![record]).verify_integrity(),
+                Err(CapsuleError::IntegrityMismatch(
+                    "record_identity".to_owned()
+                ))
+            );
+        };
+
+        let mut bad_session = valid_session;
+        bad_session.title = Some("different title".to_owned());
+        assert_invalid(PortableRecord::Session(bad_session));
+
+        let task_id = Uuid::from_u128(901);
+        let task = PortableTask {
+            task_id,
+            session_id,
+            parent_task_id: None,
+            parent_attempt_id: None,
+            kind: TaskKind::UserObjective,
+            objective: "objective".to_owned(),
+            state: TaskState::Queued,
+            state_version: 0,
+            dependency_task_ids: Vec::new(),
+            owner_actor: None,
+            input_message_ids: Vec::new(),
+            output_message_ids: Vec::new(),
+            artifact_ids: Vec::new(),
+            terminal_result: None,
+            created_at: timestamp,
+            updated_at: timestamp,
+            started_at: None,
+            finished_at: None,
+        };
+        let mut bad_task = task.clone();
+        bad_task.session_id = Uuid::new_v4();
+        assert_invalid(PortableRecord::Task(bad_task));
+
+        let turn_id = Uuid::from_u128(902);
+        let turn = PortableTurn {
+            turn_id,
+            task_id,
+            session_id,
+            sequence: 1,
+            state: TurnState::Queued,
+            state_version: 0,
+            input_message_id: None,
+            output_message_ids: Vec::new(),
+            stop_reason: None,
+            error_code: None,
+            created_at: timestamp,
+            updated_at: timestamp,
+            completed_at: None,
+        };
+        let mut bad_turn = turn.clone();
+        bad_turn.session_id = Uuid::new_v4();
+        assert_invalid(PortableRecord::Turn(bad_turn));
+
+        let attempt_id = Uuid::from_u128(903);
+        let attempt = PortableAttempt {
+            attempt_id,
+            session_id,
+            task_id,
+            turn_id: Some(turn_id),
+            parent_attempt_id: None,
+            kind: AttemptKind::Interactive,
+            state: AttemptState::Pending,
+            state_version: 0,
+            actor: None,
+            harness_id: "omnisolo".to_owned(),
+            model_runtime_id: None,
+            worker_id: None,
+            runtime_config_snapshot_id: None,
+            metadata: JsonMap::new(),
+            started_at: timestamp,
+            finished_at: None,
+        };
+        let mut bad_attempt = attempt.clone();
+        bad_attempt.harness_id.clear();
+        assert_invalid(PortableRecord::Attempt(bad_attempt));
+
+        let message = PortableMessage {
+            message_id: Uuid::from_u128(904),
+            session_id,
+            task_id: None,
+            turn_id: None,
+            role: MessageRole::User,
+            actor: None,
+            origin: None,
+            phase: None,
+            parent_message_id: None,
+            correlation_id: None,
+            status: MessageStatus::Settled,
+            content: vec![ContentPart::Text {
+                text: "message".to_owned(),
+                annotations: Vec::new(),
+            }],
+            visible_to_user: true,
+            redaction_state: None,
+            created_at: timestamp,
+            settled_at: None,
+        };
+        let mut bad_message = message.clone();
+        bad_message.session_id = Uuid::new_v4();
+        assert_invalid(PortableRecord::Message(bad_message));
+
+        let mut bad_turn_relation = turn.clone();
+        bad_turn_relation.task_id = Uuid::from_u128(905);
+        assert_eq!(
+            with_records(vec![
+                PortableRecord::Task(task.clone()),
+                PortableRecord::Turn(bad_turn_relation),
+            ])
+            .verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "record_identity".to_owned()
+            ))
+        );
+
+        let mut bad_task_relation = task.clone();
+        bad_task_relation.task_id = Uuid::from_u128(906);
+        bad_task_relation.parent_task_id = Some(Uuid::from_u128(907));
+        assert_eq!(
+            with_records(vec![
+                PortableRecord::Task(task.clone()),
+                PortableRecord::Task(bad_task_relation),
+            ])
+            .verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "record_identity".to_owned()
+            ))
+        );
+
+        let mut bad_parent_attempt = task.clone();
+        bad_parent_attempt.task_id = Uuid::from_u128(910);
+        bad_parent_attempt.parent_attempt_id = Some(Uuid::from_u128(911));
+        assert_eq!(
+            with_records(vec![
+                PortableRecord::Task(task.clone()),
+                PortableRecord::Attempt(attempt.clone()),
+                PortableRecord::Task(bad_parent_attempt),
+            ])
+            .verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "record_identity".to_owned()
+            ))
+        );
+
+        let mut bad_dependency = task.clone();
+        bad_dependency.task_id = Uuid::from_u128(912);
+        bad_dependency.dependency_task_ids = vec![Uuid::from_u128(913)];
+        assert_eq!(
+            with_records(vec![
+                PortableRecord::Task(task.clone()),
+                PortableRecord::Task(bad_dependency),
+            ])
+            .verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "record_identity".to_owned()
+            ))
+        );
+
+        let mut bad_attempt_relation = attempt.clone();
+        bad_attempt_relation.task_id = Uuid::from_u128(908);
+        assert_eq!(
+            with_records(vec![
+                PortableRecord::Task(task.clone()),
+                PortableRecord::Attempt(bad_attempt_relation),
+            ])
+            .verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "record_identity".to_owned()
+            ))
+        );
+
+        let mut bad_message_relation = message;
+        bad_message_relation.task_id = Some(Uuid::from_u128(909));
+        assert_eq!(
+            with_records(vec![
+                PortableRecord::Task(task),
+                PortableRecord::Message(bad_message_relation),
+            ])
+            .verify_integrity(),
             Err(CapsuleError::IntegrityMismatch(
                 "record_identity".to_owned()
             ))
@@ -1879,7 +2438,9 @@ mod tests {
                         },
                         response_schema: None,
                         tool_definition_digests: Vec::new(),
-                        extensions: Default::default(),
+                        extensions: [("future".to_owned(), json!({"enabled": true}))]
+                            .into_iter()
+                            .collect(),
                     }),
                     CanonicalRecord::ToolResult {
                         tool_call_id: Uuid::new_v4(),
@@ -1904,6 +2465,51 @@ mod tests {
         assert!(!encoded.contains("secret-canary"));
         assert!(encoded.contains("[REDACTED]"));
         assert!(capsule.loss_report.entries.len() >= 4);
+    }
+
+    #[test]
+    fn portable_maps_and_annotations_drop_opaque_credential_keys() {
+        let mut losses = Vec::new();
+        let string_map = [
+            ("api_key".to_owned(), "opaque-canary".to_owned()),
+            ("safe".to_owned(), "value".to_owned()),
+        ]
+        .into_iter()
+        .collect::<BTreeMap<_, _>>();
+        let projected_strings = redact_string_map("session.tags", &string_map, &mut losses);
+        assert!(!projected_strings.contains_key("api_key"));
+        assert_eq!(projected_strings.get("safe"), Some(&"value".to_owned()));
+
+        let json_map = [
+            ("accessToken".to_owned(), json!("opaque-canary")),
+            ("safe".to_owned(), json!({"nested": true})),
+        ]
+        .into_iter()
+        .collect::<JsonMap>();
+        let projected_json = redact_json_map("tool.metadata", &json_map, &mut losses);
+        assert!(!projected_json.contains_key("accessToken"));
+        assert_eq!(projected_json["safe"]["nested"], true);
+
+        let annotations = project_annotations(
+            &[ContentAnnotation {
+                annotation_type: "safe".to_owned(),
+                start: Some(0),
+                end: Some(1),
+                data: [
+                    ("clientSecret".to_owned(), json!("opaque-canary")),
+                    ("label".to_owned(), json!("kept")),
+                ]
+                .into_iter()
+                .collect(),
+            }],
+            "message.content[0]",
+            &mut losses,
+        );
+        assert!(!annotations[0].data.contains_key("clientSecret"));
+        assert_eq!(annotations[0].data["label"], "kept");
+        assert!(losses.iter().any(|entry| {
+            entry.source_path == "message.content[0].annotations[0].data.clientSecret"
+        }));
     }
 
     #[test]
@@ -1985,6 +2591,138 @@ mod tests {
     }
 
     #[test]
+    fn every_content_variant_is_projected_with_paths_and_effect_references() {
+        let mut session = session();
+        session.extensions.insert(
+            "future_extension".to_owned(),
+            json!({"access_token": "secret-canary"}),
+        );
+        let mut nested_message = message(session.session_id);
+        let artifact = ArtifactRef {
+            artifact_id: Uuid::new_v4(),
+            kind: ArtifactKind::File,
+            name: "artifact.txt".to_owned(),
+            media_type: Some("text/plain".to_owned()),
+            byte_length: 1,
+            sha256: "d".repeat(64),
+            uri: Some("artifact://safe".to_owned()),
+            metadata: Default::default(),
+        };
+        let tool_call_id = Uuid::new_v4();
+        let external_task_id = Uuid::new_v4();
+        nested_message.content = vec![
+            ContentPart::Text {
+                text: "text".to_owned(),
+                annotations: Vec::new(),
+            },
+            ContentPart::ReasoningSummary {
+                text: "visible summary".to_owned(),
+                annotations: Vec::new(),
+            },
+            ContentPart::EmbeddedResource {
+                media_type: Some("text/plain".to_owned()),
+                data: "embedded".to_owned(),
+            },
+            ContentPart::StructuredJson {
+                value: json!({"ok": true}),
+                schema_ref: Some("schema://v1".to_owned()),
+            },
+            ContentPart::File {
+                artifact: artifact.clone(),
+            },
+            ContentPart::Image {
+                artifact: artifact.clone(),
+            },
+            ContentPart::Audio {
+                artifact: artifact.clone(),
+            },
+            ContentPart::Video {
+                artifact: artifact.clone(),
+            },
+            ContentPart::Artifact {
+                artifact: artifact.clone(),
+            },
+            ContentPart::ResourceLink {
+                uri: "https://example.test/resource".to_owned(),
+                name: Some("resource".to_owned()),
+                media_type: Some("text/plain".to_owned()),
+            },
+            ContentPart::Citation {
+                uri: "https://example.test/citation".to_owned(),
+                title: Some("citation".to_owned()),
+                locator: Some("line 1".to_owned()),
+            },
+            ContentPart::WorkspacePath {
+                snapshot_id: Some(Uuid::new_v4()),
+                path: "/host/private.txt".to_owned(),
+            },
+            ContentPart::WorkspacePath {
+                snapshot_id: None,
+                path: "relative.txt".to_owned(),
+            },
+            ContentPart::Symbol {
+                path: "src/lib.rs".to_owned(),
+                name: "main".to_owned(),
+                kind: Some("function".to_owned()),
+            },
+            ContentPart::Range {
+                path: "src/lib.rs".to_owned(),
+                start_line: 1,
+                start_column: Some(1),
+                end_line: 2,
+                end_column: Some(3),
+            },
+            ContentPart::ExternalTaskRef {
+                task_id: external_task_id,
+            },
+            ContentPart::ToolCallRef { tool_call_id },
+            ContentPart::ToolResultRef { tool_call_id },
+            ContentPart::Native {
+                namespace: "vendor".to_owned(),
+                kind: "private".to_owned(),
+                payload: json!({"secret": true}),
+            },
+        ];
+        let capsule = compiler()
+            .compile(input(
+                session,
+                vec![
+                    CanonicalRecord::Unsupported {
+                        kind: "future.unknown".to_owned(),
+                        summary: "historical record".to_owned(),
+                    },
+                    CanonicalRecord::Message(nested_message),
+                ],
+            ))
+            .unwrap();
+        let projected = capsule
+            .records
+            .iter()
+            .find_map(|record| match record {
+                PortableRecord::Message(message) => Some(message),
+                _ => None,
+            })
+            .unwrap();
+        assert_eq!(projected.content.len(), 18);
+        assert!(matches!(
+            projected.content[11],
+            ContentPart::WorkspacePath { ref path, .. } if path == "[WORKSPACE_PATH]"
+        ));
+        assert!(
+            !serde_json::to_string(&capsule)
+                .unwrap()
+                .contains("secret-canary")
+        );
+        assert!(
+            capsule
+                .loss_report
+                .entries
+                .iter()
+                .any(|entry| entry.source_path.contains("session.extensions"))
+        );
+    }
+
+    #[test]
     fn loss_reports_are_sorted_and_acknowledgement_sensitive() {
         let report = LossReport::new(vec![
             LossEntry {
@@ -2003,10 +2741,92 @@ mod tests {
                 acknowledgement_required: true,
                 capability: None,
             },
+            LossEntry {
+                source_path: "c".to_owned(),
+                reason: "unsafe without explicit acknowledgement flag".to_owned(),
+                severity: LossSeverity::Unsafe,
+                target_representation: None,
+                acknowledgement_required: false,
+                capability: None,
+            },
         ]);
         assert_eq!(report.entries[0].source_path, "a");
         assert!(report.requires_ack());
         assert_ne!(report.digest(), LossReport::default().digest());
+        assert!(
+            LossReport::new(vec![LossEntry {
+                source_path: "unsafe".to_owned(),
+                reason: "unsafe".to_owned(),
+                severity: LossSeverity::Unsafe,
+                target_representation: None,
+                acknowledgement_required: false,
+                capability: None,
+            }])
+            .requires_ack()
+        );
+        assert!(
+            !LossReport::new(vec![LossEntry {
+                source_path: "warning".to_owned(),
+                reason: "warning".to_owned(),
+                severity: LossSeverity::Warning,
+                target_representation: None,
+                acknowledgement_required: false,
+                capability: None,
+            }])
+            .requires_ack()
+        );
+    }
+
+    #[test]
+    fn typed_projection_preserves_redaction_and_target_shape() {
+        let mut losses = Vec::new();
+        let result = project_typed_record::<Value, Value, _>(
+            &json!({"value": true}),
+            "records[0]",
+            &mut losses,
+            |_| {
+                PortableRecord::HistoricalData(HistoricalData {
+                    source_kind: "value".to_owned(),
+                    summary: "value".to_owned(),
+                })
+            },
+        );
+        assert!(matches!(result, Some(PortableRecord::HistoricalData(_))));
+        assert!(losses.is_empty());
+    }
+
+    #[test]
+    fn typed_projection_records_required_loss_when_redaction_removes_required_field() {
+        #[derive(serde::Deserialize)]
+        struct RequiredNativeProvenance {
+            native_provenance: String,
+        }
+
+        fn historical_record(value: RequiredNativeProvenance) -> PortableRecord {
+            assert_eq!(value.native_provenance, "native-only");
+            PortableRecord::HistoricalData(HistoricalData {
+                source_kind: "value".to_owned(),
+                summary: "value".to_owned(),
+            })
+        }
+
+        let mut losses = Vec::new();
+        let _ = historical_record(RequiredNativeProvenance {
+            native_provenance: "native-only".to_owned(),
+        });
+        let result = project_typed_record::<Value, RequiredNativeProvenance, _>(
+            &json!({"native_provenance": "native-only"}),
+            "records[0]",
+            &mut losses,
+            historical_record,
+        );
+
+        assert!(result.is_none());
+        assert!(losses.iter().any(|entry| {
+            entry.severity == LossSeverity::Required
+                && entry.acknowledgement_required
+                && entry.capability.as_deref() == Some("typed_record_projection")
+        }));
     }
 
     #[test]
@@ -2168,6 +2988,874 @@ mod tests {
         assert_eq!(
             coordinator.replace_loss_report(operation_id, changed_report),
             Err(HandoffError::Terminal)
+        );
+    }
+
+    #[test]
+    fn handoff_rejects_invalid_scope_phase_and_writer_combinations() {
+        let session_id = Uuid::new_v4();
+        let source_id = Uuid::new_v4();
+        let mut coordinator = HandoffCoordinator::new();
+        let mut invalid = binding(
+            session_id,
+            Uuid::new_v4(),
+            "omnisolo",
+            BindingState::Active,
+            BindingAccessMode::ReadWrite,
+        );
+        invalid.binding_id = Uuid::nil();
+        assert_eq!(
+            coordinator.register_binding(invalid),
+            Err(HandoffError::InvalidBinding)
+        );
+        let source = binding(
+            session_id,
+            source_id,
+            "omnisolo",
+            BindingState::Active,
+            BindingAccessMode::ReadWrite,
+        );
+        coordinator.register_binding(source.clone()).unwrap();
+        assert_eq!(
+            coordinator.register_binding(source.clone()),
+            Err(HandoffError::BindingAlreadyExists)
+        );
+        let duplicate_writable = binding(
+            session_id,
+            Uuid::new_v4(),
+            "opencode",
+            BindingState::Active,
+            BindingAccessMode::ReadWrite,
+        );
+        assert_eq!(
+            coordinator.register_binding(duplicate_writable),
+            Err(HandoffError::DuplicateWritableBinding)
+        );
+
+        let invalid_operation = HandoffOperation::new(
+            Uuid::nil(),
+            session_id,
+            None,
+            source_id,
+            String::new(),
+            HandoffScope::Session,
+            LossReport::default(),
+        );
+        assert_eq!(
+            coordinator.begin(invalid_operation),
+            Err(HandoffError::InvalidScope)
+        );
+        let unknown_source = HandoffOperation::new(
+            Uuid::new_v4(),
+            session_id,
+            None,
+            Uuid::new_v4(),
+            "opencode".to_owned(),
+            HandoffScope::Session,
+            LossReport::default(),
+        );
+        assert_eq!(
+            coordinator.begin(unknown_source),
+            Err(HandoffError::BindingNotFound)
+        );
+        let mismatch = HandoffOperation::new(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            None,
+            source_id,
+            "opencode".to_owned(),
+            HandoffScope::Session,
+            LossReport::default(),
+        );
+        assert_eq!(
+            coordinator.begin(mismatch),
+            Err(HandoffError::BindingMismatch)
+        );
+
+        let task_id = Uuid::from_u128(920);
+        let task_source_id = Uuid::from_u128(921);
+        let mut task_source = binding(
+            session_id,
+            task_source_id,
+            "omnisolo",
+            BindingState::Active,
+            BindingAccessMode::ReadOnly,
+        );
+        task_source.task_id = Some(task_id);
+        task_source.scope = BindingScope::Task;
+        task_source.owner_id = task_id;
+        coordinator.register_binding(task_source).unwrap();
+        let task_operation = HandoffOperation::new(
+            Uuid::from_u128(922),
+            session_id,
+            Some(task_id),
+            task_source_id,
+            "opencode".to_owned(),
+            HandoffScope::Task { task_id },
+            LossReport::default(),
+        );
+        coordinator.begin(task_operation).unwrap();
+        let wrong_task_source = HandoffOperation::new(
+            Uuid::from_u128(923),
+            session_id,
+            Some(task_id),
+            source_id,
+            "opencode".to_owned(),
+            HandoffScope::Task { task_id },
+            LossReport::default(),
+        );
+        assert_eq!(
+            coordinator.begin(wrong_task_source),
+            Err(HandoffError::InvalidScope)
+        );
+        coordinator
+            .operations
+            .get_mut(&Uuid::from_u128(922))
+            .unwrap()
+            .state = HandoffState::TargetCreating;
+        coordinator.bindings.get_mut(&task_source_id).unwrap().state = BindingState::Fenced;
+        let mut task_target = binding(
+            session_id,
+            Uuid::from_u128(929),
+            "opencode",
+            BindingState::Inactive,
+            BindingAccessMode::ReadOnly,
+        );
+        task_target.task_id = Some(task_id);
+        task_target.scope = BindingScope::Task;
+        task_target.owner_id = task_id;
+        coordinator
+            .install_target(Uuid::from_u128(922), task_target)
+            .unwrap();
+
+        let stale_operation_id = Uuid::from_u128(924);
+        coordinator
+            .begin(HandoffOperation::new(
+                stale_operation_id,
+                session_id,
+                None,
+                source_id,
+                "opencode".to_owned(),
+                HandoffScope::Session,
+                LossReport::default(),
+            ))
+            .unwrap();
+        assert!(matches!(
+            coordinator.advance(stale_operation_id, 99, HandoffState::Fencing),
+            Err(HandoffError::Lifecycle(LifecycleError::StaleVersion { .. }))
+        ));
+
+        let mut inactive = binding(
+            session_id,
+            Uuid::new_v4(),
+            "omnisolo",
+            BindingState::Inactive,
+            BindingAccessMode::ReadOnly,
+        );
+        inactive.access_mode = BindingAccessMode::ReadWrite;
+        coordinator.register_binding(inactive.clone()).unwrap();
+        let inactive_operation = HandoffOperation::new(
+            Uuid::new_v4(),
+            session_id,
+            None,
+            inactive.binding_id,
+            "opencode".to_owned(),
+            HandoffScope::Session,
+            LossReport::default(),
+        );
+        assert_eq!(
+            coordinator.begin(inactive_operation),
+            Err(HandoffError::SourceNotActive)
+        );
+
+        let mut wrong_scope = HandoffOperation::new(
+            Uuid::new_v4(),
+            session_id,
+            Some(Uuid::new_v4()),
+            source_id,
+            "opencode".to_owned(),
+            HandoffScope::Session,
+            LossReport::default(),
+        );
+        assert_eq!(
+            coordinator.begin(wrong_scope.clone()),
+            Err(HandoffError::InvalidScope)
+        );
+        wrong_scope.task_id = None;
+        wrong_scope.state = HandoffState::Fencing;
+        assert_eq!(
+            coordinator.begin(wrong_scope),
+            Err(HandoffError::InvalidPhase)
+        );
+
+        let operation_id = Uuid::new_v4();
+        let operation = HandoffOperation::new(
+            operation_id,
+            session_id,
+            None,
+            source_id,
+            "opencode".to_owned(),
+            HandoffScope::Session,
+            LossReport::default(),
+        );
+        coordinator.begin(operation.clone()).unwrap();
+        assert_eq!(
+            coordinator.begin(operation),
+            Err(HandoffError::OperationAlreadyExists)
+        );
+        assert_eq!(
+            coordinator.advance(Uuid::new_v4(), 0, HandoffState::Fencing),
+            Err(HandoffError::OperationNotFound)
+        );
+        assert_eq!(
+            coordinator.acknowledge_loss(operation_id, "digest".to_owned()),
+            Err(HandoffError::InvalidPhase)
+        );
+        assert_eq!(
+            coordinator.replace_loss_report(Uuid::new_v4(), LossReport::default()),
+            Err(HandoffError::OperationNotFound)
+        );
+        assert_eq!(
+            coordinator.advance(operation_id, 0, HandoffState::Snapshotting),
+            Err(HandoffError::SourceStillWritable)
+        );
+        coordinator
+            .advance(operation_id, 0, HandoffState::Fencing)
+            .unwrap();
+        coordinator
+            .advance(operation_id, 1, HandoffState::Quiescing)
+            .unwrap();
+        coordinator
+            .advance(operation_id, 2, HandoffState::Snapshotting)
+            .unwrap();
+        coordinator
+            .advance(operation_id, 3, HandoffState::Compiling)
+            .unwrap();
+        assert_eq!(
+            coordinator.install_target(
+                operation_id,
+                binding(
+                    session_id,
+                    Uuid::from_u128(925),
+                    "opencode",
+                    BindingState::Inactive,
+                    BindingAccessMode::ReadOnly,
+                ),
+            ),
+            Err(HandoffError::InvalidPhase)
+        );
+        coordinator
+            .advance(operation_id, 4, HandoffState::TargetCreating)
+            .unwrap();
+        assert_eq!(
+            coordinator.advance(operation_id, 5, HandoffState::Activating),
+            Err(HandoffError::TargetMissing)
+        );
+        coordinator.bindings.get_mut(&source_id).unwrap().state = BindingState::Active;
+        assert_eq!(
+            coordinator.install_target(
+                operation_id,
+                binding(
+                    session_id,
+                    Uuid::new_v4(),
+                    "opencode",
+                    BindingState::Inactive,
+                    BindingAccessMode::ReadOnly,
+                ),
+            ),
+            Err(HandoffError::SourceStillWritable)
+        );
+        coordinator.bindings.get_mut(&source_id).unwrap().state = BindingState::Fenced;
+        let mut wrong_scope_target = binding(
+            session_id,
+            Uuid::from_u128(926),
+            "opencode",
+            BindingState::Inactive,
+            BindingAccessMode::ReadOnly,
+        );
+        wrong_scope_target.scope = BindingScope::Task;
+        wrong_scope_target.task_id = Some(Uuid::from_u128(927));
+        assert_eq!(
+            coordinator.install_target(operation_id, wrong_scope_target),
+            Err(HandoffError::BindingMismatch)
+        );
+        assert_eq!(
+            coordinator.install_target(
+                operation_id,
+                binding(
+                    session_id,
+                    Uuid::new_v4(),
+                    "wrong-harness",
+                    BindingState::Inactive,
+                    BindingAccessMode::ReadOnly,
+                ),
+            ),
+            Err(HandoffError::BindingMismatch)
+        );
+
+        let target_id = Uuid::new_v4();
+        let target = binding(
+            session_id,
+            target_id,
+            "opencode",
+            BindingState::Inactive,
+            BindingAccessMode::ReadOnly,
+        );
+        assert_eq!(
+            coordinator.install_target(
+                operation_id,
+                binding(
+                    session_id,
+                    Uuid::from_u128(928),
+                    "opencode",
+                    BindingState::Active,
+                    BindingAccessMode::ReadOnly,
+                ),
+            ),
+            Err(HandoffError::BindingMismatch)
+        );
+        coordinator.install_target(operation_id, target).unwrap();
+        assert_eq!(
+            coordinator.activate_target(operation_id),
+            Err(HandoffError::InvalidPhase)
+        );
+        assert_eq!(
+            coordinator.advance(operation_id, 5, HandoffState::Activating),
+            Ok(())
+        );
+        assert_eq!(
+            coordinator.advance(operation_id, 6, HandoffState::Completed),
+            Err(HandoffError::TargetMissing)
+        );
+        coordinator.bindings.get_mut(&target_id).unwrap().state = BindingState::Active;
+        assert_eq!(
+            coordinator.activate_target(operation_id),
+            Err(HandoffError::BindingMismatch)
+        );
+        coordinator.bindings.get_mut(&target_id).unwrap().state = BindingState::Inactive;
+        coordinator.activate_target(operation_id).unwrap();
+        coordinator
+            .advance(operation_id, 6, HandoffState::Completed)
+            .unwrap();
+        assert_eq!(
+            coordinator.advance(operation_id, 7, HandoffState::Failed),
+            Err(HandoffError::Terminal)
+        );
+        assert!(coordinator.operation(operation_id).is_some());
+        assert!(coordinator.binding(Uuid::new_v4()).is_none());
+    }
+
+    fn decode<T: DeserializeOwned>(value: serde_json::Value) -> T {
+        serde_json::from_value(value).unwrap()
+    }
+
+    fn typed_canonical_records(
+        session_id: Uuid,
+        task_id: Uuid,
+        turn_id: Uuid,
+        attempt_id: Uuid,
+    ) -> Vec<CanonicalRecord> {
+        let timestamp = "2023-11-14T22:13:20Z";
+        let definition_id = Uuid::from_u128(1001);
+        let tool_call_id = Uuid::from_u128(1002);
+        let process_id = Uuid::from_u128(1003);
+        let plan_id = Uuid::from_u128(1004);
+        let snapshot_id = Uuid::from_u128(1005);
+        let records = vec![
+            CanonicalRecord::ToolDefinition(decode(json!({
+                "snapshot_id": definition_id,
+                "qualified_name": "shell.run",
+                "description": "run a command",
+                "source": "built_in",
+                "input_schema": {},
+                "output_schema": null,
+                "annotations": {},
+                "version": "1",
+                "digest": "tool-digest",
+                "captured_at": timestamp,
+            }))),
+            CanonicalRecord::ToolCall(decode(json!({
+                "tool_call_id": tool_call_id,
+                "session_id": session_id,
+                "task_id": task_id,
+                "turn_id": turn_id,
+                "attempt_id": attempt_id,
+                "definition_snapshot_id": definition_id,
+                "raw_input": {"command": "printf ok"},
+                "parsed_input": {"command": "printf ok"},
+                "state": "completed",
+                "started_at": timestamp,
+                "finished_at": timestamp,
+                "retry_of": null,
+                "native_provenance": {},
+                "observed_effect_ids": [],
+                "metadata": {},
+            }))),
+            CanonicalRecord::ToolProgress(decode(json!({
+                "progress_id": Uuid::from_u128(1006),
+                "tool_call_id": tool_call_id,
+                "sequence": 1,
+                "chunk_type": "stdout",
+                "content": [],
+                "percent": 50,
+                "artifact_ids": [],
+                "locations": ["stdout"],
+                "native_display_data": {"line": "ok"},
+                "occurred_at": timestamp,
+            }))),
+            CanonicalRecord::ToolResultRecord(decode(json!({
+                "tool_call_id": tool_call_id,
+                "session_id": session_id,
+                "task_id": task_id,
+                "turn_id": turn_id,
+                "attempt_id": attempt_id,
+                "state": "completed",
+                "content": [],
+                "structured_output": {"ok": true},
+                "error_code": null,
+                "error_message": null,
+                "started_at": timestamp,
+                "finished_at": timestamp,
+                "artifact_ids": [],
+                "observed_effect_ids": [],
+                "provider_metadata": {},
+            }))),
+            CanonicalRecord::Interaction(decode(json!({
+                "interaction_id": Uuid::from_u128(1007),
+                "request_id": "approval-1",
+                "session_id": session_id,
+                "task_id": task_id,
+                "turn_id": turn_id,
+                "attempt_id": attempt_id,
+                "kind": "approval",
+                "subject": "write file",
+                "action": "write",
+                "description": "write a file",
+                "risk": "medium",
+                "input_schema": null,
+                "options": [],
+                "requested_scope": "workspace",
+                "expires_at": null,
+                "state": "pending",
+                "response": null,
+                "policy_evaluation": null,
+                "created_at": timestamp,
+                "updated_at": timestamp,
+                "native_provenance": {},
+            }))),
+            CanonicalRecord::Plan(decode(json!({
+                "plan_id": plan_id,
+                "session_id": session_id,
+                "task_id": task_id,
+                "turn_id": turn_id,
+                "version": 1,
+                "objective": "finish",
+                "state": "draft",
+                "steps": [],
+                "created_at": timestamp,
+                "updated_at": timestamp,
+                "source": "client",
+            }))),
+            CanonicalRecord::Todo(decode(json!({
+                "todo_id": Uuid::from_u128(1008),
+                "session_id": session_id,
+                "task_id": task_id,
+                "plan_id": plan_id,
+                "title": "finish",
+                "details": null,
+                "state": "pending",
+                "ordinal": 1,
+                "owner_actor": null,
+                "created_at": timestamp,
+                "updated_at": timestamp,
+                "completed_at": null,
+            }))),
+            CanonicalRecord::Goal(decode(json!({
+                "goal_id": Uuid::from_u128(1009),
+                "session_id": session_id,
+                "task_id": task_id,
+                "objective": "finish",
+                "completion_criteria": "done",
+                "state": "active",
+                "budget": {
+                    "max_input_tokens": null,
+                    "max_output_tokens": null,
+                    "max_turns": null,
+                    "max_cost_micros": null,
+                    "max_wall_time_ms": null
+                },
+                "usage": {
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "turns": 0,
+                    "cost_micros": 0,
+                    "wall_time_ms": 0
+                },
+                "created_at": timestamp,
+                "updated_at": timestamp,
+                "completed_at": null,
+            }))),
+            CanonicalRecord::Process(decode(json!({
+                "process_id": process_id,
+                "session_id": session_id,
+                "task_id": task_id,
+                "turn_id": turn_id,
+                "attempt_id": attempt_id,
+                "tool_call_id": tool_call_id,
+                "command": "printf ok",
+                "argv": ["printf", "ok"],
+                "logical_cwd": "/workspace",
+                "environment_keys": ["PATH"],
+                "state": "exited",
+                "started_at": timestamp,
+                "finished_at": timestamp,
+                "exit_code": 0,
+                "signal": null,
+                "timed_out": false,
+                "out_of_memory": false,
+                "artifact_ids": [],
+                "metadata": {},
+            }))),
+            CanonicalRecord::ProcessChunk(decode(json!({
+                "chunk_id": Uuid::from_u128(1010),
+                "process_id": process_id,
+                "stream": "stdout",
+                "sequence": 1,
+                "content": "ok",
+                "occurred_at": timestamp,
+                "artifact_id": null,
+            }))),
+            CanonicalRecord::WorkspaceDescriptor(decode(json!({
+                "descriptor_id": Uuid::from_u128(1011),
+                "session_id": session_id,
+                "logical_roots": ["/workspace"],
+                "mount_policy": "isolated",
+                "operating_system": "linux",
+                "architecture": "amd64",
+                "shell": "bash",
+                "toolchain_hints": ["rust"],
+                "environment_allowlist": ["PATH"],
+                "repository_identity": {},
+                "data_locality": "cluster",
+                "metadata": {},
+            }))),
+            CanonicalRecord::WorkspaceSnapshot(decode(json!({
+                "snapshot_id": Uuid::from_u128(1012),
+                "session_id": session_id,
+                "parent_snapshot_id": null,
+                "durable_sequence": 5,
+                "tree_digest": "tree",
+                "archive_artifact_id": null,
+                "git_repository_identity": {},
+                "base_commit": "abc",
+                "branch": "main",
+                "remote": null,
+                "working_tree_patch_digest": null,
+                "index_patch_digest": null,
+                "untracked_files": [],
+                "submodule_state": {},
+                "file_metadata": {},
+                "completeness": "complete",
+                "creator_attempt_id": attempt_id,
+                "reason": "handoff",
+                "created_at": timestamp,
+                "integrity_digest": "snapshot-digest",
+            }))),
+            CanonicalRecord::RuntimeConfigSnapshot(decode(json!({
+                "snapshot_id": snapshot_id,
+                "tenant_id": "tenant-1",
+                "snapshot_digest": "config-digest",
+                "instruction_layers": [],
+                "agent_profile": "default",
+                "collaboration_settings": {},
+                "requested_model": null,
+                "response_schema": null,
+                "resource_limits": {},
+                "tool_definition_snapshot_ids": [definition_id],
+                "mcp_descriptors": [],
+                "skill_descriptors": [],
+                "plugin_descriptors": [],
+                "hook_descriptors": [],
+                "sandbox_policy": {},
+                "compaction_settings": {},
+                "retry_settings": {},
+                "budget_settings": {},
+                "telemetry_settings": {},
+                "environment_allowlist": ["PATH"],
+                "workspace_snapshot_id": Uuid::from_u128(1012),
+                "created_at": timestamp,
+            }))),
+            CanonicalRecord::Usage(decode(json!({
+                "usage_id": Uuid::from_u128(1013),
+                "tenant_id": "tenant-1",
+                "session_id": session_id,
+                "task_id": task_id,
+                "turn_id": turn_id,
+                "attempt_id": attempt_id,
+                "model_binding_id": null,
+                "provider": "managed",
+                "model_id": "model-1",
+                "input_tokens": 2,
+                "output_tokens": 3,
+                "cached_tokens": 0,
+                "reasoning_tokens": 0,
+                "cost_micros": 4,
+                "latency_ms": 5,
+                "finish_reason": "stop",
+                "recorded_at": timestamp,
+                "metadata": {},
+            }))),
+            CanonicalRecord::Error(decode(json!({
+                "error_id": Uuid::from_u128(1014),
+                "tenant_id": "tenant-1",
+                "session_id": session_id,
+                "task_id": task_id,
+                "turn_id": turn_id,
+                "attempt_id": attempt_id,
+                "source": "harness",
+                "code": "E_TEST",
+                "message": "test",
+                "retriable": true,
+                "uncertain": false,
+                "failure_class": "transport",
+                "occurred_at": timestamp,
+                "metadata": {},
+            }))),
+            CanonicalRecord::Compaction(decode(json!({
+                "compaction_id": Uuid::from_u128(1015),
+                "session_id": session_id,
+                "task_id": task_id,
+                "turn_id": turn_id,
+                "source_durable_ranges": [[1, 4]],
+                "retained_ancestor_event_id": null,
+                "summary": "summary",
+                "reason": "context limit",
+                "created_by_attempt_id": attempt_id,
+                "input_tokens": 4,
+                "output_tokens": 2,
+                "created_at": timestamp,
+                "integrity_digest": "compaction-digest",
+            }))),
+            CanonicalRecord::CapabilitySnapshot(decode(json!({
+                "snapshot_id": Uuid::from_u128(1016),
+                "subject_kind": "harness",
+                "subject_id": "codex",
+                "capability_version": 1,
+                "capabilities": ["prompt"],
+                "source_revision": "revision",
+                "captured_at": timestamp,
+                "expires_at": null,
+                "digest": "capability-digest",
+                "metadata": {},
+            }))),
+            CanonicalRecord::ContextCheckpoint(decode(json!({
+                "summary": "visible summary",
+                "selected_message_ids": [],
+                "source_durable_ranges": [[1, 2]],
+                "retained_ancestor_event_id": null,
+                "compaction_provenance": "compaction-1",
+                "usage": {},
+                "integrity_digest": "checkpoint-digest",
+            }))),
+            CanonicalRecord::NativeRecordSet(decode(json!({
+                "record_set_id": Uuid::from_u128(1017),
+                "session_id": session_id,
+                "attempt_id": attempt_id,
+                "harness_id": "codex",
+                "adapter_version": "1",
+                "native_schema": "rollout",
+                "first_cursor": "1",
+                "last_cursor": "2",
+                "record_count": 2,
+                "payload_digest": "native-set",
+                "object_storage_ref": "objects/native-set",
+                "captured_at": timestamp,
+            }))),
+            CanonicalRecord::NativeRecordTyped(decode(json!({
+                "native_record_id": Uuid::from_u128(1018),
+                "record_set_id": Uuid::from_u128(1017),
+                "harness_id": "codex",
+                "adapter_version": "1",
+                "native_schema": "rollout",
+                "record_kind": "line",
+                "native_identity": "line-1",
+                "native_cursor": "1",
+                "ordinal": 1,
+                "payload_digest": "native-record",
+                "object_storage_ref": "objects/native-record",
+                "captured_at": timestamp,
+                "data_classification": "internal",
+                "encrypted": true,
+            }))),
+            CanonicalRecord::Unsupported {
+                kind: "future.plan".to_owned(),
+                summary: "future data".to_owned(),
+            },
+            CanonicalRecord::Extension {
+                path: "extensions.future".to_owned(),
+                value: json!({"secret":"must redact"}),
+            },
+            CanonicalRecord::RawReasoning {
+                path: "records[raw_reasoning]".to_owned(),
+                text: "private reasoning".to_owned(),
+            },
+        ];
+        records
+    }
+
+    #[test]
+    fn typed_capsule_projection_and_integrity_guards_cover_all_transfer_families() {
+        let session_id = session().session_id;
+        let task_id = Uuid::from_u128(1101);
+        let turn_id = Uuid::from_u128(1102);
+        let attempt_id = Uuid::from_u128(1103);
+        let canonical = typed_canonical_records(session_id, task_id, turn_id, attempt_id);
+        let mut required_interaction = canonical
+            .iter()
+            .find_map(|record| match record {
+                CanonicalRecord::Interaction(value) => Some(value.clone()),
+                _ => None,
+            })
+            .unwrap();
+        required_interaction
+            .native_provenance
+            .insert("provider_secret".to_owned(), json!("must not transfer"));
+        let mut required_session = session();
+        required_session.session_id = session_id;
+        required_session.root_session_id = session_id;
+        assert!(matches!(
+            compiler().compile(input(
+                required_session,
+                vec![CanonicalRecord::Interaction(required_interaction)],
+            )),
+            Err(CapsuleError::RequiredLoss(_))
+        ));
+        let mut losses = Vec::new();
+        let mut portable = Vec::new();
+        for (index, record) in canonical.iter().enumerate() {
+            let result = project_record(record, &format!("records[{index}]"), &mut losses);
+            match result {
+                Ok(Some(record)) => portable.push(record),
+                Ok(None) => {}
+                Err(RecordProjectionError::Unsafe(loss)) => {
+                    assert!(matches!(loss.severity, LossSeverity::Unsafe));
+                    losses.push(loss);
+                }
+            }
+        }
+        assert!(
+            portable
+                .iter()
+                .any(|record| matches!(record, PortableRecord::HistoricalData(_)))
+        );
+        assert!(
+            portable
+                .iter()
+                .any(|record| matches!(record, PortableRecord::ContextCheckpoint(_)))
+        );
+        assert!(
+            losses
+                .iter()
+                .any(|loss| loss.source_path.contains("extensions.future"))
+        );
+
+        for record in canonical {
+            match record {
+                CanonicalRecord::ToolCall(value) => {
+                    assert!(typed_record_identity_is_valid(
+                        &PortableRecord::ToolCall(value),
+                        session_id
+                    ));
+                }
+                CanonicalRecord::Interaction(value) => {
+                    assert!(typed_record_identity_is_valid(
+                        &PortableRecord::TypedInteraction(value),
+                        session_id
+                    ));
+                }
+                _ => {}
+            }
+        }
+        for record in &portable {
+            assert!(typed_record_identity_is_valid(record, session_id));
+        }
+
+        let capsule = compiler().compile(input(session(), Vec::new())).unwrap();
+        let mut manifest_corrupt = capsule.clone();
+        manifest_corrupt.manifest_digest = "bad".to_owned();
+        assert_eq!(
+            manifest_corrupt.verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch("manifest".to_owned()))
+        );
+        let mut records_corrupt = capsule.clone();
+        records_corrupt.record_digest = "bad".to_owned();
+        assert_eq!(
+            records_corrupt.verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch("records".to_owned()))
+        );
+        let mut pointers_corrupt = capsule.clone();
+        pointers_corrupt.head_event_id = Some(Uuid::from_u128(1201));
+        assert_eq!(
+            pointers_corrupt.verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch("event_pointers".to_owned()))
+        );
+
+        let mut duplicate_ancestors = capsule.clone();
+        let ancestor = Uuid::from_u128(1202);
+        duplicate_ancestors.head_event_id = Some(ancestor);
+        duplicate_ancestors.event_ancestor_ids = vec![ancestor, ancestor];
+        duplicate_ancestors.manifest.head_event_id = Some(ancestor);
+        duplicate_ancestors.manifest.event_ancestor_ids =
+            duplicate_ancestors.event_ancestor_ids.clone();
+        duplicate_ancestors.manifest_digest = sha256_json(&duplicate_ancestors.manifest);
+        assert_eq!(
+            duplicate_ancestors.verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch("event_pointers".to_owned()))
+        );
+
+        let mut identity_corrupt = capsule.clone();
+        identity_corrupt.manifest.tenant_id.clear();
+        identity_corrupt.manifest_digest = sha256_json(&identity_corrupt.manifest);
+        assert_eq!(
+            identity_corrupt.verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "manifest_identity".to_owned()
+            ))
+        );
+
+        let wrong_goal: Goal = decode(json!({
+            "goal_id": Uuid::from_u128(1203),
+            "session_id": Uuid::from_u128(1204),
+            "task_id": null,
+            "objective": "wrong session",
+            "completion_criteria": null,
+            "state": "active",
+            "budget": {
+                "max_input_tokens": null,
+                "max_output_tokens": null,
+                "max_turns": null,
+                "max_cost_micros": null,
+                "max_wall_time_ms": null
+            },
+            "usage": {
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "turns": 0,
+                "cost_micros": 0,
+                "wall_time_ms": 0
+            },
+            "created_at": "2023-11-14T22:13:20Z",
+            "updated_at": "2023-11-14T22:13:20Z",
+            "completed_at": null,
+        }));
+        let mut typed_identity_corrupt = capsule.clone();
+        typed_identity_corrupt.records = vec![PortableRecord::TypedGoal(wrong_goal)];
+        typed_identity_corrupt.record_digest = sha256_json(&typed_identity_corrupt.records);
+        assert_eq!(
+            typed_identity_corrupt.verify_integrity(),
+            Err(CapsuleError::IntegrityMismatch(
+                "record_identity".to_owned()
+            ))
         );
     }
 

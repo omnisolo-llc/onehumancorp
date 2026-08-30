@@ -23,7 +23,9 @@ where
 
 async fn start_workflow(
     State(manager): State<Arc<DynamicWorkflowManager>>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<
+        ::server_auth::orchestration::AuthInfo,
+    >,
     Json(mut request): Json<DynamicWorkflowRequest>,
 ) -> axum::response::Response {
     if request.prompt.trim().is_empty() {

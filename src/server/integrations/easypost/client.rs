@@ -13,7 +13,12 @@ impl EasyPostClient {
         }
     }
 
-    pub async fn create_shipment(&self, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
+    pub async fn create_shipment(
+        &self,
+        to_address: &str,
+        from_address: &str,
+        parcel_details: &str,
+    ) -> Result<String, String> {
         let url = "https://api.easypost.com/v2/shipments";
         let payload = serde_json::json!({
             "shipment": {
@@ -23,7 +28,9 @@ impl EasyPostClient {
             }
         });
 
-        let res = self.http_client.post(url)
+        let res = self
+            .http_client
+            .post(url)
             .basic_auth(&self.api_key, Some(""))
             .json(&payload)
             .send()

@@ -6,6 +6,7 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use super::lifecycle::{InteractionState, ProcessState, ToolCallState};
+use super::local_services::LocalServiceBundle;
 
 pub type JsonMap = BTreeMap<String, Value>;
 pub type StringMap = BTreeMap<String, String>;
@@ -1357,6 +1358,8 @@ pub struct RuntimeConfigSnapshot {
     pub requested_model: Option<ModelDescriptor>,
     #[serde(default)]
     pub resolved_model: Option<ResolvedModelSelection>,
+    #[serde(default)]
+    pub local_service_bundle: Option<LocalServiceBundle>,
     pub response_schema: Option<Value>,
     pub resource_limits: ResourceLimits,
     pub tool_definition_snapshot_ids: Vec<Uuid>,

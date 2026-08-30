@@ -159,6 +159,11 @@ mod tests {
             lease_generation: 9,
             fencing_token: "fence-9".to_owned(),
             kind: "execute".to_owned(),
+            worker_id: "worker-1".to_owned(),
+            harness_id: "codex".to_owned(),
+            capability_version: 1,
+            binding_id: "binding-1".to_owned(),
+            binding_generation: 1,
             correlation_id: "corr-1".to_owned(),
             idempotency_key: "idem-1".to_owned(),
             payload_schema: "omnisolo.command.v1".to_owned(),
@@ -168,10 +173,9 @@ mod tests {
                 .into_iter()
                 .collect(),
         };
-        let decoded = harness_middleware::AttemptCommandEnvelope::decode(
-            message.encode_to_vec().as_slice(),
-        )
-        .unwrap();
+        let decoded =
+            harness_middleware::AttemptCommandEnvelope::decode(message.encode_to_vec().as_slice())
+                .unwrap();
         assert_eq!(decoded, message);
         assert!(decoded.turn_id.is_empty());
         assert_eq!(decoded.payload_version, 7);
@@ -208,13 +212,43 @@ mod tests {
             correlation_id: "corr-1".to_owned(),
             idempotency_key: "request-1".to_owned(),
         };
-        let decoded = harness_middleware::ModelRuntimeInference::decode(
-            message.encode_to_vec().as_slice(),
-        )
-        .unwrap();
+        let decoded =
+            harness_middleware::ModelRuntimeInference::decode(message.encode_to_vec().as_slice())
+                .unwrap();
         assert_eq!(decoded, message);
         assert_eq!(decoded.session_id, "session-1");
         assert_eq!(decoded.task_id, "task-1");
         assert_eq!(decoded.capacity_generation, 4);
+    }
+
+    #[test]
+    fn harness_worker_service_exposes_health_and_streaming_commands() {
+        let health = harness_middleware::WorkerHealthRequest {
+            protocol_version: 1,
+            worker_id: "worker-1".to_owned(),
+            harness_id: "codex".to_owned(),
+            pool_id: "codex-pool".to_owned(),
+        };
+        let encoded = health.encode_to_vec();
+        let decoded = harness_middleware::WorkerHealthRequest::decode(encoded.as_slice()).unwrap();
+        assert_eq!(decoded, health);
+
+        let response = harness_middleware::WorkerHealthResponse {
+            protocol_version: 1,
+            worker_id: "worker-1".to_owned(),
+            ready: true,
+            accepting_new_attempts: true,
+            active_attempts: 0,
+            capability_version: 4,
+        };
+        assert_eq!(
+            harness_middleware::WorkerHealthResponse::decode(response.encode_to_vec().as_slice())
+                .unwrap(),
+            response
+        );
+
+        let _service_type = std::any::type_name::<
+            harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer<()>,
+        >();
     }
 }

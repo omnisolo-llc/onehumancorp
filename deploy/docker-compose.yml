@@ -128,6 +128,414 @@ services:
       - "${OHC_DOCKER_SERVER_PORT:-8080}:8080"
       - "${OHC_DOCKER_GRPC_PORT:-127.0.0.1:8081}:8081"
 
+  # Harness pools are separate services so each adapter can scale independently
+  # from the gateway and from the other harnesses.
+  harness-omnisolo:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_WORKER_IMAGE:-omnisolo/harness-worker:0.1.0}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-omnisolo
+      OMNISOLO_HARNESS_ID: omnisolo
+      OMNISOLO_HARNESS_POOL_ID: omnisolo
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_OMNISOLO_GRPC_PORT:-127.0.0.1:8090}:8090"
+      - "${OMNISOLO_HARNESS_OMNISOLO_HEALTH_PORT:-127.0.0.1:8091}:8091"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8091/healthz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  harness-codex:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_CODEX_IMAGE:-omnisolo/harness-worker-codex:0.149.0}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-codex
+      OMNISOLO_HARNESS_ID: codex
+      OMNISOLO_HARNESS_POOL_ID: codex
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: ${OMNISOLO_HARNESS_CODEX_EXECUTABLE:-codex}
+      OMNISOLO_HARNESS_ARGS_JSON: ${OMNISOLO_HARNESS_CODEX_ARGS_JSON:-["app-server","--stdio"]}
+      OMNISOLO_HARNESS_PROTOCOL: codex_app_server
+      OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: ${OMNISOLO_HARNESS_CODEX_TIMEOUT_SECS:-30}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_CODEX_GRPC_PORT:-127.0.0.1:8092}:8090"
+      - "${OMNISOLO_HARNESS_CODEX_HEALTH_PORT:-127.0.0.1:8093}:8091"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8091/healthz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  harness-opencode:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_OPENCODE_IMAGE:-omnisolo/harness-worker-opencode:1.18.15}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-opencode
+      OMNISOLO_HARNESS_ID: opencode
+      OMNISOLO_HARNESS_POOL_ID: opencode
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: ${OMNISOLO_HARNESS_OPENCODE_EXECUTABLE:-opencode}
+      OMNISOLO_HARNESS_ARGS_JSON: ${OMNISOLO_HARNESS_OPENCODE_ARGS_JSON:-[]}
+      OMNISOLO_HARNESS_PROTOCOL: opencode_http
+      OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: ${OMNISOLO_HARNESS_OPENCODE_TIMEOUT_SECS:-30}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_OPENCODE_GRPC_PORT:-127.0.0.1:8094}:8090"
+      - "${OMNISOLO_HARNESS_OPENCODE_HEALTH_PORT:-127.0.0.1:8095}:8091"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8091/healthz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  harness-deepseek:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_DEEPSEEK_IMAGE:-omnisolo/harness-worker-deepseek:0.1.1-rc.2}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-deepseek
+      OMNISOLO_HARNESS_ID: deepseek
+      OMNISOLO_HARNESS_POOL_ID: deepseek
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: dsh-jsonrpc-agent
+      OMNISOLO_HARNESS_ARGS_JSON: '["/etc/omnisolo/deepseek/cordis.yml"]'
+      OMNISOLO_HARNESS_PROTOCOL: deepseek_json_rpc
+      DSH_CORDIS_CONFIG: /etc/omnisolo/deepseek/cordis.yml
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_DEEPSEEK_GRPC_PORT:-127.0.0.1:8100}:8090"
+      - "${OMNISOLO_HARNESS_DEEPSEEK_HEALTH_PORT:-127.0.0.1:8101}:8091"
+    healthcheck: &harness-healthcheck
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8091/healthz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  harness-pi:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_PI_IMAGE:-omnisolo/harness-worker-pi:0.73.1}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-pi
+      OMNISOLO_HARNESS_ID: pi
+      OMNISOLO_HARNESS_POOL_ID: pi
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: pi
+      OMNISOLO_HARNESS_ARGS_JSON: '["--mode","rpc","--no-session"]'
+      OMNISOLO_HARNESS_PROTOCOL: pi_rpc
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_PI_GRPC_PORT:-127.0.0.1:8102}:8090"
+      - "${OMNISOLO_HARNESS_PI_HEALTH_PORT:-127.0.0.1:8103}:8091"
+    healthcheck: *harness-healthcheck
+
+  harness-kimi:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_KIMI_IMAGE:-omnisolo/harness-worker-kimi:1.49.0}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-kimi
+      OMNISOLO_HARNESS_ID: kimi
+      OMNISOLO_HARNESS_POOL_ID: kimi
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: omnisolo-kimi-acp
+      OMNISOLO_HARNESS_ARGS_JSON: '[]'
+      OMNISOLO_HARNESS_PROTOCOL: kimi_acp
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_KIMI_GRPC_PORT:-127.0.0.1:8104}:8090"
+      - "${OMNISOLO_HARNESS_KIMI_HEALTH_PORT:-127.0.0.1:8105}:8091"
+    healthcheck: *harness-healthcheck
+
+  harness-openhands:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_OPENHANDS_IMAGE:-omnisolo/harness-worker-openhands:1.43.1}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:exec,mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-openhands
+      OMNISOLO_HARNESS_ID: openhands
+      OMNISOLO_HARNESS_POOL_ID: openhands
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: openhands-agent-server
+      OMNISOLO_HARNESS_ARGS_JSON: '[]'
+      OMNISOLO_HARNESS_PROTOCOL: openhands_http
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_OPENHANDS_GRPC_PORT:-127.0.0.1:8106}:8090"
+      - "${OMNISOLO_HARNESS_OPENHANDS_HEALTH_PORT:-127.0.0.1:8107}:8091"
+    healthcheck: *harness-healthcheck
+
+  harness-openharness:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_OPENHARNESS_IMAGE:-omnisolo/harness-worker-openharness:0.6.0}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-openharness
+      OMNISOLO_HARNESS_ID: openharness
+      OMNISOLO_HARNESS_POOL_ID: openharness
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: python3
+      OMNISOLO_HARNESS_ARGS_JSON: '["/opt/omnisolo/openharness_bridge.py"]'
+      OMNISOLO_HARNESS_PROTOCOL: openharness_sdk
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_OPENHARNESS_GRPC_PORT:-127.0.0.1:8108}:8090"
+      - "${OMNISOLO_HARNESS_OPENHARNESS_HEALTH_PORT:-127.0.0.1:8109}:8091"
+    healthcheck: *harness-healthcheck
+
+  harness-aider:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_AIDER_IMAGE:-omnisolo/harness-worker-aider:0.86.0}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-aider
+      OMNISOLO_HARNESS_ID: aider
+      OMNISOLO_HARNESS_POOL_ID: aider
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim
+      OMNISOLO_HARNESS_ARGS_JSON: '[]'
+      OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
+      OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: ${OMNISOLO_HARNESS_AIDER_TIMEOUT_SECS:-90}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_AIDER_GRPC_PORT:-127.0.0.1:8110}:8090"
+      - "${OMNISOLO_HARNESS_AIDER_HEALTH_PORT:-127.0.0.1:8111}:8091"
+    healthcheck: *harness-healthcheck
+
+  harness-goose:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_GOOSE_IMAGE:-omnisolo/harness-worker-goose:1.33.1}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-goose
+      OMNISOLO_HARNESS_ID: goose
+      OMNISOLO_HARNESS_POOL_ID: goose
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim
+      OMNISOLO_HARNESS_ARGS_JSON: '[]'
+      OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
+      OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: ${OMNISOLO_HARNESS_GOOSE_TIMEOUT_SECS:-90}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_GOOSE_GRPC_PORT:-127.0.0.1:8112}:8090"
+      - "${OMNISOLO_HARNESS_GOOSE_HEALTH_PORT:-127.0.0.1:8113}:8091"
+    healthcheck: *harness-healthcheck
+
+  harness-open-interpreter:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_OPEN_INTERPRETER_IMAGE:-omnisolo/harness-worker-open-interpreter:0.4.2}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-open-interpreter
+      OMNISOLO_HARNESS_ID: open-interpreter
+      OMNISOLO_HARNESS_POOL_ID: open-interpreter
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim
+      OMNISOLO_HARNESS_ARGS_JSON: '[]'
+      OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
+      OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: ${OMNISOLO_HARNESS_OPEN_INTERPRETER_TIMEOUT_SECS:-90}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_OPEN_INTERPRETER_GRPC_PORT:-127.0.0.1:8114}:8090"
+      - "${OMNISOLO_HARNESS_OPEN_INTERPRETER_HEALTH_PORT:-127.0.0.1:8115}:8091"
+    healthcheck: *harness-healthcheck
+
+  harness-plandex:
+    profiles: ["harness"]
+    image: ${OMNISOLO_HARNESS_PLANDEX_IMAGE:-omnisolo/harness-worker-plandex:2.2.1}
+    stop_grace_period: ${OMNISOLO_HARNESS_STOP_GRACE_PERIOD:-120s}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /workspace:mode=0700,uid=1000,gid=1000
+      - /home/omnisolo:mode=0700,uid=1000,gid=1000
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_HARNESS_WORKER_ID: harness-plandex
+      OMNISOLO_HARNESS_ID: plandex
+      OMNISOLO_HARNESS_POOL_ID: plandex
+      OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
+      OMNISOLO_HARNESS_HEALTH_ADDR: 0.0.0.0:8091
+      OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim
+      OMNISOLO_HARNESS_ARGS_JSON: '[]'
+      OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
+      OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: ${OMNISOLO_HARNESS_PLANDEX_TIMEOUT_SECS:-90}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://llmapi.omnisolo.co/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-max}
+    ports:
+      - "${OMNISOLO_HARNESS_PLANDEX_GRPC_PORT:-127.0.0.1:8116}:8090"
+      - "${OMNISOLO_HARNESS_PLANDEX_HEALTH_PORT:-127.0.0.1:8117}:8091"
+    healthcheck: *harness-healthcheck
+
+  # Optional model-runtime pool. This is a protocol placeholder until an
+  # approved managed or self-hosted serving image is selected.
+  model-runtime-default:
+    profiles: ["model-runtime"]
+    image: ${OMNISOLO_MODEL_RUNTIME_WORKER_IMAGE:-omnisolo/model-runtime-worker:latest}
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      OMNISOLO_MODEL_RUNTIME_WORKER_ID: model-runtime-default
+      OMNISOLO_MODEL_RUNTIME_RUNTIME_ID: ${OMNISOLO_MODEL_RUNTIME_ID:-managed-api}
+      OMNISOLO_MODEL_RUNTIME_POOL_ID: model-default
+      OMNISOLO_MODEL_RUNTIME_GRPC_ADDR: 0.0.0.0:8096
+      OMNISOLO_MODEL_RUNTIME_HEALTH_ADDR: 0.0.0.0:8097
+    ports:
+      - "${OMNISOLO_MODEL_RUNTIME_GRPC_PORT:-127.0.0.1:8096}:8096"
+      - "${OMNISOLO_MODEL_RUNTIME_HEALTH_PORT:-127.0.0.1:8097}:8097"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8097/healthz >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   # ─── One-time admin bootstrap ─────────────────────────────────────────────
   # Runs once at install time: waits for `server` to be healthy, then creates
   # the initial admin account from SETUP_ADMIN_INIT_USERNAME / _PASSWORD.

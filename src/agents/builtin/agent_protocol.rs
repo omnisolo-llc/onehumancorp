@@ -316,7 +316,9 @@ impl AgentProtocolServer {
                     }
                     serde_json::json!({ "checkpoints": cp_values })
                 }
-                Err(e) => serde_json::json!({ "error": format!("Failed to list checkpoints: {}", e) }),
+                Err(e) => {
+                    serde_json::json!({ "error": format!("Failed to list checkpoints: {}", e) })
+                }
             }
         } else {
             serde_json::json!({ "error": "Checkpointer not configured" })
@@ -336,8 +338,12 @@ impl AgentProtocolServer {
 
         if let Some(cp) = &self.runner.core.agent.checkpointer {
             match cp.restore_checkpoint(checkpoint_id).await {
-                Ok(_) => serde_json::json!({ "success": true, "message": format!("Restored to checkpoint {}", checkpoint_id) }),
-                Err(e) => serde_json::json!({ "error": format!("Failed to restore checkpoint: {}", e) }),
+                Ok(_) => {
+                    serde_json::json!({ "success": true, "message": format!("Restored to checkpoint {}", checkpoint_id) })
+                }
+                Err(e) => {
+                    serde_json::json!({ "error": format!("Failed to restore checkpoint: {}", e) })
+                }
             }
         } else {
             serde_json::json!({ "error": "Checkpointer not configured" })

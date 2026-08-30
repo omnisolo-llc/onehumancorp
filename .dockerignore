@@ -1,0 +1,13 @@
+.git/
+.worktrees/
+scratch/
+target/
+node_modules/
+**/target/
+**/node_modules/
+**/.next/
+bazel-bin/
+bazel-out/
+bazel-testlogs/
+**/__pycache__/
+**/*.pyc

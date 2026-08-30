@@ -108,7 +108,10 @@ impl JiraClient {
         format!("{}/rest/api/2", self.base_url)
     }
 
-    async fn check_error_response(&self, resp: reqwest::Response) -> Result<reqwest::Response, String> {
+    async fn check_error_response(
+        &self,
+        resp: reqwest::Response,
+    ) -> Result<reqwest::Response, String> {
         if !resp.status().is_success() {
             let status = resp.status();
             let text = resp
@@ -118,9 +121,20 @@ impl JiraClient {
 
             if let Ok(err) = serde_json::from_str::<JiraErrorResponse>(&text) {
                 let msgs = err.error_messages.join(", ");
-                let errors: Vec<String> = err.errors.iter().map(|(k, v)| format!("{}: {}", k, v)).collect();
-                let all_errors = [msgs, errors.join(", ")].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
-                return Err(format!("Jira API error {} [{}]: {}", status, text, all_errors));
+                let errors: Vec<String> = err
+                    .errors
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .collect();
+                let all_errors = [msgs, errors.join(", ")]
+                    .into_iter()
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                return Err(format!(
+                    "Jira API error {} [{}]: {}",
+                    status, text, all_errors
+                ));
             }
 
             return Err(format!("Jira API error {}: {}", status, text));
@@ -136,13 +150,19 @@ impl JiraClient {
             summary: fields["summary"].as_str().unwrap_or("").to_string(),
             description: fields["description"].as_str().unwrap_or("").to_string(),
             status: fields["status"]["name"].as_str().unwrap_or("").to_string(),
-            priority: fields["priority"]["name"].as_str().unwrap_or("").to_string(),
+            priority: fields["priority"]["name"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
             assignee: fields["assignee"]["displayName"]
                 .as_str()
                 .or_else(|| fields["assignee"]["name"].as_str())
                 .unwrap_or("")
                 .to_string(),
-            issue_type: fields["issuetype"]["name"].as_str().unwrap_or("").to_string(),
+            issue_type: fields["issuetype"]["name"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
             created: fields["created"].as_str().unwrap_or("").to_string(),
             updated: fields["updated"].as_str().unwrap_or("").to_string(),
         }
@@ -201,7 +221,11 @@ impl JiraClient {
     }
 
     pub async fn get_issue(&self, issue_key: &str) -> Result<JiraIssue, String> {
-        let url = format!("{}/issue/{}?expand=renderedFields", self.api_base(), issue_key);
+        let url = format!(
+            "{}/issue/{}?expand=renderedFields",
+            self.api_base(),
+            issue_key
+        );
         let resp = self
             .http_client
             .get(&url)
@@ -266,7 +290,8 @@ impl JiraClient {
             .iter()
             .find(|t| t.name.eq_ignore_ascii_case(transition_name))
             .ok_or_else(|| {
-                let available: Vec<&str> = body.transitions.iter().map(|t| t.name.as_str()).collect();
+                let available: Vec<&str> =
+                    body.transitions.iter().map(|t| t.name.as_str()).collect();
                 format!(
                     "Transition '{}' not found. Available: {:?}",
                     transition_name, available
@@ -317,7 +342,11 @@ impl JiraClient {
             .await
             .map_err(|e| format!("Failed to parse search response: {}", e))?;
 
-        let issues = body.issues.iter().map(Self::parse_issue_from_response).collect();
+        let issues = body
+            .issues
+            .iter()
+            .map(Self::parse_issue_from_response)
+            .collect();
         Ok((issues, body.total))
     }
 
@@ -400,9 +429,7 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_server(
-        response_body: &'static str,
-    ) -> (String, oneshot::Receiver<String>) {
+    async fn start_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -420,8 +447,7 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) =
-                        request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -449,7 +475,9 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
+            request_tx
+                .send(String::from_utf8(request).unwrap())
+                .unwrap();
         });
 
         (base_url, request_rx)
@@ -471,7 +499,13 @@ mod tests {
         );
 
         let issue = client
-            .create_issue("PROJ", "Test summary", "Test description", "Bug", Some("High"))
+            .create_issue(
+                "PROJ",
+                "Test summary",
+                "Test description",
+                "Bug",
+                Some("High"),
+            )
             .await
             .unwrap();
         assert_eq!(issue.key, "PROJ-123");
@@ -607,7 +641,9 @@ mod tests {
                     resp_body
                 );
                 stream.write_all(response.as_bytes()).await.unwrap();
-                transitions_tx.send(String::from_utf8(request).unwrap()).unwrap();
+                transitions_tx
+                    .send(String::from_utf8(request).unwrap())
+                    .unwrap();
             }
 
             // Second connection: POST transition
@@ -653,7 +689,9 @@ mod tests {
                     resp_body
                 );
                 stream.write_all(response.as_bytes()).await.unwrap();
-                transition_tx.send(String::from_utf8(request).unwrap()).unwrap();
+                transition_tx
+                    .send(String::from_utf8(request).unwrap())
+                    .unwrap();
             }
         });
 

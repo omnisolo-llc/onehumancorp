@@ -1,7 +1,6 @@
 #![allow(clippy::needless_borrow)]
 use crate::types::{ChatRequest, Message};
 
-
 /// Tencent Workbuddy (Expert Team) Feature
 /// Product: Tencent Cloud Intelligent Agent Platform
 /// Reference impl (BP-Factory): 6-person specialized agent team for business plans
@@ -47,16 +46,22 @@ impl SkillTrace {
     }
 }
 
-
 pub struct ProjectDirector<T: ExpertTeamLlmClient + ?Sized> {
     pub name: String,
     pub llm: std::sync::Arc<T>,
 }
 
 impl<T: ExpertTeamLlmClient + 'static> ProjectDirector<T> {
-    pub async fn coordinate(&self, task: &str, experts: Vec<DomainExpert<T>>, trace: &mut SkillTrace) -> Result<String, String> {
+    pub async fn coordinate(
+        &self,
+        task: &str,
+        experts: Vec<DomainExpert<T>>,
+        trace: &mut SkillTrace,
+    ) -> Result<String, String> {
         let manager = ExpertTeamManager::new(&self.name, experts);
-        manager.run_full_expert_workflow(task, trace, self.llm.clone()).await
+        manager
+            .run_full_expert_workflow(task, trace, self.llm.clone())
+            .await
     }
 }
 
@@ -67,7 +72,10 @@ pub struct IndustryResearcher<T: ExpertTeamLlmClient + ?Sized> {
 
 impl<T: ExpertTeamLlmClient + ?Sized> IndustryResearcher<T> {
     pub fn into_expert(self) -> DomainExpert<T> {
-        DomainExpert { role: self.role, llm: self.llm }
+        DomainExpert {
+            role: self.role,
+            llm: self.llm,
+        }
     }
 }
 
@@ -78,7 +86,10 @@ pub struct FinancialAnalyst<T: ExpertTeamLlmClient + ?Sized> {
 
 impl<T: ExpertTeamLlmClient + ?Sized> FinancialAnalyst<T> {
     pub fn into_expert(self) -> DomainExpert<T> {
-        DomainExpert { role: self.role, llm: self.llm }
+        DomainExpert {
+            role: self.role,
+            llm: self.llm,
+        }
     }
 }
 
@@ -89,7 +100,10 @@ pub struct StrategicAnalyst<T: ExpertTeamLlmClient + ?Sized> {
 
 impl<T: ExpertTeamLlmClient + ?Sized> StrategicAnalyst<T> {
     pub fn into_expert(self) -> DomainExpert<T> {
-        DomainExpert { role: self.role, llm: self.llm }
+        DomainExpert {
+            role: self.role,
+            llm: self.llm,
+        }
     }
 }
 
@@ -100,7 +114,10 @@ pub struct ProcessSupervisor<T: ExpertTeamLlmClient + ?Sized> {
 
 impl<T: ExpertTeamLlmClient + ?Sized> ProcessSupervisor<T> {
     pub fn into_expert(self) -> DomainExpert<T> {
-        DomainExpert { role: self.role, llm: self.llm }
+        DomainExpert {
+            role: self.role,
+            llm: self.llm,
+        }
     }
 }
 
@@ -111,7 +128,10 @@ pub struct QualityAuditor<T: ExpertTeamLlmClient + ?Sized> {
 
 impl<T: ExpertTeamLlmClient + ?Sized> QualityAuditor<T> {
     pub fn into_expert(self) -> DomainExpert<T> {
-        DomainExpert { role: self.role, llm: self.llm }
+        DomainExpert {
+            role: self.role,
+            llm: self.llm,
+        }
     }
 }
 
@@ -183,7 +203,10 @@ impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
 
         // 2. Parallel Execution
         let summaries = self.execute_parallel_tasks(task, trace).await?;
-        tracing::info!("Parallel tasks completed with {} summaries", summaries.len());
+        tracing::info!(
+            "Parallel tasks completed with {} summaries",
+            summaries.len()
+        );
 
         // 3. Pre-merge Gate
         QualityGates::pre_merge(&summaries)?;
@@ -213,7 +236,8 @@ impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
         let final_output = synth_res.message.content;
 
         // 5. Pre-deliver Gate
-        let expected_roles: Vec<String> = self.domain_experts.iter().map(|e| e.role.clone()).collect();
+        let expected_roles: Vec<String> =
+            self.domain_experts.iter().map(|e| e.role.clone()).collect();
         QualityGates::pre_deliver(&final_output, trace, &expected_roles)?;
         tracing::info!("Pre-deliver gate passed. Workflow complete.");
 
@@ -226,7 +250,10 @@ impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
         &self,
         task: &'a str,
         trace: &'a mut SkillTrace,
-    ) -> Result<Vec<String>, String> where T: 'a {
+    ) -> Result<Vec<String>, String>
+    where
+        T: 'a,
+    {
         // Prepare futures for parallel execution
         let mut join_handles = Vec::new();
 
@@ -270,7 +297,10 @@ impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
         for handle in join_handles {
             match handle.await {
                 Ok(res) => results.push(res),
-                Err(e) => results.push((Err(format!("Task panicked or cancelled: {:?}", e)), Vec::new())),
+                Err(e) => results.push((
+                    Err(format!("Task panicked or cancelled: {:?}", e)),
+                    Vec::new(),
+                )),
             }
         }
 
@@ -292,7 +322,10 @@ impl<T: ExpertTeamLlmClient + ?Sized + 'static> ExpertTeamManager<T> {
                     let char_count = output_str.chars().count();
                     let condensed = if char_count > max_chars {
                         let truncated: String = output_str.chars().take(max_chars).collect();
-                        format!("{}... [Condensed for Harness: 1k-2k tokens limit reached]", truncated)
+                        format!(
+                            "{}... [Condensed for Harness: 1k-2k tokens limit reached]",
+                            truncated
+                        )
                     } else {
                         output_str.to_string()
                     };
@@ -402,7 +435,11 @@ impl QualityGates {
     }
 
     /// Pre-deliver (e.g., >=20,000 words, chart verification, skill-trace completeness).
-    pub fn pre_deliver(final_output: &str, trace: &SkillTrace, expected_roles: &[String]) -> Result<(), String> {
+    pub fn pre_deliver(
+        final_output: &str,
+        trace: &SkillTrace,
+        expected_roles: &[String],
+    ) -> Result<(), String> {
         // Skill-trace tracking to prevent hard-coded bypasses.
         if !trace.has_required_skills(expected_roles) {
             return Err("Pre-deliver Gate Failed (Skill-trace tracking): Skill-trace is incomplete. Execution must be generated by experts, not hard-coded bypasses.".to_string());
@@ -419,7 +456,10 @@ impl QualityGates {
         }
 
         // Chart verification (simulated by checking if the output contains "Chart" or similar keywords, if required by context)
-        if !final_output.contains("Chart:") && !final_output.contains("Analysis:") && !final_output.contains("Graph:") {
+        if !final_output.contains("Chart:")
+            && !final_output.contains("Analysis:")
+            && !final_output.contains("Graph:")
+        {
             return Err("Pre-deliver Gate Failed (Expert Team Pattern): Missing required chart/analysis/graph verification in final output.".to_string());
         }
 
@@ -481,24 +521,70 @@ mod tests {
         assert!(result.is_ok(), "Expert workflow failed: {:?}", result.err());
     }
 
-
     #[tokio::test]
     async fn test_expert_team_parallel_execution() {
-        let director = ProjectDirector { name: "Project Director".to_string(), llm: Arc::new(MockExpertLlm { role_resp: format!("{} Chart: Required. Analysis: Deep.", "word ".repeat(20000)) }) };
+        let director = ProjectDirector {
+            name: "Project Director".to_string(),
+            llm: Arc::new(MockExpertLlm {
+                role_resp: format!("{} Chart: Required. Analysis: Deep.", "word ".repeat(20000)),
+            }),
+        };
         let experts = vec![
-            IndustryResearcher { role: "Industry Researcher".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Research summary Chapter 1 Chapter 2".to_string() }) }.into_expert(),
-            FinancialAnalyst { role: "Financial Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Financial summary Chapter 3 Chapter 4".to_string() }) }.into_expert(),
-            StrategicAnalyst { role: "Strategic Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Strategic summary Chapter 5 Chapter 6".to_string() }) }.into_expert(),
-            ProcessSupervisor { role: "Process Supervisor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Process summary Chapter 7".to_string() }) }.into_expert(),
-            QualityAuditor { role: "Quality Auditor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Quality summary Chapter 8 Chart: Required. Analysis: Deep.".to_string() }) }.into_expert(),
+            IndustryResearcher {
+                role: "Industry Researcher".to_string(),
+                llm: Arc::new(MockExpertLlm {
+                    role_resp: "Research summary Chapter 1 Chapter 2".to_string(),
+                }),
+            }
+            .into_expert(),
+            FinancialAnalyst {
+                role: "Financial Analyst".to_string(),
+                llm: Arc::new(MockExpertLlm {
+                    role_resp: "Financial summary Chapter 3 Chapter 4".to_string(),
+                }),
+            }
+            .into_expert(),
+            StrategicAnalyst {
+                role: "Strategic Analyst".to_string(),
+                llm: Arc::new(MockExpertLlm {
+                    role_resp: "Strategic summary Chapter 5 Chapter 6".to_string(),
+                }),
+            }
+            .into_expert(),
+            ProcessSupervisor {
+                role: "Process Supervisor".to_string(),
+                llm: Arc::new(MockExpertLlm {
+                    role_resp: "Process summary Chapter 7".to_string(),
+                }),
+            }
+            .into_expert(),
+            QualityAuditor {
+                role: "Quality Auditor".to_string(),
+                llm: Arc::new(MockExpertLlm {
+                    role_resp: "Quality summary Chapter 8 Chart: Required. Analysis: Deep."
+                        .to_string(),
+                }),
+            }
+            .into_expert(),
         ];
 
         let task = "Test parallel execution Chart: Required. Analysis: Deep.";
         let mut trace = SkillTrace::new();
 
-        let _summary = director.coordinate(task, experts, &mut trace).await.unwrap();
-        assert!(trace.skills_used.contains(&"industry_researcher_analysis".to_string()));
-        assert!(trace.skills_used.contains(&"financial_analyst_analysis".to_string()));
+        let _summary = director
+            .coordinate(task, experts, &mut trace)
+            .await
+            .unwrap();
+        assert!(
+            trace
+                .skills_used
+                .contains(&"industry_researcher_analysis".to_string())
+        );
+        assert!(
+            trace
+                .skills_used
+                .contains(&"financial_analyst_analysis".to_string())
+        );
     }
 
     #[test]
@@ -530,13 +616,20 @@ mod tests {
     #[test]
     fn test_pre_merge_success_low_similarity() {
         let summaries = vec![
-            "This is a completely unique summary about AI trends for Chapter 1 and Chapter 2.".to_string(),
-            "And here we have financial data talking about profits for Chapter 3 and Chapter 4.".to_string(),
+            "This is a completely unique summary about AI trends for Chapter 1 and Chapter 2."
+                .to_string(),
+            "And here we have financial data talking about profits for Chapter 3 and Chapter 4."
+                .to_string(),
             "Strategic overview with different insights for Chapter 5 and Chapter 6.".to_string(),
-            "Process analysis detailing operational changes for Chapter 7 and Chapter 8.".to_string(),
+            "Process analysis detailing operational changes for Chapter 7 and Chapter 8."
+                .to_string(),
         ];
         let res = QualityGates::pre_merge(&summaries);
-        assert!(res.is_ok(), "Expected success but got error: {:?}", res.err());
+        assert!(
+            res.is_ok(),
+            "Expected success but got error: {:?}",
+            res.err()
+        );
     }
 
     #[test]

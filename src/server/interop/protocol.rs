@@ -1,7 +1,7 @@
 use crate::msgbus::{Bus, DistributedLock, Message};
 use server_harness::middleware::capsule::{PortableRecord, SessionCapsule};
 
-use tokio::time::{sleep, timeout, Duration};
+use tokio::time::{Duration, sleep, timeout};
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -27,15 +27,16 @@ pub struct InteropProtocol {
 
 impl InteropProtocol {
     pub fn new(bus: Arc<dyn Bus>, lock: Arc<dyn DistributedLock>, node_id: String) -> Self {
-        Self {
-            bus,
-            lock,
-            node_id,
-        }
+        Self { bus, lock, node_id }
     }
 
     /// Triggers a state handoff when switching modes using protobuf on the wire
-    pub async fn handoff(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
+    pub async fn handoff(
+        &self,
+        mission_id: &str,
+        tenant_id: &str,
+        state_payload: Vec<u8>,
+    ) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
         tracing::info!(mission_id = %mission_id, tenant_id = %tenant_id, "Initiating interop state handoff"); // pii-safe
@@ -46,7 +47,12 @@ impl InteropProtocol {
         let acquire_future = async {
             let mut retries = 0;
             loop {
-                if self.lock.acquire_lock(&lock_resource, &self.node_id, 10).await.unwrap_or(false) {
+                if self
+                    .lock
+                    .acquire_lock(&lock_resource, &self.node_id, 10)
+                    .await
+                    .unwrap_or(false)
+                {
                     break Ok::<(), ()>(());
                 }
                 tracing::debug!(mission_id = %mission_id, "Waiting to acquire handoff lock");
@@ -56,7 +62,10 @@ impl InteropProtocol {
             }
         };
 
-        if timeout(Duration::from_secs(5), acquire_future).await.is_err() {
+        if timeout(Duration::from_secs(5), acquire_future)
+            .await
+            .is_err()
+        {
             tracing::error!(mission_id = %mission_id, "Timeout waiting for handoff lock");
             return Err("Timeout waiting for lock".to_string());
         }
@@ -64,8 +73,17 @@ impl InteropProtocol {
         // Idempotency check: once we hold the execution lock, check if it was processed.
         let idempotency_lock_resource = format!("handoff:processed:{}", mission_id);
         // Generate a unique owner ID for this specific handoff attempt to prevent lock extension.
-        let attempt_owner = format!("{}_{}", self.node_id, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
-        if !self.lock.acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600).await.unwrap_or(false) {
+        let attempt_owner = format!(
+            "{}_{}",
+            self.node_id,
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
+        if !self
+            .lock
+            .acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600)
+            .await
+            .unwrap_or(false)
+        {
             let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
             return Ok(());
         }
@@ -81,7 +99,10 @@ impl InteropProtocol {
 
         let mut buf = Vec::new();
         if let Err(e) = handoff_msg.encode(&mut buf) {
-            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
+            let _ = self
+                .lock
+                .release_lock(&idempotency_lock_resource, &attempt_owner)
+                .await;
             let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
             return Err(e.to_string());
         }
@@ -98,7 +119,10 @@ impl InteropProtocol {
                 Ok(_) => break Ok(()),
                 Err(e) => {
                     if retries >= 5 {
-                        break Err(format!("Failed to publish state handoff after retries: {}", e));
+                        break Err(format!(
+                            "Failed to publish state handoff after retries: {}",
+                            e
+                        ));
                     }
                     retries += 1;
                     tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
@@ -109,7 +133,10 @@ impl InteropProtocol {
 
         if result.is_err() {
             // Failed to publish, release idempotency lock so it can be retried
-            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
+            let _ = self
+                .lock
+                .release_lock(&idempotency_lock_resource, &attempt_owner)
+                .await;
         }
 
         let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
@@ -118,7 +145,12 @@ impl InteropProtocol {
     }
 
     /// Resumes a mission after a mode switch
-    pub async fn resume_mission(&self, mission_id: &str, tenant_id: &str, state_payload: Vec<u8>) -> Result<(), String> {
+    pub async fn resume_mission(
+        &self,
+        mission_id: &str,
+        tenant_id: &str,
+        state_payload: Vec<u8>,
+    ) -> Result<(), String> {
         // Handoff uses the same mechanism to synchronize state
         self.handoff(mission_id, tenant_id, state_payload).await
     }
@@ -151,7 +183,9 @@ impl InteropProtocol {
     /// interpreting its payload. This is useful for non-Rust harness workers.
     pub async fn listen_for_session_operations(
         &self,
-        handler: Box<dyn Fn(::server_ohc::harness_middleware::SessionOperationEnvelope) + Send + Sync>,
+        handler: Box<
+            dyn Fn(::server_ohc::harness_middleware::SessionOperationEnvelope) + Send + Sync,
+        >,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic != HARNESS_SESSION_OPERATION_TOPIC {
@@ -176,12 +210,14 @@ impl InteropProtocol {
         &self,
         handler: Box<dyn Fn(HarnessCapsuleOperation) + Send + Sync>,
     ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.listen_for_session_operations(Box::new(move |envelope| {
-            match decode_capsule_operation(envelope) {
+        self.listen_for_session_operations(Box::new(
+            move |envelope| match decode_capsule_operation(envelope) {
                 Ok(operation) => handler(operation),
-                Err(error) => tracing::warn!(error = %error, "Ignoring invalid harness capsule operation"),
-            }
-        }))
+                Err(error) => {
+                    tracing::warn!(error = %error, "Ignoring invalid harness capsule operation")
+                }
+            },
+        ))
         .await
     }
 
@@ -259,6 +295,13 @@ impl InteropProtocol {
             payload_version: capsule.manifest.schema_version,
             payload,
             extensions,
+            worker_id: String::new(),
+            pool_id: String::new(),
+            harness_id: capsule.manifest.target_harness_id.clone(),
+            capability_version: 1,
+            binding_id: String::new(),
+            binding_generation: 0,
+            workspace_mutation_scope_id: String::new(),
         })
     }
 
@@ -271,12 +314,8 @@ impl InteropProtocol {
     ) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        let operation = self.capsule_operation(
-            capsule,
-            kind,
-            operation_generation,
-            fencing_token,
-        )?;
+        let operation =
+            self.capsule_operation(capsule, kind, operation_generation, fencing_token)?;
         let lock_resource = format!(
             "harness:session:{}:operation:{}:{}",
             operation.session_id, operation.operation_id, operation.kind
@@ -297,15 +336,16 @@ impl InteropProtocol {
                 sleep(Duration::from_millis(50 * retries)).await;
             }
         };
-        if timeout(Duration::from_secs(5), acquire_future).await.is_err() {
+        if timeout(Duration::from_secs(5), acquire_future)
+            .await
+            .is_err()
+        {
             return Err("Timeout waiting for harness session operation lock".to_owned());
         }
 
         let idempotency_key = operation.idempotency_key.clone();
-        let idempotency_lock_resource = format!(
-            "harness:session-operation:processed:{}",
-            idempotency_key
-        );
+        let idempotency_lock_resource =
+            format!("harness:session-operation:processed:{}", idempotency_key);
         let attempt_owner = format!(
             "{}_{}",
             self.node_id,
@@ -317,10 +357,7 @@ impl InteropProtocol {
             .await
             .unwrap_or(false)
         {
-            let _ = self
-                .lock
-                .release_lock(&lock_resource, &self.node_id)
-                .await;
+            let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
             return Ok(());
         }
 
@@ -344,7 +381,11 @@ impl InteropProtocol {
                     delay_ms *= 2;
                     tracing::debug!(error = %error, retries, "Retrying harness session operation publish");
                 }
-                Err(error) => break Err(format!("Failed to publish harness session operation after retries: {error}")),
+                Err(error) => {
+                    break Err(format!(
+                        "Failed to publish harness session operation after retries: {error}"
+                    ));
+                }
             }
         };
 
@@ -354,15 +395,15 @@ impl InteropProtocol {
                 .release_lock(&idempotency_lock_resource, &attempt_owner)
                 .await;
         }
-        let _ = self
-            .lock
-            .release_lock(&lock_resource, &self.node_id)
-            .await;
+        let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
         result
     }
 
     /// Listens for state handoff updates
-    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(::server_ohc::interop::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_state_handoff(
+        &self,
+        handler: Box<dyn Fn(::server_ohc::interop::StateHandoff) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
@@ -372,7 +413,9 @@ impl InteropProtocol {
             }
         });
 
-        self.bus.subscribe("system:state_handoff".to_string(), bus_handler).await
+        self.bus
+            .subscribe("system:state_handoff".to_string(), bus_handler)
+            .await
     }
 
     /// Listens for HealthPings and sends HealthAcks
@@ -404,7 +447,8 @@ impl InteropProtocol {
                                     break;
                                 }
                                 retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms))
+                                    .await;
                                 delay_ms *= 2; // Exponential backoff
                             }
                         });
@@ -413,7 +457,9 @@ impl InteropProtocol {
             }
         });
 
-        self.bus.subscribe("system:health_ping".to_string(), handler).await
+        self.bus
+            .subscribe("system:health_ping".to_string(), handler)
+            .await
     }
 
     /// Health monitor across the swarm using protobuf
@@ -431,7 +477,10 @@ impl InteropProtocol {
             }
         });
 
-        let cancel = self.bus.subscribe(format!("system:health_ack:{}", self.node_id), handler).await?;
+        let cancel = self
+            .bus
+            .subscribe(format!("system:health_ack:{}", self.node_id), handler)
+            .await?;
 
         let ping = ::server_ohc::interop::HealthPing {
             current_mode: 0,
@@ -463,7 +512,14 @@ impl InteropProtocol {
     }
 
     /// Dispatches a background job and waits for acknowledgment
-    pub async fn dispatch_job(&self, job_id: &str, tenant_id: &str, action_name: &str, payload: Vec<u8>, timeout_ms: u64) -> Result<bool, String> {
+    pub async fn dispatch_job(
+        &self,
+        job_id: &str,
+        tenant_id: &str,
+        action_name: &str,
+        payload: Vec<u8>,
+        timeout_ms: u64,
+    ) -> Result<bool, String> {
         use prost::Message as ProstMessage;
         use std::sync::atomic::Ordering;
 
@@ -479,7 +535,10 @@ impl InteropProtocol {
             }
         });
 
-        let cancel = self.bus.subscribe(format!("system:job_ack:{}", job_id), handler).await?;
+        let cancel = self
+            .bus
+            .subscribe(format!("system:job_ack:{}", job_id), handler)
+            .await?;
 
         let dispatch = ::server_ohc::interop::JobDispatch {
             job_id: job_id.to_string(),
@@ -508,12 +567,15 @@ impl InteropProtocol {
                 Ok(_) => {
                     tracing::debug!(job_id = %job_id, "Successfully published job dispatch message");
                     break;
-                },
+                }
                 Err(e) => {
                     if retries >= 5 {
                         cancel();
                         tracing::error!(job_id = %job_id, error = %e, "Failed to publish job dispatch after max retries");
-                        return Err(format!("Failed to publish job dispatch after retries: {}", e));
+                        return Err(format!(
+                            "Failed to publish job dispatch after retries: {}",
+                            e
+                        ));
                     }
                     retries += 1;
                     tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
@@ -539,7 +601,10 @@ impl InteropProtocol {
     }
 
     /// Listens for job dispatches and acknowledges them
-    pub async fn listen_for_jobs(&self, tenant_id: &str) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_jobs(
+        &self,
+        tenant_id: &str,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let node_id = self.node_id.clone();
         let bus = self.bus.clone();
 
@@ -570,7 +635,8 @@ impl InteropProtocol {
                                     break;
                                 }
                                 retries += 1;
-                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms))
+                                    .await;
                                 delay_ms *= 2; // Exponential backoff
                             }
                         });
@@ -579,11 +645,19 @@ impl InteropProtocol {
             }
         });
 
-        self.bus.subscribe(format!("system:job_dispatch:{}", tenant_id), handler).await
+        self.bus
+            .subscribe(format!("system:job_dispatch:{}", tenant_id), handler)
+            .await
     }
 
     /// Reports job status back to the main server
-    pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
+    pub async fn report_job_status(
+        &self,
+        job_id: &str,
+        tenant_id: &str,
+        status: &str,
+        details: Vec<u8>,
+    ) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
         let update = ::server_ohc::interop::JobStatusUpdate {
@@ -610,7 +684,10 @@ impl InteropProtocol {
                 Ok(_) => return Ok(()),
                 Err(e) => {
                     if retries >= 5 {
-                        return Err(format!("Failed to publish job status update after retries: {}", e));
+                        return Err(format!(
+                            "Failed to publish job status update after retries: {}",
+                            e
+                        ));
                     }
                     retries += 1;
                     tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
@@ -621,17 +698,25 @@ impl InteropProtocol {
     }
 
     /// Listens for job status updates for a specific job
-    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(::server_ohc::interop::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_job_status(
+        &self,
+        job_id: &str,
+        handler: Box<dyn Fn(::server_ohc::interop::JobStatusUpdate) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = ::server_ohc::interop::JobStatusUpdate::decode(&msg.payload[..]) {
+                if let Ok(decoded) =
+                    ::server_ohc::interop::JobStatusUpdate::decode(&msg.payload[..])
+                {
                     handler(decoded);
                 }
             }
         });
 
-        self.bus.subscribe(format!("system:job_status:{}", job_id), bus_handler).await
+        self.bus
+            .subscribe(format!("system:job_status:{}", job_id), bus_handler)
+            .await
     }
 
     /// Synchronizes a QueueJob across modes idempotently
@@ -640,16 +725,29 @@ impl InteropProtocol {
 
         // Idempotency check: ensure we don't duplicate syncing the EXACT same state transition
         // by including updated_at_ms in the lock resource.
-        let idempotency_lock_resource = format!("queue_job:processed:{}_{}", job.id, job.updated_at_ms);
-        let attempt_owner = format!("{}_{}", self.node_id, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let idempotency_lock_resource =
+            format!("queue_job:processed:{}_{}", job.id, job.updated_at_ms);
+        let attempt_owner = format!(
+            "{}_{}",
+            self.node_id,
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
 
-        if !self.lock.acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600).await.unwrap_or(false) {
+        if !self
+            .lock
+            .acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600)
+            .await
+            .unwrap_or(false)
+        {
             return Ok(());
         }
 
         let mut buf = Vec::new();
         if let Err(e) = job.encode(&mut buf) {
-            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
+            let _ = self
+                .lock
+                .release_lock(&idempotency_lock_resource, &attempt_owner)
+                .await;
             return Err(e.to_string());
         }
 
@@ -665,7 +763,10 @@ impl InteropProtocol {
                 Ok(_) => break Ok(()),
                 Err(e) => {
                     if retries >= 5 {
-                        break Err(format!("Failed to publish queue job sync after retries: {}", e));
+                        break Err(format!(
+                            "Failed to publish queue job sync after retries: {}",
+                            e
+                        ));
                     }
                     retries += 1;
                     tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
@@ -676,14 +777,21 @@ impl InteropProtocol {
 
         if result.is_err() {
             // Failed to publish, release idempotency lock so it can be retried
-            let _ = self.lock.release_lock(&idempotency_lock_resource, &attempt_owner).await;
+            let _ = self
+                .lock
+                .release_lock(&idempotency_lock_resource, &attempt_owner)
+                .await;
         }
 
         result
     }
 
     /// Listens for queue job synchronizations
-    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(::server_ohc::interop::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_queue_jobs(
+        &self,
+        tenant_id: &str,
+        handler: Box<dyn Fn(::server_ohc::interop::QueueJob) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:queue_job_sync:") {
                 use prost::Message as ProstMessage;
@@ -693,9 +801,10 @@ impl InteropProtocol {
             }
         });
 
-        self.bus.subscribe(format!("system:queue_job_sync:{}", tenant_id), bus_handler).await
+        self.bus
+            .subscribe(format!("system:queue_job_sync:{}", tenant_id), bus_handler)
+            .await
     }
-
 }
 
 fn decode_capsule_operation(
@@ -739,24 +848,17 @@ fn decode_capsule_operation(
         return Err("session capsule schema version does not match envelope".to_owned());
     }
 
-    let expected_idempotency = format!(
-        "capsule:{}:{}",
-        envelope.kind, capsule.manifest_digest
-    );
+    let expected_idempotency = format!("capsule:{}:{}", envelope.kind, capsule.manifest_digest);
     if envelope.idempotency_key != expected_idempotency {
         return Err("session capsule idempotency key does not match manifest".to_owned());
     }
-    if envelope.extensions.get("manifest_digest")
-        != Some(&capsule.manifest_digest)
-    {
+    if envelope.extensions.get("manifest_digest") != Some(&capsule.manifest_digest) {
         return Err("session capsule manifest digest extension does not match".to_owned());
     }
     if envelope.extensions.get("loss_report_digest") != Some(&capsule.loss_report_digest) {
         return Err("session capsule loss report digest extension does not match".to_owned());
     }
-    if envelope.extensions.get("target_harness_id")
-        != Some(&capsule.manifest.target_harness_id)
-    {
+    if envelope.extensions.get("target_harness_id") != Some(&capsule.manifest.target_harness_id) {
         return Err("session capsule target harness extension does not match".to_owned());
     }
 
@@ -775,7 +877,9 @@ fn decode_capsule_operation(
 mod tests {
     use super::*;
     use crate::msgbus::MemoryBus;
-    use server_harness::middleware::adapter::{OmniSoloEvent, OmniSoloHarnessAdapter, OmniSoloRunConfig};
+    use server_harness::middleware::adapter::{
+        OmniSoloEvent, OmniSoloHarnessAdapter, OmniSoloRunConfig,
+    };
     use server_harness::middleware::capsule::{PortableRecord, SessionCapsule};
     use std::sync::atomic::Ordering;
 
@@ -809,16 +913,23 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
+                let decoded =
+                    ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_1" {
                     rx.store(true, Ordering::SeqCst);
                 }
             }
         });
 
-        let _cancel = bus.subscribe("system:state_handoff".to_string(), handler).await.unwrap();
+        let _cancel = bus
+            .subscribe("system:state_handoff".to_string(), handler)
+            .await
+            .unwrap();
 
-        protocol.handoff("mission_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
+        protocol
+            .handoff("mission_1", "tenant_1", vec![1, 2, 3])
+            .await
+            .unwrap();
         sleep(Duration::from_millis(100)).await;
 
         assert!(received.load(Ordering::SeqCst));
@@ -853,7 +964,10 @@ mod tests {
         let _cancel_jobs = protocol_agent.listen_for_jobs("tenant_a").await.unwrap();
 
         // server dispatches job to tenant "tenant_a"
-        let is_acked = protocol_server.dispatch_job("job_1", "tenant_a", "do_work", vec![42], 500).await.unwrap();
+        let is_acked = protocol_server
+            .dispatch_job("job_1", "tenant_a", "do_work", vec![42], 500)
+            .await
+            .unwrap();
 
         assert!(is_acked);
     }
@@ -870,16 +984,23 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
+                let decoded =
+                    ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_resume_1" {
                     rx.store(true, Ordering::SeqCst);
                 }
             }
         });
 
-        let _cancel = bus.subscribe("system:state_handoff".to_string(), handler).await.unwrap();
+        let _cancel = bus
+            .subscribe("system:state_handoff".to_string(), handler)
+            .await
+            .unwrap();
 
-        protocol.resume_mission("mission_resume_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
+        protocol
+            .resume_mission("mission_resume_1", "tenant_1", vec![1, 2, 3])
+            .await
+            .unwrap();
         sleep(Duration::from_millis(100)).await;
 
         assert!(received.load(Ordering::SeqCst));
@@ -914,18 +1035,29 @@ mod tests {
         assert_eq!(operations.len(), 1);
         let operation = &operations[0];
         assert_eq!(operation.envelope.tenant_id, "tenant_capsule");
-        assert_eq!(operation.envelope.session_id, capsule.manifest.session_id.to_string());
-        assert_eq!(operation.envelope.operation_id, capsule.manifest.handoff_id.to_string());
+        assert_eq!(
+            operation.envelope.session_id,
+            capsule.manifest.session_id.to_string()
+        );
+        assert_eq!(
+            operation.envelope.operation_id,
+            capsule.manifest.handoff_id.to_string()
+        );
         assert_eq!(operation.envelope.operation_generation, 7);
         assert_eq!(operation.envelope.fencing_token, "session-fence-7");
         assert_eq!(operation.envelope.kind, "handoff");
-        assert_eq!(operation.envelope.task_id, operation_task_id(&capsule).unwrap());
+        assert_eq!(
+            operation.envelope.task_id,
+            operation_task_id(&capsule).unwrap()
+        );
         assert_eq!(operation.capsule, capsule);
-        assert!(operation
-            .capsule
-            .records
-            .iter()
-            .any(|record| matches!(record, PortableRecord::ToolResult(_))));
+        assert!(
+            operation
+                .capsule
+                .records
+                .iter()
+                .any(|record| matches!(record, PortableRecord::ToolResult(_)))
+        );
     }
 
     #[tokio::test]
@@ -958,24 +1090,30 @@ mod tests {
         sleep(Duration::from_millis(100)).await;
         assert_eq!(received_count.load(Ordering::SeqCst), 1);
 
-        assert!(protocol
-            .handoff_capsule(&capsule, 0, "session-fence-0")
-            .await
-            .unwrap_err()
-            .contains("operation generation"));
-        assert!(protocol
-            .handoff_capsule(&capsule, 9, "")
-            .await
-            .unwrap_err()
-            .contains("fencing token"));
+        assert!(
+            protocol
+                .handoff_capsule(&capsule, 0, "session-fence-0")
+                .await
+                .unwrap_err()
+                .contains("operation generation")
+        );
+        assert!(
+            protocol
+                .handoff_capsule(&capsule, 9, "")
+                .await
+                .unwrap_err()
+                .contains("fencing token")
+        );
 
         let mut tampered = capsule.clone();
         tampered.manifest.target_harness_id = "tampered".to_owned();
-        assert!(protocol
-            .handoff_capsule(&tampered, 9, "session-fence-9")
-            .await
-            .unwrap_err()
-            .contains("integrity"));
+        assert!(
+            protocol
+                .handoff_capsule(&tampered, 9, "session-fence-9")
+                .await
+                .unwrap_err()
+                .contains("integrity")
+        );
     }
 
     #[tokio::test]
@@ -1025,17 +1163,26 @@ mod tests {
             }
         });
 
-        let _cancel = bus.subscribe("system:state_handoff".to_string(), handler).await.unwrap();
+        let _cancel = bus
+            .subscribe("system:state_handoff".to_string(), handler)
+            .await
+            .unwrap();
 
         // Simulate identical payload handoffs to ensure we process gracefully
-        protocol.handoff("mission_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
+        protocol
+            .handoff("mission_1", "tenant_1", vec![1, 2, 3])
+            .await
+            .unwrap();
 
         // Wait briefly for the lock to be fully acquired in the mock environment
         sleep(Duration::from_millis(50)).await;
 
         // Try the same handoff again, it should immediately return Ok() due to lock idempotency check.
         let protocol2 = InteropProtocol::new(bus.clone(), lock.clone(), "node2".to_string());
-        protocol2.handoff("mission_1", "tenant_1", vec![1, 2, 3]).await.unwrap();
+        protocol2
+            .handoff("mission_1", "tenant_1", vec![1, 2, 3])
+            .await
+            .unwrap();
 
         sleep(Duration::from_millis(100)).await;
 
@@ -1057,7 +1204,10 @@ mod tests {
             }
         });
         let _cancel = protocol.listen_for_state_handoff(handler).await.unwrap();
-        protocol.handoff("mission_2", "tenant_2", vec![1, 2, 3]).await.unwrap();
+        protocol
+            .handoff("mission_2", "tenant_2", vec![1, 2, 3])
+            .await
+            .unwrap();
         sleep(Duration::from_millis(50)).await;
         assert!(received.load(Ordering::SeqCst));
     }
@@ -1071,7 +1221,10 @@ mod tests {
 
         // server dispatches job but NO AGENT IS LISTENING
         // We expect it to return false (timeout), but not fail the retry publish loop
-        let is_acked = protocol_server.dispatch_job("job_timeout", "tenant_a", "do_work", vec![42], 100).await.unwrap();
+        let is_acked = protocol_server
+            .dispatch_job("job_timeout", "tenant_a", "do_work", vec![42], 100)
+            .await
+            .unwrap();
 
         assert!(!is_acked);
     }
@@ -1081,7 +1234,8 @@ mod tests {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();
 
-        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+        let protocol_listener =
+            InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
 
         let _cancel = protocol_listener.listen_for_pings().await.unwrap();
 
@@ -1125,7 +1279,8 @@ mod tests {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();
 
-        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+        let protocol_listener =
+            InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
 
         let _cancel = protocol_listener.listen_for_jobs("tenant_x").await.unwrap();
 
@@ -1173,16 +1328,24 @@ mod tests {
         let protocol1 = InteropProtocol::new(bus.clone(), lock.clone(), "node1".to_string());
 
         // Acquire lock manually to simulate another process holding it
-        assert!(lock.acquire_lock("handoff:mission_locked", "node_other", 10).await.unwrap());
+        assert!(
+            lock.acquire_lock("handoff:mission_locked", "node_other", 10)
+                .await
+                .unwrap()
+        );
 
         // This should timeout instead of deadlocking, because of our new timeout semantics
-        let result = protocol1.handoff("mission_locked", "tenant_1", vec![1, 2, 3]).await;
+        let result = protocol1
+            .handoff("mission_locked", "tenant_1", vec![1, 2, 3])
+            .await;
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Timeout waiting for lock");
 
         // Release
-        let _ = lock.release_lock("handoff:mission_locked", "node_other").await;
+        let _ = lock
+            .release_lock("handoff:mission_locked", "node_other")
+            .await;
     }
 
     #[tokio::test]
@@ -1203,16 +1366,21 @@ mod tests {
         });
 
         // Server listens for status updates
-        let _cancel = protocol_server.listen_for_job_status("job_status_123", handler).await.unwrap();
+        let _cancel = protocol_server
+            .listen_for_job_status("job_status_123", handler)
+            .await
+            .unwrap();
 
         // Agent reports status
-        protocol_agent.report_job_status("job_status_123", "tenant_a", "COMPLETED", vec![1, 2, 3]).await.unwrap();
+        protocol_agent
+            .report_job_status("job_status_123", "tenant_a", "COMPLETED", vec![1, 2, 3])
+            .await
+            .unwrap();
 
         sleep(Duration::from_millis(100)).await;
 
         assert!(received.load(Ordering::SeqCst));
     }
-
 
     #[tokio::test]
     async fn test_interop_dispatch_job_retry_success() {
@@ -1222,7 +1390,9 @@ mod tests {
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "server".to_string());
 
-        let result = protocol.dispatch_job("job_retry_1", "tenant_a", "do_work", vec![], 10).await;
+        let result = protocol
+            .dispatch_job("job_retry_1", "tenant_a", "do_work", vec![], 10)
+            .await;
         // The mock bus doesn't publish ACK, so it's a timeout (returns false), but it shouldn't be a publish error
         assert!(result.is_ok());
         assert!(!result.unwrap());
@@ -1236,9 +1406,15 @@ mod tests {
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "server".to_string());
 
-        let result = protocol.dispatch_job("job_retry_2", "tenant_a", "do_work", vec![], 10).await;
+        let result = protocol
+            .dispatch_job("job_retry_2", "tenant_a", "do_work", vec![], 10)
+            .await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Failed to publish job dispatch after retries"));
+        assert!(
+            result
+                .unwrap_err()
+                .contains("Failed to publish job dispatch after retries")
+        );
     }
 
     #[tokio::test]
@@ -1249,7 +1425,9 @@ mod tests {
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "node1".to_string());
 
-        let result = protocol.handoff("mission_retry_1", "tenant_1", vec![1, 2, 3]).await;
+        let result = protocol
+            .handoff("mission_retry_1", "tenant_1", vec![1, 2, 3])
+            .await;
         assert!(result.is_ok());
     }
 
@@ -1261,9 +1439,15 @@ mod tests {
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "node1".to_string());
 
-        let result = protocol.handoff("mission_retry_2", "tenant_1", vec![1, 2, 3]).await;
+        let result = protocol
+            .handoff("mission_retry_2", "tenant_1", vec![1, 2, 3])
+            .await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Failed to publish state handoff after retries"));
+        assert!(
+            result
+                .unwrap_err()
+                .contains("Failed to publish state handoff after retries")
+        );
     }
 
     struct MockFailingBus {
@@ -1277,7 +1461,11 @@ mod tests {
             }
             Ok(())
         }
-        async fn subscribe(&self, _topic: String, _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        async fn subscribe(
+            &self,
+            _topic: String,
+            _handler: Box<dyn Fn(crate::msgbus::Message) + Send + Sync>,
+        ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
             Ok(Box::new(|| {}))
         }
     }
@@ -1290,7 +1478,9 @@ mod tests {
         let lock = Arc::new(MemoryBus::new()); // dummy lock
         let protocol = InteropProtocol::new(bus, lock, "agent".to_string());
 
-        let result = protocol.report_job_status("job_retry_1", "tenant_a", "FAILED", vec![]).await;
+        let result = protocol
+            .report_job_status("job_retry_1", "tenant_a", "FAILED", vec![])
+            .await;
         assert!(result.is_ok());
     }
 
@@ -1302,9 +1492,15 @@ mod tests {
         let lock = Arc::new(MemoryBus::new());
         let protocol = InteropProtocol::new(bus, lock, "agent".to_string());
 
-        let result = protocol.report_job_status("job_retry_2", "tenant_a", "FAILED", vec![]).await;
+        let result = protocol
+            .report_job_status("job_retry_2", "tenant_a", "FAILED", vec![])
+            .await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Failed to publish job status update after retries"));
+        assert!(
+            result
+                .unwrap_err()
+                .contains("Failed to publish job status update after retries")
+        );
     }
 
     #[tokio::test]
@@ -1352,7 +1548,8 @@ mod tests {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();
 
-        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+        let protocol_listener =
+            InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
         let _cancel = protocol_listener.listen_for_pings().await.unwrap();
 
         let received = Arc::new(AtomicBool::new(false));
@@ -1382,7 +1579,8 @@ mod tests {
         let bus = Arc::new(MemoryBus::new());
         let lock = bus.clone();
 
-        let protocol_listener = InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
+        let protocol_listener =
+            InteropProtocol::new(bus.clone(), lock.clone(), "listener_node".to_string());
         let _cancel = protocol_listener.listen_for_jobs("tenant_x").await.unwrap();
 
         let received = Arc::new(AtomicBool::new(false));
@@ -1421,7 +1619,10 @@ mod tests {
             rx.store(true, Ordering::SeqCst);
         });
 
-        let _cancel = protocol_server.listen_for_job_status("job_status_123", handler).await.unwrap();
+        let _cancel = protocol_server
+            .listen_for_job_status("job_status_123", handler)
+            .await
+            .unwrap();
 
         // Send a malformed job status
         let msg = Message {
@@ -1435,5 +1636,4 @@ mod tests {
         // Handler should not have been called
         assert!(!received.load(Ordering::SeqCst));
     }
-
 }

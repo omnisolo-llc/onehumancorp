@@ -1,14 +1,22 @@
-use sqlx::PgPool;
 use serde_json::Value;
+use sqlx::PgPool;
 
 #[cfg(ohc_bazel)]
 use crate::integrations::stripe::client::StripeClient;
 #[cfg(not(ohc_bazel))]
 use server_integrations_stripe::client::StripeClient;
 
-pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool) -> Result<(), sqlx::Error> {
+pub async fn handle_quote_action(
+    tenant_id: &str,
+    payload: &Value,
+    pool: &PgPool,
+) -> Result<(), sqlx::Error> {
     // Extract customer info explicitly early on if provided by action payload
-    let mut action_customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let mut action_customer_id = payload
+        .get("customer_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
 
     let mut db_price = 0.0;
     let mut db_scope = String::new();
@@ -24,11 +32,13 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
             .await?;
 
         // Fetch quote details to ensure we use correct values
-        let row = sqlx::query("SELECT customer_id, total_amount_cents FROM quotes WHERE id = $1 AND tenant_id = $2")
-            .bind(quote_uuid)
-            .bind(tenant_id)
-            .fetch_optional(pool)
-            .await?;
+        let row = sqlx::query(
+            "SELECT customer_id, total_amount_cents FROM quotes WHERE id = $1 AND tenant_id = $2",
+        )
+        .bind(quote_uuid)
+        .bind(tenant_id)
+        .fetch_optional(pool)
+        .await?;
 
         if let Some(r) = row {
             use sqlx::Row;
@@ -42,11 +52,13 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
             }
         }
 
-        let lines = sqlx::query("SELECT description FROM quote_line_items WHERE quote_id = $1 AND tenant_id = $2")
-            .bind(quote_uuid)
-            .bind(tenant_id)
-            .fetch_all(pool)
-            .await?;
+        let lines = sqlx::query(
+            "SELECT description FROM quote_line_items WHERE quote_id = $1 AND tenant_id = $2",
+        )
+        .bind(quote_uuid)
+        .bind(tenant_id)
+        .fetch_all(pool)
+        .await?;
 
         for row in lines {
             use sqlx::Row;
@@ -61,9 +73,15 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
     // Generate an invoice automatically upon proposal/quote approval
     let invoice_id = uuid::Uuid::new_v4().to_string();
 
-    let client_name = payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Client");
+    let client_name = payload
+        .get("client_name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Client");
 
-    let mut client_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+    let mut client_id = payload
+        .get("customer_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
     if !db_client_id.is_empty() {
         client_id = &db_client_id;
     }
@@ -76,36 +94,53 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
         price = db_price;
     }
 
-    let mut scope = payload.get("scope").and_then(|v| v.as_str()).unwrap_or("Service");
+    let mut scope = payload
+        .get("scope")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Service");
     if !db_scope.is_empty() {
         scope = &db_scope;
     }
 
     // If it's not just a quote_id update, but an actual approval containing price info, create invoice
     if price > 0.0 {
-        tracing::info!("Generating invoice {} for tenant {} with amount {}", invoice_id, tenant_id, price); // pii-safe
+        tracing::info!(
+            "Generating invoice {} for tenant {} with amount {}",
+            invoice_id,
+            tenant_id,
+            price
+        ); // pii-safe
 
         let due_date = chrono::Utc::now().timestamp() + (7 * 24 * 60 * 60); // Due in 7 days
 
         let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
         let stripe_client = StripeClient::new(api_key);
 
-        let mut stripe_payment_link = payload.get("stripe_payment_link")
+        let mut stripe_payment_link = payload
+            .get("stripe_payment_link")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
-            .unwrap_or_else(|| format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")));
+            .unwrap_or_else(|| {
+                format!(
+                    "https://checkout.stripe.com/pay/cs_test_{}",
+                    uuid::Uuid::new_v4().to_string().replace("-", "")
+                )
+            });
 
         // Fallback to fake url if external integration fails to prevent silently erroring
         if payload.get("stripe_payment_link").is_none() {
-            match stripe_client.create_checkout_session(scope, client_id, price, None, None, None).await {
-                 Ok(link) => {
-                     stripe_payment_link = link;
-                 }
-                 Err(err) => {
-                     tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
-                     // Still proceed with saving the invoice but log heavily
-                     // Without hard-failing since our e2e expects it to proceed.
-                 }
+            match stripe_client
+                .create_checkout_session(scope, client_id, price, None, None, None)
+                .await
+            {
+                Ok(link) => {
+                    stripe_payment_link = link;
+                }
+                Err(err) => {
+                    tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
+                    // Still proceed with saving the invoice but log heavily
+                    // Without hard-failing since our e2e expects it to proceed.
+                }
             }
         }
 
@@ -140,15 +175,21 @@ pub async fn handle_quote_action(tenant_id: &str, payload: &Value, pool: &PgPool
         // Also update the quote with the stripe link
         if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
             let quote_uuid = uuid::Uuid::parse_str(quote_id).unwrap_or_default();
-            sqlx::query("UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2 AND tenant_id = $3")
-                .bind(&stripe_payment_link)
-                .bind(quote_uuid)
-                .bind(tenant_id)
-                .execute(pool)
-                .await?;
+            sqlx::query(
+                "UPDATE quotes SET stripe_payment_link = $1 WHERE id = $2 AND tenant_id = $3",
+            )
+            .bind(&stripe_payment_link)
+            .bind(quote_uuid)
+            .bind(tenant_id)
+            .execute(pool)
+            .await?;
         }
 
-        tracing::info!("Dispatched SMS/WhatsApp with quote and payment link {} to customer {}", stripe_payment_link, client_id);
+        tracing::info!(
+            "Dispatched SMS/WhatsApp with quote and payment link {} to customer {}",
+            stripe_payment_link,
+            client_id
+        );
     }
 
     Ok(())

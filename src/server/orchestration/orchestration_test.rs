@@ -1,9 +1,9 @@
 use crate::db::{DB, DbStore};
-use std::sync::Arc;
+use crate::orchestration::mesh::TeammateMesh;
 use crate::orchestration::tasks::TaskDecompositionService;
 use crate::tasks::SharedTask;
-use crate::orchestration::mesh::TeammateMesh;
 use chrono::Utc;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_task_decomposition_service() {
@@ -12,8 +12,14 @@ async fn test_task_decomposition_service() {
         .connect("sqlite::memory:")
         .await
         .expect("Failed to initialize database");
-    let dummy_pool = sqlx::postgres::PgPoolOptions::new().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
-    let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_millis(10))
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+    let db = DB {
+        pool: dummy_pool,
+        store: DbStore::Sqlite(sqlite_pool),
+    };
 
     match &db.store {
         DbStore::Postgres => {
@@ -52,7 +58,7 @@ async fn test_task_decomposition_service() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
-                "#
+                "#,
             )
             .execute(&db.pool)
             .await
@@ -94,7 +100,7 @@ async fn test_task_decomposition_service() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
-                "#
+                "#,
             )
             .execute(sqlite_pool)
             .await
@@ -102,20 +108,26 @@ async fn test_task_decomposition_service() {
         }
     }
 
-
-    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new())));
+    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(
+        ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+    )));
     let svc = TaskDecompositionService::new(Arc::new(db.clone()), svc_mesh_transport.clone());
     let mesh_clone = svc_mesh_transport.clone();
     tokio::spawn(async move {
         let mesh_inner = mesh_clone.clone();
-        let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
-            let msg_id = msg.msg_id.clone();
-            let ack_topic = format!("mesh:ack:{}", msg_id);
-            let mesh_inner2 = mesh_inner.clone();
-            tokio::spawn(async move {
-                let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
-            });
-        })).await;
+        let _ = mesh_clone
+            .subscribe(
+                "task.assigned",
+                Box::new(move |msg| {
+                    let msg_id = msg.msg_id.clone();
+                    let ack_topic = format!("mesh:ack:{}", msg_id);
+                    let mesh_inner2 = mesh_inner.clone();
+                    tokio::spawn(async move {
+                        let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
+                    });
+                }),
+            )
+            .await;
     });
 
     let now = Utc::now();
@@ -171,7 +183,9 @@ async fn test_task_decomposition_service() {
     let claimed = svc.claim_task("agent1").await.unwrap();
     assert!(claimed.is_some());
 
-    svc.update_status(&main_task.id, "REVIEW", "agent1").await.unwrap();
+    svc.update_status(&main_task.id, "REVIEW", "agent1")
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -183,7 +197,10 @@ async fn test_task_decomposition_dag_blocked() {
     let dummy_pool = sqlx::postgres::PgPoolOptions::new()
         .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
         .unwrap();
-    let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
+    let db = DB {
+        pool: dummy_pool,
+        store: DbStore::Sqlite(sqlite_pool),
+    };
     match &db.store {
         DbStore::Postgres => {
             sqlx::query(
@@ -212,8 +229,11 @@ async fn test_task_decomposition_dag_blocked() {
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
-                "#
-            ).execute(&db.pool).await.unwrap();
+                "#,
+            )
+            .execute(&db.pool)
+            .await
+            .unwrap();
         }
         DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
@@ -242,8 +262,11 @@ async fn test_task_decomposition_dag_blocked() {
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
-                "#
-            ).execute(sqlite_pool).await.unwrap();
+                "#,
+            )
+            .execute(sqlite_pool)
+            .await
+            .unwrap();
             sqlx::query(
                 r#"
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -254,25 +277,34 @@ async fn test_task_decomposition_dag_blocked() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
-                "#
-            ).execute(sqlite_pool).await.unwrap();
+                "#,
+            )
+            .execute(sqlite_pool)
+            .await
+            .unwrap();
         }
     }
 
-
-    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new())));
+    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(
+        ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+    )));
     let svc = TaskDecompositionService::new(Arc::new(db.clone()), svc_mesh_transport.clone());
     let mesh_clone = svc_mesh_transport.clone();
     tokio::spawn(async move {
         let mesh_inner = mesh_clone.clone();
-        let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
-            let msg_id = msg.msg_id.clone();
-            let ack_topic = format!("mesh:ack:{}", msg_id);
-            let mesh_inner2 = mesh_inner.clone();
-            tokio::spawn(async move {
-                let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
-            });
-        })).await;
+        let _ = mesh_clone
+            .subscribe(
+                "task.assigned",
+                Box::new(move |msg| {
+                    let msg_id = msg.msg_id.clone();
+                    let ack_topic = format!("mesh:ack:{}", msg_id);
+                    let mesh_inner2 = mesh_inner.clone();
+                    tokio::spawn(async move {
+                        let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
+                    });
+                }),
+            )
+            .await;
     });
 
     let now = Utc::now();
@@ -342,7 +374,10 @@ async fn test_task_decomposition_service_fail_task() {
     let dummy_pool = sqlx::postgres::PgPoolOptions::new()
         .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
         .unwrap();
-    let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
+    let db = DB {
+        pool: dummy_pool,
+        store: DbStore::Sqlite(sqlite_pool),
+    };
     match &db.store {
         DbStore::Postgres => {
             sqlx::query(
@@ -380,8 +415,11 @@ async fn test_task_decomposition_service_fail_task() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
-                "#
-            ).execute(&db.pool).await.unwrap();
+                "#,
+            )
+            .execute(&db.pool)
+            .await
+            .unwrap();
         }
         DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
@@ -419,25 +457,34 @@ async fn test_task_decomposition_service_fail_task() {
                     agent_id TEXT,
                     transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
-                "#
-            ).execute(sqlite_pool).await.unwrap();
+                "#,
+            )
+            .execute(sqlite_pool)
+            .await
+            .unwrap();
         }
     }
 
-
-    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new())));
+    let svc_mesh_transport = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(Arc::new(
+        ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+    )));
     let svc = TaskDecompositionService::new(Arc::new(db.clone()), svc_mesh_transport.clone());
     let mesh_clone = svc_mesh_transport.clone();
     tokio::spawn(async move {
         let mesh_inner = mesh_clone.clone();
-        let _ = mesh_clone.subscribe("task.assigned", Box::new(move |msg| {
-            let msg_id = msg.msg_id.clone();
-            let ack_topic = format!("mesh:ack:{}", msg_id);
-            let mesh_inner2 = mesh_inner.clone();
-            tokio::spawn(async move {
-                let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
-            });
-        })).await;
+        let _ = mesh_clone
+            .subscribe(
+                "task.assigned",
+                Box::new(move |msg| {
+                    let msg_id = msg.msg_id.clone();
+                    let ack_topic = format!("mesh:ack:{}", msg_id);
+                    let mesh_inner2 = mesh_inner.clone();
+                    tokio::spawn(async move {
+                        let _ = mesh_inner2.publish(&ack_topic, b"ack".to_vec()).await;
+                    });
+                }),
+            )
+            .await;
     });
 
     let now = Utc::now();
@@ -470,26 +517,29 @@ async fn test_task_decomposition_service_fail_task() {
     assert!(claimed.is_some());
     assert_eq!(claimed.unwrap().id, main_task.id);
 
-    svc.fail_task(&main_task.id, "agent1", "Test Error").await.unwrap();
-
+    svc.fail_task(&main_task.id, "agent1", "Test Error")
+        .await
+        .unwrap();
 
     let (status, payload_str): (String, String) = match &db.store {
         DbStore::Postgres => {
-            let row = sqlx::query("SELECT status, payload FROM shared_tasks_decomposition WHERE id = $1")
-                .bind(&main_task.id)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+            let row =
+                sqlx::query("SELECT status, payload FROM shared_tasks_decomposition WHERE id = $1")
+                    .bind(&main_task.id)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap();
             let s: String = sqlx::Row::get(&row, "status");
             let p: serde_json::Value = sqlx::Row::get(&row, "payload");
             (s, serde_json::to_string(&p).unwrap())
         }
         DbStore::Sqlite(pool) => {
-            let row = sqlx::query("SELECT status, payload FROM shared_tasks_decomposition WHERE id = ?")
-                .bind(&main_task.id)
-                .fetch_one(pool)
-                .await
-                .unwrap();
+            let row =
+                sqlx::query("SELECT status, payload FROM shared_tasks_decomposition WHERE id = ?")
+                    .bind(&main_task.id)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap();
             let s: String = sqlx::Row::get(&row, "status");
             let p: String = sqlx::Row::get(&row, "payload");
             (s, p)
@@ -500,5 +550,4 @@ async fn test_task_decomposition_service_fail_task() {
 
     let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap();
     assert_eq!(payload["error"], "Test Error");
-
 }

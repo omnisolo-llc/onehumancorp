@@ -1,10 +1,4 @@
-use axum::{
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-    Json,
-};
+use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::post};
 use serde::{Deserialize, Serialize};
 
 // In a real app this would call down to a repository to toggle state.
@@ -42,21 +36,23 @@ pub async fn toggle_syndication(
         StatusCode::OK,
         Json(ToggleSyndicationResponse {
             success: true,
-            message: format!("Channel {} toggled to {}", payload.channel_id, payload.enabled),
+            message: format!(
+                "Channel {} toggled to {}",
+                payload.channel_id, payload.enabled
+            ),
         }),
     )
 }
 
 pub fn router() -> Router {
-    Router::new()
-        .route("/api/v1/syndication/toggle", post(toggle_syndication))
+    Router::new().route("/api/v1/syndication/toggle", post(toggle_syndication))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::Request;
     use axum::body::Body;
+    use axum::http::Request;
     use tower::ServiceExt;
 
     #[tokio::test]
@@ -69,7 +65,9 @@ mod tests {
                     .method("POST")
                     .uri("/api/v1/syndication/toggle")
                     .header("Content-Type", "application/json")
-                    .body(Body::from(r#"{"channel_id": "google_shopping", "enabled": true}"#))
+                    .body(Body::from(
+                        r#"{"channel_id": "google_shopping", "enabled": true}"#,
+                    ))
                     .unwrap(),
             )
             .await

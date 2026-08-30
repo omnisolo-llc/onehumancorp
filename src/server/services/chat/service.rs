@@ -1,6 +1,6 @@
+use super::models::{ChatChannel, ChatContact, ChatConversation, ChatInbox, ChatMessage};
 use sqlx::PgPool;
 use uuid::Uuid;
-use super::models::{ChatInbox, ChatChannel, ChatContact, ChatConversation, ChatMessage};
 
 pub struct ChatService {
     pool: PgPool,
@@ -21,7 +21,7 @@ impl ChatService {
             INSERT INTO chat_inboxes (id, tenant_id, name)
             VALUES ($1, $2, $3)
             RETURNING id, tenant_id, name, created_at, updated_at
-            "#
+            "#,
         )
         .bind(Uuid::new_v4())
         .bind(tenant_id)
@@ -42,7 +42,7 @@ impl ChatService {
             INSERT INTO chat_channels (id, tenant_id, inbox_id, channel_type, config)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id, tenant_id, inbox_id, channel_type, config, created_at, updated_at
-            "#
+            "#,
         )
         .bind(Uuid::new_v4())
         .bind(tenant_id)
@@ -65,7 +65,7 @@ impl ChatService {
             INSERT INTO chat_contacts (id, tenant_id, name, email, phone)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id, tenant_id, name, email, phone, created_at, updated_at
-            "#
+            "#,
         )
         .bind(Uuid::new_v4())
         .bind(tenant_id)

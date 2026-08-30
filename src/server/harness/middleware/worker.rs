@@ -17,18 +17,26 @@ pub enum WorkerControlKind {
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SessionOperationKind {
+    Create,
+    Import,
     Handoff,
     Quiesce,
     Resume,
     Cancel,
     Snapshot,
+    Close,
+    Delete,
+    Fork,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AttemptCommandKind {
+    Start,
     Execute,
     Resume,
+    Steer,
+    Wait,
     Quiesce,
     Cancel,
     Checkpoint,
@@ -112,6 +120,13 @@ pub struct SessionOperationEnvelope {
     pub payload_version: u32,
     pub payload: Value,
     pub extensions: JsonMap,
+    pub worker_id: String,
+    pub pool_id: String,
+    pub harness_id: String,
+    pub capability_version: u64,
+    pub binding_id: Option<Uuid>,
+    pub binding_generation: i64,
+    pub workspace_mutation_scope_id: Option<String>,
 }
 
 impl SessionOperationEnvelope {
@@ -138,7 +153,34 @@ impl SessionOperationEnvelope {
             payload_version: 1,
             payload: Value::Null,
             extensions: JsonMap::new(),
+            worker_id: String::new(),
+            pool_id: String::new(),
+            harness_id: String::new(),
+            capability_version: 0,
+            binding_id: None,
+            binding_generation: 0,
+            workspace_mutation_scope_id: None,
         }
+    }
+
+    pub fn with_worker(
+        mut self,
+        worker_id: impl Into<String>,
+        harness_id: impl Into<String>,
+        pool_id: impl Into<String>,
+        capability_version: u64,
+    ) -> Self {
+        self.worker_id = worker_id.into();
+        self.harness_id = harness_id.into();
+        self.pool_id = pool_id.into();
+        self.capability_version = capability_version;
+        self
+    }
+
+    pub fn with_binding(mut self, binding_id: Uuid, binding_generation: i64) -> Self {
+        self.binding_id = Some(binding_id);
+        self.binding_generation = binding_generation;
+        self
     }
 
     pub fn validate(&self) -> Result<(), EnvelopeError> {
@@ -180,6 +222,13 @@ pub struct AttemptCommandEnvelope {
     pub payload_version: u32,
     pub payload: Value,
     pub extensions: JsonMap,
+    pub worker_id: String,
+    pub harness_id: String,
+    #[serde(default)]
+    pub pool_id: String,
+    pub capability_version: u64,
+    pub binding_id: Option<Uuid>,
+    pub binding_generation: i64,
 }
 
 impl AttemptCommandEnvelope {
@@ -213,7 +262,36 @@ impl AttemptCommandEnvelope {
             payload_version: 1,
             payload: Value::Null,
             extensions: JsonMap::new(),
+            worker_id: String::new(),
+            harness_id: String::new(),
+            pool_id: String::new(),
+            capability_version: 0,
+            binding_id: None,
+            binding_generation: 0,
         }
+    }
+
+    pub fn with_worker(
+        mut self,
+        worker_id: impl Into<String>,
+        harness_id: impl Into<String>,
+        capability_version: u64,
+    ) -> Self {
+        self.worker_id = worker_id.into();
+        self.harness_id = harness_id.into();
+        self.capability_version = capability_version;
+        self
+    }
+
+    pub fn with_pool(mut self, pool_id: impl Into<String>) -> Self {
+        self.pool_id = pool_id.into();
+        self
+    }
+
+    pub fn with_binding(mut self, binding_id: Uuid, binding_generation: i64) -> Self {
+        self.binding_id = Some(binding_id);
+        self.binding_generation = binding_generation;
+        self
     }
 
     pub fn validate(&self) -> Result<(), EnvelopeError> {

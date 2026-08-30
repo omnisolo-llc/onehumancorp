@@ -1,0 +1,119 @@
+{{- if .Values.harnessWorkers.enabled }}
+{{- range .Values.harnessWorkers.workers }}
+{{- $worker := . }}
+{{- $name := printf "%s-harness-%s" $.Release.Name $worker.id | trunc 63 | trimSuffix "-" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+    app.kubernetes.io/part-of: {{ $.Release.Name }}
+spec:
+  replicas: {{ default $.Values.harnessWorkers.defaultReplicas $worker.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+        app.kubernetes.io/part-of: {{ $.Release.Name }}
+        omnisolo.io/harness: {{ $worker.harnessId | quote }}
+        omnisolo.io/pool: {{ $worker.poolId | quote }}
+    spec:
+      terminationGracePeriodSeconds: {{ default 120 $.Values.harnessWorkers.terminationGracePeriodSeconds }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: harness-worker
+          image: {{ default $.Values.harnessWorkers.image $worker.image }}
+          imagePullPolicy: {{ $.Values.harnessWorkers.imagePullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: grpc
+              containerPort: {{ default $.Values.harnessWorkers.defaultGrpcPort $worker.grpcPort }}
+            - name: health
+              containerPort: {{ default $.Values.harnessWorkers.defaultHealthPort $worker.healthPort }}
+          env:
+            - name: OMNISOLO_HARNESS_WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OMNISOLO_HARNESS_ID
+              value: {{ $worker.harnessId | quote }}
+            - name: OMNISOLO_HARNESS_POOL_ID
+              value: {{ $worker.poolId | quote }}
+            - name: OMNISOLO_HARNESS_GRPC_ADDR
+              value: {{ printf "0.0.0.0:%v" (default $.Values.harnessWorkers.defaultGrpcPort $worker.grpcPort) | quote }}
+            - name: OMNISOLO_HARNESS_HEALTH_ADDR
+              value: {{ printf "0.0.0.0:%v" (default $.Values.harnessWorkers.defaultHealthPort $worker.healthPort) | quote }}
+            {{- range $key, $value := $worker.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $secret := $worker.secretEnv }}
+            - name: {{ $secret.name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secret.secretName | quote }}
+                  key: {{ $secret.key | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml (default $.Values.harnessWorkers.resources $worker.resources) | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            periodSeconds: 5
+            timeoutSeconds: 2
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: workspace
+              mountPath: /workspace
+            - name: harness-home
+              mountPath: /home/omnisolo
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: workspace
+          emptyDir: {}
+        - name: harness-home
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - name: grpc
+      port: {{ default $.Values.harnessWorkers.defaultGrpcPort $worker.grpcPort }}
+      targetPort: grpc
+{{- end }}
+{{- end }}

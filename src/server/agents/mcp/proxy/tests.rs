@@ -1,11 +1,11 @@
-use super::server::ReverseTunnelServer;
 use super::client::LocalProxyClient;
-use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer;
+use super::server::ReverseTunnelServer;
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
-use tonic::transport::{Server, Endpoint};
+use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
+use tonic::transport::{Endpoint, Server};
 
 #[tokio::test]
 async fn test_proxy_tunnel() {

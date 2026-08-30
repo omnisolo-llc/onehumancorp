@@ -5,14 +5,14 @@ pub mod forecaster;
 pub use ::server_config as config;
 use chrono::Utc;
 use opentelemetry::global;
+use regex::Regex;
 use serde_json::{Map, Value};
 use sqlx::{PgPool, query};
 use std::sync::OnceLock;
-use regex::Regex;
 
 use opentelemetry::metrics::Histogram;
 
-use opentelemetry::metrics::{Counter, UpDownCounter, Gauge};
+use opentelemetry::metrics::{Counter, Gauge, UpDownCounter};
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -38,17 +38,40 @@ static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
 pub fn categorize_error_signal(err_msg: &str) -> &'static str {
     let lower = err_msg.to_lowercase();
-    if lower.contains("panic") || lower.contains("segfault") || lower.contains("unreachable") || lower.contains("fatal") || lower.contains("bug") {
+    if lower.contains("panic")
+        || lower.contains("segfault")
+        || lower.contains("unreachable")
+        || lower.contains("fatal")
+        || lower.contains("bug")
+    {
         "bug"
-    } else if lower.contains("not supported") || lower.contains("missing feature") || lower.contains("feature") {
+    } else if lower.contains("not supported")
+        || lower.contains("missing feature")
+        || lower.contains("feature")
+    {
         "feature"
-    } else if lower.contains("deprecated") || lower.contains("legacy") || lower.contains("refactor") {
+    } else if lower.contains("deprecated") || lower.contains("legacy") || lower.contains("refactor")
+    {
         "refactor"
-    } else if lower.contains("leak") || lower.contains("garbage") || lower.contains("clean up") || lower.contains("cleanup") || lower.contains("stagnant") || lower.contains("stuck") {
+    } else if lower.contains("leak")
+        || lower.contains("garbage")
+        || lower.contains("clean up")
+        || lower.contains("cleanup")
+        || lower.contains("stagnant")
+        || lower.contains("stuck")
+    {
         "cleanup"
     } else if lower.contains("doc") || lower.contains("comment") || lower.contains("readme") {
         "docs"
-    } else if lower.contains("cve") || lower.contains("vulnerabilit") || lower.contains("injection") || lower.contains("auth") || lower.contains("security") || lower.contains("malware") || lower.contains("permission") || lower.contains("denied") {
+    } else if lower.contains("cve")
+        || lower.contains("vulnerabilit")
+        || lower.contains("injection")
+        || lower.contains("auth")
+        || lower.contains("security")
+        || lower.contains("malware")
+        || lower.contains("permission")
+        || lower.contains("denied")
+    {
         "security"
     } else {
         "bug"
@@ -76,7 +99,9 @@ pub fn get_sandbox_violation_total() -> &'static UpDownCounter<i64> {
 }
 
 pub fn record_error_signal(err_msg: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let category = categorize_error_signal(err_msg);
     let counter = get_error_signal_counter();
@@ -86,7 +111,8 @@ pub fn record_error_signal(err_msg: &str) {
 pub fn get_postgres_lock_contention_counter() -> &'static Counter<u64> {
     POSTGRES_LOCK_CONTENTION.get_or_init(|| {
         let meter = global::meter("ohc.telemetry");
-        meter.u64_counter("ohc_postgres_lock_contention_total")
+        meter
+            .u64_counter("ohc_postgres_lock_contention_total")
             .with_description("Total number of PostgreSQL lock contentions")
             .build()
     })
@@ -95,7 +121,8 @@ pub fn get_postgres_lock_contention_counter() -> &'static Counter<u64> {
 pub fn get_llm_network_latency_histogram() -> &'static Histogram<f64> {
     LLM_NETWORK_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.telemetry");
-        meter.f64_histogram("ohc_llm_network_latency_seconds")
+        meter
+            .f64_histogram("ohc_llm_network_latency_seconds")
             .with_description("Latency to external LLM providers in seconds")
             .build()
     })
@@ -104,7 +131,8 @@ pub fn get_llm_network_latency_histogram() -> &'static Histogram<f64> {
 pub fn get_mcp_tool_calls_counter() -> &'static Counter<u64> {
     MCP_TOOL_CALLS_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.telemetry");
-        meter.u64_counter("ohc_mcp_tool_calls_total")
+        meter
+            .u64_counter("ohc_mcp_tool_calls_total")
             .with_description("Total number of MCP tool calls")
             .build()
     })
@@ -140,7 +168,6 @@ pub fn get_agent_efficiency_score_gauge() -> &'static Gauge<f64> {
         meter.f64_gauge("ohc_agent_roi_efficiency_score").build()
     })
 }
-
 
 pub fn get_agent_api_call_counter() -> &'static Counter<u64> {
     AGENT_API_CALL.get_or_init(|| {
@@ -178,7 +205,9 @@ pub fn get_swarm_task_completed_counter() -> &'static Counter<u64> {
 }
 
 pub fn record_token_usage(agent_id: &str, role: &str, model: &str, token_type: &str, count: i64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_token_usage_counter();
     counter.add(
@@ -193,7 +222,9 @@ pub fn record_token_usage(agent_id: &str, role: &str, model: &str, token_type: &
 }
 
 pub fn record_sandbox_violation(reason: &str, command: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let gauge = get_sandbox_violation_total();
     gauge.add(
@@ -206,7 +237,9 @@ pub fn record_sandbox_violation(reason: &str, command: &str) {
 }
 
 pub fn record_harness_execution_latency(latency_seconds: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_harness_execution_latency();
     let deployment_mode = get_deployment_mode();
@@ -223,7 +256,6 @@ pub fn record_harness_execution_latency(latency_seconds: f64) {
 mod harness_execution_tests {
     use super::*;
 
-
     #[test]
     fn test_get_harness_execution_latency() {
         let histogram = get_harness_execution_latency();
@@ -239,7 +271,9 @@ mod harness_execution_tests {
 }
 
 pub fn record_agent_api_call(agent_id: &str, role: &str, api: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_agent_api_call_counter();
     counter.add(
@@ -253,7 +287,9 @@ pub fn record_agent_api_call(agent_id: &str, role: &str, api: &str) {
 }
 
 pub fn record_agent_api_error(agent_id: &str, role: &str, api: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_agent_api_error_counter();
     counter.add(
@@ -267,7 +303,9 @@ pub fn record_agent_api_error(agent_id: &str, role: &str, api: &str) {
 }
 
 pub fn record_human_interaction(interaction_type: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_human_interaction_counter();
     counter.add(
@@ -280,7 +318,9 @@ pub fn record_human_interaction(interaction_type: &str) {
 }
 
 pub fn record_meeting_event(event_type: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_meeting_event_counter();
     counter.add(
@@ -293,7 +333,9 @@ pub fn record_meeting_event(event_type: &str) {
 }
 
 pub fn record_swarm_task_completed(mission_id: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_swarm_task_completed_counter();
     counter.add(
@@ -413,7 +455,9 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
 }
 
 pub fn record_mcp_tool_call(tool_name: &str, status: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_mcp_tool_calls_counter();
     counter.add(
@@ -421,31 +465,34 @@ pub fn record_mcp_tool_call(tool_name: &str, status: &str) {
         &[
             opentelemetry::KeyValue::new("tool_name", tool_name.to_string()),
             opentelemetry::KeyValue::new("status", status.to_string()),
-        ]
+        ],
     );
 }
 
 pub fn record_postgres_lock_contention(operation: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_postgres_lock_contention_counter();
     counter.add(
         1,
-        &[
-            opentelemetry::KeyValue::new("operation", operation.to_string()),
-        ]
+        &[opentelemetry::KeyValue::new(
+            "operation",
+            operation.to_string(),
+        )],
     );
 }
 
 pub fn record_llm_network_latency(model: &str, latency: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_llm_network_latency_histogram();
     histogram.record(
         latency,
-        &[
-            opentelemetry::KeyValue::new("model", model.to_string()),
-        ]
+        &[opentelemetry::KeyValue::new("model", model.to_string())],
     );
 }
 
@@ -460,14 +507,17 @@ pub fn get_task_processing_latency_histogram() -> &'static Histogram<f64> {
 }
 
 pub fn record_task_processing_latency(deployment_mode: &str, latency: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_task_processing_latency_histogram();
     histogram.record(
         latency,
-        &[
-            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-        ],
+        &[opentelemetry::KeyValue::new(
+            "deployment_mode",
+            deployment_mode.to_string(),
+        )],
     );
 }
 
@@ -512,7 +562,9 @@ pub fn get_business_event_count_total() -> &'static UpDownCounter<i64> {
 }
 
 pub fn record_mission_time_in_queue(tenant_id: &str, deployment_mode: &str, latency: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_mission_time_in_queue_histogram();
     histogram.record(
@@ -525,7 +577,9 @@ pub fn record_mission_time_in_queue(tenant_id: &str, deployment_mode: &str, late
 }
 
 pub fn record_mission_execution_latency(tenant_id: &str, deployment_mode: &str, latency: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_mission_execution_latency_histogram();
     histogram.record(
@@ -538,7 +592,9 @@ pub fn record_mission_execution_latency(tenant_id: &str, deployment_mode: &str, 
 }
 
 pub fn record_mission_failure(tenant_id: &str, deployment_mode: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_mission_failure_rate_total();
     counter.add(
@@ -551,7 +607,9 @@ pub fn record_mission_failure(tenant_id: &str, deployment_mode: &str) {
 }
 
 pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_business_event_count_total();
     counter.add(
@@ -565,10 +623,18 @@ pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type:
 }
 
 pub fn record_sub_agent_queue_delay(delay: f64, deployment_mode: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_sub_agent_queue_delay_histogram();
-    histogram.record(delay, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
+    histogram.record(
+        delay,
+        &[opentelemetry::KeyValue::new(
+            "deployment_mode",
+            deployment_mode.to_string(),
+        )],
+    );
 }
 
 pub fn autodream_sync_duration_metric_name() -> &'static str {
@@ -586,17 +652,24 @@ pub fn get_autodream_sync_duration_histogram() -> &'static Histogram<f64> {
 }
 
 pub fn record_autodream_sync_duration(duration_seconds: f64, deployment_mode: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_autodream_sync_duration_histogram();
     histogram.record(
         duration_seconds,
-        &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())],
+        &[opentelemetry::KeyValue::new(
+            "deployment_mode",
+            deployment_mode.to_string(),
+        )],
     );
 }
 
 pub fn record_task_claim_contention(mode: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_task_claim_contention_total();
     counter.add(1, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
@@ -606,7 +679,9 @@ pub async fn record_autodream_sync(
     pool: &PgPool,
     count: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -624,7 +699,9 @@ pub async fn record_llm_call_cost(
     model: &str,
     cost_usd: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -648,7 +725,8 @@ pub async fn record_llm_call_cost(
             "organization_id": organization_id,
             "model": model,
         }),
-    ).await
+    )
+    .await
 }
 
 pub async fn record_outbound_api_cost(
@@ -657,7 +735,9 @@ pub async fn record_outbound_api_cost(
     api_name: &str,
     cost_usd: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -677,7 +757,9 @@ pub async fn record_token_burn_rate_predicted_24h(
     org_id: &str,
     forecast: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -694,7 +776,9 @@ pub async fn record_autodream_sync_error(
     count: f32,
     error_type: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -711,7 +795,9 @@ pub async fn record_autodream_ingestion_error(
     count: f32,
     error_type: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -728,7 +814,9 @@ pub async fn record_autodream_compression_error(
     count: f32,
     error_type: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -744,7 +832,9 @@ pub async fn record_autodream_consolidation(
     pool: &PgPool,
     count: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -761,7 +851,9 @@ pub async fn record_sync_escalation(
     count: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -778,7 +870,9 @@ pub async fn record_sync_daemon_batch_size(
     count: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let histogram = get_sync_daemon_batch_size_histogram();
     histogram.record(
@@ -797,7 +891,9 @@ pub async fn record_sync_daemon_batch_size(
 }
 
 pub fn record_agent_execution_trace(agent_id: &str, trace_type: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_agent_execution_traces_total();
     counter.add(
@@ -814,10 +910,15 @@ pub async fn record_sync_latency(
     latency_ms: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let histogram = get_sync_latency_histogram();
-    histogram.record(latency_ms as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
+    histogram.record(
+        latency_ms as f64,
+        &[opentelemetry::KeyValue::new("mode", mode.to_string())],
+    );
 
     buffer_metric(
         pool,
@@ -834,10 +935,15 @@ pub async fn record_sync_payload_size(
     size_bytes: f32,
     mode: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let histogram = get_sync_payload_size_histogram();
-    histogram.record(size_bytes as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
+    histogram.record(
+        size_bytes as f64,
+        &[opentelemetry::KeyValue::new("mode", mode.to_string())],
+    );
 
     buffer_metric(
         pool,
@@ -855,7 +961,9 @@ pub async fn record_sync_daemon_error_total(
     mode: &str,
     error_type: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let counter = get_sync_daemon_error_total();
     counter.add(
@@ -880,7 +988,9 @@ pub async fn record_sqlite_throttled_request(
     pool: &PgPool,
     operation: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -896,7 +1006,9 @@ pub async fn record_sqlite_lock_contention(
     pool: &PgPool,
     operation: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -912,22 +1024,34 @@ pub async fn record_sqlite_retry_exhausted(
     pool: &PgPool,
     operation: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let deployment_mode = get_deployment_mode();
     let meter = global::meter("ohc.sqlite");
-    let counter = meter.u64_counter("ohc_sqlite_retry_exhausted_total").build();
-    counter.add(1, &[
-        opentelemetry::KeyValue::new("operation", operation.to_string()),
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())
-    ]);
+    let counter = meter
+        .u64_counter("ohc_sqlite_retry_exhausted_total")
+        .build();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("operation", operation.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        ],
+    );
     let deployment_mode = get_deployment_mode();
     let meter = global::meter("ohc.sqlite");
-    let counter = meter.u64_counter("ohc_sqlite_retry_exhausted_total").build();
-    counter.add(1, &[
-        opentelemetry::KeyValue::new("operation", operation.to_string()),
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())
-    ]);
+    let counter = meter
+        .u64_counter("ohc_sqlite_retry_exhausted_total")
+        .build();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("operation", operation.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        ],
+    );
     buffer_metric(
         pool,
         "ohc_sqlite_retry_exhausted_total",
@@ -939,7 +1063,9 @@ pub async fn record_sqlite_retry_exhausted(
 }
 
 pub fn record_queue_length_sync(delta: i32, deployment_mode: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     get_queue_length_gauge().add(
         delta as i64,
@@ -954,7 +1080,9 @@ pub async fn record_queue_length(
     pool: &PgPool,
     delta: i32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let deployment_mode = get_deployment_mode();
 
@@ -985,7 +1113,9 @@ pub async fn record_task_resolution_efficiency(
     tokens: i64,
     tenant_id: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let deployment_mode = get_deployment_mode();
 
@@ -1057,7 +1187,9 @@ pub async fn record_agent_cost(
     entity: &str,
     cost: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1087,7 +1219,8 @@ pub async fn record_agent_cost(
             "model": model,
             "entity": entity,
         }),
-    ).await
+    )
+    .await
 }
 
 pub async fn record_api_call_cost(
@@ -1096,7 +1229,9 @@ pub async fn record_api_call_cost(
     entity: &str,
     cost: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1116,7 +1251,9 @@ pub async fn record_mcp_proxy_connections_active(
     spiffe_id: &str,
     delta: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1134,7 +1271,9 @@ pub async fn record_swarm_job_latency_by_entity(
     entity: &str,
     latency: f64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1154,7 +1293,9 @@ pub async fn record_token_budget_alert(
     org_id: &str,
     alert_type: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1171,7 +1312,9 @@ pub async fn record_capability_violation(
     agent_id: &str,
     capability: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1188,7 +1331,9 @@ pub async fn record_rag_escalation(
     org_id: &str,
     error: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1216,7 +1361,8 @@ pub async fn buffer_metric_i64(
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
-    let tenant_id = redacted_labels.get("tenant_id")
+    let tenant_id = redacted_labels
+        .get("tenant_id")
         .or_else(|| redacted_labels.get("organization_id"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
@@ -1268,7 +1414,8 @@ pub async fn buffer_metric(
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
-    let tenant_id = redacted_labels.get("tenant_id")
+    let tenant_id = redacted_labels
+        .get("tenant_id")
         .or_else(|| redacted_labels.get("organization_id"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
@@ -1335,7 +1482,6 @@ pub fn redact_interface_pii(val: Value) -> Value {
     }
 }
 
-
 pub fn is_pii_value_pattern(s: &str) -> bool {
     static SSN_RE: OnceLock<Regex> = OnceLock::new();
     static CC_RE: OnceLock<Regex> = OnceLock::new();
@@ -1344,8 +1490,10 @@ pub fn is_pii_value_pattern(s: &str) -> bool {
 
     let ssn_re = SSN_RE.get_or_init(|| Regex::new(r"^\d{3}-\d{2}-\d{4}$").unwrap());
     let cc_re = CC_RE.get_or_init(|| Regex::new(r"^(\d{4}[- ]?){3,4}\d{1,4}$").unwrap());
-    let api_key_re = API_KEY_RE.get_or_init(|| Regex::new(r"^(sk-|ak-|tok_)[a-zA-Z0-9]{10,}").unwrap());
-    let phone_re = PHONE_RE.get_or_init(|| Regex::new(r"^\+?(\d{1,3})?[-. (]*\d{3}[-. )]*\d{3}[-. ]*\d{4}$").unwrap());
+    let api_key_re =
+        API_KEY_RE.get_or_init(|| Regex::new(r"^(sk-|ak-|tok_)[a-zA-Z0-9]{10,}").unwrap());
+    let phone_re = PHONE_RE
+        .get_or_init(|| Regex::new(r"^\+?(\d{1,3})?[-. (]*\d{3}[-. )]*\d{3}[-. ]*\d{4}$").unwrap());
 
     ssn_re.is_match(s) || cc_re.is_match(s) || api_key_re.is_match(s) || phone_re.is_match(s)
 }
@@ -1357,7 +1505,11 @@ pub fn is_sensitive_key(key: &str) -> bool {
         return false;
     }
 
-    let k: String = key.chars().filter(|c| c.is_alphanumeric()).flat_map(|c| c.to_lowercase()).collect();
+    let k: String = key
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(|c| c.to_lowercase())
+        .collect();
 
     k.contains("password")
         || k.contains("secret")
@@ -1399,20 +1551,24 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("pin")
         || k.contains("ipaddress")
         || k.contains("macaddress")
-        || k.contains("creditcard") || k.contains("deviceid") || k.contains("gps") || k.contains("latitude") || k.contains("longitude")
+        || k.contains("creditcard")
+        || k.contains("deviceid")
+        || k.contains("gps")
+        || k.contains("latitude")
+        || k.contains("longitude")
         || (k.contains("tenant") && k != "tenantid")
 }
 
 pub fn is_email(s: &str) -> bool {
     static EMAIL_RE: OnceLock<Regex> = OnceLock::new();
-    let email_re = EMAIL_RE.get_or_init(|| Regex::new(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$").unwrap());
+    let email_re = EMAIL_RE
+        .get_or_init(|| Regex::new(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$").unwrap());
     email_re.is_match(s)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_get_queue_length_gauge() {
@@ -1461,7 +1617,9 @@ pub async fn record_storage_rw_cost(
     operation: &str,
     size_bytes: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let cost_cents = (size_bytes as f64 * 0.00000001).round() as i64;
     buffer_metric_i64(
@@ -1482,7 +1640,9 @@ pub async fn record_email_send_cost(
     organization_id: &str,
     count: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     let cost_cents = count; // Assuming 1 cent per email
     buffer_metric_i64(
@@ -1510,7 +1670,9 @@ pub fn get_onboarding_duration_histogram() -> &'static Histogram<u64> {
 }
 
 pub fn track_onboarding_step(tenant_id: &str, step: &str, duration_ms: u64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
     let histogram = get_onboarding_duration_histogram();
     histogram.record(
         duration_ms,
@@ -1553,7 +1715,9 @@ pub fn get_bubblewrap_violation_total() -> &'static UpDownCounter<i64> {
 }
 
 pub fn record_bubblewrap_spawn(agent_id: &str, task_id: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let gauge = get_bubblewrap_spawn_total();
     gauge.add(
@@ -1566,7 +1730,9 @@ pub fn record_bubblewrap_spawn(agent_id: &str, task_id: &str) {
 }
 
 pub fn record_bubblewrap_execution_latency(agent_id: &str, task_id: &str, latency_ms: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_bubblewrap_execution_latency();
     histogram.record(
@@ -1579,7 +1745,9 @@ pub fn record_bubblewrap_execution_latency(agent_id: &str, task_id: &str, latenc
 }
 
 pub fn record_bubblewrap_violation(agent_id: &str, task_id: &str, reason: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let gauge = get_bubblewrap_violation_total();
     gauge.add(
@@ -1613,7 +1781,9 @@ pub fn get_harness_db_io_latency() -> &'static Histogram<f64> {
 }
 
 pub fn record_harness_init_latency(latency_seconds: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_harness_init_latency();
     let deployment_mode = get_deployment_mode();
@@ -1627,7 +1797,9 @@ pub fn record_harness_init_latency(latency_seconds: f64) {
 }
 
 pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_harness_db_io_latency();
     let deployment_mode = get_deployment_mode();
@@ -1644,7 +1816,6 @@ mod additional_tests {
     use super::*;
     use std::fs;
 
-
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
         // Just checking that `get_deployment_mode` is exported and we can use it.
@@ -1658,11 +1829,17 @@ mod additional_tests {
         assert_eq!(metric_name, "ohc_autodream_sync_duration_seconds");
         record_autodream_sync_duration(0.25, "Standalone");
 
-        let dashboard = fs::read_to_string("../monitoring/dashboards/ohc-hybrid-telemetry.json").or_else(|_| {
-            fs::read_to_string("../../monitoring/dashboards/ohc-hybrid-telemetry.json").or_else(|_| {
-                fs::read_to_string("src/server/monitoring/dashboards/ohc-hybrid-telemetry.json")
+        let dashboard = fs::read_to_string("../monitoring/dashboards/ohc-hybrid-telemetry.json")
+            .or_else(|_| {
+                fs::read_to_string("../../monitoring/dashboards/ohc-hybrid-telemetry.json").or_else(
+                    |_| {
+                        fs::read_to_string(
+                            "src/server/monitoring/dashboards/ohc-hybrid-telemetry.json",
+                        )
+                    },
+                )
             })
-        }).expect("hybrid telemetry dashboard should be readable");
+            .expect("hybrid telemetry dashboard should be readable");
         assert!(dashboard.contains(metric_name));
     }
 }
@@ -1671,7 +1848,9 @@ pub async fn record_sync_completed_count(
     pool: &PgPool,
     count: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1687,7 +1866,9 @@ pub async fn record_sync_failed_count(
     pool: &PgPool,
     count: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    if !::server_config::is_telemetry_enabled() { return Ok(()); }
+    if !::server_config::is_telemetry_enabled() {
+        return Ok(());
+    }
 
     buffer_metric(
         pool,
@@ -1745,7 +1926,9 @@ pub fn get_harness_io_bytes_total() -> &'static Counter<u64> {
 }
 
 pub fn record_harness_io_bytes(agent_id: &str, task_id: &str, bytes: u64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_harness_io_bytes_total();
     counter.add(
@@ -1760,7 +1943,6 @@ pub fn record_harness_io_bytes(agent_id: &str, task_id: &str, bytes: u64) {
 #[cfg(test)]
 mod harness_io_bytes_tests {
     use super::*;
-
 
     #[test]
     fn test_record_harness_io_bytes() {
@@ -1781,13 +1963,17 @@ pub fn get_harness_security_divergence_total() -> &'static Counter<u64> {
     HARNESS_SECURITY_DIVERGENCE_TOTAL.get_or_init(|| {
         global::meter("ohc.telemetry")
             .u64_counter("ohc_harness_security_divergence_total")
-            .with_description("Total number of security divergence validations triggered in Harness")
+            .with_description(
+                "Total number of security divergence validations triggered in Harness",
+            )
             .build()
     })
 }
 
 pub fn record_harness_security_divergence(reason: &str, command_snippet: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_harness_security_divergence_total();
     counter.add(
@@ -1820,17 +2006,24 @@ pub fn get_rag_sync_errors_total() -> &'static Counter<u64> {
 }
 
 pub fn record_rag_records_synced(count: u64, deployment_mode: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_rag_records_synced_total();
     counter.add(
         count,
-        &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())],
+        &[opentelemetry::KeyValue::new(
+            "deployment_mode",
+            deployment_mode.to_string(),
+        )],
     );
 }
 
 pub fn record_rag_sync_error(reason: &str, deployment_mode: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_rag_sync_errors_total();
     counter.add(
@@ -1842,9 +2035,9 @@ pub fn record_rag_sync_error(reason: &str, deployment_mode: &str) {
     );
 }
 
-
 pub static CHAOS_INJECTED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
-pub static TASK_RECOVERY_TIME_MS: OnceLock<opentelemetry::metrics::Histogram<f64>> = OnceLock::new();
+pub static TASK_RECOVERY_TIME_MS: OnceLock<opentelemetry::metrics::Histogram<f64>> =
+    OnceLock::new();
 
 pub fn get_chaos_injected_total() -> &'static Counter<u64> {
     CHAOS_INJECTED_TOTAL.get_or_init(|| {
@@ -1867,22 +2060,32 @@ pub fn get_task_recovery_time_ms() -> &'static opentelemetry::metrics::Histogram
 }
 
 pub fn record_chaos_injected(env_mode: &str) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let counter = get_chaos_injected_total();
     counter.add(
         1,
-        &[opentelemetry::KeyValue::new("EnvMode", env_mode.to_string())],
+        &[opentelemetry::KeyValue::new(
+            "EnvMode",
+            env_mode.to_string(),
+        )],
     );
 }
 
 pub fn record_task_recovery_time(env_mode: &str, duration_ms: f64) {
-    if !::server_config::is_telemetry_enabled() { return; }
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
 
     let histogram = get_task_recovery_time_ms();
     histogram.record(
         duration_ms,
-        &[opentelemetry::KeyValue::new("EnvMode", env_mode.to_string())],
+        &[opentelemetry::KeyValue::new(
+            "EnvMode",
+            env_mode.to_string(),
+        )],
     );
 }
 
@@ -1945,24 +2148,30 @@ pub fn get_sandbox_memory_bytes() -> &'static Gauge<f64> {
 }
 
 pub fn record_sandbox_cpu_usage(agent_id: &str, value: f64) {
-    if !::server_config::get().telemetry_enabled { return; }
+    if !::server_config::get().telemetry_enabled {
+        return;
+    }
     let gauge = get_sandbox_cpu_usage();
     gauge.record(
         value,
-        &[
-            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
-        ],
+        &[opentelemetry::KeyValue::new(
+            "agent_id",
+            agent_id.to_string(),
+        )],
     );
 }
 
 pub fn record_sandbox_memory_bytes(agent_id: &str, value: f64) {
-    if !::server_config::get().telemetry_enabled { return; }
+    if !::server_config::get().telemetry_enabled {
+        return;
+    }
     let gauge = get_sandbox_memory_bytes();
     gauge.record(
         value,
-        &[
-            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
-        ],
+        &[opentelemetry::KeyValue::new(
+            "agent_id",
+            agent_id.to_string(),
+        )],
     );
 }
 
@@ -1979,13 +2188,16 @@ pub fn get_sandbox_network_io() -> &'static Gauge<f64> {
 }
 
 pub fn record_sandbox_network_io(agent_id: &str, value: f64) {
-    if !::server_config::get().telemetry_enabled { return; }
+    if !::server_config::get().telemetry_enabled {
+        return;
+    }
     let gauge = get_sandbox_network_io();
     gauge.record(
         value,
-        &[
-            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
-        ],
+        &[opentelemetry::KeyValue::new(
+            "agent_id",
+            agent_id.to_string(),
+        )],
     );
 }
 

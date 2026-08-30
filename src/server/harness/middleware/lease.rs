@@ -227,6 +227,7 @@ mod tests {
         assert_eq!(lease.validate(wrong_attempt), Err(FenceError::WrongAttempt));
 
         lease.release();
+        lease.release();
         assert_eq!(
             lease.validate(lease.token()),
             Err(FenceError::LeaseNotActive)
@@ -240,6 +241,10 @@ mod tests {
             revoked.validate(revoked.token()),
             Err(FenceError::LeaseNotActive)
         );
+
+        let mut not_expiring = Lease::active("attempt-4", 1);
+        not_expiring.expire_at(Utc::now());
+        assert_eq!(not_expiring.state, LeaseState::Active);
     }
 
     #[test]
@@ -265,6 +270,21 @@ mod tests {
         assert_eq!(
             lease.validate(FenceToken::new(0)),
             Err(FenceError::InvalidGeneration)
+        );
+    }
+
+    #[test]
+    fn fence_tokens_render_both_scoped_and_generation_only_forms() {
+        let lease = Lease::active("attempt-1", 3);
+        assert!(lease.token().value().contains("attempt-1"));
+        assert_eq!(FenceToken::new(3).value(), "generation:3");
+
+        let now = Utc.timestamp_opt(1_700_000_000, 0).single().unwrap();
+        let mut expiring = Lease::active("attempt-4", 1);
+        expiring.expires_at = Some(now);
+        assert_eq!(
+            expiring.validate_at(expiring.token(), now),
+            Err(FenceError::Expired)
         );
     }
 }

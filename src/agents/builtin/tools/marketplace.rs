@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Master Catalog C.21. AutoGPT Unique Harness Innovations: Agent Marketplace
 /// SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
@@ -40,17 +40,24 @@ impl HttpMarketplaceProvider {
 impl MarketplaceProvider for HttpMarketplaceProvider {
     async fn search(&self, query: &str) -> Result<Vec<MarketplaceAgent>, String> {
         let url = format!("{}/search", self.registry_url);
-        let response = self.http_client.get(&url)
+        let response = self
+            .http_client
+            .get(&url)
             .query(&[("q", query)])
             .send()
             .await
             .map_err(|e| format!("Failed to search marketplace: {}", e))?;
 
         if !response.status().is_success() {
-            return Err(format!("Marketplace returned status: {}", response.status()));
+            return Err(format!(
+                "Marketplace returned status: {}",
+                response.status()
+            ));
         }
 
-        let agents: Vec<MarketplaceAgent> = response.json().await
+        let agents: Vec<MarketplaceAgent> = response
+            .json()
+            .await
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
         Ok(agents)
@@ -58,16 +65,23 @@ impl MarketplaceProvider for HttpMarketplaceProvider {
 
     async fn fetch_agent(&self, agent_id: &str) -> Result<MarketplaceAgent, String> {
         let url = format!("{}/agents/{}", self.registry_url, agent_id);
-        let response = self.http_client.get(&url)
+        let response = self
+            .http_client
+            .get(&url)
             .send()
             .await
             .map_err(|e| format!("Failed to fetch agent: {}", e))?;
 
         if !response.status().is_success() {
-            return Err(format!("Marketplace returned status: {}", response.status()));
+            return Err(format!(
+                "Marketplace returned status: {}",
+                response.status()
+            ));
         }
 
-        let agent: MarketplaceAgent = response.json().await
+        let agent: MarketplaceAgent = response
+            .json()
+            .await
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
         Ok(agent)
@@ -75,17 +89,24 @@ impl MarketplaceProvider for HttpMarketplaceProvider {
 
     async fn publish_agent(&self, agent: MarketplaceAgent) -> Result<MarketplaceAgent, String> {
         let url = format!("{}/agents", self.registry_url);
-        let response = self.http_client.post(&url)
+        let response = self
+            .http_client
+            .post(&url)
             .json(&agent)
             .send()
             .await
             .map_err(|e| format!("Failed to publish agent: {}", e))?;
 
         if !response.status().is_success() {
-            return Err(format!("Marketplace returned status: {}", response.status()));
+            return Err(format!(
+                "Marketplace returned status: {}",
+                response.status()
+            ));
         }
 
-        let published_agent: MarketplaceAgent = response.json().await
+        let published_agent: MarketplaceAgent = response
+            .json()
+            .await
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
         Ok(published_agent)
@@ -114,7 +135,9 @@ impl MarketplaceClient {
     /// Fetch a specific agent's definition
     pub async fn fetch_agent(&self, agent_id: &str) -> Result<MarketplaceAgent, String> {
         // Check cache first
-        if let Ok(cache) = self.cache.read() && let Some(agent) = cache.get(agent_id) {
+        if let Ok(cache) = self.cache.read()
+            && let Some(agent) = cache.get(agent_id)
+        {
             return Ok(agent.clone());
         }
 
@@ -172,12 +195,15 @@ pub mod test_utils {
                     author: "AutoGPT".to_string(),
                     version: "1.0.0".to_string(),
                     endpoint: "https://marketplace.example.com/agents/agent-3".to_string(),
-                }
+                },
             ];
 
             if !query.is_empty() {
                 let q_lower = query.to_lowercase();
-                results.retain(|a| a.name.to_lowercase().contains(&q_lower) || a.description.to_lowercase().contains(&q_lower));
+                results.retain(|a| {
+                    a.name.to_lowercase().contains(&q_lower)
+                        || a.description.to_lowercase().contains(&q_lower)
+                });
             }
             Ok(results)
         }
@@ -215,7 +241,10 @@ pub mod test_utils {
             }
         }
 
-        async fn publish_agent(&self, mut agent: MarketplaceAgent) -> Result<MarketplaceAgent, String> {
+        async fn publish_agent(
+            &self,
+            mut agent: MarketplaceAgent,
+        ) -> Result<MarketplaceAgent, String> {
             if agent.name == "error" {
                 return Err("Mock publish error".to_string());
             }
@@ -229,8 +258,8 @@ pub mod test_utils {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::test_utils::MockMarketplaceProvider;
+    use super::*;
 
     #[tokio::test]
     async fn test_marketplace_search() {

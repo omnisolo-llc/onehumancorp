@@ -1,13 +1,19 @@
-use sqlx::{MySqlPool, Row};
+use sqlx::{MySqlPool, PgPool, Row};
 
-const MYSQL_MIGRATION_LOCK_NAME: &str = "omnisolo_harness_middleware_v218";
-pub const HARNESS_MIDDLEWARE_MIGRATION_VERSION: i64 = 218;
+const LEGACY_HARNESS_MIDDLEWARE_MIGRATION_VERSION: i64 = 218;
+const MYSQL_MIGRATION_LOCK_NAME: &str = "omnisolo_harness_middleware_v219";
+const POSTGRES_MIGRATION_LOCK_NAME: &str = "omnisolo_harness_middleware_v219";
+pub const HARNESS_MIDDLEWARE_MIGRATION_VERSION: i64 = 219;
 pub const HARNESS_MIDDLEWARE_MIGRATION_NAME: &str = "harness_middleware";
 
 const POSTGRES_HARNESS_MIDDLEWARE_SQL: &str =
     include_str!("../migrations/218_harness_middleware.sql");
 const MYSQL_HARNESS_MIDDLEWARE_SQL: &str =
     include_str!("migrations/218_harness_middleware_mysql.sql");
+const POSTGRES_HARNESS_MIDDLEWARE_RECORDS_SQL: &str =
+    include_str!("../migrations/219_harness_middleware_records.sql");
+const MYSQL_HARNESS_MIDDLEWARE_RECORDS_SQL: &str =
+    include_str!("migrations/219_harness_middleware_records_mysql.sql");
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SqlDialect {
@@ -20,6 +26,13 @@ impl SqlDialect {
         match self {
             Self::Postgres => POSTGRES_HARNESS_MIDDLEWARE_SQL,
             Self::MySql => MYSQL_HARNESS_MIDDLEWARE_SQL,
+        }
+    }
+
+    pub fn harness_middleware_record_extension(self) -> &'static str {
+        match self {
+            Self::Postgres => POSTGRES_HARNESS_MIDDLEWARE_RECORDS_SQL,
+            Self::MySql => MYSQL_HARNESS_MIDDLEWARE_RECORDS_SQL,
         }
     }
 }
@@ -149,6 +162,84 @@ pub async fn run_mysql_harness_middleware_migration(pool: &MySqlPool) -> Result<
     }
 }
 
+pub async fn run_postgres_harness_middleware_migration(pool: &PgPool) -> Result<(), sqlx::Error> {
+    let mut connection = pool.acquire().await?;
+    sqlx::query("SELECT pg_advisory_lock(hashtext($1))")
+        .bind(POSTGRES_MIGRATION_LOCK_NAME)
+        .execute(&mut *connection)
+        .await?;
+
+    let migration_result = run_locked_postgres_migration(&mut connection).await;
+    let release_result = sqlx::query("SELECT pg_advisory_unlock(hashtext($1))")
+        .bind(POSTGRES_MIGRATION_LOCK_NAME)
+        .execute(&mut *connection)
+        .await;
+
+    match (migration_result, release_result) {
+        (Err(error), _) => Err(error),
+        (Ok(()), Err(error)) => Err(error),
+        (Ok(()), Ok(_)) => Ok(()),
+    }
+}
+
+async fn run_locked_postgres_migration(
+    connection: &mut sqlx::pool::PoolConnection<sqlx::Postgres>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS harness_middleware_schema_migrations (\
+            version BIGINT NOT NULL PRIMARY KEY,\
+            migration_name TEXT NOT NULL,\
+            applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP\
+        )",
+    )
+    .execute(&mut **connection)
+    .await?;
+
+    let applied_legacy: Option<i64> = sqlx::query_scalar(
+        "SELECT version FROM harness_middleware_schema_migrations WHERE version = $1",
+    )
+    .bind(LEGACY_HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+    .fetch_optional(&mut **connection)
+    .await?;
+
+    let applied_current: Option<i64> = sqlx::query_scalar(
+        "SELECT version FROM harness_middleware_schema_migrations WHERE version = $1",
+    )
+    .bind(HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+    .fetch_optional(&mut **connection)
+    .await?;
+    if applied_current == Some(HARNESS_MIDDLEWARE_MIGRATION_VERSION) {
+        return Ok(());
+    }
+
+    if applied_legacy.is_none() {
+        sqlx::raw_sql(SqlDialect::Postgres.harness_middleware_schema())
+            .execute(&mut **connection)
+            .await?;
+        sqlx::query(
+            "INSERT INTO harness_middleware_schema_migrations (version, migration_name) \
+             VALUES ($1, $2)",
+        )
+        .bind(LEGACY_HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+        .bind(HARNESS_MIDDLEWARE_MIGRATION_NAME)
+        .execute(&mut **connection)
+        .await?;
+    }
+
+    sqlx::raw_sql(SqlDialect::Postgres.harness_middleware_record_extension())
+        .execute(&mut **connection)
+        .await?;
+    sqlx::query(
+        "INSERT INTO harness_middleware_schema_migrations (version, migration_name) \
+         VALUES ($1, $2)",
+    )
+    .bind(HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+    .bind(HARNESS_MIDDLEWARE_MIGRATION_NAME)
+    .execute(&mut **connection)
+    .await?;
+    Ok(())
+}
+
 async fn run_locked_mysql_migration(
     connection: &mut sqlx::pool::PoolConnection<sqlx::MySql>,
 ) -> Result<(), sqlx::Error> {
@@ -162,18 +253,39 @@ async fn run_locked_mysql_migration(
     .execute(&mut **connection)
     .await?;
 
-    let applied: Option<i64> =
+    let applied_legacy: Option<i64> =
+        sqlx::query("SELECT version FROM harness_middleware_schema_migrations WHERE version = ?")
+            .bind(LEGACY_HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+            .fetch_optional(&mut **connection)
+            .await?
+            .map(|row| row.get("version"));
+
+    let applied_current: Option<i64> =
         sqlx::query("SELECT version FROM harness_middleware_schema_migrations WHERE version = ?")
             .bind(HARNESS_MIDDLEWARE_MIGRATION_VERSION)
             .fetch_optional(&mut **connection)
             .await?
             .map(|row| row.get("version"));
 
-    if applied == Some(HARNESS_MIDDLEWARE_MIGRATION_VERSION) {
+    if applied_current == Some(HARNESS_MIDDLEWARE_MIGRATION_VERSION) {
         return Ok(());
     }
 
-    for statement in split_sql_statements(SqlDialect::MySql.harness_middleware_schema()) {
+    if applied_legacy.is_none() {
+        for statement in split_sql_statements(SqlDialect::MySql.harness_middleware_schema()) {
+            sqlx::query(&statement).execute(&mut **connection).await?;
+        }
+        sqlx::query(
+            "INSERT INTO harness_middleware_schema_migrations (version, migration_name) \
+             VALUES (?, ?)",
+        )
+        .bind(LEGACY_HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+        .bind(HARNESS_MIDDLEWARE_MIGRATION_NAME)
+        .execute(&mut **connection)
+        .await?;
+    }
+
+    for statement in split_sql_statements(SqlDialect::MySql.harness_middleware_record_extension()) {
         sqlx::query(&statement).execute(&mut **connection).await?;
     }
 

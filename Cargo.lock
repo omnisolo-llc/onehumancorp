@@ -5975,6 +5975,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "omnisolo_harness_worker"
+version = "0.1.0"
+dependencies = [
+ "axum 0.8.9",
+ "reqwest 0.12.28",
+ "serde_json",
+ "server_harness",
+ "server_ohc",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.12.3",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8867,6 +8884,8 @@ dependencies = [
  "serde",
  "server_config",
  "sqlx",
+ "temp-env",
+ "tempfile",
 ]
 
 [[package]]
@@ -8875,6 +8894,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "serde",
+ "temp-env",
  "tracing",
 ]
 
@@ -8883,18 +8903,25 @@ name = "server_harness"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "axum 0.8.9",
  "chrono",
+ "futures-util",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "prost 0.13.5",
  "regex",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "server_common",
+ "server_ohc",
  "server_telemetry",
  "sha2",
  "sqlx",
  "tokio",
+ "tokio-stream",
+ "tonic 0.12.3",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",

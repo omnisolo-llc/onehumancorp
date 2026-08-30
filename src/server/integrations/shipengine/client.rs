@@ -13,7 +13,11 @@ impl ShipengineClient {
         }
     }
 
-    pub async fn create_label(&self, carrier_id: &str, service_code: &str) -> Result<String, String> {
+    pub async fn create_label(
+        &self,
+        carrier_id: &str,
+        service_code: &str,
+    ) -> Result<String, String> {
         let url = "https://api.shipengine.com/v1/labels".to_string();
         let payload = serde_json::json!({
             "shipment": {
@@ -48,7 +52,9 @@ impl ShipengineClient {
             }
         });
 
-        let res = self.http_client.post(&url)
+        let res = self
+            .http_client
+            .post(&url)
             .header("API-Key", &self.api_key)
             .json(&payload)
             .send()

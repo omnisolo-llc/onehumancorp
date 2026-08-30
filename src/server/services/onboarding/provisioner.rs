@@ -1,10 +1,14 @@
+use opentelemetry::global;
 use std::fs;
 use std::path::Path;
-use opentelemetry::global;
 
 pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
-    let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
-    
+    let base_dir = if is_cloud {
+        ".ohc-cloud-data"
+    } else {
+        ".ohc-local-data"
+    };
+
     let dirs = vec![
         format!("{}/db", base_dir),
         format!("{}/blob", base_dir),
@@ -12,7 +16,8 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     ];
 
     for dir in dirs {
-        fs::create_dir_all(&dir).map_err(|e| format!("Failed to create directory {}: {}", dir, e))?;
+        fs::create_dir_all(&dir)
+            .map_err(|e| format!("Failed to create directory {}: {}", dir, e))?;
         tracing::debug!("Successfully created directory: {}", dir);
     }
 
@@ -20,13 +25,17 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
         .u64_counter("ohc.provisioner.environments_created")
         .build()
         .add(1, &[]);
-    
+
     Ok(())
 }
 
 pub fn check_environment(is_cloud: bool) -> Result<(), String> {
-    let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
-    
+    let base_dir = if is_cloud {
+        ".ohc-cloud-data"
+    } else {
+        ".ohc-local-data"
+    };
+
     let dirs = vec![
         format!("{}/db", base_dir),
         format!("{}/blob", base_dir),
@@ -44,17 +53,21 @@ pub fn check_environment(is_cloud: bool) -> Result<(), String> {
 }
 
 pub fn cleanup_environment(is_cloud: bool) -> Result<(), String> {
-    let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
-    
+    let base_dir = if is_cloud {
+        ".ohc-cloud-data"
+    } else {
+        ".ohc-local-data"
+    };
+
     if Path::new(base_dir).exists() {
         fs::remove_dir_all(base_dir).map_err(|e| e.to_string())?;
     }
-    
+
     global::meter("ohc.onboarding")
         .u64_counter("ohc.provisioner.environments_cleaned")
         .build()
         .add(1, &[]);
-    
+
     Ok(())
 }
 
@@ -102,7 +115,9 @@ mod tests {
 
     #[test]
     fn test_check_environment_local() {
-        if std::path::Path::new(".ohc-local-data").exists() { fs::remove_dir_all(".ohc-local-data").unwrap(); }
+        if std::path::Path::new(".ohc-local-data").exists() {
+            fs::remove_dir_all(".ohc-local-data").unwrap();
+        }
 
         let res = check_environment(false);
         assert!(res.is_err());
@@ -116,7 +131,9 @@ mod tests {
 
     #[test]
     fn test_check_environment_cloud() {
-        if std::path::Path::new(".ohc-cloud-data").exists() { fs::remove_dir_all(".ohc-cloud-data").unwrap(); }
+        if std::path::Path::new(".ohc-cloud-data").exists() {
+            fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        }
 
         let res = check_environment(true);
         assert!(res.is_err());

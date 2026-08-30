@@ -299,6 +299,14 @@ pub enum AdapterError {
     RecoveryNotAllowed,
 }
 
+impl std::fmt::Display for AdapterError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{self:?}")
+    }
+}
+
+impl std::error::Error for AdapterError {}
+
 impl From<EventStoreError> for AdapterError {
     fn from(error: EventStoreError) -> Self {
         Self::EventStore(error)
@@ -728,6 +736,7 @@ impl OmniSoloHarnessAdapter {
             records,
             workspace_snapshot_digests: Vec::new(),
             artifact_digests: Vec::new(),
+            local_service_bindings: Vec::new(),
             created_at: Utc::now(),
         };
         CapsuleCompiler::new("omnisolo", "omnisolo.portable.v2", 1)
@@ -1014,7 +1023,7 @@ mod tests {
 
     #[test]
     fn omni_solo_run_creates_session_task_and_task_level_attempt() {
-        let run = OmniSoloHarnessAdapter::start(
+        let mut run = OmniSoloHarnessAdapter::start(
             OmniSoloRunConfig::new("tenant-1", "finish the task")
                 .with_worker("worker-1")
                 .with_idempotency_key("request-1")
@@ -1031,6 +1040,13 @@ mod tests {
             run.events()[0].idempotency_key.as_deref(),
             Some("request-1")
         );
+        run.last_event_id = None;
+        run.last_durable_event_id = None;
+        let duplicate = run
+            .record(OmniSoloEvent::RunStarted { iteration: 0 })
+            .expect("duplicate event is accepted idempotently");
+        assert!(duplicate.duplicate);
+        assert_eq!(run.events().len(), 1);
     }
 
     #[test]
@@ -1336,6 +1352,20 @@ mod tests {
             attempt.attempt_id == run.attempt().attempt_id
                 && attempt.parent_attempt_id == Some(old_attempt_id)
         }));
+
+        let mut task_only = OmniSoloHarnessAdapter::start(
+            OmniSoloRunConfig::new("tenant-1", "retry without a turn").without_turn(),
+        )
+        .unwrap();
+        task_only
+            .record(OmniSoloEvent::TaskError {
+                error: "task-only failure".to_owned(),
+            })
+            .unwrap();
+        task_only
+            .begin_recovery_attempt("worker-task-only")
+            .unwrap();
+        assert!(task_only.turn().is_none());
     }
 
     #[test]
@@ -1384,5 +1414,43 @@ mod tests {
         assert_eq!(run.events().len(), event_count);
         assert_eq!(run.last_durable_sequence(), durable_sequence);
         assert_eq!(run.canonical_records.len(), canonical_count);
+    }
+
+    #[test]
+    fn adapter_errors_have_transport_safe_display_text() {
+        assert!(!AdapterError::EmptyTenant.to_string().is_empty());
+        assert!(!AdapterError::RecoveryNotAllowed.to_string().is_empty());
+        assert!(matches!(
+            AdapterError::from(LeaseError::Terminal),
+            AdapterError::Lease(LeaseError::Terminal)
+        ));
+        assert!(matches!(
+            AdapterError::from(CapsuleError::IntegrityMismatch("record".to_owned())),
+            AdapterError::Capsule(CapsuleError::IntegrityMismatch(_))
+        ));
+    }
+
+    #[test]
+    fn task_events_without_turns_keep_optional_turn_state_absent() {
+        let mut run = OmniSoloHarnessAdapter::start(
+            OmniSoloRunConfig::new("tenant-1", "finish without a turn").without_turn(),
+        )
+        .unwrap();
+        assert_eq!(run.lease().lease_id, run.fence_token().lease_id.unwrap());
+        run.record(OmniSoloEvent::TaskError {
+            error: "failed".to_owned(),
+        })
+        .unwrap();
+
+        let mut waiting = OmniSoloHarnessAdapter::start(
+            OmniSoloRunConfig::new("tenant-1", "wait without a turn").without_turn(),
+        )
+        .unwrap();
+        waiting
+            .record(OmniSoloEvent::UserInterventionRequired {
+                error: "approval".to_owned(),
+            })
+            .unwrap();
+        assert!(waiting.turn().is_none());
     }
 }

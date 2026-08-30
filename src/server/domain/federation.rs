@@ -1,5 +1,3 @@
-
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -107,6 +105,10 @@ mod tests {
         assert_eq!(got.status, "BUSY");
 
         // Update Missing Agent Status
-        assert!(registry.update_agent_status("agent-not-found", "BUSY").is_err());
+        assert!(
+            registry
+                .update_agent_status("agent-not-found", "BUSY")
+                .is_err()
+        );
     }
 }

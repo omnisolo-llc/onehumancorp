@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""Launch Kimi ACP with an explicitly configured OpenAI-compatible provider."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import tempfile
+from pathlib import Path
+from typing import MutableMapping
+from urllib.parse import urlsplit
+
+
+def _valid_base_url(value: str) -> bool:
+    if any(character.isspace() or ord(character) < 32 or ord(character) == 127 for character in value):
+        return False
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme in {"http", "https"}
+        and bool(parsed.netloc)
+        and parsed.hostname is not None
+        and parsed.username is None
+        and parsed.password is None
+        and parsed.query == ""
+        and parsed.fragment == ""
+        and (port is None or 0 < port <= 65_535)
+    )
+
+
+def prepare_static_provider(environment: MutableMapping[str, str]) -> bool:
+    """Materialize non-secret Kimi configuration for OmniSolo's provider route."""
+    api_key = environment.get("OPENAI_API_KEY", "").strip()
+    base_url = environment.get("OPENAI_API_BASE_URL", "").strip()
+    model = environment.get("OPENAI_MODEL", "").strip()
+    if (
+        not api_key
+        or not _valid_base_url(base_url)
+        or not model
+        or any(ord(character) < 32 or ord(character) == 127 for character in model)
+    ):
+        return False
+
+    environment["OPENAI_BASE_URL"] = base_url
+    share_dir_value = environment.get("KIMI_SHARE_DIR", "").strip()
+    if share_dir_value:
+        share_dir = Path(share_dir_value)
+    else:
+        temporary_root = Path(environment.get("TMPDIR", tempfile.gettempdir()))
+        share_dir = temporary_root / f"omnisolo-kimi-{os.getpid()}"
+        environment["KIMI_SHARE_DIR"] = str(share_dir)
+    share_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    share_dir.chmod(0o700)
+
+    config = {
+        "default_model": model,
+        "default_thinking": False,
+        "telemetry": False,
+        "providers": {
+            "omnisolo": {
+                "type": "openai_responses",
+                "base_url": base_url,
+                "api_key": "",
+            }
+        },
+        "models": {
+            model: {
+                "provider": "omnisolo",
+                "model": model,
+                "max_context_size": 262_144,
+                "capabilities": ["thinking"],
+            }
+        },
+    }
+    config_path = share_dir / "config.json"
+    descriptor = os.open(
+        config_path,
+        os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+        0o600,
+    )
+    with os.fdopen(descriptor, "w", encoding="utf-8") as config_file:
+        json.dump(config, config_file, separators=(",", ":"), sort_keys=True)
+        config_file.write("\n")
+    config_path.chmod(0o600)
+    return True
+
+
+def _server(static_provider_configured: bool):
+    from kimi_cli.acp.server import ACPServer
+
+    class OmniSoloKimiACPServer(ACPServer):
+        def _check_auth(self) -> None:
+            if static_provider_configured:
+                return
+            super()._check_auth()
+
+    return OmniSoloKimiACPServer()
+
+
+def main() -> None:
+    import acp
+    from kimi_cli.app import enable_logging
+    from kimi_cli.utils.logging import logger
+
+    configured = prepare_static_provider(os.environ)
+    enable_logging()
+    logger.info("Starting OmniSolo Kimi ACP bridge on stdio")
+    asyncio.run(acp.run_agent(_server(configured), use_unstable_protocol=True))
+
+
+if __name__ == "__main__":
+    main()

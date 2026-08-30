@@ -54,7 +54,12 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     let input_tokens = if t_type == "input" { count } else { 0 };
                     let output_tokens = if t_type == "output" { count } else { 0 };
 
-                    let cost_usd = ::server_pricing::calculator::calculate_cost(model, input_tokens, output_tokens, 0);
+                    let cost_usd = ::server_pricing::calculator::calculate_cost(
+                        model,
+                        input_tokens,
+                        output_tokens,
+                        0,
+                    );
 
                     let model_string = model.to_string();
                     let tenant_id = item
@@ -68,18 +73,34 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                     let model_clone = model_string.clone();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
-                        let _ = ::server_telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
+                        let _ = ::server_telemetry::record_llm_call_cost(
+                            &pool,
+                            &tenant_id,
+                            &model_string,
+                            cost_usd,
+                        )
+                        .await;
                         let cost_cents = (cost_usd * 100.0).round() as i64;
                         let labels_cents = serde_json::json!({
                             "tenant_id": tenant_id.clone(),
                             "model": model_string.clone()
                         });
-                        let _ = ::server_telemetry::buffer_metric_i64(&pool, "ohc_llm_cost_total_cents", "counter", cost_cents, labels_cents).await;
+                        let _ = ::server_telemetry::buffer_metric_i64(
+                            &pool,
+                            "ohc_llm_cost_total_cents",
+                            "counter",
+                            cost_cents,
+                            labels_cents,
+                        )
+                        .await;
 
                         if let Ok(redis_url) = std::env::var("REDIS_URL") {
                             if let Ok(client) = redis::Client::open(redis_url) {
-                                let limiter = ::server_pricing::rate_limit::RedisRateLimiter::new(client);
-                                let _ = limiter.record_token_usage(&tenant_id, &model_clone, count_clone).await;
+                                let limiter =
+                                    ::server_pricing::rate_limit::RedisRateLimiter::new(client);
+                                let _ = limiter
+                                    .record_token_usage(&tenant_id, &model_clone, count_clone)
+                                    .await;
                             }
                         }
                     });
@@ -115,13 +136,26 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .to_string();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
-                        let _ = ::server_telemetry::record_outbound_api_cost(&pool, &tenant_id, &api_string, cost_usd).await;
+                        let _ = ::server_telemetry::record_outbound_api_cost(
+                            &pool,
+                            &tenant_id,
+                            &api_string,
+                            cost_usd,
+                        )
+                        .await;
                         let cost_cents = (cost_usd * 100.0).round() as i64;
                         let labels_cents = serde_json::json!({
                             "tenant_id": tenant_id.clone(),
                             "api": api_string.clone()
                         });
-                        let _ = ::server_telemetry::buffer_metric_i64(&pool, "ohc_llm_cost_total_cents", "counter", cost_cents, labels_cents).await;
+                        let _ = ::server_telemetry::buffer_metric_i64(
+                            &pool,
+                            "ohc_llm_cost_total_cents",
+                            "counter",
+                            cost_cents,
+                            labels_cents,
+                        )
+                        .await;
                     });
                 }
             }
@@ -187,7 +221,14 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 }
                 let pool = crate::db::get_pool();
                 let redacted_labels = ::server_telemetry::redact_interface_pii(item.labels.clone());
-                let _ = ::server_telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, redacted_labels).await;
+                let _ = ::server_telemetry::buffer_metric(
+                    &pool,
+                    &item.metric_name,
+                    &item.metric_type,
+                    item.value,
+                    redacted_labels,
+                )
+                .await;
 
                 // Ignore other metrics in cloud
                 tracing::trace!(

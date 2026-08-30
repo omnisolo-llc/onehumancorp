@@ -23,6 +23,7 @@ rust_library(
         "//src/proto:organization_prost",
         "//src/proto:invoice_tonic",
         "//src/proto:harness_middleware_prost",
+        "//src/proto:harness_middleware_tonic",
         "@crates//:tonic",
     ],
 )

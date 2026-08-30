@@ -734,4 +734,36 @@ mod tests {
             HandoffState::Activating => HandoffState::Failed,
         );
     }
+
+    #[test]
+    fn every_lifecycle_family_and_unknown_state_has_explicit_semantics() {
+        assert_eq!(SessionState::family(), LifecycleFamily::Session);
+        assert_eq!(TaskState::family(), LifecycleFamily::Task);
+        assert_eq!(TurnState::family(), LifecycleFamily::Turn);
+        assert_eq!(AttemptState::family(), LifecycleFamily::Attempt);
+        assert_eq!(ToolCallState::family(), LifecycleFamily::ToolCall);
+        assert_eq!(InteractionState::family(), LifecycleFamily::Interaction);
+        assert_eq!(ProcessState::family(), LifecycleFamily::Process);
+        assert_eq!(BindingState::family(), LifecycleFamily::Binding);
+        assert_eq!(HandoffState::family(), LifecycleFamily::Handoff);
+
+        assert!(!SessionState::Unknown.is_terminal());
+        assert!(!TaskState::Unknown.is_terminal());
+        assert!(!TurnState::Unknown.is_terminal());
+        assert!(!AttemptState::Unknown.is_terminal());
+        assert!(!ToolCallState::Unknown.is_terminal());
+        assert!(InteractionState::Unknown.is_terminal());
+        assert!(ProcessState::Unknown.is_terminal());
+        assert!(BindingState::Error.is_terminal());
+
+        assert!(!SessionState::Open.can_transition_to(&SessionState::Open));
+        assert!(!TaskState::Unknown.can_transition_to(&TaskState::Queued));
+        assert!(!TurnState::Unknown.can_transition_to(&TurnState::Queued));
+        assert!(!AttemptState::Unknown.can_transition_to(&AttemptState::Pending));
+        assert!(!ToolCallState::Unknown.can_transition_to(&ToolCallState::Pending));
+        assert!(!InteractionState::Unknown.can_transition_to(&InteractionState::Pending));
+        assert!(!ProcessState::Unknown.can_transition_to(&ProcessState::Pending));
+        assert!(!BindingState::Error.can_transition_to(&BindingState::Creating));
+        assert!(!HandoffState::Completed.can_transition_to(&HandoffState::Requested));
+    }
 }

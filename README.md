@@ -3,9 +3,21 @@
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
-## Built-in Agent Harness
+## Agent Harnesses
 
-The OmniSolo platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code. Note: One Human Corp was the beta name of the beta software, now formally named and launched as OmniSolo Desktop/Mobile/Cloud.
+OmniSolo retains its first-party harness while exposing a session/task-based
+middleware for Codex app-server v2, OpenCode, DeepSeek Harness, Pi, Kimi ACP,
+OpenHands Agent Server, and AgentBoardTT OpenHarness. Portable session capsules,
+canonical events, model bindings, and fenced worker leases allow a task to move
+between harnesses without transferring credentials or process authority. Each
+harness worker and model-runtime pool can scale independently in Docker Compose
+or Kubernetes.
+
+The public OpenAI-compatible worker contract is `OPENAI_API_KEY`,
+`OPENAI_API_BASE_URL`, `OPENAI_MODEL`, and `OPENAI_REASONING_EFFORT`; the default
+model and effort are `gpt-5.6-luna` and `max`. See the
+[harness compatibility inventory](docs/omnisolo-harness-compatibility-inventory.md)
+for native protocol and lifecycle support.
 
 ### Visual/Low-Code Orchestration
 

@@ -95,9 +95,15 @@ impl ClaudeSubagentSpawner {
                 // Spawn a background OS thread to represent the separate terminal pane.
                 // We use a new current-thread tokio runtime because the subagent.run future is !Send.
                 let _handle = std::thread::spawn(move || {
-                    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+                    let rt = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .unwrap();
                     rt.block_on(async {
-                        let result = match self_clone.execute_and_summarize(&task_clone, &sub_config_clone).await {
+                        let result = match self_clone
+                            .execute_and_summarize(&task_clone, &sub_config_clone)
+                            .await
+                        {
                             Ok(res) => res,
                             Err(e) => format!("Subagent failed: {}", e),
                         };
@@ -115,7 +121,9 @@ impl ClaudeSubagentSpawner {
 
                 loop {
                     if start_time.elapsed() > timeout_duration {
-                        return Err("Teammate execution timed out waiting for outbox response".into());
+                        return Err(
+                            "Teammate execution timed out waiting for outbox response".into()
+                        );
                     }
 
                     if fs::try_exists(&out_mbox).await.unwrap_or(false) {
@@ -448,9 +456,7 @@ mod tests {
 
         let long_output = "Long raw output from subagent in fork mode...".repeat(100);
         let sub_client = Arc::new(MockLlmClient {
-            responses: std::sync::Mutex::new(vec![
-                long_output.clone(),
-            ]),
+            responses: std::sync::Mutex::new(vec![long_output.clone()]),
         });
         let subagent = Arc::new(Agent::new(sub_client, vec![]));
 

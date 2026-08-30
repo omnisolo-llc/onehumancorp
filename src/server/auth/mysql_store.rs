@@ -1,8 +1,8 @@
-use async_trait::async_trait;
-use sqlx::MySqlPool;
 use super::User;
-use chrono::{DateTime, Utc};
 use super::user_repository::UserRepository;
+use async_trait::async_trait;
+use chrono::{DateTime, Utc};
+use sqlx::MySqlPool;
 
 fn is_multitenant_mode() -> bool {
     #[cfg(test)]
@@ -71,14 +71,21 @@ impl UserRepository for MySqlUserRepository {
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = ? AND tenant_id = ?";
-        let row_opt = sqlx::query(query).bind(id).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query)
+            .bind(id)
+            .bind(org_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles_json: serde_json::Value = row
+            .try_get("roles")
+            .unwrap_or_else(|_| serde_json::Value::Null);
         let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
@@ -98,14 +105,21 @@ impl UserRepository for MySqlUserRepository {
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = ? AND tenant_id = ?";
-        let row_opt = sqlx::query(query).bind(username).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query)
+            .bind(username)
+            .bind(org_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles_json: serde_json::Value = row
+            .try_get("roles")
+            .unwrap_or_else(|_| serde_json::Value::Null);
         let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
@@ -125,14 +139,21 @@ impl UserRepository for MySqlUserRepository {
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = ? AND tenant_id = ?";
-        let row_opt = sqlx::query(query).bind(email).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query)
+            .bind(email)
+            .bind(org_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles_json: serde_json::Value = row
+            .try_get("roles")
+            .unwrap_or_else(|_| serde_json::Value::Null);
         let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
@@ -191,14 +212,21 @@ impl UserRepository for MySqlUserRepository {
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = ? AND tenant_id = ?";
-        let row_opt = sqlx::query(query).bind(sub).bind(org_id).fetch_optional(&self.pool).await.map_err(|e| e.to_string())?;
+        let row_opt = sqlx::query(query)
+            .bind(sub)
+            .bind(org_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let row = match row_opt {
             Some(r) => r,
             None => return Err("user not found".to_string()),
         };
 
-        let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+        let roles_json: serde_json::Value = row
+            .try_get("roles")
+            .unwrap_or_else(|_| serde_json::Value::Null);
         let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
         Ok(User {
@@ -218,11 +246,17 @@ impl UserRepository for MySqlUserRepository {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
         let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = ? ORDER BY created_at";
-        let rows = sqlx::query(query).bind(org_id).fetch_all(&self.pool).await.map_err(|e| e.to_string())?;
+        let rows = sqlx::query(query)
+            .bind(org_id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
         for row in rows {
-            let roles_json: serde_json::Value = row.try_get("roles").unwrap_or_else(|_| serde_json::Value::Null);
+            let roles_json: serde_json::Value = row
+                .try_get("roles")
+                .unwrap_or_else(|_| serde_json::Value::Null);
             let roles: Vec<String> = serde_json::from_value(roles_json).unwrap_or_default();
 
             users.push(User {
@@ -274,7 +308,12 @@ impl UserRepository for MySqlUserRepository {
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let query = "DELETE FROM users WHERE id = ? AND tenant_id = ?";
-        let res = sqlx::query(query).bind(id).bind(org_id).execute(&self.pool).await.map_err(|e: sqlx::Error| e.to_string())?;
+        let res = sqlx::query(query)
+            .bind(id)
+            .bind(org_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e: sqlx::Error| e.to_string())?;
 
         if res.rows_affected() == 0 {
             return Err("user not found or unauthorized".to_string());
@@ -282,7 +321,12 @@ impl UserRepository for MySqlUserRepository {
         Ok(())
     }
 
-    async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
+    async fn revoke_token(
+        &self,
+        jti: String,
+        exp: DateTime<Utc>,
+        org_id: &str,
+    ) -> Result<(), String> {
         validate_org_id!(org_id);
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
@@ -291,7 +335,7 @@ impl UserRepository for MySqlUserRepository {
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES (?, ?, ?)
             ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at)
-            "#
+            "#,
         )
         .bind(jti)
         .bind(exp)
@@ -301,7 +345,12 @@ impl UserRepository for MySqlUserRepository {
         .map_err(|e: sqlx::Error| e.to_string())?;
 
         let now = chrono::Utc::now();
-        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < ? AND tenant_id = ?").bind(now).bind(org_id).execute(&mut *tx).await.map_err(|e: sqlx::Error| e.to_string())?;
+        sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < ? AND tenant_id = ?")
+            .bind(now)
+            .bind(org_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e: sqlx::Error| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
@@ -327,8 +376,8 @@ impl UserRepository for MySqlUserRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::mysql::MySqlPoolOptions;
     use chrono::Utc;
+    use sqlx::mysql::MySqlPoolOptions;
 
     async fn get_mysql_db() -> Option<MySqlUserRepository> {
         if let Ok(url) = std::env::var("OHC_DATABASE_URL") {
@@ -368,7 +417,9 @@ mod tests {
             oidc_subject: None,
         };
 
-        repo.create_user(user.clone(), "tenant-mysql").await.unwrap();
+        repo.create_user(user.clone(), "tenant-mysql")
+            .await
+            .unwrap();
 
         // Get by ID
         let fetched = repo.get_by_id(&user_id, "tenant-mysql").await.unwrap();
@@ -376,7 +427,10 @@ mod tests {
         assert_eq!(fetched.username, username);
 
         // Get by username
-        let fetched_by_uname = repo.get_by_username(&username, "tenant-mysql").await.unwrap();
+        let fetched_by_uname = repo
+            .get_by_username(&username, "tenant-mysql")
+            .await
+            .unwrap();
         assert_eq!(fetched_by_uname.id, user_id);
 
         // Get by email
@@ -384,20 +438,32 @@ mod tests {
         assert_eq!(fetched_by_email.id, user_id);
 
         // Get by login identifier
-        let logged_in = repo.get_by_login_identifier(&username, "tenant-mysql").await.unwrap().unwrap();
+        let logged_in = repo
+            .get_by_login_identifier(&username, "tenant-mysql")
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(logged_in.id, user_id);
 
         // Update user
         let mut updated_user = user.clone();
         updated_user.roles = vec!["user".to_string()];
-        repo.update_user(updated_user, "tenant-mysql").await.unwrap();
+        repo.update_user(updated_user, "tenant-mysql")
+            .await
+            .unwrap();
 
         let fetched_updated = repo.get_by_id(&user_id, "tenant-mysql").await.unwrap();
         assert_eq!(fetched_updated.roles, vec!["user".to_string()]);
 
         // Revoke token
         let jti = uuid::Uuid::new_v4().to_string();
-        repo.revoke_token(jti.clone(), Utc::now() + chrono::Duration::hours(1), "tenant-mysql").await.unwrap();
+        repo.revoke_token(
+            jti.clone(),
+            Utc::now() + chrono::Duration::hours(1),
+            "tenant-mysql",
+        )
+        .await
+        .unwrap();
         assert!(repo.is_revoked(&jti, "tenant-mysql").await.unwrap());
 
         // Delete user

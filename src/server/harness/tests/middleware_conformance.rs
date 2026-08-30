@@ -13,6 +13,9 @@ use server_harness::middleware::inference::{
     InferenceGateway, InferenceRequest, RuntimeWorker, WorkerState,
 };
 use server_harness::middleware::lease::FenceError;
+use server_harness::middleware::local_services::{
+    LocalServiceKind, LocalServiceRegistry, LocalServiceScopeContext,
+};
 use server_harness::middleware::types::{
     BindingAccessMode, BindingScope, BindingState, ModelDescriptor, ModelProvider,
     ModelRuntimeDescriptor, ModelRuntimeKind, RuntimeAutoscaling, RuntimeCapacity,
@@ -369,4 +372,71 @@ fn handoff_fixture_requires_loss_ack_and_fences_source_before_target() {
         coordinator.binding(target_id).unwrap().state,
         BindingState::Active
     );
+}
+
+#[test]
+fn shared_service_bindings_remain_visible_across_harnesses_without_cross_workspace_authority() {
+    let registry = LocalServiceRegistry::with_defaults();
+    let session_id = Uuid::new_v4();
+    let task_id = Uuid::new_v4();
+    let attempt_id = Uuid::new_v4();
+    let context = LocalServiceScopeContext::for_attempt(
+        "tenant-shared-services",
+        Some("project-shared"),
+        Some("workspace-shared"),
+        session_id,
+        Some(task_id),
+        Some(attempt_id),
+    );
+
+    let first_harness = registry.resolve(context.clone()).unwrap();
+    let second_harness = registry.resolve(context.clone()).unwrap();
+    registry.validate(&first_harness, &context).unwrap();
+    registry.validate(&second_harness, &context).unwrap();
+    assert_eq!(first_harness.bindings.len(), 8);
+    assert_eq!(second_harness.bindings.len(), 8);
+
+    for kind in [
+        LocalServiceKind::Memory,
+        LocalServiceKind::Workspace,
+        LocalServiceKind::Artifact,
+        LocalServiceKind::Mcp,
+        LocalServiceKind::Browser,
+        LocalServiceKind::Cache,
+        LocalServiceKind::Integration,
+        LocalServiceKind::ProviderFacade,
+    ] {
+        let first = first_harness.binding(kind).unwrap();
+        let second = second_harness.binding(kind).unwrap();
+        assert_ne!(first.binding_id, second.binding_id);
+        assert_eq!(first.service_id, second.service_id);
+        assert_eq!(first.scope, second.scope);
+        assert_eq!(first.configuration_digest, second.configuration_digest);
+        assert_eq!(first.tenant_id, "tenant-shared-services");
+        assert_eq!(first.workspace_id.as_deref(), Some("workspace-shared"));
+    }
+
+    registry
+        .authorize(
+            first_harness.binding(LocalServiceKind::Memory).unwrap(),
+            &context,
+            "memory.write",
+        )
+        .unwrap();
+    registry
+        .authorize(
+            second_harness.binding(LocalServiceKind::Artifact).unwrap(),
+            &context,
+            "artifact.read",
+        )
+        .unwrap();
+
+    let mut other_workspace = context;
+    other_workspace.workspace_id = Some("workspace-other".to_owned());
+    assert!(registry
+        .validate(&first_harness, &other_workspace)
+        .is_err());
+    let encoded = serde_json::to_string(&first_harness).unwrap();
+    assert!(!encoded.contains("authority"));
+    assert!(!encoded.contains("secret"));
 }

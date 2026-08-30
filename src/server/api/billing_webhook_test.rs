@@ -1,14 +1,11 @@
-use axum::{
-    routing::post,
-    Router,
-};
+use axum::{Router, routing::post};
 use serde_json::json;
 
-use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
-use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
+use crate::api::billing_webhook::{WebhookState, stripe_webhook_handler};
 use crate::db::DB;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::mesh::CentrifugeNode;
+use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use ohc_builtin_agent::mesh::transport::InProcessTransport;
 use std::sync::Arc;
 
@@ -43,11 +40,14 @@ fn payment_success_extracts_inventory_locks_for_release() {
 
     let locks = crate::api::billing_webhook::inventory_locks_for_payment_success(&object);
 
-    assert_eq!(locks, vec![
-        "ohc:lock:tenant-1:inventory:prod-1:sess-1".to_string(),
-        "ohc:lock:tenant-1:inventory:prod-2:sess-1".to_string(),
-        "ohc:lock:tenant-1:inventory:prod-3:sess-1".to_string(),
-    ]);
+    assert_eq!(
+        locks,
+        vec![
+            "ohc:lock:tenant-1:inventory:prod-1:sess-1".to_string(),
+            "ohc:lock:tenant-1:inventory:prod-2:sess-1".to_string(),
+            "ohc:lock:tenant-1:inventory:prod-3:sess-1".to_string(),
+        ]
+    );
 }
 
 #[tokio::test]
@@ -63,15 +63,26 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
 
     #[async_trait::async_trait]
     impl PaymentFailureNotifier for RecordingNotifier {
-        async fn send_payment_failure_sms(&self, subscriber_id: &str, message: &str) -> Result<(), String> {
-            self.sent.lock().unwrap().push((subscriber_id.to_string(), message.to_string()));
+        async fn send_payment_failure_sms(
+            &self,
+            subscriber_id: &str,
+            message: &str,
+        ) -> Result<(), String> {
+            self.sent
+                .lock()
+                .unwrap()
+                .push((subscriber_id.to_string(), message.to_string()));
             Ok(())
         }
     }
 
     #[async_trait::async_trait]
     impl PaymentFailureMessageGenerator for FixedGenerator {
-        async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String {
+        async fn generate_payment_failure_message(
+            &self,
+            subscriber_id: &str,
+            business_name: &str,
+        ) -> String {
             format!("{business_name}:{subscriber_id}:update payment")
         }
     }
@@ -143,23 +154,24 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
     });
 
     let processed = crate::api::billing_webhook::process_invoice_payment_failed(
-        &state,
-        &object,
-        &notifier,
-        &generator,
+        &state, &object, &notifier, &generator,
     )
     .await
     .expect("failed-payment processing should succeed");
 
     assert_eq!(processed.as_deref(), Some("subscriber_failed_payment"));
-    let row: (String,) = sqlx::query_as("SELECT status FROM subscribers WHERE id = 'subscriber_failed_payment'")
-        .fetch_one(&state.db.pool)
-        .await
-        .expect("subscriber status should be readable");
+    let row: (String,) =
+        sqlx::query_as("SELECT status FROM subscribers WHERE id = 'subscriber_failed_payment'")
+            .fetch_one(&state.db.pool)
+            .await
+            .expect("subscriber status should be readable");
     assert_eq!(row.0, "PAST_DUE");
     assert_eq!(
         sent.lock().unwrap().as_slice(),
-        &[("subscriber_failed_payment".to_string(), "Maya Cakes:subscriber_failed_payment:update payment".to_string())]
+        &[(
+            "subscriber_failed_payment".to_string(),
+            "Maya Cakes:subscriber_failed_payment:update payment".to_string()
+        )]
     );
 }
 
@@ -202,7 +214,10 @@ async fn test_stripe_webhook_handler_completed() {
 
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
-        .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .route_layer(axum::middleware::from_fn_with_state(
+            webhook_state.clone(),
+            crate::api::billing_webhook::webhook_security_middleware,
+        ))
         .with_state(webhook_state);
 
     let payload = json!({
@@ -227,7 +242,13 @@ async fn test_stripe_webhook_handler_completed() {
     let client_req = reqwest::Client::new();
     let now = chrono::Utc::now().timestamp();
     let valid_sig = format!("t={},v1=valid_sig", now);
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).header("X-Signature", valid_sig).json(&payload).send().await.unwrap();
+    let response = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .header("X-Signature", valid_sig)
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Verify Redis Tier
@@ -282,7 +303,10 @@ async fn test_stripe_webhook_handler_deleted() {
 
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
-        .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .route_layer(axum::middleware::from_fn_with_state(
+            webhook_state.clone(),
+            crate::api::billing_webhook::webhook_security_middleware,
+        ))
         .with_state(webhook_state);
 
     let payload = json!({
@@ -306,7 +330,13 @@ async fn test_stripe_webhook_handler_deleted() {
     let client_req = reqwest::Client::new();
     let now = chrono::Utc::now().timestamp();
     let valid_sig = format!("t={},v1=valid_sig", now);
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr)).header("X-Signature", valid_sig).json(&payload).send().await.unwrap();
+    let response = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .header("X-Signature", valid_sig)
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Verify Redis Tier
@@ -324,10 +354,12 @@ async fn test_stripe_webhook_handler_deleted() {
 
 #[tokio::test]
 async fn test_mercadopago_webhook_handler_payment_created() {
+    use crate::api::billing_webhook::{
+        MercadoPagoEvent, MercadoPagoEventData, WebhookState, mercadopago_webhook_handler,
+    };
+    use axum::extract::{Json, State};
     use axum::http::StatusCode;
-    use axum::extract::{State, Json};
     use axum::response::IntoResponse;
-    use crate::api::billing_webhook::{mercadopago_webhook_handler, WebhookState, MercadoPagoEvent, MercadoPagoEventData};
     use std::sync::Arc;
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
@@ -371,23 +403,29 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         },
     };
 
-    let response = mercadopago_webhook_handler(State(state), Json(event)).await.into_response();
+    let response = mercadopago_webhook_handler(State(state), Json(event))
+        .await
+        .into_response();
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn test_webhook_security_invalid_signature() {
+    use crate::api::billing_webhook::{WebhookState, stripe_webhook_handler};
     use axum::routing::post;
-    use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let client = match redis::Client::open(redis_url) {
         Ok(c) => c,
         Err(_) => return,
     };
-    if client.get_multiplexed_async_connection().await.is_err() { return; }
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
 
-    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client.clone()));
+    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(
+        client.clone(),
+    ));
     let db = match DB::new().await {
         Ok(d) => d,
         Err(_) => return,
@@ -406,36 +444,50 @@ async fn test_webhook_security_invalid_signature() {
 
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
-        .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .route_layer(axum::middleware::from_fn_with_state(
+            webhook_state.clone(),
+            crate::api::billing_webhook::webhook_security_middleware,
+        ))
         .with_state(webhook_state);
 
-    let payload = json!({ "id": "evt_invalid_sig", "type": "checkout.session.completed", "data": {} });
+    let payload =
+        json!({ "id": "evt_invalid_sig", "type": "checkout.session.completed", "data": {} });
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move { axum::serve(listener, app).await.unwrap(); });
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
 
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+    let response = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
         .header("X-Signature", "invalid")
-        .json(&payload).send().await.unwrap();
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
 
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]
 async fn test_webhook_security_expired_timestamp() {
+    use crate::api::billing_webhook::{WebhookState, stripe_webhook_handler};
     use axum::routing::post;
-    use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let client = match redis::Client::open(redis_url) {
         Ok(c) => c,
         Err(_) => return,
     };
-    if client.get_multiplexed_async_connection().await.is_err() { return; }
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
 
-    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client.clone()));
+    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(
+        client.clone(),
+    ));
     let db = match DB::new().await {
         Ok(d) => d,
         Err(_) => return,
@@ -454,37 +506,51 @@ async fn test_webhook_security_expired_timestamp() {
 
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
-        .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .route_layer(axum::middleware::from_fn_with_state(
+            webhook_state.clone(),
+            crate::api::billing_webhook::webhook_security_middleware,
+        ))
         .with_state(webhook_state);
 
-    let payload = json!({ "id": "evt_expired_ts", "type": "checkout.session.completed", "data": {} });
+    let payload =
+        json!({ "id": "evt_expired_ts", "type": "checkout.session.completed", "data": {} });
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move { axum::serve(listener, app).await.unwrap(); });
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
 
     let expired_ts = chrono::Utc::now().timestamp() - 600; // 10 minutes ago
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+    let response = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
         .header("X-Signature", format!("t={},v1=abc", expired_ts))
-        .json(&payload).send().await.unwrap();
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
 
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]
 async fn test_webhook_security_replay_protection() {
+    use crate::api::billing_webhook::{WebhookState, stripe_webhook_handler};
     use axum::routing::post;
-    use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let client = match redis::Client::open(redis_url) {
         Ok(c) => c,
         Err(_) => return,
     };
-    if client.get_multiplexed_async_connection().await.is_err() { return; }
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
 
-    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client.clone()));
+    let rate_limiter = std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(
+        client.clone(),
+    ));
     let db = match DB::new().await {
         Ok(d) => d,
         Err(_) => return,
@@ -503,29 +569,43 @@ async fn test_webhook_security_replay_protection() {
 
     let app = Router::new()
         .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
-        .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), crate::api::billing_webhook::webhook_security_middleware))
+        .route_layer(axum::middleware::from_fn_with_state(
+            webhook_state.clone(),
+            crate::api::billing_webhook::webhook_security_middleware,
+        ))
         .with_state(webhook_state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
-    tokio::spawn(async move { axum::serve(listener, app).await.unwrap(); });
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
 
-    let payload = json!({ "id": "evt_replay_test", "type": "checkout.session.completed", "data": {} });
+    let payload =
+        json!({ "id": "evt_replay_test", "type": "checkout.session.completed", "data": {} });
     let ts = chrono::Utc::now().timestamp();
     let sig = format!("t={},v1=abc", ts);
 
     let client_req = reqwest::Client::new();
 
     // First request should be 200 OK
-    let response1 = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+    let response1 = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
         .header("X-Signature", &sig)
-        .json(&payload).send().await.unwrap();
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
     assert_eq!(response1.status(), reqwest::StatusCode::OK);
 
     // Second request with same ID should also be 200 OK (idempotent ignore)
-    let response2 = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+    let response2 = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
         .header("X-Signature", &sig)
-        .json(&payload).send().await.unwrap();
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
     assert_eq!(response2.status(), reqwest::StatusCode::OK);
 }
 
@@ -588,7 +668,8 @@ async fn test_stripe_webhook_pos_transaction() {
     });
 
     let client_req = reqwest::Client::new();
-    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+    let response = client_req
+        .post(format!("http://{}/api/v1/webhooks/stripe", addr))
         .json(&payload)
         .send()
         .await

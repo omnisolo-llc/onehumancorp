@@ -43,7 +43,47 @@ async fn mysql_harness_middleware_migration_is_idempotent() {
     .await
     .expect("read MySQL harness migration marker");
 
-    assert_eq!(table_count, 22);
+    assert_eq!(table_count, 56);
+    assert_eq!(migration_count, 1);
+    pool.close().await;
+}
+
+#[tokio::test]
+#[ignore = "requires OMNISOLO_HARNESS_POSTGRES_URL pointing at a disposable PostgreSQL database"]
+async fn postgres_harness_middleware_migration_is_idempotent() {
+    let url = std::env::var("OMNISOLO_HARNESS_POSTGRES_URL")
+        .expect("OMNISOLO_HARNESS_POSTGRES_URL must be set for this test");
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&url)
+        .await
+        .expect("connect to PostgreSQL test database");
+
+    server_lib::db::sql_middleware::run_postgres_harness_middleware_migration(&pool)
+        .await
+        .expect("apply PostgreSQL harness middleware migration");
+    server_lib::db::sql_middleware::run_postgres_harness_middleware_migration(&pool)
+        .await
+        .expect("reapply PostgreSQL harness middleware migration");
+
+    let table_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM information_schema.tables \
+         WHERE table_schema = current_schema() \
+           AND table_name LIKE 'harness_%' \
+           AND table_name <> 'harness_middleware_schema_migrations'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("count PostgreSQL harness tables");
+    let migration_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM harness_middleware_schema_migrations WHERE version = $1",
+    )
+    .bind(server_lib::db::sql_middleware::HARNESS_MIDDLEWARE_MIGRATION_VERSION)
+    .fetch_one(&pool)
+    .await
+    .expect("read PostgreSQL harness migration marker");
+
+    assert_eq!(table_count, 56);
     assert_eq!(migration_count, 1);
     pool.close().await;
 }

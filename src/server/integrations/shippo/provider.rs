@@ -1,4 +1,4 @@
-use super::client::{ShippoClient, ShippoRate, PurchaseLabelResponse};
+use super::client::{PurchaseLabelResponse, ShippoClient, ShippoRate};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
@@ -29,11 +29,15 @@ impl ShippoProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 
-    pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<ShippoRate>, String> {
+    pub async fn fetch_rates(
+        &self,
+        weight: f64,
+        dimensions: &str,
+    ) -> Result<Vec<ShippoRate>, String> {
         self._client.fetch_rates(weight, dimensions).await
     }
 
@@ -62,7 +66,11 @@ mod tests {
 }
 
 impl ShippoProvider {
-    pub async fn generate_and_email_label(&self, rate_id: &str, _email: &str) -> Result<PurchaseLabelResponse, String> {
+    pub async fn generate_and_email_label(
+        &self,
+        rate_id: &str,
+        _email: &str,
+    ) -> Result<PurchaseLabelResponse, String> {
         let response = self.purchase_label(rate_id).await?;
         // Mock emailing tracking numbers to the customer
         Ok(response)

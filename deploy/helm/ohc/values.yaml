@@ -200,3 +200,267 @@ valkey:
     runAsUser: 1000
   service:
     port: 6379
+harnessWorkers:
+  enabled: false
+  image: omnisolo/harness-worker:0.1.0
+  imagePullPolicy: IfNotPresent
+  defaultReplicas: 1
+  defaultGrpcPort: 8090
+  defaultHealthPort: 8091
+  terminationGracePeriodSeconds: 120
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  workers:
+    - id: omnisolo
+      harnessId: omnisolo
+      poolId: omnisolo
+      image: omnisolo/harness-worker:0.1.0
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: &openaiSecretEnv
+        - name: OPENAI_API_KEY
+          secretName: omnisolo-openai
+          key: api-key
+    - id: codex
+      harnessId: codex
+      poolId: codex
+      image: omnisolo/harness-worker-codex:0.149.0
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: codex
+        OMNISOLO_HARNESS_ARGS_JSON: '["app-server","--stdio"]'
+        OMNISOLO_HARNESS_PROTOCOL: codex_app_server
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: opencode
+      harnessId: opencode
+      poolId: opencode
+      image: omnisolo/harness-worker-opencode:1.18.15
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: opencode
+        OMNISOLO_HARNESS_ARGS_JSON: '[]'
+        OMNISOLO_HARNESS_PROTOCOL: opencode_http
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: deepseek
+      harnessId: deepseek
+      poolId: deepseek
+      image: omnisolo/harness-worker-deepseek:0.1.1-rc.2
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: dsh-jsonrpc-agent
+        OMNISOLO_HARNESS_ARGS_JSON: '["/etc/omnisolo/deepseek/cordis.yml"]'
+        OMNISOLO_HARNESS_PROTOCOL: deepseek_json_rpc
+        DSH_CORDIS_CONFIG: /etc/omnisolo/deepseek/cordis.yml
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: pi
+      harnessId: pi
+      poolId: pi
+      image: omnisolo/harness-worker-pi:0.73.1
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: pi
+        OMNISOLO_HARNESS_ARGS_JSON: '["--mode","rpc","--no-session"]'
+        OMNISOLO_HARNESS_PROTOCOL: pi_rpc
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: kimi
+      harnessId: kimi
+      poolId: kimi
+      image: omnisolo/harness-worker-kimi:1.49.0
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: omnisolo-kimi-acp
+        OMNISOLO_HARNESS_ARGS_JSON: '[]'
+        OMNISOLO_HARNESS_PROTOCOL: kimi_acp
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: openhands
+      harnessId: openhands
+      poolId: openhands
+      image: omnisolo/harness-worker-openhands:1.43.1
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: openhands-agent-server
+        OMNISOLO_HARNESS_ARGS_JSON: '[]'
+        OMNISOLO_HARNESS_PROTOCOL: openhands_http
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: openharness
+      harnessId: openharness
+      poolId: openharness
+      image: omnisolo/harness-worker-openharness:0.6.0
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: python3
+        OMNISOLO_HARNESS_ARGS_JSON: '["/opt/omnisolo/openharness_bridge.py"]'
+        OMNISOLO_HARNESS_PROTOCOL: openharness_sdk
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: aider
+      harnessId: aider
+      poolId: aider
+      image: omnisolo/harness-worker-aider:0.86.0
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim
+        OMNISOLO_HARNESS_ARGS_JSON: '[]'
+        OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
+        OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: "90"
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: goose
+      harnessId: goose
+      poolId: goose
+      image: omnisolo/harness-worker-goose:1.33.1
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim
+        OMNISOLO_HARNESS_ARGS_JSON: '[]'
+        OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
+        OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: "90"
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: open-interpreter
+      harnessId: open-interpreter
+      poolId: open-interpreter
+      image: omnisolo/harness-worker-open-interpreter:0.4.2
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim
+        OMNISOLO_HARNESS_ARGS_JSON: '[]'
+        OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
+        OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: "90"
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+    - id: plandex
+      harnessId: plandex
+      poolId: plandex
+      image: omnisolo/harness-worker-plandex:2.2.1
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env:
+        OMNISOLO_HARNESS_EXECUTABLE: omnisolo-openai-shim
+        OMNISOLO_HARNESS_ARGS_JSON: '[]'
+        OMNISOLO_HARNESS_PROTOCOL: openai_compatible_shim
+        OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS: "90"
+        OPENAI_API_BASE_URL: https://llmapi.omnisolo.co/v1
+        OPENAI_MODEL: gpt-5.6-luna
+        OPENAI_REASONING_EFFORT: max
+      secretEnv: *openaiSecretEnv
+modelRuntimeWorkers:
+  # Disabled until a serving engine image is selected. The pool is intentionally
+  # separate from harness workers so model capacity can scale independently.
+  enabled: false
+  image: omnisolo/model-runtime-worker:latest
+  imagePullPolicy: IfNotPresent
+  defaultReplicas: 1
+  defaultGrpcPort: 8096
+  defaultHealthPort: 8097
+  resources:
+    limits:
+      cpu: 1
+      memory: 2Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  workers:
+    - id: default
+      runtimeId: managed-api
+      poolId: model-default
+      replicas: 1
+      autoscaling:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 5
+        targetCPUUtilizationPercentage: 70
+      env: {}

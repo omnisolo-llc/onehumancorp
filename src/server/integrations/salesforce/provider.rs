@@ -66,11 +66,7 @@ impl SalesforceProvider {
             .await
     }
 
-    pub async fn update_contact(
-        &self,
-        id: &str,
-        fields: &serde_json::Value,
-    ) -> Result<(), String> {
+    pub async fn update_contact(&self, id: &str, fields: &serde_json::Value) -> Result<(), String> {
         self.client.update_contact(id, fields).await
     }
 
@@ -110,10 +106,7 @@ impl SalesforceProvider {
         self.client.search(search_term).await
     }
 
-    pub async fn describe_object(
-        &self,
-        object_name: &str,
-    ) -> Result<serde_json::Value, String> {
+    pub async fn describe_object(&self, object_name: &str) -> Result<serde_json::Value, String> {
         self.client.describe_object(object_name).await
     }
 }
@@ -148,10 +141,8 @@ mod tests {
             "https://yourorg.salesforce.com".to_string(),
             "test-token".to_string(),
         ));
-        let provider = SalesforceProvider::with_client(
-            client,
-            "https://yourorg.salesforce.com".to_string(),
-        );
+        let provider =
+            SalesforceProvider::with_client(client, "https://yourorg.salesforce.com".to_string());
         assert_eq!(provider.metadata.id, "salesforce");
     }
 }

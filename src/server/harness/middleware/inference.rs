@@ -1,9 +1,326 @@
 use std::collections::{BTreeSet, HashMap};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use uuid::Uuid;
 
-use super::types::ModelDescriptor;
+use super::types::{ModelApiDialect, ModelDescriptor, ReasoningEffort, ResolvedModelSelection};
+
+#[derive(Clone)]
+pub struct OpenAiResponsesClient {
+    client: reqwest::Client,
+    endpoint: reqwest::Url,
+    api_key: String,
+}
+
+impl std::fmt::Debug for OpenAiResponsesClient {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("OpenAiResponsesClient")
+            .field("endpoint", &self.endpoint)
+            .field("api_key", &"<configured>")
+            .finish()
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct ProviderInferenceResult {
+    pub response_id: String,
+    pub model: String,
+    pub text: String,
+    pub usage: Usage,
+    pub binding_revision: String,
+    pub binding_digest: String,
+    pub native: Value,
+}
+
+#[derive(Debug)]
+pub enum OpenAiResponsesError {
+    InvalidConfiguration(String),
+    Transport(String),
+    Provider { status: u16, message: String },
+    InvalidResponse(String),
+}
+
+impl std::fmt::Display for OpenAiResponsesError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidConfiguration(message) => {
+                write!(
+                    formatter,
+                    "invalid OpenAI Responses configuration: {message}"
+                )
+            }
+            Self::Transport(message) => {
+                write!(formatter, "OpenAI Responses transport failed: {message}")
+            }
+            Self::Provider { status, message } => {
+                write!(
+                    formatter,
+                    "OpenAI Responses provider returned HTTP {status}: {message}"
+                )
+            }
+            Self::InvalidResponse(message) => {
+                write!(formatter, "invalid OpenAI Responses payload: {message}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for OpenAiResponsesError {}
+
+impl OpenAiResponsesClient {
+    pub fn new(
+        base_url: impl AsRef<str>,
+        api_key: impl Into<String>,
+        request_timeout: Duration,
+    ) -> Result<Self, OpenAiResponsesError> {
+        let base_url = base_url.as_ref().trim().trim_end_matches('/');
+        let parsed = reqwest::Url::parse(base_url).map_err(|_| {
+            OpenAiResponsesError::InvalidConfiguration(
+                "base URL must be an absolute HTTP(S) URL".to_owned(),
+            )
+        })?;
+        if !matches!(parsed.scheme(), "http" | "https")
+            || parsed.host_str().is_none()
+            || !parsed.username().is_empty()
+            || parsed.password().is_some()
+            || parsed.query().is_some()
+            || parsed.fragment().is_some()
+        {
+            return Err(OpenAiResponsesError::InvalidConfiguration(
+                "base URL must not contain credentials, query parameters, or fragments".to_owned(),
+            ));
+        }
+        let api_key = api_key.into();
+        if api_key.trim().is_empty() || api_key.chars().any(char::is_control) {
+            return Err(OpenAiResponsesError::InvalidConfiguration(
+                "API key must be non-empty and contain no control characters".to_owned(),
+            ));
+        }
+        if request_timeout.is_zero() {
+            return Err(OpenAiResponsesError::InvalidConfiguration(
+                "request timeout must be greater than zero".to_owned(),
+            ));
+        }
+        let endpoint = reqwest::Url::parse(&format!("{base_url}/responses")).map_err(|_| {
+            OpenAiResponsesError::InvalidConfiguration("Responses endpoint is invalid".to_owned())
+        })?;
+        let client = reqwest::Client::builder()
+            .timeout(request_timeout)
+            .build()
+            .map_err(|error| OpenAiResponsesError::Transport(error.to_string()))?;
+        Ok(Self {
+            client,
+            endpoint,
+            api_key,
+        })
+    }
+
+    pub async fn execute(
+        &self,
+        selection: &ResolvedModelSelection,
+        prompt: &str,
+    ) -> Result<ProviderInferenceResult, OpenAiResponsesError> {
+        validate_provider_selection(selection)?;
+        if prompt.trim().is_empty() {
+            return Err(OpenAiResponsesError::InvalidConfiguration(
+                "prompt must be non-empty".to_owned(),
+            ));
+        }
+        let mut body = json!({
+            "model": selection.model_id.trim(),
+            "input": prompt,
+            "stream": false,
+        });
+        if let Some(effort) = &selection.reasoning_effort {
+            body["reasoning"] = json!({"effort": reasoning_effort_name(effort)?});
+        }
+        if let Some(max_output_tokens) = selection.max_output_tokens {
+            body["max_output_tokens"] = Value::from(max_output_tokens);
+        }
+        let response = self
+            .client
+            .post(self.endpoint.clone())
+            .bearer_auth(&self.api_key)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|error| {
+                OpenAiResponsesError::Transport(redact_secret(&error.to_string(), &self.api_key))
+            })?;
+        let status = response.status();
+        let payload = response.json::<Value>().await.map_err(|error| {
+            OpenAiResponsesError::InvalidResponse(redact_secret(&error.to_string(), &self.api_key))
+        })?;
+        if !status.is_success() {
+            let message = payload
+                .pointer("/error/message")
+                .and_then(Value::as_str)
+                .or_else(|| payload.get("message").and_then(Value::as_str))
+                .unwrap_or("provider rejected the request");
+            return Err(OpenAiResponsesError::Provider {
+                status: status.as_u16(),
+                message: redact_secret(message, &self.api_key),
+            });
+        }
+        decode_provider_response(payload, selection)
+    }
+}
+
+fn validate_provider_selection(
+    selection: &ResolvedModelSelection,
+) -> Result<(), OpenAiResponsesError> {
+    if selection.api_dialect != ModelApiDialect::OpenAiResponses {
+        return Err(OpenAiResponsesError::InvalidConfiguration(
+            "model selection must use the OpenAI Responses dialect".to_owned(),
+        ));
+    }
+    if selection.provider_route.trim().is_empty()
+        || selection.model_id.trim().is_empty()
+        || selection.model_id.chars().any(char::is_control)
+    {
+        return Err(OpenAiResponsesError::InvalidConfiguration(
+            "provider route and model id must be non-empty".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn reasoning_effort_name(effort: &ReasoningEffort) -> Result<&'static str, OpenAiResponsesError> {
+    match effort {
+        ReasoningEffort::None => Ok("none"),
+        ReasoningEffort::Minimal => Ok("minimal"),
+        ReasoningEffort::Low => Ok("low"),
+        ReasoningEffort::Medium => Ok("medium"),
+        ReasoningEffort::High => Ok("high"),
+        ReasoningEffort::Max => Ok("max"),
+        ReasoningEffort::Custom => Err(OpenAiResponsesError::InvalidConfiguration(
+            "custom reasoning effort cannot be translated to Responses".to_owned(),
+        )),
+    }
+}
+
+fn decode_provider_response(
+    payload: Value,
+    selection: &ResolvedModelSelection,
+) -> Result<ProviderInferenceResult, OpenAiResponsesError> {
+    if required_provider_string(payload.get("status"), "response status")? != "completed" {
+        return Err(OpenAiResponsesError::InvalidResponse(
+            "response status must be completed".to_owned(),
+        ));
+    }
+    let response_id = required_provider_string(payload.get("id"), "response id")?.to_owned();
+    let model = required_provider_string(payload.get("model"), "response model")?.to_owned();
+    let output = payload
+        .get("output")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            OpenAiResponsesError::InvalidResponse("output must be an array".to_owned())
+        })?;
+    let mut text = String::new();
+    for item in output {
+        let Some(content) = item.get("content").and_then(Value::as_array) else {
+            continue;
+        };
+        for part in content {
+            if part.get("type").and_then(Value::as_str) == Some("output_text") {
+                text.push_str(required_provider_string(part.get("text"), "output text")?);
+            }
+        }
+    }
+    if text.is_empty() {
+        return Err(OpenAiResponsesError::InvalidResponse(
+            "response contained no output text".to_owned(),
+        ));
+    }
+    let usage = payload
+        .get("usage")
+        .and_then(Value::as_object)
+        .ok_or_else(|| {
+            OpenAiResponsesError::InvalidResponse("usage must be an object".to_owned())
+        })?;
+    let input_tokens = required_provider_u64(usage.get("input_tokens"), "input tokens")?;
+    let output_tokens = required_provider_u64(usage.get("output_tokens"), "output tokens")?;
+    let cached_tokens = usage
+        .get("input_tokens_details")
+        .and_then(Value::as_object)
+        .and_then(|details| details.get("cached_tokens"))
+        .map(|value| required_provider_u64(Some(value), "cached tokens"))
+        .transpose()?
+        .unwrap_or(0);
+    Ok(ProviderInferenceResult {
+        response_id,
+        model,
+        text,
+        usage: Usage {
+            input_tokens,
+            output_tokens,
+            cached_tokens,
+        },
+        binding_revision: selection.binding_revision.clone(),
+        binding_digest: selection.binding_digest.clone(),
+        native: sanitize_provider_json(&payload),
+    })
+}
+
+fn required_provider_string<'a>(
+    value: Option<&'a Value>,
+    field: &str,
+) -> Result<&'a str, OpenAiResponsesError> {
+    value
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty() && !value.chars().any(char::is_control))
+        .ok_or_else(|| OpenAiResponsesError::InvalidResponse(format!("{field} is invalid")))
+}
+
+fn required_provider_u64(value: Option<&Value>, field: &str) -> Result<u64, OpenAiResponsesError> {
+    value
+        .and_then(Value::as_u64)
+        .ok_or_else(|| OpenAiResponsesError::InvalidResponse(format!("{field} is invalid")))
+}
+
+fn sanitize_provider_json(value: &Value) -> Value {
+    match value {
+        Value::Object(object) => Value::Object(
+            object
+                .iter()
+                .map(|(key, value)| {
+                    let normalized = key
+                        .chars()
+                        .filter(|character| character.is_ascii_alphanumeric())
+                        .flat_map(char::to_lowercase)
+                        .collect::<String>();
+                    let value = if [
+                        "apikey",
+                        "accesstoken",
+                        "refreshtoken",
+                        "authorization",
+                        "password",
+                        "secret",
+                        "credential",
+                        "cookie",
+                    ]
+                    .iter()
+                    .any(|marker| normalized.contains(marker))
+                    {
+                        Value::String("[REDACTED]".to_owned())
+                    } else {
+                        sanitize_provider_json(value)
+                    };
+                    (key.clone(), value)
+                })
+                .collect(),
+        ),
+        Value::Array(values) => Value::Array(values.iter().map(sanitize_provider_json).collect()),
+        other => other.clone(),
+    }
+}
+
+fn redact_secret(message: &str, secret: &str) -> String {
+    message.replace(secret, "[REDACTED]")
+}
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -433,10 +750,12 @@ impl InferenceGateway {
             )
         };
         self.release_capacity(lease_id, &worker_id, CapacityLeaseState::Released);
-        if let Some(request) = self.requests.get_mut(&request_id) {
-            request.state = InferenceState::Completed;
-            request.state_version += 1;
-        }
+        let request = self
+            .requests
+            .get_mut(&request_id)
+            .expect("every admission belongs to a request");
+        request.state = InferenceState::Completed;
+        request.state_version += 1;
         Ok(())
     }
 
@@ -466,10 +785,12 @@ impl InferenceGateway {
             )
         };
         self.release_capacity(lease_id, &worker_id, CapacityLeaseState::Released);
-        if let Some(request) = self.requests.get_mut(&request_id) {
-            request.state = InferenceState::Cancelled;
-            request.state_version += 1;
-        }
+        let request = self
+            .requests
+            .get_mut(&request_id)
+            .expect("every admission belongs to a request");
+        request.state = InferenceState::Cancelled;
+        request.state_version += 1;
         Ok(())
     }
 
@@ -490,7 +811,8 @@ impl InferenceGateway {
                 admission.state_version,
                 admission.state_version,
                 InferenceState::Uncertain,
-            )?;
+            )
+            .expect("validated admission state must transition to uncertain");
             admission.state = next.0;
             admission.state_version = next.1;
             (
@@ -500,10 +822,12 @@ impl InferenceGateway {
             )
         };
         self.release_capacity(lease_id, &worker_id, CapacityLeaseState::Lost);
-        if let Some(request) = self.requests.get_mut(&request_id) {
-            request.state = InferenceState::Uncertain;
-            request.state_version += 1;
-        }
+        let request = self
+            .requests
+            .get_mut(&request_id)
+            .expect("every admission belongs to a request");
+        request.state = InferenceState::Uncertain;
+        request.state_version += 1;
         Ok(())
     }
 
@@ -551,10 +875,12 @@ impl InferenceGateway {
         admission.chunks.clear();
         admission.final_response = None;
         admission.usage = None;
-        if let Some(request) = self.requests.get_mut(&request_id) {
-            request.state = InferenceState::Admitted;
-            request.state_version += 2;
-        }
+        let request = self
+            .requests
+            .get_mut(&request_id)
+            .expect("every admission belongs to a request");
+        request.state = InferenceState::Admitted;
+        request.state_version += 2;
         Ok(())
     }
 
@@ -575,10 +901,12 @@ impl InferenceGateway {
         }
         admission.state = InferenceState::Cancelled;
         admission.state_version += 1;
-        if let Some(request) = self.requests.get_mut(&request_id) {
-            request.state = InferenceState::Cancelled;
-            request.state_version += 1;
-        }
+        let request = self
+            .requests
+            .get_mut(&request_id)
+            .expect("every admission belongs to a request");
+        request.state = InferenceState::Cancelled;
+        request.state_version += 1;
         Ok(())
     }
 
@@ -712,6 +1040,49 @@ mod tests {
 
     use super::super::types::{ModelDescriptor, ModelProvider};
     use super::*;
+
+    #[test]
+    fn provider_native_usage_is_not_mistaken_for_a_credential() {
+        let native = sanitize_provider_json(&serde_json::json!({
+            "usage": {
+                "input_tokens": 7,
+                "output_tokens": 4,
+                "input_tokens_details": {"cached_tokens": 2}
+            },
+            "api_key": "must-redact"
+        }));
+        assert_eq!(native["usage"]["input_tokens"], 7);
+        assert_eq!(native["usage"]["output_tokens"], 4);
+        assert_eq!(native["usage"]["input_tokens_details"]["cached_tokens"], 2);
+        assert_eq!(native["api_key"], "[REDACTED]");
+    }
+
+    #[test]
+    fn provider_response_requires_a_completed_terminal_status() {
+        let selection = ResolvedModelSelection {
+            provider_route: "openai-compatible".to_owned(),
+            model_id: "gpt-5.6-luna".to_owned(),
+            reasoning_effort: Some(ReasoningEffort::Max),
+            api_dialect: ModelApiDialect::OpenAiResponses,
+            context_window: None,
+            max_output_tokens: None,
+            capabilities: BTreeSet::new(),
+            binding_revision: "binding-v1".to_owned(),
+            binding_digest: "sha256:test".to_owned(),
+            metadata: Default::default(),
+        };
+        let payload = serde_json::json!({
+            "id": "resp_failed",
+            "status": "failed",
+            "model": "gpt-5.6-luna",
+            "output": [{"content": [{"type": "output_text", "text": "partial"}]}],
+            "usage": {"input_tokens": 1, "output_tokens": 1}
+        });
+        assert!(matches!(
+            decode_provider_response(payload, &selection),
+            Err(OpenAiResponsesError::InvalidResponse(_))
+        ));
+    }
 
     fn worker(worker_id: &str, revision: &str, capabilities: &[&str], slots: u32) -> RuntimeWorker {
         RuntimeWorker {
@@ -1055,6 +1426,16 @@ mod tests {
     }
 
     #[test]
+    fn release_capacity_is_idempotent_for_missing_entries() {
+        let mut gateway = InferenceGateway::new();
+        gateway.release_capacity(
+            Uuid::new_v4(),
+            "missing-worker",
+            CapacityLeaseState::Released,
+        );
+    }
+
+    #[test]
     fn capacity_generation_overflow_is_rejected() {
         let mut gateway = InferenceGateway::new();
         gateway
@@ -1074,5 +1455,233 @@ mod tests {
             gateway.reassign_capacity(admission.capacity_lease_id),
             Err(InferenceError::GenerationOverflow)
         );
+    }
+
+    #[test]
+    fn inference_rejects_missing_state_and_fence_paths() {
+        let mut gateway = InferenceGateway::new();
+        gateway
+            .register_worker(worker("worker-1", "rev-1", &["tool_use"], 1))
+            .unwrap();
+        let missing = Uuid::new_v4();
+        assert_eq!(gateway.admit(missing), Err(InferenceError::RequestNotFound));
+        assert_eq!(
+            gateway.reassign_capacity(missing),
+            Err(InferenceError::CapacityLeaseNotFound)
+        );
+        assert_eq!(
+            gateway.cancel_uncertain(missing),
+            Err(InferenceError::AdmissionNotFound)
+        );
+
+        let invalid_id = Uuid::new_v4();
+        let mut invalid_request = request(invalid_id, "invalid", &["tool_use"], 100, false);
+        invalid_request.state = InferenceState::Streaming;
+        gateway.submit(invalid_request).unwrap();
+        assert_eq!(
+            gateway.admit(invalid_id),
+            Err(InferenceError::InvalidInferenceState)
+        );
+
+        let request_id = Uuid::new_v4();
+        gateway
+            .submit(request(request_id, "digest", &["tool_use"], 100, false))
+            .unwrap();
+        let admission = gateway.admit(request_id).unwrap();
+        assert_eq!(
+            gateway.admit(request_id).unwrap().admission_id,
+            admission.admission_id
+        );
+        assert_eq!(
+            gateway.start_stream(
+                admission.admission_id,
+                CapacityFence {
+                    generation: admission.fence.generation + 1,
+                    ..admission.fence.clone()
+                }
+            ),
+            Err(InferenceError::StaleCapacityFence)
+        );
+        assert_eq!(
+            gateway.append_chunk(
+                admission.admission_id,
+                admission.fence.clone(),
+                StreamChunk {
+                    sequence: 0,
+                    content: "before stream".to_owned(),
+                },
+            ),
+            Err(InferenceError::InvalidInferenceState)
+        );
+
+        let lease = gateway
+            .capacity_leases
+            .get(&admission.capacity_lease_id)
+            .cloned()
+            .unwrap();
+        gateway.capacity_leases.remove(&lease.lease_id);
+        assert_eq!(
+            gateway.start_stream(admission.admission_id, admission.fence.clone()),
+            Err(InferenceError::CapacityLeaseNotFound)
+        );
+        gateway
+            .capacity_leases
+            .insert(lease.clone().lease_id, lease.clone());
+        gateway
+            .capacity_leases
+            .get_mut(&lease.lease_id)
+            .unwrap()
+            .state = CapacityLeaseState::Released;
+        assert_eq!(
+            gateway.start_stream(admission.admission_id, admission.fence.clone()),
+            Err(InferenceError::CapacityLeaseNotActive)
+        );
+        gateway
+            .capacity_leases
+            .get_mut(&lease.lease_id)
+            .unwrap()
+            .state = CapacityLeaseState::Active;
+
+        gateway
+            .start_stream(admission.admission_id, admission.fence.clone())
+            .unwrap();
+        let chunk = StreamChunk {
+            sequence: 0,
+            content: "same".to_owned(),
+        };
+        gateway
+            .append_chunk(
+                admission.admission_id,
+                admission.fence.clone(),
+                chunk.clone(),
+            )
+            .unwrap();
+        gateway
+            .append_chunk(admission.admission_id, admission.fence.clone(), chunk)
+            .unwrap();
+        assert_eq!(
+            gateway.start_stream(admission.admission_id, admission.fence.clone()),
+            Ok(())
+        );
+        gateway
+            .complete(
+                admission.admission_id,
+                admission.fence.clone(),
+                FinalResponse {
+                    content: "same".to_owned(),
+                    finish_reason: "stop".to_owned(),
+                },
+                Usage::default(),
+            )
+            .unwrap();
+        gateway
+            .capacity_leases
+            .get_mut(&admission.capacity_lease_id)
+            .unwrap()
+            .state = CapacityLeaseState::Active;
+        assert_eq!(
+            gateway.cancel(admission.admission_id, admission.fence.clone()),
+            Err(InferenceError::AdmissionTerminal)
+        );
+        assert_eq!(
+            gateway.recover_after_restart(admission.admission_id),
+            Err(InferenceError::InvalidInferenceState)
+        );
+        assert_eq!(
+            gateway.cancel_uncertain(admission.admission_id),
+            Err(InferenceError::InvalidInferenceState)
+        );
+
+        assert_eq!(
+            transition(
+                &InferenceState::Queued,
+                1,
+                0,
+                InferenceState::CapacityLeased
+            ),
+            Err(InferenceError::StaleStateVersion)
+        );
+        assert_eq!(
+            transition(&InferenceState::Queued, 0, 0, InferenceState::Queued),
+            Ok((InferenceState::Queued, 0))
+        );
+        assert_eq!(
+            transition(&InferenceState::Completed, 0, 0, InferenceState::Failed),
+            Err(InferenceError::AdmissionTerminal)
+        );
+        assert_eq!(
+            transition(&InferenceState::Queued, 0, 0, InferenceState::Completed),
+            Err(InferenceError::InvalidInferenceState)
+        );
+        assert_eq!(
+            gateway.create_capacity_lease(request_id, "missing-worker"),
+            Err(InferenceError::NoCompatibleCapacity)
+        );
+        gateway.workers.get_mut("worker-1").unwrap().leased_slots = 1;
+        assert_eq!(
+            gateway.create_capacity_lease(request_id, "worker-1"),
+            Err(InferenceError::NoCompatibleCapacity)
+        );
+    }
+
+    #[test]
+    fn inference_rejects_invalid_transition_and_reassignment_paths() {
+        let mut gateway = InferenceGateway::new();
+        gateway
+            .register_worker(worker("worker-1", "rev-1", &["tool_use"], 2))
+            .unwrap();
+
+        let request_id = Uuid::new_v4();
+        gateway
+            .submit(request(
+                request_id,
+                "invalid-transition",
+                &["tool_use"],
+                10,
+                true,
+            ))
+            .unwrap();
+        let admission = gateway.admit(request_id).unwrap();
+        assert_eq!(
+            gateway.retry_uncertain(admission.admission_id, true),
+            Err(InferenceError::InvalidInferenceState)
+        );
+        gateway.admission_mut_for_test(admission.admission_id).state = InferenceState::Queued;
+        assert_eq!(
+            gateway.start_stream(admission.admission_id, admission.fence.clone()),
+            Err(InferenceError::InvalidInferenceState)
+        );
+        assert_eq!(
+            gateway.complete(
+                admission.admission_id,
+                admission.fence.clone(),
+                FinalResponse {
+                    content: "done".to_owned(),
+                    finish_reason: "stop".to_owned(),
+                },
+                Usage::default(),
+            ),
+            Err(InferenceError::InvalidInferenceState)
+        );
+        assert_eq!(
+            gateway.cancel(admission.admission_id, admission.fence),
+            Err(InferenceError::InvalidInferenceState)
+        );
+
+        gateway
+            .capacity_leases
+            .get_mut(&admission.capacity_lease_id)
+            .unwrap()
+            .state = CapacityLeaseState::Released;
+        assert_eq!(
+            gateway.reassign_capacity(admission.capacity_lease_id),
+            Err(InferenceError::CapacityLeaseNotActive)
+        );
+    }
+
+    impl InferenceGateway {
+        fn admission_mut_for_test(&mut self, admission_id: Uuid) -> &mut InferenceAdmission {
+            self.admissions.get_mut(&admission_id).unwrap()
+        }
     }
 }

@@ -354,6 +354,7 @@ proto_library(
 proto_rust_library(
     name = "harness_middleware",
     proto = ":harness_middleware_proto",
+    use_grpc = True,
     visibility = ["//visibility:public"],
 )
 
