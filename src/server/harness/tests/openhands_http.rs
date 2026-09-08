@@ -668,14 +668,14 @@ async fn serve_mock_request(
                 200,
                 json!({
                     "id": CONVERSATION_ID,
-                    "execution_status": "finished",
+                    "execution_status": if conversation_polls_after_prompt < 2 { "running" } else { "finished" },
                     "metrics": null,
                     "stats": {
                         "usage_to_metrics": {
                             "agent": {
                                 "accumulated_token_usage": {
-                                    "prompt_tokens": 23,
-                                    "completion_tokens": 9
+                                    "prompt_tokens": if conversation_polls_after_prompt < 2 { 0 } else { 23 },
+                                    "completion_tokens": if conversation_polls_after_prompt < 2 { 0 } else { 9 }
                                 }
                             }
                         }
@@ -1517,7 +1517,7 @@ async fn waiting_for_confirmation_surfaces_the_real_pending_action_shape() {
 }
 
 #[tokio::test]
-async fn null_metrics_fall_back_to_stats_usage_to_metrics() {
+async fn null_metrics_fall_back_to_fresh_stats_after_initial_zero_usage() {
     let server = MockServer::start(MockMode::NullMetricsWithUsageStats).await;
     let mut adapter = OpenHandsHttpAdapter::connect(
         server.address,

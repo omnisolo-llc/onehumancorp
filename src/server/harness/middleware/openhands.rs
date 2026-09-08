@@ -1554,19 +1554,22 @@ async fn poll_prompt_events(
         }
         let conversation_path = format!("/api/conversations/{conversation_id}");
         let conversation = client.request("GET", &conversation_path, None).await?;
-        if usage.is_none() {
-            usage = conversation
-                .get("metrics")
-                .filter(|value| !value.is_null())
-                .or_else(|| {
-                    conversation
-                        .get("stats")
-                        .and_then(|stats| stats.get("usage_to_metrics"))
-                        .filter(|value| !value.is_null())
-                })
-                .or_else(|| conversation.get("usage"))
-                .filter(|value| !value.is_null())
-                .map(|value| sanitize_native_json_with_secrets(value, &client.redaction_secrets));
+        // Conversation statistics are cumulative and can start at zero while
+        // the model runs. Refresh them on every poll through terminal state.
+        if let Some(current_usage) = conversation
+            .get("metrics")
+            .filter(|value| !value.is_null())
+            .or_else(|| {
+                conversation
+                    .get("stats")
+                    .and_then(|stats| stats.get("usage_to_metrics"))
+                    .filter(|value| !value.is_null())
+            })
+            .or_else(|| conversation.get("usage"))
+            .filter(|value| !value.is_null())
+            .map(|value| sanitize_native_json_with_secrets(value, &client.redaction_secrets))
+        {
+            usage = Some(current_usage);
         }
         let status = conversation
             .get("execution_status")

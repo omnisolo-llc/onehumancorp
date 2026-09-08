@@ -19,10 +19,10 @@ async fn live_harness_worker_uses_the_real_provider() {
         return;
     }
 
-    timeout(Duration::from_secs(900), run())
+    timeout(Duration::from_secs(1800), run())
         .await
         .unwrap_or_else(|_| {
-            panic!("live harness verification exceeded its fifteen-minute deadline")
+            panic!("live harness verification exceeded its thirty-minute deadline")
         });
 }
 
@@ -330,7 +330,7 @@ fn service_prompt(key: &str, value: Option<&str>) -> String {
         }
     }
     format!(
-        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use your native shell tool to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use node fetch or Python urllib, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and every string in memory_search.items and the actual stored text values returned by artifact/workspace/cache reads (decode byte arrays as UTF-8). The memory_search response is an object with an items array of strings: include ALL of those strings in the final output, without shortening or replacing values.",
+        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use ONE native shell invocation with a sequential loop over this entire list to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use node fetch or Python urllib, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and every string in memory_search.items and the actual stored text values returned by artifact/workspace/cache reads (decode byte arrays as UTF-8). The memory_search response is an object with an items array of strings: include ALL of those strings in the final output, without shortening or replacing values.",
         serde_json::to_string(&operations).unwrap()
     )
 }
@@ -470,7 +470,10 @@ fn validate_live_deliveries(
                     matches!(status, "failed" | "error" | "cancelled" | "interrupted")
                 })
         {
-            return Err("attempt emitted a failed or cancelled terminal event".to_owned());
+            let detail: String = event_payload.to_string().chars().take(4096).collect();
+            return Err(format!(
+                "attempt emitted a failed or cancelled terminal event: {detail}"
+            ));
         }
         if matches!(
             event_type,
@@ -595,7 +598,22 @@ fn validate_live_deliveries(
         return Err("attempt emitted no canonical successful terminal event".to_owned());
     }
     if usages.is_empty() {
-        return Err("attempt emitted no usage evidence".to_owned());
+        let candidates: Vec<_> = deliveries
+            .iter()
+            .filter_map(|delivery| {
+                let event: Value = serde_json::from_slice(&delivery.payload).ok()?;
+                event["payload"].get("usage").cloned().or_else(||
+                    (event["event_type"] == "usage.recorded").then(|| event["payload"].clone()))
+            })
+            .collect();
+        let detail: String = serde_json::to_string(&candidates)
+            .unwrap()
+            .chars()
+            .take(4096)
+            .collect();
+        return Err(format!(
+            "attempt emitted no usage evidence; native usage candidates: {detail}"
+        ));
     }
 
     let reasoning_translation = downgrade.as_ref().map_or_else(

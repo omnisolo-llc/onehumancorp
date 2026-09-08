@@ -253,7 +253,7 @@ for index in "${!harnesses[@]}"; do
     --env OPENAI_API_BASE_URL
     --env OPENAI_MODEL
     --env OPENAI_REASONING_EFFORT
-    --env OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS=300
+    --env OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS=600
   )
   if (( index < native_harness_count )); then
     run_args+=(--network "container:omnisolo-live-services-$harness"

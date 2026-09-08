@@ -117,3 +117,15 @@ returns actual provider usage through ACP's supported prompt-response usage
 field; the pinned CLI wire probe returned 14,269 input and 12 output tokens
 with exact `max` reasoning. Seven Kimi bridge tests and five fixture tests pass.
 The full ordered native-first acceptance matrix is running.
+
+The native-first matrix has passed OmniSolo, Codex and OpenCode, including
+cross-harness reads, and is exercising DeepSeek. DeepSeek's pinned subprocess
+runtime scrubs ambient credential-shaped names; the deployment now explicitly
+passes only the scoped service URL and token through its supported spawn-env
+interface. Its Node isolation contract and deployment contract pass. OpenHands
+now refreshes cumulative usage on every conversation poll instead of retaining
+the initial zero counters; all 30 tests pass, including the initial-zero
+regression. The fixture requests a sequential shell batch and allows ten minutes
+per native request, bounded by thirty minutes for writer plus reader. Production
+timeout defaults are unchanged. The latest 22 Python fixture tests and strict
+Clippy pass. Full twelve-row live acceptance is still pending.

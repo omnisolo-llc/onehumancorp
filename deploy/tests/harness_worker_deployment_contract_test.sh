@@ -78,7 +78,7 @@ awk '/^  harness-openhands:/{found=1} found && /- \/tmp:/{print; exit}' \
   "$repo_root/deploy/docker-compose.yml" | grep -q '/tmp:exec,mode=1777'
 grep -q 'tmp_mount="/tmp:exec,mode=1777"' "$repo_root/scripts/test-live-harness-matrix.sh"
 grep -q '{{.State.Running}}' "$repo_root/scripts/test-live-harness-matrix.sh"
-grep -q 'OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS=300' "$repo_root/scripts/test-live-harness-matrix.sh"
+grep -q 'OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS=600' "$repo_root/scripts/test-live-harness-matrix.sh"
 grep -q 'ghcr.io/openhands/agent-server:1.43.1-python@sha256:6f5c614cdab68150d6365e5be1051de4a005375dc46249e17ae2349ec93a9cc0 AS openhands' \
   "$repo_root/deploy/docker/Dockerfile.harness-worker"
 grep -q 'command -v openhands-agent-server' "$repo_root/deploy/docker/Dockerfile.harness-worker"
