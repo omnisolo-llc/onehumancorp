@@ -96,3 +96,13 @@ ignored), followed by 31 passing ACP/DeepSeek tests covering the streaming fix.
 Strict Clippy passes for all three affected libraries. Full native acceptance
 for the remaining harnesses is still being exercised; these deterministic
 results do not replace it.
+
+Pi 0.73.1 also passes the real writer/fresh-reader probe; its receipt is in
+[Pi acceptance](2026-09-08-native-pi-acceptance.json). The follow-up found and
+corrected OpenHands 1.43.1 tool registry names (`terminal`, `file_editor`,
+`task_tracker`) and the pinned OpenHarness provider's premature terminal event
+before its trailing usage chunk. OpenHands' 30 tests, OpenHarness' 29 tests,
+eight bridge Python tests and five live-fixture tests pass. The live fixture
+responds to session-matched Kimi one-time tool permissions and OpenHands
+approvals through the authenticated controller exchange. Native reruns for
+these fixes remain pending.

@@ -492,9 +492,9 @@ pub fn prepare_conversation_request_with_config(
             "kind": "Agent",
             "llm": Value::Object(llm),
             "tools": [
-                {"name": "TerminalTool"},
-                {"name": "FileEditorTool"},
-                {"name": "TaskTrackerTool"}
+                {"name": "terminal"},
+                {"name": "file_editor"},
+                {"name": "task_tracker"}
             ]
         },
         "workspace": {

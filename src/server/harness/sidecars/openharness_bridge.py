@@ -10,7 +10,9 @@ import math
 import os
 import sys
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from copy import copy
+from types import SimpleNamespace
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -100,11 +102,51 @@ def _load_pinned_sdk(session_home: Path) -> None:
     SteeringChannel = importlib.import_module(
         "harness.core.steering"
     ).SteeringChannel
-    OpenAIProvider = importlib.import_module(
+    OpenAIProvider = usage_complete_provider(importlib.import_module(
         "harness.providers.openai"
-    ).OpenAIProvider
+    ).OpenAIProvider)
     engine = importlib.import_module("harness.core.engine")
     engine.load_toml_config = lambda _cwd=None: {}
+
+
+def usage_complete_provider(provider_type):
+    """Keep the native provider, but await its trailing OpenAI usage chunk.
+
+    SDK 0.6.0 emits message_end at finish_reason, before OpenAI's final
+    choices=[] usage chunk. Delay only that event until the stream drains.
+    """
+    class UsageCompleteProvider(provider_type):
+        async def chat_completion_stream(self, *args, **kwargs):
+            usage = None
+            create = self._client.chat.completions.create
+
+            async def observed_create(*create_args, **create_kwargs):
+                source = await create(*create_args, **create_kwargs)
+
+                async def observed_chunks():
+                    nonlocal usage
+                    async for chunk in source:
+                        raw = getattr(chunk, "usage", None)
+                        if raw is not None:
+                            counts = [getattr(raw, name, None) for name in
+                                      ("prompt_tokens", "completion_tokens")]
+                            if all(type(count) is int and count >= 0 for count in counts):
+                                usage = dict(zip(("input_tokens", "output_tokens"), counts))
+                        yield chunk
+                return observed_chunks()
+
+            scoped = copy(self)
+            scoped._client = SimpleNamespace(chat=SimpleNamespace(
+                completions=SimpleNamespace(create=observed_create)))
+            terminal = None
+            async for event in provider_type.chat_completion_stream(scoped, *args, **kwargs):
+                if event.type == "message_end":
+                    terminal = event
+                else:
+                    yield event
+            if terminal is not None:
+                yield replace(terminal, usage=usage if usage is not None else terminal.usage)
+    return UsageCompleteProvider
 
 
 def _normalized_key(key: object) -> str:

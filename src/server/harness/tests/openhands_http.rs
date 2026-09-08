@@ -66,6 +66,13 @@ fn portable_model_and_selected_base_url_translate_to_openhands_llm_config() {
     .unwrap();
 
     assert_eq!(prepared.body["agent"]["kind"], "Agent");
+    // SDK v1.43.1 derives registry names from the tool classes in snake_case.
+    assert_eq!(
+        prepared.body["agent"]["tools"],
+        json!([
+            {"name":"terminal"}, {"name":"file_editor"}, {"name":"task_tracker"}
+        ])
+    );
     assert_eq!(
         prepared.body["agent"]["llm"]["model"],
         "openai/gpt-5.6-luna"

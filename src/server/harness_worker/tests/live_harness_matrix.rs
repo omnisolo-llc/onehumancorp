@@ -2,7 +2,7 @@ use serde_json::{Value, json};
 use server_harness::middleware::local_services::{LocalServiceRegistry, LocalServiceScopeContext};
 use server_ohc::harness_middleware::harness_worker_service_client::HarnessWorkerServiceClient;
 use server_ohc::harness_middleware::{
-    AttemptCommandEnvelope, EventDeliveryEnvelope, SessionOperationEnvelope,
+    AttemptCommandEnvelope, EventDeliveryEnvelope, SessionOperationEnvelope, WorkerExchangeEnvelope,
 };
 use tokio::time::{Duration, sleep, timeout};
 use tokio_stream::StreamExt;
@@ -57,6 +57,7 @@ async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
 
     eprintln!("live {harness_id}: native session created");
     let attempt_id = Uuid::new_v4();
+    let lease_id = Uuid::new_v4().to_string();
     let mut stream = client
         .attempt_command(authenticated(AttemptCommandEnvelope {
             protocol_version: 1,
@@ -66,7 +67,7 @@ async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
             attempt_id: attempt_id.to_string(),
             turn_id: String::new(),
             command_id: Uuid::new_v4().to_string(),
-            lease_id: Uuid::new_v4().to_string(),
+            lease_id: lease_id.clone(),
             lease_generation: 1,
             fencing_token: format!("live-{harness_id}-attempt-fence"),
             kind: "execute".to_owned(),
@@ -93,7 +94,42 @@ async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
     eprintln!("live {harness_id}: attempt stream accepted");
     let mut deliveries = Vec::new();
     while let Some(delivery) = stream.next().await {
-        deliveries.push(delivery.expect("receive live harness event"));
+        let delivery = delivery.expect("receive live harness event");
+        let event: Value = serde_json::from_slice(&delivery.payload).expect("canonical event JSON");
+        if event["event_type"] == "interaction.required" {
+            // This explicitly opted-in fixture authorizes its requested tool operations.
+            // Exercise the controller approval exchange rather than changing native policy.
+            let (kind, response) =
+                fixture_approval(&harness_id, &native.native_session_id, &event["payload"])
+                    .expect("supported fixture tool approval");
+            eprintln!("live {harness_id}: responding to native tool approval");
+            let reply = client
+                .interaction(authenticated(WorkerExchangeEnvelope {
+                    protocol_version: 1,
+                    tenant_id: "tenant-live-harness-matrix".to_owned(),
+                    session_id: session_id.to_string(),
+                    task_id: task_id.to_string(),
+                    attempt_id: attempt_id.to_string(),
+                    worker_id: worker_id.clone(),
+                    harness_id: harness_id.clone(),
+                    pool_id: harness_id.clone(),
+                    lease_id: lease_id.clone(),
+                    lease_generation: 1,
+                    fencing_token: format!("live-{harness_id}-attempt-fence"),
+                    kind,
+                    idempotency_key: format!("live-approval-{}", delivery.delivery_sequence),
+                    payload_schema: "omnisolo.interaction.v1".to_owned(),
+                    payload_version: 1,
+                    payload: serde_json::to_vec(&response).unwrap(),
+                    artifact_digest: String::new(),
+                    extensions: Default::default(),
+                }))
+                .await
+                .expect("fixture approval exchange")
+                .into_inner();
+            assert!(reply.accepted, "fixture approval rejected");
+        }
+        deliveries.push(delivery);
     }
     eprintln!(
         "live {harness_id}: stream completed ({} deliveries)",
@@ -140,6 +176,56 @@ async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
         .into_inner();
     assert!(delete.accepted, "{harness_id} rejected session deletion");
     (evidence, attempt_id)
+}
+
+fn fixture_approval(
+    harness: &str,
+    native_session: &str,
+    payload: &Value,
+) -> Option<(String, Value)> {
+    if harness == "kimi"
+        && payload["native_method"] == "session/request_permission"
+        && payload["native_params"]["sessionId"] == native_session
+    {
+        let option = payload["native_params"]["options"]
+            .as_array()?
+            .iter()
+            .find(|option| option["kind"] == "allow_once")?["optionId"]
+            .as_str()?;
+        return Some((
+            "session/request_permission".to_owned(),
+            json!({
+                "native_request_id": payload.get("native_request_id")?,
+                "result": {"outcome":{"outcome":"selected", "optionId":option}}
+            }),
+        ));
+    }
+    if harness == "openhands"
+        && payload["native_session_id"] == native_session
+        && payload["interaction_kind"] == "approval"
+    {
+        return Some((
+            "approval.response".to_owned(),
+            json!({
+                "native_session_id":native_session, "accept":true,
+                "reason":"explicitly opted-in isolated service acceptance fixture"
+            }),
+        ));
+    }
+    None
+}
+
+#[test]
+fn fixture_approval_requires_matching_session_and_one_time_tool_option() {
+    let mut payload = json!({"native_request_id":7,"native_method":"session/request_permission",
+        "native_params":{"sessionId":"native-1","options":[
+            {"kind":"allow_always","optionId":"always"}, {"kind":"allow_once","optionId":"once"}]}});
+    let (_, reply) = fixture_approval("kimi", "native-1", &payload).unwrap();
+    assert_eq!(reply["result"]["outcome"]["optionId"], "once");
+    assert!(fixture_approval("kimi", "another", &payload).is_none());
+    assert!(fixture_approval("other", "native-1", &payload).is_none());
+    payload["native_params"]["options"] = json!([{ "kind":"allow_always","optionId":"always"}]);
+    assert!(fixture_approval("kimi", "native-1", &payload).is_none());
 }
 
 fn authenticated<T>(body: T) -> Request<T> {
