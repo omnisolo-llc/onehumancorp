@@ -113,6 +113,34 @@ elif command == 'cargo':
         )
         self.assertNotIn("shared_service_probe", report["results"][0])
 
+    def test_subset_cleanup_never_removes_unselected_workers(self):
+        result, calls = self.run_matrix(
+            successful=True, OMNISOLO_RUN_LIVE_HARNESS_E2E="1",
+            OPENAI_API_KEY="canary", OMNISOLO_LIVE_HARNESSES="pi",
+            OMNISOLO_LIVE_BUILD_IMAGES="0",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        removals = [json.loads(line) for line in calls.splitlines() if json.loads(line)[0] == "rm"]
+        self.assertTrue(removals)
+        self.assertTrue(all(name in ("omnisolo-live-pi", "omnisolo-live-services-pi")
+                            for args in removals for name in args[2:]))
+
+    def test_retry_restarts_worker_and_authority_but_reuses_backend_mount(self):
+        result, calls = self.run_matrix(
+            successful=True, OMNISOLO_RUN_LIVE_HARNESS_E2E="1",
+            OPENAI_API_KEY="canary", OMNISOLO_LIVE_HARNESSES="pi",
+            OMNISOLO_LIVE_BUILD_IMAGES="0", OMNISOLO_LIVE_ATTEMPTS="2",
+            OMNISOLO_LIVE_RETRY_DELAY_SECS="0", FAIL_DIAGNOSTIC="1",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        invocations = [json.loads(line) for line in calls.splitlines()]
+        workers = [args for args in invocations if args[0] == "run" and "omnisolo-live-pi" in args]
+        daemons = [args for args in invocations if args[0] == "run" and "omnisolo-live-services-pi" in args]
+        self.assertEqual(len(workers), 2)
+        self.assertEqual(len(daemons), 2)
+        self.assertEqual(daemons[0][daemons[0].index("--volume") + 1],
+                         daemons[1][daemons[1].index("--volume") + 1])
+
     def test_successful_test_exit_without_evidence_fails_matrix(self):
         result, _ = self.run_matrix(
             successful=True,

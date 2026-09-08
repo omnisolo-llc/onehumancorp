@@ -56,6 +56,8 @@ USER 1000:1000
 CMD ["--local-service-daemon"]
 
 FROM node-worker-base AS codex
+# The container supplies filesystem, process and privilege isolation.
+ENV OMNISOLO_HARNESS_EXTERNAL_SANDBOX=1
 USER root
 RUN npm install --global @openai/codex@0.149.0
 USER 1000:1000

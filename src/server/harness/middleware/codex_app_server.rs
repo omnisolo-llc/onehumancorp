@@ -10,11 +10,24 @@ use super::protocol::{
 use super::types::{ContentPart, ReasoningEffort, sanitize_credential_value};
 
 #[derive(Clone, Debug, Default)]
-pub struct CodexAppServerV2Codec;
+pub struct CodexAppServerV2Codec {
+    external_sandbox: bool,
+}
 
 impl CodexAppServerV2Codec {
     pub fn new() -> Self {
-        Self
+        Self::default()
+    }
+
+    /// The worker operator supplies container isolation; request metadata cannot enable this.
+    pub fn with_external_sandbox(mut self, enabled: bool) -> Self {
+        self.external_sandbox = enabled;
+        self
+    }
+
+    #[cfg(test)]
+    fn sandbox_test_request() -> HarnessSessionRequest {
+        HarnessSessionRequest::new("tenant", uuid::Uuid::new_v4(), uuid::Uuid::new_v4())
     }
 
     pub fn initialize_request(&self) -> JsonRpcRequestSpec {
@@ -150,7 +163,14 @@ impl CodexAppServerV2Codec {
             "approvalPolicy".to_owned(),
             Value::String("never".to_owned()),
         );
-        options.insert("sandboxPolicy".to_owned(), json!({"type": "readOnly"}));
+        options.insert(
+            "sandboxPolicy".to_owned(),
+            if self.external_sandbox {
+                json!({"type":"externalSandbox", "networkAccess":"enabled"})
+            } else {
+                json!({"type":"readOnly"})
+            },
+        );
         for (source, target) in [("codex.cwd", "cwd"), ("codex.personality", "personality")] {
             if let Some(Value::String(value)) = request.extensions.get(source) {
                 options.insert(target.to_owned(), Value::String(value.clone()));
@@ -952,6 +972,29 @@ mod tests {
         assert_eq!(
             structured_summary(&BTreeMap::new()),
             "Portable OmniSolo context record"
+        );
+    }
+}
+
+#[cfg(test)]
+mod container_sandbox_tests {
+    use super::*;
+    #[test]
+    fn external_sandbox_requires_worker_configuration_not_request_metadata() {
+        let mut request = CodexAppServerV2Codec::sandbox_test_request();
+        request
+            .extensions
+            .insert("codex.external_sandbox".into(), json!(true));
+        assert_eq!(
+            CodexAppServerV2Codec::new().turn_options(&request).unwrap()["sandboxPolicy"],
+            json!({"type":"readOnly"})
+        );
+        assert_eq!(
+            CodexAppServerV2Codec::new()
+                .with_external_sandbox(true)
+                .turn_options(&request)
+                .unwrap()["sandboxPolicy"],
+            json!({"type":"externalSandbox","networkAccess":"enabled"})
         );
     }
 }

@@ -2287,7 +2287,14 @@ impl ProcessHarnessAdapter {
         let cwd = self.spec.working_directory.to_string_lossy().into_owned();
         let codec: Arc<dyn HarnessProtocolCodec> = match self.spec.protocol_kind.clone() {
             HarnessProtocolKind::CodexAppServer => {
-                let codec = Arc::new(CodexAppServerV2Codec::new());
+                let codec = Arc::new(
+                    CodexAppServerV2Codec::new().with_external_sandbox(
+                        self.spec
+                            .environment
+                            .get("OMNISOLO_HARNESS_EXTERNAL_SANDBOX")
+                            .is_some_and(|value| value == "1"),
+                    ),
+                );
                 let initialize = codec.initialize_request();
                 if let Err(error) = runtime.request(&initialize.method, initialize.params).await {
                     let _ = runtime.shutdown().await;

@@ -43,3 +43,9 @@ Vector storage requires the existing consolidated-memory schema and an explicit 
 For configuration containing credentials, use a Kubernetes Secret with `localServices.configSecret` instead of `configMap`, or a protected Compose configuration file. The Secret also contains `configuration.json`. Mounts remain daemon-only. `integration_read` returns metadata for an allowed read-only tool; `integration_invoke` executes it with explicit arguments. Worker startup retries a starting daemon for a bounded interval and rejects invalid control credentials immediately.
 
 Additional daemon environment entries, such as an embedding key sourced with `secretKeyRef`, go under Helm `localServices.env`. For Compose, add them to the daemon service's environment in a private override file. Do not add backend credentials to the native worker environment.
+
+The pinned Codex image sets `OMNISOLO_HARNESS_EXTERNAL_SANDBOX=1` because the
+worker container supplies isolation and cannot create a nested Bubblewrap
+namespace. The worker selects Codex's `externalSandbox` turn policy with network
+access for its scoped loopback services. Host workers default to Codex's read-only
+sandbox; session metadata cannot select the container policy.

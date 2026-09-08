@@ -41,15 +41,34 @@ rows pass.
 | Compose/Helm service isolation rendering | 2 passed |
 | Built service image smoke | Actual SQLite write, selected Read tool execution, integration metadata read and Chromium screenshot/snapshot passed |
 
-The full deterministic run passed 460 tests (three explicitly live tests ignored).
-The final timeout and remote-HTTP regressions are being rerun. Strict Clippy
+The full deterministic run passed 461 tests (three explicitly live tests ignored).
+The timeout and remote-HTTP regressions passed. The final Codex container-policy regressions also passed (one codec test and 28 worker tests). Strict Clippy
 passes for the harness, worker and builtin agent libraries. Bazel passed its
 harness test target. Migration parity passed both tests. LLVM coverage measured
-91.408957% lines, 90.824504% regions and 86.620630% functions before the final
+91.516852% lines and 90.919989% regions before the Codex container-policy
 regressions; this is not branch coverage. The provider-backed matrix remains
 pending: the first native probe exposed the native worker ignoring the configured
-request timeout, which now has a passing regression test. Earlier concurrent
+request timeout, which now has a passing regression test and a successful real-provider OmniSolo writer/reader run. The pinned Codex image now selects its externally supplied container sandbox through worker configuration; request metadata cannot enable it. Earlier concurrent
 verification runs exposed a request-shape regression and process-startup timeout
 sensitivity; the fixes are included and affected suites are being rerun with
 bounded concurrency. No interrupted, skipped or fixture-only run is counted as
 live native acceptance.
+
+
+## Completion ledger
+
+| Written plan | Tasks and evidence |
+| --- | --- |
+| Universal harness services, tasks 1–3 | Pinned integration modes, issued namespaces, portable reference validation and trusted rebinding: middleware local-service and capsule suites. |
+| Universal harness services, tasks 4–5 | Per-attempt facade, provider translation and lifecycle revocation: provider facade, worker gRPC and worker E2E suites. |
+| Universal harness services, task 6 | Four native pinned CLI shims: installed CLI probes, Python shim tests and Rust shim lifecycle tests. |
+| Universal harness services, task 7 | Twelve worker images, Compose/Helm inventory, daemon isolation and native Plandex deployment: image builds and deployment contract/rendering tests. |
+| Universal harness services, task 8 | Deterministic shared-service conformance passes; the full native-first twelve-row real-provider gate is still pending. |
+| Cross-harness model routing, tasks 1–12 | Portable model selection, configuration, native codecs, provider execution and images: 26 deterministic test suites and all pinned image builds. |
+| Cross-harness model routing, tasks 13–14 | Migration parity, strict Clippy, coverage and Bazel pass; final full live matrix pending. |
+| Communication channels, tasks 9–10 | Actual parallel agent results, observed metrics and authenticated streaming: 24 API tests, 1,422 UI tests, production build and TypeScript checks. |
+
+The separate [native OmniSolo receipt](2026-09-08-native-omnisolo-acceptance.json)
+records the real writer and fresh reader, all required backend operation receipts,
+provider usage, marker and session cleanup. It is one native acceptance result,
+not a substitute for the twelve-row matrix.

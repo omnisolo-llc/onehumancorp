@@ -101,6 +101,7 @@ cleanup() {
     docker rm --force omnisolo-live-plandex-server omnisolo-live-plandex-db >/dev/null 2>&1 || true
   fi
   for harness in "${harnesses[@]}"; do
+    if ! is_selected "$harness"; then continue; fi
     docker rm --force "omnisolo-live-$harness" "omnisolo-live-services-$harness" >/dev/null 2>&1 || true
   done
   if [[ -n "$service_state" ]]; then rm -rf -- "$service_state"; fi
@@ -308,8 +309,8 @@ for index in "${!harnesses[@]}"; do
   started_at=$(date +%s)
   for attempt in $(seq 1 "$OMNISOLO_LIVE_ATTEMPTS"); do
     if [[ "$worker_started" == "0" ]]; then break; fi
-    if [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null || true)" != "true" ]]; then
-      echo "[$harness] worker exited; recreating it before retry $attempt" >&2
+    if (( attempt > 1 )) || [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null || true)" != "true" ]]; then
+      echo "[$harness] creating a fresh worker before retry $attempt" >&2
       start_worker
     fi
     echo "[$harness] live verification attempt $attempt/$OMNISOLO_LIVE_ATTEMPTS" >&2

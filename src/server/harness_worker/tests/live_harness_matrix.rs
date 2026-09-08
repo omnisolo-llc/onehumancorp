@@ -55,6 +55,7 @@ async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
         "{harness_id} returned an empty native session id"
     );
 
+    eprintln!("live {harness_id}: native session created");
     let attempt_id = Uuid::new_v4();
     let mut stream = client
         .attempt_command(authenticated(AttemptCommandEnvelope {
@@ -89,10 +90,15 @@ async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
         .expect("execute live native attempt")
         .into_inner();
 
+    eprintln!("live {harness_id}: attempt stream accepted");
     let mut deliveries = Vec::new();
     while let Some(delivery) = stream.next().await {
         deliveries.push(delivery.expect("receive live harness event"));
     }
+    eprintln!(
+        "live {harness_id}: stream completed ({} deliveries)",
+        deliveries.len()
+    );
     let model = required_env("OPENAI_MODEL");
     let reasoning_effort = required_env("OPENAI_REASONING_EFFORT");
     let api_key = required_env("OPENAI_API_KEY");
@@ -174,8 +180,9 @@ async fn run() {
         let reader_audit = service_audit(reader_attempt);
         verify_operations(&reader_audit, false)
             .expect("native reader must execute the configured service operations");
-        verify_read_values(&reader_evidence, &secret)
-            .expect("fresh native reader must retrieve every withheld service value");
+        verify_read_values(&reader_evidence, &secret).unwrap_or_else(|error| {
+            panic!("fresh native reader must retrieve every withheld service value: {error}; canonical reader text: {}", reader_evidence["assistant_text"]);
+        });
         let previous = std::env::var("OMNISOLO_LIVE_PREVIOUS_VALUE").ok();
         if let Some(previous) = &previous {
             verify_read_values(&reader_evidence, previous)
@@ -230,7 +237,7 @@ fn service_prompt(key: &str, value: Option<&str>) -> String {
         }
     }
     format!(
-        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use your native shell tool to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /v1/operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use node fetch or Python urllib, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and the actual stored text values returned by reads (decode byte arrays as UTF-8).",
+        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use your native shell tool to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use node fetch or Python urllib, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and the actual stored text values returned by reads (decode byte arrays as UTF-8).",
         serde_json::to_string(&operations).unwrap()
     )
 }

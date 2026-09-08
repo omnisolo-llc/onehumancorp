@@ -42,6 +42,7 @@ pub struct WorkerConfigInput {
     pub args_json: Option<String>,
     pub protocol: Option<String>,
     pub timeout_secs: Option<String>,
+    pub external_sandbox: bool,
     pub openai_api_key: Option<String>,
     pub openai_api_base_url: Option<String>,
     pub openai_model: Option<String>,
@@ -68,6 +69,7 @@ impl WorkerConfigInput {
             args_json: lookup("OMNISOLO_HARNESS_ARGS_JSON"),
             protocol: lookup("OMNISOLO_HARNESS_PROTOCOL"),
             timeout_secs: lookup("OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS"),
+            external_sandbox: lookup("OMNISOLO_HARNESS_EXTERNAL_SANDBOX").as_deref() == Some("1"),
             openai_api_key: lookup(OPENAI_API_KEY),
             openai_api_base_url: lookup(OPENAI_API_BASE_URL),
             openai_model: lookup(OPENAI_MODEL),
@@ -220,6 +222,12 @@ impl WorkerConfig {
         config.provider_api_key = routing.api_key.clone().map(SecretValue);
         config.request_timeout = parse_request_timeout(input.timeout_secs.as_deref())?;
         config.process_spec = process_spec_from_input(&input, routing)?;
+        if input.external_sandbox
+            && let Some(spec) = config.process_spec.as_mut()
+        {
+            spec.environment
+                .insert("OMNISOLO_HARNESS_EXTERNAL_SANDBOX".into(), "1".into());
+        }
         Ok(config)
     }
 }
@@ -744,6 +752,7 @@ mod tests {
             args_json: Some(r#"["app-server","--stdio"]"#.to_owned()),
             protocol: Some("codex_app_server".to_owned()),
             timeout_secs: None,
+            external_sandbox: false,
             openai_api_key: None,
             openai_api_base_url: None,
             openai_model: None,
@@ -1267,6 +1276,25 @@ mod tests {
                 "127.0.0.1:8091",
             )
             .is_err()
+        );
+    }
+
+    #[test]
+    fn external_sandbox_is_an_explicit_operator_setting() {
+        let mut input = worker_input();
+        let standard = WorkerConfig::from_input(input.clone()).unwrap();
+        assert!(
+            !standard
+                .process_spec
+                .unwrap()
+                .environment
+                .contains_key("OMNISOLO_HARNESS_EXTERNAL_SANDBOX")
+        );
+        input.external_sandbox = true;
+        let container = WorkerConfig::from_input(input).unwrap();
+        assert_eq!(
+            container.process_spec.unwrap().environment["OMNISOLO_HARNESS_EXTERNAL_SANDBOX"],
+            "1"
         );
     }
 
