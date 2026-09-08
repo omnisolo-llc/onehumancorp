@@ -65,6 +65,11 @@ const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
 pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 
+#[cfg(test)]
+mod harness_middleware_schema;
+
+pub mod sql_middleware;
+
 fn database_url_from_environment()
 -> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
     let canonical_direct = std::env::var_os("DATABASE_URL").is_some();
@@ -3712,6 +3717,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                 .await?;
                 ensure_mysql_column(mysql_pool, "tenants", "enabled_currencies", "JSON NULL")
                     .await?;
+
+                sql_middleware::run_mysql_harness_middleware_migration(mysql_pool).await?;
             }
         }
 

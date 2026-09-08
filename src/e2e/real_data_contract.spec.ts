@@ -75,6 +75,62 @@ test.describe('real data contract', () => {
     });
   });
 
+  test('renders tenant currency settings returned by the real PostgreSQL API', async ({ page }) => {
+    const settingsResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/v1/settings/global-commerce'
+        && response.request().method() === 'GET';
+    });
+
+    await page.goto('/settings/global-commerce');
+
+    const settingsResponse = await settingsResponsePromise;
+    expect(settingsResponse.status()).toBe(200);
+    await expect(settingsResponse.json()).resolves.toEqual({
+      tenant: {
+        base_currency: 'USD',
+        enabled_currencies: ['USD', 'EUR'],
+      },
+    });
+    await expect(page.getByLabel('Base currency')).toHaveValue('USD');
+    await expect(page.getByRole('checkbox', { name: 'USD' })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'EUR' })).toBeChecked();
+  });
+
+  test('renders seeded subscription data in the client portal through real APIs', async ({ page }) => {
+    const subscriptionResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/v1/subscriptions'
+        && response.request().method() === 'GET';
+    });
+
+    await page.goto('/client-portal');
+
+    const subscriptionResponse = await subscriptionResponsePromise;
+    expect(subscriptionResponse.status()).toBe(200);
+    const overview = await subscriptionResponse.json();
+    expect(overview.plans).toContainEqual(expect.objectContaining({
+      id: 'e2e-plan-cake-club',
+      name: 'Vegan Celebration Cake',
+      amount: 3999,
+      interval: 'month',
+      active: true,
+    }));
+    expect(overview.subscribers).toContainEqual(expect.objectContaining({
+      id: 'e2e-subscription-cake-club',
+      customer_id: 'e2e-customer-bakery',
+      status: 'active',
+    }));
+    expect(overview.batches).toContainEqual(expect.objectContaining({
+      id: 'e2e-fulfillment-cake-club',
+      status: 'PENDING',
+      subscriber_count: 1,
+    }));
+    await expect(page.locator('[data-client-portal-state="settled"]')).toBeVisible();
+    await expect(page.getByText('Free', { exact: true })).toBeVisible();
+    await expect(page.getByText('1', { exact: true })).toBeVisible();
+  });
+
   test('Rust server does not own browser application pages', async () => {
     expect(fs.existsSync(path.join(repoRoot, 'src/server/lib.rs')), 'Production source files are not available in this Bazel Playwright runfiles tree.').toBeTruthy();
     const serverLib = fs.readFileSync(path.join(repoRoot, 'src/server/lib.rs'), 'utf8');
@@ -107,11 +163,12 @@ test.describe('real data contract', () => {
       const delegatesToService = [
         /\bfetch\(/,
         /\b(?:proxyCurrentBackendPath|proxyBackend(?:Get|Post|Put|Request))\b/,
+        /\b(?:publicAuthDependencies|proxyPublicAuthentication|registerAndSealSession)\b/,
         /\bPool\b|\bpg\b|\bsqlx\b/i,
         /process\.env\.[A-Z0-9_]*(URL|DSN|ENDPOINT|HOST)/,
         /BACKEND_URL|OHC_BACKEND_URL|OHC_API_URL/,
       ].some((pattern) => pattern.test(source));
-      const failsClosed = /status:\s*(501|503)/.test(source);
+      const failsClosed = /status:\s*(501|503)|\bunavailableAuthenticationResponse\b/.test(source);
 
       if (!delegatesToService && !failsClosed) {
         violations.push(`${relative}: POST handler does not call a backend, database, or fail closed`);
@@ -146,6 +203,30 @@ test.describe('real data contract', () => {
         }
       });
     }
+
+    expect(violations).toEqual([]);
+  });
+
+  test('production runtime behavior is not replaced by CI or E2E environment branches', async () => {
+    const productionRuntimeFiles = [
+      'src/agents/builtin/auth.rs',
+      'src/agents/builtin/local_provider.rs',
+      'src/server/api/agents/client_intake.rs',
+      'src/server/api/proposals.rs',
+      'src/server/api/quotes.rs',
+      'src/server/orchestration/router.rs',
+      'src/server/workers/draft_quote_worker.rs',
+      'src/server/workers/quote_generation_worker.rs',
+    ];
+    const violations = productionRuntimeFiles.flatMap((relative) => {
+      const source = fs.readFileSync(path.join(repoRoot, relative), 'utf8');
+      return [
+        /std::env::var\("CI"\)/,
+        /std::env::var\("E2E_TEST"\)/,
+      ]
+        .filter((pattern) => pattern.test(source))
+        .map((pattern) => `${relative}: ${pattern.source}`);
+    });
 
     expect(violations).toEqual([]);
   });

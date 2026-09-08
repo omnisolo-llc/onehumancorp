@@ -34,7 +34,10 @@ fn source_files(root: &Path, relative: &str) -> Vec<PathBuf> {
             if path.is_dir() {
                 pending.push(path);
             } else if path.extension().is_some_and(|extension| {
-                matches!(extension.to_str(), Some("tsx" | "ts" | "md" | "html" | "mjs"))
+                matches!(
+                    extension.to_str(),
+                    Some("tsx" | "ts" | "md" | "html" | "mjs")
+                )
             }) {
                 files.push(path);
             }
@@ -64,6 +67,10 @@ fn user_facing_sources_use_omnisolo_branding() {
                 continue;
             };
             for (line_number, line) in source.lines().enumerate() {
+                // Introductory migration context may name the former product.
+                if !source_is_user_facing && line.contains("(formerly One Human Corp / OHC)") {
+                    continue;
+                }
                 let contains_legacy_acronym = source_is_user_facing
                     && line
                         .split(|character: char| !character.is_ascii_alphanumeric())

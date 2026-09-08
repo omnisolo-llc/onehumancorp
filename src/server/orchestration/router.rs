@@ -342,8 +342,8 @@ Return strict JSON:
             }
         }
 
-        // If tests are mocking without an LLM, provide basic deterministic output to avoid flaky tests.
-        if std::env::var("CI").is_ok() && !success {
+        // Unit tests use deterministic output without changing production runtime behavior.
+        if cfg!(test) && !success {
             let content_lower = msg.content.to_lowercase();
             let mut ops_context = None;
             let mut sales_context = None;

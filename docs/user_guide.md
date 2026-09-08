@@ -3,7 +3,7 @@
 # User Guide: OmniSolo Platform
 
 ## Introduction
-Welcome to OmniSolo (OHC)! OHC is the simplest platform that empowers anyone—with zero technical knowledge—to launch, run, and grow a small business entirely on their own. We put the power of a full business stack (website, storefront, customer management, AI agents, analytics, marketing) into your hands, accessible from your phone or desktop in minutes.
+Welcome to OmniSolo (formerly One Human Corp / OHC)! OmniSolo is the simplest platform that empowers anyone—with zero technical knowledge—to launch, run, and grow a small business entirely on their own. We put the power of a full business stack (website, storefront, customer management, AI agents, analytics, marketing) into your hands, accessible from desktop or mobile in minutes.
 
 Our mission is radical simplicity: No code. No servers. No jargon.
 
@@ -100,16 +100,16 @@ The platform provides simple ways to check if everything is running smoothly. Co
 
 ## FAQ
 
-**Q: What AI models are supported?**
-A: The platform uses state-of-the-art AI models, such as Gemini Pro, to power your helpers invisibly.
+**Q: What AI models and providers are supported?**
+A: The platform supports OpenAI-compatible providers, MiniMax (`minimax`), Anthropic Claude, Google Gemini, and local Ollama models.
 
 **Q: Is my data stored persistently?**
-A: Yes, all data is saved securely in the cloud storage system.
+A: Yes, in Cloud Mode all data is saved securely in PostgreSQL (with optional vector memory sync), while in Standalone Desktop Mode data is saved locally to your encrypted SQLite database.
 
 **Q: How do I reset demo data?**
-A: You can reload the seeded demo scenario from the settings menu.
+A: You can reload the seeded demo scenario from the settings menu or via the developer API endpoint `/api/v1/dev/seed`.
 
-**Q: How do I access my business on my phone?**
-A: OHC is completely mobile-first! You can manage everything from a beautiful, native-feeling app right on your phone browser.
+**Q: How do I run OmniSolo on my desktop?**
+A: OmniSolo provides a native Tauri v2 desktop application (`bazelisk run //src/ui/tauri:app`) supporting both standalone local execution and remote cloud connections.
 
 </div>

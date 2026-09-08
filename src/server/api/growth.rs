@@ -2636,7 +2636,8 @@ async fn handle_check_milestones(
         Milestone {
             id: "1000_orders".to_string(),
             title: "👑 1,000 Orders!".to_string(),
-            description: "A monumental achievement! 1,000 orders fulfilled on OmniSolo!".to_string(),
+            description: "A monumental achievement! 1,000 orders fulfilled on OmniSolo!"
+                .to_string(),
             reached: reached_types.contains(&"1000_orders".to_string()),
         },
         Milestone {
@@ -4881,7 +4882,11 @@ mod cloud_bridge_tests {
         assert!(res.is_ok());
 
         let res_json = res.unwrap().0;
-        assert!(res_json.invite_link.starts_with("https://omnisolo.co/invite/"));
+        assert!(
+            res_json
+                .invite_link
+                .starts_with("https://omnisolo.co/invite/")
+        );
 
         let recent_events = state.hub.recent_events(10).await;
         assert!(

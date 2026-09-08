@@ -53,6 +53,18 @@ message RunTaskRequest {
   bool enable_tao_orchestration_loop = 15;
   // Enable Lazy Tool Loading (Harness Thickness)
   bool enable_lazy_tool_loading = 16;
+  // Optional canonical middleware session identity. Empty creates a session.
+  string session_id = 17;
+  // Target harness identity for middleware routing; the built-in implementation
+  // uses "omnisolo" when this is empty.
+  string harness_id = 18;
+  // Portable session capsule for explicit cross-harness import.
+  string session_capsule_json = 19;
+  string project_id = 20;
+  string workspace_id = 21;
+  string worker_id = 22;
+  bool create_turn = 23;
+  string idempotency_key = 24;
 }
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
@@ -85,6 +97,19 @@ message RunTaskEvent {
   // Present for RUN_STARTED and ITERATION_STARTED.
   int32 iteration = 7;
   int32 message_count = 8;
+  // Canonical OmniSolo middleware identity and replay metadata.
+  string session_id = 9;
+  string task_id = 10;
+  string turn_id = 11;
+  string attempt_id = 12;
+  string event_id = 13;
+  int64 durable_sequence = 14;
+  int64 delivery_sequence = 15;
+  string middleware_event_type = 16;
+  string source_attempt_id = 17;
+  string ingest_attempt_id = 18;
+  string payload_json = 19;
+  string harness_id = 20;
 }
 
 // PingRequest / PingResponse for health-check.

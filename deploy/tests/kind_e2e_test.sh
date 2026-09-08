@@ -322,8 +322,10 @@ run_rest_smoke_tests() {
   local local_port="$3"
   local grpc_local_port=$((local_port + 1000))
   local backend_url="http://127.0.0.1:${local_port}"
+  local expected_database_backend="Sqlite"
   local port_mappings=("${local_port}:8080")
   if [[ "${mode_name}" == "cloud/web mode" ]]; then
+    expected_database_backend="Postgres"
     port_mappings+=("${grpc_local_port}:8081")
   fi
 
@@ -358,7 +360,16 @@ run_rest_smoke_tests() {
   log "  /healthz ✓"
 
   response="$(curl_bounded -sf "${backend_url}/readyz")"
-  [[ "${response}" == "ok" ]] || { echo "readyz failed: ${response}" >&2; exit 1; }
+  if ! jq -e --arg backend "${expected_database_backend}" '
+    .status == "ready"
+    and .database.backend == $backend
+    and (.database.migrations | type == "number" and . >= 0)
+    and (.database.users | type == "number" and . >= 0)
+    and (.database.products | type == "number" and . >= 0)
+  ' <<<"${response}" >/dev/null; then
+    echo "readyz failed for ${expected_database_backend}: ${response}" >&2
+    exit 1
+  fi
   log "  /readyz ✓"
 
 # --- one-time setup and normal login ---

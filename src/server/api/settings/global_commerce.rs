@@ -16,12 +16,36 @@ pub struct GlobalCommerceSettings {
     pub enabled_currencies: Vec<String>,
 }
 
-fn tenant_id(auth_info: &::server_auth::orchestration::AuthInfo) -> Result<&str, Response> {
-    let tenant_id = auth_info.org_id.trim();
+fn tenant_id(claims: &::server_common::Claims) -> Result<&str, Response> {
+    let tenant_id = claims.organization_id.as_deref().unwrap_or_default().trim();
     if tenant_id.is_empty() || tenant_id.eq_ignore_ascii_case("system") {
         return Err((StatusCode::UNAUTHORIZED, "Missing tenant ID").into_response());
     }
     Ok(tenant_id)
+}
+
+const SUPPORTED_CURRENCIES: [&str; 6] = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY"];
+
+fn valid_settings(settings: &GlobalCommerceSettings) -> bool {
+    let supported = |currency: &str| SUPPORTED_CURRENCIES.contains(&currency);
+    !settings.enabled_currencies.is_empty()
+        && settings.enabled_currencies.len() <= SUPPORTED_CURRENCIES.len()
+        && supported(&settings.base_currency)
+        && settings
+            .enabled_currencies
+            .iter()
+            .all(|currency| supported(currency))
+        && settings
+            .enabled_currencies
+            .iter()
+            .filter(|currency| *currency == &settings.base_currency)
+            .count()
+            == 1
+        && settings
+            .enabled_currencies
+            .iter()
+            .enumerate()
+            .all(|(index, currency)| !settings.enabled_currencies[..index].contains(currency))
 }
 
 fn normalize_settings(
@@ -39,6 +63,16 @@ fn normalize_settings(
             "base_currency must be a three-letter ISO currency code",
         )
             .into_response());
+    }
+
+    const SUPPORTED: [&str; 6] = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY"];
+    if !SUPPORTED.contains(&settings.base_currency.as_str())
+        || settings
+            .enabled_currencies
+            .iter()
+            .any(|currency| !SUPPORTED.contains(&currency.trim().to_ascii_uppercase().as_str()))
+    {
+        return Err((StatusCode::BAD_REQUEST, "unsupported currency").into_response());
     }
 
     let mut currencies = settings
@@ -93,9 +127,9 @@ fn settings_response(base_currency: Option<String>, enabled_currencies: Vec<Stri
 
 pub async fn get_settings(
     Extension(db): Extension<Arc<DB>>,
-    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Extension(claims): Extension<::server_common::Claims>,
 ) -> Response {
-    let tenant_id = match tenant_id(&auth_info) {
+    let tenant_id = match tenant_id(&claims) {
         Ok(tenant_id) => tenant_id,
         Err(response) => return response,
     };
@@ -198,13 +232,16 @@ pub async fn get_settings(
 
 pub async fn update_settings(
     Extension(db): Extension<Arc<DB>>,
-    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Extension(claims): Extension<::server_common::Claims>,
     Json(payload): Json<GlobalCommerceSettings>,
 ) -> Response {
-    let tenant_id = match tenant_id(&auth_info) {
+    let tenant_id = match tenant_id(&claims) {
         Ok(tenant_id) => tenant_id,
         Err(response) => return response,
     };
+    if !valid_settings(&payload) {
+        return (StatusCode::BAD_REQUEST, "invalid currency settings").into_response();
+    }
     let payload = match normalize_settings(payload) {
         Ok(payload) => payload,
         Err(response) => return response,
@@ -288,5 +325,24 @@ mod tests {
             })
             .is_err()
         );
+    }
+    #[test]
+    fn currency_settings_are_bounded_and_include_the_base_once() {
+        assert!(valid_settings(&GlobalCommerceSettings {
+            base_currency: "EUR".to_string(),
+            enabled_currencies: vec!["USD".to_string(), "EUR".to_string()],
+        }));
+        assert!(!valid_settings(&GlobalCommerceSettings {
+            base_currency: "EUR".to_string(),
+            enabled_currencies: vec!["USD".to_string()],
+        }));
+        assert!(!valid_settings(&GlobalCommerceSettings {
+            base_currency: "USD".to_string(),
+            enabled_currencies: vec!["USD".to_string(), "USD".to_string()],
+        }));
+        assert!(!valid_settings(&GlobalCommerceSettings {
+            base_currency: "BTC".to_string(),
+            enabled_currencies: vec!["BTC".to_string()],
+        }));
     }
 }

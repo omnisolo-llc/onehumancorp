@@ -33,14 +33,13 @@ pub mod cart;
 pub mod catalog;
 pub mod docs;
 pub mod fulfillment;
-#[path = "settings/global_commerce.rs"]
-pub mod global_commerce_settings;
 pub mod incidents;
 pub mod invoice;
 pub mod local_seo;
 pub mod mcp_webhook;
 pub mod meta_webhook;
 pub mod recovery;
+pub mod settings;
 pub mod shipping;
 pub mod subscription;
 
@@ -51,6 +50,8 @@ pub mod payment_ledger;
 pub mod quotes;
 pub mod sync_gateway;
 
+pub mod agent_metrics;
+pub mod agent_orchestrate;
 pub mod agent_stream;
 pub mod checkout_api;
 pub mod field_ops;
@@ -63,3 +64,5 @@ pub mod unified_inbox_webhook;
 pub mod unified_ws;
 mod walkup;
 pub mod work_triage;
+mod ws_batch;
+pub(crate) mod ws_compression;

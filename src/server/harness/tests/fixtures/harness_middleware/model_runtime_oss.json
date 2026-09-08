@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "model_id": "open-model-placeholder",
+  "provider": "self_hosted",
+  "runtime_kind": "kubernetes_service",
+  "serving_engines": ["vllm", "tgi", "sglang", "ollama", "llama_cpp"],
+  "required_capabilities": ["tool_calling", "json_schema"],
+  "placement": {"cluster": "cluster-a", "namespace": "models"},
+  "autoscaling": {"min_replicas": 0, "max_replicas": 8, "scale_to_zero": true}
+}

@@ -37,33 +37,50 @@ export function useAgentWebSocket({
   useEffect(() => {
     if (!url) return;
     mountedRef.current = true;
+    let disposed = false;
+    // Preserve received frame order across reconnects within this subscription.
+    let pending = Promise.resolve();
 
     const connect = () => {
-      if (!mountedRef.current) return;
+      if (disposed || !mountedRef.current) return;
 
-      const ws = new WebSocket(url);
+      const ws = typeof DecompressionStream === 'function'
+        ? new WebSocket(url, ['omnisolo.gzip.v1'])
+        : new WebSocket(url);
+      ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (disposed || wsRef.current !== ws) return;
         setConnected(true);
       };
 
       ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
+        pending = pending.then(async () => {
+          let text: string;
+          if (typeof event.data === 'string') {
+            text = event.data;
+          } else if (event.data instanceof ArrayBuffer) {
+            const stream = new Blob([event.data]).stream()
+              .pipeThrough(new DecompressionStream('gzip'));
+            text = await new Response(stream).text();
+          } else {
+            throw new Error('Unsupported WebSocket frame');
+          }
+          if (disposed) return;
+          const data = JSON.parse(text);
           if (data.type === 'batch' && Array.isArray(data.items)) {
-            for (const item of data.items) {
-              onMessageRef.current(item);
-            }
+            for (const item of data.items) onMessageRef.current(item);
           } else {
             onMessageRef.current(data);
           }
-        } catch (err) {
+        }).catch((err) => {
           console.error('Failed to parse WebSocket message:', err);
-        }
+        });
       };
 
       ws.onclose = () => {
+        if (disposed || wsRef.current !== ws) return;
         setConnected(false);
         wsRef.current = null;
         if (mountedRef.current) {
@@ -78,7 +95,7 @@ export function useAgentWebSocket({
 
     connect();
 
-    return cleanup;
+    return () => { disposed = true; cleanup(); };
   }, [url, reconnectInterval, cleanup]);
 
   return { connected };

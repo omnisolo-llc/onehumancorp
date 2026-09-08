@@ -1,7 +1,7 @@
 use sqlx::Row;
 pub mod cart_recovery;
 pub mod persistence;
-#[cfg(test)]
+#[cfg(all(test, not(ohc_bazel)))]
 mod persistence_commands_test;
 pub mod rag_sync;
 pub mod redis_pool;
@@ -975,10 +975,6 @@ pub mod storage;
 pub mod sync;
 
 pub mod benchmarks;
-
-#[cfg(test)]
-#[path = "../omnisolo_branding_contract_test.rs"]
-mod omnisolo_branding_contract_test;
 
 pub use crate::proto as ohc;
 pub use ::server_common as common;
@@ -2988,84 +2984,35 @@ impl HubService for MyHubService {
         &self,
         request: Request<SubTask>,
     ) -> Result<Response<DelegateTaskResponse>, Status> {
+        let identity = ::server_auth::extract_spiffe_id_from_metadata(request.metadata())
+            .map_err(Status::unauthenticated)?;
+        let (org, _) = ::server_auth::parse_spiffe_id(&identity)?;
         let req = request.into_inner();
-
-        if req.task_id.is_empty() || req.target_role.is_empty() {
+        if req.task_id.is_empty() || req.target_role.is_empty() || req.instruction.trim().is_empty()
+        {
             return Err(Status::invalid_argument(
-                "task_id and target_role are required",
+                "task_id, target_role, and instruction are required",
             ));
         }
-
-        if self.hub.get_agent(&req.from_agent_id).await.is_none() {
-            return Err(Status::invalid_argument("sender agent is not registered"));
+        if !self
+            .hub
+            .get_agent(&req.from_agent_id)
+            .await
+            .is_some_and(|agent| !org.is_empty() && agent.organization_id == org)
+        {
+            return Err(Status::permission_denied("sender agent is not available"));
         }
-
-        // Quota Enforcement
-        if self.hub.get_agents_count().await >= 10 {
-            // Soft limit: allow even if VRAM limit is exceeded
-            tracing::warn!("VRAM quota limit exceeded, but soft limit allows sub-agent creation");
-        }
-
-        let now_nano = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let sub_agent_id = format!("sub-agent-{}-{}", req.target_role, now_nano);
-
-        let sub_agent = Agent {
-            id: sub_agent_id.clone(),
-            name: format!("Specialized {} Agent", req.target_role),
-            role: req.target_role.clone(),
-            organization_id: "dynamic-delegation".to_string(),
-            status: "IDLE".to_string(),
-            provider_type: "builtin".to_string(),
-        };
-
-        self.hub.register_agent(sub_agent).await;
-
-        // Prompt injection checks
-        if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
-            return Err(Status::invalid_argument(
-                "instruction contains forbidden prompt injection sequences",
-            ));
-        }
-        if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
-            return Err(Status::invalid_argument(
-                "parent_thread_id contains forbidden prompt injection sequences",
-            ));
-        }
-
-        // Delegate to K8s Operator
-        let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
-            &req.target_role,
-            &req.instruction,
-            &req.parent_thread_id,
-        )
-        .await
-        .map_err(|e| Status::internal(e))?;
-        tracing::debug!(
-            "Spawned K8s Pod {} for Hierarchical Task Delegation",
-            pod_id
-        );
-
-        let msg_id = format!("msg-{}-{}", req.task_id, now_nano);
-        let msg = Message {
-            id: msg_id,
-            from_agent: req.from_agent_id,
-            to_agent: sub_agent_id,
-            r#type: "TaskDelegation".to_string(),
-            content: format!(
-                "Execute Task: {}\nContext: {}\nK8sPod: {}",
-                req.instruction, req.parent_thread_id, pod_id
-            ),
-            occurred_at_unix: Utc::now().timestamp(),
-            meeting_id: String::new(),
-        };
-
-        match self.hub.clone().publish(msg).await {
-            Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
-            Err(e) => Err(Status::internal(e)),
-        }
+        self.hub
+            .clone()
+            .delegate_sub_task(
+                &req.from_agent_id,
+                &req.target_role,
+                &req.instruction,
+                &req.parent_thread_id,
+            )
+            .await
+            .map_err(Status::failed_precondition)?;
+        Ok(Response::new(DelegateTaskResponse { success: true }))
     }
 
     async fn advertise_capabilities(
@@ -9295,6 +9242,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/settings/integrations/whatsapp_cloud_api", axum::routing::post(api::integrations_settings::connect_whatsapp_cloud_api).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .route("/api/v1/settings/integrations/whatsapp", axum::routing::post(api::integrations_settings::connect_whatsapp).with_state(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())))
         .merge(api::agent_stream::router(hub.clone()))
+        .merge(api::agent_metrics::router(hub.clone()))
+        .merge(api::agent_orchestrate::router(hub.clone()))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .route("/ws", axum::routing::get(api::unified_ws::unified_ws_handler))
         .route("/api/v1/auth/realtime-ticket", axum::routing::post(api::realtime::realtime_ticket_handler).route_layer(
@@ -9426,8 +9375,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .route(
             "/api/v1/settings/global-commerce",
-            axum::routing::get(api::global_commerce_settings::get_settings)
-                .put(api::global_commerce_settings::update_settings)
+            axum::routing::get(api::settings::global_commerce::get_settings)
+                .put(api::settings::global_commerce::update_settings)
                 .layer(legacy_db_compatibility_layer(db.clone()))
                 .route_layer(axum::middleware::from_fn_with_state(
                     http_auth_store.clone(),
@@ -10005,6 +9954,22 @@ mod tests {
     }
 
     #[test]
+    fn production_router_inserts_the_shared_database_extension_without_double_wrapping() {
+        let source = include_str!("lib.rs");
+        let production_source = source
+            .rsplit_once("\n#[cfg(test)]\nmod tests {")
+            .expect("server source must retain its final test-module boundary")
+            .0;
+
+        assert!(
+            !production_source
+                .contains(".layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))"),
+            "db is already Arc<DB>; double wrapping inserts Arc<Arc<DB>> and breaks handlers"
+        );
+        assert!(production_source.contains(".layer(axum::extract::Extension(db.clone()))"));
+    }
+
+    #[test]
     fn dashboard_sales_and_top_product_use_qualifying_orders() {
         for sql in [dashboard_sales_query(true), dashboard_sales_query(false)] {
             assert!(sql.contains("paid"));
@@ -10108,21 +10073,17 @@ mod tests {
         use tower::ServiceExt;
 
         let auth_store = std::sync::Arc::new(::server_auth::Store::new());
-        let now = chrono::Utc::now();
-        let token = auth_store
-            .issue_token(&::server_auth::User {
-                id: "user-a".to_string(),
-                username: "user-a".to_string(),
-                email: "user-a@example.com".to_string(),
-                password_hash: String::new(),
-                roles: vec!["ADMIN".to_string()],
-                active: true,
-                organization_id: Some("tenant-a".to_string()),
-                created_at: now,
-                updated_at: now,
-                oidc_subject: None,
-            })
+        let user = auth_store
+            .create_user(
+                "user-a".to_string(),
+                "user-a@example.com".to_string(),
+                "user-a-password".to_string(),
+                vec!["ADMIN".to_string()],
+                "tenant-a".to_string(),
+            )
+            .await
             .unwrap();
+        let token = auth_store.issue_token(&user).unwrap();
         let app = Router::new()
             .route("/api/v1/protected", get(|| async { "ok" }))
             .route("/api/v1/auth/login", get(|| async { "public" }))

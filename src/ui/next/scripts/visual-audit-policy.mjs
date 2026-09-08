@@ -1,5 +1,7 @@
 export const HYDRATION_FAILURE_PATTERN = /Text content does not match server-rendered HTML|Text content did not match|Hydration failed|error occurred during hydration|server HTML (?:was )?replaced|initial UI does not match/i;
 
+export const PUBLIC_AUTH_ROUTES = new Set(['/login', '/register', '/verify-email']);
+
 const RESOURCE_FAILURE_PATTERN = /^Failed to load resource: the server responded with a status of (?:401|403|404|500|502)\b/i;
 
 const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
@@ -192,8 +194,12 @@ export function failureReasons(result) {
   if (result.pageErrors?.length > 0) reasons.push('uncaught page error');
   if (result.hydrationErrors?.length > 0) reasons.push('hydration error');
   if (result.unexpectedConsoleErrors?.length > 0) reasons.push('unexpected console error');
-  for (const [shell, count] of Object.entries(result.shellCounts)) {
-    if (count !== 1) reasons.push(`${shell} count ${count}`);
+  const expectedLayoutCounts = PUBLIC_AUTH_ROUTES.has(result.route)
+    ? { auth: 1, sidebar: 0, topbar: 0, main: 0 }
+    : { auth: 0, sidebar: 1, topbar: 1, main: 1 };
+  for (const [shell, expected] of Object.entries(expectedLayoutCounts)) {
+    const count = result.shellCounts[shell] ?? 0;
+    if (count !== expected) reasons.push(`${shell} count ${count}, expected ${expected}`);
   }
   if (result.horizontalOverflow) {
     reasons.push(`horizontal overflow ${result.documentWidth - result.viewportWidth}px`);

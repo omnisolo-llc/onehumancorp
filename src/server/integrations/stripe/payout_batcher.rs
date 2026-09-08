@@ -212,17 +212,16 @@ mod batching_cost_tests {
     #[test]
     fn test_batch_threshold_saves_fees() {
         let pool: Option<Arc<PgPool>> = None;
-        let threshold =
-            crate::integrations::stripe::routing::PaymentRouter::BATCH_PAYOUT_THRESHOLD_CENTS;
+        let threshold = super::super::routing::PaymentRouter::BATCH_PAYOUT_THRESHOLD_CENTS;
         let batcher = PayoutBatcher::new(pool, threshold);
 
         // Simulating the routing check directly as that's what prevents unbatched fees
         assert_eq!(
-            crate::integrations::stripe::routing::PaymentRouter::should_batch_payout(1000),
+            super::super::routing::PaymentRouter::should_batch_payout(1000),
             true
         );
         assert_eq!(
-            crate::integrations::stripe::routing::PaymentRouter::should_batch_payout(10000),
+            super::super::routing::PaymentRouter::should_batch_payout(10000),
             false
         ); // Threshold reached
 

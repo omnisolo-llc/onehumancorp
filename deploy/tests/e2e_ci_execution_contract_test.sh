@@ -43,6 +43,11 @@ reject_literal() {
   fi
 }
 
+require_literal "jq -e --arg backend \"\${expected_database_backend}\"" "$kind_script" \
+  "Kind E2E must validate the structured readiness response and database backend."
+reject_literal '[[ "${response}" == "ok" ]] || { echo "readyz failed:' "$kind_script" \
+  "Kind E2E must not expect the structured readiness endpoint to return plain text."
+
 for script in "$kind_script" "$compose_script"; do
   if grep -Fq 'Skipping test in CI environment' "$script"; then
     echo "${script} still bypasses its real smoke test in CI." >&2

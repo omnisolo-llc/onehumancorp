@@ -1,5 +1,18 @@
 #[path = "persistence/capabilities.rs"]
 mod capabilities;
+mod db {
+    pub struct DB;
+
+    impl DB {
+        pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+            unreachable!("legacy PostgreSQL migrations are not used by SQLite persistence tests")
+        }
+
+        pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
+            unreachable!("legacy PostgreSQL migrations are not used by SQLite persistence tests")
+        }
+    }
+}
 #[path = "persistence/commands.rs"]
 mod commands;
 #[path = "persistence/connection.rs"]
@@ -13,6 +26,33 @@ use chrono::Utc;
 use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, PaginatorTrait, Set, Statement};
 
 use connection::AppDatabase;
+
+#[test]
+fn database_url_can_be_loaded_from_a_secret_file() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("database-url");
+    std::fs::write(&path, "postgres://file-user:file-password@database/ohc\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
+
+    temp_env::with_vars(
+        [
+            ("DATABASE_URL", None),
+            ("OHC_DATABASE_URL", None),
+            ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
+        ],
+        || {
+            let url = commands::database_url_from_environment().unwrap();
+            assert_eq!(
+                url.expose_for_connection(),
+                "postgres://file-user:file-password@database/ohc"
+            );
+        },
+    );
+}
 
 async fn insert_user(database: &AppDatabase, id: &str, tenant_id: &str, email: &str) {
     let now = Utc::now();
@@ -39,6 +79,52 @@ async fn insert_user(database: &AppDatabase, id: &str, tenant_id: &str, email: &
         ))
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn environment_connection_applies_the_sqlcipher_key_to_sqlite() {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("environment.db");
+    std::fs::File::create(&path).unwrap();
+    let url = format!("sqlite://{}", path.display());
+
+    temp_env::async_with_vars(
+        [
+            ("DATABASE_URL", Some(url.as_str())),
+            ("OHC_DATABASE_URL", None),
+            (
+                "OHC_SQLITE_KEY",
+                Some("environment-test-key-with-'quote-that-remains-outside-the-url"),
+            ),
+        ],
+        async {
+            let database = commands::connect_from_environment().await.unwrap();
+            database
+                .connection()
+                .execute(Statement::from_string(
+                    sea_orm::DatabaseBackend::Sqlite,
+                    "CREATE TABLE environment_probe (value TEXT NOT NULL)".to_owned(),
+                ))
+                .await
+                .unwrap();
+            database.connection().clone().close().await.unwrap();
+        },
+    )
+    .await;
+
+    let unkeyed = AppDatabase::connect(&url).await.unwrap();
+    let error = unkeyed
+        .connection()
+        .query_one(Statement::from_string(
+            sea_orm::DatabaseBackend::Sqlite,
+            "SELECT value FROM environment_probe".to_owned(),
+        ))
+        .await
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("file is not a database"),
+        "{error}"
+    );
 }
 
 #[tokio::test]

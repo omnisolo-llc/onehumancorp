@@ -157,7 +157,7 @@ async fn fetch_fulfillment_batches(
             fulfillment_date::TEXT AS fulfillment_date,
             status,
             subscriber_count::BIGINT AS subscriber_count
-         FROM fulfillment_batches
+         FROM fulfillment_schedules
          WHERE tenant_id = $1
          ORDER BY fulfillment_date ASC, created_at ASC, id ASC",
     )
@@ -662,7 +662,8 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
         orchestrator,
         SubscriptionTenantPolicy {
             multitenant: ::server_config::get().multitenant,
-            configured_default: ::server_common::auth_utils::get_default_tenant(),
+            configured_default: std::env::var("OHC_DEFAULT_TENANT_ID")
+                .unwrap_or_else(|_| ::server_common::auth_utils::get_default_tenant()),
         },
     )
 }

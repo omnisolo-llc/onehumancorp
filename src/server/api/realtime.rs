@@ -1,11 +1,12 @@
 use axum::{
     Json, Router,
     extract::{
-        Extension,
+        Extension, FromRequestParts,
         ws::{Message as WsMessage, WebSocket, WebSocketUpgrade},
     },
+    http::Request,
     response::IntoResponse,
-    routing::{get, post},
+    routing::get,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
@@ -130,10 +131,7 @@ fn unoch_epoch_or_default() -> SystemTime {
     UNIX_EPOCH
 }
 
-pub async fn realtime_ws_handler(
-    ws: WebSocketUpgrade,
-    req: axum::http::Request<axum::body::Body>,
-) -> impl IntoResponse {
+pub async fn realtime_ws_handler(req: Request<axum::body::Body>) -> impl IntoResponse {
     // Protocol header: Sec-WebSocket-Protocol
     let subprotocol = req
         .headers()
@@ -170,6 +168,14 @@ pub async fn realtime_ws_handler(
                     .into_response();
             }
         };
+
+    // Authenticate the single-use ticket before Axum validates the upgrade
+    // headers, so missing or invalid credentials consistently fail with 401.
+    let (mut parts, _) = req.into_parts();
+    let ws = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
+        Ok(ws) => ws,
+        Err(rejection) => return rejection.into_response(),
+    };
 
     // Verify single-use of jti
     {
@@ -376,6 +382,8 @@ mod tests {
     use super::*;
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
+    use axum::routing::post;
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     use tower::ServiceExt;
 
     #[test]
@@ -495,47 +503,43 @@ mod tests {
         let ticket_str = encode(&header, &claims, &key).unwrap();
 
         let app = Router::new().route("/api/v1/realtime/ws", get(realtime_ws_handler));
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0))
+            .await
+            .unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
 
-        // First attempt - since axum `oneshot` upgrades, we test the WebSocket upgrade route rejection logic.
-        // Handshake validation:
-        let res1 = app
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .uri("/api/v1/realtime/ws")
-                    .method("GET")
-                    .header(
-                        "sec-websocket-protocol",
-                        format!("ohc-rt-ticket-{}", ticket_str),
-                    )
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+        let upgrade_request = || {
+            let mut request = format!("ws://{address}/api/v1/realtime/ws")
+                .into_client_request()
+                .unwrap();
+            request.headers_mut().insert(
+                "sec-websocket-protocol",
+                format!("ohc-rt-ticket-{ticket_str}").parse().unwrap(),
+            );
+            request
+        };
+
+        let (socket, res1) = tokio_tungstenite::connect_async(upgrade_request())
             .await
             .unwrap();
 
-        // Should either succeed (returns 101 Switching Protocols under real WS client, or 400 Bad Request in test-harness if upgrade headers like connection/upgrade are missing, but NOT 401 UNAUTHORIZED)
-        let status1 = res1.status();
-        assert_ne!(status1, StatusCode::UNAUTHORIZED);
+        assert_eq!(res1.status(), StatusCode::SWITCHING_PROTOCOLS);
+        drop(socket);
 
         // Second attempt with the SAME consumed ticket
-        let res2 = app
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .uri("/api/v1/realtime/ws")
-                    .method("GET")
-                    .header(
-                        "sec-websocket-protocol",
-                        format!("ohc-rt-ticket-{}", ticket_str),
-                    )
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+        let error = tokio_tungstenite::connect_async(upgrade_request())
             .await
-            .unwrap();
+            .expect_err("a consumed ticket must not establish another WebSocket");
 
-        // Second attempt must fail with 401 UNAUTHORIZED
-        assert_eq!(res2.status(), StatusCode::UNAUTHORIZED);
+        match error {
+            tokio_tungstenite::tungstenite::Error::Http(response) => {
+                assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            }
+            other => panic!("expected an HTTP authentication rejection, got {other}"),
+        }
+        server.abort();
     }
 }

@@ -57,6 +57,8 @@ pub mod product {
         pub item_type: Option<String>,
         pub price_cents: Option<i64>,
         pub inventory_count: Option<i32>,
+        #[sea_orm(column_type = "JsonBinary", nullable)]
+        pub metadata: Option<Json>,
         pub created_at: Option<DateTimeUtc>,
         pub updated_at: Option<DateTimeUtc>,
     }

@@ -3,6 +3,7 @@ import {
   classifyConsoleError,
   failureReasons,
   isCoverageComplete,
+  PUBLIC_AUTH_ROUTES,
   shouldFailAudit,
 } from './visual-audit-policy.mjs';
 
@@ -19,7 +20,7 @@ function healthyResult(route, viewport) {
     completed: true,
     status: 200,
     finalPathname: route,
-    shellCounts: { sidebar: 1, topbar: 1, main: 1 },
+    shellCounts: { auth: 0, sidebar: 1, topbar: 1, main: 1 },
     horizontalOverflow: false,
     documentWidth: 390,
     consoleErrors: [],
@@ -142,6 +143,13 @@ describe('visual audit policy', () => {
     const result = healthyResult('/dashboard', 'desktop');
     result.finalPathname = '/login';
     expect(failureReasons(result)).toContain('unexpected redirect to /login');
+  });
+
+  it('requires the isolated public layout without authenticated chrome', () => {
+    expect(PUBLIC_AUTH_ROUTES.has('/register')).toBe(true);
+    const result = healthyResult('/register', 'desktop');
+    result.shellCounts = { auth: 1, sidebar: 0, topbar: 0, main: 0 };
+    expect(failureReasons(result)).toEqual([]);
   });
 
   it('allows the share-card redirect contract and no other onboarding redirect', () => {

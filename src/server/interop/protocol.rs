@@ -1,4 +1,5 @@
 use crate::msgbus::{Bus, DistributedLock, Message};
+use server_harness::middleware::capsule::{PortableRecord, SessionCapsule};
 
 use tokio::time::{Duration, sleep, timeout};
 
@@ -6,6 +7,15 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 pub mod proto {
     pub use ::server_ohc::interop::*;
+}
+
+pub const HARNESS_SESSION_OPERATION_TOPIC: &str = "system:harness_session_operation";
+const HARNESS_SESSION_OPERATION_SCHEMA: &str = "omnisolo.session_capsule.v1";
+
+#[derive(Clone, Debug)]
+pub struct HarnessCapsuleOperation {
+    pub envelope: ::server_ohc::harness_middleware::SessionOperationEnvelope,
+    pub capsule: SessionCapsule,
 }
 
 /// Interop Layer protocol for mode-switch behaviour and sync
@@ -143,6 +153,250 @@ impl InteropProtocol {
     ) -> Result<(), String> {
         // Handoff uses the same mechanism to synchronize state
         self.handoff(mission_id, tenant_id, state_payload).await
+    }
+
+    /// Publishes a verified portable capsule as a fenced, idempotent session operation.
+    /// This is the typed handoff path for independently scaled harness workers; the
+    /// legacy `StateHandoff` path above remains available for older deployments.
+    pub async fn handoff_capsule(
+        &self,
+        capsule: &SessionCapsule,
+        operation_generation: i64,
+        fencing_token: &str,
+    ) -> Result<(), String> {
+        self.publish_capsule_operation(capsule, "handoff", operation_generation, fencing_token)
+            .await
+    }
+
+    /// Publishes a verified portable capsule as a resume operation.
+    pub async fn resume_capsule(
+        &self,
+        capsule: &SessionCapsule,
+        operation_generation: i64,
+        fencing_token: &str,
+    ) -> Result<(), String> {
+        self.publish_capsule_operation(capsule, "resume", operation_generation, fencing_token)
+            .await
+    }
+
+    /// Listens for the protocol-neutral session operation envelope without
+    /// interpreting its payload. This is useful for non-Rust harness workers.
+    pub async fn listen_for_session_operations(
+        &self,
+        handler: Box<
+            dyn Fn(::server_ohc::harness_middleware::SessionOperationEnvelope) + Send + Sync,
+        >,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let bus_handler = Box::new(move |msg: Message| {
+            if msg.topic != HARNESS_SESSION_OPERATION_TOPIC {
+                return;
+            }
+            use prost::Message as ProstMessage;
+            if let Ok(decoded) =
+                ::server_ohc::harness_middleware::SessionOperationEnvelope::decode(&msg.payload[..])
+            {
+                handler(decoded);
+            }
+        });
+
+        self.bus
+            .subscribe(HARNESS_SESSION_OPERATION_TOPIC.to_owned(), bus_handler)
+            .await
+    }
+
+    /// Listens for session operations and only forwards capsules that pass
+    /// integrity, tenant, identity, version, and fencing validation.
+    pub async fn listen_for_capsule_operations(
+        &self,
+        handler: Box<dyn Fn(HarnessCapsuleOperation) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.listen_for_session_operations(Box::new(
+            move |envelope| match decode_capsule_operation(envelope) {
+                Ok(operation) => handler(operation),
+                Err(error) => {
+                    tracing::warn!(error = %error, "Ignoring invalid harness capsule operation")
+                }
+            },
+        ))
+        .await
+    }
+
+    fn capsule_operation(
+        &self,
+        capsule: &SessionCapsule,
+        kind: &str,
+        operation_generation: i64,
+        fencing_token: &str,
+    ) -> Result<::server_ohc::harness_middleware::SessionOperationEnvelope, String> {
+        capsule
+            .verify_integrity()
+            .map_err(|error| format!("capsule integrity verification failed: {error:?}"))?;
+        if capsule.manifest.tenant_id.trim().is_empty() {
+            return Err("capsule tenant id is empty".to_owned());
+        }
+        if capsule.manifest.session_id.is_nil() {
+            return Err("capsule session id is empty".to_owned());
+        }
+        if capsule.manifest.handoff_id.is_nil() {
+            return Err("capsule handoff id is empty".to_owned());
+        }
+        if capsule.manifest.target_harness_id.trim().is_empty() {
+            return Err("capsule target harness id is empty".to_owned());
+        }
+        if operation_generation <= 0 {
+            return Err("operation generation must be positive".to_owned());
+        }
+        if fencing_token.trim().is_empty() {
+            return Err("fencing token must not be empty".to_owned());
+        }
+        if !matches!(kind, "handoff" | "resume") {
+            return Err(format!("unsupported capsule operation kind: {kind}"));
+        }
+
+        let payload = serde_json::to_vec(capsule)
+            .map_err(|error| format!("failed to encode session capsule: {error}"))?;
+        let task_id = capsule.records.iter().find_map(|record| match record {
+            PortableRecord::Task(task) => Some(task.task_id.to_string()),
+            _ => None,
+        });
+        let idempotency_key = format!("capsule:{kind}:{}", capsule.manifest_digest);
+        let extensions = [
+            (
+                "target_harness_id".to_owned(),
+                capsule.manifest.target_harness_id.clone(),
+            ),
+            (
+                "manifest_digest".to_owned(),
+                capsule.manifest_digest.clone(),
+            ),
+            (
+                "loss_report_digest".to_owned(),
+                capsule.loss_report_digest.clone(),
+            ),
+        ]
+        .into_iter()
+        .collect();
+
+        Ok(::server_ohc::harness_middleware::SessionOperationEnvelope {
+            protocol_version: 1,
+            tenant_id: capsule.manifest.tenant_id.clone(),
+            session_id: capsule.manifest.session_id.to_string(),
+            operation_id: capsule.manifest.handoff_id.to_string(),
+            operation_generation,
+            fencing_token: fencing_token.to_owned(),
+            kind: kind.to_owned(),
+            task_id: task_id.unwrap_or_default(),
+            correlation_id: capsule
+                .head_event_id
+                .unwrap_or(capsule.manifest.session_id)
+                .to_string(),
+            idempotency_key,
+            payload_schema: HARNESS_SESSION_OPERATION_SCHEMA.to_owned(),
+            payload_version: capsule.manifest.schema_version,
+            payload,
+            extensions,
+            worker_id: String::new(),
+            pool_id: String::new(),
+            harness_id: capsule.manifest.target_harness_id.clone(),
+            capability_version: 1,
+            binding_id: String::new(),
+            binding_generation: 0,
+            workspace_mutation_scope_id: String::new(),
+        })
+    }
+
+    async fn publish_capsule_operation(
+        &self,
+        capsule: &SessionCapsule,
+        kind: &str,
+        operation_generation: i64,
+        fencing_token: &str,
+    ) -> Result<(), String> {
+        use prost::Message as ProstMessage;
+
+        let operation =
+            self.capsule_operation(capsule, kind, operation_generation, fencing_token)?;
+        let lock_resource = format!(
+            "harness:session:{}:operation:{}:{}",
+            operation.session_id, operation.operation_id, operation.kind
+        );
+
+        let acquire_future = async {
+            let mut retries = 0;
+            loop {
+                if self
+                    .lock
+                    .acquire_lock(&lock_resource, &self.node_id, 10)
+                    .await
+                    .unwrap_or(false)
+                {
+                    break Ok::<(), ()>(());
+                }
+                retries += 1;
+                sleep(Duration::from_millis(50 * retries)).await;
+            }
+        };
+        if timeout(Duration::from_secs(5), acquire_future)
+            .await
+            .is_err()
+        {
+            return Err("Timeout waiting for harness session operation lock".to_owned());
+        }
+
+        let idempotency_key = operation.idempotency_key.clone();
+        let idempotency_lock_resource =
+            format!("harness:session-operation:processed:{}", idempotency_key);
+        let attempt_owner = format!(
+            "{}_{}",
+            self.node_id,
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
+        if !self
+            .lock
+            .acquire_lock(&idempotency_lock_resource, &attempt_owner, 3600)
+            .await
+            .unwrap_or(false)
+        {
+            let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
+            return Ok(());
+        }
+
+        let mut payload = Vec::new();
+        operation
+            .encode(&mut payload)
+            .map_err(|error| format!("failed to encode harness session operation: {error}"))?;
+        let message = Message {
+            topic: HARNESS_SESSION_OPERATION_TOPIC.to_owned(),
+            payload,
+        };
+
+        let mut retries = 0;
+        let mut delay_ms = 100;
+        let result = loop {
+            match self.bus.publish(message.clone()).await {
+                Ok(()) => break Ok(()),
+                Err(error) if retries < 5 => {
+                    retries += 1;
+                    sleep(Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2;
+                    tracing::debug!(error = %error, retries, "Retrying harness session operation publish");
+                }
+                Err(error) => {
+                    break Err(format!(
+                        "Failed to publish harness session operation after retries: {error}"
+                    ));
+                }
+            }
+        };
+
+        if result.is_err() {
+            let _ = self
+                .lock
+                .release_lock(&idempotency_lock_resource, &attempt_owner)
+                .await;
+        }
+        let _ = self.lock.release_lock(&lock_resource, &self.node_id).await;
+        result
     }
 
     /// Listens for state handoff updates
@@ -553,11 +807,99 @@ impl InteropProtocol {
     }
 }
 
+fn decode_capsule_operation(
+    envelope: ::server_ohc::harness_middleware::SessionOperationEnvelope,
+) -> Result<HarnessCapsuleOperation, String> {
+    if envelope.protocol_version == 0 {
+        return Err("unsupported session operation protocol version".to_owned());
+    }
+    if envelope.operation_generation <= 0 {
+        return Err("operation generation must be positive".to_owned());
+    }
+    if envelope.fencing_token.trim().is_empty() {
+        return Err("fencing token must not be empty".to_owned());
+    }
+    if !matches!(envelope.kind.as_str(), "handoff" | "resume") {
+        return Err(format!(
+            "unsupported capsule operation kind: {}",
+            envelope.kind
+        ));
+    }
+    if envelope.payload_schema != HARNESS_SESSION_OPERATION_SCHEMA {
+        return Err("unsupported session capsule payload schema".to_owned());
+    }
+
+    let capsule: SessionCapsule = serde_json::from_slice(&envelope.payload)
+        .map_err(|error| format!("invalid session capsule payload: {error}"))?;
+    capsule
+        .verify_integrity()
+        .map_err(|error| format!("capsule integrity verification failed: {error:?}"))?;
+
+    if envelope.tenant_id != capsule.manifest.tenant_id {
+        return Err("session operation tenant does not match capsule".to_owned());
+    }
+    if envelope.session_id != capsule.manifest.session_id.to_string() {
+        return Err("session operation session does not match capsule".to_owned());
+    }
+    if envelope.operation_id != capsule.manifest.handoff_id.to_string() {
+        return Err("session operation id does not match capsule handoff".to_owned());
+    }
+    if envelope.payload_version != capsule.manifest.schema_version {
+        return Err("session capsule schema version does not match envelope".to_owned());
+    }
+
+    let expected_idempotency = format!("capsule:{}:{}", envelope.kind, capsule.manifest_digest);
+    if envelope.idempotency_key != expected_idempotency {
+        return Err("session capsule idempotency key does not match manifest".to_owned());
+    }
+    if envelope.extensions.get("manifest_digest") != Some(&capsule.manifest_digest) {
+        return Err("session capsule manifest digest extension does not match".to_owned());
+    }
+    if envelope.extensions.get("loss_report_digest") != Some(&capsule.loss_report_digest) {
+        return Err("session capsule loss report digest extension does not match".to_owned());
+    }
+    if envelope.extensions.get("target_harness_id") != Some(&capsule.manifest.target_harness_id) {
+        return Err("session capsule target harness extension does not match".to_owned());
+    }
+
+    let task_id = capsule.records.iter().find_map(|record| match record {
+        PortableRecord::Task(task) => Some(task.task_id.to_string()),
+        _ => None,
+    });
+    if envelope.task_id != task_id.unwrap_or_default() {
+        return Err("session operation task does not match capsule".to_owned());
+    }
+
+    Ok(HarnessCapsuleOperation { envelope, capsule })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::msgbus::MemoryBus;
+    use server_harness::middleware::adapter::{
+        OmniSoloEvent, OmniSoloHarnessAdapter, OmniSoloRunConfig,
+    };
+    use server_harness::middleware::capsule::{PortableRecord, SessionCapsule};
     use std::sync::atomic::Ordering;
+
+    fn test_capsule() -> SessionCapsule {
+        let mut adapter = OmniSoloHarnessAdapter::start(
+            OmniSoloRunConfig::new("tenant_capsule", "transfer this task").with_turn(),
+        )
+        .unwrap();
+        adapter
+            .record(OmniSoloEvent::ToolCall {
+                name: "read_file".to_owned(),
+                args_json: r#"{"path":"README.md"}"#.to_owned(),
+                result: "portable result".to_owned(),
+                iteration: 1,
+            })
+            .unwrap();
+        adapter
+            .export_capsule("opencode", uuid::Uuid::new_v4())
+            .unwrap()
+    }
 
     #[tokio::test]
     async fn test_interop_handoff_memory() {
@@ -662,6 +1004,148 @@ mod tests {
         sleep(Duration::from_millis(100)).await;
 
         assert!(received.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_interop_capsule_handoff_round_trip_preserves_portable_identity() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+        let capsule = test_capsule();
+        let received = Arc::new(tokio::sync::Mutex::new(Vec::new()));
+        let received_clone = received.clone();
+
+        let _cancel = protocol
+            .listen_for_capsule_operations(Box::new(move |operation| {
+                let received = received_clone.clone();
+                tokio::spawn(async move {
+                    received.lock().await.push(operation);
+                });
+            }))
+            .await
+            .unwrap();
+
+        protocol
+            .handoff_capsule(&capsule, 7, "session-fence-7")
+            .await
+            .unwrap();
+        sleep(Duration::from_millis(100)).await;
+
+        let operations = received.lock().await;
+        assert_eq!(operations.len(), 1);
+        let operation = &operations[0];
+        assert_eq!(operation.envelope.tenant_id, "tenant_capsule");
+        assert_eq!(
+            operation.envelope.session_id,
+            capsule.manifest.session_id.to_string()
+        );
+        assert_eq!(
+            operation.envelope.operation_id,
+            capsule.manifest.handoff_id.to_string()
+        );
+        assert_eq!(operation.envelope.operation_generation, 7);
+        assert_eq!(operation.envelope.fencing_token, "session-fence-7");
+        assert_eq!(operation.envelope.kind, "handoff");
+        assert_eq!(
+            operation.envelope.task_id,
+            operation_task_id(&capsule).unwrap()
+        );
+        assert_eq!(operation.capsule, capsule);
+        assert!(
+            operation
+                .capsule
+                .records
+                .iter()
+                .any(|record| matches!(record, PortableRecord::ToolResult(_)))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_interop_capsule_resume_is_idempotent_and_rejects_invalid_payloads() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock.clone(), "node1".to_string());
+        let duplicate_protocol = InteropProtocol::new(bus.clone(), lock, "node2".to_string());
+        let capsule = test_capsule();
+        let received_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let received_count_clone = received_count.clone();
+
+        let _cancel = protocol
+            .listen_for_capsule_operations(Box::new(move |operation| {
+                if operation.envelope.kind == "resume" {
+                    received_count_clone.fetch_add(1, Ordering::SeqCst);
+                }
+            }))
+            .await
+            .unwrap();
+
+        protocol
+            .resume_capsule(&capsule, 8, "session-fence-8")
+            .await
+            .unwrap();
+        duplicate_protocol
+            .resume_capsule(&capsule, 8, "session-fence-8")
+            .await
+            .unwrap();
+        sleep(Duration::from_millis(100)).await;
+        assert_eq!(received_count.load(Ordering::SeqCst), 1);
+
+        assert!(
+            protocol
+                .handoff_capsule(&capsule, 0, "session-fence-0")
+                .await
+                .unwrap_err()
+                .contains("operation generation")
+        );
+        assert!(
+            protocol
+                .handoff_capsule(&capsule, 9, "")
+                .await
+                .unwrap_err()
+                .contains("fencing token")
+        );
+
+        let mut tampered = capsule.clone();
+        tampered.manifest.target_harness_id = "tampered".to_owned();
+        assert!(
+            protocol
+                .handoff_capsule(&tampered, 9, "session-fence-9")
+                .await
+                .unwrap_err()
+                .contains("integrity")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_interop_capsule_listener_ignores_malformed_envelopes() {
+        let bus = Arc::new(MemoryBus::new());
+        let lock = bus.clone();
+        let protocol = InteropProtocol::new(bus.clone(), lock, "node1".to_string());
+        let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let received_clone = received.clone();
+
+        let _cancel = protocol
+            .listen_for_capsule_operations(Box::new(move |_operation| {
+                received_clone.store(true, Ordering::SeqCst);
+            }))
+            .await
+            .unwrap();
+
+        bus.publish(Message {
+            topic: "system:harness_session_operation".to_owned(),
+            payload: vec![255, 255, 255],
+        })
+        .await
+        .unwrap();
+        sleep(Duration::from_millis(50)).await;
+        assert!(!received.load(Ordering::SeqCst));
+    }
+
+    fn operation_task_id(capsule: &SessionCapsule) -> Option<String> {
+        capsule.records.iter().find_map(|record| match record {
+            PortableRecord::Task(task) => Some(task.task_id.to_string()),
+            _ => None,
+        })
     }
 
     #[tokio::test]

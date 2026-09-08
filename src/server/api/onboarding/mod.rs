@@ -667,21 +667,17 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool));
         let agent = Arc::new(OnboardingAgent::new(db, hub));
         let auth_store = Arc::new(::server_auth::Store::new());
-        let now = chrono::Utc::now();
-        let token = auth_store
-            .issue_token(&::server_auth::User {
-                id: "viewer-a".to_string(),
-                username: "viewer-a".to_string(),
-                email: "viewer-a@example.com".to_string(),
-                password_hash: String::new(),
-                roles: vec!["VIEWER".to_string()],
-                active: true,
-                organization_id: Some("tenant-a".to_string()),
-                created_at: now,
-                updated_at: now,
-                oidc_subject: None,
-            })
+        let viewer = auth_store
+            .create_user(
+                "viewer-a".to_string(),
+                "viewer-a@example.com".to_string(),
+                "test-password".to_string(),
+                vec!["VIEWER".to_string()],
+                "tenant-a".to_string(),
+            )
+            .await
             .unwrap();
+        let token = auth_store.issue_token(&viewer).unwrap();
         let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
             Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let app = router(agent, auth_store).with_state(transport);

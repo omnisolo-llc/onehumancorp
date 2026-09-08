@@ -2454,10 +2454,13 @@ mod store_tests {
 
     #[test]
     fn test_secret_paths_are_safe() {
-        unsafe {
-            std::env::set_var("JWT_SECRET", "test_secret");
-        }
-        let store = Store::new();
+        let store = temp_env::with_vars(
+            [
+                ("JWT_SECRET", Some("test_secret")),
+                ("JWT_SECRET_FILE", None),
+            ],
+            Store::new,
+        );
         // Since we can't easily assert on the inner paths without modifying visibility,
         // we assert that we don't panic upon creation.
         assert!(!store.secret.is_empty());
@@ -2540,11 +2543,14 @@ mod store_tests {
 
     #[test]
     fn test_store_validate_org_id_multitenant() {
-        unsafe {
-            std::env::set_var("JWT_SECRET", "test_secret");
-        }
         // Create an empty store just to access the validate_org_id method
-        let store = Store::new();
+        let store = temp_env::with_vars(
+            [
+                ("JWT_SECRET", Some("test_secret")),
+                ("JWT_SECRET_FILE", None),
+            ],
+            Store::new,
+        );
 
         // In a real environment, ::server_config::get().multitenant is controlled by the config.
         // We test that `validate_org_id` properly returns an error or success based on the config.

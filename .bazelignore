@@ -5,6 +5,7 @@ bazel/rules/flutter/bazel-bin
 bazel/rules/flutter/bazel-out
 bazel/rules/flutter/bazel-testlogs
 node_modules
+.worktrees
 bazel-mono
 bazel-bin
 bazel-out

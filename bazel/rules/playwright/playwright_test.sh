@@ -657,7 +657,9 @@ fi
 NEXT_WORK_DIR="$WORK_DIR/src/ui/next"
 mkdir -p "$WORK_DIR/src/ui"
 mkdir -p "$NEXT_WORK_DIR"
-tar -C "$NEXT_APP_ROOT" \
+# Bazel exposes source files as runfiles symlinks. Materialize them so Next's
+# project root and dependency resolution stay inside the writable workspace.
+tar --dereference -C "$NEXT_APP_ROOT" \
   --exclude='./node_modules' \
   --exclude='./.next' \
   --exclude='./out' \
@@ -673,22 +675,30 @@ OHC_WEB_SESSION_SECRET="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')"
 echo "[playwright] Starting Next UI on port $NEXT_PORT from $NEXT_WORK_DIR..."
 (
   cd "$NEXT_WORK_DIR"
-  BACKEND_URL="$API_BASE_URL" \
-  OHC_BACKEND_URL="$API_BASE_URL" \
-  OHC_API_URL="$API_BASE_URL" \
-  OHC_WEB_CANONICAL_ORIGIN="$BASE_URL" \
-  OHC_WEB_LOCAL_DEV=true \
-  OHC_WEB_SESSION_KEY_ID=e2e-v1 \
-  OHC_WEB_SESSION_SECRET="$OHC_WEB_SESSION_SECRET" \
-  NEXT_PUBLIC_E2E=true \
-  node ./node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port "$NEXT_PORT"
+  export BACKEND_URL="$API_BASE_URL"
+  export OHC_BACKEND_URL="$API_BASE_URL"
+  export OHC_API_URL="$API_BASE_URL"
+  export OHC_WEB_CANONICAL_ORIGIN="$BASE_URL"
+  export OHC_WEB_LOCAL_DEV=true
+  export OHC_WEB_SESSION_KEY_ID=e2e-v1
+  export OHC_WEB_SESSION_SECRET
+  export NEXT_PUBLIC_E2E=true
+  for required_name in BACKEND_URL OHC_WEB_CANONICAL_ORIGIN OHC_WEB_SESSION_KEY_ID OHC_WEB_SESSION_SECRET; do
+    if [[ -z "${!required_name:-}" ]]; then
+      echo "[playwright] Error: required Next environment variable is missing: $required_name" >&2
+      exit 1
+    fi
+  done
+  # Turbopack resolves the CLI through Bazel's symlinked runfiles tree and
+  # rejects the copied writable workspace as an invalid project root.
+  exec node ./node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port "$NEXT_PORT" --webpack
 ) >"$TEST_TMPDIR/next.log" 2>&1 &
 NEXT_PID=$!
 unset OHC_WEB_SESSION_SECRET
 
 echo "[playwright] Waiting for Next UI on port $NEXT_PORT..."
 for i in $(seq 1 120); do
-  if curl -sS -o /dev/null "$BASE_URL/login" >/dev/null 2>&1; then
+  if curl -sS --fail --max-time 5 -o /dev/null "$BASE_URL/login" >/dev/null 2>&1; then
     echo "[playwright] Next UI is ready."
     break
   fi
@@ -773,6 +783,10 @@ if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
   "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_RUN_LOG"
   playwright_status=${PIPESTATUS[0]}
   set -e
+  if (( playwright_status != 0 )); then
+    echo "[playwright] Next UI log tail after browser failure:"
+    tail -80 "$TEST_TMPDIR/next.log"
+  fi
   exit "$playwright_status"
 else
   echo "[playwright] Listing selected specs/tests"
@@ -793,5 +807,9 @@ else
   "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG} 2>&1 | tee "$PLAYWRIGHT_RUN_LOG"
   playwright_status=${PIPESTATUS[0]}
   set -e
+  if (( playwright_status != 0 )); then
+    echo "[playwright] Next UI log tail after browser failure:"
+    tail -80 "$TEST_TMPDIR/next.log"
+  fi
   exit "$playwright_status"
 fi

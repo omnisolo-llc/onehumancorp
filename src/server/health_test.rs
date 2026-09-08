@@ -88,21 +88,17 @@ async fn test_setup_health_check_endpoint() {
     };
     let agent = Arc::new(OnboardingAgent::new(Arc::new(db), hub));
     let auth_store = Arc::new(crate::auth::Store::new());
-    let now = chrono::Utc::now();
-    let token = auth_store
-        .issue_token(&crate::auth::User {
-            id: "health-user".to_string(),
-            username: "health-user".to_string(),
-            email: "health@example.com".to_string(),
-            password_hash: String::new(),
-            roles: vec![crate::auth::ROLE_ADMIN.to_string()],
-            active: true,
-            organization_id: Some("health-tenant".to_string()),
-            created_at: now,
-            updated_at: now,
-            oidc_subject: None,
-        })
+    let user = auth_store
+        .create_user(
+            "health-user".to_string(),
+            "health@example.com".to_string(),
+            "health-password".to_string(),
+            vec![crate::auth::ROLE_ADMIN.to_string()],
+            "health-tenant".to_string(),
+        )
+        .await
         .unwrap();
+    let token = auth_store.issue_token(&user).unwrap();
 
     let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
         Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());

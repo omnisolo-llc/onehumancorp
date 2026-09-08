@@ -31,7 +31,7 @@ import pathlib
 import re
 import sys
 
-server = pathlib.Path(sys.argv[1]).read_text()
+server = pathlib.Path(sys.argv[1]).read_text().rsplit("\n#[cfg(test)]\nmod tests {", 1)[0]
 db = pathlib.Path(sys.argv[2]).read_text()
 catalog = pathlib.Path(sys.argv[3]).read_text()
 collective = pathlib.Path(sys.argv[4]).read_text()

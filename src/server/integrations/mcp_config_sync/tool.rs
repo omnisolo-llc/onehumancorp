@@ -296,6 +296,7 @@ mod mock_tests {
 #[cfg(test)]
 mod db_tests {
     use super::*;
+    use sqlx::Executor;
 
     #[tokio::test]
     async fn test_sync_and_get_config() {
@@ -303,7 +304,19 @@ mod db_tests {
         if !url.starts_with("postgres") {
             return;
         }
-        let pool = match ::server_lib::db::secure_pg_pool_options()
+        let pool = match sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|connection, _meta| {
+                Box::pin(async move {
+                    connection.execute("SET app.current_tenant = ''").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|connection, _meta| {
+                Box::pin(async move {
+                    connection.execute("RESET ROLE; RESET ALL;").await?;
+                    Ok(true)
+                })
+            })
             .connect(&url)
             .await
         {
