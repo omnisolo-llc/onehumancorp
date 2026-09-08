@@ -2,11 +2,10 @@
 
 ## Status
 
-Implementation and acceptance work is ongoing on `fix/harness-plan-completion`.
-Commit `bcc0d038a` was pushed before this completion pass. The results below
-replace the earlier review's obsolete implementation-gap descriptions. A live
-matrix is not complete until its native service-operation gate and all twelve
-rows pass.
+Implementation is committed and pushed on `fix/harness-plan-completion`.
+All eight native harnesses have passed individual provider-backed service
+writer/fresh-reader checks. The final ordered twelve-row matrix is running; acceptance remains pending
+until it passes. The final Bazel verification passed.
 
 ## Implemented plan requirements
 
@@ -26,106 +25,95 @@ rows pass.
 
 ## Verified evidence
 
+The [deterministic verification record](2026-09-08-deterministic-verification.json)
+contains counts, coverage totals and hashes of the test logs.
+
 | Check | Result |
 | --- | --- |
+| Harness and worker deterministic suites, latest coverage run | 469 passed across 26 suites; 0 failed; 3 opt-in live tests ignored |
+| Broader Rust regression run, before final native follow-up fixes | 1,029 passed across 31 suites; 0 failed; 3 live tests ignored |
 | UI unit/component suite | 1,422 passed; 0 failed or skipped |
-| Production Next build | Passed |
-| TypeScript check | Passed |
-| Agent API tests | 24 passed |
-| Authentication tests | 97 passed |
-| Worker library tests | 27 passed, including bootstrap retry, rejection, actual scoped storage and revocation |
-| Focused resumed-session/backend/capsule tests | 39 passed; selected backend adapter rerun: 8 passed |
-| Live runner and service fixture Python tests | 12 passed |
-| Shim, Kimi bridge and Plandex entrypoint Python tests | 17 passed |
+| Production Next build and TypeScript check | Passed |
+| Agent communication API | 24 passed |
+| Authentication | 97 passed |
+| Worker library | 28 passed |
+| Selected backend adapters | 8 passed |
+| Kimi/OpenHarness bridges and live runner Python tests | 22 passed |
+| DeepSeek scoped subprocess environment contract | Passed |
 | Deployment contract | Passed |
 | Compose/Helm service isolation rendering | 2 passed |
-| Built service image smoke | Actual SQLite write, selected Read tool execution, integration metadata read and Chromium screenshot/snapshot passed |
+| PostgreSQL/MySQL migration parity | 2 passed |
+| Workspace formatting and strict harness/worker library Clippy | Passed |
+| Final Bazel harness targets | Passed; one test target |
+| Ordered native-first twelve-harness live matrix | Running |
 
-The full deterministic run passed 461 tests (three explicitly live tests ignored).
-The timeout and remote-HTTP regressions passed. The final Codex container-policy regressions also passed (one codec test and 28 worker tests). Strict Clippy
-passes for the harness, worker and builtin agent libraries. Bazel passed its
-harness test target. Migration parity passed both tests. LLVM coverage measured
-91.516852% lines and 90.919989% regions before the Codex container-policy
-regressions; this is not branch coverage. The provider-backed matrix remains
-pending: the first native probe exposed the native worker ignoring the configured
-request timeout, which now has a passing regression test and a successful real-provider OmniSolo writer/reader run. The pinned Codex image now selects its externally supplied container sandbox through worker configuration; request metadata cannot enable it. Earlier concurrent
-verification runs exposed a request-shape regression and process-startup timeout
-sensitivity; the fixes are included and affected suites are being rerun with
-bounded concurrency. No interrupted, skipped or fixture-only run is counted as
-live native acceptance.
+LLVM coverage measured **91.522390% lines**, **90.932459% regions** and
+**86.878216% functions** for the harness and worker packages. This is not branch
+coverage. External backend and native process paths are additionally exercised
+by container probes; those subprocess executions are not included in the LLVM
+coverage counters. No skipped, interrupted or fixture-only run is counted as
+live acceptance.
 
+## Native integration corrections
+
+Real pinned CLI execution exposed and verified fixes for:
+
+- Codex's unused diagnostic queue blocking JSON-RPC dispatch after 256 messages;
+  diagnostics now use a nonblocking broadcast with explicit lag reporting.
+- Codex container sandbox selection and native workers ignoring the configured
+  request timeout. Trusted worker configuration controls both behaviors.
+- OpenCode treating intermediate tool-call completion as terminal.
+- Kimi and DeepSeek emitting valid empty streaming text chunks.
+- DeepSeek returning tool results through `source.callId` and stripping ambient
+  credential-shaped environment names. Its subprocess extension explicitly
+  passes only the issued local-service URL and token through the SDK spawn API.
+- Kimi's boolean reasoning interface and missing ACP usage. The bridge pins the
+  exact provider effort and returns actual accumulated provider usage through
+  ACP's supported prompt response.
+- OpenHands registry tool names and initially zero cumulative usage. The adapter
+  refreshes the SDK's counters on every poll.
+- OpenHarness ending a message before its provider's trailing usage chunk. The
+  bridge drains the native stream and preserves the measured final usage.
+
+Each correction has a passing focused regression or pinned-runtime contract
+check and a successful native provider-backed writer/fresh-reader run. The live
+fixture answers native tool permissions through the authenticated controller
+exchange, checks attempt/session/task fences, and requests sequential service
+operations using the interpreter installed in each pinned image. Live requests
+have a ten-minute limit and writer/reader verification a thirty-minute limit;
+production timeout defaults are unchanged.
+
+## Acceptance receipts and reasoning
+
+Individual native receipts preserve model binding, actual usage, service-side
+operation receipts, withheld-value verification, credential checks and cleanup:
+[OmniSolo](2026-09-08-native-omnisolo-acceptance.json),
+[Codex](2026-09-08-native-codex-acceptance.json),
+[OpenCode](2026-09-08-native-opencode-acceptance.json),
+[DeepSeek](2026-09-08-native-deepseek-acceptance.json),
+[Pi](2026-09-08-native-pi-acceptance.json),
+[Kimi](2026-09-08-native-kimi-acceptance.json),
+[OpenHands](2026-09-08-native-openhands-acceptance.json), and
+[OpenHarness](2026-09-08-native-openharness-acceptance.json).
+DeepSeek also passed its row in the previous ordered run. That run failed Kimi's
+old five-minute limit and does not count as final matrix acceptance.
+
+The selected upstream model is `gpt-5.6-luna` with `max` reasoning. Kimi reports
+an explicit native translation to boolean `thinking`; the bridge preserves
+`max` on the actual provider request. A pinned CLI wire probe confirmed that
+selection and returned 14,269 input and 12 output tokens. OpenHarness also
+reports its narrower native reasoning capability explicitly. Native capability
+translation and upstream provider selection are distinct evidence fields.
 
 ## Completion ledger
 
 | Written plan | Tasks and evidence |
 | --- | --- |
-| Universal harness services, tasks 1–3 | Pinned integration modes, issued namespaces, portable reference validation and trusted rebinding: middleware local-service and capsule suites. |
-| Universal harness services, tasks 4–5 | Per-attempt facade, provider translation and lifecycle revocation: provider facade, worker gRPC and worker E2E suites. |
-| Universal harness services, task 6 | Four native pinned CLI shims: installed CLI probes, Python shim tests and Rust shim lifecycle tests. |
-| Universal harness services, task 7 | Twelve worker images, Compose/Helm inventory, daemon isolation and native Plandex deployment: image builds and deployment contract/rendering tests. |
-| Universal harness services, task 8 | Deterministic shared-service conformance passes; the full native-first twelve-row real-provider gate is still pending. |
-| Cross-harness model routing, tasks 1–12 | Portable model selection, configuration, native codecs, provider execution and images: 26 deterministic test suites and all pinned image builds. |
-| Cross-harness model routing, tasks 13–14 | Migration parity, strict Clippy, coverage and Bazel pass; final full live matrix pending. |
-| Communication channels, tasks 9–10 | Actual parallel agent results, observed metrics and authenticated streaming: 24 API tests, 1,422 UI tests, production build and TypeScript checks. |
-
-The separate [native OmniSolo receipt](2026-09-08-native-omnisolo-acceptance.json)
-records the real writer and fresh reader, all required backend operation receipts,
-provider usage, marker and session cleanup. It is one native acceptance result,
-not a substitute for the twelve-row matrix.
-
-
-## Live acceptance follow-up
-
-The real Codex 0.149.0 and OpenCode 1.18.15 runs now pass writer and fresh-reader
-verification with all four withheld service values. Their operation receipts,
-usage, model binding and cleanup evidence are recorded in
-[Codex acceptance](2026-09-08-native-codex-acceptance.json) and
-[OpenCode acceptance](2026-09-08-native-opencode-acceptance.json).
-The native-first twelve-row matrix remains pending.
-
-These runs exposed an unused diagnostic queue blocking JSON-RPC dispatch after
-256 messages and OpenCode incorrectly treating an intermediate tool-call step
-as terminal. Both have passing regression tests and successful native reruns.
-Kimi's pinned SDK now sends the exact configured reasoning effort through its
-public request override hook; a direct pinned CLI wire probe confirmed `max`.
-Kimi and DeepSeek also emit empty streaming chunks, which their decoders now
-preserve while still rejecting non-string content.
-
-The broader Rust run passed 1,029 tests across 31 suites (three live tests
-ignored), followed by 31 passing ACP/DeepSeek tests covering the streaming fix.
-Strict Clippy passes for all three affected libraries. Full native acceptance
-for the remaining harnesses is still being exercised; these deterministic
-results do not replace it.
-
-Pi 0.73.1 also passes the real writer/fresh-reader probe; its receipt is in
-[Pi acceptance](2026-09-08-native-pi-acceptance.json). The follow-up found and
-corrected OpenHands 1.43.1 tool registry names (`terminal`, `file_editor`,
-`task_tracker`) and the pinned OpenHarness provider's premature terminal event
-before its trailing usage chunk. OpenHands' 30 tests, OpenHarness' 29 tests,
-eight bridge Python tests and five live-fixture tests pass. The live fixture
-responds to session-matched Kimi one-time tool permissions and OpenHands
-approvals through the authenticated controller exchange. Native reruns for
-these fixes remain pending.
-
-OpenHarness 0.6.0 now passes the complete native writer/fresh-reader probe with
-real usage; see [OpenHarness acceptance](2026-09-08-native-openharness-acceptance.json).
-The latest coverage run passed 468 tests across 26 suites and measured 91.523713%
-lines and 90.925409% regions. The subsequent pinned DeepSeek source-call-ID
-regression passes with all 16 codec tests. OpenHands usage validation now reads
-the SDK's nested `agent.accumulated_token_usage` counters. Kimi's bridge now
-returns actual provider usage through ACP's supported prompt-response usage
-field; the pinned CLI wire probe returned 14,269 input and 12 output tokens
-with exact `max` reasoning. Seven Kimi bridge tests and five fixture tests pass.
-The full ordered native-first acceptance matrix is running.
-
-The native-first matrix has passed OmniSolo, Codex and OpenCode, including
-cross-harness reads, and is exercising DeepSeek. DeepSeek's pinned subprocess
-runtime scrubs ambient credential-shaped names; the deployment now explicitly
-passes only the scoped service URL and token through its supported spawn-env
-interface. Its Node isolation contract and deployment contract pass. OpenHands
-now refreshes cumulative usage on every conversation poll instead of retaining
-the initial zero counters; all 30 tests pass, including the initial-zero
-regression. The fixture requests a sequential shell batch and allows ten minutes
-per native request, bounded by thirty minutes for writer plus reader. Production
-timeout defaults are unchanged. The latest 22 Python fixture tests and strict
-Clippy pass. Full twelve-row live acceptance is still pending.
+| Universal harness services, tasks 1–3 | Pinned integration modes, issued namespaces, portable reference validation and trusted rebinding: local-service and capsule suites. |
+| Universal harness services, tasks 4–5 | Per-attempt facade, provider translation and lifecycle revocation: facade, worker gRPC and worker E2E suites. |
+| Universal harness services, task 6 | Four real pinned CLI shims: installed CLI probes, Python shim tests and Rust lifecycle tests. |
+| Universal harness services, task 7 | Twelve worker images, Compose/Helm inventory, daemon isolation and native Plandex deployment: image builds, deployment contracts and rendering tests. |
+| Universal harness services, task 8 | Deterministic shared-service conformance passes; final native-first twelve-row real-provider gate pending. |
+| Cross-harness model routing, tasks 1–12 | Portable model selection, configuration, native codecs, provider execution and images: deterministic suites and pinned image builds. |
+| Cross-harness model routing, tasks 13–14 | Migration parity, strict Clippy and coverage pass; final Bazel passes; full live matrix pending. |
+| Communication channels, tasks 9–10 and streaming follow-up | Registered parallel agent results, observed metrics and authenticated streaming: API/UI tests, production build and TypeScript checks. |
