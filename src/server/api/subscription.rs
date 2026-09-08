@@ -662,7 +662,8 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
         orchestrator,
         SubscriptionTenantPolicy {
             multitenant: ::server_config::get().multitenant,
-            configured_default: std::env::var("OHC_DEFAULT_TENANT_ID")
+            configured_default: std::env::var("OMNISOLO_DEFAULT_TENANT_ID")
+                .or_else(|_| std::env::var("OHC_DEFAULT_TENANT_ID"))
                 .unwrap_or_else(|_| ::server_common::auth_utils::get_default_tenant()),
         },
     )
