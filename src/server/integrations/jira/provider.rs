@@ -75,7 +75,9 @@ impl JiraProvider {
         issue_key: &str,
         transition_name: &str,
     ) -> Result<(), String> {
-        self.client.transition_issue(issue_key, transition_name).await
+        self.client
+            .transition_issue(issue_key, transition_name)
+            .await
     }
 
     pub async fn search_issues(

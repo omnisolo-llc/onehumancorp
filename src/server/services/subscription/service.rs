@@ -1,21 +1,29 @@
-use crate::domain::subscription::{
-    FulfillmentSchedule, FulfillmentStatus, SubscriptionPlan, Subscriber, SubscriptionStatus,
-};
 use crate::db::{DB, DbStore};
+use crate::domain::subscription::{
+    FulfillmentSchedule, FulfillmentStatus, Subscriber, SubscriptionPlan, SubscriptionStatus,
+};
+use chrono::Utc;
 use sqlx::PgPool as DbPool;
 use sqlx::Row;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::Utc;
 
 #[async_trait::async_trait]
 pub trait DunningNotifier: Send + Sync {
-    async fn send_payment_failure_sms(&self, subscriber_id: &str, message: &str) -> Result<(), String>;
+    async fn send_payment_failure_sms(
+        &self,
+        subscriber_id: &str,
+        message: &str,
+    ) -> Result<(), String>;
 }
 
 #[async_trait::async_trait]
 pub trait DunningMessageGenerator: Send + Sync {
-    async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String;
+    async fn generate_payment_failure_message(
+        &self,
+        subscriber_id: &str,
+        business_name: &str,
+    ) -> String;
 }
 
 pub struct CriticalSmsDunningNotifier;
@@ -23,19 +31,26 @@ pub struct LlmDunningMessageGenerator;
 
 #[async_trait::async_trait]
 impl DunningNotifier for CriticalSmsDunningNotifier {
-    async fn send_payment_failure_sms(&self, _subscriber_id: &str, message: &str) -> Result<(), String> {
+    async fn send_payment_failure_sms(
+        &self,
+        _subscriber_id: &str,
+        message: &str,
+    ) -> Result<(), String> {
         crate::dispatch_critical_sms("failed_payment", message).await
     }
 }
 
 #[async_trait::async_trait]
 impl DunningMessageGenerator for LlmDunningMessageGenerator {
-    async fn generate_payment_failure_message(&self, subscriber_id: &str, business_name: &str) -> String {
+    async fn generate_payment_failure_message(
+        &self,
+        subscriber_id: &str,
+        business_name: &str,
+    ) -> String {
         let fallback = build_payment_failure_sms(business_name);
         let prompt = format!(
             "Write a concise, helpful SMS for subscription payment recovery. Business: {}. Subscriber id: {}. Mention the payment could not be processed and ask them to update their saved payment method. Avoid blame and keep it under 240 characters.",
-            business_name,
-            subscriber_id
+            business_name, subscriber_id
         );
         match std::env::var("OHC_LLM_PROVIDER").as_deref() {
             Ok("minimax") => {
@@ -66,8 +81,12 @@ pub async fn send_dunning_sms<N: DunningNotifier, G: DunningMessageGenerator>(
     subscriber_id: &str,
     business_name: &str,
 ) -> Result<(), String> {
-    let message = generator.generate_payment_failure_message(subscriber_id, business_name).await;
-    notifier.send_payment_failure_sms(subscriber_id, &message).await
+    let message = generator
+        .generate_payment_failure_message(subscriber_id, business_name)
+        .await;
+    notifier
+        .send_payment_failure_sms(subscriber_id, &message)
+        .await
 }
 
 pub struct SubscriptionService {
@@ -110,7 +129,15 @@ impl SubscriptionService {
         Ok(transaction)
     }
 
-    pub async fn create_plan(&self, tenant_id: &str, name: &str, description: &str, amount: i64, currency: &str, interval: &str) -> Result<SubscriptionPlan, String> {
+    pub async fn create_plan(
+        &self,
+        tenant_id: &str,
+        name: &str,
+        description: &str,
+        amount: i64,
+        currency: &str,
+        interval: &str,
+    ) -> Result<SubscriptionPlan, String> {
         let plan = SubscriptionPlan {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.to_string(),
@@ -167,7 +194,13 @@ impl SubscriptionService {
         Ok(plan)
     }
 
-    pub async fn subscribe_customer(&self, tenant_id: &str, plan_id: &str, customer_id: &str, stripe_sub_id: &str) -> Result<Subscriber, String> {
+    pub async fn subscribe_customer(
+        &self,
+        tenant_id: &str,
+        plan_id: &str,
+        customer_id: &str,
+        stripe_sub_id: &str,
+    ) -> Result<Subscriber, String> {
         let subscriber = Subscriber {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.to_string(),
@@ -235,14 +268,27 @@ impl SubscriptionService {
     }
 
     pub async fn trigger_dunning(&self, subscriber_id: &str) -> Result<(), String> {
-        self.trigger_dunning_with_notifier(subscriber_id, &CriticalSmsDunningNotifier).await
+        self.trigger_dunning_with_notifier(subscriber_id, &CriticalSmsDunningNotifier)
+            .await
     }
 
-    pub async fn trigger_dunning_with_notifier<N: DunningNotifier>(&self, subscriber_id: &str, notifier: &N) -> Result<(), String> {
-        self.trigger_dunning_with_notifier_and_generator(subscriber_id, notifier, &LlmDunningMessageGenerator).await
+    pub async fn trigger_dunning_with_notifier<N: DunningNotifier>(
+        &self,
+        subscriber_id: &str,
+        notifier: &N,
+    ) -> Result<(), String> {
+        self.trigger_dunning_with_notifier_and_generator(
+            subscriber_id,
+            notifier,
+            &LlmDunningMessageGenerator,
+        )
+        .await
     }
 
-    pub async fn trigger_dunning_with_notifier_and_generator<N: DunningNotifier, G: DunningMessageGenerator>(
+    pub async fn trigger_dunning_with_notifier_and_generator<
+        N: DunningNotifier,
+        G: DunningMessageGenerator,
+    >(
         &self,
         subscriber_id: &str,
         notifier: &N,
@@ -272,46 +318,52 @@ impl SubscriptionService {
         Ok(())
     }
 
-    pub async fn handle_stripe_webhook(&self, event_type: &str, subscription_id: &str) -> Result<(), String> {
+    pub async fn handle_stripe_webhook(
+        &self,
+        event_type: &str,
+        subscription_id: &str,
+    ) -> Result<(), String> {
         match event_type {
-            "invoice.payment_succeeded" => {
-                match &self.db.store {
-                    crate::db::DbStore::Postgres => {
-                        let mut transaction = self.begin_system_transaction().await?;
-                        sqlx::query("UPDATE subscribers SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = $1")
+            "invoice.payment_succeeded" => match &self.db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut transaction = self.begin_system_transaction().await?;
+                    sqlx::query("UPDATE subscribers SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = $1")
                             .bind(subscription_id)
                             .execute(&mut *transaction)
                             .await
                             .map_err(|e| e.to_string())?;
-                        transaction.commit().await.map_err(|e| e.to_string())?;
-                    }
-                    crate::db::DbStore::Sqlite(pool) => {
-                        sqlx::query("UPDATE subscribers SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?")
+                    transaction.commit().await.map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query("UPDATE subscribers SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?")
                             .bind(subscription_id)
                             .execute(pool)
                             .await
                             .map_err(|e| e.to_string())?;
-                    }
                 }
-            }
+            },
             "invoice.payment_failed" => {
                 let subscriber_id: Option<String> = match &self.db.store {
                     crate::db::DbStore::Postgres => {
                         let mut transaction = self.begin_system_transaction().await?;
-                        let row = sqlx::query("SELECT id FROM subscribers WHERE stripe_subscription_id = $1")
-                            .bind(subscription_id)
-                            .fetch_optional(&mut *transaction)
-                            .await
-                            .map_err(|e| e.to_string())?;
+                        let row = sqlx::query(
+                            "SELECT id FROM subscribers WHERE stripe_subscription_id = $1",
+                        )
+                        .bind(subscription_id)
+                        .fetch_optional(&mut *transaction)
+                        .await
+                        .map_err(|e| e.to_string())?;
                         transaction.commit().await.map_err(|e| e.to_string())?;
                         row.map(|r| r.try_get("id").unwrap_or_default())
                     }
                     crate::db::DbStore::Sqlite(pool) => {
-                        let row = sqlx::query("SELECT id FROM subscribers WHERE stripe_subscription_id = ?")
-                            .bind(subscription_id)
-                            .fetch_optional(pool)
-                            .await
-                            .map_err(|e| e.to_string())?;
+                        let row = sqlx::query(
+                            "SELECT id FROM subscribers WHERE stripe_subscription_id = ?",
+                        )
+                        .bind(subscription_id)
+                        .fetch_optional(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
                         row.map(|r| r.try_get("id").unwrap_or_default())
                     }
                 };
@@ -320,26 +372,24 @@ impl SubscriptionService {
                     self.trigger_dunning(&sub_id).await?;
                 }
             }
-            "customer.subscription.deleted" => {
-                match &self.db.store {
-                    crate::db::DbStore::Postgres => {
-                        let mut transaction = self.begin_system_transaction().await?;
-                        sqlx::query("UPDATE subscribers SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = $1")
+            "customer.subscription.deleted" => match &self.db.store {
+                crate::db::DbStore::Postgres => {
+                    let mut transaction = self.begin_system_transaction().await?;
+                    sqlx::query("UPDATE subscribers SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = $1")
                             .bind(subscription_id)
                             .execute(&mut *transaction)
                             .await
                             .map_err(|e| e.to_string())?;
-                        transaction.commit().await.map_err(|e| e.to_string())?;
-                    }
-                    crate::db::DbStore::Sqlite(pool) => {
-                        sqlx::query("UPDATE subscribers SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?")
+                    transaction.commit().await.map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query("UPDATE subscribers SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE stripe_subscription_id = ?")
                             .bind(subscription_id)
                             .execute(pool)
                             .await
                             .map_err(|e| e.to_string())?;
-                    }
                 }
-            }
+            },
             _ => {}
         }
         Ok(())
@@ -471,7 +521,10 @@ impl SubscriptionService {
         Ok(batch)
     }
 
-    pub fn fulfillment_schedule_event_payload(&self, batch: &FulfillmentSchedule) -> serde_json::Value {
+    pub fn fulfillment_schedule_event_payload(
+        &self,
+        batch: &FulfillmentSchedule,
+    ) -> serde_json::Value {
         serde_json::json!({
             "batch_id": batch.id,
             "subscription_plan_id": batch.plan_id,
@@ -603,15 +656,26 @@ mod tests {
 
     #[async_trait::async_trait]
     impl DunningMessageGenerator for FixedDunningMessageGenerator {
-        async fn generate_payment_failure_message(&self, _subscriber_id: &str, _business_name: &str) -> String {
+        async fn generate_payment_failure_message(
+            &self,
+            _subscriber_id: &str,
+            _business_name: &str,
+        ) -> String {
             "LLM generated dunning response".to_string()
         }
     }
 
     #[async_trait::async_trait]
     impl DunningNotifier for RecordingDunningNotifier {
-        async fn send_payment_failure_sms(&self, subscriber_id: &str, message: &str) -> Result<(), String> {
-            self.sent.lock().unwrap().push((subscriber_id.to_string(), message.to_string()));
+        async fn send_payment_failure_sms(
+            &self,
+            subscriber_id: &str,
+            message: &str,
+        ) -> Result<(), String> {
+            self.sent
+                .lock()
+                .unwrap()
+                .push((subscriber_id.to_string(), message.to_string()));
             Ok(())
         }
     }
@@ -622,7 +686,9 @@ mod tests {
         let notifier = RecordingDunningNotifier { sent: sent.clone() };
         let generator = FixedDunningMessageGenerator;
 
-        send_dunning_sms(&notifier, &generator, "sub_123", "Maya's Cakes").await.unwrap();
+        send_dunning_sms(&notifier, &generator, "sub_123", "Maya's Cakes")
+            .await
+            .unwrap();
 
         let messages = sent.lock().unwrap();
         assert_eq!(messages.len(), 1);

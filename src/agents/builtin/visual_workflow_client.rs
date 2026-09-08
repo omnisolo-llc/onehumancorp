@@ -69,7 +69,10 @@ pub async fn handle_workflow_run(
 pub async fn handle_workflow_schema(
     axum::extract::State(_state): axum::extract::State<Arc<VisualWorkflowState>>,
 ) -> Json<WorkflowSchemaResponse> {
-    let graph = WorkflowGraph { nodes: vec![], edges: vec![] };
+    let graph = WorkflowGraph {
+        nodes: vec![],
+        edges: vec![],
+    };
     use crate::visual_workflow::BlockConnectUI;
     Json(WorkflowSchemaResponse {
         schema: graph.generate_ui_schema(),
@@ -81,9 +84,17 @@ pub async fn handle_workflow_validate(
     Json(req): Json<WorkflowValidateRequest>,
 ) -> Json<WorkflowRunResponse> {
     if req.graph.nodes.is_empty() {
-        return Json(WorkflowRunResponse { success: false, result: None, error: Some("Empty graph".to_string()) });
+        return Json(WorkflowRunResponse {
+            success: false,
+            result: None,
+            error: Some("Empty graph".to_string()),
+        });
     }
-    Json(WorkflowRunResponse { success: true, result: Some("Valid".to_string()), error: None })
+    Json(WorkflowRunResponse {
+        success: true,
+        result: Some("Valid".to_string()),
+        error: None,
+    })
 }
 
 pub fn create_router(state: Arc<VisualWorkflowState>) -> Router {

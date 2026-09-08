@@ -61,7 +61,7 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
             "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
         )
         .bind(quote_id)
-        .bind(&tenant_id)
+        .bind(tenant_id)
         .bind(match Uuid::parse_str(&customer_id) {
             Ok(u) => u,
             Err(_) => return Err(ToolError::LlmRecoverable("Invalid customer_id format".to_string()))

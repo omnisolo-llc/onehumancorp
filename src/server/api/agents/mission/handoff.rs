@@ -1,15 +1,14 @@
-use axum::{
-    extract::{Extension, State, Path},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-    Json,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use crate::sip::SipDB;
 use ::server_common::Claims;
+use axum::{
+    Json, Router,
+    extract::{Extension, Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct HandoffRequest {
@@ -41,7 +40,11 @@ async fn handoff_mission_endpoint(
         Err(e) => {
             ::server_telemetry::record_error_signal("[bug] Failed to handoff mission : {:?}");
             tracing::error!("Failed to handoff mission {}: {:?}", id, e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(HandoffResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(HandoffResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }

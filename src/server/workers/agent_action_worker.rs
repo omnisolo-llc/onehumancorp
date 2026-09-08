@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use sqlx::PgPool;
-use tokio::time::{sleep, Duration};
 use crate::orchestration::queue::OHCJobQueue;
 use crate::orchestration::queue::redis_lock::RedisLock;
 use serde_json::Value;
+use sqlx::PgPool;
+use tokio::time::{Duration, sleep};
 
 pub struct AgentActionWorker {
     pub pool: PgPool,
@@ -22,17 +22,31 @@ impl AgentActionWorker {
         });
     }
 
-    pub async fn process_job(&self, job: crate::orchestration::queue::ohc_job_queue::OHCJob, queue: &OHCJobQueue, redis_lock: &RedisLock) {
+    pub async fn process_job(
+        &self,
+        job: crate::orchestration::queue::ohc_job_queue::OHCJob,
+        queue: &OHCJobQueue,
+        redis_lock: &RedisLock,
+    ) {
         let parsed: Result<Value, _> = serde_json::from_str(&job.payload);
         if let Ok(payload) = parsed {
             let tenant_id = &job.tenant_id;
-            let action_id = payload.get("action_id").and_then(|v| v.as_str()).unwrap_or(&job.id);
+            let action_id = payload
+                .get("action_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or(&job.id);
 
             // Acquire lock
-            match redis_lock.acquire_lock(tenant_id, "agent_feed", action_id, 300).await {
+            match redis_lock
+                .acquire_lock(tenant_id, "agent_feed", action_id, 300)
+                .await
+            {
                 Ok(Some(lock_val)) => {
                     // Process action with timeout
-                    let is_incident = payload.get("is_incident").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let is_incident = payload
+                        .get("is_incident")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
                     let dispatch_payload = payload.get("payload");
                     let feature_type = payload.get("feature_type").and_then(|v| v.as_str());
 
@@ -43,14 +57,28 @@ impl AgentActionWorker {
                         let mut task_success = true;
                         if is_incident {
                             if let Some(payload_val) = dispatch_payload {
-                                if let Err(e) = crate::domain::incidents::handle_incident_resolution(tenant_id, &sqlx::types::Json(payload_val.clone()), &self.pool).await {
+                                if let Err(e) =
+                                    crate::domain::incidents::handle_incident_resolution(
+                                        tenant_id,
+                                        &sqlx::types::Json(payload_val.clone()),
+                                        &self.pool,
+                                    )
+                                    .await
+                                {
                                     tracing::error!("Incident resolution failed: {}", e);
                                     task_success = false;
                                 }
                             }
                         } else if let Some(ft) = feature_type {
                             if let Some(payload_val) = dispatch_payload {
-                                if let Err(e) = crate::domain::action_router::dispatch_action(ft, tenant_id, &sqlx::types::Json(payload_val.clone()), &self.pool).await {
+                                if let Err(e) = crate::domain::action_router::dispatch_action(
+                                    ft,
+                                    tenant_id,
+                                    &sqlx::types::Json(payload_val.clone()),
+                                    &self.pool,
+                                )
+                                .await
+                                {
                                     tracing::error!("Action dispatch failed: {}", e);
                                     task_success = false;
                                 }
@@ -72,7 +100,10 @@ impl AgentActionWorker {
                             }
                         }
                         Err(_) => {
-                            tracing::error!("Agent execution exceeded 60-second ML-Resilience timeout rule for job {}", job.id);
+                            tracing::error!(
+                                "Agent execution exceeded 60-second ML-Resilience timeout rule for job {}",
+                                job.id
+                            );
                             success = false;
                         }
                     }
@@ -82,12 +113,22 @@ impl AgentActionWorker {
                     } else if malformed {
                         let _ = queue.fail(&job.id, 3, "Invalid malformed payload: missing feature_type or is_incident flag").await;
                     } else {
-                        let reason = if success { "" } else { "Agent execution exceeded 60-second ML-Resilience timeout rule." };
-                        let fail_reason = if reason.is_empty() { "Action execution failed" } else { reason };
+                        let reason = if success {
+                            ""
+                        } else {
+                            "Agent execution exceeded 60-second ML-Resilience timeout rule."
+                        };
+                        let fail_reason = if reason.is_empty() {
+                            "Action execution failed"
+                        } else {
+                            reason
+                        };
                         let _ = queue.fail(&job.id, 3, fail_reason).await;
                     }
 
-                    let _ = redis_lock.release_lock(tenant_id, "agent_feed", action_id, &lock_val).await;
+                    let _ = redis_lock
+                        .release_lock(tenant_id, "agent_feed", action_id, &lock_val)
+                        .await;
                 }
                 Ok(None) => {
                     // Lock not acquired (already running?)
@@ -136,8 +177,6 @@ impl AgentActionWorker {
 #[cfg(test)]
 
 mod tests {
-
-
 
     #[tokio::test]
     async fn test_ml_resilience_agent_action_timeout() {

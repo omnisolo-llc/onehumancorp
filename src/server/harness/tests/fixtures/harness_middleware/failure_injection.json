@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "cases": [
+    "stale_worker_after_reassignment",
+    "duplicate_delivery",
+    "uncertain_model_admission",
+    "checkpoint_crash_window",
+    "handoff_writer_exclusivity"
+  ],
+  "expected": "reject_or_reconcile_without_two_writers"
+}

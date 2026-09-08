@@ -1,6 +1,6 @@
+use super::finance::finance_report_tool;
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::json;
-use super::finance::finance_report_tool;
 
 #[tokio::test]
 async fn test_finance_executor_success_default_args() {

@@ -1,7 +1,7 @@
-use redis::{AsyncCommands, Client};
-use tokio::sync::OnceCell;
 use dashmap::DashMap;
-use std::time::{Instant, Duration};
+use redis::{AsyncCommands, Client};
+use std::time::{Duration, Instant};
+use tokio::sync::OnceCell;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlanTier {
@@ -44,9 +44,12 @@ impl PlanTier {
             _ => "",
         };
         if !env_var.is_empty()
-            && let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
-                return Some(v);
-            }
+            && let Some(v) = std::env::var(env_var)
+                .ok()
+                .and_then(|s| s.parse::<u32>().ok())
+        {
+            return Some(v);
+        }
 
         match self {
             PlanTier::Free => Some(100),
@@ -71,15 +74,18 @@ impl PlanTier {
             PlanTier::Business => "OHC_BUSINESS_TIER_STORAGE_MB",
         };
         if !env_var.is_empty()
-            && let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
-                return Some(v);
-            }
+            && let Some(v) = std::env::var(env_var)
+                .ok()
+                .and_then(|s| s.parse::<u32>().ok())
+        {
+            return Some(v);
+        }
 
         match self {
-            PlanTier::Free => Some(500), // 500MB
-            PlanTier::Starter => Some(5120), // 5GB
-            PlanTier::Pro => Some(51200),    // 50GB
-            PlanTier::Business => Some(512000),      // 500GB
+            PlanTier::Free => Some(500),        // 500MB
+            PlanTier::Starter => Some(5120),    // 5GB
+            PlanTier::Pro => Some(51200),       // 50GB
+            PlanTier::Business => Some(512000), // 500GB
         }
     }
 
@@ -151,55 +157,70 @@ impl RedisRateLimiter {
         self
     }
 
-    pub fn with_token_tracking(mut self, tracker: std::sync::Arc<crate::token_tracking::TokenTracking>) -> Self {
+    pub fn with_token_tracking(
+        mut self,
+        tracker: std::sync::Arc<crate::token_tracking::TokenTracking>,
+    ) -> Self {
         self.token_tracking = Some(tracker);
         self
     }
 
-    pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
+    pub fn with_telemetry(
+        mut self,
+        store: std::sync::Arc<::server_harness::telemetry::ViolationStore>,
+    ) -> Self {
         self.telemetry_store = Some(store);
         self
     }
 
     pub async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
-        let conn = self.connection.get_or_try_init(|| async {
-            self.client.get_multiplexed_async_connection().await
-        }).await.map_err(|e| e.to_string())?;
+        let conn = self
+            .connection
+            .get_or_try_init(|| async { self.client.get_multiplexed_async_connection().await })
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(conn.clone())
     }
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
         if let Some(entry) = self.tier_cache.get(tenant_id)
-            && entry.1.elapsed() < Duration::from_secs(300) {
-                return Ok(entry.0.clone());
-            }
+            && entry.1.elapsed() < Duration::from_secs(300)
+        {
+            return Ok(entry.0.clone());
+        }
 
         let mut conn = self.get_connection().await?;
         let redis_key = format!("tenant:{}:tier", tenant_id);
         let mut tier: Option<String> = conn.get(&redis_key).await.map_err(|e| e.to_string())?;
 
         if tier.is_none()
-            && let Some(pool) = &self.db_pool {
-                use sqlx::Row;
-                if let Ok(record) = sqlx::query("SELECT plan_tier as tier FROM tenants WHERE id = $1")
-                    .bind(tenant_id)
-                    .fetch_one(pool)
-                    .await
-                    && let Ok(t) = record.try_get::<Option<String>, _>("tier") {
-                        tier = t;
-                        if let Some(ref t_str) = tier {
-                            // Cache for 24 hours
-                            let _ : () = conn.set_ex(&redis_key, t_str, 24 * 60 * 60).await.unwrap_or(());
-                        }
-                    }
+            && let Some(pool) = &self.db_pool
+        {
+            use sqlx::Row;
+            if let Ok(record) = sqlx::query("SELECT plan_tier as tier FROM tenants WHERE id = $1")
+                .bind(tenant_id)
+                .fetch_one(pool)
+                .await
+                && let Ok(t) = record.try_get::<Option<String>, _>("tier")
+            {
+                tier = t;
+                if let Some(ref t_str) = tier {
+                    // Cache for 24 hours
+                    let _: () = conn
+                        .set_ex(&redis_key, t_str, 24 * 60 * 60)
+                        .await
+                        .unwrap_or(());
+                }
             }
+        }
 
         let tier_val = match tier {
             Some(t) => t.parse::<PlanTier>().unwrap_or(PlanTier::Free),
             None => PlanTier::Free,
         };
 
-        self.tier_cache.insert(tenant_id.to_string(), (tier_val.clone(), Instant::now()));
+        self.tier_cache
+            .insert(tenant_id.to_string(), (tier_val.clone(), Instant::now()));
 
         Ok(tier_val)
     }
@@ -213,11 +234,18 @@ impl RedisRateLimiter {
         Ok(used.unwrap_or(0))
     }
 
-    pub async fn get_agent_actions_used(&self, tenant_id: &str, agent_id: &str) -> Result<u32, String> {
+    pub async fn get_agent_actions_used(
+        &self,
+        tenant_id: &str,
+        agent_id: &str,
+    ) -> Result<u32, String> {
         let mut conn = self.get_connection().await?;
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
-        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+        let agent_key = format!(
+            "tenant:{}:agent:{}:actions_used:{}",
+            tenant_id, agent_id, month_key
+        );
         let used: Option<u32> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
@@ -229,7 +257,7 @@ impl RedisRateLimiter {
         let mut used_bytes = used.unwrap_or(0);
         if used_bytes < 0 {
             used_bytes = 0;
-            let _ : () = conn.set(&storage_key, 0).await.unwrap_or(());
+            let _: () = conn.set(&storage_key, 0).await.unwrap_or(());
         }
         Ok(used_bytes)
     }
@@ -237,12 +265,21 @@ impl RedisRateLimiter {
     pub async fn set_tenant_tier(&self, tenant_id: &str, tier: PlanTier) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
         let tier_str = tier.to_string();
-        let _ : () = conn.set(format!("tenant:{}:tier", tenant_id), tier_str).await.map_err(|e| e.to_string())?;
-        self.tier_cache.insert(tenant_id.to_string(), (tier.clone(), Instant::now()));
+        let _: () = conn
+            .set(format!("tenant:{}:tier", tenant_id), tier_str)
+            .await
+            .map_err(|e| e.to_string())?;
+        self.tier_cache
+            .insert(tenant_id.to_string(), (tier.clone(), Instant::now()));
         Ok(())
     }
 
-    pub async fn record_token_usage(&self, tenant_id: &str, model: &str, tokens: i64) -> Result<(), String> {
+    pub async fn record_token_usage(
+        &self,
+        tenant_id: &str,
+        model: &str,
+        tokens: i64,
+    ) -> Result<(), String> {
         if tokens <= 0 {
             return Ok(());
         }
@@ -250,7 +287,12 @@ impl RedisRateLimiter {
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
 
-        tracing::info!("💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}", tokens, tenant_id, model); // pii-safe
+        tracing::info!(
+            "💰 Miser telemetry: Recording {} tokens for tenant: {} model: {}",
+            tokens,
+            tenant_id,
+            model
+        ); // pii-safe
 
         if let Some(tracker) = &self.token_tracking {
             tracker.record_tokens(tenant_id, model, tokens as u64);
@@ -259,21 +301,32 @@ impl RedisRateLimiter {
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
         let model_key = format!("tenant:{}:tokens_used:{}:{}", tenant_id, model, month_key);
 
-        let _ : () = redis::AsyncCommands::incr(&mut conn, &tenant_key, tokens).await.unwrap_or(());
-        let _ : () = redis::AsyncCommands::incr(&mut conn, &model_key, tokens).await.unwrap_or(());
+        let _: () = redis::AsyncCommands::incr(&mut conn, &tenant_key, tokens)
+            .await
+            .unwrap_or(());
+        let _: () = redis::AsyncCommands::incr(&mut conn, &model_key, tokens)
+            .await
+            .unwrap_or(());
 
         let cost_cents = crate::calculator::calculate_cost_cents(model, tokens, 0, 0);
 
         if let Some(store) = &self.telemetry_store {
             store.mission_cost_cents.add(
                 cost_cents as u64,
-                &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()), opentelemetry::KeyValue::new("model", model.to_string())],
+                &[
+                    opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+                    opentelemetry::KeyValue::new("model", model.to_string()),
+                ],
             );
         }
 
         // Expire keys after ~2 months to save space
-        let _ : () = redis::AsyncCommands::expire(&mut conn, &tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
-        let _ : () = redis::AsyncCommands::expire(&mut conn, &model_key, 60 * 60 * 24 * 60).await.unwrap_or(());
+        let _: () = redis::AsyncCommands::expire(&mut conn, &tenant_key, 60 * 60 * 24 * 60)
+            .await
+            .unwrap_or(());
+        let _: () = redis::AsyncCommands::expire(&mut conn, &model_key, 60 * 60 * 24 * 60)
+            .await
+            .unwrap_or(());
 
         Ok(())
     }
@@ -284,13 +337,25 @@ impl RedisRateLimiter {
         let month_key = now.format("%Y-%m").to_string();
         let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
 
-        let count: i64 = redis::AsyncCommands::get(&mut conn, &tenant_key).await.unwrap_or(0);
+        let count: i64 = redis::AsyncCommands::get(&mut conn, &tenant_key)
+            .await
+            .unwrap_or(0);
         Ok(count)
     }
 
-    pub async fn record_action(&self, tenant_id: &str, agent_id: &str) -> Result<RateLimitStatus, String> {
+    pub async fn record_action(
+        &self,
+        tenant_id: &str,
+        agent_id: &str,
+    ) -> Result<RateLimitStatus, String> {
         if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+            store.rate_limit_checks_total.add(
+                1,
+                &[opentelemetry::KeyValue::new(
+                    "tenant_id",
+                    tenant_id.to_string(),
+                )],
+            );
         }
 
         let mut conn = self.get_connection().await?;
@@ -300,57 +365,84 @@ impl RedisRateLimiter {
         let month_key = now.format("%Y-%m").to_string();
 
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-        tracing::info!("💰 Miser telemetry: Recording action for tenant: {} agent: {}", tenant_id, agent_id); // pii-safe
-        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+        tracing::info!(
+            "💰 Miser telemetry: Recording action for tenant: {} agent: {}",
+            tenant_id,
+            agent_id
+        ); // pii-safe
+        let agent_key = format!(
+            "tenant:{}:agent:{}:actions_used:{}",
+            tenant_id, agent_id, month_key
+        );
 
         let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
         let agent_used: u32 = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
 
         // Expire keys after ~2 months to save space
-        let _ : () = conn.expire(&tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
-        let _ : () = conn.expire(&agent_key, 60 * 60 * 24 * 60).await.unwrap_or(());
+        let _: () = conn
+            .expire(&tenant_key, 60 * 60 * 24 * 60)
+            .await
+            .unwrap_or(());
+        let _: () = conn
+            .expire(&agent_key, 60 * 60 * 24 * 60)
+            .await
+            .unwrap_or(());
 
         if let Some(limit) = tier.monthly_action_limit()
-            && tenant_used >= limit {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit per requirements
-                    soft_limit_reached: true,
-                    user_message: Some(format!(
-                        "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            PlanTier::Business => "Business",
-                        },
-                        limit
-                    )),
-                });
+            && tenant_used >= limit
+        {
+            if let Some(store) = &self.telemetry_store {
+                store.rate_limit_exceeded_total.add(
+                    1,
+                    &[opentelemetry::KeyValue::new(
+                        "tenant_id",
+                        tenant_id.to_string(),
+                    )],
+                );
             }
+            return Ok(RateLimitStatus {
+                is_allowed: true, // Soft limit per requirements
+                soft_limit_reached: true,
+                user_message: Some(format!(
+                    "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
+                    match tier {
+                        PlanTier::Free => "Free",
+                        PlanTier::Starter => "Starter",
+                        PlanTier::Pro => "Pro",
+                        PlanTier::Business => "Business",
+                    },
+                    limit
+                )),
+            });
+        }
 
         if let Some(limit) = tier.agent_action_limit()
-            && agent_used >= limit {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit per requirements
-                    soft_limit_reached: true,
-                    user_message: Some(format!(
-                        "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            PlanTier::Business => "Business",
-                        },
-                        limit
-                    )),
-                });
+            && agent_used >= limit
+        {
+            if let Some(store) = &self.telemetry_store {
+                store.rate_limit_exceeded_total.add(
+                    1,
+                    &[opentelemetry::KeyValue::new(
+                        "tenant_id",
+                        tenant_id.to_string(),
+                    )],
+                );
             }
+            return Ok(RateLimitStatus {
+                is_allowed: true, // Soft limit per requirements
+                soft_limit_reached: true,
+                user_message: Some(format!(
+                    "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
+                    match tier {
+                        PlanTier::Free => "Free",
+                        PlanTier::Starter => "Starter",
+                        PlanTier::Pro => "Pro",
+                        PlanTier::Business => "Business",
+                    },
+                    limit
+                )),
+            });
+        }
 
         Ok(RateLimitStatus {
             is_allowed: true,
@@ -360,38 +452,55 @@ impl RedisRateLimiter {
     }
 
     pub async fn check_product_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking product quota for tenant: {}", tenant_id); // pii-safe
+        tracing::info!(
+            "💰 Miser telemetry: Checking product quota for tenant: {}",
+            tenant_id
+        ); // pii-safe
         if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+            store.rate_limit_checks_total.add(
+                1,
+                &[opentelemetry::KeyValue::new(
+                    "tenant_id",
+                    tenant_id.to_string(),
+                )],
+            );
         }
 
         let mut conn = self.get_connection().await?;
         let tier = self.get_tenant_tier(tenant_id).await?;
 
         let product_key = format!("tenant:{}:products", tenant_id);
-        let total_products: Option<usize> = conn.get(&product_key).await.map_err(|e| e.to_string())?;
+        let total_products: Option<usize> =
+            conn.get(&product_key).await.map_err(|e| e.to_string())?;
         let total_products = total_products.unwrap_or(0);
 
         if let Some(limit) = tier.max_products()
-            && total_products >= limit {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit per requirements
-                    soft_limit_reached: true,
-                    user_message: Some(format!(
-                        "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            PlanTier::Business => "Business",
-                        },
-                        limit
-                    )),
-                });
+            && total_products >= limit
+        {
+            if let Some(store) = &self.telemetry_store {
+                store.rate_limit_exceeded_total.add(
+                    1,
+                    &[opentelemetry::KeyValue::new(
+                        "tenant_id",
+                        tenant_id.to_string(),
+                    )],
+                );
             }
+            return Ok(RateLimitStatus {
+                is_allowed: true, // Soft limit per requirements
+                soft_limit_reached: true,
+                user_message: Some(format!(
+                    "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
+                    match tier {
+                        PlanTier::Free => "Free",
+                        PlanTier::Starter => "Starter",
+                        PlanTier::Pro => "Pro",
+                        PlanTier::Business => "Business",
+                    },
+                    limit
+                )),
+            });
+        }
 
         Ok(RateLimitStatus {
             is_allowed: true,
@@ -403,14 +512,26 @@ impl RedisRateLimiter {
     pub async fn record_product_added(&self, tenant_id: &str) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
         let product_key = format!("tenant:{}:products", tenant_id);
-        let _ : usize = conn.incr(&product_key, 1).await.map_err(|e| e.to_string())?;
+        let _: usize = conn
+            .incr(&product_key, 1)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
     pub async fn check_agent_quota(&self, tenant_id: &str) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking agent quota for tenant: {}", tenant_id); // pii-safe
+        tracing::info!(
+            "💰 Miser telemetry: Checking agent quota for tenant: {}",
+            tenant_id
+        ); // pii-safe
         if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+            store.rate_limit_checks_total.add(
+                1,
+                &[opentelemetry::KeyValue::new(
+                    "tenant_id",
+                    tenant_id.to_string(),
+                )],
+            );
         }
 
         let mut conn = self.get_connection().await?;
@@ -421,25 +542,32 @@ impl RedisRateLimiter {
         let total_agents = total_agents.unwrap_or(0);
 
         if let Some(limit) = tier.max_agents()
-            && total_agents >= limit {
-                if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
-                }
-                return Ok(RateLimitStatus {
-                    is_allowed: true, // Soft limit per requirements
-                    soft_limit_reached: true,
-                    user_message: Some(format!(
-                        "You've reached your {} tier limit of {} agents. Upgrade to unlock more power!",
-                        match tier {
-                            PlanTier::Free => "Free",
-                            PlanTier::Starter => "Starter",
-                            PlanTier::Pro => "Pro",
-                            PlanTier::Business => "Business",
-                        },
-                        limit
-                    )),
-                });
+            && total_agents >= limit
+        {
+            if let Some(store) = &self.telemetry_store {
+                store.rate_limit_exceeded_total.add(
+                    1,
+                    &[opentelemetry::KeyValue::new(
+                        "tenant_id",
+                        tenant_id.to_string(),
+                    )],
+                );
             }
+            return Ok(RateLimitStatus {
+                is_allowed: true, // Soft limit per requirements
+                soft_limit_reached: true,
+                user_message: Some(format!(
+                    "You've reached your {} tier limit of {} agents. Upgrade to unlock more power!",
+                    match tier {
+                        PlanTier::Free => "Free",
+                        PlanTier::Starter => "Starter",
+                        PlanTier::Pro => "Pro",
+                        PlanTier::Business => "Business",
+                    },
+                    limit
+                )),
+            });
+        }
 
         Ok(RateLimitStatus {
             is_allowed: true,
@@ -451,14 +579,28 @@ impl RedisRateLimiter {
     pub async fn record_agent_added(&self, tenant_id: &str) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
         let agent_key = format!("tenant:{}:agents", tenant_id);
-        let _ : usize = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
+        let _: usize = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    pub async fn check_storage_quota(&self, tenant_id: &str, delta_bytes: i64) -> Result<RateLimitStatus, String> {
-        tracing::info!("💰 Miser telemetry: Checking storage quota for tenant: {} with delta: {}", tenant_id, delta_bytes); // pii-safe
+    pub async fn check_storage_quota(
+        &self,
+        tenant_id: &str,
+        delta_bytes: i64,
+    ) -> Result<RateLimitStatus, String> {
+        tracing::info!(
+            "💰 Miser telemetry: Checking storage quota for tenant: {} with delta: {}",
+            tenant_id,
+            delta_bytes
+        ); // pii-safe
         if let Some(store) = &self.telemetry_store {
-            store.rate_limit_checks_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+            store.rate_limit_checks_total.add(
+                1,
+                &[opentelemetry::KeyValue::new(
+                    "tenant_id",
+                    tenant_id.to_string(),
+                )],
+            );
         }
 
         let mut conn = self.get_connection().await?;
@@ -470,30 +612,39 @@ impl RedisRateLimiter {
             let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
             used.unwrap_or(0)
         } else {
-            conn.incr(&storage_key, delta_bytes).await.map_err(|e| e.to_string())?
+            conn.incr(&storage_key, delta_bytes)
+                .await
+                .map_err(|e| e.to_string())?
         };
 
         if total_storage < 0 {
-            let _ : () = conn.set(&storage_key, 0).await.unwrap_or(());
+            let _: () = conn.set(&storage_key, 0).await.unwrap_or(());
             total_storage = 0;
         }
 
         if let Some(store) = &self.telemetry_store
-            && delta_bytes > 0 {
-                store.storage_bytes_counter.add(
-                    delta_bytes as u64,
-                    &[
-                        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-                        opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
-                    ],
-                );
-            }
+            && delta_bytes > 0
+        {
+            store.storage_bytes_counter.add(
+                delta_bytes as u64,
+                &[
+                    opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+                    opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
+                ],
+            );
+        }
 
         if let Some(limit_mb) = tier.storage_limit_mb() {
             let limit_bytes = (limit_mb as i64) * 1024 * 1024;
             if total_storage > limit_bytes {
                 if let Some(store) = &self.telemetry_store {
-                    store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
+                    store.rate_limit_exceeded_total.add(
+                        1,
+                        &[opentelemetry::KeyValue::new(
+                            "tenant_id",
+                            tenant_id.to_string(),
+                        )],
+                    );
                 }
                 return Ok(RateLimitStatus {
                     is_allowed: true, // Soft limit per requirements
@@ -559,7 +710,12 @@ mod tests {
     fn test_plan_tier_edge_cases() {
         // Create an "unknown" tier simulation if we were to parse from string
         // Though PlanTier is an enum, we just verify its methods hold true for all variants
-        let tiers = vec![PlanTier::Free, PlanTier::Starter, PlanTier::Pro, PlanTier::Business];
+        let tiers = vec![
+            PlanTier::Free,
+            PlanTier::Starter,
+            PlanTier::Pro,
+            PlanTier::Business,
+        ];
         for tier in tiers {
             // Verify base_price is never negative
             assert!(tier.base_price() >= 0.0);
@@ -598,7 +754,10 @@ mod tests {
 
         // Test Invalid
         assert!(PlanTier::from_str("unknown").is_err());
-        assert_eq!(PlanTier::from_str("unknown").unwrap_err(), "Unknown tier: unknown");
+        assert_eq!(
+            PlanTier::from_str("unknown").unwrap_err(),
+            "Unknown tier: unknown"
+        );
     }
 
     #[tokio::test]
@@ -615,213 +774,257 @@ mod tests {
     #[tokio::test]
     async fn test_check_product_quota_no_mutation() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
-            && let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-no-mutation";
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-no-mutation";
 
-                // Clear any existing products
-                let mut conn = limiter.get_connection().await.unwrap();
-                let product_key = format!("tenant:{}:products", tenant_id);
-                let _ : () = conn.del(&product_key).await.unwrap_or(());
+            // Clear any existing products
+            let mut conn = limiter.get_connection().await.unwrap();
+            let product_key = format!("tenant:{}:products", tenant_id);
+            let _: () = conn.del(&product_key).await.unwrap_or(());
 
-                // Set tier to free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+            // Set tier to free
+            limiter
+                .set_tenant_tier(tenant_id, PlanTier::Free)
+                .await
+                .unwrap();
 
-                // Check quota initially
-                let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
+            // Check quota initially
+            let status = limiter.check_product_quota(tenant_id).await.unwrap();
+            assert!(status.is_allowed);
+            assert!(!status.soft_limit_reached);
 
-                // Check again to ensure it didn't mutate (increment)
-                let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
+            // Check again to ensure it didn't mutate (increment)
+            let status = limiter.check_product_quota(tenant_id).await.unwrap();
+            assert!(status.is_allowed);
+            assert!(!status.soft_limit_reached);
 
-                // Add 10 products
-                for _ in 0..10 {
-                    limiter.record_product_added(tenant_id).await.unwrap();
-                }
-
-                // Check quota now
-                let status = limiter.check_product_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
+            // Add 10 products
+            for _ in 0..10 {
+                limiter.record_product_added(tenant_id).await.unwrap();
             }
+
+            // Check quota now
+            let status = limiter.check_product_quota(tenant_id).await.unwrap();
+            assert!(status.is_allowed);
+            assert!(status.soft_limit_reached); // Should be reached since we have 10 products (limit is 10)
+        }
     }
 
     #[tokio::test]
     async fn test_check_storage_quota_no_mutation() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
-            && let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-storage-no-mutation";
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-storage-no-mutation";
 
-                let mut conn = limiter.get_connection().await.unwrap();
-                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
-                let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
+            let mut conn = limiter.get_connection().await.unwrap();
+            let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+            let _: () = redis::AsyncCommands::del(&mut conn, &storage_key)
+                .await
+                .unwrap_or(());
 
-                let status = limiter.check_storage_quota(tenant_id, 0).await.unwrap();
-                assert!(status.is_allowed);
-            }
+            let status = limiter.check_storage_quota(tenant_id, 0).await.unwrap();
+            assert!(status.is_allowed);
+        }
     }
 
     #[tokio::test]
     async fn test_check_storage_quota() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
-            && let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-storage-quota";
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-storage-quota";
 
-                // Clear any existing storage used
-                let mut conn = limiter.get_connection().await.unwrap();
-                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
-                let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
+            // Clear any existing storage used
+            let mut conn = limiter.get_connection().await.unwrap();
+            let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+            let _: () = redis::AsyncCommands::del(&mut conn, &storage_key)
+                .await
+                .unwrap_or(());
 
-                // Set tier to Free (500MB limit)
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+            // Set tier to Free (500MB limit)
+            limiter
+                .set_tenant_tier(tenant_id, PlanTier::Free)
+                .await
+                .unwrap();
 
-                // Increment storage by a small amount (100MB)
-                let delta: i64 = 100 * 1024 * 1024;
-                let status = limiter.check_storage_quota(tenant_id, delta).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
+            // Increment storage by a small amount (100MB)
+            let delta: i64 = 100 * 1024 * 1024;
+            let status = limiter.check_storage_quota(tenant_id, delta).await.unwrap();
+            assert!(status.is_allowed);
+            assert!(!status.soft_limit_reached);
 
-                // Increment storage by an amount crossing the 500MB limit
-                let large_delta: i64 = 500 * 1024 * 1024;
-                let status = limiter.check_storage_quota(tenant_id, large_delta).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // But flag is set
-                assert!(status.user_message.unwrap().contains("500MB storage"));
-            }
+            // Increment storage by an amount crossing the 500MB limit
+            let large_delta: i64 = 500 * 1024 * 1024;
+            let status = limiter
+                .check_storage_quota(tenant_id, large_delta)
+                .await
+                .unwrap();
+            assert!(status.is_allowed);
+            assert!(status.soft_limit_reached); // But flag is set
+            assert!(status.user_message.unwrap().contains("500MB storage"));
+        }
     }
 
     #[tokio::test]
     async fn test_record_agent_quota() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
-            && let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-agent-quota";
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-agent-quota";
 
-                // Clear any existing agents
-                let mut conn = limiter.get_connection().await.unwrap();
-                let agent_key = format!("tenant:{}:agents", tenant_id);
-                let _ : () = conn.del(&agent_key).await.unwrap_or(());
+            // Clear any existing agents
+            let mut conn = limiter.get_connection().await.unwrap();
+            let agent_key = format!("tenant:{}:agents", tenant_id);
+            let _: () = conn.del(&agent_key).await.unwrap_or(());
 
-                // Set tier to free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+            // Set tier to free
+            limiter
+                .set_tenant_tier(tenant_id, PlanTier::Free)
+                .await
+                .unwrap();
 
-                // Add 1 agent
-                limiter.record_agent_added(tenant_id).await.unwrap();
+            // Add 1 agent
+            limiter.record_agent_added(tenant_id).await.unwrap();
 
-                // Check quota now
-                let status = limiter.check_agent_quota(tenant_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(status.soft_limit_reached); // Limit is 1 for Free tier
-            }
+            // Check quota now
+            let status = limiter.check_agent_quota(tenant_id).await.unwrap();
+            assert!(status.is_allowed);
+            assert!(status.soft_limit_reached); // Limit is 1 for Free tier
+        }
     }
 
     #[tokio::test]
     async fn test_record_action_monthly_reset() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
-            && let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-monthly-reset";
-                let agent_id = "agent-1";
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-monthly-reset";
+            let agent_id = "agent-1";
 
-                let now = chrono::Utc::now();
-                let month_key = now.format("%Y-%m").to_string();
+            let now = chrono::Utc::now();
+            let month_key = now.format("%Y-%m").to_string();
 
-                let mut conn = limiter.get_connection().await.unwrap();
-                let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-                let _ : () = conn.del(&tenant_key).await.unwrap_or(());
+            let mut conn = limiter.get_connection().await.unwrap();
+            let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+            let _: () = conn.del(&tenant_key).await.unwrap_or(());
 
-                // Set tier to Free
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+            // Set tier to Free
+            limiter
+                .set_tenant_tier(tenant_id, PlanTier::Free)
+                .await
+                .unwrap();
 
-                // Record an action
-                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
-                assert!(status.is_allowed);
-                assert!(!status.soft_limit_reached);
+            // Record an action
+            let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
+            assert!(status.is_allowed);
+            assert!(!status.soft_limit_reached);
 
-                // Verify the monthly key was created and has a value of 1
-                let count: usize = conn.get(&tenant_key).await.unwrap_or(0);
-                assert_eq!(count, 1);
-            }
+            // Verify the monthly key was created and has a value of 1
+            let count: usize = conn.get(&tenant_key).await.unwrap_or(0);
+            assert_eq!(count, 1);
+        }
     }
 
     #[tokio::test]
     async fn test_agent_action_limit() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
-            && let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-agent-action";
-                let agent_id = "agent-limit";
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-agent-action";
+            let agent_id = "agent-limit";
 
-                let mut conn = limiter.get_connection().await.unwrap();
-                let now = chrono::Utc::now();
-                let month_key = now.format("%Y-%m").to_string();
-                let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
-                let _ : () = conn.del(&agent_key).await.unwrap_or(());
+            let mut conn = limiter.get_connection().await.unwrap();
+            let now = chrono::Utc::now();
+            let month_key = now.format("%Y-%m").to_string();
+            let agent_key = format!(
+                "tenant:{}:agent:{}:actions_used:{}",
+                tenant_id, agent_id, month_key
+            );
+            let _: () = conn.del(&agent_key).await.unwrap_or(());
 
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+            limiter
+                .set_tenant_tier(tenant_id, PlanTier::Free)
+                .await
+                .unwrap();
 
-                for _ in 0..20 {
-                    let _ = limiter.record_action(tenant_id, agent_id).await;
-                }
-                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
-                assert!(status.soft_limit_reached);
+            for _ in 0..20 {
+                let _ = limiter.record_action(tenant_id, agent_id).await;
             }
+            let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
+            assert!(status.soft_limit_reached);
+        }
     }
 
     #[tokio::test]
     async fn test_record_token_usage() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
-            && let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-tokens";
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-tokens";
 
-                let mut conn = limiter.get_connection().await.unwrap();
-                let now = chrono::Utc::now();
-                let month_key = now.format("%Y-%m").to_string();
-                let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
-                let _ : () = redis::AsyncCommands::del(&mut conn, &tenant_key).await.unwrap_or(());
+            let mut conn = limiter.get_connection().await.unwrap();
+            let now = chrono::Utc::now();
+            let month_key = now.format("%Y-%m").to_string();
+            let tenant_key = format!("tenant:{}:tokens_used:{}", tenant_id, month_key);
+            let _: () = redis::AsyncCommands::del(&mut conn, &tenant_key)
+                .await
+                .unwrap_or(());
 
-                let usage = limiter.get_token_usage(tenant_id).await.unwrap();
-                assert_eq!(usage, 0);
+            let usage = limiter.get_token_usage(tenant_id).await.unwrap();
+            assert_eq!(usage, 0);
 
-                limiter.record_token_usage(tenant_id, "gpt-4o", 1500).await.unwrap();
-                limiter.record_token_usage(tenant_id, "gpt-4o", 500).await.unwrap();
+            limiter
+                .record_token_usage(tenant_id, "gpt-4o", 1500)
+                .await
+                .unwrap();
+            limiter
+                .record_token_usage(tenant_id, "gpt-4o", 500)
+                .await
+                .unwrap();
 
-                let usage = limiter.get_token_usage(tenant_id).await.unwrap();
-                assert_eq!(usage, 2000);
-            }
+            let usage = limiter.get_token_usage(tenant_id).await.unwrap();
+            assert_eq!(usage, 2000);
+        }
     }
 
     #[tokio::test]
     async fn test_rate_limit_status_is_always_allowed_soft_limit() {
         if let Ok(redis_url) = std::env::var("REDIS_URL")
-            && let Ok(client) = redis::Client::open(redis_url) {
-                let limiter = RedisRateLimiter::new(client.clone());
-                let tenant_id = "test-tenant-soft-limits";
-                let agent_id = "agent-1";
+            && let Ok(client) = redis::Client::open(redis_url)
+        {
+            let limiter = RedisRateLimiter::new(client.clone());
+            let tenant_id = "test-tenant-soft-limits";
+            let agent_id = "agent-1";
 
-                let mut conn = limiter.get_connection().await.unwrap();
-                let now = chrono::Utc::now();
-                let month_key = now.format("%Y-%m").to_string();
-                let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
-                let _ : () = conn.del(&tenant_key).await.unwrap_or(());
+            let mut conn = limiter.get_connection().await.unwrap();
+            let now = chrono::Utc::now();
+            let month_key = now.format("%Y-%m").to_string();
+            let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+            let _: () = conn.del(&tenant_key).await.unwrap_or(());
 
-                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+            limiter
+                .set_tenant_tier(tenant_id, PlanTier::Free)
+                .await
+                .unwrap();
 
-                // exceed limit
-                for _ in 0..100 {
-                    let _ = limiter.record_action(tenant_id, agent_id).await;
-                }
-                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
-
-                assert!(status.is_allowed);
-                assert!(status.soft_limit_reached);
+            // exceed limit
+            for _ in 0..100 {
+                let _ = limiter.record_action(tenant_id, agent_id).await;
             }
+            let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
+
+            assert!(status.is_allowed);
+            assert!(status.soft_limit_reached);
+        }
     }
 
     #[tokio::test]
@@ -834,14 +1037,18 @@ mod tests {
                 // Clear any existing tier in redis
                 let mut conn = limiter.get_connection().await.unwrap();
                 let redis_key = format!("tenant:{}:tier", tenant_id);
-                let _ : () = redis::AsyncCommands::del(&mut conn, &redis_key).await.unwrap_or(());
+                let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
+                    .await
+                    .unwrap_or(());
 
                 // Fetch once to populate cache (fallback to Free)
                 let tier1 = limiter.get_tenant_tier(tenant_id).await.unwrap();
                 assert_eq!(tier1, PlanTier::Free);
 
                 // Now modify redis directly
-                let _ : () = redis::AsyncCommands::set(&mut conn, &redis_key, "Starter").await.unwrap_or(());
+                let _: () = redis::AsyncCommands::set(&mut conn, &redis_key, "Starter")
+                    .await
+                    .unwrap_or(());
 
                 // Fetch again, should still be Free because of memory cache
                 let tier2 = limiter.get_tenant_tier(tenant_id).await.unwrap();
@@ -860,12 +1067,17 @@ mod tests {
                 // Clear any existing tier in redis
                 let mut conn = limiter.get_connection().await.unwrap();
                 let redis_key = format!("tenant:{}:tier", tenant_id);
-                let _ : () = redis::AsyncCommands::del(&mut conn, &redis_key).await.unwrap_or(());
+                let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
+                    .await
+                    .unwrap_or(());
 
                 // Insert into cache manually with expired time
                 limiter.tier_cache.insert(
                     tenant_id.to_string(),
-                    (PlanTier::Business, std::time::Instant::now() - std::time::Duration::from_secs(400))
+                    (
+                        PlanTier::Business,
+                        std::time::Instant::now() - std::time::Duration::from_secs(400),
+                    ),
                 );
 
                 // Fetch should bypass expired cache, read from redis (which is None -> Free)
@@ -906,7 +1118,9 @@ mod tests {
 
                 let mut conn = limiter.get_connection().await.unwrap();
                 let redis_key = format!("tenant:{}:tier", tenant_id);
-                let _ : () = redis::AsyncCommands::del(&mut conn, &redis_key).await.unwrap_or(());
+                let _: () = redis::AsyncCommands::del(&mut conn, &redis_key)
+                    .await
+                    .unwrap_or(());
 
                 // Assume no db_pool, tier defaults to Free
                 let tier = limiter.get_tenant_tier(tenant_id).await.unwrap();
@@ -956,7 +1170,9 @@ mod tests {
                 let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
 
                 // Set negative storage manually
-                let _ : () = redis::AsyncCommands::set(&mut conn, &storage_key, -100).await.unwrap_or(());
+                let _: () = redis::AsyncCommands::set(&mut conn, &storage_key, -100)
+                    .await
+                    .unwrap_or(());
 
                 // Getting storage used should fix the negative value to 0
                 let used = limiter.get_tenant_storage_used(tenant_id).await.unwrap();

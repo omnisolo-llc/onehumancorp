@@ -4,15 +4,15 @@ pub use ::server_ohc as ohc;
 pub use ::server_oidc as oidc;
 
 pub mod email;
+pub mod grpc;
+pub mod http;
+pub mod mysql_store;
 pub mod orchestration;
 pub mod peer_identity;
 pub mod postgres_store;
-pub mod sqlite_store;
-pub mod mysql_store;
 pub mod seaorm_store;
+pub mod sqlite_store;
 pub mod user_repository;
-pub mod grpc;
-pub mod http;
 pub mod validation;
 
 pub mod db {
@@ -27,7 +27,9 @@ pub mod db {
                 let database_url = std::env::var("DATABASE_URL")
                     .ok()
                     .or_else(|| std::env::var("OHC_DATABASE_URL").ok())
-                    .unwrap_or_else(|| "postgres://postgres:postgres@localhost:5432/test".to_string());
+                    .unwrap_or_else(|| {
+                        "postgres://postgres:postgres@localhost:5432/test".to_string()
+                    });
                 sqlx::postgres::PgPoolOptions::new()
                     .max_connections(100)
                     .acquire_timeout(std::time::Duration::from_millis(15000))
@@ -140,10 +142,11 @@ pub async fn api_key_auth_middleware(
     let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
     if has_db {
         let pool = crate::db::get_pool();
-        if let Ok(Some(row)) = sqlx::query("SELECT member_id, organization_id FROM api_keys WHERE key_hash = $1")
-            .bind(&key_hash)
-            .fetch_optional(&pool)
-            .await
+        if let Ok(Some(row)) =
+            sqlx::query("SELECT member_id, organization_id FROM api_keys WHERE key_hash = $1")
+                .bind(&key_hash)
+                .fetch_optional(&pool)
+                .await
         {
             use sqlx::Row;
             let member_id: uuid::Uuid = row.get(0);
@@ -214,8 +217,7 @@ pub const MAX_AUTH_ROLES: usize = 32;
 pub const MAX_AUTH_ROLE_BYTES: usize = 64;
 const MAX_ACCESS_TOKEN_CLAIMS_BYTES: usize = 1400;
 const MAX_PASSWORD_HASH_CONCURRENCY: usize = 16;
-const DUMMY_PASSWORD_HASH: &str =
-    "$2b$10$dVqpE7hfDSB6wqVCcDvUGuLwuaGMsiC.FznSYrakLDs.8jQXm2wMC";
+const DUMMY_PASSWORD_HASH: &str = "$2b$10$dVqpE7hfDSB6wqVCcDvUGuLwuaGMsiC.FznSYrakLDs.8jQXm2wMC";
 
 fn hash(password: String, cost: u32) -> Result<String, String> {
     bcrypt::hash(password, cost).map_err(|e| e.to_string())
@@ -315,15 +317,14 @@ where
     }
 }
 
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use rand::RngCore;
 use ::server_common::Claims;
-use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::auth_service_server::AuthService;
 use ::server_ohc::orchestration::*;
 use base64::Engine as _;
-
+use chrono::{DateTime, Utc};
+use rand::RngCore;
+use serde::{Deserialize, Serialize};
+use tonic::{Request, Response, Status};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -561,24 +562,33 @@ impl Store {
         let mut roles = HashMap::new();
         let now = Utc::now();
 
-        roles.insert(ROLE_ADMIN.to_string(), Role {
-            id: ROLE_ADMIN.to_string(),
-            name: ROLE_ADMIN.to_string(),
-            permissions: vec!["*".to_string()],
-            created_at: now,
-        });
-        roles.insert(ROLE_OPERATOR.to_string(), Role {
-            id: ROLE_OPERATOR.to_string(),
-            name: ROLE_OPERATOR.to_string(),
-            permissions: vec!["read".to_string(), "write".to_string()],
-            created_at: now,
-        });
-        roles.insert(ROLE_VIEWER.to_string(), Role {
-            id: ROLE_VIEWER.to_string(),
-            name: ROLE_VIEWER.to_string(),
-            permissions: vec!["read".to_string()],
-            created_at: now,
-        });
+        roles.insert(
+            ROLE_ADMIN.to_string(),
+            Role {
+                id: ROLE_ADMIN.to_string(),
+                name: ROLE_ADMIN.to_string(),
+                permissions: vec!["*".to_string()],
+                created_at: now,
+            },
+        );
+        roles.insert(
+            ROLE_OPERATOR.to_string(),
+            Role {
+                id: ROLE_OPERATOR.to_string(),
+                name: ROLE_OPERATOR.to_string(),
+                permissions: vec!["read".to_string(), "write".to_string()],
+                created_at: now,
+            },
+        );
+        roles.insert(
+            ROLE_VIEWER.to_string(),
+            Role {
+                id: ROLE_VIEWER.to_string(),
+                name: ROLE_VIEWER.to_string(),
+                permissions: vec!["read".to_string()],
+                created_at: now,
+            },
+        );
 
         let redis_configuration = if ::server_config::get().multitenant {
             let setting = match std::env::var("OHC_REDIS_URL") {
@@ -605,9 +615,7 @@ impl Store {
             redis_client,
             redis_configuration_error,
             secret,
-            password_slots: Arc::new(tokio::sync::Semaphore::new(
-                MAX_PASSWORD_HASH_CONCURRENCY,
-            )),
+            password_slots: Arc::new(tokio::sync::Semaphore::new(MAX_PASSWORD_HASH_CONCURRENCY)),
             user_creation_lock: tokio::sync::Mutex::new(()),
             repo: None,
             portable_repo: None,
@@ -621,9 +629,11 @@ impl Store {
     fn seed_default_admin(&self, now: DateTime<Utc>) {
         let admin_user = std::env::var("ADMIN_USERNAME").unwrap_or_else(|_| "admin".to_string());
         let admin_pass = std::env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin".to_string());
-        let admin_email = std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
+        let admin_email =
+            std::env::var("ADMIN_EMAIL").unwrap_or_else(|_| "admin@localhost".to_string());
 
-        let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
+        let hash = hash(admin_pass, if cfg!(test) { 4 } else { DEFAULT_COST })
+            .expect("Failed to hash password");
 
         let id = hex::encode(random_bytes(8));
 
@@ -640,11 +650,31 @@ impl Store {
             oidc_subject: None,
         };
 
-        self.users.write().expect("Failed to acquire lock").insert(id.clone(), admin);
-        self.by_name.write().expect("Failed to acquire lock").insert(TenantKey { org_id: "".to_string(), key: admin_user }, id.clone());
-        self.by_email.write().expect("Failed to acquire lock").insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
+        self.users
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(id.clone(), admin);
+        self.by_name
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(
+                TenantKey {
+                    org_id: "".to_string(),
+                    key: admin_user,
+                },
+                id.clone(),
+            );
+        self.by_email
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(
+                TenantKey {
+                    org_id: "".to_string(),
+                    key: admin_email,
+                },
+                id,
+            );
     }
-
 
     pub fn with_repo(repo: std::sync::Arc<dyn crate::user_repository::UserRepository>) -> Self {
         let mut store = Store::new();
@@ -667,7 +697,14 @@ impl Store {
         self.portable_repo.clone()
     }
 
-    pub async fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+    pub async fn create_user(
+        &self,
+        username: String,
+        email: String,
+        password: String,
+        roles: Vec<String>,
+        org_id: String,
+    ) -> Result<User, String> {
         self.validate_org_id(&org_id)?;
         if username.is_empty() {
             return Err("username is required".to_string());
@@ -678,17 +715,34 @@ impl Store {
 
         let _creation_guard = self.user_creation_lock.lock().await;
 
-        let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
-        if self.by_name.read().expect("Failed to acquire lock").contains_key(&name_key) {
+        let name_key = TenantKey {
+            org_id: org_id.clone(),
+            key: username.clone(),
+        };
+        if self
+            .by_name
+            .read()
+            .expect("Failed to acquire lock")
+            .contains_key(&name_key)
+        {
             return Err("username already taken".to_string());
         }
 
-        let email_key = TenantKey { org_id: org_id.clone(), key: email.clone() };
-        if self.by_email.read().expect("Failed to acquire lock").contains_key(&email_key) {
+        let email_key = TenantKey {
+            org_id: org_id.clone(),
+            key: email.clone(),
+        };
+        if self
+            .by_email
+            .read()
+            .expect("Failed to acquire lock")
+            .contains_key(&email_key)
+        {
             return Err("email already registered".to_string());
         }
 
-        let hash = hash(password, if cfg!(test) { 4 } else { DEFAULT_COST }).expect("Failed to hash password");
+        let hash = hash(password, if cfg!(test) { 4 } else { DEFAULT_COST })
+            .expect("Failed to hash password");
 
         let id = hex::encode(random_bytes(8));
         let now = Utc::now();
@@ -714,9 +768,18 @@ impl Store {
             repo.create_user(user.clone(), &org_id).await?;
         }
 
-        self.users.write().expect("Failed to acquire lock").insert(id.clone(), user.clone());
-        self.by_name.write().expect("Failed to acquire lock").insert(name_key, id.clone());
-        self.by_email.write().expect("Failed to acquire lock").insert(email_key, id);
+        self.users
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(id.clone(), user.clone());
+        self.by_name
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(name_key, id.clone());
+        self.by_email
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(email_key, id);
 
         Ok(user)
     }
@@ -736,10 +799,24 @@ impl Store {
         let _creation_guard = self.user_creation_lock.lock().await;
 
         let org_id = uuid::Uuid::new_v4().to_string();
-        let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
-        let email_key = TenantKey { org_id: org_id.clone(), key: email.clone() };
-        if self.by_name.read().expect("Failed to acquire lock").contains_key(&name_key)
-            || self.by_email.read().expect("Failed to acquire lock").contains_key(&email_key)
+        let name_key = TenantKey {
+            org_id: org_id.clone(),
+            key: username.clone(),
+        };
+        let email_key = TenantKey {
+            org_id: org_id.clone(),
+            key: email.clone(),
+        };
+        if self
+            .by_name
+            .read()
+            .expect("Failed to acquire lock")
+            .contains_key(&name_key)
+            || self
+                .by_email
+                .read()
+                .expect("Failed to acquire lock")
+                .contains_key(&email_key)
         {
             return Err("account already exists".to_string());
         }
@@ -767,11 +844,26 @@ impl Store {
             .consume_ticket_and_create_user(ticket_hash, now, user)
             .await?;
         let org_id = user.organization_id.clone().unwrap_or_default();
-        let name_key = TenantKey { org_id: org_id.clone(), key: user.username.clone() };
-        let email_key = TenantKey { org_id, key: user.email.clone() };
-        self.users.write().expect("Failed to acquire lock").insert(id.clone(), user.clone());
-        self.by_name.write().expect("Failed to acquire lock").insert(name_key, id.clone());
-        self.by_email.write().expect("Failed to acquire lock").insert(email_key, id);
+        let name_key = TenantKey {
+            org_id: org_id.clone(),
+            key: user.username.clone(),
+        };
+        let email_key = TenantKey {
+            org_id,
+            key: user.email.clone(),
+        };
+        self.users
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(id.clone(), user.clone());
+        self.by_name
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(name_key, id.clone());
+        self.by_email
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(email_key, id);
         Ok(user)
     }
 
@@ -808,7 +900,8 @@ impl Store {
             format!("user-{suffix}")
         });
         let organization_id = uuid::Uuid::new_v4().to_string();
-        let random_password = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(random_bytes(32));
+        let random_password =
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(random_bytes(32));
         let user = User {
             id: hex::encode(random_bytes(8)),
             username: username.clone(),
@@ -825,15 +918,30 @@ impl Store {
             .create_oidc_user(user, provider_key, issuer, &identity.sub)
             .await?;
         let organization_id = user.organization_id.clone().unwrap_or_default();
-        self.users.write().expect("Failed to acquire lock").insert(user.id.clone(), user.clone());
-        self.by_name.write().expect("Failed to acquire lock").insert(
-            TenantKey { org_id: organization_id.clone(), key: username },
-            user.id.clone(),
-        );
-        self.by_email.write().expect("Failed to acquire lock").insert(
-            TenantKey { org_id: organization_id, key: email },
-            user.id.clone(),
-        );
+        self.users
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(user.id.clone(), user.clone());
+        self.by_name
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(
+                TenantKey {
+                    org_id: organization_id.clone(),
+                    key: username,
+                },
+                user.id.clone(),
+            );
+        self.by_email
+            .write()
+            .expect("Failed to acquire lock")
+            .insert(
+                TenantKey {
+                    org_id: organization_id,
+                    key: email,
+                },
+                user.id.clone(),
+            );
         Ok(user)
     }
 
@@ -884,21 +992,18 @@ impl Store {
         decision
     }
 
-    pub async fn authenticate_dummy(
-        &self,
-        password: &str,
-    ) -> Result<User, AuthenticationError> {
+    pub async fn authenticate_dummy(&self, password: &str) -> Result<User, AuthenticationError> {
         let _password_slot = self
             .password_slots
             .clone()
             .try_acquire_owned()
             .map_err(|_| AuthenticationError::Unavailable("credential verifier busy".into()))?;
         let password = password.to_string();
-        tokio::task::spawn_blocking(move || {
-            decide_credentials_with(None, &password, "", verify)
-        })
-        .await
-        .map_err(|_| AuthenticationError::Unavailable("credential verifier unavailable".into()))?
+        tokio::task::spawn_blocking(move || decide_credentials_with(None, &password, "", verify))
+            .await
+            .map_err(|_| {
+                AuthenticationError::Unavailable("credential verifier unavailable".into())
+            })?
     }
 
     fn find_memory_user_with<F>(
@@ -973,7 +1078,8 @@ impl Store {
         }
 
         let users = self.users.read().expect("Failed to acquire lock");
-        users.values()
+        users
+            .values()
             .filter(|u| {
                 if org_id.is_empty() {
                     u.organization_id.is_none() || u.organization_id.as_deref() == Some("")
@@ -985,14 +1091,27 @@ impl Store {
             .collect()
     }
 
-    pub async fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+    pub async fn update_user(
+        &self,
+        id: &str,
+        email_ptr: Option<String>,
+        roles: Option<Vec<String>>,
+        active_ptr: Option<bool>,
+        org_id: &str,
+    ) -> Result<User, String> {
         self.validate_org_id(org_id)?;
 
         if let Some(repo) = &self.repo {
             let mut u = repo.get_by_id(id, org_id).await?;
-            if let Some(email) = email_ptr { u.email = email; }
-            if let Some(r) = roles { u.roles = r; }
-            if let Some(active) = active_ptr { u.active = active; }
+            if let Some(email) = email_ptr {
+                u.email = email;
+            }
+            if let Some(r) = roles {
+                u.roles = r;
+            }
+            if let Some(active) = active_ptr {
+                u.active = active;
+            }
             if !Self::user_access_token_fits(&u) {
                 return Err("user claims exceed the access token size limit".to_string());
             }
@@ -1004,7 +1123,9 @@ impl Store {
         let mut users = self.users.write().expect("Failed to acquire lock");
         let mut by_email = self.by_email.write().expect("Failed to acquire lock");
 
-        let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
+        let u = users
+            .get_mut(id)
+            .ok_or_else(|| "user not found".to_string())?;
 
         if let Some(ref user_org) = u.organization_id {
             if user_org != org_id {
@@ -1031,11 +1152,17 @@ impl Store {
         if let Some(email) = email_ptr {
             if email != u.email {
                 let org = u.organization_id.clone().unwrap_or_default();
-                let email_key = TenantKey { org_id: org, key: email.clone() };
+                let email_key = TenantKey {
+                    org_id: org,
+                    key: email.clone(),
+                };
                 if by_email.contains_key(&email_key) {
                     return Err("email already registered".to_string());
                 }
-                by_email.remove(&TenantKey { org_id: u.organization_id.clone().unwrap_or_default(), key: u.email.clone() });
+                by_email.remove(&TenantKey {
+                    org_id: u.organization_id.clone().unwrap_or_default(),
+                    key: u.email.clone(),
+                });
                 u.email = email;
                 by_email.insert(email_key, id.to_string());
             }
@@ -1077,10 +1204,19 @@ impl Store {
         }
 
         let org = u.organization_id.clone().unwrap_or_default();
-        by_name.remove(&TenantKey { org_id: org.clone(), key: u.username.clone() });
-        by_email.remove(&TenantKey { org_id: org.clone(), key: u.email.clone() });
+        by_name.remove(&TenantKey {
+            org_id: org.clone(),
+            key: u.username.clone(),
+        });
+        by_email.remove(&TenantKey {
+            org_id: org.clone(),
+            key: u.email.clone(),
+        });
         if let Some(ref oidc) = u.oidc_subject {
-            by_oidc.remove(&TenantKey { org_id: org, key: oidc.clone() });
+            by_oidc.remove(&TenantKey {
+                org_id: org,
+                key: oidc.clone(),
+            });
         }
 
         users.remove(id);
@@ -1201,12 +1337,13 @@ impl Store {
     /// the token in the tenant named by those claims. This makes logout
     /// idempotent without trusting transport-supplied tenant data.
     pub async fn logout_token(&self, token: &str) -> Result<(), LogoutError> {
-        let claims = self.validate_token_claims(token, false).await.map_err(
-            |error| match error {
-                TokenValidationError::Invalid(_) => LogoutError::InvalidToken,
-                TokenValidationError::Unavailable => LogoutError::ValidationUnavailable,
-            },
-        )?;
+        let claims =
+            self.validate_token_claims(token, false)
+                .await
+                .map_err(|error| match error {
+                    TokenValidationError::Invalid(_) => LogoutError::InvalidToken,
+                    TokenValidationError::Unavailable => LogoutError::ValidationUnavailable,
+                })?;
         let exp =
             chrono::DateTime::from_timestamp(claims.exp, 0).ok_or(LogoutError::InvalidToken)?;
         let org_id = claims.organization_id.unwrap_or_default();
@@ -1355,7 +1492,9 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), Status> {
     Ok((parts[2].to_string(), parts[4].to_string()))
 }
 
-pub fn extract_spiffe_id_from_metadata(md: &tonic::metadata::MetadataMap) -> Result<String, String> {
+pub fn extract_spiffe_id_from_metadata(
+    md: &tonic::metadata::MetadataMap,
+) -> Result<String, String> {
     md.get("x-spiffe-id")
         .ok_or_else(|| "missing x-spiffe-id header".to_string())?
         .to_str()
@@ -1384,17 +1523,10 @@ impl AuthService for AuthServiceServerImpl {
             .authenticate(&req.username, &req.password, &req.organization_id)
             .await
         {
-            Ok(user) => {
-                match self.store.issue_token_with_expiry(&user) {
-                    Ok((token, expires_at)) => {
-                         Ok(Response::new(LoginResponse {
-                             token,
-                             expires_at,
-                         }))
-                    }
-                    Err(e) => Err(Status::internal(e)),
-                }
-            }
+            Ok(user) => match self.store.issue_token_with_expiry(&user) {
+                Ok((token, expires_at)) => Ok(Response::new(LoginResponse { token, expires_at })),
+                Err(e) => Err(Status::internal(e)),
+            },
             Err(AuthenticationError::InvalidCredentials) => {
                 Err(Status::unauthenticated("invalid credentials"))
             }
@@ -1414,7 +1546,10 @@ impl AuthService for AuthServiceServerImpl {
         let req = request.into_inner();
 
         let (final_org_id, final_role) = if ::server_config::get().multitenant {
-            (sqlx::types::Uuid::new_v4().to_string(), ROLE_ADMIN.to_string())
+            (
+                sqlx::types::Uuid::new_v4().to_string(),
+                ROLE_ADMIN.to_string(),
+            )
         } else {
             // Prevent users from registering into the 'system' tenant ID even in standalone mode
             // unless we have specific logic. Here we just fallback to a safe ID or what they provided
@@ -1429,20 +1564,24 @@ impl AuthService for AuthServiceServerImpl {
             (req_org, ROLE_VIEWER.to_string())
         };
 
-        let user = self.store.create_user(
-            req.username.clone(),
-            req.email.clone(),
-            req.password,
-            vec![final_role],
-            final_org_id,
-        ).await.map_err(|e| Status::internal(e))?;
+        let user = self
+            .store
+            .create_user(
+                req.username.clone(),
+                req.email.clone(),
+                req.password,
+                vec![final_role],
+                final_org_id,
+            )
+            .await
+            .map_err(|e| Status::internal(e))?;
 
-        let (token, expires_at) = self.store.issue_token_with_expiry(&user).map_err(Status::internal)?;
+        let (token, expires_at) = self
+            .store
+            .issue_token_with_expiry(&user)
+            .map_err(Status::internal)?;
 
-        Ok(Response::new(LoginResponse {
-             token,
-             expires_at,
-        }))
+        Ok(Response::new(LoginResponse { token, expires_at }))
     }
 
     async fn logout(
@@ -1465,15 +1604,18 @@ impl AuthService for AuthServiceServerImpl {
             .strip_prefix("Bearer ")
             .or_else(|| auth_str.strip_prefix("bearer "))
             .unwrap_or(auth_str);
-        self.store.logout_token(token).await.map_err(|error| match error {
-            LogoutError::InvalidToken => Status::unauthenticated("invalid token"),
-            LogoutError::ValidationUnavailable => {
-                Status::unavailable("token validation unavailable")
-            }
-            LogoutError::RevocationUnavailable => {
-                Status::unavailable("token revocation unavailable")
-            }
-        })?;
+        self.store
+            .logout_token(token)
+            .await
+            .map_err(|error| match error {
+                LogoutError::InvalidToken => Status::unauthenticated("invalid token"),
+                LogoutError::ValidationUnavailable => {
+                    Status::unavailable("token validation unavailable")
+                }
+                LogoutError::RevocationUnavailable => {
+                    Status::unavailable("token revocation unavailable")
+                }
+            })?;
         Ok(Response::new(EmptyResponse {}))
     }
 
@@ -1482,10 +1624,15 @@ impl AuthService for AuthServiceServerImpl {
         mut request: Request<EmptyRequest>,
     ) -> Result<Response<UserProto>, Status> {
         self.authenticate_rpc(AuthRpc::GetMe, &mut request)?;
-        let auth_info = request.extensions().get::<AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&auth_info.spiffe_id, &auth_info.org_id).await
+        let user = self
+            .store
+            .get_user(&auth_info.spiffe_id, &auth_info.org_id)
+            .await
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -1506,21 +1653,26 @@ impl AuthService for AuthServiceServerImpl {
         mut request: Request<ListUsersRequest>,
     ) -> Result<Response<ListUsersResponse>, Status> {
         self.authenticate_rpc(AuthRpc::ListUsers, &mut request)?;
-        let auth_info = request.extensions().get::<AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
         let users = self.store.list_users(&auth_info.org_id).await;
-        let proto_users = users.into_iter().map(|u| UserProto {
-            id: u.id,
-            username: u.username,
-            email: u.email,
-            roles: u.roles,
-            active: u.active,
-            organization_id: u.organization_id.unwrap_or_default(),
-            created_at_unix: u.created_at.timestamp(),
-            updated_at_unix: u.updated_at.timestamp(),
-            oidc_subject: u.oidc_subject.unwrap_or_default(),
-        }).collect();
+        let proto_users = users
+            .into_iter()
+            .map(|u| UserProto {
+                id: u.id,
+                username: u.username,
+                email: u.email,
+                roles: u.roles,
+                active: u.active,
+                organization_id: u.organization_id.unwrap_or_default(),
+                created_at_unix: u.created_at.timestamp(),
+                updated_at_unix: u.updated_at.timestamp(),
+                oidc_subject: u.oidc_subject.unwrap_or_default(),
+            })
+            .collect();
         Ok(Response::new(ListUsersResponse { users: proto_users }))
     }
 
@@ -1529,11 +1681,16 @@ impl AuthService for AuthServiceServerImpl {
         mut request: Request<CreateUserRequest>,
     ) -> Result<Response<UserProto>, Status> {
         self.authenticate_rpc(AuthRpc::CreateUser, &mut request)?;
-        let auth_info = request.extensions().get::<AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let org_id = auth_info.org_id.clone();
 
-        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id).await
+        let caller = self
+            .store
+            .get_user(&auth_info.spiffe_id, &org_id)
+            .await
             .ok_or_else(|| Status::not_found("Caller not found"))?;
 
         if !caller.roles.contains(&"ADMIN".to_string()) {
@@ -1542,13 +1699,17 @@ impl AuthService for AuthServiceServerImpl {
 
         let req = request.into_inner();
         // Force the new user to be in the caller's organization to prevent cross-tenant injection
-        let user = self.store.create_user(
-            req.username.clone(),
-            req.email.clone(),
-            req.password,
-            vec![],
-            org_id,
-        ).await.map_err(|e| Status::internal(e))?;
+        let user = self
+            .store
+            .create_user(
+                req.username.clone(),
+                req.email.clone(),
+                req.password,
+                vec![],
+                org_id,
+            )
+            .await
+            .map_err(|e| Status::internal(e))?;
         Ok(Response::new(UserProto {
             id: user.id,
             username: user.username,
@@ -1567,10 +1728,15 @@ impl AuthService for AuthServiceServerImpl {
         mut request: Request<GetUserRequest>,
     ) -> Result<Response<UserProto>, Status> {
         self.authenticate_rpc(AuthRpc::GetUser, &mut request)?;
-        let auth_info = request.extensions().get::<AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
-        let user = self.store.get_user(&request.get_ref().id, &auth_info.org_id).await
+        let user = self
+            .store
+            .get_user(&request.get_ref().id, &auth_info.org_id)
+            .await
             .ok_or_else(|| Status::not_found("User not found"))?;
 
         Ok(Response::new(UserProto {
@@ -1591,27 +1757,49 @@ impl AuthService for AuthServiceServerImpl {
         mut request: Request<UpdateUserRequest>,
     ) -> Result<Response<UserProto>, Status> {
         self.authenticate_rpc(AuthRpc::UpdateUser, &mut request)?;
-        let auth_info = request.extensions().get::<AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let org_id = auth_info.org_id.clone();
 
         // Privilege Escalation fix: Ensure caller is ADMIN or the target user themselves
-        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id).await
+        let caller = self
+            .store
+            .get_user(&auth_info.spiffe_id, &org_id)
+            .await
             .ok_or_else(|| Status::not_found("Caller not found"))?;
 
         let req = request.into_inner();
 
         let is_admin = caller.roles.contains(&"ADMIN".to_string());
         if !is_admin && caller.id != req.id {
-            return Err(Status::permission_denied("Insufficient permissions to update this user"));
+            return Err(Status::permission_denied(
+                "Insufficient permissions to update this user",
+            ));
         }
 
         // Only ADMIN can change roles or active status
-        let target_user = self.store.get_user(&req.id, &org_id).await.ok_or_else(|| Status::not_found("User not found"))?;
-        let final_roles = if is_admin { req.roles } else { target_user.roles.clone() };
-        let final_active = if is_admin { req.active } else { Some(target_user.active) };
+        let target_user = self
+            .store
+            .get_user(&req.id, &org_id)
+            .await
+            .ok_or_else(|| Status::not_found("User not found"))?;
+        let final_roles = if is_admin {
+            req.roles
+        } else {
+            target_user.roles.clone()
+        };
+        let final_active = if is_admin {
+            req.active
+        } else {
+            Some(target_user.active)
+        };
 
-        let user = self.store.update_user(&req.id, req.email, Some(final_roles), final_active, &org_id).await
+        let user = self
+            .store
+            .update_user(&req.id, req.email, Some(final_roles), final_active, &org_id)
+            .await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(UserProto {
@@ -1632,19 +1820,26 @@ impl AuthService for AuthServiceServerImpl {
         mut request: Request<DeleteUserRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
         self.authenticate_rpc(AuthRpc::DeleteUser, &mut request)?;
-        let auth_info = request.extensions().get::<AuthInfo>()
+        let auth_info = request
+            .extensions()
+            .get::<AuthInfo>()
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
         let org_id = auth_info.org_id.clone();
 
         // Privilege Escalation fix: Ensure caller is ADMIN
-        let caller = self.store.get_user(&auth_info.spiffe_id, &org_id).await
+        let caller = self
+            .store
+            .get_user(&auth_info.spiffe_id, &org_id)
+            .await
             .ok_or_else(|| Status::not_found("Caller not found"))?;
 
         if !caller.roles.contains(&"ADMIN".to_string()) {
             return Err(Status::permission_denied("Only ADMIN can delete users"));
         }
 
-        self.store.delete_user(&request.get_ref().id, &org_id).await
+        self.store
+            .delete_user(&request.get_ref().id, &org_id)
+            .await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(EmptyResponse {}))
@@ -1694,8 +1889,7 @@ mod store_tests {
 
     #[test]
     fn auth_rpc_policy_exposes_only_login_and_register_without_peer_identity() {
-        let service =
-            AuthServiceServerImpl::new(Arc::new(Store::new()), AuthTransportMode::Cloud);
+        let service = AuthServiceServerImpl::new(Arc::new(Store::new()), AuthTransportMode::Cloud);
         let public = [AuthRpc::Login, AuthRpc::Register];
         let protected = [
             AuthRpc::Logout,
@@ -1716,14 +1910,12 @@ mod store_tests {
 
         for rpc in protected {
             let mut request = Request::new(());
-            request
-                .metadata_mut()
-                .insert(
-                    "x-spiffe-id",
-                    "spiffe://onehumancorp.io/org/acme/agent/forged"
-                        .parse()
-                        .unwrap(),
-                );
+            request.metadata_mut().insert(
+                "x-spiffe-id",
+                "spiffe://onehumancorp.io/org/acme/agent/forged"
+                    .parse()
+                    .unwrap(),
+            );
             request.extensions_mut().insert(AuthInfo {
                 spiffe_id: "spiffe://onehumancorp.io/org/acme/agent/forged".to_string(),
                 org_id: "acme".to_string(),
@@ -1846,9 +2038,7 @@ mod store_tests {
             redis_client: None,
             redis_configuration_error: None,
             secret: b"test-secret-with-at-least-32-bytes".to_vec(),
-            password_slots: Arc::new(tokio::sync::Semaphore::new(
-                MAX_PASSWORD_HASH_CONCURRENCY,
-            )),
+            password_slots: Arc::new(tokio::sync::Semaphore::new(MAX_PASSWORD_HASH_CONCURRENCY)),
             user_creation_lock: tokio::sync::Mutex::new(()),
             repo: Some(repo),
             portable_repo: None,
@@ -2177,7 +2367,10 @@ mod store_tests {
     async fn application_token_validation_never_falls_back_to_raw_rs256_idp_tokens() {
         let store = test_store_with_memory_user(true);
         let raw_rs256 = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsifQ.e30.AA";
-        assert_eq!(store.validate_token(raw_rs256).await.unwrap_err(), "Invalid token");
+        assert_eq!(
+            store.validate_token(raw_rs256).await.unwrap_err(),
+            "Invalid token"
+        );
     }
 
     fn logout_request(token: &str) -> Request<EmptyRequest> {
@@ -2261,8 +2454,13 @@ mod store_tests {
 
     #[test]
     fn test_secret_paths_are_safe() {
-        unsafe { std::env::set_var("JWT_SECRET", "test_secret"); }
-        let store = Store::new();
+        let store = temp_env::with_vars(
+            [
+                ("JWT_SECRET", Some("test_secret")),
+                ("JWT_SECRET_FILE", None),
+            ],
+            Store::new,
+        );
         // Since we can't easily assert on the inner paths without modifying visibility,
         // we assert that we don't panic upon creation.
         assert!(!store.secret.is_empty());
@@ -2345,9 +2543,14 @@ mod store_tests {
 
     #[test]
     fn test_store_validate_org_id_multitenant() {
-        unsafe { std::env::set_var("JWT_SECRET", "test_secret"); }
         // Create an empty store just to access the validate_org_id method
-        let store = Store::new();
+        let store = temp_env::with_vars(
+            [
+                ("JWT_SECRET", Some("test_secret")),
+                ("JWT_SECRET_FILE", None),
+            ],
+            Store::new,
+        );
 
         // In a real environment, ::server_config::get().multitenant is controlled by the config.
         // We test that `validate_org_id` properly returns an error or success based on the config.
@@ -2359,9 +2562,15 @@ mod store_tests {
 
         if multitenant {
             assert!(res_system.is_err());
-            assert_eq!(res_system.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+            assert_eq!(
+                res_system.unwrap_err(),
+                "tenant_id 'system' cannot be queried in multi-tenant mode"
+            );
             assert!(res_empty.is_err());
-            assert_eq!(res_empty.unwrap_err(), "empty tenant_id is not allowed in multi-tenant mode");
+            assert_eq!(
+                res_empty.unwrap_err(),
+                "empty tenant_id is not allowed in multi-tenant mode"
+            );
             assert!(res_valid.is_ok());
         } else {
             // Standalone mode: we allow empty and system.

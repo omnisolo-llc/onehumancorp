@@ -1,6 +1,6 @@
-use std::time::{Duration, Instant};
-use dashmap::DashMap;
 use crate::compression;
+use dashmap::DashMap;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 pub struct CacheEntry {
@@ -23,7 +23,7 @@ impl LocalEmbeddingCache {
     }
 
     fn hash_prompt(&self, prompt: &str) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(prompt.as_bytes());
         hex::encode(hasher.finalize())
@@ -44,16 +44,21 @@ impl LocalEmbeddingCache {
     pub fn set(&self, prompt: &str, response: &str) {
         let key = self.hash_prompt(prompt);
         let now = Instant::now();
-        self.entries.insert(key, CacheEntry {
-            response: response.to_string(),
-            created_at: now,
-            expires_at: now + self.ttl,
-        });
+        self.entries.insert(
+            key,
+            CacheEntry {
+                response: response.to_string(),
+                created_at: now,
+                expires_at: now + self.ttl,
+            },
+        );
     }
 
     pub fn prune(&self) -> usize {
         let now = Instant::now();
-        let expired_keys: Vec<String> = self.entries.iter()
+        let expired_keys: Vec<String> = self
+            .entries
+            .iter()
             .filter(|entry| now > entry.value().expires_at)
             .map(|entry| entry.key().clone())
             .collect();
@@ -81,7 +86,7 @@ impl CompressedEmbeddingCache {
     }
 
     fn hash_prompt(&self, prompt: &str) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(prompt.as_bytes());
         hex::encode(hasher.finalize())
@@ -108,14 +113,17 @@ impl CompressedEmbeddingCache {
     pub fn set(&self, prompt: &str, response: &str) {
         let key = self.hash_prompt(prompt);
         let now = Instant::now();
-        
+
         match compression::compress_lossless(response) {
             Ok(compressed) => {
-                self.entries.insert(key, CacheEntry {
-                    response: compressed,
-                    created_at: now,
-                    expires_at: now + self.ttl,
-                });
+                self.entries.insert(
+                    key,
+                    CacheEntry {
+                        response: compressed,
+                        created_at: now,
+                        expires_at: now + self.ttl,
+                    },
+                );
             }
             Err(e) => {
                 tracing::error!("Failed to compress cache response: {}", e);
@@ -125,7 +133,9 @@ impl CompressedEmbeddingCache {
 
     pub fn prune(&self) -> usize {
         let now = Instant::now();
-        let expired_keys: Vec<String> = self.entries.iter()
+        let expired_keys: Vec<String> = self
+            .entries
+            .iter()
             .filter(|entry| now > entry.value().expires_at)
             .map(|entry| entry.key().clone())
             .collect();
@@ -147,15 +157,15 @@ mod tests {
     #[test]
     fn test_local_embedding_cache() {
         let cache = LocalEmbeddingCache::new(Duration::from_millis(100));
-        
+
         cache.set("prompt1", "response1");
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
         assert_eq!(cache.get("prompt2"), None);
-        
+
         // Wait for expiration
         thread::sleep(Duration::from_millis(500));
         assert_eq!(cache.get("prompt1"), None);
-        
+
         // Prune
         cache.set("prompt3", "response3");
         assert_eq!(cache.prune(), 1); // Should prune prompt1
@@ -178,10 +188,10 @@ mod tests {
     #[test]
     fn test_compressed_embedding_cache() {
         let cache = CompressedEmbeddingCache::new(Duration::from_millis(100));
-        
+
         cache.set("prompt1", "response1");
         assert_eq!(cache.get("prompt1"), Some("response1".to_string()));
-        
+
         // Wait for expiration
         thread::sleep(Duration::from_millis(500));
         assert_eq!(cache.get("prompt1"), None);

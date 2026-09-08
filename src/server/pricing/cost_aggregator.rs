@@ -27,16 +27,19 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
     for i in 0..7 {
         if let Some(d) = chrono::Utc::now().checked_sub_signed(chrono::Duration::days(i)) {
             let d_str = d.format("%Y-%m-%d").to_string();
-            trends.insert(d_str.clone(), DailyCost {
-                date: d_str,
-                total_cost: 0,
-                llm_cost: 0,
-                storage_cost: 0,
-                network_cost: 0,
-                compute_cost: 0,
-                email_cost: 0,
-                api_cost: 0,
-            });
+            trends.insert(
+                d_str.clone(),
+                DailyCost {
+                    date: d_str,
+                    total_cost: 0,
+                    llm_cost: 0,
+                    storage_cost: 0,
+                    network_cost: 0,
+                    compute_cost: 0,
+                    email_cost: 0,
+                    api_cost: 0,
+                },
+            );
         }
     }
 
@@ -53,10 +56,18 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
                     "ohc_email_send_cost" => daily.email_cost += val,
                     "ohc_outbound_api_cost" | "ohc_api_call_cost" => daily.api_cost += val,
                     _ => {
-                        warn!("Unknown metric encountered during aggregation: {}", row.metric_name);
+                        warn!(
+                            "Unknown metric encountered during aggregation: {}",
+                            row.metric_name
+                        );
                     }
                 }
-                daily.total_cost = daily.llm_cost + daily.storage_cost + daily.network_cost + daily.compute_cost + daily.email_cost + daily.api_cost;
+                daily.total_cost = daily.llm_cost
+                    + daily.storage_cost
+                    + daily.network_cost
+                    + daily.compute_cost
+                    + daily.email_cost
+                    + daily.api_cost;
             }
         } else {
             warn!("TelemetryRow missing date for metric: {}", row.metric_name);
@@ -68,9 +79,9 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
     sorted
 }
 
+use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
-use std::collections::HashMap;
 
 type DailyCostCacheType = HashMap<String, (Instant, Vec<DailyCost>)>;
 static DAILY_COST_CACHE: OnceLock<Mutex<DailyCostCacheType>> = OnceLock::new();
@@ -113,25 +124,33 @@ pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyC
     let raw_rows = match raw_rows_result {
         Ok(rows) => rows,
         Err(e) => {
-            error!("Failed to fetch daily costs from database for tenant {}: {}", tenant_id, e);
+            error!(
+                "Failed to fetch daily costs from database for tenant {}: {}",
+                tenant_id, e
+            );
             return process_telemetry_rows(vec![]); // Return empty zero-filled 7 days on error
         }
     };
 
-    let rows: Vec<TelemetryRow> = raw_rows.into_iter().map(|r| TelemetryRow {
-        date: r.try_get::<Option<chrono::NaiveDate>, _>("date").unwrap_or_else(|e| {
-            warn!("Failed to parse date from query result: {}", e);
-            None
-        }),
-        metric_name: r.try_get::<String, _>("metric_name").unwrap_or_else(|e| {
-            warn!("Failed to parse metric_name from query result: {}", e);
-            String::new()
-        }),
-        total: r.try_get::<Option<f64>, _>("total").unwrap_or_else(|e| {
-            warn!("Failed to parse total from query result: {}", e);
-            None
-        }),
-    }).collect();
+    let rows: Vec<TelemetryRow> = raw_rows
+        .into_iter()
+        .map(|r| TelemetryRow {
+            date: r
+                .try_get::<Option<chrono::NaiveDate>, _>("date")
+                .unwrap_or_else(|e| {
+                    warn!("Failed to parse date from query result: {}", e);
+                    None
+                }),
+            metric_name: r.try_get::<String, _>("metric_name").unwrap_or_else(|e| {
+                warn!("Failed to parse metric_name from query result: {}", e);
+                String::new()
+            }),
+            total: r.try_get::<Option<f64>, _>("total").unwrap_or_else(|e| {
+                warn!("Failed to parse total from query result: {}", e);
+                None
+            }),
+        })
+        .collect();
 
     let result = process_telemetry_rows(rows);
 
@@ -185,7 +204,10 @@ mod tests {
         let res = process_telemetry_rows(rows);
         assert_eq!(res.len(), 7);
         let today_str = today.format("%Y-%m-%d").to_string();
-        let today_data = res.iter().find(|r| r.date == today_str).expect("failed to unwrap");
+        let today_data = res
+            .iter()
+            .find(|r| r.date == today_str)
+            .expect("failed to unwrap");
         assert_eq!(today_data.llm_cost, 500);
         assert_eq!(today_data.compute_cost, 200);
         assert_eq!(today_data.email_cost, 50);
@@ -215,7 +237,10 @@ mod tests {
         ];
         let res = process_telemetry_rows(rows);
         let today_str = today.format("%Y-%m-%d").to_string();
-        let today_data = res.iter().find(|r| r.date == today_str).expect("failed to unwrap");
+        let today_data = res
+            .iter()
+            .find(|r| r.date == today_str)
+            .expect("failed to unwrap");
 
         assert_eq!(today_data.storage_cost, 50);
         assert_eq!(today_data.network_cost, 150);
@@ -226,13 +251,11 @@ mod tests {
 
     #[test]
     fn test_process_missing_date() {
-        let rows = vec![
-            TelemetryRow {
-                date: None,
-                metric_name: "ohc_llm_cost_total_cents".to_string(),
-                total: Some(500.0),
-            },
-        ];
+        let rows = vec![TelemetryRow {
+            date: None,
+            metric_name: "ohc_llm_cost_total_cents".to_string(),
+            total: Some(500.0),
+        }];
         let res = process_telemetry_rows(rows);
 
         // Ensure no cost was added to any date since the date was missing
@@ -282,12 +305,13 @@ pub struct AgentCostRawRow {
 }
 
 pub fn process_agent_cost_rows(rows: Vec<AgentCostRawRow>) -> Vec<AgentCostRow> {
-    rows.into_iter().map(|r| AgentCostRow {
-        agent_id: r.agent_id.unwrap_or_else(|| "unknown".to_string()),
-        cost_cents: r.total.unwrap_or(0.0) as i64,
-    })
-    .filter(|r| r.cost_cents > 0)
-    .collect()
+    rows.into_iter()
+        .map(|r| AgentCostRow {
+            agent_id: r.agent_id.unwrap_or_else(|| "unknown".to_string()),
+            cost_cents: r.total.unwrap_or(0.0) as i64,
+        })
+        .filter(|r| r.cost_cents > 0)
+        .collect()
 }
 
 pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentCostRow> {
@@ -312,7 +336,7 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
           AND labels_json IS NOT NULL
         GROUP BY COALESCE((labels_json::jsonb)->>'agent_id', 'unknown')
         ORDER BY total DESC
-        "#
+        "#,
     )
     .bind(tenant_id)
     .fetch_all(pool)
@@ -321,15 +345,21 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
     let raw_rows = match raw_rows_result {
         Ok(rows) => rows,
         Err(e) => {
-            error!("Failed to fetch agent costs from database for tenant {}: {}", tenant_id, e);
+            error!(
+                "Failed to fetch agent costs from database for tenant {}: {}",
+                tenant_id, e
+            );
             return vec![];
         }
     };
 
-    let processed_rows = raw_rows.into_iter().map(|r| AgentCostRawRow {
-        agent_id: r.try_get::<Option<String>, _>("agent_id").unwrap_or(None),
-        total: r.try_get::<Option<f64>, _>("total").unwrap_or(None),
-    }).collect();
+    let processed_rows = raw_rows
+        .into_iter()
+        .map(|r| AgentCostRawRow {
+            agent_id: r.try_get::<Option<String>, _>("agent_id").unwrap_or(None),
+            total: r.try_get::<Option<f64>, _>("total").unwrap_or(None),
+        })
+        .collect();
 
     let result = process_agent_cost_rows(processed_rows);
 

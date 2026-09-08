@@ -1,5 +1,7 @@
 # Agent Communication & Performance Improvement Plan
 
+> **Completion — 2026-09-08:** Implementation and acceptance are complete. See the [completion ledger and verification evidence](../../technical/reports/2026-09-08-harness-plan-review.md). Historical step-by-step instructions below are retained as the original plan.
+
 > **For agentic workers:** Use superpowers:subagent-driven-development to implement this plan task-by-task.
 
 **Goal:** Transform OHC's fragmented agent communication into a unified, high-performance real-time system inspired by WorkBuddy's multi-agent orchestration — enabling small business owners to seamlessly orchestrate AI agents via WebSocket/SSE with sub-100ms latency, automatic reconnection, and zero message loss.

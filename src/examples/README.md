@@ -15,7 +15,7 @@ These examples are designed to practically demonstrate the platform's **Zero-Loc
 Experience the platform in seconds with the "Hello World" agent. It leverages the `builtin` model for immediate feedback with **zero configuration** and **no external API keys**.
 
 <div style="background: rgba(0, 0, 0, 0.2); padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); margin: 16px 0;">
-Run the compiled Go agent directly using our intuitive Bazel aliases:
+Run the example agent directly using Bazel:
 <pre style="margin: 8px 0 0 0; background: transparent; border: none;"><code>bazel run //src/examples/hello-world-agent:hello_world_agent</code></pre>
 </div>
 

@@ -1,0 +1,156 @@
+{
+  "evidence": {
+    "credential_leak_observed": false,
+    "delivery_count": 1258,
+    "harness_id": "kimi",
+    "integration_mode": "native",
+    "last_durable_sequence": 1083,
+    "model_binding": {
+      "api_dialect": "open_ai_responses",
+      "binding_digest": "sha256:runtime-unbound",
+      "binding_revision": "worker-env-v1",
+      "capabilities": [
+        "reasoning",
+        "tools"
+      ],
+      "context_window": null,
+      "harness_id": "kimi",
+      "integration_mode": "native",
+      "max_output_tokens": null,
+      "model_id": "gpt-5.6-luna",
+      "provider_route": "openai-compatible",
+      "reasoning_effort": "max"
+    },
+    "provider_marker_observed": true,
+    "reasoning_translation": {
+      "effective": "thinking",
+      "kind": "explicit_downgrade",
+      "reason": "kimi_acp_1_49_supports_boolean_thinking_only",
+      "requested": "max"
+    },
+    "shared_local_services": {
+      "cross_harness_read_verified": false,
+      "cross_session_read_verified": true,
+      "reader_operations": {
+        "attempt_id": "f9be0b3d-b639-45cf-a113-f14ed2ceb5ea",
+        "operations": [
+          "artifact.read",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.read",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.search",
+          "workspace.read"
+        ]
+      },
+      "reader_verified": true,
+      "status": "operations_verified",
+      "writer_evidence": {
+        "credential_leak_observed": false,
+        "delivery_count": 4589,
+        "harness_id": "kimi",
+        "integration_mode": "native",
+        "last_durable_sequence": 4339,
+        "model_binding": {
+          "api_dialect": "open_ai_responses",
+          "binding_digest": "sha256:runtime-unbound",
+          "binding_revision": "worker-env-v1",
+          "capabilities": [
+            "reasoning",
+            "tools"
+          ],
+          "context_window": null,
+          "harness_id": "kimi",
+          "integration_mode": "native",
+          "max_output_tokens": null,
+          "model_id": "gpt-5.6-luna",
+          "provider_route": "openai-compatible",
+          "reasoning_effort": "max"
+        },
+        "provider_marker_observed": true,
+        "reasoning_translation": {
+          "effective": "thinking",
+          "kind": "explicit_downgrade",
+          "reason": "kimi_acp_1_49_supports_boolean_thinking_only",
+          "requested": "max"
+        },
+        "shared_local_services": {
+          "binding_count": 8,
+          "memory_scope": "workspace",
+          "memory_service_id": "omnisolo.memory",
+          "status": "bound"
+        },
+        "terminal_success_observed": true,
+        "usage": [
+          {
+            "cachedReadTokens": 33280,
+            "cachedWriteTokens": 0,
+            "inputTokens": 238253,
+            "outputTokens": 12185,
+            "totalTokens": 250438
+          },
+          {
+            "cachedReadTokens": 33280,
+            "cachedWriteTokens": 0,
+            "inputTokens": 238253,
+            "outputTokens": 12185,
+            "totalTokens": 250438
+          }
+        ],
+        "usage_observed": true
+      },
+      "writer_key": "probe247da27425c64a69a631f044b889ab63",
+      "writer_operations": {
+        "attempt_id": "53f536ce-7a9a-40f7-bf2c-d62859b74c47",
+        "operations": [
+          "artifact.read",
+          "artifact.write",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.read",
+          "cache.write",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.search",
+          "memory.write",
+          "workspace.read",
+          "workspace.write"
+        ]
+      },
+      "writer_value": "valuea06c71835de244c69337418790e26ebb",
+      "writer_verified": true
+    },
+    "terminal_success_observed": true,
+    "usage": [
+      {
+        "cachedReadTokens": 6656,
+        "cachedWriteTokens": 0,
+        "inputTokens": 32174,
+        "outputTokens": 2982,
+        "totalTokens": 35156
+      },
+      {
+        "cachedReadTokens": 6656,
+        "cachedWriteTokens": 0,
+        "inputTokens": 32174,
+        "outputTokens": 2982,
+        "totalTokens": 35156
+      }
+    ],
+    "usage_observed": true
+  },
+  "harness_id": "kimi",
+  "model": "gpt-5.6-luna",
+  "native_session_deleted": true,
+  "reasoning_effort": "max",
+  "schema": "omnisolo.live_harness_result.v1",
+  "status": "passed",
+  "native_protocol": "kimi_acp",
+  "integration_mode": "native",
+  "duration_seconds": 493
+}

@@ -1,0 +1,103 @@
+{{- if .Values.modelRuntimeWorkers.enabled }}
+{{- range .Values.modelRuntimeWorkers.workers }}
+{{- $worker := . }}
+{{- $name := printf "%s-model-runtime-%s" $.Release.Name $worker.id | trunc 63 | trimSuffix "-" }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+    app.kubernetes.io/part-of: {{ $.Release.Name }}
+spec:
+  replicas: {{ default $.Values.modelRuntimeWorkers.defaultReplicas $worker.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+        app.kubernetes.io/part-of: {{ $.Release.Name }}
+        omnisolo.io/model-runtime: {{ $worker.runtimeId | quote }}
+        omnisolo.io/pool: {{ $worker.poolId | quote }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: model-runtime-worker
+          image: {{ $.Values.modelRuntimeWorkers.image }}
+          imagePullPolicy: {{ $.Values.modelRuntimeWorkers.imagePullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: grpc
+              containerPort: {{ default $.Values.modelRuntimeWorkers.defaultGrpcPort $worker.grpcPort }}
+            - name: health
+              containerPort: {{ default $.Values.modelRuntimeWorkers.defaultHealthPort $worker.healthPort }}
+          env:
+            - name: OMNISOLO_MODEL_RUNTIME_WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OMNISOLO_MODEL_RUNTIME_RUNTIME_ID
+              value: {{ $worker.runtimeId | quote }}
+            - name: OMNISOLO_MODEL_RUNTIME_POOL_ID
+              value: {{ $worker.poolId | quote }}
+            - name: OMNISOLO_MODEL_RUNTIME_GRPC_ADDR
+              value: {{ printf "0.0.0.0:%v" (default $.Values.modelRuntimeWorkers.defaultGrpcPort $worker.grpcPort) | quote }}
+            - name: OMNISOLO_MODEL_RUNTIME_HEALTH_ADDR
+              value: {{ printf "0.0.0.0:%v" (default $.Values.modelRuntimeWorkers.defaultHealthPort $worker.healthPort) | quote }}
+            {{- range $key, $value := $worker.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml (default $.Values.modelRuntimeWorkers.resources $worker.resources) | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            periodSeconds: 5
+            timeoutSeconds: 2
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  selector:
+    app: {{ $name }}
+  ports:
+    - name: grpc
+      port: {{ default $.Values.modelRuntimeWorkers.defaultGrpcPort $worker.grpcPort }}
+      targetPort: grpc
+{{- end }}
+{{- end }}

@@ -1,5 +1,5 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::Arc;
 
 use super::{Tool, ToolExecutor};
@@ -43,15 +43,9 @@ struct SkillExecutor {
 #[async_trait::async_trait]
 impl ToolExecutor for SkillExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let task = args
-            .get("task")
-            .and_then(Value::as_str)
-            .ok_or_else(|| {
-                ToolError::LlmRecoverable(format!(
-                    "{}: task is required",
-                    self.skill.tool_name()
-                ))
-            })?;
+        let task = args.get("task").and_then(Value::as_str).ok_or_else(|| {
+            ToolError::LlmRecoverable(format!("{}: task is required", self.skill.tool_name()))
+        })?;
         let context = args
             .get("context")
             .map(|v| v.to_string())
@@ -83,7 +77,10 @@ impl ToolExecutor for SkillExecutor {
 pub fn skill_tool(skill: LoadedSkill) -> Tool {
     let tool_name = skill.tool_name();
     let description = if skill.description.trim().is_empty() {
-        format!("Invoke the {} skill with a focused task and optional JSON context.", skill.name)
+        format!(
+            "Invoke the {} skill with a focused task and optional JSON context.",
+            skill.name
+        )
     } else {
         format!("Invoke the {} skill. {}", skill.name, skill.description)
     };

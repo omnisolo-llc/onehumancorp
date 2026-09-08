@@ -1,13 +1,10 @@
-use tonic::{Request, Response, Status};
 use ::server_ohc::collective::{
-    collective_service_server::CollectiveService,
-    GetNearbyTenantsRequest, GetNearbyTenantsResponse,
-    InviteTenantRequest, InviteTenantResponse,
-    AcceptInviteRequest, AcceptInviteResponse,
-    GetCollectivesRequest, GetCollectivesResponse,
-    Collective
+    AcceptInviteRequest, AcceptInviteResponse, Collective, GetCollectivesRequest,
+    GetCollectivesResponse, GetNearbyTenantsRequest, GetNearbyTenantsResponse, InviteTenantRequest,
+    InviteTenantResponse, collective_service_server::CollectiveService,
 };
 use sqlx::PgPool;
+use tonic::{Request, Response, Status};
 
 pub struct MyCollectiveService {
     pool: PgPool,
@@ -28,14 +25,9 @@ impl CollectiveService for MyCollectiveService {
         let _req = request.into_inner();
 
         // Mock implementation for discovery - returns mock neighbors
-        let tenant_ids = vec![
-            "carlos_repairs".to_string(),
-            "fatima_food_cart".to_string(),
-        ];
+        let tenant_ids = vec!["carlos_repairs".to_string(), "fatima_food_cart".to_string()];
 
-        Ok(Response::new(GetNearbyTenantsResponse {
-            tenant_ids,
-        }))
+        Ok(Response::new(GetNearbyTenantsResponse { tenant_ids }))
     }
 
     async fn invite_tenant(
@@ -46,7 +38,11 @@ impl CollectiveService for MyCollectiveService {
 
         let tenant_id = req.target_tenant_id;
 
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         sqlx::query(
             "INSERT INTO ohc_collective_member (collective_id, tenant_id, status) VALUES ($1, $2, 'PENDING') ON CONFLICT DO NOTHING"
@@ -57,11 +53,11 @@ impl CollectiveService for MyCollectiveService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(InviteTenantResponse {
-            success: true,
-        }))
+        Ok(Response::new(InviteTenantResponse { success: true }))
     }
 
     async fn accept_invite(
@@ -70,7 +66,11 @@ impl CollectiveService for MyCollectiveService {
     ) -> Result<Response<AcceptInviteResponse>, Status> {
         let req = request.into_inner();
 
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         sqlx::query(
             "UPDATE ohc_collective_member SET status = 'ACTIVE' WHERE collective_id = $1 AND tenant_id = $2"
@@ -81,11 +81,11 @@ impl CollectiveService for MyCollectiveService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(AcceptInviteResponse {
-            success: true,
-        }))
+        Ok(Response::new(AcceptInviteResponse { success: true }))
     }
 
     async fn get_collectives(
@@ -107,22 +107,23 @@ impl CollectiveService for MyCollectiveService {
             "SELECT c.id, c.name, c.location_center, c.radius_meters
              FROM ohc_collective c
              JOIN ohc_collective_member m ON c.id = m.collective_id
-             WHERE m.tenant_id = $1"
+             WHERE m.tenant_id = $1",
         )
         .bind(req.tenant_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let collectives = records.into_iter().map(|rec| Collective {
-            id: rec.id,
-            name: rec.name,
-            location_center: rec.location_center.unwrap_or_default(),
-            radius_meters: rec.radius_meters.unwrap_or_default() as f32,
-        }).collect();
+        let collectives = records
+            .into_iter()
+            .map(|rec| Collective {
+                id: rec.id,
+                name: rec.name,
+                location_center: rec.location_center.unwrap_or_default(),
+                radius_meters: rec.radius_meters.unwrap_or_default() as f32,
+            })
+            .collect();
 
-        Ok(Response::new(GetCollectivesResponse {
-            collectives,
-        }))
+        Ok(Response::new(GetCollectivesResponse { collectives }))
     }
 }

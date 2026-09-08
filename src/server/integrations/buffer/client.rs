@@ -15,7 +15,9 @@ impl BufferClient {
 
     pub async fn get_profiles(&self) -> Result<String, String> {
         let url = "https://api.bufferapp.com/1/profiles.json".to_string();
-        let res = self.http_client.get(&url)
+        let res = self
+            .http_client
+            .get(&url)
             .bearer_auth(&self.access_token)
             .send()
             .await;

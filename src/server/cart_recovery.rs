@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
+use ohc_builtin_agent::llm::LlmClient;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{PgPool, Row};
 use std::fmt;
 use std::sync::Arc;
 use uuid::Uuid;
-use ohc_builtin_agent::llm::LlmClient;
 
 pub const CART_RECOVERY_JOB_TYPE: &str = "cart_recovery";
 
@@ -174,12 +174,18 @@ fn build_recovery_llm_client() -> Option<Arc<dyn LlmClient>> {
     let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
 
     let mut config = if let Some(endpoint) = endpoint {
-        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(key, endpoint, Some(model.clone()))
+        ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai_compatible(
+            key,
+            endpoint,
+            Some(model.clone()),
+        )
     } else {
         ohc_builtin_agent::llm::openai::OpenAIClientConfig::openai(key)
     };
     config.default_model = Some(model);
-    Some(Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config)))
+    Some(Arc::new(
+        ohc_builtin_agent::llm::openai::OpenAIClient::from_config(config),
+    ))
 }
 
 pub struct CartRecoveryJobProcessor<D> {
@@ -198,8 +204,10 @@ where
         &self,
         payload: &Value,
     ) -> Result<RecoveryDeliveryReceipt, CartRecoveryError> {
-        let payload_obj: CartRecoveryJobPayload = serde_json::from_value(payload.clone())
-            .map_err(|err| CartRecoveryError::Dispatch(format!("invalid cart recovery payload: {err}")))?;
+        let payload_obj: CartRecoveryJobPayload =
+            serde_json::from_value(payload.clone()).map_err(|err| {
+                CartRecoveryError::Dispatch(format!("invalid cart recovery payload: {err}"))
+            })?;
 
         let receipt = self.process_job(payload_obj).await?;
 
@@ -211,8 +219,9 @@ where
         &self,
         payload: &str,
     ) -> Result<RecoveryDeliveryReceipt, CartRecoveryError> {
-        let value: Value = serde_json::from_str(payload)
-            .map_err(|err| CartRecoveryError::Dispatch(format!("invalid cart recovery payload json: {err}")))?;
+        let value: Value = serde_json::from_str(payload).map_err(|err| {
+            CartRecoveryError::Dispatch(format!("invalid cart recovery payload json: {err}"))
+        })?;
         self.process_payload(&value).await
     }
 
@@ -269,12 +278,19 @@ impl HttpCartRecoveryDeliveryProvider {
         }
     }
 
-    async fn deliver_email(&self, payload: &CartRecoveryJobPayload) -> Result<(), CartRecoveryError> {
+    async fn deliver_email(
+        &self,
+        payload: &CartRecoveryJobPayload,
+    ) -> Result<(), CartRecoveryError> {
         let api_key = self.sendgrid_api_key.as_deref().ok_or_else(|| {
-            CartRecoveryError::MissingProviderConfig("SENDGRID_API_KEY is required for cart recovery email".to_string())
+            CartRecoveryError::MissingProviderConfig(
+                "SENDGRID_API_KEY is required for cart recovery email".to_string(),
+            )
         })?;
         let to = payload.to.as_deref().ok_or_else(|| {
-            CartRecoveryError::Dispatch("cart recovery email payload is missing recipient".to_string())
+            CartRecoveryError::Dispatch(
+                "cart recovery email payload is missing recipient".to_string(),
+            )
         })?;
         let body = serde_json::json!({
             "personalizations": [{
@@ -292,7 +308,9 @@ impl HttpCartRecoveryDeliveryProvider {
             .json(&body)
             .send()
             .await
-            .map_err(|err| CartRecoveryError::Dispatch(format!("SendGrid cart recovery request failed: {err}")))?;
+            .map_err(|err| {
+                CartRecoveryError::Dispatch(format!("SendGrid cart recovery request failed: {err}"))
+            })?;
         if response.status().is_success() {
             Ok(())
         } else {
@@ -305,20 +323,26 @@ impl HttpCartRecoveryDeliveryProvider {
 
     async fn deliver_sms(&self, payload: &CartRecoveryJobPayload) -> Result<(), CartRecoveryError> {
         let account_sid = self.twilio_account_sid.as_deref().ok_or_else(|| {
-            CartRecoveryError::MissingProviderConfig("TWILIO_ACCOUNT_SID is required for cart recovery SMS".to_string())
+            CartRecoveryError::MissingProviderConfig(
+                "TWILIO_ACCOUNT_SID is required for cart recovery SMS".to_string(),
+            )
         })?;
         let auth_token = self.twilio_auth_token.as_deref().ok_or_else(|| {
-            CartRecoveryError::MissingProviderConfig("TWILIO_AUTH_TOKEN is required for cart recovery SMS".to_string())
+            CartRecoveryError::MissingProviderConfig(
+                "TWILIO_AUTH_TOKEN is required for cart recovery SMS".to_string(),
+            )
         })?;
         let from = self.twilio_from_number.as_deref().ok_or_else(|| {
-            CartRecoveryError::MissingProviderConfig("TWILIO_FROM_NUMBER is required for cart recovery SMS".to_string())
+            CartRecoveryError::MissingProviderConfig(
+                "TWILIO_FROM_NUMBER is required for cart recovery SMS".to_string(),
+            )
         })?;
         let to = payload.to.as_deref().ok_or_else(|| {
-            CartRecoveryError::Dispatch("cart recovery SMS payload is missing recipient".to_string())
+            CartRecoveryError::Dispatch(
+                "cart recovery SMS payload is missing recipient".to_string(),
+            )
         })?;
-        let url = format!(
-            "https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
-        );
+        let url = format!("https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json");
         let params = [("To", to), ("From", from), ("Body", payload.body.as_str())];
 
         let response = self
@@ -328,7 +352,9 @@ impl HttpCartRecoveryDeliveryProvider {
             .form(&params)
             .send()
             .await
-            .map_err(|err| CartRecoveryError::Dispatch(format!("Twilio cart recovery request failed: {err}")))?;
+            .map_err(|err| {
+                CartRecoveryError::Dispatch(format!("Twilio cart recovery request failed: {err}"))
+            })?;
         if response.status().is_success() {
             Ok(())
         } else {
@@ -380,7 +406,12 @@ where
     S: CartRecoveryStore,
     D: CartRecoveryDispatcher,
 {
-    pub fn new(store: Arc<S>, dispatcher: Arc<D>, config: CartRecoveryConfig, llm: Option<Arc<dyn LlmClient>>) -> Self {
+    pub fn new(
+        store: Arc<S>,
+        dispatcher: Arc<D>,
+        config: CartRecoveryConfig,
+        llm: Option<Arc<dyn LlmClient>>,
+    ) -> Self {
         Self {
             store,
             dispatcher,
@@ -389,7 +420,10 @@ where
         }
     }
 
-    pub async fn run_once(&self, now: DateTime<Utc>) -> Result<CartRecoverySummary, CartRecoveryError> {
+    pub async fn run_once(
+        &self,
+        now: DateTime<Utc>,
+    ) -> Result<CartRecoverySummary, CartRecoveryError> {
         let abandoned_before = now - self.config.abandoned_after;
         let sessions = self
             .store
@@ -412,10 +446,17 @@ where
                 continue;
             }
 
-            let message = recovery_message_for(&session, &self.config.checkout_base_url, self.llm.as_deref()).await;
+            let message = recovery_message_for(
+                &session,
+                &self.config.checkout_base_url,
+                self.llm.as_deref(),
+            )
+            .await;
             match self.dispatcher.dispatch_recovery(&session, &message).await {
                 Ok(receipt) => {
-                    self.store.record_recovery_action(&session, &receipt).await?;
+                    self.store
+                        .record_recovery_action(&session, &receipt)
+                        .await?;
                     summary.dispatched += 1;
                 }
                 Err(CartRecoveryError::MissingProviderConfig(_)) => {
@@ -431,8 +472,14 @@ where
 
 fn is_recoverable_checkout(session: &AbandonedCheckoutSession) -> bool {
     session.status.eq_ignore_ascii_case("pending")
-        && (session.customer_email.as_deref().is_some_and(|email| !email.trim().is_empty())
-            || session.customer_phone.as_deref().is_some_and(|phone| !phone.trim().is_empty()))
+        && (session
+            .customer_email
+            .as_deref()
+            .is_some_and(|email| !email.trim().is_empty())
+            || session
+                .customer_phone
+                .as_deref()
+                .is_some_and(|phone| !phone.trim().is_empty()))
 }
 
 async fn recovery_message_for(
@@ -447,27 +494,37 @@ async fn recovery_message_for(
     );
     let amount = format!("${:.2}", session.amount_cents as f64 / 100.0);
 
-    let default_body = format!(
-        "You left a {amount} checkout unfinished. Resume securely here: {checkout_url}"
-    );
+    let default_body =
+        format!("You left a {amount} checkout unfinished. Resume securely here: {checkout_url}");
 
     let mut body = default_body.clone();
 
     if let Some(llm_client) = llm {
-        let customer_name = session.customer_name.as_deref().unwrap_or("Valued Customer");
+        let customer_name = session
+            .customer_name
+            .as_deref()
+            .unwrap_or("Valued Customer");
         let business_name = session.business_name.as_deref().unwrap_or("our store");
         let checkout_type = &session.checkout_type;
 
         let system_prompt = "You are a friendly, highly persuasive assistant acting as the store owner's Cart Recovery Agent. Your goal is to draft a short, personalized follow-up message to a customer who abandoned their cart to encourage them to complete the purchase. Be polite, natural, and helpful. Do NOT use placeholder variables like [Name]. Output only the message body and nothing else.";
         let user_prompt = format!(
             "Store Name: {}\nCustomer Name: {}\nAbandoned Cart Value: {}\nAbandoned Items Context (checkout type): {}\nCheckout Link: {}\n\nWrite a short, friendly message encouraging {} to resume their checkout at {}. Mention the items left behind based on the context. If the context is 'full' or unclear, just mention they left something behind. Give them the secure link to finish their purchase.",
-            business_name, customer_name, amount, checkout_type, checkout_url, customer_name, business_name
+            business_name,
+            customer_name,
+            amount,
+            checkout_type,
+            checkout_url,
+            customer_name,
+            business_name
         );
 
         let req = ohc_builtin_agent::types::ChatRequest {
             model: "default".to_string(),
             system: ::server_pricing::compression::reduce_tokens(&system_prompt),
-            messages: vec![ohc_builtin_agent::types::Message::user(&::server_pricing::compression::reduce_tokens(&user_prompt))],
+            messages: vec![ohc_builtin_agent::types::Message::user(
+                &::server_pricing::compression::reduce_tokens(&user_prompt),
+            )],
             tools: vec![],
             max_tokens: 500,
             temperature: 0.7,
@@ -481,7 +538,11 @@ async fn recovery_message_for(
         }
     }
 
-    if let Some(email) = session.customer_email.as_ref().filter(|email| !email.trim().is_empty()) {
+    if let Some(email) = session
+        .customer_email
+        .as_ref()
+        .filter(|email| !email.trim().is_empty())
+    {
         RecoveryMessage {
             channel: RecoveryChannel::Email,
             to: Some(email.clone()),
@@ -619,7 +680,12 @@ impl PostgresQueueRecoveryDispatcher {
 
     pub fn from_env(pool: Arc<PgPool>) -> Self {
         let enabled = std::env::var("OHC_CART_RECOVERY_AGENT_QUEUE_ENABLED")
-            .map(|value| matches!(value.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+            .map(|value| {
+                matches!(
+                    value.trim().to_ascii_lowercase().as_str(),
+                    "1" | "true" | "yes" | "on"
+                )
+            })
             .unwrap_or(false);
         Self::new(pool, enabled)
     }
@@ -754,10 +820,21 @@ where
         .map_err(|err| CartRecoveryError::Store(err.to_string()))?;
 
     if job_type == CART_RECOVERY_JOB_TYPE || job_type == "cart_recovery_agent" {
-        let customer_name = payload.get("to").and_then(|v| v.as_str()).unwrap_or("Customer").to_string();
-        let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+        let customer_name = payload
+            .get("to")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Customer")
+            .to_string();
+        let amount_cents = payload
+            .get("amount_cents")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0);
         let cart_value = format!("${:.2}", amount_cents as f64 / 100.0);
-        let body = payload.get("body").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let body = payload
+            .get("body")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
         let id = uuid::Uuid::new_v4().to_string();
         let proposed_action = serde_json::json!({
             "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name),
@@ -841,7 +918,9 @@ pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>) {
             .unwrap_or(300)
             .max(30);
         loop {
-            match run_cart_recovery_scan_once(scan_pool.clone(), CartRecoveryConfig::default()).await {
+            match run_cart_recovery_scan_once(scan_pool.clone(), CartRecoveryConfig::default())
+                .await
+            {
                 Ok(summary) => {
                     if summary.scanned > 0 || summary.dispatched > 0 || summary.failed_closed > 0 {
                         tracing::info!(
@@ -867,7 +946,8 @@ pub fn start_cart_recovery_background_workers(pool: Arc<PgPool>) {
             .and_then(|value| value.parse::<u64>().ok())
             .unwrap_or(15)
             .max(5);
-        let processor = CartRecoveryJobProcessor::new(Arc::new(HttpCartRecoveryDeliveryProvider::from_env()));
+        let processor =
+            CartRecoveryJobProcessor::new(Arc::new(HttpCartRecoveryDeliveryProvider::from_env()));
         loop {
             match run_cart_recovery_dispatch_job_once(pool.clone(), &processor).await {
                 Ok(true) => tracing::info!("cart recovery dispatch job completed"),
@@ -919,7 +999,10 @@ mod tests {
             session: &AbandonedCheckoutSession,
             _receipt: &RecoveryDispatchReceipt,
         ) -> Result<(), CartRecoveryError> {
-            self.recorded.lock().unwrap().push(session.session_id.clone());
+            self.recorded
+                .lock()
+                .unwrap()
+                .push(session.session_id.clone());
             Ok(())
         }
     }
@@ -941,7 +1024,10 @@ mod tests {
             session: &AbandonedCheckoutSession,
             _message: &RecoveryMessage,
         ) -> Result<RecoveryDispatchReceipt, CartRecoveryError> {
-            self.dispatched.lock().unwrap().push(session.session_id.clone());
+            self.dispatched
+                .lock()
+                .unwrap()
+                .push(session.session_id.clone());
             Ok(RecoveryDispatchReceipt {
                 channel: RecoveryChannel::AgentQueue,
                 provider_message_id: Some(format!("job-{}", session.session_id)),
@@ -998,7 +1084,10 @@ mod tests {
 
         assert_eq!(summary.scanned, 1);
         assert_eq!(summary.dispatched, 1);
-        assert_eq!(dispatcher.dispatched.lock().unwrap().as_slice(), ["stale-session"]);
+        assert_eq!(
+            dispatcher.dispatched.lock().unwrap().as_slice(),
+            ["stale-session"]
+        );
         assert_eq!(store.recorded.lock().unwrap().as_slice(), ["stale-session"]);
     }
 
@@ -1006,7 +1095,11 @@ mod tests {
     async fn missing_dispatcher_configuration_fails_closed_without_recording_action() {
         let now = Utc::now();
         let store = Arc::new(InMemoryRecoveryStore {
-            sessions: vec![checkout_session("stale-session", "pending", now - Duration::hours(2))],
+            sessions: vec![checkout_session(
+                "stale-session",
+                "pending",
+                now - Duration::hours(2),
+            )],
             ..Default::default()
         });
         let dispatcher = Arc::new(RecordingDispatcher::default());
@@ -1079,7 +1172,10 @@ mod tests {
         let receipt = processor.process_payload(&payload).await.unwrap();
 
         assert_eq!(receipt.channel, RecoveryChannel::Email);
-        assert_eq!(delivery.delivered.lock().unwrap().as_slice(), ["stale-session"]);
+        assert_eq!(
+            delivery.delivered.lock().unwrap().as_slice(),
+            ["stale-session"]
+        );
     }
 
     #[tokio::test]

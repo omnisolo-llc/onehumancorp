@@ -1,0 +1,280 @@
+{
+  "evidence": {
+    "credential_leak_observed": false,
+    "delivery_count": 1141,
+    "harness_id": "pi",
+    "integration_mode": "native",
+    "last_durable_sequence": 14,
+    "model_binding": {
+      "api_dialect": "open_ai_responses",
+      "binding_digest": "sha256:runtime-unbound",
+      "binding_revision": "worker-env-v1",
+      "capabilities": [
+        "reasoning",
+        "tools"
+      ],
+      "context_window": null,
+      "harness_id": "pi",
+      "integration_mode": "native",
+      "max_output_tokens": null,
+      "model_id": "gpt-5.6-luna",
+      "provider_route": "openai-compatible",
+      "reasoning_effort": "max"
+    },
+    "provider_marker_observed": true,
+    "reasoning_translation": {
+      "effective": "xhigh",
+      "kind": "native",
+      "requested": "max"
+    },
+    "shared_local_services": {
+      "cross_harness_read_verified": false,
+      "cross_session_read_verified": true,
+      "reader_operations": {
+        "attempt_id": "b97277ee-dff6-465a-a20e-1dc44f4b8e0f",
+        "operations": [
+          "artifact.read",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.read",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.search",
+          "workspace.read"
+        ]
+      },
+      "reader_verified": true,
+      "status": "operations_verified",
+      "writer_evidence": {
+        "credential_leak_observed": false,
+        "delivery_count": 3404,
+        "harness_id": "pi",
+        "integration_mode": "native",
+        "last_durable_sequence": 39,
+        "model_binding": {
+          "api_dialect": "open_ai_responses",
+          "binding_digest": "sha256:runtime-unbound",
+          "binding_revision": "worker-env-v1",
+          "capabilities": [
+            "reasoning",
+            "tools"
+          ],
+          "context_window": null,
+          "harness_id": "pi",
+          "integration_mode": "native",
+          "max_output_tokens": null,
+          "model_id": "gpt-5.6-luna",
+          "provider_route": "openai-compatible",
+          "reasoning_effort": "max"
+        },
+        "provider_marker_observed": true,
+        "reasoning_translation": {
+          "effective": "xhigh",
+          "kind": "native",
+          "requested": "max"
+        },
+        "shared_local_services": {
+          "binding_count": 8,
+          "memory_scope": "workspace",
+          "memory_service_id": "omnisolo.memory",
+          "status": "bound"
+        },
+        "terminal_success_observed": true,
+        "usage": [
+          {
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 6046,
+            "output": 3784,
+            "totalTokens": 9830
+          },
+          {
+            "cacheRead": 5632,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 4316,
+            "output": 1295,
+            "totalTokens": 11243
+          },
+          {
+            "cacheRead": 9728,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 1633,
+            "output": 927,
+            "totalTokens": 12288
+          },
+          {
+            "cacheRead": 10752,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 1550,
+            "output": 261,
+            "totalTokens": 12563
+          },
+          {
+            "cacheRead": 11776,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 818,
+            "output": 261,
+            "totalTokens": 12855
+          },
+          {
+            "cacheRead": 11776,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 1110,
+            "output": 764,
+            "totalTokens": 13650
+          },
+          {
+            "cacheRead": 12800,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 969,
+            "output": 300,
+            "totalTokens": 14069
+          },
+          {
+            "cacheRead": 12800,
+            "cacheWrite": 0,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0,
+              "total": 0
+            },
+            "input": 969,
+            "output": 300,
+            "totalTokens": 14069
+          }
+        ],
+        "usage_observed": true
+      },
+      "writer_key": "probe9d06d749b81749b8a9316dc1ed031971",
+      "writer_operations": {
+        "attempt_id": "6d136526-dc39-4053-bc73-bf3108ac5727",
+        "operations": [
+          "artifact.read",
+          "artifact.write",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.read",
+          "cache.write",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.search",
+          "memory.write",
+          "workspace.read",
+          "workspace.write"
+        ]
+      },
+      "writer_value": "value98a73aa14638449d91a516e80124b902",
+      "writer_verified": true
+    },
+    "terminal_success_observed": true,
+    "usage": [
+      {
+        "cacheRead": 0,
+        "cacheWrite": 0,
+        "cost": {
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "input": 0,
+          "output": 0,
+          "total": 0
+        },
+        "input": 5754,
+        "output": 1791,
+        "totalTokens": 7545
+      },
+      {
+        "cacheRead": 5632,
+        "cacheWrite": 0,
+        "cost": {
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "input": 0,
+          "output": 0,
+          "total": 0
+        },
+        "input": 2032,
+        "output": 253,
+        "totalTokens": 7917
+      },
+      {
+        "cacheRead": 5632,
+        "cacheWrite": 0,
+        "cost": {
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "input": 0,
+          "output": 0,
+          "total": 0
+        },
+        "input": 2032,
+        "output": 253,
+        "totalTokens": 7917
+      }
+    ],
+    "usage_observed": true
+  },
+  "harness_id": "pi",
+  "model": "gpt-5.6-luna",
+  "native_session_deleted": true,
+  "reasoning_effort": "max",
+  "schema": "omnisolo.live_harness_result.v1",
+  "status": "passed",
+  "native_protocol": "pi_rpc",
+  "integration_mode": "native",
+  "duration_seconds": 236
+}

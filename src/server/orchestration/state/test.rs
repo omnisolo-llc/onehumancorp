@@ -305,7 +305,11 @@ async fn test_missing_dependency_blocking() {
 
     // Verify it is NOT pulled because dependency is missing
     let tasks = state_manager.pull_available_tasks(10).await.unwrap();
-    assert_eq!(tasks.len(), 0, "Task 1 should be blocked by missing dependency");
+    assert_eq!(
+        tasks.len(),
+        0,
+        "Task 1 should be blocked by missing dependency"
+    );
 
     // Insert the missing dependency, but as PENDING
     sqlx::query(
@@ -323,17 +327,19 @@ async fn test_missing_dependency_blocking() {
     assert_eq!(tasks[0].id, "missing-id");
 
     // Mark dependency as COMPLETED
-    sqlx::query(
-        "UPDATE swarm_tasks SET status = 'COMPLETED' WHERE id = ?"
-    )
-    .bind("missing-id")
-    .execute(&pool)
-    .await
-    .unwrap();
+    sqlx::query("UPDATE swarm_tasks SET status = 'COMPLETED' WHERE id = ?")
+        .bind("missing-id")
+        .execute(&pool)
+        .await
+        .unwrap();
 
     // Now Task 1 should be available
     tasks = state_manager.pull_available_tasks(10).await.unwrap();
-    assert_eq!(tasks.len(), 1, "Task 1 should be pulled now that dependency is completed");
+    assert_eq!(
+        tasks.len(),
+        1,
+        "Task 1 should be pulled now that dependency is completed"
+    );
     assert_eq!(tasks[0].id, "task-1");
 }
 

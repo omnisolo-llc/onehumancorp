@@ -59,7 +59,9 @@ impl GitHubProvider {
         description: &str,
         private: bool,
     ) -> Result<super::client::GitHubRepo, String> {
-        self.client.create_repository(name, description, private).await
+        self.client
+            .create_repository(name, description, private)
+            .await
     }
 
     pub async fn get_pull_requests(
@@ -103,7 +105,9 @@ impl GitHubProvider {
         body: &str,
         labels: &[String],
     ) -> Result<super::client::GHIssue, String> {
-        self.client.create_issue(owner, repo, title, body, labels).await
+        self.client
+            .create_issue(owner, repo, title, body, labels)
+            .await
     }
 
     pub async fn get_file_contents(

@@ -5,7 +5,10 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::{pydantic::{PydanticAdapter, PydanticToolExecutor}, Tool};
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+};
 
 #[derive(Deserialize)]
 struct LazyLoadArgs {
@@ -76,7 +79,10 @@ impl PydanticToolExecutor<LazyLoadArgs> for UnloadToolsExecutor {
         }
 
         if unloaded.is_empty() {
-            Ok("None of the specified tools were currently active in your context window.".to_string())
+            Ok(
+                "None of the specified tools were currently active in your context window."
+                    .to_string(),
+            )
         } else {
             Ok(format!(
                 "Successfully unloaded {} tools from your context window. This frees up tokens for reasoning.",
@@ -86,7 +92,10 @@ impl PydanticToolExecutor<LazyLoadArgs> for UnloadToolsExecutor {
     }
 }
 
-pub fn lazy_load_tool(active_tools: Arc<RwLock<HashSet<String>>>, available_tools: Arc<Vec<String>>) -> Tool {
+pub fn lazy_load_tool(
+    active_tools: Arc<RwLock<HashSet<String>>>,
+    available_tools: Arc<Vec<String>>,
+) -> Tool {
     Tool {
         name: "LazyLoadTools".to_string(),
         description: "Loads additional tools into your context window. Use this when you discover tools via ToolSearch that you need to use.".to_string(),

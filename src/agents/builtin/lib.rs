@@ -42,9 +42,11 @@ pub mod goose;
 pub mod guardrails;
 pub mod in_memory_store;
 pub mod json_store;
+pub mod local_service_adapters;
 pub mod memory;
 pub mod memory_exhaustive_tests;
 pub mod memory_store;
+pub mod middleware;
 pub mod openhands;
 pub mod openhands_runner;
 pub mod prompt_construction;
@@ -85,6 +87,9 @@ pub mod agentic_seek;
 pub mod pi;
 pub mod ruflo_plugins;
 pub mod tool_executor_engine;
+
+#[cfg(test)]
+mod middleware_integration_tests;
 
 fn get_env(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())
@@ -267,29 +272,21 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             "--ralph-loop" => {
                 ralph_loop = true;
             }
-            "--task" => {
-                if i + 1 < args.len() {
-                    task = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "--task" if i + 1 < args.len() => {
+                task = Some(args[i + 1].clone());
+                i += 1;
             }
-            "--parent-context-file" => {
-                if i + 1 < args.len() {
-                    parent_context_file = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "--parent-context-file" if i + 1 < args.len() => {
+                parent_context_file = Some(args[i + 1].clone());
+                i += 1;
             }
-            "--worktree" => {
-                if i + 1 < args.len() {
-                    worktree = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "--worktree" if i + 1 < args.len() => {
+                worktree = Some(args[i + 1].clone());
+                i += 1;
             }
-            "--mailbox" => {
-                if i + 1 < args.len() {
-                    mailbox = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "--mailbox" if i + 1 < args.len() => {
+                mailbox = Some(args[i + 1].clone());
+                i += 1;
             }
             _ => {}
         }

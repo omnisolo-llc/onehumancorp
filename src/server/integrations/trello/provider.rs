@@ -1,4 +1,4 @@
-use super::client::{TrelloClient, TrelloBoard, TrelloList, TrelloCard, TrelloLabel};
+use super::client::{TrelloBoard, TrelloCard, TrelloClient, TrelloLabel, TrelloList};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 

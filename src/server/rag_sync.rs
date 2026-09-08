@@ -32,9 +32,9 @@ pub trait RAGSyncService: Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
     use std::sync::Arc;
     use tokio::sync::Mutex;
-    use chrono::Utc;
 
     struct MockRAGSyncService {
         records: Arc<Mutex<Vec<RAGSyncRecord>>>,
@@ -64,7 +64,10 @@ mod tests {
             Ok(())
         }
 
-        async fn process_incoming_sync(&self, incoming_records: Vec<RAGSyncRecord>) -> Result<(), String> {
+        async fn process_incoming_sync(
+            &self,
+            incoming_records: Vec<RAGSyncRecord>,
+        ) -> Result<(), String> {
             let mut records = self.records.lock().await;
             for mut incoming in incoming_records {
                 if let Some(existing) = records.iter_mut().find(|r| r.id == incoming.id) {

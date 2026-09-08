@@ -110,7 +110,10 @@ impl XeroClient {
         &self.base_url
     }
 
-    async fn check_error_response(&self, resp: reqwest::Response) -> Result<reqwest::Response, String> {
+    async fn check_error_response(
+        &self,
+        resp: reqwest::Response,
+    ) -> Result<reqwest::Response, String> {
         if !resp.status().is_success() {
             let status = resp.status();
             let text = resp
@@ -146,11 +149,7 @@ impl XeroClient {
         Ok(body.contacts)
     }
 
-    pub async fn create_contact(
-        &self,
-        name: &str,
-        email: &str,
-    ) -> Result<XeroContact, String> {
+    pub async fn create_contact(&self, name: &str, email: &str) -> Result<XeroContact, String> {
         let token = self.validated_access_token()?;
         let url = format!("{}/Contacts", self.api_base());
 
@@ -324,9 +323,7 @@ mod tests {
     use tokio::net::TcpListener;
     use tokio::sync::oneshot;
 
-    async fn start_server(
-        response_body: &'static str,
-    ) -> (String, oneshot::Receiver<String>) {
+    async fn start_server(response_body: &'static str) -> (String, oneshot::Receiver<String>) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let (request_tx, request_rx) = oneshot::channel();
@@ -344,8 +341,7 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) =
-                        request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -373,7 +369,9 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
+            request_tx
+                .send(String::from_utf8(request).unwrap())
+                .unwrap();
         });
 
         (base_url, request_rx)
@@ -401,8 +399,11 @@ mod tests {
             ]
         }"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client =
-            XeroClient::with_base_url_for_test(base_url, "valid-token".to_string(), "tenant-123".to_string());
+        let client = XeroClient::with_base_url_for_test(
+            base_url,
+            "valid-token".to_string(),
+            "tenant-123".to_string(),
+        );
 
         let contacts = client.get_contacts().await.unwrap();
         assert_eq!(contacts.len(), 2);
@@ -430,8 +431,11 @@ mod tests {
             ]
         }"#;
         let (base_url, request_rx) = start_server(response).await;
-        let client =
-            XeroClient::with_base_url_for_test(base_url, "test-token".to_string(), "tenant-456".to_string());
+        let client = XeroClient::with_base_url_for_test(
+            base_url,
+            "test-token".to_string(),
+            "tenant-456".to_string(),
+        );
 
         let contact = client
             .create_contact("New Contact", "new@test.com")
@@ -459,8 +463,11 @@ mod tests {
             ]
         }"#;
         let (base_url, _request_rx) = start_server(response).await;
-        let client =
-            XeroClient::with_base_url_for_test(base_url, "test-token".to_string(), "tenant-789".to_string());
+        let client = XeroClient::with_base_url_for_test(
+            base_url,
+            "test-token".to_string(),
+            "tenant-789".to_string(),
+        );
 
         let invoices = client.get_invoices().await.unwrap();
         assert_eq!(invoices.len(), 1);
@@ -481,8 +488,11 @@ mod tests {
             ]
         }"#;
         let (base_url, _request_rx) = start_server(response).await;
-        let client =
-            XeroClient::with_base_url_for_test(base_url, "test-token".to_string(), "tenant-abc".to_string());
+        let client = XeroClient::with_base_url_for_test(
+            base_url,
+            "test-token".to_string(),
+            "tenant-abc".to_string(),
+        );
 
         let accounts = client.get_accounts().await.unwrap();
         assert_eq!(accounts.len(), 1);
@@ -506,8 +516,11 @@ mod tests {
             stream.write_all(response.as_bytes()).await.unwrap();
         });
 
-        let client =
-            XeroClient::with_base_url_for_test(base_url, "expired-token".to_string(), "tenant-err".to_string());
+        let client = XeroClient::with_base_url_for_test(
+            base_url,
+            "expired-token".to_string(),
+            "tenant-err".to_string(),
+        );
         let error = client.get_contacts().await.unwrap_err();
         assert!(error.contains("Xero API error"));
     }
@@ -517,8 +530,11 @@ mod tests {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
 
-        let client =
-            XeroClient::with_base_url_for_test(base_url, "   ".to_string(), "tenant-blank".to_string());
+        let client = XeroClient::with_base_url_for_test(
+            base_url,
+            "   ".to_string(),
+            "tenant-blank".to_string(),
+        );
         let error = client.get_contacts().await.unwrap_err();
         assert_eq!(error, "Xero access token is required");
     }

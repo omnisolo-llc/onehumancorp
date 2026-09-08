@@ -2,10 +2,13 @@ use crate::db::DbStore;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::DepartmentEvent;
 use std::sync::Arc;
-use tokio::time::{interval, Duration};
-use tracing::{info, error};
+use tokio::time::{Duration, interval};
+use tracing::{error, info};
 
-pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator: Arc<DepartmentOrchestrator>) {
+pub async fn start_invoice_followup_worker(
+    db: Arc<crate::db::DB>,
+    orchestrator: Arc<DepartmentOrchestrator>,
+) {
     let mut interval = interval(Duration::from_secs(60 * 60 * 24)); // Run once a day
 
     tokio::spawn(async move {
@@ -41,15 +44,22 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
             }
 
             for (invoice_id, tenant_id, customer_id) in overdue_invoices {
-                info!("Triggering Finance Agent for overdue invoice {}", invoice_id);
+                info!(
+                    "Triggering Finance Agent for overdue invoice {}",
+                    invoice_id
+                );
 
                 // Fetch recent communications from unified customer timeline
                 let mut recent_communications: Vec<String> = vec![];
                 let mut target_channel = "email".to_string();
 
                 if !customer_id.is_empty() {
-                    if let Ok(timeline_events) = orchestrator.get_customer_timeline(&tenant_id, &customer_id, 5).await {
-                        let mut channel_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+                    if let Ok(timeline_events) = orchestrator
+                        .get_customer_timeline(&tenant_id, &customer_id, 5)
+                        .await
+                    {
+                        let mut channel_counts: std::collections::HashMap<String, usize> =
+                            std::collections::HashMap::new();
 
                         for event in &timeline_events {
                             if !event.content.is_empty() {
@@ -58,7 +68,9 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
                             *channel_counts.entry(event.source.clone()).or_insert(0) += 1;
                         }
 
-                        if let Some((most_frequent_channel, _)) = channel_counts.into_iter().max_by_key(|&(_, count)| count) {
+                        if let Some((most_frequent_channel, _)) =
+                            channel_counts.into_iter().max_by_key(|&(_, count)| count)
+                        {
                             if !most_frequent_channel.is_empty() {
                                 target_channel = most_frequent_channel;
                             }
@@ -68,20 +80,28 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
 
                 let comms_context = recent_communications.join("\n");
                 let mut is_promise_to_pay = false;
-                let mut generated_response = format!("Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!", invoice_id);
+                let mut generated_response = format!(
+                    "Hi there, just checking in to see if you received invoice {}. Let us know if you have any questions!",
+                    invoice_id
+                );
                 let mut original_message = format!("Invoice {} is overdue.", invoice_id);
 
                 if !comms_context.is_empty() {
-                    let prompt = format!("You are an AI financial assistant. Analyze the recent communication history with this customer regarding their overdue invoice. Is there a clear promise to pay soon (e.g., 'I will pay on Friday')? If so, reply with EXACTLY 'PROMISE_DETECTED'. If not, draft a polite, context-aware invoice reminder tailored for the '{}' channel based on the conversation history (e.g., acknowledging what they last said, keeping it concise if it's SMS/WhatsApp). Here is the communication history:\n\n{}", target_channel, comms_context);
+                    let prompt = format!(
+                        "You are an AI financial assistant. Analyze the recent communication history with this customer regarding their overdue invoice. Is there a clear promise to pay soon (e.g., 'I will pay on Friday')? If so, reply with EXACTLY 'PROMISE_DETECTED'. If not, draft a polite, context-aware invoice reminder tailored for the '{}' channel based on the conversation history (e.g., acknowledging what they last said, keeping it concise if it's SMS/WhatsApp). Here is the communication history:\n\n{}",
+                        target_channel, comms_context
+                    );
 
                     let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
                         Ok("minimax") => {
                             if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
-                                crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+                                crate::minimax::MinimaxClient::new(api_key)
+                                    .reason(&prompt)
+                                    .await
                             } else {
                                 crate::minimax::LocalLLMClient::new().reason(&prompt).await
                             }
-                        },
+                        }
                         _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
                     };
 
@@ -90,13 +110,20 @@ pub async fn start_invoice_followup_worker(db: Arc<crate::db::DB>, orchestrator:
                             is_promise_to_pay = true;
                         } else {
                             generated_response = res.trim().to_string();
-                            original_message = format!("Invoice {} is overdue. Recent contact: {}", invoice_id, recent_communications.first().unwrap_or(&"".to_string()));
+                            original_message = format!(
+                                "Invoice {} is overdue. Recent contact: {}",
+                                invoice_id,
+                                recent_communications.first().unwrap_or(&"".to_string())
+                            );
                         }
                     }
                 }
 
                 if is_promise_to_pay {
-                    info!("Promise to pay detected for invoice {}. Updating cash flow prediction and pausing reminder.", invoice_id);
+                    info!(
+                        "Promise to pay detected for invoice {}. Updating cash flow prediction and pausing reminder.",
+                        invoice_id
+                    );
                     continue;
                 }
 

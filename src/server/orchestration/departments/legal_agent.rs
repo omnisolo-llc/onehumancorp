@@ -1,5 +1,9 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::orchestrator::{
+    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
+};
+use crate::orchestration::departments::types::{
+    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
+};
 
 pub struct LegalAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -33,26 +37,41 @@ impl Department for LegalAgent {
             ActionRisk::DraftForReview
         };
 
-        self.orchestrator.execute_action(
-            DepartmentType::Legal,
-            "Draft compliance terms and policy update".to_string(),
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+        self.orchestrator
+            .execute_action(
+                DepartmentType::Legal,
+                "Draft compliance terms and policy update".to_string(),
+                event.tenant_id.clone(),
+                risk,
+                event.payload.clone(),
+            )
+            .await
+            .map(|_| ())
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
         None
     }
 
-
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(
+        &self,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+    ) -> Result<ApprovalRequest, String> {
+        self.orchestrator
+            .execute_action(
+                self.department_type(),
+                description.clone(),
+                tenant_id.clone(),
+                risk,
+                serde_json::json!({}),
+            )
+            .await
     }
 }
 
@@ -65,5 +84,4 @@ impl BaseAgent for LegalAgent {
     fn trigger_type(&self) -> AgentTriggerType {
         AgentTriggerType::EventDriven
     }
-
 }

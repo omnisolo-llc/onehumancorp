@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 
 /// Represents the exhaustive set of all possible Swarm Protocol messages.
@@ -151,8 +150,7 @@ pub enum SipMessage {
     MetricRecord {
         metric_name: String,
         value: f64,
-        labels: std::collections::HashMap<String,
-        String>,
+        labels: std::collections::HashMap<String, String>,
     },
     AlertTrigger {
         alert_name: String,
@@ -1539,7 +1537,6 @@ pub enum SipMessage {
     },
 }
 
-
 impl SipMessage {
     pub fn is_system_level(&self) -> bool {
         match self {
@@ -1732,7 +1729,6 @@ impl SipMessage {
             SipMessage::ExtensionMessage147 { .. } => false,
             SipMessage::ExtensionMessage148 { .. } => false,
             SipMessage::ExtensionMessage149 { .. } => false,
-
         }
     }
 
@@ -1927,7 +1923,6 @@ impl SipMessage {
             SipMessage::ExtensionMessage147 { ext_id, .. } => format!("ext.{}", ext_id),
             SipMessage::ExtensionMessage148 { ext_id, .. } => format!("ext.{}", ext_id),
             SipMessage::ExtensionMessage149 { ext_id, .. } => format!("ext.{}", ext_id),
-
         }
     }
 }

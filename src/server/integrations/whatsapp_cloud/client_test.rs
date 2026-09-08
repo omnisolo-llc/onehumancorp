@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::client::RealWhatsAppCloudClient;
+    use super::super::client::RealWhatsAppCloudClient;
 
     #[test]
     fn test_real_whatsapp_cloud_client_new() {

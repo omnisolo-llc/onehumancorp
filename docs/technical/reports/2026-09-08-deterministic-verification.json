@@ -1,0 +1,136 @@
+{
+  "schema": "omnisolo.plan_verification.v1",
+  "date": "2026-09-08",
+  "scope": "Deterministic verification; live acceptance is recorded separately.",
+  "checks": [
+    {
+      "name": "harness and worker deterministic coverage run",
+      "status": "passed",
+      "suites": 26,
+      "passed": 469,
+      "failed": 0,
+      "ignored": 3,
+      "log_sha256": "20579f12c2768a66ac02e103b004d5ab9e190f0b9c85b851802e681223d1f3bc"
+    },
+    {
+      "name": "broader Rust regression run",
+      "status": "passed",
+      "suites": 31,
+      "passed": 1029,
+      "failed": 0,
+      "ignored": 3,
+      "log_sha256": "419bdb3dd152b7e132ac8afcca4b0c13c5eb1da44b815d4eff385ecfb3e54354"
+    },
+    {
+      "name": "final server communication regressions",
+      "status": "passed",
+      "suites": 7,
+      "passed": 58,
+      "failed": 0,
+      "ignored": 0,
+      "logs": [
+        {
+          "path": "/tmp/planned-verified-redis_pool-tests.log",
+          "sha256": "b780bf337e300e075fc75722832f2aef1c70cc227dddb72b45c659e6cae25410"
+        },
+        {
+          "path": "/tmp/planned-verified-api-ws_.log",
+          "sha256": "20a579e8c6dff885feae0bcb772043409dc520057c249c4b4f8d382bd2fc35ab"
+        },
+        {
+          "path": "/tmp/planned-verified-orchestration-node_identity-tests.log",
+          "sha256": "7c399c5d8a4a9a5f98013a17b843b37eee4437e5b45910edb764475d64ce97fa"
+        },
+        {
+          "path": "/tmp/planned-verified-api-agent.log",
+          "sha256": "f6b310f723c3e9f56a731ee9a2b1b48c75efe9f1277c83d1fbfd15e2f7240137"
+        },
+        {
+          "path": "/tmp/planned-verified-api-unified_ws-tests.log",
+          "sha256": "c51efdd25f9396957865e556f291f714f8914246e6f20a7c309364cb284b5b97"
+        },
+        {
+          "path": "/tmp/planned-disconnect-verified.log",
+          "sha256": "060426fccd24c87be5b0dc94c8950a1e1a6855d6575a1fa38c4088a3ddcf4800"
+        },
+        {
+          "path": "/tmp/planned-sync-final-tests.log",
+          "sha256": "dbfa2faa97f62ab8a6166d24774ecc9c74321d569d7734bb5ff33e663593b414"
+        }
+      ],
+      "note": "The sync group ignored its opt-in disconnect test, which passed in the separate included run."
+    },
+    {
+      "name": "authentication",
+      "status": "passed",
+      "suites": 1,
+      "passed": 97,
+      "failed": 0,
+      "ignored": 0,
+      "log_sha256": "d31a7c280479a1cd9616d35924c91bd051fec18da10c45eccac0783492052e8b"
+    },
+    {
+      "name": "UI unit and component tests",
+      "status": "passed",
+      "passed": 1428,
+      "failed": 0,
+      "skipped": 0,
+      "log_sha256": "b02b004d56cf79a625eae61b90d16ffa23ee200bcf8bea4ecbd34984c0498c79"
+    },
+    {
+      "name": "Compose and Helm service isolation rendering",
+      "status": "passed",
+      "passed": 2,
+      "log_sha256": "45c52635cc912e0384dd28802d0b9e9166ae1229745682070b3f7136ae2e9b10"
+    },
+    {
+      "name": "Bazel harness and worker targets",
+      "status": "passed",
+      "test_targets_passed": 1,
+      "command": "bazel test --jobs=2 --local_test_jobs=1 --local_resources=memory=4096 --repo_contents_cache= --repository_cache= //src/server/harness/... //src/server/harness_worker/...",
+      "log_sha256": "2c8fb47817ea99b06d8bc4a0131c5d800edcc5f1cd2777893b2b32622af43169"
+    },
+    {
+      "name": "real PostgreSQL notifications, reconnect and durable restart",
+      "status": "passed",
+      "passed": 1,
+      "log_sha256": "1a2406a062fbcf51e1acfd37bf0f8cdbb648a02d94c472f1bd57eec93d4a34f7"
+    },
+    {
+      "name": "live runner, validated resume and Plandex entrypoint",
+      "status": "passed",
+      "passed": 24,
+      "log_sha256": "4d37c14042c0490b992d91f3f4729484f012ea540c61f3f44213c238139211c7"
+    },
+    {
+      "name": "bridge, service fixture and Compose/Helm rendering",
+      "status": "passed",
+      "passed": 12,
+      "log_sha256": "04b02e611f75cdf2fa23e7755c8aba3f5e39fef18f04f056e5a6d6b956575a86"
+    }
+  ],
+  "coverage": {
+    "tool": "cargo llvm-cov",
+    "packages": [
+      "server_harness",
+      "omnisolo_harness_worker"
+    ],
+    "lines": {
+      "count": 30728,
+      "covered": 28123,
+      "percent": 91.52239000260349
+    },
+    "regions": {
+      "count": 45128,
+      "covered": 41036,
+      "notcovered": 4092,
+      "percent": 90.93245878390356
+    },
+    "functions": {
+      "count": 2332,
+      "covered": 2026,
+      "percent": 86.87821612349913
+    },
+    "branch_coverage_measured": false
+  }
+}

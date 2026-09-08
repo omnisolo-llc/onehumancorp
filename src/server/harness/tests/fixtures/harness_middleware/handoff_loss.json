@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "scope": "task",
+  "loss_severities": ["info", "warning", "required", "unsafe"],
+  "requires_report_digest_ack": true,
+  "source_binding_must_be_fenced_before_target": true
+}

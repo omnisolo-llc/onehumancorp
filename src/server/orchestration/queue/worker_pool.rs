@@ -1,8 +1,8 @@
+use super::ohc_job_queue::{OHCJob, OHCJobQueue};
 use std::sync::Arc;
-use tokio::task::JoinHandle;
-use tokio::sync::broadcast;
 use std::time::Duration;
-use super::ohc_job_queue::{OHCJobQueue, OHCJob};
+use tokio::sync::broadcast;
+use tokio::task::JoinHandle;
 
 pub trait JobHandler: Send + Sync {
     fn handle(&self, job: OHCJob) -> tokio::task::JoinHandle<Result<(), String>>;
@@ -14,11 +14,22 @@ pub struct WorkerPool {
 }
 
 impl WorkerPool {
-    pub fn new(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>) -> Self {
+    pub fn new(
+        queue: Arc<OHCJobQueue>,
+        num_workers: usize,
+        job_types: Vec<String>,
+        handler: Arc<dyn JobHandler>,
+    ) -> Self {
         Self::new_with_timeout(queue, num_workers, job_types, handler, 60000)
     }
 
-    pub fn new_with_timeout(queue: Arc<OHCJobQueue>, num_workers: usize, job_types: Vec<String>, handler: Arc<dyn JobHandler>, timeout_ms: u64) -> Self {
+    pub fn new_with_timeout(
+        queue: Arc<OHCJobQueue>,
+        num_workers: usize,
+        job_types: Vec<String>,
+        handler: Arc<dyn JobHandler>,
+        timeout_ms: u64,
+    ) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
         let mut workers = Vec::with_capacity(num_workers);
 

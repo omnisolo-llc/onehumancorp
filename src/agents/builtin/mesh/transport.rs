@@ -202,20 +202,22 @@ impl MeshTransport for InProcessTransport {
 #[derive(Clone)]
 pub struct PgTransport {
     pool: sqlx::PgPool,
-    subs: DashMap<String, broadcast::Sender<Message>>,
+    subs: Arc<DashMap<String, broadcast::Sender<Message>>>,
+    subscriber_id: String,
 }
 
 impl PgTransport {
     pub async fn new(db_url: &str) -> Result<Self, String> {
+        Self::new_with_subscriber_id(db_url, uuid::Uuid::new_v4().to_string()).await
+    }
+
+    /// Use a distinct, stable ID per node to resume that node's durable checkpoint.
+    pub async fn new_with_subscriber_id(
+        db_url: &str,
+        subscriber_id: String,
+    ) -> Result<Self, String> {
         use sqlx::postgres::PgPoolOptions;
         let pool = PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
             .connect(db_url)
             .await
             .map_err(|e| e.to_string())?;
@@ -280,67 +282,101 @@ impl PgTransport {
         .await
         .map_err(|e| e.to_string())?;
 
-        let subs = DashMap::new();
+        let subs = Arc::new(DashMap::new());
 
-        Ok(PgTransport { pool, subs })
+        Ok(PgTransport {
+            pool,
+            subs,
+            subscriber_id,
+        })
     }
 
     pub async fn start_worker(&self) {
-        use opentelemetry::{KeyValue, global};
         use prost::Message as ProstMessage;
         let pool = self.pool.clone();
         let subs = self.subs.clone();
-
-        let subscriber_id = "builtin_agent_node".to_string();
-        let mut last_id: i64 =
-            sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1")
-                .bind(&subscriber_id)
-                .fetch_optional(&pool)
-                .await
-                .unwrap_or(Some(0))
-                .unwrap_or(0);
-
-        let meter = global::meter("ohc.postgres");
-        let skip_locked_counter = meter.u64_counter("ohc_postgres_skip_locked_total").build();
-
-        loop {
-            // Poll for new messages using SKIP LOCKED
-            let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
-                "SELECT id, topic, payload FROM mesh_messages WHERE id > $1 ORDER BY id ASC FOR UPDATE SKIP LOCKED"
+        let subscriber_id = &self.subscriber_id;
+        let mut last_id: i64 = loop {
+            match sqlx::query_scalar(
+                "SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1",
             )
-            .bind(last_id)
-            .fetch_all(&pool)
-            .await;
-
-            if let Ok(rows) = rows {
-                let has_rows = !rows.is_empty();
-                for (id, topic, payload) in rows {
-                    skip_locked_counter.add(1, &[KeyValue::new("action", "poll_messages")]);
-                    last_id = id;
-                    if let Some(tx) = subs.get(&topic)
-                        && let Ok(message) = Message::decode(&payload[..])
-                    {
-                        let _ = tx.send(message);
-                    }
-                }
-
-                if has_rows {
-                    let _ = sqlx::query("INSERT INTO mesh_checkpoints (subscriber_id, last_id) VALUES ($1, $2) ON CONFLICT(subscriber_id) DO UPDATE SET last_id = EXCLUDED.last_id")
-                        .bind(&subscriber_id)
-                        .bind(last_id)
-                        .execute(&pool)
-                        .await;
+            .bind(subscriber_id)
+            .fetch_optional(&pool)
+            .await
+            {
+                Ok(checkpoint) => break checkpoint.unwrap_or(0),
+                Err(error) => {
+                    tracing::warn!(%error, "Failed to load mesh checkpoint; retrying");
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 }
             }
-
-            // Cleanup old messages (keep last 1 hour)
-            let _ = sqlx::query(
-                "DELETE FROM mesh_messages WHERE created_at < NOW() - INTERVAL '1 hour'",
-            )
-            .execute(&pool)
-            .await;
-
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        };
+        let mut listener: Option<sqlx::postgres::PgListener> = None;
+        let mut maintenance = tokio::time::interval(std::time::Duration::from_secs(60));
+        maintenance.tick().await;
+        loop {
+            if listener.is_none() {
+                // LISTEN must be committed before catch-up: a publication between the
+                // query and recv then remains queued on this dedicated connection.
+                let connected = async {
+                    let mut connection = sqlx::postgres::PgListener::connect_with(&pool).await?;
+                    connection.listen("mesh_messages_notify").await?;
+                    Ok::<_, sqlx::Error>(connection)
+                };
+                if let Ok(Ok(connection)) =
+                    tokio::time::timeout(std::time::Duration::from_secs(1), connected).await
+                {
+                    listener = Some(connection);
+                }
+            }
+            // Do not SKIP LOCKED: advancing a high-water mark past a locked row loses it.
+            let rows: Result<Vec<(i64, String, Vec<u8>)>, _> = sqlx::query_as(
+                "SELECT id, topic, payload FROM mesh_messages WHERE id > $1 ORDER BY id ASC LIMIT 1024",
+            ).bind(last_id).fetch_all(&pool).await;
+            let rows = match rows {
+                Ok(rows) => rows,
+                Err(error) => {
+                    tracing::warn!(%error, "Failed to catch up mesh messages; retrying");
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    continue;
+                }
+            };
+            let full_batch = rows.len() == 1024;
+            for (id, topic, payload) in &rows {
+                if let Some(tx) = subs.get(topic)
+                    && let Ok(message) = Message::decode(&payload[..])
+                {
+                    let _ = tx.send(message);
+                }
+                last_id = *id;
+            }
+            if !rows.is_empty() {
+                // Failure leaves the previous durable checkpoint intact, so a restart
+                // replays instead of silently skipping messages (at-least-once delivery).
+                if let Err(error) = sqlx::query("INSERT INTO mesh_checkpoints (subscriber_id, last_id) VALUES ($1, $2) ON CONFLICT(subscriber_id) DO UPDATE SET last_id = EXCLUDED.last_id")
+                    .bind(subscriber_id).bind(last_id).execute(&pool).await {
+                    tracing::warn!(%error, "Failed to persist mesh checkpoint");
+                }
+            }
+            if full_batch {
+                continue;
+            }
+            if let Some(connection) = listener.as_mut() {
+                tokio::select! {
+                    notification = connection.try_recv() => {
+                        // try_recv returns None after reconnecting and restoring LISTEN.
+                        // Always catch up then; notifications during disconnect are lost.
+                        if notification.is_err() { listener = None; }
+                    }
+                    _ = maintenance.tick() => {
+                        let _ = sqlx::query("DELETE FROM mesh_messages WHERE created_at < NOW() - INTERVAL '1 hour'")
+                            .execute(&pool).await;
+                    }
+                }
+            } else {
+                // Only a failed listener uses polling, retrying LISTEN on every pass.
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
         }
     }
 }
@@ -358,18 +394,27 @@ impl MeshTransport for PgTransport {
             Some(message.msg_id.clone())
         };
 
+        let mut transaction = self.pool.begin().await.map_err(|e| e.to_string())?;
+        // BIGSERIAL allocation alone does not order commits. Serialize publishers so
+        // durable catch-up cannot advance past a lower, still-uncommitted message ID.
+        sqlx::query("SELECT pg_advisory_xact_lock(726384921)")
+            .execute(&mut *transaction)
+            .await
+            .map_err(|e| e.to_string())?;
         sqlx::query("INSERT INTO mesh_messages (topic, payload, msg_id) VALUES ($1, $2, $3)")
             .bind(topic)
             .bind(buf)
             .bind(msg_id)
-            .execute(&self.pool)
+            .execute(&mut *transaction)
             .await
             .map_err(|e| e.to_string())?;
 
-        // Deliver to local subscribers without polling delay
-        if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
-        }
+        // NOTIFY is delivered only when the matching insert commits.
+        sqlx::query("SELECT pg_notify('mesh_messages_notify', '')")
+            .execute(&mut *transaction)
+            .await
+            .map_err(|e| e.to_string())?;
+        transaction.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -1614,6 +1659,210 @@ Content-Length: 0
 
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+
+    // Run explicitly against an isolated PostgreSQL database:
+    // OHC_TEST_PG_URL=postgres://... cargo test -p ohc_builtin_agent pg_notify -- --ignored
+    #[tokio::test]
+    #[ignore = "requires isolated PostgreSQL via OHC_TEST_PG_URL"]
+    async fn test_pg_notify_durable_delivery_and_reconnect() {
+        let url = std::env::var("OHC_TEST_PG_URL").expect("isolated PostgreSQL required");
+        let reader = PgTransport::new(&url).await.unwrap();
+        let writer = PgTransport::new(&url).await.unwrap();
+        let mut notifications = sqlx::postgres::PgListener::connect(&url).await.unwrap();
+        notifications.listen("mesh_messages_notify").await.unwrap();
+        let topic = uuid::Uuid::new_v4().to_string();
+        let message = |id: &str| Message {
+            msg_id: id.to_owned(),
+            ..Default::default()
+        };
+        writer
+            .publish(&topic, message("before-worker"))
+            .await
+            .unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(1), notifications.recv())
+            .await
+            .expect("publish must send a committed wakeup")
+            .unwrap();
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let worker_reader = reader.clone();
+        let worker = tokio::spawn(async move { worker_reader.start_worker().await });
+        let guard = SubscriptionAbortOnDrop { worker };
+        let cancel = reader
+            .subscribe(
+                &topic,
+                Box::new(move |msg| {
+                    let _ = tx.send(msg);
+                }),
+            )
+            .await
+            .unwrap();
+        let first = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(first.msg_id, "before-worker");
+        // The live worker must see subscriptions added through a clone after startup.
+        let later_topic = uuid::Uuid::new_v4().to_string();
+        let (later_tx, mut later_rx) = tokio::sync::mpsc::unbounded_channel();
+        let later_cancel = reader
+            .clone()
+            .subscribe(
+                &later_topic,
+                Box::new(move |msg| {
+                    let _ = later_tx.send(msg);
+                }),
+            )
+            .await
+            .unwrap();
+        writer
+            .publish(&later_topic, message("after-start"))
+            .await
+            .unwrap();
+        assert_eq!(
+            tokio::time::timeout(std::time::Duration::from_secs(2), later_rx.recv())
+                .await
+                .unwrap()
+                .unwrap()
+                .msg_id,
+            "after-start"
+        );
+        // Kill the dedicated LISTEN connection while preserving the durable message table.
+        let terminated: Vec<bool> = sqlx::query_scalar("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid() AND query LIKE 'LISTEN%'")
+            .fetch_all(&writer.pool).await.unwrap();
+        assert!(
+            terminated.iter().filter(|killed| **killed).count() >= 2,
+            "both the observer and worker LISTEN connections must be disconnected"
+        );
+        for index in 0..20 {
+            writer
+                .publish(&topic, message(&format!("reconnect-{index}")))
+                .await
+                .unwrap();
+        }
+        for index in 0..20 {
+            let received = tokio::time::timeout(std::time::Duration::from_secs(5), rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(received.msg_id, format!("reconnect-{index}"));
+        }
+        // A lower allocated ID must commit before a later publisher can allocate
+        // its ID; otherwise a durable high-water mark could skip the lower message.
+        let mut pending = writer.pool.begin().await.unwrap();
+        sqlx::query("SELECT pg_advisory_xact_lock(726384921)")
+            .execute(&mut *pending)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO mesh_messages (topic, payload) VALUES ($1, $2)")
+            .bind(&topic)
+            .bind(prost::Message::encode_to_vec(&message("pending-lower")))
+            .execute(&mut *pending)
+            .await
+            .unwrap();
+        let later_writer = writer.clone();
+        let publish_topic = topic.clone();
+        let later_publish = tokio::spawn(async move {
+            later_writer
+                .publish(
+                    &publish_topic,
+                    Message {
+                        msg_id: "committed-higher".into(),
+                        ..Default::default()
+                    },
+                )
+                .await
+                .unwrap();
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert!(
+            !later_publish.is_finished(),
+            "publishers must preserve commit order"
+        );
+        sqlx::query("SELECT pg_notify('mesh_messages_notify', '')")
+            .execute(&mut *pending)
+            .await
+            .unwrap();
+        pending.commit().await.unwrap();
+        later_publish.await.unwrap();
+        for id in ["pending-lower", "committed-higher"] {
+            assert_eq!(
+                tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .msg_id,
+                id
+            );
+        }
+        // Publishing locally must not duplicate the durable worker delivery.
+        reader.publish(&topic, message("local-once")).await.unwrap();
+        assert_eq!(
+            tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
+                .await
+                .unwrap()
+                .unwrap()
+                .msg_id,
+            "local-once"
+        );
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(200), rx.recv())
+                .await
+                .is_err()
+        );
+        cancel();
+        later_cancel();
+        // A restarted node resumes its own checkpoint, including messages committed
+        // while its listener was absent, without replaying already checkpointed rows.
+        let last_row: i64 = sqlx::query_scalar("SELECT MAX(id) FROM mesh_messages")
+            .fetch_one(&writer.pool)
+            .await
+            .unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            loop {
+                let checkpoint: Option<i64> = sqlx::query_scalar(
+                    "SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1",
+                )
+                .bind(&reader.subscriber_id)
+                .fetch_optional(&reader.pool)
+                .await
+                .unwrap();
+                if checkpoint == Some(last_row) {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        drop(guard);
+        writer.publish(&topic, message("offline")).await.unwrap();
+        let resumed = PgTransport::new_with_subscriber_id(&url, reader.subscriber_id.clone())
+            .await
+            .unwrap();
+        let (resumed_tx, mut resumed_rx) = tokio::sync::mpsc::unbounded_channel();
+        let resumed_cancel = resumed
+            .subscribe(
+                &topic,
+                Box::new(move |msg| {
+                    let _ = resumed_tx.send(msg);
+                }),
+            )
+            .await
+            .unwrap();
+        let resumed_worker = SubscriptionAbortOnDrop {
+            worker: tokio::spawn(async move { resumed.start_worker().await }),
+        };
+        assert_eq!(
+            tokio::time::timeout(std::time::Duration::from_secs(2), resumed_rx.recv())
+                .await
+                .unwrap()
+                .unwrap()
+                .msg_id,
+            "offline"
+        );
+        resumed_cancel();
+        drop(resumed_worker);
+    }
 
     #[tokio::test]
     async fn test_ipc_transport() {

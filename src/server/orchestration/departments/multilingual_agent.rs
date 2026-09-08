@@ -1,5 +1,9 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::orchestrator::{
+    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
+};
+use crate::orchestration::departments::types::{
+    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -29,12 +33,20 @@ impl Department for MultilingualAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         if event.event_type == "tenant.omnichannel.message.received" {
-            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let source = event
+                .payload
+                .get("source")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             if source != "walkup" {
                 return Ok(()); // Only process walkup orders
             }
 
-            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let message = event
+                .payload
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             if message.is_empty() {
                 return Ok(());
             }
@@ -43,13 +55,12 @@ impl Department for MultilingualAgent {
             let pool = crate::db::get_pool();
 
             let target_language: String = {
-                let prefs_row = sqlx::query(
-                    "SELECT language_preference FROM tenants WHERE id = $1"
-                )
-                .bind(&tenant_id)
-                .fetch_optional(&pool)
-                .await
-                .unwrap_or(None);
+                let prefs_row =
+                    sqlx::query("SELECT language_preference FROM tenants WHERE id = $1")
+                        .bind(&tenant_id)
+                        .fetch_optional(&pool)
+                        .await
+                        .unwrap_or(None);
 
                 match prefs_row {
                     Some(r) => {
@@ -73,18 +84,36 @@ impl Department for MultilingualAgent {
                 Ok("minimax") => {
                     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                     if api_key.trim().is_empty() {
-                        crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                        crate::minimax::LocalLLMClient::new()
+                            .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                            .await
+                            .unwrap_or_default()
                     } else {
-                        crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                        crate::minimax::MinimaxClient::new(api_key)
+                            .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                            .await
+                            .unwrap_or_default()
                     }
-                },
-                _ => crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default(),
+                }
+                _ => crate::minimax::LocalLLMClient::new()
+                    .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                    .await
+                    .unwrap_or_default(),
             };
 
-            let clean_res = raw_response.trim_matches('`').trim_start_matches("json\n").trim_end();
+            let clean_res = raw_response
+                .trim_matches('`')
+                .trim_start_matches("json\n")
+                .trim_end();
             if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {
-                let intent = translated_json.get("intent").and_then(|v| v.as_str()).unwrap_or("Query");
-                let translated_text = translated_json.get("translated_text").and_then(|v| v.as_str()).unwrap_or(message);
+                let intent = translated_json
+                    .get("intent")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Query");
+                let translated_text = translated_json
+                    .get("translated_text")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(message);
 
                 if intent == "Order" {
                     let _ = sqlx::query(
@@ -113,8 +142,21 @@ impl Department for MultilingualAgent {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(
+        &self,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+    ) -> Result<ApprovalRequest, String> {
+        self.orchestrator
+            .execute_action(
+                self.department_type(),
+                description.clone(),
+                tenant_id.clone(),
+                risk,
+                serde_json::json!({}),
+            )
+            .await
     }
 }
 

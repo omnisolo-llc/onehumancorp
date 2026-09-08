@@ -1,8 +1,11 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::orchestrator::{
+    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
+};
+use crate::orchestration::departments::types::{
+    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
-
 
 pub struct TranslationAgent {
     orchestrator: Arc<DepartmentOrchestrator>,
@@ -34,32 +37,51 @@ impl Department for TranslationAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         if event.event_type == "tenant.omnichannel.message.received" {
-            let message = event.payload.get("original_message").and_then(|v| v.as_str()).unwrap_or("");
-            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
-            let target_language = event.payload.get("target_language").and_then(|v| v.as_str()).unwrap_or("English");
-            let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+            let message = event
+                .payload
+                .get("original_message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let source = event
+                .payload
+                .get("source")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let target_language = event
+                .payload
+                .get("target_language")
+                .and_then(|v| v.as_str())
+                .unwrap_or("English");
+            let inbox_id = event
+                .payload
+                .get("inbox_message_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
             if inbox_id.is_empty() || message.is_empty() {
                 return Ok(());
             }
 
-            let translation = match crate::api::agents::translation::translate_inbox_message_with_llm(
-                &event.tenant_id,
-                source,
-                message,
-                target_language,
-            ).await {
-                Ok(t) => t,
-                Err(e) => {
-                    tracing::error!("Translation failed: {}", e);
-                    crate::api::agents::translation::InboxTranslation {
-                        translated_content: message.to_string(),
-                        source_language: Some("Unknown".to_string()),
-                        target_language: target_language.to_string(),
-                        original_content: message.to_string(),
+            let translation =
+                match crate::api::agents::translation::translate_inbox_message_with_llm(
+                    &event.tenant_id,
+                    source,
+                    message,
+                    target_language,
+                )
+                .await
+                {
+                    Ok(t) => t,
+                    Err(e) => {
+                        tracing::error!("Translation failed: {}", e);
+                        crate::api::agents::translation::InboxTranslation {
+                            translated_content: message.to_string(),
+                            source_language: Some("Unknown".to_string()),
+                            target_language: target_language.to_string(),
+                            original_content: message.to_string(),
+                        }
                     }
-                }
-            };
+                };
 
             let pool = crate::db::get_pool();
             let _ = sqlx::query(
@@ -67,7 +89,7 @@ impl Department for TranslationAgent {
                 UPDATE inbox_messages
                 SET content = $1, translated_from_language = $2
                 WHERE id = $3 AND tenant_id = $4
-                "#
+                "#,
             )
             .bind(&translation.translated_content)
             .bind(&translation.source_language)
@@ -88,15 +110,32 @@ impl Department for TranslationAgent {
                     "inbox_message_id": inbox_id,
                 }),
             };
-            self.orchestrator.dispatch_event(new_event).await.map(|_| ())?;
+            self.orchestrator
+                .dispatch_event(new_event)
+                .await
+                .map(|_| ())?;
 
             return Ok(());
         }
 
-        if event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
-            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
-            let name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("");
-            let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+        if event.event_type == "tenant.product.created"
+            || event.event_type == "tenant.product.updated"
+        {
+            let product_id = event
+                .payload
+                .get("product_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let name = event
+                .payload
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let description = event
+                .payload
+                .get("description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let tenant_id = event.tenant_id.clone();
 
             if product_id.is_empty() {
@@ -107,7 +146,7 @@ impl Department for TranslationAgent {
 
             let target_languages: Vec<String> = {
                 let prefs_row = sqlx::query(
-                    "SELECT target_languages FROM ohc_translation_preferences WHERE tenant_id = $1"
+                    "SELECT target_languages FROM ohc_translation_preferences WHERE tenant_id = $1",
                 )
                 .bind(&tenant_id)
                 .fetch_optional(&pool)
@@ -129,7 +168,10 @@ impl Department for TranslationAgent {
             }
 
             for lang in target_languages {
-                let prompt = format!("Translate the following product name and description into language code '{}'.\nName: {}\nDescription: {}\nReturn JSON format: {{\"name\": \"translated name\", \"description\": \"translated description\"}}", lang, name, description);
+                let prompt = format!(
+                    "Translate the following product name and description into language code '{}'.\nName: {}\nDescription: {}\nReturn JSON format: {{\"name\": \"translated name\", \"description\": \"translated description\"}}",
+                    lang, name, description
+                );
 
                 let mut translated_name = format!("[{}] {}", lang, name);
                 let mut translated_desc = format!("[{}] {}", lang, description);
@@ -141,18 +183,38 @@ impl Department for TranslationAgent {
                     Ok("minimax") => {
                         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                         if api_key.trim().is_empty() {
-                            crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                            crate::minimax::LocalLLMClient::new()
+                                .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                                .await
+                                .unwrap_or_default()
                         } else {
-                            crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                            crate::minimax::MinimaxClient::new(api_key)
+                                .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                                .await
+                                .unwrap_or_default()
                         }
-                    },
-                    _ => crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default(),
+                    }
+                    _ => crate::minimax::LocalLLMClient::new()
+                        .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                        .await
+                        .unwrap_or_default(),
                 };
 
-                let clean_res = raw_response.trim_matches('`').trim_start_matches("json\n").trim_end();
+                let clean_res = raw_response
+                    .trim_matches('`')
+                    .trim_start_matches("json\n")
+                    .trim_end();
                 if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {
-                    translated_name = translated_json.get("name").and_then(|v| v.as_str()).unwrap_or(&translated_name).to_string();
-                    translated_desc = translated_json.get("description").and_then(|v| v.as_str()).unwrap_or(&translated_desc).to_string();
+                    translated_name = translated_json
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&translated_name)
+                        .to_string();
+                    translated_desc = translated_json
+                        .get("description")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&translated_desc)
+                        .to_string();
                 }
 
                 let name_key = format!("product:{}:name", product_id);
@@ -197,8 +259,21 @@ impl Department for TranslationAgent {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(
+        &self,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+    ) -> Result<ApprovalRequest, String> {
+        self.orchestrator
+            .execute_action(
+                self.department_type(),
+                description.clone(),
+                tenant_id.clone(),
+                risk,
+                serde_json::json!({}),
+            )
+            .await
     }
 }
 

@@ -1,6 +1,5 @@
 use super::client::StripeClient;
 
-
 pub struct TerminalSessionManager {
     client: StripeClient,
 }
@@ -10,11 +9,16 @@ impl TerminalSessionManager {
         Self { client }
     }
 
-    pub async fn create_terminal_connection_token(&self, tenant_id: &str) -> Result<String, String> {
+    pub async fn create_terminal_connection_token(
+        &self,
+        tenant_id: &str,
+    ) -> Result<String, String> {
         if tenant_id.is_empty() {
             return Err("Unauthenticated: Missing tenant ID".to_string());
         }
-        self.client.create_terminal_connection_token(tenant_id).await
+        self.client
+            .create_terminal_connection_token(tenant_id)
+            .await
     }
 
     pub async fn create_terminal_payment_intent(
@@ -30,24 +34,31 @@ impl TerminalSessionManager {
         if tenant_id.is_empty() {
             return Err("Unauthenticated: Missing tenant ID".to_string());
         }
-        self.client.create_terminal_payment_intent(
-            tenant_id,
-            amount_cents,
-            currency,
-            product_id,
-            quantity,
-            order_id,
-            idempotency_key,
-        ).await
+        self.client
+            .create_terminal_payment_intent(
+                tenant_id,
+                amount_cents,
+                currency,
+                product_id,
+                quantity,
+                order_id,
+                idempotency_key,
+            )
+            .await
     }
 }
 
 impl StripeClient {
-
-    pub async fn create_terminal_connection_token(&self, _tenant_id: &str) -> Result<String, String> {
+    pub async fn create_terminal_connection_token(
+        &self,
+        _tenant_id: &str,
+    ) -> Result<String, String> {
         let api_key = self.require_api_key()?;
         let res = reqwest::Client::new()
-            .post(format!("{}/v1/terminal/connection_tokens", Self::api_base()))
+            .post(format!(
+                "{}/v1/terminal/connection_tokens",
+                Self::api_base()
+            ))
             .basic_auth(api_key, Some(""))
             .form(&std::collections::HashMap::<String, String>::new())
             .send()
@@ -91,11 +102,17 @@ impl StripeClient {
         let mut form = std::collections::HashMap::new();
         form.insert("amount".to_string(), amount_cents.to_string());
         form.insert("currency".to_string(), currency.to_string());
-        form.insert("payment_method_types[]".to_string(), "card_present".to_string());
+        form.insert(
+            "payment_method_types[]".to_string(),
+            "card_present".to_string(),
+        );
         form.insert("capture_method".to_string(), "manual".to_string());
         form.insert("metadata[tenant_id]".to_string(), tenant_id.to_string());
         form.insert("metadata[source]".to_string(), "in_person".to_string());
-        form.insert("metadata[idempotency_key]".to_string(), idempotency_key.to_string());
+        form.insert(
+            "metadata[idempotency_key]".to_string(),
+            idempotency_key.to_string(),
+        );
 
         if let Some(pid) = product_id {
             form.insert("metadata[product_id]".to_string(), pid.to_string());
@@ -107,7 +124,8 @@ impl StripeClient {
             form.insert("metadata[order_id]".to_string(), oid.to_string());
         }
 
-        let res = reqwest::Client::new().post(format!("{}/v1/payment_intents", Self::api_base()))
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/payment_intents", Self::api_base()))
             .basic_auth(api_key, Some(""))
             .header("Idempotency-Key", idempotency_key)
             .form(&form)
@@ -121,9 +139,16 @@ impl StripeClient {
             return Err(format!("Stripe API error ({}): {}", status, text));
         }
 
-        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
-        let secret = json["client_secret"].as_str().ok_or_else(|| "Missing client_secret in response".to_string())?;
-        let payment_intent_id = json["id"].as_str().ok_or_else(|| "Missing id in response".to_string())?;
+        let json: serde_json::Value = res
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        let secret = json["client_secret"]
+            .as_str()
+            .ok_or_else(|| "Missing client_secret in response".to_string())?;
+        let payment_intent_id = json["id"]
+            .as_str()
+            .ok_or_else(|| "Missing id in response".to_string())?;
 
         Ok((payment_intent_id.to_string(), secret.to_string()))
     }
@@ -134,7 +159,11 @@ impl StripeClient {
     ) -> Result<String, String> {
         let api_key = self.require_api_key()?;
         let res = reqwest::Client::new()
-            .post(format!("{}/v1/payment_intents/{}/capture", Self::api_base(), payment_intent_id))
+            .post(format!(
+                "{}/v1/payment_intents/{}/capture",
+                Self::api_base(),
+                payment_intent_id
+            ))
             .basic_auth(api_key, Some(""))
             .send()
             .await
@@ -146,7 +175,10 @@ impl StripeClient {
             return Err(format!("Stripe API error ({}): {}", status, text));
         }
 
-        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let json: serde_json::Value = res
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
         json["status"]
             .as_str()
             .map(|s| s.to_string())
@@ -162,15 +194,27 @@ mod tests {
     async fn test_terminal_connection_token_requires_configured_key() {
         let client = StripeClient::new("".to_string());
         let result = client.create_terminal_connection_token("test_tenant").await;
-        let err = result.expect_err("Terminal tokens must not be mocked when Stripe credentials are missing");
+        let err = result
+            .expect_err("Terminal tokens must not be mocked when Stripe credentials are missing");
         assert!(err.contains("Stripe API key"));
     }
 
     #[tokio::test]
     async fn test_create_terminal_payment_intent_requires_configured_key() {
         let client = StripeClient::new("".to_string());
-        let result = client.create_terminal_payment_intent("test_tenant", 1000, "usd", None, None, None, "idempotency_key").await;
-        let err = result.expect_err("Create intent must not be mocked when Stripe credentials are missing");
+        let result = client
+            .create_terminal_payment_intent(
+                "test_tenant",
+                1000,
+                "usd",
+                None,
+                None,
+                None,
+                "idempotency_key",
+            )
+            .await;
+        let err = result
+            .expect_err("Create intent must not be mocked when Stripe credentials are missing");
         assert!(err.contains("Stripe API key"));
     }
 
@@ -178,7 +222,8 @@ mod tests {
     async fn test_capture_terminal_payment_intent_requires_configured_key() {
         let client = StripeClient::new("".to_string());
         let result = client.capture_terminal_payment_intent("pi_test_123").await;
-        let err = result.expect_err("Capture intent must not be mocked when Stripe credentials are missing");
+        let err = result
+            .expect_err("Capture intent must not be mocked when Stripe credentials are missing");
         assert!(err.contains("Stripe API key"));
     }
 }

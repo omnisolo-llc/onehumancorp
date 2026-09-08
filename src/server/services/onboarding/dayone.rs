@@ -1,7 +1,7 @@
-use crate::services::onboarding::provisioner;
-use crate::services::onboarding::wizard::InteractiveWizard;
-use crate::services::onboarding::validation::ValidationEndpoint;
 use crate::services::onboarding::audit;
+use crate::services::onboarding::provisioner;
+use crate::services::onboarding::validation::ValidationEndpoint;
+use crate::services::onboarding::wizard::InteractiveWizard;
 
 pub fn run_day_one_setup(is_cloud: bool) -> Result<String, String> {
     // 1. Provision environment
@@ -17,7 +17,7 @@ pub fn run_day_one_setup(is_cloud: bool) -> Result<String, String> {
 
     // 4. Generate audit report
     let report = audit::generate_audit_report(is_cloud);
-    
+
     Ok(report)
 }
 
@@ -28,7 +28,9 @@ mod tests {
 
     #[test]
     fn test_run_day_one_setup_standalone() {
-        if std::path::Path::new(".ohc-local-data").exists() { fs::remove_dir_all(".ohc-local-data").unwrap(); }
+        if std::path::Path::new(".ohc-local-data").exists() {
+            fs::remove_dir_all(".ohc-local-data").unwrap();
+        }
 
         let report = run_day_one_setup(false).unwrap();
         assert!(report.contains("PASSED"));
@@ -39,10 +41,14 @@ mod tests {
 
     #[test]
     fn test_run_day_one_setup_cloud() {
-        if std::path::Path::new(".ohc-cloud-data").exists() { fs::remove_dir_all(".ohc-cloud-data").unwrap(); }
+        if std::path::Path::new(".ohc-cloud-data").exists() {
+            fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        }
 
-        let num_cpus = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1);
-        
+        let num_cpus = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1);
+
         let res = run_day_one_setup(true);
         if num_cpus < 2 {
             assert!(res.is_err());
@@ -53,6 +59,8 @@ mod tests {
             assert!(report.contains("Cloud-native"));
         }
 
-        if std::path::Path::new(".ohc-cloud-data").exists() { fs::remove_dir_all(".ohc-cloud-data").unwrap(); }
+        if std::path::Path::new(".ohc-cloud-data").exists() {
+            fs::remove_dir_all(".ohc-cloud-data").unwrap();
+        }
     }
 }

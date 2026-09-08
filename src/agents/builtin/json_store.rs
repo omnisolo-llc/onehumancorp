@@ -16,12 +16,14 @@ pub struct JsonMemoryEntry {
 #[derive(Debug)]
 pub struct NamespaceJsonStore {
     base_dir: PathBuf,
+    scoped_lock: tokio::sync::Mutex<()>,
 }
 
 impl NamespaceJsonStore {
     pub fn new<P: AsRef<Path>>(base_dir: P) -> Self {
         Self {
             base_dir: base_dir.as_ref().to_path_buf(),
+            scoped_lock: tokio::sync::Mutex::new(()),
         }
     }
 
@@ -91,6 +93,41 @@ impl NamespaceJsonStore {
 
 #[async_trait]
 impl LongTermMemory for NamespaceJsonStore {
+    fn service_configuration_identity(&self) -> String {
+        format!("json:{}", self.base_dir.to_string_lossy())
+    }
+
+    fn supports_scoped_services(&self) -> bool {
+        true
+    }
+    async fn store_scoped(&self, namespace: &str, content: &str) -> Result<(), String> {
+        let _guard = self.scoped_lock.lock().await;
+        let namespace = crate::local_service_adapters::scope_key(namespace);
+        let mut entries = self.read_namespace(&namespace).await?;
+        entries.push(JsonMemoryEntry {
+            content: content.to_owned(),
+            timestamp: chrono::Utc::now().timestamp(),
+        });
+        self.write_namespace(&namespace, &entries).await
+    }
+    async fn retrieve_scoped(
+        &self,
+        namespace: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<String>, String> {
+        let _guard = self.scoped_lock.lock().await;
+        let namespace = crate::local_service_adapters::scope_key(namespace);
+        Ok(self
+            .read_namespace(&namespace)
+            .await?
+            .into_iter()
+            .rev()
+            .filter(|entry| entry.content.to_lowercase().contains(&query.to_lowercase()))
+            .take(limit.min(1000))
+            .map(|entry| entry.content)
+            .collect())
+    }
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut all_entries = Vec::new();
 
@@ -110,7 +147,7 @@ impl LongTermMemory for NamespaceJsonStore {
         }
 
         // Basic naive search: sort by recency and filter by substring
-        all_entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        all_entries.sort_by_key(|entry| std::cmp::Reverse(entry.timestamp));
 
         let query_lower = query.to_lowercase();
         let mut results = Vec::new();
@@ -131,12 +168,15 @@ impl LongTermMemory for NamespaceJsonStore {
         Ok(results)
     }
 
-        fn get_customer_session_summaries<'a>(
+    fn get_customer_session_summaries<'a>(
         &'a self,
         _tenant_id: &'a str,
         _customer_id: &'a str,
         _limit: i64,
-    ) -> crate::langgraph::BoxFuture<'a, Result<Vec<crate::memory_store::AgentSessionSummary>, String>> {
+    ) -> crate::langgraph::BoxFuture<
+        'a,
+        Result<Vec<crate::memory_store::AgentSessionSummary>, String>,
+    > {
         Box::pin(async move { Ok(vec![]) })
     }
 

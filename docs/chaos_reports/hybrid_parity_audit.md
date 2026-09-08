@@ -28,6 +28,5 @@ Chaos benchmark tests were added into `src/server/benchmarks/chaos_bench.rs` suc
 *   `test_graceful_degradation`: Simulating database freezing or heavy contention successfully triggers the new timeout blocks preventing runaway execution wait times.
 
 
-### Grafana Visualizations
-![Latency Histogram](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
-![Error Rates](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
+### Observability & Verification
+Metrics and resilience properties are continuously monitored via Prometheus alerts and Grafana dashboards under `deploy/grafana/dashboards/` for latency distributions, error rates, and queue recovery performance.

@@ -89,7 +89,9 @@ impl HubSpotProvider {
         amount: Option<f64>,
         close_date: Option<&str>,
     ) -> Result<super::client::HubSpotDeal, String> {
-        self.client.create_deal(name, stage, amount, close_date).await
+        self.client
+            .create_deal(name, stage, amount, close_date)
+            .await
     }
 
     pub async fn update_deal(

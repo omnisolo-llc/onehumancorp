@@ -29,13 +29,20 @@ impl EasyPostProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 }
 
 impl EasyPostProvider {
-    pub async fn create_shipment(&self, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
-        self._client.create_shipment(to_address, from_address, parcel_details).await
+    pub async fn create_shipment(
+        &self,
+        to_address: &str,
+        from_address: &str,
+        parcel_details: &str,
+    ) -> Result<String, String> {
+        self._client
+            .create_shipment(to_address, from_address, parcel_details)
+            .await
     }
 }

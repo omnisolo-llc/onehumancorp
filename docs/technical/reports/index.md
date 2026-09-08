@@ -11,4 +11,3 @@ Technical reports and audits.
 - [Hybrid FS MCP Report](./hybrid-fs-mcp-report.md)
 - [Harness Git Protection Report](./harness-git-protection-report.md)
 - [CPP Migration Evaluation](./cpp-migration-evaluation.md)
-- [MCP Bridge README](./mcp-bridge-readme.md)

@@ -52,7 +52,11 @@ impl DoorDashClient {
         }
     }
 
-    pub async fn get_delivery_quote(&self, pickup_address: &str, dropoff_address: &str) -> Result<DeliveryQuote, String> {
+    pub async fn get_delivery_quote(
+        &self,
+        pickup_address: &str,
+        dropoff_address: &str,
+    ) -> Result<DeliveryQuote, String> {
         self.validate_credentials()?;
         if pickup_address.trim().is_empty() || dropoff_address.trim().is_empty() {
             return Err("pickup and dropoff addresses are required".to_string());
@@ -71,7 +75,8 @@ impl DoorDashClient {
             "dropoff_address": dropoff_address,
         });
 
-        let resp = self.http_client
+        let resp = self
+            .http_client
             .post(format!("{}/drive/v2/quotes", Self::api_base()))
             .bearer_auth(self.api_key.trim())
             .json(&payload)
@@ -80,19 +85,25 @@ impl DoorDashClient {
             .map_err(|e| format!("DoorDash quote request failed: {e}"))?;
 
         let status = resp.status();
-        let body: serde_json::Value = resp.json().await
+        let body: serde_json::Value = resp
+            .json()
+            .await
             .map_err(|e| format!("DoorDash quote response was not JSON: {e}"))?;
         if !status.is_success() {
             return Err(format!("DoorDash quote API error {status}: {body}"));
         }
 
-        let fee_cents = body.get("fee").and_then(|v| v.as_f64())
+        let fee_cents = body
+            .get("fee")
+            .and_then(|v| v.as_f64())
             .ok_or_else(|| "DoorDash quote response missing fee".to_string())?;
-        let pickup_eta = body.get("pickup_time_estimated")
+        let pickup_eta = body
+            .get("pickup_time_estimated")
             .or_else(|| body.get("pickup_eta"))
             .and_then(|v| v.as_str())
             .ok_or_else(|| "DoorDash quote response missing pickup ETA".to_string())?;
-        let dropoff_eta = body.get("dropoff_time_estimated")
+        let dropoff_eta = body
+            .get("dropoff_time_estimated")
             .or_else(|| body.get("dropoff_eta"))
             .and_then(|v| v.as_str())
             .ok_or_else(|| "DoorDash quote response missing dropoff ETA".to_string())?;
@@ -104,9 +115,17 @@ impl DoorDashClient {
         })
     }
 
-    pub async fn dispatch_delivery(&self, pickup_address: &str, dropoff_address: &str, order_id: &str) -> Result<String, String> {
+    pub async fn dispatch_delivery(
+        &self,
+        pickup_address: &str,
+        dropoff_address: &str,
+        order_id: &str,
+    ) -> Result<String, String> {
         self.validate_credentials()?;
-        if pickup_address.trim().is_empty() || dropoff_address.trim().is_empty() || order_id.trim().is_empty() {
+        if pickup_address.trim().is_empty()
+            || dropoff_address.trim().is_empty()
+            || order_id.trim().is_empty()
+        {
             return Err("pickup address, dropoff address, and order id are required".to_string());
         }
 
@@ -117,7 +136,8 @@ impl DoorDashClient {
             "dropoff_address": dropoff_address,
         });
 
-        let resp = self.http_client
+        let resp = self
+            .http_client
             .post(format!("{}/drive/v2/deliveries", Self::api_base()))
             .bearer_auth(self.api_key.trim())
             .json(&payload)
@@ -126,13 +146,16 @@ impl DoorDashClient {
             .map_err(|e| format!("DoorDash delivery request failed: {e}"))?;
 
         let status = resp.status();
-        let body: serde_json::Value = resp.json().await
+        let body: serde_json::Value = resp
+            .json()
+            .await
             .map_err(|e| format!("DoorDash delivery response was not JSON: {e}"))?;
         if !status.is_success() {
             return Err(format!("DoorDash delivery API error {status}: {body}"));
         }
 
-        Ok(body.get("external_delivery_id")
+        Ok(body
+            .get("external_delivery_id")
             .and_then(|v| v.as_str())
             .unwrap_or(&external_delivery_id)
             .to_string())
@@ -146,14 +169,20 @@ mod tests {
     #[tokio::test]
     async fn test_get_delivery_quote_requires_real_credentials() {
         let client = DoorDashClient::new("dummy_key".to_string());
-        let err = client.get_delivery_quote("123 Pickup St", "456 Dropoff Ave").await.unwrap_err();
+        let err = client
+            .get_delivery_quote("123 Pickup St", "456 Dropoff Ave")
+            .await
+            .unwrap_err();
         assert!(err.contains("DoorDash API key is required"));
     }
 
     #[tokio::test]
     async fn test_dispatch_delivery_requires_real_credentials() {
         let client = DoorDashClient::new("".to_string());
-        let err = client.dispatch_delivery("123 Pickup St", "456 Dropoff Ave", "ord_123").await.unwrap_err();
+        let err = client
+            .dispatch_delivery("123 Pickup St", "456 Dropoff Ave", "ord_123")
+            .await
+            .unwrap_err();
         assert!(err.contains("DoorDash API key is required"));
     }
 }

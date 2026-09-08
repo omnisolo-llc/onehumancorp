@@ -1,5 +1,9 @@
-use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::orchestrator::{
+    AgentTriggerType, BaseAgent, Department, DepartmentOrchestrator,
+};
+use crate::orchestration::departments::types::{
+    ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
+};
 
 pub struct BusinessAdvisoryAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -18,7 +22,10 @@ impl Department for BusinessAdvisoryAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.report.weekly_health".to_string(), "tenant.inventory.analyze_stagnant".to_string()]
+        vec![
+            "tenant.report.weekly_health".to_string(),
+            "tenant.inventory.analyze_stagnant".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -52,19 +59,35 @@ impl Department for BusinessAdvisoryAgent {
                 }
             });
 
-            return self.orchestrator.execute_action(
-                DepartmentType::BusinessAdvisory,
-                "Smart Price Suggestion: Winter Scarf".to_string(),
-                event.tenant_id.clone(),
-                ActionRisk::DraftForReview, // Always draft for review for pricing changes initially
-                payload
-            ).await.map(|_| ());
+            return self
+                .orchestrator
+                .execute_action(
+                    DepartmentType::BusinessAdvisory,
+                    "Smart Price Suggestion: Winter Scarf".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview, // Always draft for review for pricing changes initially
+                    payload,
+                )
+                .await
+                .map(|_| ());
         }
 
         if event.event_type == "tenant.report.weekly_health" {
-            let gross_sales = event.payload.get("gross_sales").and_then(|v| v.as_f64()).unwrap_or(0.0);
-            let orders_count = event.payload.get("orders_count").and_then(|v| v.as_i64()).unwrap_or(0);
-            let top_seller_name = event.payload.get("top_seller_name").and_then(|v| v.as_str()).unwrap_or("N/A");
+            let gross_sales = event
+                .payload
+                .get("gross_sales")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let orders_count = event
+                .payload
+                .get("orders_count")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            let top_seller_name = event
+                .payload
+                .get("top_seller_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A");
 
             let prompt = format!(
                 "You are The Advisor. The user had {} orders this week. Gross sales: ${}. Most people bought {}. Generate a radically simple, plain-language business health report. Do not use jargon. Format the response as JSON with keys 'summary' and 'actionable_suggestion'.",
@@ -77,7 +100,13 @@ impl Department for BusinessAdvisoryAgent {
             let mut _ai_call_succeeded = false;
             while attempts < 3 {
                 let ai_op = async {
-                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                    if let Ok(mut client) =
+                        ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(
+                            std::env::var("OHC_HUB_URL")
+                                .unwrap_or_else(|_| "http://127.0.0.1:8081".to_string()),
+                        )
+                        .await
+                    {
                         let reason_req = ::server_ohc::orchestration::ReasonRequest {
                             prompt: ::server_pricing::compression::reduce_tokens(&prompt),
                             from_agent_id: "The Advisor".into(),
@@ -94,7 +123,7 @@ impl Department for BusinessAdvisoryAgent {
                         drafted_msg = content;
                         _ai_call_succeeded = true;
                         break;
-                    },
+                    }
                     _ => {
                         attempts += 1;
                         if attempts == 3 {
@@ -106,16 +135,18 @@ impl Department for BusinessAdvisoryAgent {
                                 serde_json::json!({"error": "The AI agent responsible for answering questions is paused because the AI service is unavailable."})
                             ).await;
                         } else {
-                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts)))
+                                .await;
                         }
                     }
                 }
             }
 
-            let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
-                "summary": drafted_msg,
-                "actionable_suggestion": "Consider adding a new promotion."
-            }));
+            let parsed: serde_json::Value =
+                serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                    "summary": drafted_msg,
+                    "actionable_suggestion": "Consider adding a new promotion."
+                }));
 
             let payload = serde_json::json!({
                 "tenant_id": event.tenant_id.clone(),
@@ -126,13 +157,17 @@ impl Department for BusinessAdvisoryAgent {
                 }
             });
 
-            return self.orchestrator.execute_action(
-                DepartmentType::BusinessAdvisory,
-                "Draft weekly business health report".to_string(),
-                event.tenant_id.clone(),
-                risk,
-                payload,
-            ).await.map(|_| ());
+            return self
+                .orchestrator
+                .execute_action(
+                    DepartmentType::BusinessAdvisory,
+                    "Draft weekly business health report".to_string(),
+                    event.tenant_id.clone(),
+                    risk,
+                    payload,
+                )
+                .await
+                .map(|_| ());
         }
 
         // Fallback
@@ -143,13 +178,25 @@ impl Department for BusinessAdvisoryAgent {
         None
     }
 
-
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
     }
 
-    async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+    async fn request_approval(
+        &self,
+        description: String,
+        tenant_id: String,
+        risk: ActionRisk,
+    ) -> Result<ApprovalRequest, String> {
+        self.orchestrator
+            .execute_action(
+                self.department_type(),
+                description.clone(),
+                tenant_id.clone(),
+                risk,
+                serde_json::json!({}),
+            )
+            .await
     }
 }
 
@@ -166,7 +213,10 @@ impl BaseAgent for BusinessAdvisoryAgent {
     async fn execute(&self, payload: serde_json::Value) -> Result<(), String> {
         // If triggered as a CRON job for inventory analysis
         if payload.get("action").and_then(|v| v.as_str()) == Some("analyze_stagnant_inventory") {
-            let tenant_id = payload.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("system");
+            let tenant_id = payload
+                .get("tenant_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("system");
             let event = DepartmentEvent {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: tenant_id.to_string(),
@@ -178,8 +228,15 @@ impl BaseAgent for BusinessAdvisoryAgent {
 
         // Handle execution of the weekly health report action (e.g., if user approves the suggestion)
         if let Some(context) = payload.get("context") {
-            if context.get("weekly_health_report").and_then(|v| v.as_bool()) == Some(true) {
-                let tenant_id = payload.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("system");
+            if context
+                .get("weekly_health_report")
+                .and_then(|v| v.as_bool())
+                == Some(true)
+            {
+                let tenant_id = payload
+                    .get("tenant_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("system");
 
                 // Dispatch a job to The Promoter
                 let mut attempts = 0;
@@ -209,10 +266,11 @@ impl BaseAgent for BusinessAdvisoryAgent {
                     match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
                         Ok(Ok(_)) => {
                             break;
-                        },
+                        }
                         _ => {
                             attempts += 1;
-                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts)))
+                                .await;
                         }
                     }
                 }

@@ -45,7 +45,7 @@ export function useAgentSSE({
     if (!agentId) return;
 
     const connect = () => {
-      const es = new EventSource(`/api/v1/agents/${agentId}/events`);
+      const es = new EventSource(`/api/v1/agents/${encodeURIComponent(agentId)}/stream`);
       eventSourceRef.current = es;
 
       es.onopen = () => {
@@ -53,7 +53,7 @@ export function useAgentSSE({
         setReconnectAttempts(0);
       };
 
-      es.onmessage = (event) => {
+      const receive = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
           onMessageRef.current(data);
@@ -61,6 +61,16 @@ export function useAgentSSE({
           onMessageRef.current(event.data);
         }
       };
+
+      es.onmessage = receive;
+      for (const type of ['chat', 'token', 'progress', 'task_result', 'task_error', 'TaskDelegation']) {
+        es.addEventListener(type, receive as EventListener);
+      }
+      es.addEventListener('done', () => {
+        es.close();
+        eventSourceRef.current = null;
+        setConnected(false);
+      });
 
       es.onerror = (event) => {
         setConnected(false);

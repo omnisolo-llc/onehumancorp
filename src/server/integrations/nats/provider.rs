@@ -57,8 +57,8 @@ impl NatsProvider {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     struct MockNatsClient {
         published_messages: Arc<AtomicUsize>,
@@ -84,12 +84,22 @@ mod tests {
     #[tokio::test]
     async fn test_nats_provider_integration() {
         let published = Arc::new(AtomicUsize::new(0));
-        let mock = Arc::new(MockNatsClient { published_messages: published.clone() });
+        let mock = Arc::new(MockNatsClient {
+            published_messages: published.clone(),
+        });
         let provider = NatsProvider::with_client(mock, "mock_url");
 
         let received = Arc::new(AtomicUsize::new(0));
         let received_clone = received.clone();
-        let _ = provider.subscribe("test_topic", Box::new(move |_| { received_clone.fetch_add(1, Ordering::SeqCst); })).await.unwrap();
+        let _ = provider
+            .subscribe(
+                "test_topic",
+                Box::new(move |_| {
+                    received_clone.fetch_add(1, Ordering::SeqCst);
+                }),
+            )
+            .await
+            .unwrap();
 
         provider.publish("test_topic", vec![]).await.unwrap();
         assert_eq!(published.load(Ordering::SeqCst), 1);
@@ -135,18 +145,38 @@ mod tests {
         let cloud_node = NatsProvider::with_client(broker.clone(), "nats://cloud.test");
 
         // Mocking Standalone Instance sharing the same broker
-        let standalone_instance = NatsProvider::with_client(broker.clone(), "nats://localhost:4222");
+        let standalone_instance =
+            NatsProvider::with_client(broker.clone(), "nats://localhost:4222");
 
         let cloud_received = Arc::new(AtomicUsize::new(0));
         let cloud_received_clone = cloud_received.clone();
-        let _ = cloud_node.subscribe("mesh_sync", Box::new(move |_| { cloud_received_clone.fetch_add(1, Ordering::SeqCst); })).await.unwrap();
+        let _ = cloud_node
+            .subscribe(
+                "mesh_sync",
+                Box::new(move |_| {
+                    cloud_received_clone.fetch_add(1, Ordering::SeqCst);
+                }),
+            )
+            .await
+            .unwrap();
 
         let standalone_received = Arc::new(AtomicUsize::new(0));
         let standalone_received_clone = standalone_received.clone();
-        let _ = standalone_instance.subscribe("mesh_sync", Box::new(move |_| { standalone_received_clone.fetch_add(1, Ordering::SeqCst); })).await.unwrap();
+        let _ = standalone_instance
+            .subscribe(
+                "mesh_sync",
+                Box::new(move |_| {
+                    standalone_received_clone.fetch_add(1, Ordering::SeqCst);
+                }),
+            )
+            .await
+            .unwrap();
 
         // Simulate standalone node propagating an event to cloud
-        standalone_instance.publish("mesh_sync", b"standalone_event".to_vec()).await.unwrap();
+        standalone_instance
+            .publish("mesh_sync", b"standalone_event".to_vec())
+            .await
+            .unwrap();
 
         // Assert it reached the broker and was processed by both subscribers (cloud & standalone)
         assert_eq!(published_count.load(Ordering::SeqCst), 1);
@@ -154,7 +184,10 @@ mod tests {
         assert_eq!(standalone_received.load(Ordering::SeqCst), 1);
 
         // Simulate cloud node propagating an event to standalone
-        cloud_node.publish("mesh_sync", b"cloud_event".to_vec()).await.unwrap();
+        cloud_node
+            .publish("mesh_sync", b"cloud_event".to_vec())
+            .await
+            .unwrap();
 
         assert_eq!(published_count.load(Ordering::SeqCst), 2);
         assert_eq!(cloud_received.load(Ordering::SeqCst), 2);

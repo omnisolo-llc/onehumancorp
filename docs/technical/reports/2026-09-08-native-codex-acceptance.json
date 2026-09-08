@@ -1,0 +1,392 @@
+{
+  "evidence": {
+    "credential_leak_observed": false,
+    "delivery_count": 189,
+    "harness_id": "codex",
+    "integration_mode": "native",
+    "last_durable_sequence": 28,
+    "model_binding": {
+      "api_dialect": "open_ai_responses",
+      "binding_digest": "sha256:runtime-unbound",
+      "binding_revision": "worker-env-v1",
+      "capabilities": [
+        "reasoning",
+        "tools"
+      ],
+      "context_window": null,
+      "harness_id": "codex",
+      "integration_mode": "native",
+      "max_output_tokens": null,
+      "model_id": "gpt-5.6-luna",
+      "provider_route": "openai-compatible",
+      "reasoning_effort": "max"
+    },
+    "provider_marker_observed": true,
+    "reasoning_translation": {
+      "effective": "max",
+      "kind": "native",
+      "requested": "max"
+    },
+    "shared_local_services": {
+      "cross_harness_read_verified": false,
+      "cross_session_read_verified": true,
+      "reader_operations": {
+        "attempt_id": "a71c30ee-3249-43f1-bf4c-78782ae68876",
+        "operations": [
+          "artifact.read",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.read",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.search",
+          "workspace.read"
+        ]
+      },
+      "reader_verified": true,
+      "status": "operations_verified",
+      "writer_evidence": {
+        "credential_leak_observed": false,
+        "delivery_count": 544,
+        "harness_id": "codex",
+        "integration_mode": "native",
+        "last_durable_sequence": 86,
+        "model_binding": {
+          "api_dialect": "open_ai_responses",
+          "binding_digest": "sha256:runtime-unbound",
+          "binding_revision": "worker-env-v1",
+          "capabilities": [
+            "reasoning",
+            "tools"
+          ],
+          "context_window": null,
+          "harness_id": "codex",
+          "integration_mode": "native",
+          "max_output_tokens": null,
+          "model_id": "gpt-5.6-luna",
+          "provider_route": "openai-compatible",
+          "reasoning_effort": "max"
+        },
+        "provider_marker_observed": true,
+        "reasoning_translation": {
+          "effective": "max",
+          "kind": "native",
+          "requested": "max"
+        },
+        "shared_local_services": {
+          "binding_count": 8,
+          "memory_scope": "workspace",
+          "memory_service_id": "omnisolo.memory",
+          "status": "bound"
+        },
+        "terminal_success_observed": true,
+        "usage": [
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 3840,
+              "inputTokens": 14903,
+              "outputTokens": 468,
+              "reasoningOutputTokens": 329,
+              "totalTokens": 15371
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 3840,
+              "inputTokens": 14903,
+              "outputTokens": 468,
+              "reasoningOutputTokens": 329,
+              "totalTokens": 15371
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 14080,
+              "inputTokens": 15395,
+              "outputTokens": 42,
+              "reasoningOutputTokens": 24,
+              "totalTokens": 15437
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 17920,
+              "inputTokens": 30298,
+              "outputTokens": 510,
+              "reasoningOutputTokens": 353,
+              "totalTokens": 30808
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 13056,
+              "inputTokens": 22443,
+              "outputTokens": 3745,
+              "reasoningOutputTokens": 2366,
+              "totalTokens": 26188
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 30976,
+              "inputTokens": 52741,
+              "outputTokens": 4255,
+              "reasoningOutputTokens": 2719,
+              "totalTokens": 56996
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 22272,
+              "inputTokens": 26221,
+              "outputTokens": 1586,
+              "reasoningOutputTokens": 216,
+              "totalTokens": 27807
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 53248,
+              "inputTokens": 78962,
+              "outputTokens": 5841,
+              "reasoningOutputTokens": 2935,
+              "totalTokens": 84803
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 25344,
+              "inputTokens": 45962,
+              "outputTokens": 1963,
+              "reasoningOutputTokens": 1288,
+              "totalTokens": 47925
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 78592,
+              "inputTokens": 124924,
+              "outputTokens": 7804,
+              "reasoningOutputTokens": 4223,
+              "totalTokens": 132728
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 45824,
+              "inputTokens": 48125,
+              "outputTokens": 640,
+              "reasoningOutputTokens": 24,
+              "totalTokens": 48765
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 124416,
+              "inputTokens": 173049,
+              "outputTokens": 8444,
+              "reasoningOutputTokens": 4247,
+              "totalTokens": 181493
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 47872,
+              "inputTokens": 48893,
+              "outputTokens": 984,
+              "reasoningOutputTokens": 688,
+              "totalTokens": 49877
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 172288,
+              "inputTokens": 221942,
+              "outputTokens": 9428,
+              "reasoningOutputTokens": 4935,
+              "totalTokens": 231370
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 47872,
+              "inputTokens": 49924,
+              "outputTokens": 1022,
+              "reasoningOutputTokens": 764,
+              "totalTokens": 50946
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 220160,
+              "inputTokens": 271866,
+              "outputTokens": 10450,
+              "reasoningOutputTokens": 5699,
+              "totalTokens": 282316
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 48896,
+              "inputTokens": 50993,
+              "outputTokens": 316,
+              "reasoningOutputTokens": 33,
+              "totalTokens": 51309
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 269056,
+              "inputTokens": 322859,
+              "outputTokens": 10766,
+              "reasoningOutputTokens": 5732,
+              "totalTokens": 333625
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 49920,
+              "inputTokens": 51375,
+              "outputTokens": 603,
+              "reasoningOutputTokens": 91,
+              "totalTokens": 51978
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 318976,
+              "inputTokens": 374234,
+              "outputTokens": 11369,
+              "reasoningOutputTokens": 5823,
+              "totalTokens": 385603
+            }
+          },
+          {
+            "last": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 50944,
+              "inputTokens": 52381,
+              "outputTokens": 538,
+              "reasoningOutputTokens": 414,
+              "totalTokens": 52919
+            },
+            "modelContextWindow": 258400,
+            "total": {
+              "cacheWriteInputTokens": 0,
+              "cachedInputTokens": 369920,
+              "inputTokens": 426615,
+              "outputTokens": 11907,
+              "reasoningOutputTokens": 6237,
+              "totalTokens": 438522
+            }
+          }
+        ],
+        "usage_observed": true
+      },
+      "writer_key": "probe5170e7902add427681c1a814a32e1116",
+      "writer_operations": {
+        "attempt_id": "4f87eaa0-7b7b-4f0c-a0ea-dee88e39057b",
+        "operations": [
+          "artifact.read",
+          "artifact.write",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.read",
+          "cache.write",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.search",
+          "memory.write",
+          "workspace.read",
+          "workspace.write"
+        ]
+      },
+      "writer_value": "value9942254b1ec14aebbbe5f09c381e5b16",
+      "writer_verified": true
+    },
+    "terminal_success_observed": true,
+    "usage": [
+      {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 14080,
+          "inputTokens": 14608,
+          "outputTokens": 279,
+          "reasoningOutputTokens": 174,
+          "totalTokens": 14887
+        },
+        "modelContextWindow": 258400,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 14080,
+          "inputTokens": 14608,
+          "outputTokens": 279,
+          "reasoningOutputTokens": 174,
+          "totalTokens": 14887
+        }
+      },
+      {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 13056,
+          "inputTokens": 14911,
+          "outputTokens": 2042,
+          "reasoningOutputTokens": 1236,
+          "totalTokens": 16953
+        },
+        "modelContextWindow": 258400,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 27136,
+          "inputTokens": 29519,
+          "outputTokens": 2321,
+          "reasoningOutputTokens": 1410,
+          "totalTokens": 31840
+        }
+      },
+      {
+        "last": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 14080,
+          "inputTokens": 18593,
+          "outputTokens": 471,
+          "reasoningOutputTokens": 347,
+          "totalTokens": 19064
+        },
+        "modelContextWindow": 258400,
+        "total": {
+          "cacheWriteInputTokens": 0,
+          "cachedInputTokens": 41216,
+          "inputTokens": 48112,
+          "outputTokens": 2792,
+          "reasoningOutputTokens": 1757,
+          "totalTokens": 50904
+        }
+      }
+    ],
+    "usage_observed": true
+  },
+  "harness_id": "codex",
+  "model": "gpt-5.6-luna",
+  "native_session_deleted": true,
+  "reasoning_effort": "max",
+  "schema": "omnisolo.live_harness_result.v1",
+  "status": "passed",
+  "native_protocol": "codex_app_server",
+  "integration_mode": "native",
+  "duration_seconds": 313
+}

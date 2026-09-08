@@ -1,10 +1,8 @@
-
-use std::sync::OnceLock;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::time::Duration;
 use dashmap::DashMap;
 use dashmap::DashSet;
-
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use std::sync::OnceLock;
+use std::time::Duration;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct CacheItem<T> {
@@ -15,7 +13,6 @@ struct CacheItem<T> {
 }
 
 use std::sync::atomic::Ordering;
-
 
 struct CacheValue<T> {
     val: T,
@@ -39,35 +36,42 @@ pub struct HybridCache<T> {
 
 impl<T> HybridCache<T>
 where
-    T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static
+    T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
 {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
-        Self { inner: std::sync::Arc::new(HybridCacheInner {
-            local: OnceLock::new(),
-            local_tags: OnceLock::new(),
-            flight_group: OnceLock::new(),
-            redis_client,
-            redis_conn: tokio::sync::OnceCell::new(),
-            max_local_capacity: 1000,
-        }) }
+        Self {
+            inner: std::sync::Arc::new(HybridCacheInner {
+                local: OnceLock::new(),
+                local_tags: OnceLock::new(),
+                flight_group: OnceLock::new(),
+                redis_client,
+                redis_conn: tokio::sync::OnceCell::new(),
+                max_local_capacity: 1000,
+            }),
+        }
     }
 
     pub fn with_capacity(redis_client: Option<redis::Client>, capacity: usize) -> Self {
-        Self { inner: std::sync::Arc::new(HybridCacheInner {
-            local: OnceLock::new(),
-            local_tags: OnceLock::new(),
-            flight_group: OnceLock::new(),
-            redis_client,
-            redis_conn: tokio::sync::OnceCell::new(),
-            max_local_capacity: capacity,
-        }) }
+        Self {
+            inner: std::sync::Arc::new(HybridCacheInner {
+                local: OnceLock::new(),
+                local_tags: OnceLock::new(),
+                flight_group: OnceLock::new(),
+                redis_client,
+                redis_conn: tokio::sync::OnceCell::new(),
+                max_local_capacity: capacity,
+            }),
+        }
     }
 
     async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
         if let Some(client) = &self.inner.redis_client {
-            let conn = self.inner.redis_conn.get_or_try_init(|| async {
-                client.get_multiplexed_tokio_connection().await
-            }).await.ok()?;
+            let conn = self
+                .inner
+                .redis_conn
+                .get_or_try_init(|| async { client.get_multiplexed_tokio_connection().await })
+                .await
+                .ok()?;
             Some(conn.clone())
         } else {
             None
@@ -92,7 +96,13 @@ where
 
     /// Gets the value from the cache or fetches it using the provided future.
     /// Ensures that only one fetch happens concurrently for a given key.
-    pub async fn get_or_fetch_with_tags_swr<F, Fut>(&self, key: &str, tags: Vec<String>, ttl: Duration, fetch: F) -> Option<T>
+    pub async fn get_or_fetch_with_tags_swr<F, Fut>(
+        &self,
+        key: &str,
+        tags: Vec<String>,
+        ttl: Duration,
+        fetch: F,
+    ) -> Option<T>
     where
         F: FnOnce() -> Fut + Send + 'static,
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
@@ -122,7 +132,9 @@ where
                     let tags_clone = tags.clone();
                     tokio::spawn(async move {
                         if let Some(val) = fetch().await {
-                            cache_clone.set_with_tags(&key_clone, val.clone(), tags_clone, ttl).await;
+                            cache_clone
+                                .set_with_tags(&key_clone, val.clone(), tags_clone, ttl)
+                                .await;
                             let _ = tx.send(Some(val));
                         }
                         tokio::time::sleep(Duration::from_millis(50)).await;
@@ -159,7 +171,12 @@ where
         }
     }
 
-    pub async fn get_or_fetch_with_swr<F, Fut>(&self, key: &str, ttl: Duration, fetch: F) -> Option<T>
+    pub async fn get_or_fetch_with_swr<F, Fut>(
+        &self,
+        key: &str,
+        ttl: Duration,
+        fetch: F,
+    ) -> Option<T>
     where
         F: FnOnce() -> Fut + Send + 'static,
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
@@ -246,7 +263,12 @@ where
                 if let Ok(item) = serde_json::from_str::<CacheItem<T>>(&data) {
                     // Populate local cache
                     let ttl_secs = if item.ttl_secs > 0 { item.ttl_secs } else { 60 };
-                    self.set_local(key, item.value.clone(), &item.tags, Duration::from_secs(ttl_secs));
+                    self.set_local(
+                        key,
+                        item.value.clone(),
+                        &item.tags,
+                        Duration::from_secs(ttl_secs),
+                    );
                     return Some((item.value, false));
                 } else if let Ok(val) = serde_json::from_str::<T>(&data) {
                     // Backwards compatibility for items saved before tags
@@ -269,7 +291,11 @@ where
         // 2. Set Redis if available
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
-            let item = CacheItem { value, tags: tags.clone(), ttl_secs: ttl.as_secs() };
+            let item = CacheItem {
+                value,
+                tags: tags.clone(),
+                ttl_secs: ttl.as_secs(),
+            };
             if let Ok(data) = serde_json::to_string(&item) {
                 let _: Result<(), _> = conn.set_ex(key, data, ttl.as_secs() as u64).await;
             }
@@ -305,7 +331,6 @@ where
                 }
             }
 
-
             if has_expired {
                 for k in &removed_keys {
                     local.remove(k);
@@ -324,7 +349,6 @@ where
                     }
                 }
             }
-
 
             // Clean up tags
             if !removed_keys.is_empty() {
@@ -413,16 +437,22 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_cache_capacity_eviction() {
         let cache = HybridCache::<String>::with_capacity(None, 2);
-        cache.set("k1", "v1".to_string(), Duration::from_secs(60)).await;
+        cache
+            .set("k1", "v1".to_string(), Duration::from_secs(60))
+            .await;
         tokio::time::sleep(Duration::from_millis(5)).await;
-        cache.set("k2", "v2".to_string(), Duration::from_secs(60)).await;
+        cache
+            .set("k2", "v2".to_string(), Duration::from_secs(60))
+            .await;
         tokio::time::sleep(Duration::from_millis(5)).await;
 
         // Access k1 so k2 becomes the LRU
         let _ = cache.get("k1").await;
         tokio::time::sleep(Duration::from_millis(5)).await;
 
-        cache.set("k3", "v3".to_string(), Duration::from_secs(60)).await;
+        cache
+            .set("k3", "v3".to_string(), Duration::from_secs(60))
+            .await;
 
         let local = cache.get_local();
         assert_eq!(local.len(), 2);
@@ -433,8 +463,22 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_cache_tags() {
         let cache = HybridCache::<String>::with_capacity(None, 10);
-        cache.set_with_tags("k1", "v1".to_string(), vec!["tag1".to_string()], Duration::from_secs(60)).await;
-        cache.set_with_tags("k2", "v2".to_string(), vec!["tag1".to_string(), "tag2".to_string()], Duration::from_secs(60)).await;
+        cache
+            .set_with_tags(
+                "k1",
+                "v1".to_string(),
+                vec!["tag1".to_string()],
+                Duration::from_secs(60),
+            )
+            .await;
+        cache
+            .set_with_tags(
+                "k2",
+                "v2".to_string(),
+                vec!["tag1".to_string(), "tag2".to_string()],
+                Duration::from_secs(60),
+            )
+            .await;
 
         assert_eq!(cache.get("k1").await, Some("v1".to_string()));
         cache.invalidate_by_tag("tag1").await;
@@ -446,8 +490,8 @@ mod tests {
 #[cfg(test)]
 mod tests_singleflight {
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use tokio::time::Duration;
 
     #[tokio::test]
@@ -460,11 +504,17 @@ mod tests_singleflight {
             let cache_clone = cache.clone();
             let count_clone = fetch_count.clone();
             handles.push(tokio::spawn(async move {
-                cache_clone.get_or_fetch_with_swr("test_key", Duration::from_secs(60), move || async move {
-                    count_clone.fetch_add(1, Ordering::SeqCst);
-                    tokio::time::sleep(Duration::from_millis(50)).await;
-                    Some("test_val".to_string())
-                }).await
+                cache_clone
+                    .get_or_fetch_with_swr(
+                        "test_key",
+                        Duration::from_secs(60),
+                        move || async move {
+                            count_clone.fetch_add(1, Ordering::SeqCst);
+                            tokio::time::sleep(Duration::from_millis(50)).await;
+                            Some("test_val".to_string())
+                        },
+                    )
+                    .await
             }));
         }
 

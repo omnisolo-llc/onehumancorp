@@ -308,11 +308,10 @@ async fn bootstrap_postgres(
         .await?;
     let now = chrono::Utc::now();
     let user_id = uuid::Uuid::new_v4().to_string();
-    let claims_exist: bool = sqlx::query_scalar(
-        "SELECT to_regclass('identity_email_claims') IS NOT NULL",
-    )
-    .fetch_one(&mut *transaction)
-    .await?;
+    let claims_exist: bool =
+        sqlx::query_scalar("SELECT to_regclass('identity_email_claims') IS NOT NULL")
+            .fetch_one(&mut *transaction)
+            .await?;
     if claims_exist {
         let claimed = sqlx::query(
             "INSERT INTO identity_email_claims (normalized_email, user_id, claimed_at) VALUES ($1, $2, $3) ON CONFLICT (normalized_email) DO NOTHING",
@@ -641,12 +640,11 @@ mod tests {
                 .await
                 .unwrap();
             assert_eq!(user.1, "admin@example.test");
-            let claim: (String, String) = sqlx::query_as(
-                "SELECT normalized_email, user_id FROM identity_email_claims",
-            )
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+            let claim: (String, String) =
+                sqlx::query_as("SELECT normalized_email, user_id FROM identity_email_claims")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
             assert_eq!(claim, ("admin@example.test".to_string(), user.0));
         })
         .await;
@@ -901,11 +899,10 @@ mod tests {
                     .await
                     .unwrap();
             assert_eq!(tenant_count, 0);
-            let claim_count: i64 =
-                sqlx::query_scalar("SELECT COUNT(*) FROM identity_email_claims")
-                    .fetch_one(&pool)
-                    .await
-                    .unwrap();
+            let claim_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM identity_email_claims")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
             assert_eq!(claim_count, 0);
         })
         .await;

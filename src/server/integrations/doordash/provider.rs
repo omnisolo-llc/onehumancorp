@@ -1,4 +1,4 @@
-use super::client::{DoorDashClient, DeliveryQuote};
+use super::client::{DeliveryQuote, DoorDashClient};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
@@ -29,18 +29,31 @@ impl DoorDashProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 }
 
 impl DoorDashProvider {
-    pub async fn get_delivery_quote(&self, pickup_address: &str, dropoff_address: &str) -> Result<DeliveryQuote, String> {
-        self._client.get_delivery_quote(pickup_address, dropoff_address).await
+    pub async fn get_delivery_quote(
+        &self,
+        pickup_address: &str,
+        dropoff_address: &str,
+    ) -> Result<DeliveryQuote, String> {
+        self._client
+            .get_delivery_quote(pickup_address, dropoff_address)
+            .await
     }
 
-    pub async fn dispatch_delivery(&self, pickup_address: &str, dropoff_address: &str, order_id: &str) -> Result<String, String> {
-        self._client.dispatch_delivery(pickup_address, dropoff_address, order_id).await
+    pub async fn dispatch_delivery(
+        &self,
+        pickup_address: &str,
+        dropoff_address: &str,
+        order_id: &str,
+    ) -> Result<String, String> {
+        self._client
+            .dispatch_delivery(pickup_address, dropoff_address, order_id)
+            .await
     }
 }
 

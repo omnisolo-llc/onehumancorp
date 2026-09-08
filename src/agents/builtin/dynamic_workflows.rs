@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 /// Dynamic workflows orchestrate many subagents from a script Claude writes and you can rerun.
 /// Use them for codebase audits, large migrations, and cross-checked research.
 ///
@@ -5,8 +6,7 @@
 /// - Up to 16 concurrent agents.
 /// - Up to 1,000 agents total per run.
 use std::sync::Arc;
-use tokio::sync::{Semaphore, RwLock, mpsc, watch};
-use std::collections::HashMap;
+use tokio::sync::{RwLock, Semaphore, mpsc, watch};
 
 #[derive(Debug)]
 pub struct DynamicWorkflow {
@@ -117,7 +117,12 @@ impl DynamicWorkflow {
                 };
 
                 if let Some(res) = cached_result {
-                    let _ = tx_clone.send(Ok(TaskResult { task_id: task.id, output: res })).await;
+                    let _ = tx_clone
+                        .send(Ok(TaskResult {
+                            task_id: task.id,
+                            output: res,
+                        }))
+                        .await;
                     return;
                 }
 
@@ -282,13 +287,11 @@ mod tests {
             max_active_observed: Arc::new(AtomicUsize::new(0)),
         });
 
-        let tasks = vec![
-            Task {
-                id: "1".to_string(),
-                instructions: "task 1".to_string(),
-                args: None,
-            },
-        ];
+        let tasks = vec![Task {
+            id: "1".to_string(),
+            instructions: "task 1".to_string(),
+            args: None,
+        }];
 
         // Pre-populate the cache to simulate "already completed"
         {
@@ -319,13 +322,11 @@ mod tests {
             max_active_observed: Arc::new(AtomicUsize::new(0)),
         });
 
-        let tasks = vec![
-            Task {
-                id: "1".to_string(),
-                instructions: "task 1".to_string(),
-                args: None,
-            },
-        ];
+        let tasks = vec![Task {
+            id: "1".to_string(),
+            instructions: "task 1".to_string(),
+            args: None,
+        }];
 
         let results = wf.run_workflow(tasks, agent.clone()).await.unwrap();
         assert_eq!(results.len(), 1);

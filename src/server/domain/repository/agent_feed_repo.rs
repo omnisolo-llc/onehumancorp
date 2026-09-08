@@ -1,7 +1,7 @@
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AgentFeedItem {
@@ -46,7 +46,11 @@ impl AgentFeedRepository {
         Ok(rec)
     }
 
-    pub async fn get(&self, tenant_id: &str, id: &str) -> Result<Option<AgentFeedItem>, sqlx::Error> {
+    pub async fn get(
+        &self,
+        tenant_id: &str,
+        id: &str,
+    ) -> Result<Option<AgentFeedItem>, sqlx::Error> {
         let rec = sqlx::query_as::<_, AgentFeedItem>(
             r#"
             SELECT
@@ -106,7 +110,13 @@ impl AgentFeedRepository {
         Ok(rec)
     }
 
-    pub async fn list(&self, tenant_id: &str, limit: i64, offset: i64, mobile_optimized: bool) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
+    pub async fn list(
+        &self,
+        tenant_id: &str,
+        limit: i64,
+        offset: i64,
+        mobile_optimized: bool,
+    ) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
         let is_pg = match &self.db.store {
             crate::db::DbStore::Postgres => true,
             crate::db::DbStore::Sqlite(_) => false,
@@ -203,14 +213,19 @@ impl AgentFeedRepository {
         Ok(items)
     }
 
-    pub async fn update_state(&self, tenant_id: &str, id: &str, new_state: &str) -> Result<AgentFeedItem, sqlx::Error> {
+    pub async fn update_state(
+        &self,
+        tenant_id: &str,
+        id: &str,
+        new_state: &str,
+    ) -> Result<AgentFeedItem, sqlx::Error> {
         let rec = sqlx::query_as::<_, AgentFeedItem>(
             r#"
             UPDATE agent_feed_items
             SET lifecycle_state = $1, updated_at = NOW()
             WHERE tenant_id = $2 AND id = $3
             RETURNING *
-            "#
+            "#,
         )
         .bind(new_state)
         .bind(tenant_id)
@@ -223,7 +238,13 @@ impl AgentFeedRepository {
         }
 
         // Fallback to agent_approvals
-        let legacy_status = if new_state == "APPROVED" { "APPROVED" } else if new_state == "DISMISSED" { "REJECTED" } else { "DRAFT" };
+        let legacy_status = if new_state == "APPROVED" {
+            "APPROVED"
+        } else if new_state == "DISMISSED" {
+            "REJECTED"
+        } else {
+            "DRAFT"
+        };
         let rows_affected = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
             .bind(legacy_status)
             .bind(tenant_id)
@@ -233,67 +254,87 @@ impl AgentFeedRepository {
             .rows_affected();
 
         if rows_affected == 0 {
-             // Fallback to agent_action_requests
-             let request_status = if new_state == "APPROVED" { "Approved" } else if new_state == "DISMISSED" { "Rejected" } else { "Pending" };
-             let request_rows_affected = sqlx::query("UPDATE agent_action_requests SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+            // Fallback to agent_action_requests
+            let request_status = if new_state == "APPROVED" {
+                "Approved"
+            } else if new_state == "DISMISSED" {
+                "Rejected"
+            } else {
+                "Pending"
+            };
+            let request_rows_affected = sqlx::query("UPDATE agent_action_requests SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
                  .bind(request_status)
                  .bind(tenant_id)
                  .bind(id)
                  .execute(&self.db.pool)
                  .await?.rows_affected();
 
-             if request_rows_affected == 0 {
-                 let is_pg = match &self.db.store {
-                     crate::db::DbStore::Postgres => true,
-                     crate::db::DbStore::Sqlite(_) => false,
-                 };
-                 // Fallback to omni_inbox_messages
-                 let inbox_status = if new_state == "APPROVED" { "sent" } else if new_state == "DISMISSED" { "dismissed" } else { "unread" };
-                 let inbox_rows_affected = sqlx::query("UPDATE omni_inbox_messages SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+            if request_rows_affected == 0 {
+                let is_pg = match &self.db.store {
+                    crate::db::DbStore::Postgres => true,
+                    crate::db::DbStore::Sqlite(_) => false,
+                };
+                // Fallback to omni_inbox_messages
+                let inbox_status = if new_state == "APPROVED" {
+                    "sent"
+                } else if new_state == "DISMISSED" {
+                    "dismissed"
+                } else {
+                    "unread"
+                };
+                let inbox_rows_affected = sqlx::query("UPDATE omni_inbox_messages SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
                      .bind(inbox_status)
                      .bind(tenant_id)
                      .bind(id)
                      .execute(&self.db.pool)
                      .await?.rows_affected();
 
-                 if inbox_rows_affected == 0 {
-                     let order_status = if new_state == "APPROVED" { "processing" } else { "cancelled" };
-                     let order_rows_affected = if is_pg {
+                if inbox_rows_affected == 0 {
+                    let order_status = if new_state == "APPROVED" {
+                        "processing"
+                    } else {
+                        "cancelled"
+                    };
+                    let order_rows_affected = if is_pg {
                         sqlx::query("UPDATE orders SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
                              .bind(order_status)
                              .bind(tenant_id)
                              .bind(id)
                              .execute(&self.db.pool)
                              .await?.rows_affected()
-                     } else {
+                    } else {
                         sqlx::query("UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                              .bind(order_status)
                              .bind(tenant_id)
                              .bind(id)
                              .execute(&self.db.pool)
                              .await?.rows_affected()
-                     };
+                    };
 
-                     if order_rows_affected == 0 {
-                         let invoice_status = if new_state == "APPROVED" { "sent" } else { "cancelled" };
-                         if is_pg {
-                             sqlx::query("UPDATE invoices SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                    if order_rows_affected == 0 {
+                        let invoice_status = if new_state == "APPROVED" {
+                            "sent"
+                        } else {
+                            "cancelled"
+                        };
+                        if is_pg {
+                            sqlx::query("UPDATE invoices SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
                                  .bind(invoice_status)
                                  .bind(tenant_id)
                                  .bind(id)
                                  .execute(&self.db.pool)
                                  .await?;
-                         } else {
-                             sqlx::query("UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                        } else {
+                            sqlx::query("UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                                  .bind(invoice_status)
                                  .bind(tenant_id)
                                  .bind(id)
                                  .execute(&self.db.pool)
                                  .await?;
-                         }
-                     }
-                 }
-             }
+                        }
+                    }
+                }
+            }
         }
 
         let fetched = self.get(tenant_id, id).await?;
@@ -304,13 +345,19 @@ impl AgentFeedRepository {
         Err(sqlx::Error::RowNotFound)
     }
 
-    pub async fn update_payloads(&self, tenant_id: &str, id: &str, context_payload: Option<sqlx::types::Json<serde_json::Value>>, proposed_action: Option<sqlx::types::Json<serde_json::Value>>) -> Result<(), sqlx::Error> {
+    pub async fn update_payloads(
+        &self,
+        tenant_id: &str,
+        id: &str,
+        context_payload: Option<sqlx::types::Json<serde_json::Value>>,
+        proposed_action: Option<sqlx::types::Json<serde_json::Value>>,
+    ) -> Result<(), sqlx::Error> {
         let res = sqlx::query(
             r#"
             UPDATE agent_feed_items
             SET context_payload = $1, proposed_action = $2, updated_at = NOW()
             WHERE tenant_id = $3 AND id = $4
-            "#
+            "#,
         )
         .bind(&context_payload)
         .bind(&proposed_action)
@@ -330,7 +377,7 @@ impl AgentFeedRepository {
                 UPDATE agent_approvals
                 SET payload = $1, updated_at = NOW()
                 WHERE tenant_id = $2 AND id = $3
-                "#
+                "#,
             )
             .bind(action)
             .bind(tenant_id)
@@ -346,7 +393,7 @@ impl AgentFeedRepository {
                     UPDATE agent_action_requests
                     SET payload = $1, updated_at = NOW()
                     WHERE tenant_id = $2 AND id = $3
-                    "#
+                    "#,
                 )
                 .bind(action)
                 .bind(tenant_id)
@@ -362,14 +409,15 @@ impl AgentFeedRepository {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
+    use crate::domain::repository::agent_feed_repo::{AgentFeedItem, AgentFeedRepository};
     use chrono::Utc;
     use uuid::Uuid;
 
     #[tokio::test]
 
     async fn test_agent_feed_repo_lifecycle() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         if !database_url.starts_with("postgres") {
             return;
         }
@@ -381,7 +429,10 @@ mod tests {
             Ok(p) => p,
             Err(_) => return,
         };
-        let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }));
+        let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        }));
 
         let tenant_id = "test-tenant-123";
 
@@ -397,25 +448,41 @@ mod tests {
             updated_at: Some(Utc::now()),
         };
 
-        let created = repo.create(new_item.clone()).await.expect("Failed to create feed item");
+        let created = repo
+            .create(new_item.clone())
+            .await
+            .expect("Failed to create feed item");
         assert_eq!(created.id, new_item.id);
         assert_eq!(created.lifecycle_state, "PENDING");
 
         // 2. Get the item
-        let fetched = repo.get(tenant_id, &new_item.id).await.expect("Failed to get feed item").expect("Item not found");
+        let fetched = repo
+            .get(tenant_id, &new_item.id)
+            .await
+            .expect("Failed to get feed item")
+            .expect("Item not found");
         assert_eq!(fetched.id, new_item.id);
 
         // 3. Update the state
-        let updated = repo.update_state(tenant_id, &new_item.id, "APPROVED").await.expect("Failed to update state");
+        let updated = repo
+            .update_state(tenant_id, &new_item.id, "APPROVED")
+            .await
+            .expect("Failed to update state");
         assert_eq!(updated.lifecycle_state, "APPROVED");
 
         // 4. List items
-        let list = repo.list(tenant_id, 10, 0, false).await.expect("Failed to list feed items");
+        let list = repo
+            .list(tenant_id, 10, 0, false)
+            .await
+            .expect("Failed to list feed items");
         assert!(!list.is_empty());
         assert!(list.iter().any(|i| i.id == new_item.id));
 
         // 5. List items with mobile_optimized = true
-        let list_mobile = repo.list(tenant_id, 10, 0, true).await.expect("Failed to list feed items (mobile)");
+        let list_mobile = repo
+            .list(tenant_id, 10, 0, true)
+            .await
+            .expect("Failed to list feed items (mobile)");
         assert!(!list_mobile.is_empty());
         let mobile_item = list_mobile.iter().find(|i| i.id == new_item.id).unwrap();
         assert!(mobile_item.context_payload.is_none());

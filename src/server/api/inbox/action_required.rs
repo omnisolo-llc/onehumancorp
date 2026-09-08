@@ -1,15 +1,14 @@
+use crate::{db::DB, domain::repository::action_required_queue_repo::ActionRequiredQueueRepo};
 use axum::{
+    Json, Router,
     extract::{Extension, Path, State},
     response::IntoResponse,
-    Json,
     routing::{get, post, put},
-    Router,
 };
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::{db::DB, domain::repository::action_required_queue_repo::ActionRequiredQueueRepo};
 
 pub struct AppState {
     pub db: Arc<DB>,
@@ -68,8 +67,12 @@ async fn list_pending_drafts(
         Ok(drafts) => (axum::http::StatusCode::OK, Json(drafts)).into_response(),
         Err(error) => {
             tracing::error!("Failed to list action-required drafts: {error:?}");
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Drafts unavailable"}))).into_response()
-        },
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Drafts unavailable"})),
+            )
+                .into_response()
+        }
     }
 }
 
@@ -88,19 +91,35 @@ async fn approve_draft(
 
     let draft_id = match Uuid::parse_str(&draft_id_str) {
         Ok(t) => t,
-        Err(_) => return (axum::http::StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid draft ID"}))).into_response(),
+        Err(_) => {
+            return (
+                axum::http::StatusCode::BAD_REQUEST,
+                Json(json!({"error": "Invalid draft ID"})),
+            )
+                .into_response();
+        }
     };
 
     let repo = ActionRequiredQueueRepo::new(state.db.clone());
     match repo.approve_draft(draft_id, tenant_id).await {
-        Ok(true) => {
-            (axum::http::StatusCode::OK, Json(json!({"status": "approved"}))).into_response()
-        },
-        Ok(false) => (axum::http::StatusCode::NOT_FOUND, Json(json!({"error": "Draft not found"}))).into_response(),
+        Ok(true) => (
+            axum::http::StatusCode::OK,
+            Json(json!({"status": "approved"})),
+        )
+            .into_response(),
+        Ok(false) => (
+            axum::http::StatusCode::NOT_FOUND,
+            Json(json!({"error": "Draft not found"})),
+        )
+            .into_response(),
         Err(error) => {
             tracing::error!("Failed to approve action-required draft: {error:?}");
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Draft update failed"}))).into_response()
-        },
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Draft update failed"})),
+            )
+                .into_response()
+        }
     }
 }
 
@@ -126,7 +145,13 @@ async fn edit_draft(
 
     let draft_id = match Uuid::parse_str(&draft_id_str) {
         Ok(t) => t,
-        Err(_) => return (axum::http::StatusCode::BAD_REQUEST, Json(json!({"error": "Invalid draft ID"}))).into_response(),
+        Err(_) => {
+            return (
+                axum::http::StatusCode::BAD_REQUEST,
+                Json(json!({"error": "Invalid draft ID"})),
+            )
+                .into_response();
+        }
     };
     if payload.response.trim().is_empty() || payload.response.chars().count() > 16_000 {
         return (
@@ -137,14 +162,27 @@ async fn edit_draft(
     }
 
     let repo = ActionRequiredQueueRepo::new(state.db.clone());
-    match repo.update_draft_response(draft_id, tenant_id, &payload.response).await {
-        Ok(true) => {
-            (axum::http::StatusCode::OK, Json(json!({"status": "edited"}))).into_response()
-        },
-        Ok(false) => (axum::http::StatusCode::NOT_FOUND, Json(json!({"error": "Draft not found"}))).into_response(),
+    match repo
+        .update_draft_response(draft_id, tenant_id, &payload.response)
+        .await
+    {
+        Ok(true) => (
+            axum::http::StatusCode::OK,
+            Json(json!({"status": "edited"})),
+        )
+            .into_response(),
+        Ok(false) => (
+            axum::http::StatusCode::NOT_FOUND,
+            Json(json!({"error": "Draft not found"})),
+        )
+            .into_response(),
         Err(error) => {
             tracing::error!("Failed to edit action-required draft: {error:?}");
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Draft update failed"}))).into_response()
-        },
+            (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Draft update failed"})),
+            )
+                .into_response()
+        }
     }
 }

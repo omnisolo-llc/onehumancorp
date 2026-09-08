@@ -1,21 +1,19 @@
-use axum::{
-    extract::{Extension, State, Path, Query},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::{get, post},
-    Router,
-    Json,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use crate::utils::cache::HybridCache;
-use std::sync::OnceLock;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
+use crate::utils::cache::HybridCache;
 use ::server_common::Claims;
+use axum::{
+    Json, Router,
+    extract::{Extension, Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::sync::OnceLock;
 
 pub static APPROVALS_CACHE: OnceLock<HybridCache<ApprovalsResponse>> = OnceLock::new();
-
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ApprovalsResponse {
@@ -41,14 +39,19 @@ pub struct DecisionResponse {
     pub success: bool,
 }
 
-
 async fn simulate_promoter_draft(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let description = "New product detected! Schedule a post to drive sales?";
@@ -67,19 +70,26 @@ async fn simulate_promoter_draft(
         "product_name": product_name
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::Marketing,
-        format!("Draft Social Post: {}", product_name),
-        tenant_id.clone(),
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        parsed.clone(),
-    ).await {
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::Marketing,
+            format!("Draft Social Post: {}", product_name),
+            tenant_id.clone(),
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            parsed.clone(),
+        )
+        .await
+    {
         Ok(_) => {
             let pool = crate::db::get_pool();
             let agent_feed_item_id = uuid::Uuid::new_v4().to_string();
 
             // Insert fallback feed item so it shows up in UI Unified Agent Feed correctly
-            let insert_res = if std::env::var("OHC_DATABASE_URL").unwrap_or_default().starts_with("sqlite") || std::env::var("OHC_DATABASE_URL").is_err() {
+            let insert_res = if std::env::var("OHC_DATABASE_URL")
+                .unwrap_or_default()
+                .starts_with("sqlite")
+                || std::env::var("OHC_DATABASE_URL").is_err()
+            {
                 sqlx::query(
                     "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                 )
@@ -105,10 +115,14 @@ async fn simulate_promoter_draft(
             }
 
             (StatusCode::OK, Json(DecisionResponse { success: true })).into_response()
-        },
+        }
         Err(e) => {
             tracing::error!("Failed to simulate promoter draft: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -123,19 +137,36 @@ where
         .route("/ledger", get(list_ledger_entries))
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
-        .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
-        .route("/simulate-ambassador-draft", post(simulate_ambassador_draft))
+        .route(
+            "/simulate-stockout-reorder",
+            post(simulate_stockout_reorder),
+        )
+        .route(
+            "/simulate-ambassador-draft",
+            post(simulate_ambassador_draft),
+        )
         .route("/simulate-promoter-draft", post(simulate_promoter_draft))
-        .route("/simulate-dispute-resolution", post(simulate_dispute_resolution))
-        .route("/simulate-newsletter-draft", post(simulate_newsletter_draft))
-        .route("/simulate-autonomous-booking-quote", post(simulate_autonomous_booking_quote))
+        .route(
+            "/simulate-dispute-resolution",
+            post(simulate_dispute_resolution),
+        )
+        .route(
+            "/simulate-newsletter-draft",
+            post(simulate_newsletter_draft),
+        )
+        .route(
+            "/simulate-autonomous-booking-quote",
+            post(simulate_autonomous_booking_quote),
+        )
         .route("/simulate-invoice-draft", post(simulate_invoice_draft))
-        .route("/simulate-invoice-followup", post(simulate_invoice_followup))
+        .route(
+            "/simulate-invoice-followup",
+            post(simulate_invoice_followup),
+        )
         .route("/simulate-lead-recovery", post(simulate_lead_recovery))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
 }
-
 
 async fn simulate_stockout_reorder(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
@@ -143,14 +174,27 @@ async fn simulate_stockout_reorder(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
-    match orchestrator.simulate_stockout_restock_and_price(&tenant_id).await {
+    match orchestrator
+        .simulate_stockout_restock_and_price(&tenant_id)
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate stockout reorder: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -161,7 +205,13 @@ async fn simulate_newsletter_draft(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let payload = serde_json::json!({
@@ -172,17 +222,24 @@ async fn simulate_newsletter_draft(
         "draft_copy": "Hey everyone, we just restocked our popular summer dresses. Click here to check them out...",
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::Marketing,
-        "Draft weekly newsletter".to_string(),
-        tenant_id,
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::Marketing,
+            "Draft weekly newsletter".to_string(),
+            tenant_id,
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload,
+        )
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate newsletter draft: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -193,7 +250,13 @@ async fn simulate_quote_draft(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let payload = serde_json::json!({
@@ -205,17 +268,24 @@ async fn simulate_quote_draft(
         "suggested_time": "Tomorrow at 2 PM",
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::Sales,
-        "Action Required: Approve Estimate for 2-Bedroom Apartment Painting".to_string(),
-        tenant_id,
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::Sales,
+            "Action Required: Approve Estimate for 2-Bedroom Apartment Painting".to_string(),
+            tenant_id,
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload,
+        )
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate quote draft: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -226,14 +296,24 @@ async fn simulate_smart_pricing(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     match orchestrator.simulate_smart_pricing(&tenant_id).await {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate smart pricing: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -244,7 +324,13 @@ async fn simulate_dispute_resolution(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let payload = serde_json::json!({
@@ -261,17 +347,24 @@ async fn simulate_dispute_resolution(
         "past_orders": "Returning Customer (2 past orders).",
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
-        "Draft dispute resolution for review".to_string(),
-        tenant_id,
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+            "Draft dispute resolution for review".to_string(),
+            tenant_id,
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload,
+        )
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate dispute resolution: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -282,7 +375,13 @@ async fn simulate_ambassador_draft(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let payload = serde_json::json!({
@@ -298,23 +397,27 @@ async fn simulate_ambassador_draft(
         "past_orders": "Returning Customer (2 past orders).",
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
-        "Customer Inquiry Reply Draft".to_string(),
-        tenant_id.clone(),
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload.clone(),
-    ).await {
-        Ok(_) => {
-            (StatusCode::OK, Json(DecisionResponse { success: true })).into_response()
-        },
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+            "Customer Inquiry Reply Draft".to_string(),
+            tenant_id.clone(),
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload.clone(),
+        )
+        .await
+    {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate ambassador draft: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
-
 
 async fn list_approvals(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
@@ -323,12 +426,27 @@ async fn list_approvals(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApprovalsResponse {
+                    pending_approvals: vec![],
+                    next_cursor: None,
+                }),
+            )
+                .into_response();
+        }
     };
 
     let limit = query.limit.unwrap_or(20);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let cache_key = format!("approvals:{}:{}:{}:{}", tenant_id, query.cursor.as_deref().unwrap_or("none"), limit, mobile_optimized);
+    let cache_key = format!(
+        "approvals:{}:{}:{}:{}",
+        tenant_id,
+        query.cursor.as_deref().unwrap_or("none"),
+        limit,
+        mobile_optimized
+    );
     let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -341,7 +459,9 @@ async fn list_approvals(
         let orchestrator_bg = orchestrator.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let mut approvals = orchestrator_bg.get_pending_approvals(&tenant_id_bg, cursor_bg, limit as i64).await;
+            let mut approvals = orchestrator_bg
+                .get_pending_approvals(&tenant_id_bg, cursor_bg, limit as i64)
+                .await;
             if mobile_optimized {
                 for a in &mut approvals {
                     a.payload = None;
@@ -353,14 +473,24 @@ async fn list_approvals(
                 None
             };
             if let Some(c) = APPROVALS_CACHE.get() {
-                c.set(&cache_key_bg, ApprovalsResponse { pending_approvals: approvals, next_cursor }, std::time::Duration::from_secs(10)).await;
+                c.set(
+                    &cache_key_bg,
+                    ApprovalsResponse {
+                        pending_approvals: approvals,
+                        next_cursor,
+                    },
+                    std::time::Duration::from_secs(10),
+                )
+                .await;
             }
         });
 
         return (StatusCode::OK, Json(cached)).into_response();
     }
 
-    let mut approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let mut approvals = orchestrator
+        .get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64)
+        .await;
     if mobile_optimized {
         for a in &mut approvals {
             a.payload = None;
@@ -377,11 +507,16 @@ async fn list_approvals(
         pending_approvals: approvals,
         next_cursor,
     };
-    cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(10)).await;
+    cache
+        .set(
+            &cache_key,
+            response.clone(),
+            std::time::Duration::from_secs(10),
+        )
+        .await;
 
     (StatusCode::OK, Json(response)).into_response()
 }
-
 
 async fn list_activity_feed(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
@@ -390,12 +525,27 @@ async fn list_activity_feed(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApprovalsResponse {
+                    pending_approvals: vec![],
+                    next_cursor: None,
+                }),
+            )
+                .into_response();
+        }
     };
 
     let limit = query.limit.unwrap_or(20);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let cache_key = format!("activity_feed:{}:{}:{}:{}", tenant_id, query.cursor.as_deref().unwrap_or("none"), limit, mobile_optimized);
+    let cache_key = format!(
+        "activity_feed:{}:{}:{}:{}",
+        tenant_id,
+        query.cursor.as_deref().unwrap_or("none"),
+        limit,
+        mobile_optimized
+    );
     let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
 
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -408,7 +558,9 @@ async fn list_activity_feed(
         let orchestrator_bg = orchestrator.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let mut activities = orchestrator_bg.get_activity_feed(&tenant_id_bg, cursor_bg, limit as i64).await;
+            let mut activities = orchestrator_bg
+                .get_activity_feed(&tenant_id_bg, cursor_bg, limit as i64)
+                .await;
             if mobile_optimized {
                 for a in &mut activities {
                     a.payload = None;
@@ -420,14 +572,24 @@ async fn list_activity_feed(
                 None
             };
             if let Some(c) = APPROVALS_CACHE.get() {
-                c.set(&cache_key_bg, ApprovalsResponse { pending_approvals: activities, next_cursor }, std::time::Duration::from_secs(10)).await;
+                c.set(
+                    &cache_key_bg,
+                    ApprovalsResponse {
+                        pending_approvals: activities,
+                        next_cursor,
+                    },
+                    std::time::Duration::from_secs(10),
+                )
+                .await;
             }
         });
 
         return (StatusCode::OK, Json(cached)).into_response();
     }
 
-    let mut activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let mut activities = orchestrator
+        .get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64)
+        .await;
     if mobile_optimized {
         for a in &mut activities {
             a.payload = None;
@@ -444,7 +606,13 @@ async fn list_activity_feed(
         pending_approvals: activities,
         next_cursor,
     };
-    cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(10)).await;
+    cache
+        .set(
+            &cache_key,
+            response.clone(),
+            std::time::Duration::from_secs(10),
+        )
+        .await;
 
     (StatusCode::OK, Json(response)).into_response()
 }
@@ -457,16 +625,28 @@ async fn decide_approval(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
-    match orchestrator.decide_approval(&id, &tenant_id, payload.approved, payload.edited_payload).await {
+    match orchestrator
+        .decide_approval(&id, &tenant_id, payload.approved, payload.edited_payload)
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(DecisionResponse { success: false }),
+        )
+            .into_response(),
     }
 }
 // Support for AI Agent Department Architecture
-
 
 async fn list_ledger_entries(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
@@ -475,14 +655,31 @@ async fn list_ledger_entries(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "entries": [] }))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({ "entries": [] })),
+            )
+                .into_response();
+        }
     };
 
     let limit = query.limit.unwrap_or(50);
 
-    match orchestrator.get_ledger_entries(&tenant_id, limit as i64).await {
-        Ok(entries) => (StatusCode::OK, Json(serde_json::json!({ "entries": entries }))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e }))).into_response(),
+    match orchestrator
+        .get_ledger_entries(&tenant_id, limit as i64)
+        .await
+    {
+        Ok(entries) => (
+            StatusCode::OK,
+            Json(serde_json::json!({ "entries": entries })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e })),
+        )
+            .into_response(),
     }
 }
 
@@ -504,7 +701,13 @@ mod tests {
             next_cursor: None,
         };
 
-        cache.set(&cache_key, dummy_resp.clone(), std::time::Duration::from_secs(60)).await;
+        cache
+            .set(
+                &cache_key,
+                dummy_resp.clone(),
+                std::time::Duration::from_secs(60),
+            )
+            .await;
 
         let cached_val = cache.get(&cache_key).await;
         assert!(cached_val.is_some(), "Cache should hit after set");
@@ -517,7 +720,13 @@ async fn simulate_invoice_draft(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let payload = serde_json::json!({
@@ -539,17 +748,24 @@ async fn simulate_invoice_draft(
         }
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::Finance,
-        "Draft invoice for completed project milestone".to_string(),
-        tenant_id,
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::Finance,
+            "Draft invoice for completed project milestone".to_string(),
+            tenant_id,
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload,
+        )
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate invoice draft: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -560,7 +776,13 @@ async fn simulate_invoice_followup(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let payload = serde_json::json!({
@@ -573,17 +795,24 @@ async fn simulate_invoice_followup(
         "suggested_channel": "email"
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::Finance,
-        "Draft personalized invoice follow-up for review".to_string(),
-        tenant_id,
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::Finance,
+            "Draft personalized invoice follow-up for review".to_string(),
+            tenant_id,
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload,
+        )
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate invoice followup: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -594,15 +823,24 @@ async fn simulate_autonomous_booking_quote(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let proposed_slot_id = uuid::Uuid::new_v4().to_string();
 
     // Acquire Redis Redlock for the slot
     if let Ok(redis_url) = std::env::var("OHC_REDIS_URL").or_else(|_| std::env::var("REDIS_URL")) {
-        if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url) {
-            let _ = redis_lock.acquire_lock(&tenant_id, "booking_slot", &proposed_slot_id, 600).await;
+        if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url)
+        {
+            let _ = redis_lock
+                .acquire_lock(&tenant_id, "booking_slot", &proposed_slot_id, 600)
+                .await;
         }
     }
 
@@ -622,17 +860,24 @@ async fn simulate_autonomous_booking_quote(
         "inbox_message_id": "msg_simulated_quote_123"
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::Sales,
-        "Draft quote and propose schedule for Emergency Handyman Service".to_string(),
-        tenant_id.clone(),
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::Sales,
+            "Draft quote and propose schedule for Emergency Handyman Service".to_string(),
+            tenant_id.clone(),
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload,
+        )
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate autonomous booking quote: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }
@@ -643,7 +888,13 @@ async fn simulate_lead_recovery(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
     let payload = serde_json::json!({
@@ -653,17 +904,24 @@ async fn simulate_lead_recovery(
         "inbox_message_id": "msg-lead-recovery"
     });
 
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
-        "Follow up on missed lead".to_string(),
-        tenant_id,
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
+    match orchestrator
+        .execute_action(
+            crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+            "Follow up on missed lead".to_string(),
+            tenant_id,
+            crate::orchestration::departments::types::ActionRisk::DraftForReview,
+            payload,
+        )
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate lead recovery: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response()
         }
     }
 }

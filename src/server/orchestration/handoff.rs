@@ -1,6 +1,6 @@
-use crate::db::{DbStore, DB};
-use ::server_ohc::orchestration::SyncStateHandoff;
+use crate::db::{DB, DbStore};
 use crate::orchestration::mesh::TeammateMesh;
+use ::server_ohc::orchestration::SyncStateHandoff;
 use ohc_builtin_agent::mesh::transport::Message as MeshMessage;
 use prost::Message;
 use std::sync::Arc;
@@ -166,8 +166,8 @@ impl HandoffManager {
 mod tests {
     use super::*;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
-    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use sqlx::Row;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
 
     #[tokio::test]
@@ -509,9 +509,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_with_failed_lock() {
-        let conn_opts = <sqlx::sqlite::SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
-            .unwrap()
-            .create_if_missing(true);
+        let conn_opts =
+            <sqlx::sqlite::SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+                .unwrap()
+                .create_if_missing(true);
 
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1)
@@ -525,11 +526,15 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: crate::db::secure_pg_pool_options()
+                .acquire_timeout(std::time::Duration::from_millis(10))
+                .connect_lazy("postgres://localhost/dummy")
+                .unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
-        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport =
+            std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));
@@ -550,7 +555,9 @@ mod tests {
             "handoff:{}:{}:{}",
             handoff.entity_type, handoff.tenant_id, handoff.state_id
         );
-        mesh.acquire_lock(&lock_key, "another_owner", 60).await.unwrap();
+        mesh.acquire_lock(&lock_key, "another_owner", 60)
+            .await
+            .unwrap();
 
         let mut buf = Vec::new();
         prost::Message::encode(&handoff, &mut buf).unwrap();
@@ -559,21 +566,26 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
-        let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state_locked'")
-            .fetch_optional(&pool)
-            .await
-            .unwrap();
+        let row =
+            sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state_locked'")
+                .fetch_optional(&pool)
+                .await
+                .unwrap();
 
-        assert!(row.is_none(), "Handoff should not process because lock is held by someone else");
+        assert!(
+            row.is_none(),
+            "Handoff should not process because lock is held by someone else"
+        );
 
         cancel();
     }
 
     #[tokio::test]
     async fn test_initiate_handoff_with_invalid_entity() {
-        let conn_opts = <sqlx::sqlite::SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
-            .unwrap()
-            .create_if_missing(true);
+        let conn_opts =
+            <sqlx::sqlite::SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+                .unwrap()
+                .create_if_missing(true);
 
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1)
@@ -582,27 +594,39 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: crate::db::secure_pg_pool_options()
+                .acquire_timeout(std::time::Duration::from_millis(10))
+                .connect_lazy("postgres://localhost/dummy")
+                .unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
-        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport =
+            std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));
 
         let manager = HandoffManager::new(mesh.clone(), db.clone(), true);
 
-        let result = manager.initiate_handoff("tenant_1", "state_1", b"state_data".to_vec(), "unknown_entity_type").await;
+        let result = manager
+            .initiate_handoff(
+                "tenant_1",
+                "state_1",
+                b"state_data".to_vec(),
+                "unknown_entity_type",
+            )
+            .await;
 
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_handoff_reflection_prevention() {
-        let conn_opts = <sqlx::sqlite::SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
-            .unwrap()
-            .create_if_missing(true);
+        let conn_opts =
+            <sqlx::sqlite::SqliteConnectOptions as std::str::FromStr>::from_str("sqlite::memory:")
+                .unwrap()
+                .create_if_missing(true);
 
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1)
@@ -616,11 +640,15 @@ mod tests {
             .unwrap();
 
         let db = std::sync::Arc::new(crate::db::DB {
-            pool: crate::db::secure_pg_pool_options().acquire_timeout(std::time::Duration::from_millis(10)).connect_lazy("postgres://localhost/dummy").unwrap(),
+            pool: crate::db::secure_pg_pool_options()
+                .acquire_timeout(std::time::Duration::from_millis(10))
+                .connect_lazy("postgres://localhost/dummy")
+                .unwrap(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         });
 
-        let transport = std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let transport =
+            std::sync::Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
             transport.clone(),
         ));
@@ -645,10 +673,12 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'test_state_reflection'")
-            .fetch_optional(&pool)
-            .await
-            .unwrap();
+        let row = sqlx::query(
+            "SELECT raw_content FROM agent_memories WHERE id = 'test_state_reflection'",
+        )
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
 
         assert!(row.is_none());
 

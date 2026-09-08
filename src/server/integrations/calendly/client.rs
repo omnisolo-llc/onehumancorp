@@ -26,11 +26,7 @@ impl CalendlyClient {
     }
 
     fn api_url(&self, path: &str) -> String {
-        format!(
-            "{}{}",
-            self.base_url.trim_end_matches('/'),
-            path
-        )
+        format!("{}{}", self.base_url.trim_end_matches('/'), path)
     }
 
     fn validated_access_token(&self) -> Result<&str, String> {
@@ -55,7 +51,10 @@ impl CalendlyClient {
             .map_err(|e| format!("Network error fetching user: {}", e))?;
 
         if !user_resp.status().is_success() {
-            return Err(format!("Calendly API error fetching user: {}", user_resp.status()));
+            return Err(format!(
+                "Calendly API error fetching user: {}",
+                user_resp.status()
+            ));
         }
 
         let user_json: Value = user_resp
@@ -145,7 +144,10 @@ impl CalendlyClient {
         } else {
             let status = resp.status();
             let body = resp.text().await.unwrap_or_default();
-            Err(format!("Calendly API error creating event: {} - {}", status, body))
+            Err(format!(
+                "Calendly API error creating event: {} - {}",
+                status, body
+            ))
         }
     }
 
@@ -171,7 +173,10 @@ impl CalendlyClient {
             let text = resp.text().await.unwrap_or_default();
             Ok(text)
         } else {
-            Err(format!("Calendly API error fetching free/busy: {}", resp.status()))
+            Err(format!(
+                "Calendly API error fetching free/busy: {}",
+                resp.status()
+            ))
         }
     }
 }
@@ -204,8 +209,7 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) =
-                        request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);
@@ -233,7 +237,9 @@ mod tests {
                 response_body
             );
             stream.write_all(response.as_bytes()).await.unwrap();
-            request_tx.send(String::from_utf8(request).unwrap()).unwrap();
+            request_tx
+                .send(String::from_utf8(request).unwrap())
+                .unwrap();
         });
 
         (base_url, request_rx)
@@ -329,7 +335,8 @@ mod tests {
             ]
         }"#;
 
-        let (base_url, requests_rx) = start_calendly_multi_server(vec![user_response, events_response]).await;
+        let (base_url, requests_rx) =
+            start_calendly_multi_server(vec![user_response, events_response]).await;
         let client = CalendlyClient::with_base_url_for_test("test-token".to_string(), base_url);
 
         let event_types = client.fetch_event_types().await.unwrap();
@@ -379,7 +386,10 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(event_uri, "https://api.calendly.com/scheduled_events/EEEE2222");
+        assert_eq!(
+            event_uri,
+            "https://api.calendly.com/scheduled_events/EEEE2222"
+        );
 
         let request = request_rx.await.unwrap();
         assert!(request_method(&request) == "POST");
@@ -468,8 +478,7 @@ mod tests {
                 request.extend_from_slice(&buffer[..read]);
 
                 if header_end.is_none() {
-                    if let Some(index) =
-                        request.windows(4).position(|window| window == b"\r\n\r\n")
+                    if let Some(index) = request.windows(4).position(|window| window == b"\r\n\r\n")
                     {
                         header_end = Some(index + 4);
                         let headers = String::from_utf8_lossy(&request[..index]);

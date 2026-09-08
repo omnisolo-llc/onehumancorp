@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use tokio::time::Duration;
 use crate::db::DB;
 use sqlx::Row;
+use std::sync::Arc;
+use tokio::time::Duration;
 use uuid::Uuid;
 
 pub struct DepositFollowUpWorker {
@@ -83,10 +83,10 @@ impl DepositFollowUpWorker {
         };
 
         if let Some((quote_id, tenant_id, customer_name, amount)) = row_data {
-
             let follow_up_msg = format!(
                 "Hi {}, just following up on the estimate for ${:.2}. Let me know if you have any questions or are ready to move forward with the deposit!",
-                customer_name, (amount as f64) / 100.0
+                customer_name,
+                (amount as f64) / 100.0
             );
 
             let agent_feed_item_id = Uuid::new_v4().to_string();
@@ -114,9 +114,9 @@ impl DepositFollowUpWorker {
                     sqlx::query("UPDATE quotes SET last_follow_up_at = NOW(), follow_up_count = follow_up_count + 1 WHERE id = $1")
                         .bind(quote_id)
                         .execute(&self.db.pool).await.map_err(|e| e.to_string())?;
-                },
+                }
                 crate::db::DbStore::Sqlite(pool) => {
-                     sqlx::query(
+                    sqlx::query(
                         "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                     )
                     .bind(&agent_feed_item_id)
@@ -157,8 +157,12 @@ mod tests {
         let amount = 15000;
         let follow_up_msg = format!(
             "Hi {}, just following up on the estimate for ${:.2}. Let me know if you have any questions or are ready to move forward with the deposit!",
-            customer_name, (amount as f64) / 100.0
+            customer_name,
+            (amount as f64) / 100.0
         );
-        assert_eq!(follow_up_msg, "Hi Carlos, just following up on the estimate for $150.00. Let me know if you have any questions or are ready to move forward with the deposit!");
+        assert_eq!(
+            follow_up_msg,
+            "Hi Carlos, just following up on the estimate for $150.00. Let me know if you have any questions or are ready to move forward with the deposit!"
+        );
     }
 }

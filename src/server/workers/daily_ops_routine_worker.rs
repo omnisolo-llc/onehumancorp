@@ -1,8 +1,8 @@
-use std::sync::Arc;
 use crate::db::DB;
+use std::sync::Arc;
 
-use uuid::Uuid;
 use serde_json::json;
+use uuid::Uuid;
 
 pub struct DailyOpsRoutineWorker {
     pub db: Arc<DB>,
@@ -22,18 +22,14 @@ impl DailyOpsRoutineWorker {
 
                 // 1. Get all active tenants
                 let tenants: Vec<String> = match &db.store {
-                    crate::db::DbStore::Postgres => {
-                        sqlx::query_scalar("SELECT id FROM tenants")
-                            .fetch_all(&db.pool)
-                            .await
-                            .unwrap_or_default()
-                    },
-                    crate::db::DbStore::Sqlite(_) => {
-                        sqlx::query_scalar("SELECT id FROM tenants")
-                            .fetch_all(&db.pool)
-                            .await
-                            .unwrap_or_default()
-                    }
+                    crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT id FROM tenants")
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or_default(),
+                    crate::db::DbStore::Sqlite(_) => sqlx::query_scalar("SELECT id FROM tenants")
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or_default(),
                 };
 
                 for tenant_id in tenants {
@@ -110,7 +106,7 @@ impl DailyOpsRoutineWorker {
                                 .bind(&tenant_id)
                                 .bind(sqlx::types::Json(payload))
                                 .execute(&db.pool).await;
-                            },
+                            }
                             crate::db::DbStore::Sqlite(_) => {
                                 let payload_str = payload.to_string();
                                 let _ = sqlx::query(
@@ -143,10 +139,13 @@ impl DailyOpsRoutineWorker {
 
                         let conn_result = db.pool.acquire().await;
                         if let Ok(mut conn) = conn_result {
-                             let _ = ::server_common::auth_utils::set_org_context(&mut *conn, &tenant_id).await;
-                             let context_payload_json = sqlx::types::Json(context_payload);
-                             let proposed_action_json = sqlx::types::Json(proposed_action);
-                             let _ = sqlx::query(
+                            let _ = ::server_common::auth_utils::set_org_context(
+                                &mut *conn, &tenant_id,
+                            )
+                            .await;
+                            let context_payload_json = sqlx::types::Json(context_payload);
+                            let proposed_action_json = sqlx::types::Json(proposed_action);
+                            let _ = sqlx::query(
                                  r#"
                                  INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
                                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
