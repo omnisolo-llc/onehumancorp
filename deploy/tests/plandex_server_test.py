@@ -33,6 +33,12 @@ class DatabaseConfigurationTests(unittest.TestCase):
                 with self.subTest(content_length=len(content)), self.assertRaises(ValueError):
                     entrypoint.configure_database({'DB_PASSWORD_FILE': str(secret)})
 
+    def test_split_configuration_respects_explicit_ssl_mode_and_escapes_credentials(self):
+        env = dict(DB_HOST='db', DB_PORT='5432', DB_USER='plandex', DB_NAME='plandex',
+                   DB_PASSWORD='p@ss/word?', DB_SSLMODE='disable')
+        entrypoint.configure_database(env)
+        self.assertEqual(env.get('DATABASE_URL'), 'postgres://plandex:p%40ss%2Fword%3F@db:5432/plandex?sslmode=disable')
+
     def test_incomplete_configuration_is_rejected(self):
         with self.assertRaises(ValueError):
             entrypoint.configure_database({'DB_HOST': 'database'})

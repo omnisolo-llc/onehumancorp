@@ -526,6 +526,7 @@ services:
       - /tmp:mode=1777
     environment:
       DB_HOST: plandex-postgres
+      DB_SSLMODE: disable
       DB_PORT: "5432"
       DB_USER: plandex
       DB_NAME: plandex

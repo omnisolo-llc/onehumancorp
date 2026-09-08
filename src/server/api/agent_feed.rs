@@ -1,3 +1,4 @@
+use super::ws_compression::{encode_json, negotiate};
 use axum::{
     Json, Router,
     extract::{
@@ -120,10 +121,11 @@ pub async fn ws_feed_handler(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    ws.on_upgrade(move |socket| handle_feed_socket(socket, tenant_id))
+    let (ws, gzip) = negotiate(ws);
+    ws.on_upgrade(move |socket| handle_feed_socket(socket, tenant_id, gzip))
 }
 
-async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
+async fn handle_feed_socket(socket: WebSocket, tenant_id: String, gzip: bool) {
     let (mut sender, mut receiver) = socket.split();
 
     let client = get_redis_client();
@@ -161,7 +163,7 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
     // Task 1: Redis subscriber → buffer (non-blocking, drops oldest on full)
     let buf_producer = buffer.clone();
     let notify_producer = notify.clone();
-    let pubsub_task = tokio::spawn(async move {
+    let mut pubsub_task = tokio::spawn(async move {
         while let Some(msg) = stream.next().await {
             let payload: String = match msg.get_payload() {
                 Ok(p) => p,
@@ -193,13 +195,19 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
             // Drain all available messages from buffer first
             {
                 let mut q = buf_consumer.lock().await;
-                while let Some(msg) = q.pop_front() {
+                if batch.is_empty() && !q.is_empty() {
+                    tick.reset();
+                }
+                while batch.len() < 20 {
+                    let Some(msg) = q.pop_front() else { break };
                     batch.push(msg);
                 }
             }
 
             if batch.len() >= 20 {
-                flush_batch(&mut sender, &mut batch).await;
+                if flush_batch(&mut sender, &mut batch, gzip).await.is_err() {
+                    return;
+                }
                 continue;
             }
 
@@ -210,7 +218,7 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
                         // More messages may be available — loop back to drain
                     }
                     _ = tick.tick() => {
-                        flush_batch(&mut sender, &mut batch).await;
+                        if flush_batch(&mut sender, &mut batch, gzip).await.is_err() { return; }
                     }
                     else => break,
                 }
@@ -229,7 +237,9 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
         }
         // Flush any remaining messages
         if !batch.is_empty() {
-            flush_batch(&mut sender, &mut batch).await;
+            if flush_batch(&mut sender, &mut batch, gzip).await.is_err() {
+                return;
+            }
         }
     });
 
@@ -248,31 +258,22 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
             send_task.abort();
             pubsub_task.abort();
         },
+        _ = (&mut pubsub_task) => {
+            send_task.abort();
+            recv_task.abort();
+        },
     };
 }
 
 async fn flush_batch(
     sender: &mut futures::stream::SplitSink<WebSocket, WsMessage>,
     batch: &mut Vec<String>,
-) {
-    if batch.len() == 1 {
-        // Single message — send directly for backwards compatibility
-        let msg = batch.remove(0);
-        let _ = sender.send(WsMessage::Text(msg.into())).await;
-    } else {
-        // Multiple messages — send as batch
-        let items: Vec<serde_json::Value> = batch
-            .drain(..)
-            .map(|m| serde_json::Value::String(m))
-            .collect();
-        let batch_msg = serde_json::json!({
-            "type": "batch",
-            "items": items
-        });
-        let _ = sender
-            .send(WsMessage::Text(batch_msg.to_string().into()))
-            .await;
+    gzip: bool,
+) -> Result<(), axum::Error> {
+    if let Some(payload) = super::ws_batch::take_batch(batch) {
+        sender.send(encode_json(payload, gzip)).await?;
     }
+    Ok(())
 }
 
 async fn list_feed_items(
@@ -753,7 +754,7 @@ mod tests {
                 let items = parsed["items"].as_array().expect("items not an array");
                 assert_eq!(items.len(), 5);
                 for i in 0..5 {
-                    assert_eq!(items[i], format!("{{\"seq\":{}}}", i));
+                    assert_eq!(items[i], serde_json::json!({"seq": i}));
                 }
             }
         }

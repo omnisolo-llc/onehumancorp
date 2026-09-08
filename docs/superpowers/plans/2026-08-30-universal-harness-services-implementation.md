@@ -1,5 +1,7 @@
 # Universal Harness Services Implementation Plan
 
+> **Completion — 2026-09-08:** Implementation and acceptance are complete. See the [completion ledger and verification evidence](../../technical/reports/2026-09-08-harness-plan-review.md). Historical step-by-step instructions below are retained as the original plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Finish the eight native harness integrations behind a common provider facade and scoped local-service contract, then add the four pinned OpenAI-compatible shim harnesses without losing shared memory, tools, workspace, artifacts, browser, cache, integration, or persistence behavior.

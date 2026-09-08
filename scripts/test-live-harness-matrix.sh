@@ -85,6 +85,25 @@ for harness in "${harnesses[@]:0:native_harness_count}"; do
   fi
 done
 
+resume_file=""
+if [[ -n "${OMNISOLO_LIVE_RESUME_REPORT:-}" ]]; then
+  if [[ "$selection_count" != "12" || "${OMNISOLO_LIVE_BUILD_IMAGES:-1}" != "0" ]]; then
+    echo 'resume requires the complete twelve-harness selection and existing images' >&2
+    exit 1
+  fi
+  for harness in "${harnesses[@]}"; do
+    if ! is_selected "$harness"; then
+      echo 'resume requires every harness in the original matrix' >&2
+      exit 1
+    fi
+  done
+  resume_file="$(mktemp)"
+  if ! python3 scripts/live-harness-resume.py "$OMNISOLO_LIVE_RESUME_REPORT" "$OPENAI_MODEL" "$OPENAI_REASONING_EFFORT" >"$resume_file"; then
+    rm "$resume_file"
+    exit 1
+  fi
+fi
+
 matrix_file="$(mktemp)"
 models_file="$(mktemp)"
 preflight_file="$(mktemp)"
@@ -105,6 +124,7 @@ cleanup() {
     docker rm --force "omnisolo-live-$harness" "omnisolo-live-services-$harness" >/dev/null 2>&1 || true
   done
   if [[ -n "$service_state" ]]; then rm -rf -- "$service_state"; fi
+  if [[ -n "$resume_file" ]]; then rm -- "$resume_file"; fi
   rm -f "$matrix_file" "$models_file" "$preflight_file" "$attempt_file" "$result_file"
 }
 trap cleanup EXIT
@@ -188,12 +208,11 @@ start_plandex_services() {
   done
   plandex_db_host="$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' omnisolo-live-plandex-db)"
   docker rm --force omnisolo-live-plandex-server >/dev/null 2>&1 || true
-  DB_PASSWORD="$plandex_db_password" docker run --detach --name omnisolo-live-plandex-server \
+  DATABASE_URL="postgres://plandex:$plandex_db_password@$plandex_db_host:5432/plandex?sslmode=disable" docker run --detach --name omnisolo-live-plandex-server \
     --network container:omnisolo-live-plandex --read-only \
     --tmpfs /tmp:mode=1777 --tmpfs /var/lib/plandex:mode=0700,uid=1000,gid=1000 \
     --cap-drop ALL --security-opt no-new-privileges:true \
-    --env "DB_HOST=$plandex_db_host" --env DB_PORT=5432 --env DB_NAME=plandex \
-    --env DB_USER=plandex --env DB_PASSWORD "$plandex_server_image" >&2 || return 1
+    --env DATABASE_URL "$plandex_server_image" >&2 || return 1
   for probe in $(seq 1 60); do
     if docker exec omnisolo-live-plandex-server python3 -c \
       'import socket; socket.create_connection(("127.0.0.1",8099),2).close()' >/dev/null 2>&1; then
@@ -210,6 +229,11 @@ native_gate_failed=0
 for index in "${!harnesses[@]}"; do
   harness="${harnesses[$index]}"
   if ! is_selected "$harness"; then
+    continue
+  fi
+  if [[ -n "$resume_file" ]] && jq -e --arg harness "$harness" '.results[] | select(.harness_id == $harness and .status == "passed")' "$resume_file" >/dev/null; then
+    jq -c --arg harness "$harness" '.results[] | select(.harness_id == $harness)' "$resume_file" >>"$matrix_file"
+    echo "[$harness] retaining verified receipt from the completed native gate run" >&2
     continue
   fi
   native_protocol="${protocols[$index]}"
@@ -298,15 +322,17 @@ for index in "${!harnesses[@]}"; do
       start_plandex_services
     fi
   }
+  started_at=$(date +%s)
   worker_started=1
   if ! start_worker; then
     worker_started=0
     if (( index < native_harness_count )); then
       docker logs --tail 200 "omnisolo-live-services-$harness" 2>&1 | jq -Rr 'split(env.OPENAI_API_KEY) | join("[REDACTED]") | split(env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN) | join("[REDACTED]")' >&2 || true
+    elif [[ "$harness" == "plandex" ]]; then
+      docker logs --tail 200 omnisolo-live-plandex-server 2>&1 | jq -Rr --arg password "${plandex_db_password:-}" 'split(env.OPENAI_API_KEY) | join("[REDACTED]") | if $password != "" then split($password) | join("[REDACTED]") else . end' >&2 || true
     fi
   fi
   succeeded=0
-  started_at=$(date +%s)
   for attempt in $(seq 1 "$OMNISOLO_LIVE_ATTEMPTS"); do
     if [[ "$worker_started" == "0" ]]; then break; fi
     if (( attempt > 1 )) || [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null || true)" != "true" ]]; then
@@ -398,7 +424,8 @@ jq -s \
   --arg native_gate "$(if (( native_gate_failed != 0 )); then printf failed; elif (( native_gate_complete == 0 )); then printf not_run; else printf passed; fi)" \
   --arg model "$OPENAI_MODEL" \
   --arg reasoning_effort "$OPENAI_REASONING_EFFORT" \
-  '{schema:"omnisolo.live_harness_matrix.v1",status:$status,native_gate:$native_gate,model:$model,reasoning_effort:$reasoning_effort,results:.}' \
+  --argjson resumed_from "$(if [[ -n "$resume_file" ]]; then jq -c '.resumed_from' "$resume_file"; else printf null; fi)" \
+  '{schema:"omnisolo.live_harness_matrix.v1",status:$status,native_gate:$native_gate,model:$model,reasoning_effort:$reasoning_effort,results:.} + (if $resumed_from == null then {} else {resumed_from:$resumed_from} end)' \
   "$matrix_file"
 if [[ "$matrix_status" == "failed" ]]; then
   printf 'live harness verification failed: %s\n' "${failed_harnesses[*]}" >&2

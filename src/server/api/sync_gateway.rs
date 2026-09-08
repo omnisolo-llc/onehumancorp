@@ -1,3 +1,4 @@
+use super::ws_compression::{encode_json, negotiate};
 use ::server_common::Claims;
 use ::server_ohc::orchestration::sync_service_server::SyncService;
 use ::server_ohc::orchestration::{DeltaItem, SyncMcpDeltasRequest};
@@ -319,10 +320,11 @@ pub async fn ws_sync_handler(
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
 
-    ws.on_upgrade(move |socket| handle_sync_socket(socket, tenant_id, topics))
+    let (ws, gzip) = negotiate(ws);
+    ws.on_upgrade(move |socket| handle_sync_socket(socket, tenant_id, topics, gzip))
 }
 
-async fn handle_sync_socket(socket: WebSocket, tenant_id: String, topics: Vec<String>) {
+async fn handle_sync_socket(socket: WebSocket, tenant_id: String, topics: Vec<String>, gzip: bool) {
     ensure_redis_subscription().await;
 
     let (mut sender, mut receiver) = socket.split();
@@ -347,7 +349,7 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String, topics: Vec<St
                             if let Some(channel) = parsed.get("channel").and_then(|c| c.as_str()) {
                                 if target_channels.contains(&channel.to_string()) {
                                     if let Some(payload) = parsed.get("payload").and_then(|p| p.as_str()) {
-                                        if let Err(e) = sender.send(WsMessage::Text(payload.to_string().into())).await {
+                                        if let Err(e) = sender.send(encode_json(payload.to_string(), gzip)).await {
                                             tracing::error!("Failed to send sync message to client: {}", e);
                                             break;
                                         }

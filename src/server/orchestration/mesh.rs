@@ -774,7 +774,15 @@ pub async fn get_mesh_transport(
         crate::db::DbStore::Sqlite(pool) => {
             if let Ok(pg_url) = std::env::var("OHC_DATABASE_URL") {
                 if pg_url.starts_with("postgres://") || pg_url.starts_with("postgresql://") {
-                    match ohc_builtin_agent::mesh::transport::PgTransport::new(&pg_url).await {
+                    let node_id = super::node_identity::mesh_node_id(
+                        std::env::var("OHC_MESH_NODE_ID").ok().as_deref(),
+                        &crate::config::get_safe_user_dir().join("mesh"),
+                    )?;
+                    match ohc_builtin_agent::mesh::transport::PgTransport::new_with_subscriber_id(
+                        &pg_url, node_id,
+                    )
+                    .await
+                    {
                         Ok(transport) => {
                             let t_clone = transport.clone();
                             tokio::spawn(async move {

@@ -86,5 +86,12 @@
       "image_id": "sha256:e48022868296adfe7e8cf5e4387499f52cb51e1447e8ba5fa052c81c418bde8d",
       "integration_mode": "openai_compatible"
     }
+  ],
+  "supporting_images": [
+    {
+      "image_tag": "omnisolo/plandex-server:2.2.1",
+      "image_id": "sha256:bab1cd0dc4879e284950e57192f3f797fbd142ef4efdfa0c1bb052e6a7f48409",
+      "role": "Native Plandex server used for the successful continuation"
+    }
   ]
 }

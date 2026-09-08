@@ -1,3 +1,4 @@
+use super::ws_compression::{encode_json, negotiate};
 use axum::{
     extract::{
         Extension, Query,
@@ -75,7 +76,8 @@ pub async fn unified_ws_handler(
         .map(|c| c.split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_default();
 
-    ws.on_upgrade(move |socket| handle_unified_socket(socket, tenant_id, initial_channels))
+    let (ws, gzip) = negotiate(ws);
+    ws.on_upgrade(move |socket| handle_unified_socket(socket, tenant_id, initial_channels, gzip))
 }
 
 #[allow(dead_code)]
@@ -180,6 +182,7 @@ async fn handle_unified_socket(
     socket: WebSocket,
     tenant_id: String,
     initial_channels: Vec<String>,
+    gzip: bool,
 ) {
     let (mut sender, mut receiver) = socket.split();
 
@@ -209,7 +212,7 @@ async fn handle_unified_socket(
 
     let send_task = tokio::spawn(async move {
         while let Some(msg) = ws_rx.recv().await {
-            if sender.send(WsMessage::Text(msg.into())).await.is_err() {
+            if sender.send(encode_json(msg, gzip)).await.is_err() {
                 break;
             }
         }

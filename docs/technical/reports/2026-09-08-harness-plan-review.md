@@ -2,10 +2,12 @@
 
 ## Status
 
-Implementation is committed and pushed on `fix/harness-plan-completion`.
-All eight native harnesses have passed individual provider-backed service
-writer/fresh-reader checks. The final ordered twelve-row matrix is running; acceptance remains pending
-until it passes. The final Bazel verification passed.
+All planned implementation work in the completion ledger is implemented. All
+twelve harnesses passed provider-backed acceptance, including the complete
+native service writer/fresh-reader gate. The communication follow-up passed
+normal-crate Rust, real Redis/PostgreSQL and browser regression checks.
+The final Bazel rebuild passed. No implementation or acceptance item in the
+completion ledger remains pending.
 
 ## Implemented plan requirements
 
@@ -32,20 +34,20 @@ contains counts, coverage totals and hashes of the test logs.
 | --- | --- |
 | Harness and worker deterministic suites, latest coverage run | 469 passed across 26 suites; 0 failed; 3 opt-in live tests ignored |
 | Broader Rust regression run, before final native follow-up fixes | 1,029 passed across 31 suites; 0 failed; 3 live tests ignored |
-| UI unit/component suite | 1,422 passed; 0 failed or skipped |
+| UI unit/component suite | 1,428 passed; 0 failed or skipped after communication follow-up |
 | Production Next build and TypeScript check | Passed |
-| Agent communication API | 24 passed |
+| Final communication Rust checks | 58 passed in the server crate, plus 1 real PostgreSQL builtin-agent test |
 | Authentication | 97 passed |
 | Worker library | 28 passed |
 | Selected backend adapters | 8 passed |
-| Kimi/OpenHarness bridges and live runner Python tests | 22 passed |
+| Bridge, deployment, live runner, resume and Plandex Python tests | 36 passed across two disjoint runs |
 | DeepSeek scoped subprocess environment contract | Passed |
 | Deployment contract | Passed |
 | Compose/Helm service isolation rendering | 2 passed |
 | PostgreSQL/MySQL migration parity | 2 passed |
 | Workspace formatting and strict harness/worker library Clippy | Passed |
-| Final Bazel harness targets | Passed; one test target |
-| Ordered native-first twelve-harness live matrix | Running |
+| Bazel harness targets | Passed after all follow-up changes |
+| Ordered native-first twelve-harness live matrix | All 12 passed; Plandex retried through validated continuation |
 
 LLVM coverage measured **91.522390% lines**, **90.932459% regions** and
 **86.878216% functions** for the harness and worker packages. This is not branch
@@ -95,8 +97,16 @@ operation receipts, withheld-value verification, credential checks and cleanup:
 [Kimi](2026-09-08-native-kimi-acceptance.json),
 [OpenHands](2026-09-08-native-openhands-acceptance.json), and
 [OpenHarness](2026-09-08-native-openharness-acceptance.json).
-DeepSeek also passed its row in the previous ordered run. That run failed Kimi's
-old five-minute limit and does not count as final matrix acceptance.
+The [final twelve-row matrix](2026-09-08-live-harness-matrix.json) preserves
+usage, service receipts, model binding and cleanup evidence. The ordered run
+passed all eight native rows and Aider, Goose and Open Interpreter. Plandex's
+server initially failed because it required TLS from the fixture's local
+PostgreSQL server. The owned fixture now explicitly selects `sslmode=disable`;
+the entrypoint otherwise retains its secure `require` default. Its native
+health check and provider-backed row then passed. Validated continuation
+retained the eleven completed rows and reran Plandex; `resumed_from` records
+the original report's SHA-256 and retained rows. This was a completed native
+gate followed by a shim retry, not an uninterrupted successful invocation.
 
 The selected upstream model is `gpt-5.6-luna` with `max` reasoning. Kimi reports
 an explicit native translation to boolean `thinking`; the bridge preserves
@@ -113,7 +123,42 @@ translation and upstream provider selection are distinct evidence fields.
 | Universal harness services, tasks 4–5 | Per-attempt facade, provider translation and lifecycle revocation: facade, worker gRPC and worker E2E suites. |
 | Universal harness services, task 6 | Four real pinned CLI shims: installed CLI probes, Python shim tests and Rust lifecycle tests. |
 | Universal harness services, task 7 | Twelve worker images, Compose/Helm inventory, daemon isolation and native Plandex deployment: image builds, deployment contracts and rendering tests. |
-| Universal harness services, task 8 | Deterministic shared-service conformance passes; final native-first twelve-row real-provider gate pending. |
+| Universal harness services, task 8 | Deterministic shared-service conformance passes; all twelve real-provider rows pass, including native service receipts. |
 | Cross-harness model routing, tasks 1–12 | Portable model selection, configuration, native codecs, provider execution and images: deterministic suites and pinned image builds. |
-| Cross-harness model routing, tasks 13–14 | Migration parity, strict Clippy and coverage pass; final Bazel passes; full live matrix pending. |
-| Communication channels, tasks 9–10 and streaming follow-up | Registered parallel agent results, observed metrics and authenticated streaming: API/UI tests, production build and TypeScript checks. |
+| Cross-harness model routing, tasks 13–14 | Migration parity, strict Clippy and coverage pass; all twelve live rows and the final Bazel rebuild pass. |
+| Communication channels, tasks 1–10 and streaming follow-up | Redis connection reuse, PostgreSQL notifications and stable checkpoints, bounded batching, gzip frames, ordered browser decoding, parallel agent results, observed metrics and authenticated streaming: real backend tests, API/UI tests, production build and TypeScript checks. |
+
+## Final communication audit follow-up
+
+The final task-by-task check found remaining gaps in communication tasks 2, 4,
+7 and 8. The follow-up replaces per-call Redis command connections with a shared
+reconnecting connection manager; changes PostgreSQL delivery from 50ms polling
+to transactional notifications with durable catch-up; and enables negotiated
+gzip framing across feed, unified and deployed sync WebSockets. Legacy clients
+retain text frames. The browser decodes compressed frames in order and drops
+queued messages after disposal. Batches now contain JSON objects, cap at twenty
+messages and stop the sender on connection errors.
+
+Focused regressions pass for Redis reuse/concurrent initialization/reconnect,
+real PostgreSQL notifications/reconnect/checkpoint restart, gzip WebSocket
+negotiation and browser decoding, and batch contents/limits. Combined normal-crate server verification passes all 58 selected tests. The full UI rerun passes all
+1,428 tests, and its production build passes. IpcBus already uses the planned
+100ms interval and required no change. PostgreSQL retains its existing one-hour
+message retention; checkpoint recovery is at least once within retained data.
+
+Independent review identified two follow-up issues: socket closure discarded
+already-received browser frames during decompression, and the production mesh
+constructor did not yet use a stable checkpoint identity. Regressions reproduced
+both. The browser now drains received frames across reconnects while discarding
+frames after subscription disposal. PostgreSQL mesh initialization uses
+`OHC_MESH_NODE_ID` when configured, otherwise an atomically persisted identity
+at `~/.ohc/mesh/node-id`; managed replicas should use distinct configured IDs or
+separate persistent state directories. Identity initialization is tested across
+restarts and concurrent callers. The normal builtin-agent crate's isolated
+PostgreSQL notification/reconnect/restart test passes.
+
+Real Redis validation also exposed the batch interval flushing immediately at
+a timer boundary. The batching window now starts with the first queued message.
+The disconnect regression proves Redis pub/sub loss closes the WebSocket for
+client reconnection. The legacy sync handler's mock-auth header is accepted
+only in test builds.

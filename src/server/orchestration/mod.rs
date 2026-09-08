@@ -33,3 +33,5 @@ pub mod tasks;
 pub mod tasks_db;
 #[cfg(test)]
 pub mod tasks_db_test;
+
+mod node_identity;

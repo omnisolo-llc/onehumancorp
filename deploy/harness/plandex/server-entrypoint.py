@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import sys
+from urllib.parse import quote, urlencode
 
 
 def configure_database(environment):
@@ -26,6 +27,20 @@ def configure_database(environment):
         environment.get(name) for name in ("DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME")
     ):
         raise ValueError("native Plandex database configuration is incomplete")
+    if not environment.get("DATABASE_URL"):
+        mode = environment.get("DB_SSLMODE", "require")
+        if mode not in ("disable", "allow", "prefer", "require", "verify-ca", "verify-full"):
+            raise ValueError("native Plandex database SSL mode is invalid")
+        port = environment["DB_PORT"]
+        if not port.isdigit() or not 0 < int(port) < 65536:
+            raise ValueError("native Plandex database port is invalid")
+        host = environment["DB_HOST"]
+        if any(char in host for char in "/?#@"):
+            raise ValueError("native Plandex database host is invalid")
+        if ":" in host and not host.startswith("["):
+            host = "[" + host + "]"
+        user, password, database = (quote(environment[name], safe="") for name in ("DB_USER", "DB_PASSWORD", "DB_NAME"))
+        environment["DATABASE_URL"] = f"postgres://{user}:{password}@{host}:{port}/{database}?" + urlencode({"sslmode": mode})
 
 
 if __name__ == "__main__":

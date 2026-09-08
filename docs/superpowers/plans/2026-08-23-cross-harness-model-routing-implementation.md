@@ -1,5 +1,7 @@
 # Cross-Harness Model Routing Implementation Plan
 
+> **Completion — 2026-09-08:** Implementation and acceptance are complete. See the [completion ledger and verification evidence](../../technical/reports/2026-09-08-harness-plan-review.md). Historical step-by-step instructions below are retained as the original plan.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Route a portable session/task model selection into every advertised OmniSolo harness and prove all eight harnesses execute `gpt-5.6-luna` through Sub2API.

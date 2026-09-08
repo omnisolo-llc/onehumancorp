@@ -67,6 +67,38 @@ elif command == 'cargo':
             calls = log.read_text() if log.exists() else ""
             return result, calls
 
+    def test_resume_retains_verified_native_gate_and_runs_only_failed_shim(self):
+        from scripts.tests.test_live_harness_resume import report_fixture
+        report = report_fixture()
+        report['model'] = 'gpt-5.6-luna'
+        for row in report['results']:
+            row['model'] = 'gpt-5.6-luna'
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'prior.json'
+            path.write_text(json.dumps(report))
+            result, calls = self.run_matrix(successful=True,
+                OMNISOLO_RUN_LIVE_HARNESS_E2E='1', OPENAI_API_KEY='canary',
+                OMNISOLO_LIVE_BUILD_IMAGES='0', OMNISOLO_LIVE_RESUME_REPORT=str(path))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = json.loads(result.stdout)
+        self.assertEqual(result['status'], 'passed')
+        self.assertEqual(len(result['results']), 12)
+        self.assertEqual(len(result['resumed_from']['retained_harnesses']), 11)
+        runs = [json.loads(line) for line in calls.splitlines() if json.loads(line)[0] == 'run']
+        workers = [args[args.index('--name') + 1] for args in runs]
+        self.assertEqual(workers, ['omnisolo-live-plandex', 'omnisolo-live-plandex-db', 'omnisolo-live-plandex-server'])
+        self.assertIn('DATABASE_URL', runs[-1])
+
+    def test_resume_rejects_failed_native_gate_before_external_commands(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'prior.json'
+            path.write_text(json.dumps({'native_gate':'failed'}))
+            result, calls = self.run_matrix(successful=True,
+                OMNISOLO_RUN_LIVE_HARNESS_E2E='1', OPENAI_API_KEY='canary',
+                OMNISOLO_LIVE_BUILD_IMAGES='0', OMNISOLO_LIVE_RESUME_REPORT=str(path))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(calls, '')
+
     def test_without_opt_in_skips_before_credentials_or_external_commands(self):
         result, calls = self.run_matrix()
         self.assertEqual(result.returncode, 0, result.stderr)
