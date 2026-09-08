@@ -1,4 +1,4 @@
-# One Human Corp — Docker Compose
+# OmniSolo — Docker Compose
 #
 # Single-machine deployment defaults to the same lean cloud/web shape exercised
 # by deploy/tests/kind_e2e_test.sh: server + pgvector Postgres + Valkey.

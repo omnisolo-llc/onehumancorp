@@ -3,10 +3,10 @@
 # User Guide: Marketplace
 
 ## 1. Introduction & Value Proposition
-The One Human Corp Marketplace is an ecosystem where the CEO can discover, acquire, and deploy specialized AI agents, organizational templates, and unique tool integrations. This directly empowers businesses to rapidly scale their operations by simply importing proven, ready-made domain knowledge and skill blueprints.
+The OmniSolo Marketplace is an ecosystem where the CEO can discover, acquire, and deploy specialized AI agents, organizational templates, and unique tool integrations. This directly empowers businesses to rapidly scale their operations by simply importing proven, ready-made domain knowledge and skill blueprints.
 
 ## 2. Prerequisites & Requirements
-- **Hardware/Software**: The One Human Corp backend with MCP Gateway access.
+- **Hardware/Software**: The OmniSolo backend with MCP Gateway access.
 - **Permissions**: CEO or System Admin role for purchasing and deploying new agents.
 - **Dependencies**: An active internet connection to browse the central OHC Marketplace registry.
 

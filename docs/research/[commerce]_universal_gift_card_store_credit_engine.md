@@ -70,7 +70,7 @@ sequenceDiagram
 ```
 
 ### UI wireframes or screen flow description
-- **Dashboard & Creation:** Priya opens the OHC app and taps the "Gift Cards" card on the modular dashboard. A clean, translucent glass-styled screen shows active gift cards and a prominent "+ Issue New" button. The design uses standard OneHumanCorp design tokens (rounded corners, soft drop shadows, UniFi modular card layouts).
+- **Dashboard & Creation:** Priya opens the OHC app and taps the "Gift Cards" card on the modular dashboard. A clean, translucent glass-styled screen shows active gift cards and a prominent "+ Issue New" button. The design uses standard OmniSolo design tokens (rounded corners, soft drop shadows, UniFi modular card layouts).
 - **Refund to Credit:** During a return flow on the app, the UI presents a massive, easily tappable "Issue Store Credit" button alongside "Refund to Original Payment". No complex dropdowns.
 - **Customer View:** The gift card receipt sent via SMS/Email opens a mobile-optimized webpage with a single "Add to Apple Wallet" / "Add to Google Wallet" button. No complex logins needed.
 

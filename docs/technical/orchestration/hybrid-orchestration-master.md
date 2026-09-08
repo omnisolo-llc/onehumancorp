@@ -83,5 +83,5 @@ In cloud mode, it is backed by Redis ZSETs. In Standalone, it uses an internal S
 
 ---
 *Authored by: Principal Product Architect & KAIROS Orchestrator (L7)*
-*Identity: One Human Corp*
+*Identity: OmniSolo*
 </div>

@@ -7,7 +7,7 @@
 **Version:** 1.0.0
 
 ## 1. Overview
-The KAIROS Orchestrator serves as the core orchestration engine powering the One Human Corp (OHC) Swarm. This document outlines the implementation strategy for the structural and aesthetic vision of the OHC Hybrid Agentic OS, specifically covering Task Decomposition, UltraPlan Deliberation, State Machine Tracking, Sub-Agent Orchestration, Teammate Mesh Architecture, and AutoDream Data Pipelines.
+The KAIROS Orchestrator serves as the core orchestration engine powering the OmniSolo (OHC) Swarm. This document outlines the implementation strategy for the structural and aesthetic vision of the OHC Hybrid Agentic OS, specifically covering Task Decomposition, UltraPlan Deliberation, State Machine Tracking, Sub-Agent Orchestration, Teammate Mesh Architecture, and AutoDream Data Pipelines.
 
 ## 2. Phase 1: Shared Task List (Task Decomposition)
 A durable, distributed state machine and task queue designed for both Cloud-Native and Standalone Desktop environments.

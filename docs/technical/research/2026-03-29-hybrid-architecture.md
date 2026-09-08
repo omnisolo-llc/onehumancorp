@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-29
 
 ## 1. Overview
-The **One Human Corp (OHC) Hybrid Agentic OS** requires a fluid and consistent architecture across completely different operating models. This document solidifies the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OHC "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier.
+The **OmniSolo (OHC) Hybrid Agentic OS** requires a fluid and consistent architecture across completely different operating models. This document solidifies the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OHC "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

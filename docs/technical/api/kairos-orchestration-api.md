@@ -6,7 +6,7 @@
 **Target Audience:** Orchestration Engineers & AI Agents
 
 ## 1. Introduction
-The **KAIROS Orchestration API** drives the core backbone of the One Human Corp Swarm. It encompasses the Shared Task List, Teammate Mesh APIs, and AutoDream Vector Data Pipelines, bridging the gap between Cloud-Native pgvector PostgreSQL deployments and Local Standalone SQLite execution.
+The **KAIROS Orchestration API** drives the core backbone of the OmniSolo Swarm. It encompasses the Shared Task List, Teammate Mesh APIs, and AutoDream Vector Data Pipelines, bridging the gap between Cloud-Native pgvector PostgreSQL deployments and Local Standalone SQLite execution.
 
 ## 2. Shared Task List APIs
 

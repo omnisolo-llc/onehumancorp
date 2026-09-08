@@ -2,7 +2,7 @@
 
 # CUJ: Ecosystem Interoperability (Framework Adapters)
 
-**Persona:** TPM Agent | **Context:** Integrating and orchestrating agents from diverse frameworks (OpenClaw, AutoGen, CrewAI, Semantic Kernel) within the unified One Human Corp (OHC) Agentic OS.
+**Persona:** TPM Agent | **Context:** Integrating and orchestrating agents from diverse frameworks (OpenClaw, AutoGen, CrewAI, Semantic Kernel) within the unified OmniSolo (OHC) Agentic OS.
 **Success Metrics:** Cross-framework task execution with zero state loss, successful MCP tool usage by external framework agents, and verified SPIFFE identity propagation.
 
 ## 1. User Journey Overview

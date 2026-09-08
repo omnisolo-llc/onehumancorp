@@ -1,13 +1,13 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Test Plan: "One Human Corp" Marketplace
+# Test Plan: "OmniSolo" Marketplace
 
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-A high-level summary of the testing strategy for the "One Human Corp" Marketplace feature, ensuring the successful download, parsing, validation, and deployment of community-driven agents.
+A high-level summary of the testing strategy for the "OmniSolo" Marketplace feature, ensuring the successful download, parsing, validation, and deployment of community-driven agents.
 
 ## 2. Test Strategy
 - **Unit Testing:** Focus on verifying the schema validation logic for imported `SkillBlueprints`.

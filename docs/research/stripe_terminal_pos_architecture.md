@@ -1,7 +1,7 @@
 # Implement Stripe Terminal POS Architecture for In-Person Payments
 
 ## Problem Statement
-Currently, OneHumanCorp (OHC) handles online payments efficiently via Stripe Checkout and custom payment routing. However, our real-world personas, like Priya (the boutique owner) and Carlos (the handyman), frequently transact in person. Priya needs to seamlessly ring up customers in her store using her phone (Tap to Pay) or a dedicated card reader, while Carlos needs to accept final payments on-site after a repair. The lack of a native in-person Point of Sale (POS) solution forces users to rely on disjointed third-party systems, breaking the "all-in-one" OHC promise and muddying financial reporting.
+Currently, OmniSolo (OHC) handles online payments efficiently via Stripe Checkout and custom payment routing. However, our real-world personas, like Priya (the boutique owner) and Carlos (the handyman), frequently transact in person. Priya needs to seamlessly ring up customers in her store using her phone (Tap to Pay) or a dedicated card reader, while Carlos needs to accept final payments on-site after a repair. The lack of a native in-person Point of Sale (POS) solution forces users to rely on disjointed third-party systems, breaking the "all-in-one" OHC promise and muddying financial reporting.
 
 ## Research Report
 - **OHC Gaps:** A review of `src/server/integrations/stripe/` reveals implementations for Checkout, Subscription, and Routing (Card vs. ACH, Razorpay, MercadoPago), but zero support for Stripe Terminal.

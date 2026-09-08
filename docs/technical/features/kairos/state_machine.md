@@ -2,7 +2,7 @@
 
 # Distributed State Machine Tracker
 
-The Distributed State Machine Tracker is a core pillar of the KAIROS Orchestration engine within the One Human Corp (OHC) architecture. It provides a robust, resilient mechanism to track and transition agent coordination states reliably, especially in complex multi-agent workflows.
+The Distributed State Machine Tracker is a core pillar of the KAIROS Orchestration engine within the OmniSolo (OHC) architecture. It provides a robust, resilient mechanism to track and transition agent coordination states reliably, especially in complex multi-agent workflows.
 
 ## 1. Core Architecture
 

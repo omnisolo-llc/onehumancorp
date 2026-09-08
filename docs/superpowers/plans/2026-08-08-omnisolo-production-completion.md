@@ -161,7 +161,7 @@ git commit -m "test: freeze production feature failure inventory"
 - Modify: `README.md`, `CHANGELOG.md`, `docs/**`, `src/ui/next/src/app/layout.tsx`, `src/ui/next/src/app/components/**`, `package.json`, `Cargo.toml`
 - Test: branding contract and browser title/visible-brand assertions.
 
-- [ ] **Step 1: Add a failing source contract** that rejects user-visible `OHC`/`One Human Corp` strings while allowing an explicit compatibility allowlist for `OHC_DATABASE_URL`, legacy cookie/API names, Kubernetes secret keys, and migration comments.
+- [ ] **Step 1: Add a failing source contract** that rejects user-visible `OHC`/`OmniSolo` strings while allowing an explicit compatibility allowlist for `OHC_DATABASE_URL`, legacy cookie/API names, Kubernetes secret keys, and migration comments.
 - [ ] **Step 2: Run the contract and confirm RED; record the allowlist in `docs/omnisolo-compatibility.md`.
 - [ ] **Step 3: Apply a reviewable codemod to product-facing strings, metadata, help content, package descriptions, docs, and release labels. Keep compatibility aliases at their boundary and add `OMNISOLO_*` canonical names.
 - [ ] **Step 4: Run branding/unit tests and a Playwright assertion that page title and navigation show OmniSolo.

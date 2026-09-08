@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-20
 
 ## 1. Overview
-The Extensible Skill Import Framework (Phase 3) evolves One Human Corp from a hardcoded "Software Company" into a dynamic system capable of modeling any business domain. It allows the CEO to upload "Skill Blueprints" (JSON/YAML) or describe a new business area in natural language to instantly generate specialized agent roles, organizational hierarchies, and MCP tool bindings.
+The Extensible Skill Import Framework (Phase 3) evolves OmniSolo from a hardcoded "Software Company" into a dynamic system capable of modeling any business domain. It allows the CEO to upload "Skill Blueprints" (JSON/YAML) or describe a new business area in natural language to instantly generate specialized agent roles, organizational hierarchies, and MCP tool bindings.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

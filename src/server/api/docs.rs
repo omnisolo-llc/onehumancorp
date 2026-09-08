@@ -1,4 +1,4 @@
-use axum::{extract::Query, Json};
+use axum::{Json, extract::Query};
 
 use serde::{Deserialize, Serialize};
 
@@ -42,15 +42,129 @@ pub struct WalkthroughStep {
     pub content: String,
 }
 
+async fn mysql_walkthrough_steps(
+    pool: &sqlx::MySqlPool,
+    tenant_id: &str,
+    page: &str,
+) -> Result<Vec<WalkthroughStep>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT selector, title, text FROM walkthrough_steps
+         WHERE tenant_id = ? AND page = ? ORDER BY step_order ASC",
+    )
+    .bind(tenant_id)
+    .bind(page)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            use sqlx::Row;
+            WalkthroughStep {
+                target_id: row.get("selector"),
+                title: row.get("title"),
+                content: row.get("text"),
+            }
+        })
+        .collect())
+}
+
+async fn mysql_tooltips(
+    pool: &sqlx::MySqlPool,
+    tenant_id: &str,
+) -> Result<std::collections::HashMap<String, String>, sqlx::Error> {
+    let rows = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?")
+        .bind(tenant_id)
+        .fetch_all(pool)
+        .await?;
+    let mut tooltips = std::collections::HashMap::new();
+    for row in rows {
+        use sqlx::Row;
+        tooltips.insert(row.get("id"), row.get("text"));
+    }
+    Ok(tooltips)
+}
+
+async fn mysql_articles(
+    pool: &sqlx::MySqlPool,
+    tenant_id: &str,
+    query: Option<&str>,
+) -> Result<Vec<HelpArticle>, sqlx::Error> {
+    let rows = if let Some(query) = query {
+        let query = format!("%{}%", query.to_lowercase());
+        sqlx::query(
+            "SELECT category, title, desc_text, link FROM help_articles
+             WHERE tenant_id = ? AND (LOWER(category) LIKE ? OR LOWER(title) LIKE ? OR LOWER(desc_text) LIKE ?)",
+        )
+        .bind(tenant_id)
+        .bind(&query)
+        .bind(&query)
+        .bind(&query)
+        .fetch_all(pool)
+        .await?
+    } else {
+        sqlx::query(
+            "SELECT category, title, desc_text, link FROM help_articles
+             WHERE tenant_id = ? ORDER BY id ASC",
+        )
+        .bind(tenant_id)
+        .fetch_all(pool)
+        .await?
+    };
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            use sqlx::Row;
+            HelpArticle {
+                category: row.get("category"),
+                title: row.get("title"),
+                desc: row.get("desc_text"),
+                link: row.get("link"),
+            }
+        })
+        .collect())
+}
+
+async fn mysql_videos(
+    pool: &sqlx::MySqlPool,
+    tenant_id: &str,
+) -> Result<Vec<VideoTutorial>, sqlx::Error> {
+    let rows = sqlx::query(
+        "SELECT id, title, duration, video_url FROM video_tutorials
+         WHERE tenant_id = ? ORDER BY id ASC",
+    )
+    .bind(tenant_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            use sqlx::Row;
+            VideoTutorial {
+                id: row.get("id"),
+                title: row.get("title"),
+                duration: row.get("duration"),
+                video_url: row.get("video_url"),
+            }
+        })
+        .collect())
+}
 
 pub async fn get_walkthrough(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-    axum::extract::Path(page): axum::extract::Path<String>
+    axum::extract::Path(page): axum::extract::Path<String>,
 ) -> Result<Json<Vec<WalkthroughStep>>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
 
-    let steps = match &db.store {
+    let steps = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        mysql_walkthrough_steps(&pool, &tenant_id, &page)
+            .await
+            .map_err(|error| {
+                tracing::error!("Failed to fetch MySQL walkthrough steps: {error}");
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            })?
+    } else {
+        match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = match db.pool.begin().await {
                 Ok(tx) => tx,
@@ -102,18 +216,44 @@ pub async fn get_walkthrough(
                 Err(_) => vec![]
             }
         }
+        }
     };
 
     if steps.is_empty() {
         let fb = match page.as_str() {
             "store-setup" => vec![
-                WalkthroughStep { target_id: "dashboard-title".to_string(), title: "Set up your store".to_string(), content: "Learn how to easily set up your store and accept your first payment.".to_string() },
-                WalkthroughStep { target_id: "bio-input-tooltip".to_string(), title: "Describe your business".to_string(), content: "Tell us what you sell so we can create the perfect storefront for you.".to_string() },
-                WalkthroughStep { target_id: "generate-btn-tooltip".to_string(), title: "Generate Store".to_string(), content: "Click here and watch our AI build your store from scratch.".to_string() },
+                WalkthroughStep {
+                    target_id: "dashboard-title".to_string(),
+                    title: "Set up your store".to_string(),
+                    content: "Learn how to easily set up your store and accept your first payment."
+                        .to_string(),
+                },
+                WalkthroughStep {
+                    target_id: "bio-input-tooltip".to_string(),
+                    title: "Describe your business".to_string(),
+                    content:
+                        "Tell us what you sell so we can create the perfect storefront for you."
+                            .to_string(),
+                },
+                WalkthroughStep {
+                    target_id: "generate-btn-tooltip".to_string(),
+                    title: "Generate Store".to_string(),
+                    content: "Click here and watch our AI build your store from scratch."
+                        .to_string(),
+                },
             ],
             "dashboard" => vec![
-                WalkthroughStep { target_id: "dashboard-title".to_string(), title: "Welcome".to_string(), content: "Welcome to your dashboard! This is your control center.".to_string() },
-                WalkthroughStep { target_id: "wrapped-summary".to_string(), title: "AI Savings".to_string(), content: "Here you can see the time and effort your agents have saved you.".to_string() }
+                WalkthroughStep {
+                    target_id: "dashboard-title".to_string(),
+                    title: "Welcome".to_string(),
+                    content: "Welcome to your dashboard! This is your control center.".to_string(),
+                },
+                WalkthroughStep {
+                    target_id: "wrapped-summary".to_string(),
+                    title: "AI Savings".to_string(),
+                    content: "Here you can see the time and effort your agents have saved you."
+                        .to_string(),
+                },
             ],
             _ => vec![],
         };
@@ -129,79 +269,138 @@ pub async fn get_tooltips(
 ) -> Result<Json<std::collections::HashMap<String, String>>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
     let mut tooltips = std::collections::HashMap::new();
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            let mut tx = db.pool.begin().await.map_err(|e| {
-                tracing::error!("Failed to start tooltip transaction: {}", e);
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        tooltips = mysql_tooltips(&pool, &tenant_id).await.map_err(|error| {
+            tracing::error!("Failed to fetch MySQL tooltips: {error}");
+            axum::http::StatusCode::SERVICE_UNAVAILABLE
+        })?;
+    } else {
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                let mut tx = db.pool.begin().await.map_err(|e| {
+                    tracing::error!("Failed to start tooltip transaction: {}", e);
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR
                 })?;
-            let result = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1")
-                .bind(tenant_id.to_string())
-                .fetch_all(&mut *tx)
-                .await;
-            let _ = tx.commit().await;
-            match result {
-                Ok(rows) => {
-                    for row in rows {
-                        use sqlx::Row;
-                        let id: String = row.get("id");
-                        let text: String = row.get("text");
-                        tooltips.insert(id, text);
+                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("Failed to set tooltip tenant context: {}", e); // pii-safe
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+                    })?;
+                let result = sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = $1")
+                    .bind(tenant_id.to_string())
+                    .fetch_all(&mut *tx)
+                    .await;
+                let _ = tx.commit().await;
+                match result {
+                    Ok(rows) => {
+                        for row in rows {
+                            use sqlx::Row;
+                            let id: String = row.get("id");
+                            let text: String = row.get("text");
+                            tooltips.insert(id, text);
+                        }
                     }
-                }
-                Err(e) => {
-                    tracing::error!("Failed to fetch tooltips: {}", e);
-                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    Err(e) => {
+                        tracing::error!("Failed to fetch tooltips: {}", e);
+                        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    }
                 }
             }
-        },
-        crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?").bind(tenant_id.to_string())
-                .fetch_all(pool)
-                .await
-            {
-                Ok(rows) => {
-                    for row in rows {
-                        use sqlx::Row;
-                        let id: String = row.get("id");
-                        let text: String = row.get("text");
-                        tooltips.insert(id, text);
+            crate::db::DbStore::Sqlite(pool) => {
+                match sqlx::query("SELECT id, text FROM tooltips WHERE tenant_id = ?")
+                    .bind(tenant_id.to_string())
+                    .fetch_all(pool)
+                    .await
+                {
+                    Ok(rows) => {
+                        for row in rows {
+                            use sqlx::Row;
+                            let id: String = row.get("id");
+                            let text: String = row.get("text");
+                            tooltips.insert(id, text);
+                        }
                     }
-                }
-                Err(e) => {
-                    tracing::error!("Failed to fetch tooltips: {}", e);
-                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    Err(e) => {
+                        tracing::error!("Failed to fetch tooltips: {}", e);
+                        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    }
                 }
             }
         }
     }
 
     if tooltips.is_empty() {
-        tooltips.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
-        tooltips.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
-        tooltips.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
-        tooltips.insert("voice-assistant-tooltip".to_string(), "Hold to speak a command to your AI Assistant.".to_string());
-        tooltips.insert("rate-limit-close-tooltip".to_string(), "Dismiss this warning.".to_string());
-        tooltips.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
-        tooltips.insert("generate-link-btn".to_string(), "Click here to share access with a team member.".to_string());
-        tooltips.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
-        tooltips.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
+        tooltips.insert(
+            "dashboard-walkthrough-btn".to_string(),
+            "Take a tour of the dashboard".to_string(),
+        );
+        tooltips.insert(
+            "api-docs-tooltip".to_string(),
+            "Direct API access is only for custom integrations.".to_string(),
+        );
+        tooltips.insert(
+            "kairos-nav-link-tooltip".to_string(),
+            "Click here to see what your AI helpers are working on and how they plan.".to_string(),
+        );
+        tooltips.insert(
+            "voice-assistant-tooltip".to_string(),
+            "Hold to speak a command to your AI Assistant.".to_string(),
+        );
+        tooltips.insert(
+            "rate-limit-close-tooltip".to_string(),
+            "Dismiss this warning.".to_string(),
+        );
+        tooltips.insert(
+            "dashboard-tooltip".to_string(),
+            "View your daily sales and overall business health.".to_string(),
+        );
+        tooltips.insert(
+            "generate-link-btn".to_string(),
+            "Click here to share access with a team member.".to_string(),
+        );
+        tooltips.insert(
+            "ask-ai-tooltip".to_string(),
+            "Open AI Help Chat to get answers instantly.".to_string(),
+        );
+        tooltips.insert(
+            "settings-delivery-tooltip".to_string(),
+            "Turn this on to offer local delivery to your customers.".to_string(),
+        );
         tooltips.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
-        tooltips.insert("help-search-tooltip".to_string(), "Search for help articles and videos...".to_string());
-        tooltips.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
-        tooltips.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
-        tooltips.insert("total-sales-tooltip".to_string(), "Total revenue generated from your orders.".to_string());
-        tooltips.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
-        tooltips.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
-        tooltips.insert("help-advanced-toggle-tooltip".to_string(), "Show advanced developer options.".to_string());
+        tooltips.insert(
+            "help-search-tooltip".to_string(),
+            "Search for help articles and videos...".to_string(),
+        );
+        tooltips.insert(
+            "inventory-tooltip".to_string(),
+            "Manage your inventory, prices, and stock levels.".to_string(),
+        );
+        tooltips.insert(
+            "orders-tooltip".to_string(),
+            "See what customers bought and track order fulfillment.".to_string(),
+        );
+        tooltips.insert(
+            "total-sales-tooltip".to_string(),
+            "Total revenue generated from your orders.".to_string(),
+        );
+        tooltips.insert(
+            "recent-orders-tooltip".to_string(),
+            "View the latest orders placed by your customers.".to_string(),
+        );
+        tooltips.insert(
+            "inbox-activity-tooltip".to_string(),
+            "Keep track of recent customer messages.".to_string(),
+        );
+        tooltips.insert(
+            "help-advanced-toggle-tooltip".to_string(),
+            "Show advanced developer options.".to_string(),
+        );
         tooltips.insert("help-btn-tooltip-appshell".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
-        tooltips.insert("checkout-pay-tooltip".to_string(), "Click to process your payment.".to_string());
+        tooltips.insert(
+            "checkout-pay-tooltip".to_string(),
+            "Click to process your payment.".to_string(),
+        );
     }
 
     Ok(Json(tooltips))
@@ -221,9 +420,25 @@ pub struct SuccessResponse {
 pub async fn update_tooltip(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-    axum::extract::Json(payload): axum::extract::Json<TooltipPayload>
+    axum::extract::Json(payload): axum::extract::Json<TooltipPayload>,
 ) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        sqlx::query(
+            "INSERT INTO tooltips (id, tenant_id, text) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE text = VALUES(text)",
+        )
+        .bind(payload.id)
+        .bind(tenant_id)
+        .bind(payload.text)
+        .execute(&pool)
+        .await
+        .map_err(|error| {
+            tracing::error!("Failed to update MySQL tooltip: {error}");
+            axum::http::StatusCode::SERVICE_UNAVAILABLE
+        })?;
+        return Ok(Json(SuccessResponse { success: true }));
+    }
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| {
@@ -277,6 +492,18 @@ pub async fn delete_tooltip(
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
 ) -> Result<Json<SuccessResponse>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        sqlx::query("DELETE FROM tooltips WHERE id = ? AND tenant_id = ?")
+            .bind(id.clone())
+            .bind(tenant_id)
+            .execute(&pool)
+            .await
+            .map_err(|error| {
+                tracing::error!("Failed to delete MySQL tooltip: {error}");
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            })?;
+        return Ok(Json(SuccessResponse { success: true }));
+    }
     match &db.store {
         crate::db::DbStore::Postgres => {
             let mut tx = db.pool.begin().await.map_err(|e| {
@@ -307,7 +534,7 @@ pub async fn delete_tooltip(
                     Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
                 }
             }
-        },
+        }
         crate::db::DbStore::Sqlite(pool) => {
             match sqlx::query("DELETE FROM tooltips WHERE id = ? AND tenant_id = ?")
                 .bind(id.clone())
@@ -325,40 +552,120 @@ pub async fn delete_tooltip(
     }
 }
 
-
-
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
-        HelpArticle { category: "Getting Started".to_string(), title: "Getting Started with Your Store".to_string(), desc: "Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.".to_string(), link: "/help/getting-started-1".to_string() },
-        HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/add-products".to_string() },
-        HelpArticle { category: "Payments".to_string(), title: "Accepting Payments".to_string(), desc: "Learn how to accept credit cards and manage your payouts.".to_string(), link: "/help/accept-payments".to_string() },
-        HelpArticle { category: "AI Agents".to_string(), title: "Activate AI Support".to_string(), desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(), link: "/help/ai-support".to_string() },
-        HelpArticle { category: "Marketing".to_string(), title: "Grow Your Audience".to_string(), desc: "Use our built-in tools to run promotions and track performance.".to_string(), link: "/help/marketing-tools".to_string() },
-        HelpArticle { category: "Account & Billing".to_string(), title: "Manage Billing".to_string(), desc: "Update your subscription and payment methods.".to_string(), link: "/help/billing-settings".to_string() },
-        HelpArticle { category: "Advanced".to_string(), title: "API Documentation (for Advanced Users)".to_string(), desc: "Interactive API reference for connecting external services to your workspace.".to_string(), link: "/api-docs".to_string() },
+        HelpArticle {
+            category: "Getting Started".to_string(),
+            title: "Getting Started with Your Store".to_string(),
+            desc: "Welcome to OmniSolo! Let's get your business online in under 10 minutes."
+                .to_string(),
+            link: "/help/getting-started-1".to_string(),
+        },
+        HelpArticle {
+            category: "My Store".to_string(),
+            title: "Adding Products".to_string(),
+            desc: "Add products, track what's in stock, and change how your store looks."
+                .to_string(),
+            link: "/help/add-products".to_string(),
+        },
+        HelpArticle {
+            category: "Payments".to_string(),
+            title: "Accepting Payments".to_string(),
+            desc: "Learn how to accept credit cards and manage your payouts.".to_string(),
+            link: "/help/accept-payments".to_string(),
+        },
+        HelpArticle {
+            category: "AI Agents".to_string(),
+            title: "Activate AI Support".to_string(),
+            desc: "Let our AI handle customer inquiries and triage your inbox.".to_string(),
+            link: "/help/ai-support".to_string(),
+        },
+        HelpArticle {
+            category: "Marketing".to_string(),
+            title: "Grow Your Audience".to_string(),
+            desc: "Use our built-in tools to run promotions and track performance.".to_string(),
+            link: "/help/marketing-tools".to_string(),
+        },
+        HelpArticle {
+            category: "Account & Billing".to_string(),
+            title: "Manage Billing".to_string(),
+            desc: "Update your subscription and payment methods.".to_string(),
+            link: "/help/billing-settings".to_string(),
+        },
+        HelpArticle {
+            category: "Advanced".to_string(),
+            title: "API Documentation (for Advanced Users)".to_string(),
+            desc: "Interactive API reference for connecting external services to your workspace."
+                .to_string(),
+            link: "/api-docs".to_string(),
+        },
     ]
 }
 
 pub fn get_videos() -> Vec<VideoTutorial> {
     vec![
-        VideoTutorial { id: 1, title: "How to set up your first store easily".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 2, title: "Connecting a bank account to accept payments".to_string(), duration: "0:45".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 3, title: "Activating your AI Support Agent".to_string(), duration: "1:25".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 4, title: "Adding a new product to your inventory".to_string(), duration: "0:50".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 5, title: "Managing staff and user permissions".to_string(), duration: "1:10".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 6, title: "Creating a marketing campaign".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 7, title: "Using the Analytics Dashboard".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 8, title: "How to handle refunds and returns".to_string(), duration: "1:05".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 9, title: "Customizing your storefront design".to_string(), duration: "1:20".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
-        VideoTutorial { id: 10, title: "Setting up automated email receipts".to_string(), duration: "0:55".to_string(), video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string() },
+        VideoTutorial {
+            id: 1,
+            title: "How to set up your first store easily".to_string(),
+            duration: "1:20".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 2,
+            title: "Connecting a bank account to accept payments".to_string(),
+            duration: "0:45".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 3,
+            title: "Activating your AI Support Agent".to_string(),
+            duration: "1:25".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 4,
+            title: "Adding a new product to your inventory".to_string(),
+            duration: "0:50".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 5,
+            title: "Managing staff and user permissions".to_string(),
+            duration: "1:10".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 6,
+            title: "Creating a marketing campaign".to_string(),
+            duration: "1:20".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 7,
+            title: "Using the Analytics Dashboard".to_string(),
+            duration: "1:20".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 8,
+            title: "How to handle refunds and returns".to_string(),
+            duration: "1:05".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 9,
+            title: "Customizing your storefront design".to_string(),
+            duration: "1:20".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
+        VideoTutorial {
+            id: 10,
+            title: "Setting up automated email receipts".to_string(),
+            duration: "0:55".to_string(),
+            video_url: "https://www.w3schools.com/html/mov_bbb.mp4".to_string(),
+        },
     ]
 }
-
-
-
-
-
-
 
 #[allow(unused_macros)]
 macro_rules! with_cache_fallback {
@@ -372,29 +679,42 @@ macro_rules! with_cache_fallback {
                 let cache_key_bg = cache_key_str.clone();
                 tokio::spawn(async move {
                     let items = $fetch_fn();
-                    let _ = $cache.set(&cache_key_bg, items, std::time::Duration::from_secs(3600)).await;
+                    let _ = $cache
+                        .set(&cache_key_bg, items, std::time::Duration::from_secs(3600))
+                        .await;
                 });
             }
             (cached, true)
         } else {
             let items = $fetch_fn();
-            let _ = $cache.set(&cache_key_str, items.clone(), std::time::Duration::from_secs(3600)).await;
+            let _ = $cache
+                .set(
+                    &cache_key_str,
+                    items.clone(),
+                    std::time::Duration::from_secs(3600),
+                )
+                .await;
             (items, false)
         }
     }};
 }
 
-static DOCS_ARTICLES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<HelpArticle>>> = std::sync::OnceLock::new();
-static DOCS_VIDEOS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<VideoTutorial>>> = std::sync::OnceLock::new();
+static DOCS_ARTICLES_CACHE: std::sync::OnceLock<
+    ::server_utils::cache::HybridCache<Vec<HelpArticle>>,
+> = std::sync::OnceLock::new();
+static DOCS_VIDEOS_CACHE: std::sync::OnceLock<
+    ::server_utils::cache::HybridCache<Vec<VideoTutorial>>,
+> = std::sync::OnceLock::new();
 
 pub async fn list_articles(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-    Query(query): Query<DocsQuery>
+    Query(query): Query<DocsQuery>,
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
 
-    let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+    let cache = DOCS_ARTICLES_CACHE
+        .get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
     let cache_key = format!("docs:articles:all:{}", tenant_id);
     let mut articles: Vec<HelpArticle> = vec![];
     if let Some((cached, _is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -402,7 +722,13 @@ pub async fn list_articles(
     } else {
         let db_clone = db.clone();
         let t_id = tenant_id.to_string();
-        articles = match &db_clone.store {
+        articles = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            mysql_articles(&pool, &t_id, None).await.map_err(|error| {
+                tracing::error!("Failed to fetch MySQL help articles: {error}");
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            })?
+        } else {
+            match &db_clone.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = match db_clone.pool.begin().await {
                     Ok(tx) => tx,
@@ -454,43 +780,54 @@ pub async fn list_articles(
                     Err(_) => vec![]
                 }
             }
+            }
         };
         if articles.is_empty() {
             articles = get_articles();
         }
-        let _ = cache.set(&cache_key, articles.clone(), std::time::Duration::from_secs(3600)).await;
+        let _ = cache
+            .set(
+                &cache_key,
+                articles.clone(),
+                std::time::Duration::from_secs(3600),
+            )
+            .await;
     }
 
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let json_articles = articles.into_iter().map(|a| {
-        if mobile_optimized {
-            serde_json::json!({
-                "category": a.category,
-                "title": a.title,
-                "link": a.link
-            })
-        } else {
-            serde_json::json!({
-                "category": a.category,
-                "title": a.title,
-                "desc": a.desc,
-                "link": a.link
-            })
-        }
-    }).collect();
+    let json_articles = articles
+        .into_iter()
+        .map(|a| {
+            if mobile_optimized {
+                serde_json::json!({
+                    "category": a.category,
+                    "title": a.title,
+                    "link": a.link
+                })
+            } else {
+                serde_json::json!({
+                    "category": a.category,
+                    "title": a.title,
+                    "desc": a.desc,
+                    "link": a.link
+                })
+            }
+        })
+        .collect();
     Ok(Json(json_articles))
 }
 
 pub async fn search_articles(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-    Query(query): Query<SearchQuery>
+    Query(query): Query<SearchQuery>,
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
 
     let q = query.q.to_lowercase();
     let cache_key = format!("docs:articles:search:{}:{}", tenant_id, q);
-    let cache = DOCS_ARTICLES_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+    let cache = DOCS_ARTICLES_CACHE
+        .get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
 
     let mut articles: Vec<HelpArticle> = vec![];
     if let Some((cached, _is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -499,41 +836,50 @@ pub async fn search_articles(
         let db_clone = db.clone();
         let t_id = tenant_id.to_string();
         let query_str = format!("%{}%", q);
-        articles = match &db_clone.store {
-            crate::db::DbStore::Postgres => {
-                let mut tx = match db_clone.pool.begin().await {
-                    Ok(tx) => tx,
-                    Err(_) => return Ok(Json(vec![])),
-                };
-                if ::server_common::auth_utils::set_org_context(&mut *tx, &t_id)
-                    .await
-                    .is_err()
-                {
-                    return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
-                }
-                let result = sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1 AND (category ILIKE $2 OR title ILIKE $2 OR desc_text ILIKE $2)")
+        articles = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            mysql_articles(&pool, &t_id, Some(&q))
+                .await
+                .map_err(|error| {
+                    tracing::error!("Failed to search MySQL help articles: {error}");
+                    axum::http::StatusCode::SERVICE_UNAVAILABLE
+                })?
+        } else {
+            match &db_clone.store {
+                crate::db::DbStore::Postgres => {
+                    let mut tx = match db_clone.pool.begin().await {
+                        Ok(tx) => tx,
+                        Err(_) => return Ok(Json(vec![])),
+                    };
+                    if ::server_common::auth_utils::set_org_context(&mut *tx, &t_id)
+                        .await
+                        .is_err()
+                    {
+                        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                    }
+                    let result = sqlx::query("SELECT category, title, desc_text, link FROM help_articles WHERE tenant_id = $1 AND (category ILIKE $2 OR title ILIKE $2 OR desc_text ILIKE $2)")
                     .bind(t_id.clone())
                     .bind(query_str.clone())
                     .fetch_all(&mut *tx)
                     .await;
-                let _ = tx.commit().await;
-                match result {
-                    Ok(rows) => {
-                        rows.into_iter().map(|row| {
-                            use sqlx::Row;
-                            HelpArticle {
-                                category: row.get("category"),
-                                title: row.get("title"),
-                                desc: row.get("desc_text"),
-                                link: row.get("link"),
-                            }
-                        }).collect()
+                    let _ = tx.commit().await;
+                    match result {
+                        Ok(rows) => rows
+                            .into_iter()
+                            .map(|row| {
+                                use sqlx::Row;
+                                HelpArticle {
+                                    category: row.get("category"),
+                                    title: row.get("title"),
+                                    desc: row.get("desc_text"),
+                                    link: row.get("link"),
+                                }
+                            })
+                            .collect(),
+                        Err(_) => vec![],
                     }
-                    Err(_) => vec![]
                 }
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ? AND (category LIKE ? OR title LIKE ? OR desc_text LIKE ?)")
+                crate::db::DbStore::Sqlite(pool) => {
+                    match sqlx::query("SELECT category, title, desc_text as text, link FROM help_articles WHERE tenant_id = ? AND (category LIKE ? OR title LIKE ? OR desc_text LIKE ?)")
                     .bind(t_id.clone())
                     .bind(query_str.clone())
                     .bind(query_str.clone())
@@ -554,45 +900,61 @@ pub async fn search_articles(
                     }
                     Err(_) => vec![]
                 }
+                }
             }
         };
         if articles.is_empty() {
-            articles = get_articles().into_iter().filter(|a| {
-                a.category.to_lowercase().contains(&q) || a.title.to_lowercase().contains(&q) || a.desc.to_lowercase().contains(&q)
-            }).collect();
+            articles = get_articles()
+                .into_iter()
+                .filter(|a| {
+                    a.category.to_lowercase().contains(&q)
+                        || a.title.to_lowercase().contains(&q)
+                        || a.desc.to_lowercase().contains(&q)
+                })
+                .collect();
         }
-        let _ = cache.set(&cache_key, articles.clone(), std::time::Duration::from_secs(3600)).await;
+        let _ = cache
+            .set(
+                &cache_key,
+                articles.clone(),
+                std::time::Duration::from_secs(3600),
+            )
+            .await;
     }
 
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let json_articles = articles.into_iter().map(|a| {
-        if mobile_optimized {
-            serde_json::json!({
-                "category": a.category,
-                "title": a.title,
-                "link": a.link
-            })
-        } else {
-            serde_json::json!({
-                "category": a.category,
-                "title": a.title,
-                "desc": a.desc,
-                "link": a.link
-            })
-        }
-    }).collect();
+    let json_articles = articles
+        .into_iter()
+        .map(|a| {
+            if mobile_optimized {
+                serde_json::json!({
+                    "category": a.category,
+                    "title": a.title,
+                    "link": a.link
+                })
+            } else {
+                serde_json::json!({
+                    "category": a.category,
+                    "title": a.title,
+                    "desc": a.desc,
+                    "link": a.link
+                })
+            }
+        })
+        .collect();
     Ok(Json(json_articles))
 }
 
 pub async fn list_videos(
     axum::extract::Extension(db): axum::extract::Extension<std::sync::Arc<crate::db::DB>>,
     axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-    Query(query): Query<DocsQuery>
+    Query(query): Query<DocsQuery>,
 ) -> Result<Json<Vec<serde_json::Value>>, axum::http::StatusCode> {
     let tenant_id = docs_tenant(&claims)?;
 
-    let cache = DOCS_VIDEOS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
+    let cache = DOCS_VIDEOS_CACHE
+        .get_or_init(|| ::server_utils::cache::HybridCache::new(crate::get_redis_client()));
     let cache_key = format!("docs:videos:all:{}", tenant_id);
     let mut videos: Vec<VideoTutorial> = vec![];
     if let Some((cached, _is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -600,7 +962,13 @@ pub async fn list_videos(
     } else {
         let db_clone = db.clone();
         let t_id = tenant_id.to_string();
-        videos = match &db_clone.store {
+        videos = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            mysql_videos(&pool, &t_id).await.map_err(|error| {
+                tracing::error!("Failed to fetch MySQL video tutorials: {error}");
+                axum::http::StatusCode::SERVICE_UNAVAILABLE
+            })?
+        } else {
+            match &db_clone.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = match db_clone.pool.begin().await {
                     Ok(tx) => tx,
@@ -654,38 +1022,49 @@ pub async fn list_videos(
                     Err(_) => vec![]
                 }
             }
+            }
         };
         if videos.is_empty() {
             videos = get_videos();
         }
-        let _ = cache.set(&cache_key, videos.clone(), std::time::Duration::from_secs(3600)).await;
+        let _ = cache
+            .set(
+                &cache_key,
+                videos.clone(),
+                std::time::Duration::from_secs(3600),
+            )
+            .await;
     }
 
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     if mobile_optimized {
-        let json_videos = videos.into_iter().map(|v| {
+        let json_videos = videos
+            .into_iter()
+            .map(|v| {
+                serde_json::json!({
+                    "id": v.id,
+                    "title": v.title,
+                    "duration": v.duration,
+                    "video_url": v.video_url
+                })
+            })
+            .collect();
+        return Ok(Json(json_videos));
+    }
+    let json_videos = videos
+        .into_iter()
+        .map(|v| {
             serde_json::json!({
                 "id": v.id,
                 "title": v.title,
                 "duration": v.duration,
                 "video_url": v.video_url
             })
-        }).collect();
-        return Ok(Json(json_videos));
-    }
-    let json_videos = videos.into_iter().map(|v| {
-        serde_json::json!({
-            "id": v.id,
-            "title": v.title,
-            "duration": v.duration,
-            "video_url": v.video_url
         })
-    }).collect();
+        .collect();
     Ok(Json(json_videos))
 }
-
-
 
 #[derive(Serialize, Clone)]
 pub struct HelpArticleDetail {
@@ -701,7 +1080,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
             title: "Getting Started with Your Store".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
-        Welcome to OneHumanCorp! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
+        Welcome to OmniSolo! Setting up your store is quick and easy. Our app helps you get everything ready to sell online.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Step 1: Tell us about your business</h2>
       <p class="text-gray-700 mb-4">
@@ -772,7 +1151,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Viewing Your Bills</h2>
       <p class="text-gray-700 mb-4">
-        You can see a history of all the payments you have made to OneHumanCorp. This makes it easy to keep track of your expenses for your own records.
+        You can see a history of all the payments you have made to OmniSolo. This makes it easy to keep track of your expenses for your own records.
       </p>
       <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Inviting Team Members</h2>
       <p class="text-gray-700 mb-4">
@@ -824,7 +1203,9 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
     }
 }
 
-pub async fn get_article_handler(axum::extract::Path(article_id): axum::extract::Path<String>) -> Result<Json<HelpArticleDetail>, axum::http::StatusCode> {
+pub async fn get_article_handler(
+    axum::extract::Path(article_id): axum::extract::Path<String>,
+) -> Result<Json<HelpArticleDetail>, axum::http::StatusCode> {
     if let Some(article) = get_article(&article_id) {
         Ok(Json(article))
     } else {
@@ -900,7 +1281,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
         "info": {
             "title": "API Documentation (for Advanced Users)",
             "version": "1.0.0",
-            "description": "OHC Advanced API Reference integrating with OneHumanCorp.",
+            "description": "OHC Advanced API Reference integrating with OmniSolo.",
         },
         "servers": [
             {
@@ -1397,9 +1778,15 @@ mod tests {
 
     fn claims(tenant_id: &str) -> ::server_common::Claims {
         ::server_common::Claims {
-            sub: "test-user".to_string(), exp: 0, iat: 0,
-            organization_id: Some(tenant_id.to_string()), username: String::new(),
-            email: String::new(), roles: vec![], session_id: None, jti: String::new(),
+            sub: "test-user".to_string(),
+            exp: 0,
+            iat: 0,
+            organization_id: Some(tenant_id.to_string()),
+            username: String::new(),
+            email: String::new(),
+            roles: vec![],
+            session_id: None,
+            jti: String::new(),
         }
     }
 
@@ -1411,32 +1798,65 @@ mod tests {
         })
     }
 
-
     #[tokio::test]
     async fn test_list_articles() {
         let db = docs_test_db().await;
-        let res = list_articles(axum::extract::Extension(db), axum::extract::Extension(claims("default")), axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
+        let res = list_articles(
+            axum::extract::Extension(db),
+            axum::extract::Extension(claims("default")),
+            axum::extract::Query(DocsQuery {
+                mobile_optimized: None,
+            }),
+        )
+        .await
+        .unwrap();
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_found() {
         let db = docs_test_db().await;
-        let res = search_articles(axum::extract::Extension(db), axum::extract::Extension(claims("default")), axum::extract::Query(SearchQuery { q: "getting".to_string(), mobile_optimized: None })).await.unwrap();
+        let res = search_articles(
+            axum::extract::Extension(db),
+            axum::extract::Extension(claims("default")),
+            axum::extract::Query(SearchQuery {
+                q: "getting".to_string(),
+                mobile_optimized: None,
+            }),
+        )
+        .await
+        .unwrap();
         assert!(!res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_search_articles_not_found() {
         let db = docs_test_db().await;
-        let res = search_articles(axum::extract::Extension(db), axum::extract::Extension(claims("default")), axum::extract::Query(SearchQuery { q: "unlikelysearchterm123".to_string(), mobile_optimized: None })).await.unwrap();
+        let res = search_articles(
+            axum::extract::Extension(db),
+            axum::extract::Extension(claims("default")),
+            axum::extract::Query(SearchQuery {
+                q: "unlikelysearchterm123".to_string(),
+                mobile_optimized: None,
+            }),
+        )
+        .await
+        .unwrap();
         assert!(res.0.is_empty());
     }
 
     #[tokio::test]
     async fn test_list_videos() {
         let db = docs_test_db().await;
-        let res = list_videos(axum::extract::Extension(db), axum::extract::Extension(claims("default")), axum::extract::Query(DocsQuery { mobile_optimized: None })).await.unwrap();
+        let res = list_videos(
+            axum::extract::Extension(db),
+            axum::extract::Extension(claims("default")),
+            axum::extract::Query(DocsQuery {
+                mobile_optimized: None,
+            }),
+        )
+        .await
+        .unwrap();
         assert!(!res.0.is_empty());
     }
 
@@ -1454,7 +1874,10 @@ mod tests {
         let db_pool = crate::db::create_sqlite_pool_for_test().await;
         let pg_pool = crate::db::create_dummy_pg_pool().await;
         sqlx::query("CREATE TABLE IF NOT EXISTS tooltips (id TEXT, tenant_id TEXT, text TEXT, PRIMARY KEY (tenant_id, id))").execute(&db_pool).await.unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(db_pool) });
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(db_pool),
+        });
 
         // Prepare the payload to update a tooltip
         let payload = TooltipPayload {
@@ -1463,11 +1886,22 @@ mod tests {
         };
 
         // Update the tooltip
-        let res = update_tooltip(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant")), AxumJson(payload)).await.unwrap();
+        let res = update_tooltip(
+            axum::extract::Extension(db.clone()),
+            axum::extract::Extension(claims("test-tenant")),
+            AxumJson(payload),
+        )
+        .await
+        .unwrap();
         assert!(res.0.success);
 
         // Fetch tooltips and verify the update
-        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant"))).await.unwrap();
+        let tooltips_res = get_tooltips(
+            axum::extract::Extension(db.clone()),
+            axum::extract::Extension(claims("test-tenant")),
+        )
+        .await
+        .unwrap();
         let tooltips = tooltips_res.0;
 
         assert_eq!(
@@ -1481,7 +1915,10 @@ mod tests {
         let db_pool = crate::db::create_sqlite_pool_for_test().await;
         let pg_pool = crate::db::create_dummy_pg_pool().await;
         sqlx::query("CREATE TABLE IF NOT EXISTS tooltips (id TEXT, tenant_id TEXT, text TEXT, PRIMARY KEY (tenant_id, id))").execute(&db_pool).await.unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(db_pool) });
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(db_pool),
+        });
 
         // Insert a tooltip manually
         sqlx::query("INSERT INTO tooltips (id, tenant_id, text) VALUES ('delete-test-id', 'test-tenant', 'Tooltip to delete')")
@@ -1490,19 +1927,34 @@ mod tests {
             .unwrap();
 
         // Verify it exists
-        let tooltips_res = get_tooltips(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant"))).await.unwrap();
-        assert_eq!(tooltips_res.0.get("delete-test-id").map(|s| s.as_str()), Some("Tooltip to delete"));
+        let tooltips_res = get_tooltips(
+            axum::extract::Extension(db.clone()),
+            axum::extract::Extension(claims("test-tenant")),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            tooltips_res.0.get("delete-test-id").map(|s| s.as_str()),
+            Some("Tooltip to delete")
+        );
 
         // Delete the tooltip
         let res = delete_tooltip(
             axum::extract::Extension(db.clone()),
             axum::extract::Path("delete-test-id".to_string()),
             axum::extract::Extension(claims("test-tenant")),
-        ).await.unwrap();
+        )
+        .await
+        .unwrap();
         assert!(res.0.success);
 
         // Fetch tooltips and verify the deletion
-        let tooltips_res_after = get_tooltips(axum::extract::Extension(db.clone()), axum::extract::Extension(claims("test-tenant"))).await.unwrap();
+        let tooltips_res_after = get_tooltips(
+            axum::extract::Extension(db.clone()),
+            axum::extract::Extension(claims("test-tenant")),
+        )
+        .await
+        .unwrap();
         assert!(!tooltips_res_after.0.contains_key("delete-test-id"));
     }
 }

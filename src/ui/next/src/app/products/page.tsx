@@ -52,7 +52,7 @@ export default function ProductsPage() {
 
   const downloadQR = () => {
     if (!selectedProduct) return;
-    const checkoutUrl = `https://ohc.app/checkout?product_id=${encodeURIComponent(selectedProduct.id)}`;
+    const checkoutUrl = `https://cloud.omnisolo.co/checkout?product_id=${encodeURIComponent(selectedProduct.id)}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(checkoutUrl)}`;
     const link = document.createElement('a');
     link.href = qrUrl;
@@ -132,7 +132,7 @@ export default function ProductsPage() {
 
               <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(`https://ohc.app/checkout?product_id=${encodeURIComponent(selectedProduct.id)}`)}`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(`https://cloud.omnisolo.co/checkout?product_id=${encodeURIComponent(selectedProduct.id)}`)}`}
                   alt={`QR Code for ${selectedProduct.name}`}
                   className="w-48 h-48 object-contain"
                 />
@@ -148,7 +148,7 @@ export default function ProductsPage() {
                 </button>
               </div>
               <div className="mt-6 pt-4 border-t border-gray-200/50 w-full">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ Powered by OHC</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ Powered by OmniSolo</p>
               </div>
             </div>
           </div>

@@ -13,7 +13,12 @@ impl ConvertKitClient {
         }
     }
 
-    pub async fn add_subscriber(&self, form_id: &str, email: &str, first_name: &str) -> Result<String, String> {
+    pub async fn add_subscriber(
+        &self,
+        form_id: &str,
+        email: &str,
+        first_name: &str,
+    ) -> Result<String, String> {
         let url = format!("https://api.convertkit.com/v3/forms/{}/subscribe", form_id);
         let payload = serde_json::json!({
             "api_secret": self.api_secret,
@@ -21,10 +26,7 @@ impl ConvertKitClient {
             "first_name": first_name
         });
 
-        let res = self.http_client.post(&url)
-            .json(&payload)
-            .send()
-            .await;
+        let res = self.http_client.post(&url).json(&payload).send().await;
 
         match res {
             Ok(resp) => {

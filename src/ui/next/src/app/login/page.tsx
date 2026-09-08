@@ -80,7 +80,7 @@ function LoginForm() {
               O
             </div>
             <h1 id="login-title" className="text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
-              Sign in to OHC
+              Sign in to OmniSolo
             </h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
               Access your business workspace securely.

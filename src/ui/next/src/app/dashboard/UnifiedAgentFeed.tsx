@@ -37,7 +37,7 @@ type ApprovalsResponse = {
   next_cursor?: string | null;
 };
 
-type OHCLedgerEntry = {
+type OmniSoloLedgerEntry = {
   id: string;
   tenant_id: string;
   event_type: string;
@@ -47,7 +47,7 @@ type OHCLedgerEntry = {
 };
 
 type LedgerResponse = {
-  entries: OHCLedgerEntry[];
+  entries: OmniSoloLedgerEntry[];
 };
 
 type ApprovalRequest = {

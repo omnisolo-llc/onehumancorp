@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## Overview
-The Core Orchestration Engine is the central brain of One Human Corp. It manages agent lifecycle, task delegation, and role-based coordination based on the 4 conceptual layers: **Domain Knowledge, Role, Organization, and CEO User**. It allows multiple specialized AI agents to work together in **virtual meeting rooms** towards a high-level goal defined by the CEO.
+The Core Orchestration Engine is the central brain of OmniSolo. It manages agent lifecycle, task delegation, and role-based coordination based on the 4 conceptual layers: **Domain Knowledge, Role, Organization, and CEO User**. It allows multiple specialized AI agents to work together in **virtual meeting rooms** towards a high-level goal defined by the CEO.
 
 ## Goals
 - Provide a robust framework for agent communication via virtual meeting rooms where agents can define scopes, design, and implement products.

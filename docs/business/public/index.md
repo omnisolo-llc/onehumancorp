@@ -1,6 +1,6 @@
 # Product Overview
 
-One Human Corp (OHC) is the world's first **Hybrid Agentic Operating System** - a cloud-native and local-first agentic platform.
+OmniSolo (OHC) is the world's first **Hybrid Agentic Operating System** - a cloud-native and local-first agentic platform.
 
 ## Core Capabilities
 

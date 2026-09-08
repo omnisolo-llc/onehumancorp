@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
 import { OnboardingChatAgent } from './components/OnboardingChatAgent';
 
 export default function ZeroClickBuilderPage() {
@@ -17,7 +17,7 @@ export default function ZeroClickBuilderPage() {
   }, []);
 
   const handleShare = () => {
-    const shareText = `I just built my AI-powered business in 30 seconds using OHC! Start your own for free: https://ohc.app/zero-click-builder?ref=new_store \n\n⚡ Powered by OHC`;
+    const shareText = `I just built my AI-powered business in 30 seconds using OmniSolo! Start your own for free: https://cloud.omnisolo.co/zero-click-builder?ref=new_store \n\n⚡ Powered by OmniSolo`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(shareUrl, '_blank');
   };
@@ -91,7 +91,7 @@ export default function ZeroClickBuilderPage() {
 
         <div className="text-center mt-8">
           <p className="text-sm font-semibold text-gray-500 flex items-center justify-center gap-1">
-            <span id="dashboard-footer-viral-link">⚡ Powered by OHC</span>
+            <span id="dashboard-footer-viral-link">⚡ Powered by OmniSolo</span>
             {!hasPro && (
               <a href="/pricing" className="text-indigo-500 hover:text-indigo-600 hover:underline ml-1">
                 (Upgrade to remove)
@@ -99,7 +99,7 @@ export default function ZeroClickBuilderPage() {
             )}
           </p>
           <div className="flex justify-center mt-2">
-            <PoweredByOHC tenantId="ohc" />
+            <PoweredByOmniSolo tenantId="ohc" />
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 # Research Report: Website & Storefront Builder Architecture
 
 ## Overview
-This report documents the architectural design and research findings for the Website and Storefront Builder within the OneHumanCorp (OHC) platform. The primary objective is to define a system that allows non-technical business owners to establish a professional, mobile-first online presence in minutes, with AI agents handling the heavy lifting of design, layout, and SEO.
+This report documents the architectural design and research findings for the Website and Storefront Builder within the OmniSolo (OHC) platform. The primary objective is to define a system that allows non-technical business owners to establish a professional, mobile-first online presence in minutes, with AI agents handling the heavy lifting of design, layout, and SEO.
 
 ## Market Context & User Needs
 Our research indicates a significant gap in the market for a truly mobile-first, zero-knowledge website builder:

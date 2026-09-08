@@ -2,7 +2,7 @@
 
 # Teammate Mesh Walkthrough
 
-Welcome to the Teammate Mesh interactive walkthrough. The Teammate Mesh is the real-time communication spine of the One Human Corp (OHC) Hybrid Architecture, allowing agents to collaborate, deliberate, and execute tasks autonomously. This walkthrough explains the agent-to-agent communication over the `mesh:tasks` and `mesh:presence` channels, which are fundamental components of the mailbox protocol and event bus channels.
+Welcome to the Teammate Mesh interactive walkthrough. The Teammate Mesh is the real-time communication spine of the OmniSolo (OHC) Hybrid Architecture, allowing agents to collaborate, deliberate, and execute tasks autonomously. This walkthrough explains the agent-to-agent communication over the `mesh:tasks` and `mesh:presence` channels, which are fundamental components of the mailbox protocol and event bus channels.
 
 ## 1. Mesh Transport Overview
 

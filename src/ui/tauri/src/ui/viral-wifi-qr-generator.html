@@ -242,7 +242,7 @@
   <div class="container">
     <div style="font-size: 40px; text-align: center; margin-bottom: 12px;">📶</div>
     <h1>Viral WiFi QR Generator</h1>
-    <p class="subtitle">Create a "Scan to Connect" WiFi display card. Visitors get instant access, and the "Powered by OHC" watermark helps you earn referral credits.</p>
+    <p class="subtitle">Create a "Scan to Connect" WiFi display card. Visitors get instant access, and the "OmniSolo" watermark helps you earn referral credits.</p>
 
     <div class="ohc-growth-card" style="margin-bottom: 24px; text-align: center; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 24px;">
       <h3 style="margin-top: 0;">Embed Widget</h3>
@@ -259,7 +259,7 @@
 
         <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="remove-branding" style="width: auto;">
-          <label for="remove-branding" style="margin: 0;">Remove "Powered by OHC" Badge (Pro)</label>
+          <label for="remove-branding" style="margin: 0;">Remove "OmniSolo" Badge (Pro)</label>
         </div>
 
         <button id="download-btn">Save Image</button>
@@ -270,9 +270,9 @@
           <div>Scan to Connect to</div>
           <div class="preview-network-name" id="preview-network-name">Guest WiFi</div>
 
-          <img id="qr-image" class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fohc.app%2Fcheckout%3Fproduct%3DGuest%20WiFi" alt="QR Code" />
+          <img id="qr-image" class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fomnisolo.co%2Fcheckout%3Fproduct%3DGuest%20WiFi" alt="QR Code" />
 
-          <a href="#" class="preview-branding" id="preview-branding">⚡ Powered by OHC</a>
+          <a href="#" class="preview-branding" id="preview-branding">⚡ OmniSolo</a>
         </div>
       </div>
     </div>
@@ -284,7 +284,7 @@
   <div class="modal" id="paywall-modal">
     <div class="modal-content">
       <h3 style="margin-top: 0; font-size: 20px;">Upgrade to Pro</h3>
-      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "Powered by OHC" watermark is a Pro feature. Upgrade your account to unlock this feature.</p>
+      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "OmniSolo" watermark is a Pro feature. Upgrade your account to unlock this feature.</p>
 
       <div class="modal-actions">
         <button class="btn-secondary" id="close-paywall" style="margin-top: 0;">Cancel</button>
@@ -317,7 +317,7 @@
       const updatePreview = () => {
         previewNetworkName.textContent = state.networkName;
 
-        const payload = `https://ohc.app/checkout?product=${encodeURIComponent(state.networkName)}`;
+        const payload = `https://omnisolo.co/checkout?product=${encodeURIComponent(state.networkName)}`;
         qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(payload)}`;
         document.getElementById('embed-code').textContent = `<img src="${qrImage.src}" alt="WiFi QR" />`;
 

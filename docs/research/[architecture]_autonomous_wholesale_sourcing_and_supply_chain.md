@@ -4,7 +4,7 @@
 **Autonomous Wholesale Sourcing & Intelligent Supply Chain: The Zero-Touch Inventory Engine**
 
 ## 2. Problem Statement
-For OneHumanCorp (OHC) core personas selling physical goods—like **Priya (boutique owner)** and **Maya (baker)**—inventory replenishment is a reactive, manual, and stressful process. They must manually monitor stock levels, hunt for new wholesale products on fragmented platforms like Faire or Amazon Business, negotiate with suppliers via email, and manually create Purchase Orders.
+For OmniSolo (OHC) core personas selling physical goods—like **Priya (boutique owner)** and **Maya (baker)**—inventory replenishment is a reactive, manual, and stressful process. They must manually monitor stock levels, hunt for new wholesale products on fragmented platforms like Faire or Amazon Business, negotiate with suppliers via email, and manually create Purchase Orders.
 
 Small business owners suffer from "Procurement Paralysis": they know they need to restock or diversify their catalog but are overwhelmed by the administrative burden. Current platforms (Shopify, Wix) treat inventory as a static database. They tell you when you are out of stock, but they don't help you find and buy the next batch. OHC needs an autonomous supply chain engine that not only predicts when to restock but actively sources products and negotiates wholesale terms, presenting the owner with a single "1-Tap Approve" button.
 

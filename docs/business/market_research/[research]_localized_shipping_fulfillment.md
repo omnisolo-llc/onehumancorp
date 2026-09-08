@@ -1,7 +1,7 @@
 # Research Report: Localized Shipping & Fulfillment Optimization
 
 ## Executive Summary
-This report analyzes the challenges micro-SMEs face when managing localized shipping and fulfillment. Many platforms provide robust international shipping capabilities but lack intuitive, dynamic routing and delivery zone management for local operations (e.g., local delivery, food pickup, neighborhood drops). OneHumanCorp (OHC) can differentiate itself by integrating AI agents to autonomously coordinate local logistics, providing a frictionless experience for both the business owner and the end consumer.
+This report analyzes the challenges micro-SMEs face when managing localized shipping and fulfillment. Many platforms provide robust international shipping capabilities but lack intuitive, dynamic routing and delivery zone management for local operations (e.g., local delivery, food pickup, neighborhood drops). OmniSolo (OHC) can differentiate itself by integrating AI agents to autonomously coordinate local logistics, providing a frictionless experience for both the business owner and the end consumer.
 
 ## 1. Market Mapping & Competitor Discovery (Track 1)
 - **Shopify:** Provides Local Delivery and Local Pickup options, but setting up granular delivery zones (e.g., specific zip codes or drawn polygons) is cumbersome. It often relies on third-party apps like Zapiet, adding to the "App Tax."

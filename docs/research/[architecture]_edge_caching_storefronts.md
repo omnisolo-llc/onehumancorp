@@ -10,7 +10,7 @@ Small business owners (Maya, Carlos) require instant-loading, beautiful storefro
 - **Edge Caching Needs**: To meet the Mobile-First Performance targets (LCP < 1.5s on 4G), the initial HTML document must be served from the edge (e.g., Cloudflare Workers or Fastly Compute) rather than a centralized origin.
 - **Dynamic Content Challenge**: OHC storefronts are highly dynamic. Maya's inventory count changes frequently. Traditional static caching would result in overselling.
 - **Micro-caching and SWR (Stale-While-Revalidate)**: OHC can leverage SWR at the edge. The edge serves a slightly stale but ultra-fast HTML shell, while fetching the latest dynamic inventory in the background or via client-side hydration.
-- **Multi-Tenant Routing**: The Edge Worker must dynamically resolve the incoming host (e.g., `maya.ohc.app` or `maya-bakes.com`) to the correct OHC `tenant_id` at the edge to serve the right cached content.
+- **Multi-Tenant Routing**: The Edge Worker must dynamically resolve the incoming host (e.g., `maya.omnisolo.co` or `maya-bakes.com`) to the correct OHC `tenant_id` at the edge to serve the right cached content.
 
 ## Design Doc
 

@@ -14,7 +14,7 @@ test.describe('Growth: Footer Branding Loop Generator', () => {
 
     // Verify title and description
     await expect(page.locator('h1')).toHaveText('Footer Branding Loop Builder');
-    await expect(page.locator('text=Generate a "Powered by OHC" snippet')).toBeVisible();
+    await expect(page.locator('text=Generate a "OmniSolo" snippet')).toBeVisible();
 
     // Verify default state
     await expect(page.locator('id=badge-style')).toHaveValue('pill');
@@ -23,7 +23,7 @@ test.describe('Growth: Footer Branding Loop Generator', () => {
 
     // Verify live preview reflects default state
     await expect(page.locator('id=preview-badge-pill')).toBeVisible();
-    await expect(page.locator('id=preview-text-pill')).toHaveText('Powered by OHC');
+    await expect(page.locator('id=preview-text-pill')).toHaveText('OmniSolo');
     await expect(page.locator('id=preview-badge-footer')).not.toBeVisible();
 
     // Interact with form

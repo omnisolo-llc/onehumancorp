@@ -33,7 +33,7 @@ describe('ReferralFabBuilder', () => {
     fireEvent.click(toggle);
 
     expect(screen.getByText('Upgrade to Pro')).toBeDefined();
-    expect(screen.getByText('Remove the "Powered by OHC" branding and unlock premium widgets by upgrading to our Pro plan.')).toBeDefined();
+    expect(screen.getByText('Remove the "Powered by OmniSolo" branding and unlock premium widgets by upgrading to our Pro plan.')).toBeDefined();
   });
 
   it('does not grant branding removal from an upgrade click alone', () => {
@@ -49,7 +49,7 @@ describe('ReferralFabBuilder', () => {
 
     expect(localStorage.getItem('has_pro')).toBeNull();
     expect(toggle.getAttribute('aria-checked')).toBe('false');
-    expect(screen.getByText('⚡ Powered by OHC')).toBeDefined();
+    expect(screen.getByText('⚡ Powered by OmniSolo')).toBeDefined();
   });
 
   it('changes theme color', () => {

@@ -25,8 +25,7 @@ pub struct GenerateOfferingRequest {
     pub prompt: String,
 }
 
-#[derive(Serialize)]
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub struct GenerateOfferingResponse {
     pub title: String,
     pub description: String,
@@ -718,7 +717,8 @@ fn parse_generated_offering(raw: &str) -> Result<GenerateOfferingResponse, &'sta
         Some(value) if value.is_number() => value.to_string(),
         _ => return Err("provider output did not contain a price"),
     };
-    let price_number = parse_bounded_price(&price, false).ok_or("provider output contained an invalid price")?;
+    let price_number =
+        parse_bounded_price(&price, false).ok_or("provider output contained an invalid price")?;
     let item_type = parsed
         .get("item_type")
         .and_then(serde_json::Value::as_str)
@@ -755,7 +755,9 @@ fn parse_generated_offering(raw: &str) -> Result<GenerateOfferingResponse, &'sta
             }
             Some(variants)
         }
-        Some(serde_json::Value::Array(_)) => return Err("provider output contained too many variants"),
+        Some(serde_json::Value::Array(_)) => {
+            return Err("provider output contained too many variants");
+        }
         _ => return Err("provider output contained invalid variants"),
     };
 

@@ -1,7 +1,7 @@
 # Title: Autonomous KYB/KYC & Instant Underwriting Engine
 
 ## Problem Statement
-Small business owners—like Maya the baker, Carlos the handyman, and Fatima the food cart operator—need to start accepting payments immediately when they set up their business. Traditional payment gateways require lengthy Know Your Business (KYB) and Know Your Customer (KYC) procedures. These often involve uploading multiple documents, waiting days for manual review, or suffering sudden "funds frozen" events. To deliver OneHumanCorp's promise of "zero → live business in under 10 minutes," we need an invisible, instant underwriting engine that securely handles compliance and risk without blocking the user's ability to make their first sale.
+Small business owners—like Maya the baker, Carlos the handyman, and Fatima the food cart operator—need to start accepting payments immediately when they set up their business. Traditional payment gateways require lengthy Know Your Business (KYB) and Know Your Customer (KYC) procedures. These often involve uploading multiple documents, waiting days for manual review, or suffering sudden "funds frozen" events. To deliver OmniSolo's promise of "zero → live business in under 10 minutes," we need an invisible, instant underwriting engine that securely handles compliance and risk without blocking the user's ability to make their first sale.
 
 ## Research Report
 - **Competitor Analysis**:

@@ -1,6 +1,6 @@
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::RwLock;
-use sha2::{Sha256, Digest};
 
 pub struct Experiment {
     pub id: String,
@@ -21,11 +21,14 @@ impl ExperimentManager {
 
     pub fn add_experiment(&self, id: &str, title: &str, split: f64) {
         let mut experiments = self.experiments.write().unwrap();
-        experiments.insert(id.to_string(), Experiment {
-            id: id.to_string(),
-            title: title.to_string(),
-            traffic_split: split,
-        });
+        experiments.insert(
+            id.to_string(),
+            Experiment {
+                id: id.to_string(),
+                title: title.to_string(),
+                traffic_split: split,
+            },
+        );
     }
 
     pub fn get_variant(&self, id: &str, user_id: &str) -> String {

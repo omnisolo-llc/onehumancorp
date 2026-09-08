@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viral Certificate Generator | OHC</title>
+  <title>Viral Certificate Generator | OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -273,7 +273,7 @@
         const course = encodeURIComponent(document.getElementById('course-name').value || 'Course');
         const theme = encodeURIComponent(document.getElementById('theme').value || 'light');
 
-        const baseUrl = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') ? 'https://ohc.app' : window.location.origin;
+        const baseUrl = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1') ? 'https://omnisolo.co' : window.location.origin;
         const embedUrl = `${baseUrl}/api/v1/growth/certificate/embed?tenant=${tenant}&title=${title}&recipient=${recipient}&course=${course}&theme=${theme}`;
 
         const embedCode = `<iframe src="${embedUrl}" width="100%" height="400" frameborder="0" style="border: 1px solid #ccc; border-radius: 12px; overflow: hidden;"></iframe>`;

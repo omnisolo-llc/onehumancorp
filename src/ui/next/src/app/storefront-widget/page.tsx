@@ -17,10 +17,10 @@ export default function StorefrontWidgetPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Embed Your Store | OHC";
+    document.title = "Embed Your Store | OmniSolo";
   }, []);
 
-  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+  const embedCode = `<iframe src="https://cloud.omnisolo.co/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -100,7 +100,7 @@ export default function StorefrontWidgetPage() {
                             onChange={(e) => setRemoveBranding(e.target.checked)}
                             className="w-4 h-4 text-[#0071E3] border-gray-300 rounded focus:ring-[#0066FF]"
                         />
-                        <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Badge (Pro)</span>
+                        <span className="text-sm font-medium text-gray-700">Remove "Powered by OmniSolo" Badge (Pro)</span>
                     </label>
                 </div>
 
@@ -162,7 +162,7 @@ export default function StorefrontWidgetPage() {
                 {!removeBranding && (
                     <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
                         <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
-                            ⚡ Powered by OHC
+                            ⚡ Powered by OmniSolo
                         </a>
                     </div>
                 )}

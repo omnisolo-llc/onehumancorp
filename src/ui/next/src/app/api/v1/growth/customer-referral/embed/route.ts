@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     ? ""
     : `
 <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;">
-  <a href="${request.nextUrl.origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+  <a href="${request.nextUrl.origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a>
 </div>`;
 
   const html = `

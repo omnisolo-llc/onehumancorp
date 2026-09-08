@@ -1,6 +1,6 @@
 # Business Documentation
 
-This section contains business documentation for the One Human Corp (OHC) platform.
+This section contains business documentation for the OmniSolo (OHC) platform.
 
 ## Contents
 

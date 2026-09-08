@@ -2,7 +2,7 @@
 
 # 🚀 Day One Onboarding: Simplifying the Hybrid OHC Experience
 
-Welcome to **One Human Corp (OHC)**! This guide will walk you through your first day, getting your environment set up and launching your first Hybrid Agentic Swarm.
+Welcome to **OmniSolo (OHC)**! This guide will walk you through your first day, getting your environment set up and launching your first Hybrid Agentic Swarm.
 
 Whether you are targeting **Cloud-Native Mode**, **Standalone Desktop Mode**, or **Headless API Mode**, our simplified setup scripts take the friction out of configuration so you can start orchestrating agents immediately.
 

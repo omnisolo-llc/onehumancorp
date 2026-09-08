@@ -1,7 +1,7 @@
 # [Architecture] In-Person POS & Tap-to-Pay (Stripe Terminal) Integration
 
 ## Problem Statement
-For omni-channel retail personas like **Priya (The Boutique Owner)**, the ability to take in-person payments seamlessly is a hard requirement. Currently, OneHumanCorp (OHC) handles online orders but lacks the infrastructure for physical, in-store Point-of-Sale (POS) transactions. If Priya cannot accept a customer's credit card via Tap-to-Pay on her iPhone or via a physical Stripe Terminal card reader, she cannot use OHC to run her boutique. She needs an integration that bridges her online inventory with her offline sales instantly.
+For omni-channel retail personas like **Priya (The Boutique Owner)**, the ability to take in-person payments seamlessly is a hard requirement. Currently, OmniSolo (OHC) handles online orders but lacks the infrastructure for physical, in-store Point-of-Sale (POS) transactions. If Priya cannot accept a customer's credit card via Tap-to-Pay on her iPhone or via a physical Stripe Terminal card reader, she cannot use OHC to run her boutique. She needs an integration that bridges her online inventory with her offline sales instantly.
 
 ## Research Report
 ### Competitor Analysis

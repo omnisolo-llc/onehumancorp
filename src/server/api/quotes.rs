@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Extension, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post, put},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::domain::repository::models::{Quote, QuoteLineItem};
 use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Usage, Message};
+use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 
 const QUOTE_COLUMNS: &str = "id::text AS id, tenant_id, customer_id::text AS customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at";
 const QUOTE_LINE_ITEM_COLUMNS: &str = "id::text AS id, quote_id::text AS quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, service_item_id";
@@ -52,7 +52,8 @@ impl ResearcherLlmClient for AdapterLlm {
             prompt.push_str(&msg.content);
         }
 
-        let is_test_mode = cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
+        let is_test_mode =
+            cfg!(test) || std::env::var("CI").is_ok() || std::env::var("E2E_TEST").is_ok();
 
         #[cfg(test)]
         let forced_response = forced_test_service_item_response(&prompt);
@@ -64,7 +65,9 @@ impl ResearcherLlmClient for AdapterLlm {
         } else if is_test_mode {
             r#"[{"description": "AI Labor", "unit_price_cents": 15000, "quantity": 1, "is_optional": false, "service_item_id": null}]"#.to_string()
         } else {
-            crate::minimax::LocalLLMClient::new().reason(&prompt).await?
+            crate::minimax::LocalLLMClient::new()
+                .reason(&prompt)
+                .await?
         };
 
         Ok(ChatResponse {
@@ -285,7 +288,7 @@ async fn create_quote(
 
     // Check if TaxJar integration is connected for this tenant in the DB
     let api_key_res: Result<(String,), _> = sqlx::query_as(
-        "SELECT api_token FROM integrations WHERE tenant_id = $1 AND provider_id = 'taxjar'"
+        "SELECT api_token FROM integrations WHERE tenant_id = $1 AND provider_id = 'taxjar'",
     )
     .bind(authority.tenant_id())
     .fetch_one(&mut *tx)
@@ -298,10 +301,25 @@ async fn create_quote(
 
     if !api_key.is_empty() {
         let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
-        let total_pre_tax = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+        let total_pre_tax = line_items
+            .iter()
+            .map(|li| li.unit_price_cents * li.quantity as i64)
+            .sum::<i64>();
         let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
 
-        if let Ok(tax_rate) = provider.calculate_tax(crate::integrations::taxjar::client::TaxJarParams { amount: total_pre_tax_usd, shipping: 0.0, to_country: "US", to_zip: "90002", to_state: "CA", from_country: "US", from_zip: "92093", from_state: "CA" }).await {
+        if let Ok(tax_rate) = provider
+            .calculate_tax(crate::integrations::taxjar::client::TaxJarParams {
+                amount: total_pre_tax_usd,
+                shipping: 0.0,
+                to_country: "US",
+                to_zip: "90002",
+                to_state: "CA",
+                from_country: "US",
+                from_zip: "92093",
+                from_state: "CA",
+            })
+            .await
+        {
             if tax_rate.amount_to_collect > 0.0 {
                 line_items.push(QuoteLineItemRequest {
                     description: "Automated Sales Tax (TaxJar)".to_string(),
@@ -314,8 +332,13 @@ async fn create_quote(
         }
     }
 
-    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
-    let required_deposit_cents = payload.required_deposit_cents.unwrap_or(total_amount_cents / 3);
+    let total_amount_cents = line_items
+        .iter()
+        .map(|li| li.unit_price_cents * li.quantity as i64)
+        .sum::<i64>();
+    let required_deposit_cents = payload
+        .required_deposit_cents
+        .unwrap_or(total_amount_cents / 3);
 
     let quote_res = sqlx::query(
         "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at) SELECT $1, $2, customer.id, 'DRAFT', $4, $5, $6, $7, $8, NOW(), NOW() FROM customers AS customer WHERE customer.id::text = $3 AND customer.tenant_id = $2"
@@ -367,7 +390,11 @@ async fn create_quote(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    (StatusCode::CREATED, Json(serde_json::json!({"id": quote_id.to_string()}))).into_response()
+    (
+        StatusCode::CREATED,
+        Json(serde_json::json!({"id": quote_id.to_string()})),
+    )
+        .into_response()
 }
 
 async fn draft_quote_agent(
@@ -388,7 +415,9 @@ async fn draft_quote_agent(
         }
     };
 
-    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, authority.tenant_id()).await {
+    if let Err(e) =
+        ::server_common::auth_utils::set_org_context(&mut *tx, authority.tenant_id()).await
+    {
         tracing::error!("Failed to set org context: {}", e);
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
@@ -398,7 +427,11 @@ async fn draft_quote_agent(
         "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount_cents, required_deposit_cents) VALUES ($1, $2, $3, 'DRAFTING', 0, 0)"
     );
 
-    let cust_id: Option<String> = if payload.customer_id.is_empty() { None } else { Some(payload.customer_id.clone()) };
+    let cust_id: Option<String> = if payload.customer_id.is_empty() {
+        None
+    } else {
+        Some(payload.customer_id.clone())
+    };
 
     if let Err(e) = sqlx::query(&insert_quote)
         .bind(quote_id.to_string())
@@ -480,30 +513,43 @@ async fn update_quote(
 
     // If status is being updated to SENT, generate stripe link and soft-lock calendar slot
     if payload.status.as_deref() == Some("SENT") && current_quote.stripe_payment_link.is_none() {
-        let amount_usd = (payload.total_amount_cents.unwrap_or(current_quote.total_amount_cents.unwrap_or(0)) as f64) / 100.0;
-        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+        let amount_usd = (payload
+            .total_amount_cents
+            .unwrap_or(current_quote.total_amount_cents.unwrap_or(0))
+            as f64)
+            / 100.0;
+        let stripe_key =
+            std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
         let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
 
-        match stripe_client.create_checkout_session(
-            &format!("Quote #{}", quote_id),
-            &current_quote.customer_id.to_string(),
-            amount_usd,
-            None,
-            None,
-            None
-        ).await {
+        match stripe_client
+            .create_checkout_session(
+                &format!("Quote #{}", quote_id),
+                &current_quote.customer_id.to_string(),
+                amount_usd,
+                None,
+                None,
+                None,
+            )
+            .await
+        {
             Ok(url) => {
                 new_stripe_link = Some(url);
-            },
+            }
             Err(e) => {
                 tracing::error!("Failed to create Stripe checkout session: {}", e); // pii-safe
             }
         }
 
         if let Some(slot_id) = &current_quote.proposed_slot_id {
-            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-            if let Ok(redis_lock) = crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url) {
-                let _ = redis_lock.acquire_lock(&current_quote.tenant_id, "booking_slot", slot_id, 1800).await;
+            let redis_url =
+                std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+            if let Ok(redis_lock) =
+                crate::orchestration::queue::redis_lock::RedisLock::new(&redis_url)
+            {
+                let _ = redis_lock
+                    .acquire_lock(&current_quote.tenant_id, "booking_slot", slot_id, 1800)
+                    .await;
             }
         }
     }
@@ -531,13 +577,12 @@ async fn update_quote(
         }
     }
 
-    let delete_res = sqlx::query(
-        "DELETE FROM quote_line_items WHERE quote_id::text = $1 AND tenant_id = $2",
-    )
-        .bind(quote_id.to_string())
-        .bind(authority.tenant_id())
-        .execute(&mut *tx)
-        .await;
+    let delete_res =
+        sqlx::query("DELETE FROM quote_line_items WHERE quote_id::text = $1 AND tenant_id = $2")
+            .bind(quote_id.to_string())
+            .bind(authority.tenant_id())
+            .execute(&mut *tx)
+            .await;
 
     if let Err(e) = delete_res {
         tracing::error!("Failed to delete old quote line items: {}", e);
@@ -590,9 +635,8 @@ async fn get_quote(
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
     };
 
-    let quote_query = format!(
-        "SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text = $1 AND tenant_id = $2",
-    );
+    let quote_query =
+        format!("SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text = $1 AND tenant_id = $2",);
     let line_items_query = format!(
         "SELECT {QUOTE_LINE_ITEM_COLUMNS} FROM quote_line_items WHERE quote_id::text = $1 AND tenant_id = $2",
     );
@@ -638,7 +682,14 @@ async fn get_quote(
             item.updated_at = None;
         }
 
-        (StatusCode::OK, Json(QuoteResponse { quote: q, line_items })).into_response()
+        (
+            StatusCode::OK,
+            Json(QuoteResponse {
+                quote: q,
+                line_items,
+            }),
+        )
+            .into_response()
     } else {
         (StatusCode::OK, Json(QuoteResponse { quote, line_items })).into_response()
     }
@@ -652,9 +703,7 @@ mod tests {
     use axum::{body::Body, extract::Extension, http::Request};
     use tower::ServiceExt;
 
-    async fn isolated_quote_pool(
-        label: &str,
-    ) -> Option<(sqlx::PgPool, sqlx::PgPool, String)> {
+    async fn isolated_quote_pool(label: &str) -> Option<(sqlx::PgPool, sqlx::PgPool, String)> {
         let database_url = std::env::var("OHC_DATABASE_URL").ok()?;
         let admin = sqlx::PgPool::connect(&database_url)
             .await
@@ -703,11 +752,7 @@ mod tests {
             .expect("disable TaxJar in quote integration test");
     }
 
-    async fn drop_quote_test_schema(
-        admin: sqlx::PgPool,
-        pool: sqlx::PgPool,
-        schema: &str,
-    ) {
+    async fn drop_quote_test_schema(admin: sqlx::PgPool, pool: sqlx::PgPool, schema: &str) {
         pool.close().await;
         sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))
             .execute(&admin)
@@ -715,11 +760,7 @@ mod tests {
             .expect("drop isolated quote schema");
     }
 
-    async fn assert_tenant_reassignment_is_locked(
-        pool: &sqlx::PgPool,
-        table: &str,
-        id: &str,
-    ) {
+    async fn assert_tenant_reassignment_is_locked(pool: &sqlx::PgPool, table: &str, id: &str) {
         let mut connection = pool.acquire().await.expect("acquire competing connection");
         sqlx::query("SET lock_timeout = '100ms'")
             .execute(&mut *connection)
@@ -897,7 +938,10 @@ mod tests {
                 service_item_id: Some(service_item_id),
             }],
         };
-        let mut tx = pool.begin().await.expect("begin reference-lock transaction");
+        let mut tx = pool
+            .begin()
+            .await
+            .expect("begin reference-lock transaction");
         validate_create_references(&mut tx, &authority, &payload)
             .await
             .expect("validate owned references");
@@ -911,7 +955,9 @@ mod tests {
             assert_tenant_reassignment_is_locked(&pool, table, &id).await;
         }
 
-        tx.rollback().await.expect("rollback reference-lock transaction");
+        tx.rollback()
+            .await
+            .expect("rollback reference-lock transaction");
 
         let quote_id = Uuid::new_v4();
         sqlx::query("INSERT INTO quotes (id, tenant_id, customer_id, status, created_at, updated_at) VALUES ($1, 'tenant-a', $2, 'DRAFT', NOW(), NOW())")
@@ -920,13 +966,18 @@ mod tests {
             .execute(&pool)
             .await
             .expect("seed replacement-lock quote");
-        let mut tx = pool.begin().await.expect("begin replacement-lock transaction");
+        let mut tx = pool
+            .begin()
+            .await
+            .expect("begin replacement-lock transaction");
         let locked = lock_owned_quote(&mut tx, &authority, quote_id)
             .await
             .expect("lock owned quote");
         assert!(locked.is_some());
         assert_tenant_reassignment_is_locked(&pool, "quotes", &quote_id.to_string()).await;
-        tx.rollback().await.expect("rollback replacement-lock transaction");
+        tx.rollback()
+            .await
+            .expect("rollback replacement-lock transaction");
 
         drop_quote_test_schema(admin, pool, &schema).await;
     }
@@ -1186,12 +1237,14 @@ mod tests {
             .execute(&pool)
             .await
             .expect("disable TaxJar in quote integration test");
-        sqlx::query("INSERT INTO customers (id, tenant_id) VALUES ($1, 'tenant-a'), ($2, 'tenant-b')")
-            .bind(owned_customer_id)
-            .bind(foreign_customer_id)
-            .execute(&pool)
-            .await
-            .expect("seed quote integration customers");
+        sqlx::query(
+            "INSERT INTO customers (id, tenant_id) VALUES ($1, 'tenant-a'), ($2, 'tenant-b')",
+        )
+        .bind(owned_customer_id)
+        .bind(foreign_customer_id)
+        .execute(&pool)
+        .await
+        .expect("seed quote integration customers");
         for statement in [
             "INSERT INTO services (id, tenant_id) VALUES ('service-a', 'tenant-a'), ('service-b', 'tenant-b')",
             "INSERT INTO booking_slots (id, tenant_id) VALUES ('slot-a', 'tenant-a'), ('slot-b', 'tenant-b')",
@@ -1241,8 +1294,12 @@ mod tests {
 
         let foreign_reference_bodies = [
             format!(r#"{{"customer_id":"{foreign_customer_id}","line_items":[]}}"#),
-            format!(r#"{{"customer_id":"{owned_customer_id}","service_id":"service-b","line_items":[]}}"#),
-            format!(r#"{{"customer_id":"{owned_customer_id}","proposed_slot_id":"slot-b","line_items":[]}}"#),
+            format!(
+                r#"{{"customer_id":"{owned_customer_id}","service_id":"service-b","line_items":[]}}"#
+            ),
+            format!(
+                r#"{{"customer_id":"{owned_customer_id}","proposed_slot_id":"slot-b","line_items":[]}}"#
+            ),
             format!(
                 r#"{{"customer_id":"{owned_customer_id}","line_items":[{{"description":"Foreign","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{foreign_service_item_id}"}}]}}"#,
             ),
@@ -1330,8 +1387,12 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         for body in [
-            format!(r#"{{"tenant_id":"tenant-b","customer_id":"{owned_customer_id}","line_items":[]}}"#),
-            format!(r#"{{"tenant_id":"tenant-b","inquiry":"Need a quote","customer_id":"{owned_customer_id}"}}"#),
+            format!(
+                r#"{{"tenant_id":"tenant-b","customer_id":"{owned_customer_id}","line_items":[]}}"#
+            ),
+            format!(
+                r#"{{"tenant_id":"tenant-b","inquiry":"Need a quote","customer_id":"{owned_customer_id}"}}"#
+            ),
         ] {
             let uri = if body.contains("inquiry") {
                 "/draft_agent"
@@ -1393,13 +1454,12 @@ mod tests {
         .expect("count owned LLM quote items");
         assert_eq!(owned_llm_items, 2);
 
-        let foreign_quote: (String, i64) = sqlx::query_as(
-            "SELECT status, total_amount_cents FROM quotes WHERE id = $1",
-        )
-        .bind(foreign_quote_id)
-        .fetch_one(&pool)
-        .await
-        .expect("reload foreign quote");
+        let foreign_quote: (String, i64) =
+            sqlx::query_as("SELECT status, total_amount_cents FROM quotes WHERE id = $1")
+                .bind(foreign_quote_id)
+                .fetch_one(&pool)
+                .await
+                .expect("reload foreign quote");
         assert_eq!(foreign_quote, ("DRAFT".to_string(), 700));
         let foreign_items: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM quote_line_items WHERE quote_id = $1 AND tenant_id = 'tenant-b'",
@@ -1464,8 +1524,7 @@ async fn accept_quote(
 
     let invoice_id = Uuid::new_v4();
     let total_amount = (accepted_quote.total_amount_cents.unwrap_or(0) as f64) / 100.0;
-    let stripe_key =
-        std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_mock".to_string());
     let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     let mut payment_link = String::new();
     match stripe_client
@@ -1556,11 +1615,15 @@ async fn accept_quote(
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    (StatusCode::OK, Json(serde_json::json!({
-        "success": true,
-        "invoice_id": invoice_id.to_string(),
-        "stripe_payment_link": payment_link
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": true,
+            "invoice_id": invoice_id.to_string(),
+            "stripe_payment_link": payment_link
+        })),
+    )
+        .into_response()
 }
 
 async fn approve_quote(
@@ -1581,10 +1644,10 @@ async fn approve_quote(
         "UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id::text = $1 AND tenant_id = $2 RETURNING {QUOTE_COLUMNS}",
     );
     let quote = match sqlx::query_as::<_, Quote>(&approve_query)
-    .bind(quote_id.to_string())
-    .bind(authority.tenant_id())
-    .fetch_optional(&pool)
-    .await
+        .bind(quote_id.to_string())
+        .bind(authority.tenant_id())
+        .fetch_optional(&pool)
+        .await
     {
         Ok(Some(q)) => q,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),

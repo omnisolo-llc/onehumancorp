@@ -17,10 +17,10 @@ describe('MenuGeneratorPage', () => {
     localStorage.clear();
   });
 
-  it('renders initial state correctly and includes Powered by OHC watermark', () => {
+  it('renders initial state correctly and includes Powered by OmniSolo watermark', () => {
     render(<MenuGeneratorPage />);
     expect(screen.getByText('Menu Details')).toBeTruthy();
-    expect(screen.getByText('⚡ Powered by OHC')).toBeTruthy();
+    expect(screen.getByText('⚡ Powered by OmniSolo')).toBeTruthy();
   });
 
   it('generates menu link on valid input', async () => {

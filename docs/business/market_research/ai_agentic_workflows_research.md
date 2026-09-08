@@ -1,7 +1,7 @@
 # OHC AI Agentic Workflows vs Traditional Platforms: A Deep Dive
 
 ## 1. Introduction
-This research brief outlines how OneHumanCorp's (OHC) AI Agent architecture provides a fundamental paradigm shift compared to legacy small business platforms like Shopify, Wix, and Squarespace. The traditional platforms expect users to orchestrate various tools manually; OHC uses invisible AI agents to act autonomously on the user's behalf.
+This research brief outlines how OmniSolo's (OHC) AI Agent architecture provides a fundamental paradigm shift compared to legacy small business platforms like Shopify, Wix, and Squarespace. The traditional platforms expect users to orchestrate various tools manually; OHC uses invisible AI agents to act autonomously on the user's behalf.
 
 ## 2. Competitive Deep Dive: Shopify + Apps vs. OHC Agents
 

@@ -50,9 +50,9 @@ export default function Wrapped() {
            <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center text-5xl mb-4 backdrop-blur-[30px] saturate-[210%] border border-white/30 shadow-xl">
              🌟
            </div>
-           <h1 className="text-4xl md:text-6xl font-black font-outfit drop-shadow-md tracking-tight">Your OHC Snapshot</h1>
+           <h1 className="text-4xl md:text-6xl font-black font-outfit drop-shadow-md tracking-tight">Your OmniSolo Snapshot</h1>
            <p className="text-xl md:text-2xl font-medium opacity-90 max-w-md drop-shadow-sm leading-relaxed">
-             A snapshot of the business metrics currently available in OHC.
+             A snapshot of the business metrics currently available in OmniSolo.
            </p>
         </div>
       ),
@@ -115,7 +115,7 @@ export default function Wrapped() {
              <div className="mt-auto pt-6 border-t border-white/20 flex flex-col items-center gap-1 z-10">
                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">Join my journey</span>
                  <span className="text-xs font-medium">{shareLink.replace('https://', '')}</span>
-                 <a href={shareLink} target="_blank" rel="noopener noreferrer" className="mt-2 text-sm font-bold opacity-90 hover:opacity-100 transition-opacity">⚡ Powered by OHC</a>
+                 <a href={shareLink} target="_blank" rel="noopener noreferrer" className="mt-2 text-sm font-bold opacity-90 hover:opacity-100 transition-opacity">⚡ Powered by OmniSolo</a>
              </div>
           </div>
 
@@ -138,14 +138,14 @@ export default function Wrapped() {
     }
   };
 
-  const shareText = `My OHC business snapshot shows ${formattedRevenue} in recorded revenue. Launch your own storefront: ${shareLink}`;
+  const shareText = `My OmniSolo business snapshot shows ${formattedRevenue} in recorded revenue. Launch your own storefront: ${shareLink}`;
 
   return (
     <div className="relative h-[calc(100vh-7rem)] min-h-[40rem] w-full bg-[#1D1D1F] flex flex-col font-inter overflow-hidden">
       <div className="absolute left-6 bottom-6 z-50 rounded-2xl bg-white/15 px-4 py-3 text-white backdrop-blur-[30px] saturate-[210%] border border-white/20 shadow-xl">
         <h2 className="text-sm font-bold uppercase tracking-widest">Top Seller</h2>
         <p className="text-base font-semibold">{metrics.topProduct || 'Unavailable'}</p>
-        <span className="mt-1 inline-block text-xs font-bold opacity-90">Powered by OHC</span>
+        <span className="mt-1 inline-block text-xs font-bold opacity-90">Powered by OmniSolo</span>
       </div>
       {/* Progress Bars */}
       <div className="absolute top-0 left-0 right-0 p-4 flex gap-2 z-50">

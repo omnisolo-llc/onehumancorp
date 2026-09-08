@@ -1,4 +1,4 @@
-use super::client::{ResendClientWrapper, RealResendClient};
+use super::client::{RealResendClient, ResendClientWrapper};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
@@ -41,11 +41,17 @@ impl ResendProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 
-    pub async fn send_email(&self, to: &str, from: &str, subject: &str, html_body: &str) -> Result<(), String> {
+    pub async fn send_email(
+        &self,
+        to: &str,
+        from: &str,
+        subject: &str,
+        html_body: &str,
+    ) -> Result<(), String> {
         self.client.send_email(to, from, subject, html_body).await
     }
 }
@@ -59,7 +65,13 @@ mod tests {
 
     #[async_trait]
     impl ResendClientWrapper for MockResendClient {
-        async fn send_email(&self, _to: &str, _from: &str, _subject: &str, _html_body: &str) -> Result<(), String> {
+        async fn send_email(
+            &self,
+            _to: &str,
+            _from: &str,
+            _subject: &str,
+            _html_body: &str,
+        ) -> Result<(), String> {
             Ok(())
         }
     }
@@ -82,7 +94,14 @@ mod tests {
     async fn test_resend_provider_send_email() {
         let mock_client = Arc::new(MockResendClient);
         let provider = ResendProvider::with_client(mock_client);
-        let result = provider.send_email("test@example.com", "sender@example.com", "Subject", "<p>Body</p>").await;
+        let result = provider
+            .send_email(
+                "test@example.com",
+                "sender@example.com",
+                "Subject",
+                "<p>Body</p>",
+            )
+            .await;
         assert!(result.is_ok());
     }
 }

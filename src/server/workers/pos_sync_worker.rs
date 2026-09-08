@@ -1,6 +1,5 @@
-
-use std::sync::Arc;
 use crate::db::DB;
+use std::sync::Arc;
 
 pub struct PosSyncWorker {
     db: Arc<DB>,
@@ -16,10 +15,15 @@ impl PosSyncWorker {
 impl crate::queue::TaskJobHandler for PosSyncWorker {
     async fn handle(&self, job: crate::queue::Job) -> Result<(), String> {
         let payload: serde_json::Value = serde_json::from_str(&job.payload).unwrap();
-        let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str())
+        let transaction_id = payload
+            .get("transaction_id")
+            .and_then(|v| v.as_str())
             .or_else(|| payload.get("pos_transaction_id").and_then(|v| v.as_str()))
             .unwrap_or("");
-        let client_id = payload.get("client_id").and_then(|v| v.as_str()).unwrap_or("");
+        let client_id = payload
+            .get("client_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
 
         let mut tx = match self.db.pool.begin().await {
             Ok(tx) => tx,
@@ -29,7 +33,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             }
         };
 
-        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &job.tenant_id).await {
+        if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &job.tenant_id).await
+        {
             tracing::error!("Failed to set org context: {}", e);
             return Err("Failed to set org context".into());
         }
@@ -50,14 +55,26 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 .await
                 .unwrap();
 
-            let product_id_owned: Option<String> = payload.get("mutation").and_then(|m| m.get("product_id")).and_then(|v| v.as_str()).map(|s| s.to_string())
+            let product_id_owned: Option<String> = payload
+                .get("mutation")
+                .and_then(|m| m.get("product_id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
                 .or_else(|| {
                     if let Some(items) = payload.get("payload").and_then(|v| v.as_str()) {
                         let items_array = serde_json::from_str::<Vec<serde_json::Value>>(items)
-                            .or_else(|_| serde_json::from_str::<serde_json::Value>(items).map(|obj| vec![obj]));
+                            .or_else(|_| {
+                                serde_json::from_str::<serde_json::Value>(items)
+                                    .map(|obj| vec![obj])
+                            });
 
                         if let Ok(arr) = items_array {
-                            return arr.first().and_then(|first| first.get("product_id").and_then(|p| p.as_str()).map(|s| s.to_string()));
+                            return arr.first().and_then(|first| {
+                                first
+                                    .get("product_id")
+                                    .and_then(|p| p.as_str())
+                                    .map(|s| s.to_string())
+                            });
                         }
                     }
                     None
@@ -72,7 +89,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 "transaction_id": transaction_id,
                 "amount_cents": amount_cents,
                 "product_id": product_id,
-            }).to_string();
+            })
+            .to_string();
 
             let _ = sqlx::query(
                 "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
@@ -111,9 +129,11 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             .await
             .unwrap();
 
-
         // Handle tap_to_pay offline processing via Stripe
-        let mutation_type = payload.get("mutation_type").and_then(|v| v.as_str()).unwrap_or("");
+        let mutation_type = payload
+            .get("mutation_type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
         if mutation_type == "tap_to_pay" {
             // Securely create and capture Stripe intent since it's an offline tap-to-pay
             let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
@@ -123,14 +143,29 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             let mut qty = None;
             let mut p_id_owned = None;
             if let Some(mutation) = payload.get("mutation") {
-                p_id_owned = mutation.get("product_id").and_then(|v| v.as_str()).map(|s| s.to_string());
-                qty = mutation.get("quantity_deducted").and_then(|v| v.as_i64()).map(|v| v as i32);
+                p_id_owned = mutation
+                    .get("product_id")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+                qty = mutation
+                    .get("quantity_deducted")
+                    .and_then(|v| v.as_i64())
+                    .map(|v| v as i32);
             } else if let Some(items_str) = payload.get("payload").and_then(|v| v.as_str()) {
-                let parsed_items = serde_json::from_str::<Vec<serde_json::Value>>(items_str).or_else(|_| serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj]));
+                let parsed_items = serde_json::from_str::<Vec<serde_json::Value>>(items_str)
+                    .or_else(|_| {
+                        serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj])
+                    });
                 if let Ok(items_array) = parsed_items {
                     if let Some(first) = items_array.first() {
-                        p_id_owned = first.get("product_id").and_then(|v| v.as_str()).map(|s| s.to_string());
-                        qty = first.get("quantity").and_then(|v| v.as_i64()).map(|v| v as i32);
+                        p_id_owned = first
+                            .get("product_id")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string());
+                        qty = first
+                            .get("quantity")
+                            .and_then(|v| v.as_i64())
+                            .map(|v| v as i32);
                     }
                 }
             }
@@ -138,15 +173,18 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
 
             if client.require_api_key().is_ok() {
                 // Idempotency key uses the transaction_id to prevent double charges
-                match client.create_terminal_payment_intent(
-                    &job.tenant_id,
-                    amount_cents,
-                    "usd", // Assuming USD for now, or use payload.currency
-                    p_id,
-                    qty,
-                    None,
-                    &transaction_id,
-                ).await {
+                match client
+                    .create_terminal_payment_intent(
+                        &job.tenant_id,
+                        amount_cents,
+                        "usd", // Assuming USD for now, or use payload.currency
+                        p_id,
+                        qty,
+                        None,
+                        &transaction_id,
+                    )
+                    .await
+                {
                     Ok((intent_id, _)) => {
                         // Capture it
                         match client.capture_terminal_payment_intent(&intent_id).await {
@@ -154,7 +192,10 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 // Proceed to fulfill inventory below
                             }
                             Err(e) => {
-                                tracing::error!("Failed to capture Stripe intent for offline tap-to-pay: {}", e); // pii-safe
+                                tracing::error!(
+                                    "Failed to capture Stripe intent for offline tap-to-pay: {}",
+                                    e
+                                ); // pii-safe
                                 sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
                                     .bind(transaction_id)
                                     .execute(&mut *tx)
@@ -166,7 +207,10 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         }
                     }
                     Err(e) => {
-                        tracing::error!("Failed to create Stripe intent for offline tap-to-pay: {}", e); // pii-safe
+                        tracing::error!(
+                            "Failed to create Stripe intent for offline tap-to-pay: {}",
+                            e
+                        ); // pii-safe
                         sqlx::query("UPDATE pos_offline_transactions SET status = 'FAILED', _sync_status = 'failed' WHERE id = $1")
                             .bind(transaction_id)
                             .execute(&mut *tx)
@@ -179,7 +223,10 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             }
         }
 
-        let payload_amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+        let payload_amount_cents = payload
+            .get("amount_cents")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0);
 
         if payload_amount_cents == 4002 {
             let feed_id = uuid::Uuid::new_v4().to_string();
@@ -229,7 +276,10 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             if let Ok(Some(row)) = current_stock_res {
                 let mut stock: i32 = sqlx::Row::get(&row, "available_quantity");
 
-                let inventory_already_deducted = payload.get("inventory_already_deducted").and_then(|v| v.as_bool()).unwrap_or(false);
+                let inventory_already_deducted = payload
+                    .get("inventory_already_deducted")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 if inventory_already_deducted {
                     stock += quantity_deducted as i32;
                 }
@@ -273,14 +323,30 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
 
                 // Get customer message note if exists
                 if let Some(notes) = payload.get("notes").and_then(|v| v.as_str()) {
-                    let tenant_locale: String = sqlx::query_scalar("SELECT locale FROM tenant_settings WHERE tenant_id = $1")
-                        .bind(&job.tenant_id)
-                        .fetch_optional(&mut *tx)
+                    let tenant_locale: String = sqlx::query_scalar(
+                        "SELECT locale FROM tenant_settings WHERE tenant_id = $1",
+                    )
+                    .bind(&job.tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap_or(None)
+                    .unwrap_or_else(|| "en".to_string());
+                    let target_language = if tenant_locale.starts_with("ar") {
+                        "Arabic"
+                    } else if tenant_locale.starts_with("es") {
+                        "Spanish"
+                    } else {
+                        "English"
+                    };
+                    if let Ok(t) =
+                        crate::api::agents::translation::translate_inbox_message_with_llm(
+                            &job.tenant_id,
+                            "kitchen",
+                            notes,
+                            target_language,
+                        )
                         .await
-                        .unwrap_or(None)
-                        .unwrap_or_else(|| "en".to_string());
-                    let target_language = if tenant_locale.starts_with("ar") { "Arabic" } else if tenant_locale.starts_with("es") { "Spanish" } else { "English" };
-                    if let Ok(t) = crate::api::agents::translation::translate_inbox_message_with_llm(&job.tenant_id, "kitchen", notes, target_language).await {
+                    {
                         translated_notes = Some(t.translated_content);
                     }
                 }
@@ -299,7 +365,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         "product_id": product_id,
                         "remaining_stock": new_stock,
                         "suggested_action": "Restock Item"
-                    }).to_string();
+                    })
+                    .to_string();
                     sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                         .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await
                         .map_err(|e| e.to_string())?;
@@ -307,9 +374,15 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     let job_id = uuid::Uuid::new_v4().to_string();
 
                     let message = if new_stock == 0 {
-                        format!("{} sold out. Would you like to draft a restock order?", product_id)
+                        format!(
+                            "{} sold out. Would you like to draft a restock order?",
+                            product_id
+                        )
                     } else {
-                        format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                        format!(
+                            "Stock for product {} has dropped to {}.",
+                            product_id, new_stock
+                        )
                     };
 
                     let job_payload = serde_json::json!({
@@ -317,7 +390,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         "remaining_stock": new_stock,
                         "threshold": 5,
                         "message": message
-                    }).to_string();
+                    })
+                    .to_string();
                     sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                         .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
                         .map_err(|e| e.to_string())?;
@@ -408,7 +482,9 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     }]);
 
                     if client_id.is_empty() {
-                        tracing::warn!("client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions");
+                        tracing::warn!(
+                            "client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions"
+                        );
                     } else {
                         if !inventory_already_deducted {
                             if let Err(e) = sqlx::query(
@@ -438,8 +514,13 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 format!("tenant-id:{}", job.tenant_id),
                                 format!("entity:product:{}", product_id)
                             ]
-                        }).to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                        })
+                        .to_string();
+                        let _: Result<(), _> = redis::cmd("PUBLISH")
+                            .arg(invalidation_topic)
+                            .arg(invalidation_payload)
+                            .query_async(&mut conn)
+                            .await;
                     }
                 }
             }
@@ -448,7 +529,10 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
         // Support payload formatted directly for the transaction items array
         if let Some(items) = payload.get("payload") {
             if let Some(items_str) = items.as_str() {
-                let parsed_items = serde_json::from_str::<Vec<serde_json::Value>>(items_str).or_else(|_| serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj]));
+                let parsed_items = serde_json::from_str::<Vec<serde_json::Value>>(items_str)
+                    .or_else(|_| {
+                        serde_json::from_str::<serde_json::Value>(items_str).map(|obj| vec![obj])
+                    });
                 if let Ok(items_array) = parsed_items {
                     let order_id = uuid::Uuid::new_v4().to_string();
                     let amount_cents = payload_amount_cents;
@@ -457,14 +541,30 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
 
                     let mut translated_notes = None;
                     if let Some(notes) = payload.get("notes").and_then(|v| v.as_str()) {
-                        let tenant_locale: String = sqlx::query_scalar("SELECT locale FROM tenant_settings WHERE tenant_id = $1")
-                            .bind(&job.tenant_id)
-                            .fetch_optional(&mut *tx)
+                        let tenant_locale: String = sqlx::query_scalar(
+                            "SELECT locale FROM tenant_settings WHERE tenant_id = $1",
+                        )
+                        .bind(&job.tenant_id)
+                        .fetch_optional(&mut *tx)
+                        .await
+                        .unwrap_or(None)
+                        .unwrap_or_else(|| "en".to_string());
+                        let target_language = if tenant_locale.starts_with("ar") {
+                            "Arabic"
+                        } else if tenant_locale.starts_with("es") {
+                            "Spanish"
+                        } else {
+                            "English"
+                        };
+                        if let Ok(t) =
+                            crate::api::agents::translation::translate_inbox_message_with_llm(
+                                &job.tenant_id,
+                                "kitchen",
+                                notes,
+                                target_language,
+                            )
                             .await
-                            .unwrap_or(None)
-                            .unwrap_or_else(|| "en".to_string());
-                        let target_language = if tenant_locale.starts_with("ar") { "Arabic" } else if tenant_locale.starts_with("es") { "Spanish" } else { "English" };
-                        if let Ok(t) = crate::api::agents::translation::translate_inbox_message_with_llm(&job.tenant_id, "kitchen", notes, target_language).await {
+                        {
                             translated_notes = Some(t.translated_content);
                         }
                     }
@@ -473,34 +573,57 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).bind(payload.get("notes").and_then(|v| v.as_str())).bind(translated_notes).execute(&mut *tx).await;
 
                     for item in items_array {
-                        let product_id = item.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let product_id = item
+                            .get("product_id")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
-                        if product_id.is_empty() { continue; }
+                        if product_id.is_empty() {
+                            continue;
+                        }
 
                         let item_id = uuid::Uuid::new_v4().to_string();
                         let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
                             .bind(&item_id).bind(&job.tenant_id).bind(&order_id).bind(product_id).bind(qty).bind(total_amount).execute(&mut *tx).await;
 
-                        let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if crate::is_standalone_runtime() {
-                            if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
-                                Box::new(crate::orchestration::locks::StandaloneLock::with_pool(pool))
+                        let locker: Box<dyn crate::orchestration::locks::DistributedLock> =
+                            if crate::is_standalone_runtime() {
+                                if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                                    Box::new(
+                                        crate::orchestration::locks::StandaloneLock::with_pool(
+                                            pool,
+                                        ),
+                                    )
+                                } else {
+                                    Box::new(crate::orchestration::locks::StandaloneLock::new())
+                                }
                             } else {
-                                Box::new(crate::orchestration::locks::StandaloneLock::new())
-                            }
-                        } else {
-                            if let Ok(client) = redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string())) {
-                                Box::new(crate::orchestration::locks::RedisLock::new(client))
-                            } else if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
-                                Box::new(crate::orchestration::locks::StandaloneLock::with_pool(pool))
-                            } else {
-                                Box::new(crate::orchestration::locks::StandaloneLock::new())
-                            }
-                        };
+                                if let Ok(client) = redis::Client::open(
+                                    std::env::var("REDIS_URL")
+                                        .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
+                                ) {
+                                    Box::new(crate::orchestration::locks::RedisLock::new(client))
+                                } else if let Some(pool) = crate::db::get_sqlite_pool_if_exists() {
+                                    Box::new(
+                                        crate::orchestration::locks::StandaloneLock::with_pool(
+                                            pool,
+                                        ),
+                                    )
+                                } else {
+                                    Box::new(crate::orchestration::locks::StandaloneLock::new())
+                                }
+                            };
 
-                        let mut _lock_guard = match locker.acquire_resource(&job.tenant_id, "inventory", product_id).await {
+                        let mut _lock_guard = match locker
+                            .acquire_resource(&job.tenant_id, "inventory", product_id)
+                            .await
+                        {
                             Ok(guard) => guard,
                             Err(_) => {
-                                tracing::warn!("Failed to acquire lock for offline sync reconciliation: inventory:{}", product_id);
+                                tracing::warn!(
+                                    "Failed to acquire lock for offline sync reconciliation: inventory:{}",
+                                    product_id
+                                );
                                 continue;
                             }
                         };
@@ -514,7 +637,10 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         if let Ok(Some(row)) = current_stock_res {
                             let mut stock: i32 = sqlx::Row::get(&row, "available_quantity");
 
-                            let inventory_already_deducted = payload.get("inventory_already_deducted").and_then(|v| v.as_bool()).unwrap_or(false);
+                            let inventory_already_deducted = payload
+                                .get("inventory_already_deducted")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
 
                             if inventory_already_deducted {
                                 // Add back the deducted amount to check if there was a conflict before it was deducted synchronously
@@ -563,7 +689,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 "product_id": product_id,
                                 "quantity_deducted": qty,
                                 "remaining_stock": new_stock
-                            }).to_string();
+                            })
+                            .to_string();
 
                             let _ = sqlx::query(
                                 "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
@@ -598,7 +725,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                     "product_id": product_id,
                                     "remaining_stock": new_stock,
                                     "suggested_action": "Restock Item"
-                                }).to_string();
+                                })
+                                .to_string();
                                 sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await
                                     .map_err(|e| e.to_string())?;
@@ -606,9 +734,15 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 let job_id = uuid::Uuid::new_v4().to_string();
 
                                 let message = if new_stock == 0 {
-                                    format!("{} sold out. Would you like to draft a restock order?", product_id)
+                                    format!(
+                                        "{} sold out. Would you like to draft a restock order?",
+                                        product_id
+                                    )
                                 } else {
-                                    format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                                    format!(
+                                        "Stock for product {} has dropped to {}.",
+                                        product_id, new_stock
+                                    )
                                 };
 
                                 let job_payload = serde_json::json!({
@@ -616,7 +750,8 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                     "remaining_stock": new_stock,
                                     "threshold": 5,
                                     "message": message
-                                }).to_string();
+                                })
+                                .to_string();
                                 sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                                     .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
                                     .map_err(|e| e.to_string())?;
@@ -707,7 +842,9 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 }]);
 
                                 if client_id.is_empty() {
-                                    tracing::warn!("client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions");
+                                    tracing::warn!(
+                                        "client_id is empty, skipping pending_reconciliation update for pos_terminal_sessions"
+                                    );
                                 } else {
                                     if !inventory_already_deducted {
                                         if let Err(e) = sqlx::query(
@@ -729,7 +866,9 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                             }
 
                             if let Some(client) = crate::get_redis_client() {
-                                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                if let Ok(mut conn) =
+                                    client.get_multiplexed_async_connection().await
+                                {
                                     let invalidation_topic = "cache_invalidation_events";
                                     let invalidation_payload = serde_json::json!({
                                         "event": "inventory.updated",
@@ -737,8 +876,13 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                             format!("tenant-id:{}", job.tenant_id),
                                             format!("entity:product:{}", product_id)
                                         ]
-                                    }).to_string();
-                                    let _: Result<(), _> = redis::cmd("PUBLISH").arg(invalidation_topic).arg(invalidation_payload).query_async(&mut conn).await;
+                                    })
+                                    .to_string();
+                                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                                        .arg(invalidation_topic)
+                                        .arg(invalidation_payload)
+                                        .query_async(&mut conn)
+                                        .await;
                                 }
                             }
                         }
@@ -761,7 +905,6 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -771,13 +914,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_sync_worker_logic() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let pool = crate::db::secure_pg_pool_options()
+            .connect(&database_url)
+            .await
+            .unwrap();
+        let db = Arc::new(DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
         let worker = PosSyncWorker::new(db.clone());
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
@@ -814,18 +964,28 @@ mod tests {
         let res = handle.await;
         assert!(res.is_ok());
 
-        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-worker-test-1'")
-            .fetch_one(&pool).await.unwrap();
+        let count: (i32,) =
+            sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-worker-test-1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(count.0, 8); // 10 - 2 = 8
 
-        let tx_status: (String,) = sqlx::query_as("SELECT status FROM pos_offline_transactions WHERE id = 'tx-test-worker'")
-            .fetch_one(&pool).await.unwrap();
+        let tx_status: (String,) = sqlx::query_as(
+            "SELECT status FROM pos_offline_transactions WHERE id = 'tx-test-worker'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
         assert_eq!(tx_status.0, "RESOLVED");
 
-        let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE action_type = 'offline_pos_sync'")
-            .fetch_one(&pool).await.unwrap();
+        let ledger_count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM ohc_universal_ledger WHERE action_type = 'offline_pos_sync'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
         assert!(ledger_count.0 > 0);
-
 
         let conflict_jobs: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'POS_INVENTORY_CONFLICT_RESOLUTION'")
             .fetch_one(&pool).await.unwrap();
@@ -835,13 +995,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_pos_sync_worker_conflict() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let pool = crate::db::secure_pg_pool_options()
+            .connect(&database_url)
+            .await
+            .unwrap();
+        let db = Arc::new(DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
         let worker = PosSyncWorker::new(db.clone());
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test-conflict', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
@@ -884,12 +1051,20 @@ mod tests {
         let res = handle.await;
         assert!(res.is_ok());
 
-        let count: (i32,) = sqlx::query_as("SELECT available_quantity FROM products WHERE id = 'prod-worker-test-conflict'")
-            .fetch_one(&pool).await.unwrap();
+        let count: (i32,) = sqlx::query_as(
+            "SELECT available_quantity FROM products WHERE id = 'prod-worker-test-conflict'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
         assert_eq!(count.0, 0);
 
-        let tx_status: (String,) = sqlx::query_as("SELECT status FROM pos_offline_transactions WHERE id = 'tx-test-worker-conflict'")
-            .fetch_one(&pool).await.unwrap();
+        let tx_status: (String,) = sqlx::query_as(
+            "SELECT status FROM pos_offline_transactions WHERE id = 'tx-test-worker-conflict'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
         assert_eq!(tx_status.0, "RESOLVED");
 
         let conflict_jobs: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'POS_INVENTORY_CONFLICT_RESOLUTION' AND tenant_id = 'tenant-worker-test-conflict'")
@@ -903,20 +1078,37 @@ mod tests {
         let pending = sync_status.1.as_array().unwrap();
         assert_eq!(pending.len(), 1);
         let conflict_obj = pending[0].as_object().unwrap();
-        assert_eq!(conflict_obj.get("transaction_id").unwrap().as_str().unwrap(), "tx-test-worker-conflict");
-        assert_eq!(conflict_obj.get("product_id").unwrap().as_str().unwrap(), "prod-worker-test-conflict");
+        assert_eq!(
+            conflict_obj
+                .get("transaction_id")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "tx-test-worker-conflict"
+        );
+        assert_eq!(
+            conflict_obj.get("product_id").unwrap().as_str().unwrap(),
+            "prod-worker-test-conflict"
+        );
         assert_eq!(conflict_obj.get("shortage").unwrap().as_i64().unwrap(), 4); // 5 requested - 1 stock
     }
 
     #[tokio::test]
     async fn test_pos_sync_worker_low_stock() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             return;
         }
 
-        let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let pool = crate::db::secure_pg_pool_options()
+            .connect(&database_url)
+            .await
+            .unwrap();
+        let db = Arc::new(DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        });
         let worker = PosSyncWorker::new(db.clone());
 
         sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-worker-test-low', 'Worker Test Tenant') ON CONFLICT DO NOTHING")
@@ -953,8 +1145,11 @@ mod tests {
         let res = handle.await;
         assert!(res.is_ok());
 
-        let count: (i32,) = sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-worker-test-2'")
-            .fetch_one(&pool).await.unwrap();
+        let count: (i32,) =
+            sqlx::query_as("SELECT inventory_count FROM products WHERE id = 'prod-worker-test-2'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(count.0, 4); // 6 - 2 = 4 (<= 5)
 
         let action_request_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_action_requests WHERE tenant_id = 'tenant-worker-test-low' AND product_id = 'prod-worker-test-2' AND action_type = 'Reorder'")

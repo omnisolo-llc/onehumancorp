@@ -1,5 +1,5 @@
-use tauri::AppHandle;
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PendingTransaction {

@@ -55,7 +55,7 @@ describe('NeighborhoodPulseCard', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Neighborhood Pulse')).toBeInTheDocument();
-      expect(screen.getByText(/There are 2 OHC businesses/)).toBeInTheDocument();
+      expect(screen.getByText(/There are 2 OmniSolo businesses/)).toBeInTheDocument();
       expect(screen.getByText('Neighbor One')).toBeInTheDocument();
       expect(screen.getByText('Neighbor Two')).toBeInTheDocument();
     });

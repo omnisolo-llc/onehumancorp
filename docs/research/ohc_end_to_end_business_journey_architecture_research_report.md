@@ -1,7 +1,7 @@
 # OHC End-to-End Business Journey Architecture: Research Report
 
 ## 1. Executive Summary
-This research report details the architectural mapping of the end-to-end business journey within the OneHumanCorp (OHC) platform. Our goal is to ensure the platform supports a seamless transition from **Acquisition** to **Referral** for non-technical small business owners, operating strictly through the "Small Business Owner Lens". The investigation focused on how the KAIROS Orchestrator and the 7 AI Agent Departments interact to remove friction, specifically addressing the needs of our 5 core personas: Maya, Carlos, Priya, Leo, and Fatima.
+This research report details the architectural mapping of the end-to-end business journey within the OmniSolo (OHC) platform. Our goal is to ensure the platform supports a seamless transition from **Acquisition** to **Referral** for non-technical small business owners, operating strictly through the "Small Business Owner Lens". The investigation focused on how the KAIROS Orchestrator and the 7 AI Agent Departments interact to remove friction, specifically addressing the needs of our 5 core personas: Maya, Carlos, Priya, Leo, and Fatima.
 
 ## 2. Research Methodology
 The research was conducted by evaluating the existing OHC technical documentation, competitive analysis against platforms like Shopify, Wix, and Squarespace, and applying the "Grandmother Test" to current and proposed flows. We identified critical friction points where non-technical users typically abandon the setup process or fail to reach the "Activation" milestone. We also reviewed the capabilities of the OHC Hybrid AI OS, particularly the event-driven Teammate Mesh and the Autonomous Agent Departments, to automate these friction points.
@@ -32,7 +32,7 @@ Based on these findings, we have mapped out the end-to-end journey across six ke
 3.  **Activation:** The instant generation of a functional storefront or booking page in under 60 seconds (The "Aha!" moment).
 4.  **Retention:** Proactive engagement via the *Business Advisory Agent* delivering plain-language daily briefings, and automated notifications for new orders/bookings.
 5.  **Revenue:** Seamless upgrade paths driven by value (e.g., hitting AI action limits) rather than feature-gating, supported by native Stripe/Mercado Pago integrations.
-6.  **Referral:** Built-in viral loops (e.g., referral discounts, "Powered by OHC" footers).
+6.  **Referral:** Built-in viral loops (e.g., referral discounts, "OmniSolo" footers).
 
 ### 4.1 Friction Mitigation Strategies
 *   **Progressive Disclosure:** Advanced settings (custom domains, complex shipping rules) are hidden behind a "Simple Mode" toggle during onboarding.

@@ -2,7 +2,7 @@
 # Claude-Class Agent Harness Architecture
 
 ## Problem Statement
-Based on the Universal Core Design Protocols, One Human Corp (OHC) aims to match and exceed the architectural capabilities of state-of-the-art agent systems like Claude Code. Our current agent harness lacks the robust process isolation, fine-grained telemetry, state preservation, and safety mechanisms present in leading solutions. We need to implement a 'Claude-Class' agent harness that provides a secure, observable, and resilient execution environment for OHC agents.
+Based on the Universal Core Design Protocols, OmniSolo (OHC) aims to match and exceed the architectural capabilities of state-of-the-art agent systems like Claude Code. Our current agent harness lacks the robust process isolation, fine-grained telemetry, state preservation, and safety mechanisms present in leading solutions. We need to implement a 'Claude-Class' agent harness that provides a secure, observable, and resilient execution environment for OHC agents.
 
 ## Research Report
 ### Competitive Analysis: Claude Code (Leaked v2.1.88)

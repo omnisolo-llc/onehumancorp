@@ -25,6 +25,6 @@ test.describe('Release Notes & Changelog', () => {
         // Check the website link
         const externalLink = page.locator('a', { hasText: 'Read the full technical changelog on our website' });
         await expect(externalLink).toBeVisible();
-        await expect(externalLink).toHaveAttribute('href', 'https://onehumancorp.com/changelog');
+        await expect(externalLink).toHaveAttribute('href', 'https://omnisolo.co/changelog');
     });
 });

@@ -14,7 +14,7 @@ Small business owners (like Maya the baker and Carlos the handyman) know they lo
 - **Squarespace:** Requires users to manually activate the feature and write their own copy. No intelligent agent oversight.
 
 **OHC Advantage:**
-OneHumanCorp will implement a "Zero-Click" approach. The system will autonomously detect abandoned checkouts and allow the AI "Promoter" agent to proactively generate personalized, context-aware follow-ups with dynamic, margin-safe discounts—presenting the owner with a simple "1-Tap Approve" notification on their mobile activity feed.
+OmniSolo will implement a "Zero-Click" approach. The system will autonomously detect abandoned checkouts and allow the AI "Promoter" agent to proactively generate personalized, context-aware follow-ups with dynamic, margin-safe discounts—presenting the owner with a simple "1-Tap Approve" notification on their mobile activity feed.
 
 ## Design Doc
 

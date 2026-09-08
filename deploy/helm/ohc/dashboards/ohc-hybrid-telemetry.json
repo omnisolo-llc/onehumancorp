@@ -51,7 +51,7 @@
           "color": "rgba(255, 0, 255, 0.7)"
         },
         "filterValues": {
-          "le": 1e-9
+          "le": 1e-09
         },
         "legend": {
           "show": true
@@ -92,49 +92,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },
@@ -326,49 +326,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },
@@ -705,49 +705,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },
@@ -1458,49 +1458,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },
@@ -1850,49 +1850,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },
@@ -2336,49 +2336,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },
@@ -2844,49 +2844,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },
@@ -3210,49 +3210,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },
@@ -3806,49 +3806,49 @@
       },
       "collapsed": false,
       "panels": [
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 2000,
-      "targets": [
         {
-          "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
-          "legendFormat": "{{agent_role}}",
-          "refId": "A"
+          "type": "heatmap",
+          "title": "Token Efficiency by Agent Role",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 42
+          },
+          "id": 2000,
+          "targets": [
+            {
+              "expr": "sum by (agent_role) (rate(ohc_token_usage_by_outcome{outcome=\"success\"}[5m]))",
+              "legendFormat": "{{agent_role}}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "calculate": false,
+            "cellGap": 1,
+            "cellValues": {},
+            "color": {
+              "mode": "scheme",
+              "scheme": "Oranges"
+            },
+            "exemplars": {
+              "color": "rgba(255, 0, 255, 0.7)"
+            },
+            "filterValues": {
+              "le": 1e-09
+            },
+            "legend": {
+              "show": true
+            },
+            "tooltip": {
+              "show": true,
+              "yHistogram": false
+            },
+            "yAxis": {
+              "reverse": false
+            }
+          }
         }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges"
-        },
-        "exemplars": {
-          "color": "rgba(255, 0, 255, 0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "tooltip": {
-          "show": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "reverse": false
-        }
-      }
-    }
       ],
       "transparent": true
     },

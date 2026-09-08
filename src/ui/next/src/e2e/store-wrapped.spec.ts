@@ -39,7 +39,7 @@ test.describe('Store Wrapped Growth Loop', () => {
         await expect(mainHeading).toBeVisible();
 
         // Ensure the referral growth loop is intact
-        const poweredBy = page.locator('a', { hasText: '⚡ Powered by OHC' });
+        const poweredBy = page.locator('a', { hasText: '⚡ OmniSolo' });
         await expect(poweredBy).toBeVisible();
 
         const shareTitle = page.locator('h2:has-text("Share Your Success")');

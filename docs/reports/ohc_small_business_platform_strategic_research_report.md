@@ -1,7 +1,7 @@
 # OHC Small Business Platform: Strategic Research Report
 
 ## Executive Summary
-OneHumanCorp (OHC) has the opportunity to dominate the global SMB market by focusing on **extreme simplicity** and **invisible AI agents**. While legacy platforms like Shopify and Wix target users willing to learn complex software, OHC targets the "invisible majority" of small business owners (bakers, handymen, tutors) who currently run their businesses entirely via Instagram DMs, WhatsApp, and cash/Venmo.
+OmniSolo (OHC) has the opportunity to dominate the global SMB market by focusing on **extreme simplicity** and **invisible AI agents**. While legacy platforms like Shopify and Wix target users willing to learn complex software, OHC targets the "invisible majority" of small business owners (bakers, handymen, tutors) who currently run their businesses entirely via Instagram DMs, WhatsApp, and cash/Venmo.
 
 ## Track 1: Deep Competitor Audit
 
@@ -69,7 +69,7 @@ pie title US SMB Market Breakdown (Non-Employer Firms)
 ### Strategic Recommendations
 - **Beachhead Persona:** Carlos (Handyman) & Maya (Baker). Focus on local service/order-ahead businesses that Shopify ignores.
 - **Geographic Expansion:** Optimize for mobile-first, WhatsApp-heavy markets (LATAM, India) after US proof-of-concept.
-- **Growth Loop:** Every OHC receipt sent to a customer should include a subtle "Powered by OHC - Start your business today" link.
+- **Growth Loop:** Every OHC receipt sent to a customer should include a subtle "OmniSolo - Start your business today" link.
 
 ---
 

@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-The CEO Dashboard is the primary human-in-the-loop (HITL) interface for One Human Corp. It provides the CEO with high-fidelity observability into the AI workforce, a portal for approval gating, and a "Mission Control" center for injecting high-level goals into the Orchestration Engine.
+The CEO Dashboard is the primary human-in-the-loop (HITL) interface for OmniSolo. It provides the CEO with high-fidelity observability into the AI workforce, a portal for approval gating, and a "Mission Control" center for injecting high-level goals into the Orchestration Engine.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

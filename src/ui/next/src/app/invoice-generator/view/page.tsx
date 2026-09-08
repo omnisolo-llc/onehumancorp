@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { PoweredByOHC } from '../../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
 
 function InvoiceContent() {
   const searchParams = useSearchParams();
@@ -110,7 +110,7 @@ function InvoiceContent() {
 
         {/* Viral Growth Loop Footer */}
         <div className="text-center pb-8 animate-fade-in flex flex-col items-center">
-          <PoweredByOHC tenantId={tenant} />
+          <PoweredByOmniSolo tenantId={tenant} />
           <Link
             href={`/onboarding?ref=${tenant}&source=invoice_generator`}
             target="_blank"

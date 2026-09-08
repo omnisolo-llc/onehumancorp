@@ -11,8 +11,8 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('../../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc">Powered by OHC</div>,
+vi.mock('../../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo">Powered by OmniSolo</div>,
 }));
 
 describe('ZeroClickBuilderPage', () => {
@@ -104,15 +104,15 @@ describe('ZeroClickBuilderPage', () => {
     expect(localStorage.getItem('user_display_name')).toBeNull();
   });
 
-  it('renders Powered by OHC branding', () => {
+  it('renders Powered by OmniSolo branding', () => {
     render(<ZeroClickBuilderPage />);
-    const texts = screen.getAllByText(/Powered by OHC/i);
+    const texts = screen.getAllByText(/Powered by OmniSolo/i);
     expect(texts.length).toBeGreaterThan(0);
   });
 
-  it('renders the PoweredByOHC component', () => {
+  it('renders the PoweredByOmniSolo component', () => {
     render(<ZeroClickBuilderPage />);
-    const components = screen.getAllByTestId('powered-by-ohc');
+    const components = screen.getAllByTestId('powered-by-omnisolo');
     expect(components.length).toBeGreaterThan(0);
   });
 });

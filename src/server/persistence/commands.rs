@@ -12,11 +12,21 @@ type CommandResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
 pub fn database_url_from_environment() -> CommandResult<DatabaseUrl> {
     let direct = std::env::var("DATABASE_URL").ok();
+    let canonical = std::env::var("OMNISOLO_DATABASE_URL").ok();
     let legacy = std::env::var("OHC_DATABASE_URL").ok();
-    if direct.is_some() && legacy.is_some() {
-        return Err("DATABASE_URL and OHC_DATABASE_URL cannot both be set".into());
+    if [direct.is_some(), canonical.is_some(), legacy.is_some()]
+        .into_iter()
+        .filter(|present| *present)
+        .count()
+        > 1
+    {
+        return Err(
+            "DATABASE_URL, OMNISOLO_DATABASE_URL, and OHC_DATABASE_URL are mutually exclusive"
+                .into(),
+        );
     }
     direct
+        .or(canonical)
         .or(legacy)
         .filter(|value| !value.trim().is_empty())
         .map(DatabaseUrl::new)

@@ -5,7 +5,7 @@
 **Author:** Lead AI Product Architect & Market Strategist (L7)
 
 ## Executive Summary
-This document synthesizes capabilities from leading AI Agent frameworks (OpenClaw, CrewAI, AutoGen, Claude Code) and merges them into the One Human Corp (OHC) execution playbook. The focus is triangulating the top 5 urgent capability gaps against our current trajectory and providing architectural blueprints leveraging our K8s, LangGraph, and SPIFFE/SPIRE stack.
+This document synthesizes capabilities from leading AI Agent frameworks (OpenClaw, CrewAI, AutoGen, Claude Code) and merges them into the OmniSolo (OHC) execution playbook. The focus is triangulating the top 5 urgent capability gaps against our current trajectory and providing architectural blueprints leveraging our K8s, LangGraph, and SPIFFE/SPIRE stack.
 
 ## Top 5 Urgent Capability Gaps & Actionable Designs
 

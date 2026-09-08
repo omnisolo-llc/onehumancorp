@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
 export default function ProjectShowcasePage() {
   const router = useRouter();
@@ -156,7 +156,7 @@ export default function ProjectShowcasePage() {
 
             <div className="flex items-center justify-between p-4 bg-[#F5F5F7] rounded-xl mb-4">
               <div>
-                <p className="font-medium text-sm">Remove "Powered by OHC" Badge</p>
+                <p className="font-medium text-sm">Remove "Powered by OmniSolo" Badge</p>
                 <p className="text-xs text-[#86868B] mt-1">Make the showcase 100% white-labeled</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -254,10 +254,10 @@ export default function ProjectShowcasePage() {
                 )}
               </div>
 
-              {/* Powered By OHC Loop */}
+              {/* Powered By OmniSolo Loop */}
               {!removeBranding && (
                 <div className="bg-[#F5F5F7] py-6 flex justify-center border-t border-[#E5E5EA]">
-                  <PoweredByOHC tenantId={tenant} />
+                  <PoweredByOmniSolo tenantId={tenant} />
                 </div>
               )}
             </div>
@@ -280,7 +280,7 @@ export default function ProjectShowcasePage() {
             </div>
             <h2 className="text-2xl font-bold mb-2">Upgrade to Pro</h2>
             <p className="text-[#86868B] mb-8">
-              Make the Project Showcase 100% white-labeled. Upgrade to Pro to remove the "Powered by OHC" watermark.
+              Make the Project Showcase 100% white-labeled. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
             <div className="space-y-3">
               <button

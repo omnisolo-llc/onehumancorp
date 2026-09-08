@@ -4,7 +4,7 @@
 **Autonomous Influencer and Affiliate Marketing Engine: Zero-Touch Viral Growth**
 
 ## 2. Problem Statement
-For OneHumanCorp (OHC)'s core personas—especially **Priya (boutique owner, 35)** and **Maya (baker, 28)**—driving viral growth through micro-influencers and affiliates is highly desired but technically complex. Setting up affiliate programs requires managing third-party tools (like Refersion or ShareASale), creating tracking links, calculating commissions, and handling payouts. This requires technical knowledge and manual administrative work that non-technical business owners do not have time for.
+For OmniSolo (OHC)'s core personas—especially **Priya (boutique owner, 35)** and **Maya (baker, 28)**—driving viral growth through micro-influencers and affiliates is highly desired but technically complex. Setting up affiliate programs requires managing third-party tools (like Refersion or ShareASale), creating tracking links, calculating commissions, and handling payouts. This requires technical knowledge and manual administrative work that non-technical business owners do not have time for.
 
 Competitors like Shopify require expensive third-party apps for affiliate marketing, adding friction and cost. OHC needs an invisible, autonomous system that turns happy customers and local micro-influencers into commissioned promoters with zero configuration.
 

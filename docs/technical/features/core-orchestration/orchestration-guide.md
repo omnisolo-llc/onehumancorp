@@ -3,7 +3,7 @@
 # User Guide: Core Orchestration Engine
 
 ## 1. Introduction & Value Proposition
-The Core Orchestration Engine is the "brain" of One Human Corp. It transforms high-level CEO mandates into actionable, multi-agent workflows. By automating task delegation, context propagation, and meeting management, it allows a single human to operate with the capacity of a 50-person department.
+The Core Orchestration Engine is the "brain" of OmniSolo. It transforms high-level CEO mandates into actionable, multi-agent workflows. By automating task delegation, context propagation, and meeting management, it allows a single human to operate with the capacity of a 50-person department.
 
 **Key Benefits:**
 - **Reduced Context Switch**: Agents manage sub-tasks autonomously.

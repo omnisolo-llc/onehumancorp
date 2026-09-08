@@ -637,6 +637,7 @@ sh_test(
     data = [
         "lib.rs",
         "//src/server/api:catalog.rs",
+        "//src/server/services/collective:service.rs",
     ],
 )
 

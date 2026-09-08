@@ -1,9 +1,9 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Developer Guide: One Human Corp
+# Developer Guide: OmniSolo
 
 ## Introduction
-This guide is intended for engineers who want to contribute to the One Human Corp (OHC) platform. It covers everything from local setup to adding new features and deploying to Kubernetes.
+This guide is intended for engineers who want to contribute to the OmniSolo (OHC) platform. It covers everything from local setup to adding new features and deploying to Kubernetes.
 
 ## Operating Modes
 

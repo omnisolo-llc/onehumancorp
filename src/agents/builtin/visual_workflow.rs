@@ -138,28 +138,34 @@ impl BlockConnectUI for WorkflowGraph {
         });
 
         for node in &self.nodes {
-            schema["nodes"].as_array_mut().unwrap().push(serde_json::json!({
-                "id": node.id,
-                "type": match node.node_type {
-                    NodeType::Llm { .. } => "Llm",
-                    NodeType::Tool { .. } => "Tool",
-                    NodeType::Condition { .. } => "Condition",
-                    NodeType::Input { .. } => "Input",
-                    NodeType::Output => "Output",
-                    NodeType::SubAgent { .. } => "SubAgent",
-                    NodeType::HumanInLoop { .. } => "HumanInLoop",
-                    NodeType::Merge { .. } => "Merge",
-                    NodeType::ParallelFork { .. } => "ParallelFork",
-                    NodeType::ParallelJoin { .. } => "ParallelJoin",
-                }
-            }));
+            schema["nodes"]
+                .as_array_mut()
+                .unwrap()
+                .push(serde_json::json!({
+                    "id": node.id,
+                    "type": match node.node_type {
+                        NodeType::Llm { .. } => "Llm",
+                        NodeType::Tool { .. } => "Tool",
+                        NodeType::Condition { .. } => "Condition",
+                        NodeType::Input { .. } => "Input",
+                        NodeType::Output => "Output",
+                        NodeType::SubAgent { .. } => "SubAgent",
+                        NodeType::HumanInLoop { .. } => "HumanInLoop",
+                        NodeType::Merge { .. } => "Merge",
+                        NodeType::ParallelFork { .. } => "ParallelFork",
+                        NodeType::ParallelJoin { .. } => "ParallelJoin",
+                    }
+                }));
         }
 
         for edge in &self.edges {
-            schema["edges"].as_array_mut().unwrap().push(serde_json::json!({
-                "source": edge.source,
-                "target": edge.target
-            }));
+            schema["edges"]
+                .as_array_mut()
+                .unwrap()
+                .push(serde_json::json!({
+                    "source": edge.source,
+                    "target": edge.target
+                }));
         }
 
         serde_json::to_string_pretty(&schema).unwrap_or_default()
@@ -172,7 +178,9 @@ impl BlockConnectUI for WorkflowGraph {
         if matches!(target_node.node_type, NodeType::Input { .. }) {
             return Err("Input nodes cannot have incoming connections.".to_string());
         }
-        if matches!(source_node.node_type, NodeType::Input { .. }) && matches!(target_node.node_type, NodeType::Output) {
+        if matches!(source_node.node_type, NodeType::Input { .. })
+            && matches!(target_node.node_type, NodeType::Output)
+        {
             return Err("Direct connection from Input to Output is not allowed.".to_string());
         }
         Ok(())
@@ -278,7 +286,14 @@ impl WorkflowExecutor {
                 if let Some(cp) = &self.checkpointer {
                     let state_json = serde_json::to_value(&state).unwrap_or_default();
                     // We ignore errors in checkpointing so the workflow can continue
-                    let _ = cp.put_checkpoint(crate::checkpointer::Checkpoint { thread_id: "visual-workflow".to_string(), checkpoint_id: current_node_id.clone(), data: state_json, parent_id: None, created_at: chrono::Utc::now(), metadata: serde_json::Value::Null });
+                    let _ = cp.put_checkpoint(crate::checkpointer::Checkpoint {
+                        thread_id: "visual-workflow".to_string(),
+                        checkpoint_id: current_node_id.clone(),
+                        data: state_json,
+                        parent_id: None,
+                        created_at: chrono::Utc::now(),
+                        metadata: serde_json::Value::Null,
+                    });
                 }
 
                 *count += 1;
@@ -476,7 +491,7 @@ impl WorkflowExecutor {
                                     tools_clone,
                                     sub_agents_clone,
                                     config_clone,
-                      None,
+                                    None,
                                 );
                                 sub_executor
                                     .execute_from_node(target_clone, state_clone)
@@ -1171,7 +1186,8 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
+        let executor =
+            WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in1".to_string(), "val1".to_string());
@@ -1254,7 +1270,8 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
+        let executor =
+            WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "init_data".to_string());
@@ -1382,7 +1399,8 @@ mod tests {
         let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
         let config = AgentRunConfig::default();
 
-        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
+        let executor =
+            WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config, None);
 
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "root_data".to_string());
@@ -1458,7 +1476,8 @@ mod additional_tests {
             async fn chat(
                 &self,
                 _req: crate::types::ChatRequest,
-            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>
+            {
                 let mut count = self.call_count.lock().await;
                 *count += 1;
                 Ok(crate::types::ChatResponse {
@@ -1471,14 +1490,23 @@ mod additional_tests {
         }
 
         let call_count = Arc::new(tokio::sync::Mutex::new(0));
-        let llm_client = Arc::new(CallCountingLlmClient { call_count: call_count.clone() });
+        let llm_client = Arc::new(CallCountingLlmClient {
+            call_count: call_count.clone(),
+        });
         let agent = Arc::new(Agent::new(llm_client, vec![]));
         let config = AgentRunConfig::default();
         let cache = Arc::new(tokio::sync::Mutex::new(HashMap::new()));
 
         // Run 1: Should call LLM
-        let executor1 = WorkflowExecutor::new(graph.clone(), agent.clone(), vec![], HashMap::new(), config.clone(), None)
-            .with_cache(cache.clone());
+        let executor1 = WorkflowExecutor::new(
+            graph.clone(),
+            agent.clone(),
+            vec![],
+            HashMap::new(),
+            config.clone(),
+            None,
+        )
+        .with_cache(cache.clone());
         let mut inputs = HashMap::new();
         inputs.insert("in".to_string(), "data1".to_string());
 
@@ -1490,12 +1518,22 @@ mod additional_tests {
         // We inject a fake response into the cache for the exact same prompt to prove cache hit works
         {
             let mut cache_lock = cache.lock().await;
-            cache_lock.insert("llm:Cache test: data1".to_string(), "From Cache".to_string());
+            cache_lock.insert(
+                "llm:Cache test: data1".to_string(),
+                "From Cache".to_string(),
+            );
         }
 
         // Run 2: Should hit cache, not the LLM
-        let executor2 = WorkflowExecutor::new(graph.clone(), agent.clone(), vec![], HashMap::new(), config.clone(), None)
-            .with_cache(cache.clone());
+        let executor2 = WorkflowExecutor::new(
+            graph.clone(),
+            agent.clone(),
+            vec![],
+            HashMap::new(),
+            config.clone(),
+            None,
+        )
+        .with_cache(cache.clone());
 
         let res2 = executor2.execute(inputs).await.unwrap();
         assert_eq!(res2, "From Cache");
@@ -1581,12 +1619,10 @@ mod additional_tests {
                     node_type: NodeType::Output,
                 },
             ],
-            edges: vec![
-                Edge {
-                    source: "in".to_string(),
-                    target: "out".to_string(),
-                },
-            ],
+            edges: vec![Edge {
+                source: "in".to_string(),
+                target: "out".to_string(),
+            }],
         };
 
         let schema = graph.generate_ui_schema();
@@ -1600,9 +1636,20 @@ mod additional_tests {
 
     #[test]
     fn test_visual_workflow_block_connect_ui_validation() {
-        let graph = WorkflowGraph { nodes: vec![], edges: vec![] };
-        let in_node = Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_json".to_string() } };
-        let out_node = Node { id: "out".to_string(), node_type: NodeType::Output };
+        let graph = WorkflowGraph {
+            nodes: vec![],
+            edges: vec![],
+        };
+        let in_node = Node {
+            id: "in".to_string(),
+            node_type: NodeType::Input {
+                name: "input_json".to_string(),
+            },
+        };
+        let out_node = Node {
+            id: "out".to_string(),
+            node_type: NodeType::Output,
+        };
 
         let res1 = graph.validate_connection(&out_node, &in_node);
         assert!(res1.is_err());

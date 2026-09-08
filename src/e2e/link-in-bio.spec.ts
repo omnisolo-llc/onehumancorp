@@ -47,7 +47,7 @@ test.describe('Link-in-Bio Generator E2E', () => {
         // Verify Powered by link (it is an ohc-badge in bio.html)
         const poweredByBadge = memberPage.locator('#ohc-badge');
         await expect(poweredByBadge).toBeVisible();
-        await expect(poweredByBadge).toContainText('Powered by OHC');
+        await expect(poweredByBadge).toContainText('OmniSolo');
 
         // Go back and toggle the remove branding switch
         await memberPage.goto('/ui/link-in-bio-generator.html');

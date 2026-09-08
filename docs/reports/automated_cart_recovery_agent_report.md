@@ -1,7 +1,7 @@
 # Automated Cart Recovery via Agents Research Report
 
 ## Executive Summary
-This report outlines the architectural gap and proposed solution for an "Automated Cart Recovery Agent" for the OneHumanCorp (OHC) platform. Cart recovery is a vital business need for micro-SMEs, and currently requires expensive third-party applications on competing platforms like Shopify.
+This report outlines the architectural gap and proposed solution for an "Automated Cart Recovery Agent" for the OmniSolo (OHC) platform. Cart recovery is a vital business need for micro-SMEs, and currently requires expensive third-party applications on competing platforms like Shopify.
 
 ## Key Findings
 1.  **High Drop-off Rates**: A significant percentage of users abandon their carts during checkout.

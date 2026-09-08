@@ -3,7 +3,7 @@
 # User Guide: Advanced Agentic Capabilities
 
 ## 1. Introduction & Value Proposition
-The Advanced Agentic Capabilities feature set represents a paradigm shift in how One Human Corp handles complex, long-running workflows. It directly addresses "Agent Amnesia" and static tool limitations by introducing Stateful Episodic Memory, Dynamic Tool Discovery, and Native Multimodal Reasoning. For the CEO, this means massive epics can be delegated with confidence, knowing agents will retain context across disjointed sessions, autonomously bind to required tools, and effectively parse visual data without context bloat or runaway token costs.
+The Advanced Agentic Capabilities feature set represents a paradigm shift in how OmniSolo handles complex, long-running workflows. It directly addresses "Agent Amnesia" and static tool limitations by introducing Stateful Episodic Memory, Dynamic Tool Discovery, and Native Multimodal Reasoning. For the CEO, this means massive epics can be delegated with confidence, knowing agents will retain context across disjointed sessions, autonomously bind to required tools, and effectively parse visual data without context bloat or runaway token costs.
 
 ## 2. Prerequisites & Requirements
 - **Hardware/Software**: A standard web browser for the CEO Dashboard; backend Kubernetes cluster with CSI snapshot capabilities and persistent storage (PostgreSQL for checkpointers).
@@ -48,6 +48,6 @@ The Advanced Agentic Capabilities feature set represents a paradigm shift in how
   - A: By distilling older checkpoints into semantic embeddings, the active context window remains small. Agents only pull in historical data when strictly necessary, drastically reducing LLM token burn.
 
 ## 7. Support & Feedback
-If you encounter persistent issues, please file a bug report via the CEO Dashboard's "Support" tab or directly in the One Human Corp issue tracker, including the relevant `thread_id` and checkpoint logs.
+If you encounter persistent issues, please file a bug report via the CEO Dashboard's "Support" tab or directly in the OmniSolo issue tracker, including the relevant `thread_id` and checkpoint logs.
 
 </div>

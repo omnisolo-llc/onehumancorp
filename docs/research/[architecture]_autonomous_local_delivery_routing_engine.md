@@ -5,7 +5,7 @@ Implement Autonomous Local Delivery Routing Engine
 
 ## Problem Statement
 For local business owners like **Maya the baker** or **Fatima the food cart operator**, delivering physical goods locally is a massive source of operational friction. They currently have to manually text customers, punch addresses into Google Maps, figure out the most efficient driving route in their heads, and field endless "where is my order?" messages.
-This breaks the OneHumanCorp promise of invisible complexity. A baker should bake; they shouldn't be acting as a full-time logistics dispatcher or a customer support agent tracking a delayed courier. We need an integrated, zero-touch system that automatically batches local orders, calculates optimal routes, generates a simple step-by-step driver view for whoever is doing the delivery (the owner or an employee), and keeps the buyer updated in real-time.
+This breaks the OmniSolo promise of invisible complexity. A baker should bake; they shouldn't be acting as a full-time logistics dispatcher or a customer support agent tracking a delayed courier. We need an integrated, zero-touch system that automatically batches local orders, calculates optimal routes, generates a simple step-by-step driver view for whoever is doing the delivery (the owner or an employee), and keeps the buyer updated in real-time.
 
 ## Research Report
 - **Current OHC State:** We have strong booking, pickup, and standard shipping capabilities. However, "Local Delivery" is treated either as generic shipping (which requires carrier integrations) or simple pickup, leaving a gap for point-to-point self-managed local delivery.

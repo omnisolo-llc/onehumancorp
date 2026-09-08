@@ -2,7 +2,7 @@
 
 # Agent Research Report: Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture
 
-**Focus:** Identifying the gap in high-performance, SEO-optimized delivery for non-technical small business owners on the OneHumanCorp (OHC) platform.
+**Focus:** Identifying the gap in high-performance, SEO-optimized delivery for non-technical small business owners on the OmniSolo (OHC) platform.
 
 ## 1. The Gap Identified
 Through market research and technical architecture reviews, a significant gap was identified in how current platforms handle traffic spikes and search engine discoverability for non-technical users.

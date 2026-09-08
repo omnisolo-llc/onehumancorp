@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     const isDark = theme === 'dark';
 
-    // Core OHC design tokens
+    // Core OmniSolo design tokens
     const colors = {
         bg: isDark ? '#1a1a1a' : '#ffffff',
         text: isDark ? '#f5f5f5' : '#111827',
@@ -229,10 +229,10 @@ export async function GET(request: Request) {
 
         ${rawBranding ? `
         <div class="footer">
-            ⚡ Powered by OHC
+            ⚡ Powered by OmniSolo
             <!-- Hidden link for crawler attribution and referral loop -->
             <span style="display:none;">
-               <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer">OHC</a>
+               <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer">OmniSolo</a>
             </span>
         </div>
         ` : ''}

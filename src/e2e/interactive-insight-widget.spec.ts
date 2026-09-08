@@ -21,8 +21,8 @@ test.describe('Interactive Insight Widget Growth Feature', () => {
     const livePreviewValue = page.getByText('150+', { exact: true });
     await expect(livePreviewValue).toBeVisible();
 
-    // Verify "Powered by OHC" watermark is visible in preview
-    const poweredByLink = page.getByRole('link', { name: '⚡ Powered by OHC' });
+    // Verify "OmniSolo" watermark is visible in preview
+    const poweredByLink = page.getByRole('link', { name: '⚡ OmniSolo' });
     await expect(poweredByLink).toBeVisible();
 
     // Update metric label and value
@@ -36,7 +36,7 @@ test.describe('Interactive Insight Widget Growth Feature', () => {
     await expect(updatedLivePreviewValue).toBeVisible();
 
     // Attempt to remove branding without Pro
-    const removeBrandingCheckbox = page.getByLabel(/Remove "Powered by OHC" Badge/);
+    const removeBrandingCheckbox = page.getByLabel(/Remove "OmniSolo" Badge/);
     await removeBrandingCheckbox.click();
 
     // Verify the soft paywall appears

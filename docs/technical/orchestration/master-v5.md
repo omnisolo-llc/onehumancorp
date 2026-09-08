@@ -2,7 +2,7 @@
 
 # KAIROS: The Hybrid Agentic OS Master Architecture (V5)
 
-**Mission:** To provide a robust, autonomous, and aesthetically superior backbone for the One Human Corp Swarm. KAIROS orchestrates complex human goals into parallel, self-healing agent workflows across Cloud-Native (Postgres/Redis) and Standalone (SQLite) environments.
+**Mission:** To provide a robust, autonomous, and aesthetically superior backbone for the OmniSolo Swarm. KAIROS orchestrates complex human goals into parallel, self-healing agent workflows across Cloud-Native (Postgres/Redis) and Standalone (SQLite) environments.
 
 ---
 

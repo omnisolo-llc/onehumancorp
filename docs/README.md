@@ -1,4 +1,4 @@
-# One Human Corp Documentation
+# OmniSolo Documentation
 
 This directory is the source for the repository documentation site.
 

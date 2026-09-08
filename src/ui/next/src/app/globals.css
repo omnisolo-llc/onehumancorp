@@ -1193,7 +1193,7 @@ button,
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 
-/* OHC Mobile-First Non-Negotiable: Touch targets are at least 44x44px */
+/* OmniSolo Mobile-First Non-Negotiable: Touch targets are at least 44x44px */
 button,
 [role="button"],
 a.button,

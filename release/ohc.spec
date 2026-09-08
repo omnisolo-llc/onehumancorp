@@ -1,11 +1,11 @@
 Name: ohc
 Version: 0
 Release: 1
-Summary: One Human Corp application bundle
+Summary: OmniSolo application bundle
 License: Apache-2.0
 
 %description
-One Human Corp application bundle
+OmniSolo application bundle
 
 %prep
 

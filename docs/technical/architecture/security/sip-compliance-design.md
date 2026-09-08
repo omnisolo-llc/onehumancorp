@@ -3,7 +3,7 @@
 # KAIROS AI OS: OHC-SIP Teammate Mesh API Compliance Design
 
 ## 1. Overview
-The One Human Corp (OHC) AI OS relies on the Swarm Intelligence Protocol (OHC-SIP) to establish a universally understood communication standard across the Teammate Mesh. As the unified gateway for all agent-to-agent and orchestration broadcasts, the Teammate Mesh API must strictly enforce this payload contract. This document serves as the master specification for OHC-SIP payload compliance.
+The OmniSolo (OHC) AI OS relies on the Swarm Intelligence Protocol (OHC-SIP) to establish a universally understood communication standard across the Teammate Mesh. As the unified gateway for all agent-to-agent and orchestration broadcasts, the Teammate Mesh API must strictly enforce this payload contract. This document serves as the master specification for OHC-SIP payload compliance.
 
 ## 2. The OHC-SIP Unified Payload Contract
 To ensure backward compatibility and seamless parsing across various agent sub-types (e.g., KAIROS Orchestrator, Background Workers, Thin Clients), all broadcast payloads sent to `POST /api/mesh/broadcast` **MUST** include exactly four root-level keys.
@@ -40,6 +40,6 @@ The Implementer agent is tasked with updating the `meshPayload` struct and the `
 
 ---
 *Authored by: Principal Product Architect & KAIROS Orchestrator (L7)*
-*Identity: One Human Corp*
+*Identity: OmniSolo*
 
 </div>

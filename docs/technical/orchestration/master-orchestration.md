@@ -2,7 +2,7 @@
 
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif;">
 ## The Swarm Intelligence Vision
-One Human Corp (OHC) empowers a single human to orchestrate a vast swarm of AI agents. The KAIROS Hybrid Architecture ensures a frictionless and beautiful experience.
+OmniSolo (OHC) empowers a single human to orchestrate a vast swarm of AI agents. The KAIROS Hybrid Architecture ensures a frictionless and beautiful experience.
 </div>
 
 ## Phase 1: Shared Task List (UltraPlan Deliberation)

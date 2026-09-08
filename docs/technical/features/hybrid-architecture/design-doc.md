@@ -2,7 +2,7 @@
 
 # Hybrid Architecture: The Best of Both Worlds
 
-The One Human Corp (OHC) Agentic OS utilizes a unique **Hybrid Architecture (OHC-HA)**, seamlessly transitioning between high-scale cloud deployments and secure, localized execution.
+The OmniSolo (OHC) Agentic OS utilizes a unique **Hybrid Architecture (OHC-HA)**, seamlessly transitioning between high-scale cloud deployments and secure, localized execution.
 
 ## 1. Operating Modes
 

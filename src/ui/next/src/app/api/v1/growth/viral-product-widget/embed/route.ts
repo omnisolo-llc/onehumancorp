@@ -88,7 +88,7 @@ export async function GET(request: Request) {
             <a href="/checkout?tenant=${encodedTenant}&product=${encodeURIComponent(productName)}" target="_top" class="buy-button">Buy Now</a>
             ${rawBranding ? `
             <div class="footer">
-                <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_product_widget" target="_blank">⚡ Powered by OHC</a>
+                <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_product_widget" target="_blank">⚡ Powered by OmniSolo</a>
             </div>
             ` : ''}
         </div>

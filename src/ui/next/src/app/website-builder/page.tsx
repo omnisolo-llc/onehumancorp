@@ -6,7 +6,7 @@ import { useWebsiteBuilderStore } from "./store";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { PoweredByOHC } from "../components/PoweredByOHC";
+import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
 
 export default function WebsiteBuilderPage() {
   const router = useRouter();
@@ -326,7 +326,7 @@ export default function WebsiteBuilderPage() {
                     >
                       Instant Build
                     </button>
-                    <PoweredByOHC tenantId="ohc" />
+                    <PoweredByOmniSolo tenantId="ohc" />
                   </div>
                 </>
               )}
@@ -523,7 +523,7 @@ export default function WebsiteBuilderPage() {
                       className="w-full min-h-[54px] bg-[#0066FF] text-white p-4 font-bold rounded-lg shadow-md hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       onClick={() => setWizardStep('8.5')}
                     >
-                      Free OHC Domain
+                      Free OmniSolo Domain
                     </button>
                     <button
                       className="w-full min-h-[54px] glass-control text-[#0066FF] border border-[#0066FF] p-4 font-bold shadow-sm hover:bg-[#0066FF]/10 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
@@ -788,7 +788,7 @@ export default function WebsiteBuilderPage() {
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
           <SmartBlock type="PoweredBy" props={{ tenantId: "ohc", isPremium: false }} />
           <div className="text-center mt-4 mb-8">
-            <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OHC</a>
+            <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OmniSolo</a>
           </div>
         </div>
 

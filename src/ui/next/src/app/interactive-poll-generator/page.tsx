@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
 export default function InteractivePollGeneratorPage() {
   const router = useRouter();
@@ -59,10 +59,10 @@ export default function InteractivePollGeneratorPage() {
     }
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/interactive-poll/embed?tenant=${tenant}&q=${encodeURIComponent(question)}&opts=${encodeURIComponent(options.join(','))}&theme=${theme}&email=${requireEmail}&hideBranding=${removeBranding}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/interactive-poll/embed?tenant=${tenant}&q=${encodeURIComponent(question)}&opts=${encodeURIComponent(options.join(','))}&theme=${theme}&email=${requireEmail}&hideBranding=${removeBranding}`;
 
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="${requireEmail ? '350' : '280'}" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `
-<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleGenerate = () => {
     setShowModal(true);
@@ -205,9 +205,9 @@ export default function InteractivePollGeneratorPage() {
                   />
                   <div>
                     <span className="block text-sm font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                      Remove OHC Branding {hasPro ? '' : <span className="bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 text-[10px] font-bold px-1.5 py-0.5 rounded-sm tracking-wider uppercase">Pro</span>}
+                      Remove OmniSolo Branding {hasPro ? '' : <span className="bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 text-[10px] font-bold px-1.5 py-0.5 rounded-sm tracking-wider uppercase">Pro</span>}
                     </span>
-                    <span className="block text-xs text-gray-500 dark:text-gray-400">Hide the &quot;Powered by OHC&quot; link</span>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">Hide the &quot;Powered by OmniSolo&quot; link</span>
                   </div>
                 </label>
               </div>
@@ -257,7 +257,7 @@ export default function InteractivePollGeneratorPage() {
 
             {!removeBranding && (
               <div className="mt-4">
-                <PoweredByOHC tenantId={tenant} />
+                <PoweredByOmniSolo tenantId={tenant} />
               </div>
             )}
           </div>
@@ -317,7 +317,7 @@ export default function InteractivePollGeneratorPage() {
 
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">Upgrade to Pro</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Removing the OHC branding from widgets is a Pro feature. Upgrade your workspace to unlock white-labeling and advanced analytics.
+              Removing the OmniSolo branding from widgets is a Pro feature. Upgrade your workspace to unlock white-labeling and advanced analytics.
             </p>
 
             <div className="space-y-3">

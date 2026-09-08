@@ -14,12 +14,11 @@ import * as permissions from "./permissions/route";
 import * as plugins from "./plugins/route";
 import * as previews from "./previews/route";
 import * as remote from "./remote/route";
-import * as settings from "./settings/route";
 import * as share from "./share/route";
 import * as support from "./support/route";
 import * as uploads from "./uploads/route";
 
-type Handler = () => Response | Promise<Response>;
+type Handler = (request: Request) => Response | Promise<Response>;
 
 const unavailableRoutes: Array<[string, Handler[]]> = [
   ["approvals", [approvals.GET, approvals.POST, approvals.PATCH]],
@@ -37,7 +36,6 @@ const unavailableRoutes: Array<[string, Handler[]]> = [
   ["plugins", [plugins.GET, plugins.PATCH]],
   ["previews", [previews.GET, previews.PATCH]],
   ["remote", [remote.GET, remote.POST]],
-  ["settings", [settings.GET, settings.PATCH]],
   ["share", [share.GET, share.POST, share.PATCH]],
   ["support", [support.POST]],
   ["uploads", [uploads.GET, uploads.POST]],
@@ -46,7 +44,7 @@ const unavailableRoutes: Array<[string, Handler[]]> = [
 describe("assistant API authority", () => {
   test.each(unavailableRoutes)("%s fails closed without a persistent backend", async (_name, handlers) => {
     for (const handler of handlers) {
-      const response = await handler();
+      const response = await handler(new Request("http://localhost/api/v1/assistant"));
       expect(response.status).toBe(501);
       await expect(response.json()).resolves.toEqual(
         expect.objectContaining({ error: expect.any(String) }),

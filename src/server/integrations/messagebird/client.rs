@@ -13,7 +13,12 @@ impl MessageBirdClient {
         }
     }
 
-    pub async fn send_sms(&self, originator: &str, recipients: &str, body: &str) -> Result<String, String> {
+    pub async fn send_sms(
+        &self,
+        originator: &str,
+        recipients: &str,
+        body: &str,
+    ) -> Result<String, String> {
         let url = "https://rest.messagebird.com/messages".to_string();
         let payload = serde_json::json!({
             "originator": originator,
@@ -21,7 +26,9 @@ impl MessageBirdClient {
             "body": body
         });
 
-        let res = self.http_client.post(&url)
+        let res = self
+            .http_client
+            .post(&url)
             .header("Authorization", format!("AccessKey {}", self.api_key))
             .json(&payload)
             .send()

@@ -97,7 +97,7 @@ function QuoteCalculatorContent() {
 
                 <div className="mt-auto py-3 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb', backgroundColor: theme === 'dark' ? '#1f2937' : '#f9fafb' }}>
                     <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wide hover:underline opacity-70 hover:opacity-100 transition-opacity inline-flex items-center gap-1" style={{ color: '#6b7280' }}>
-                        ⚡ Powered by OHC
+                        ⚡ Powered by OmniSolo
                     </a>
                 </div>
             </div>

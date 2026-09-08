@@ -2,7 +2,7 @@
 
 # Hybrid Environment Setup Walkthrough
 
-Welcome to the One Human Corp Hybrid Environment Setup Walkthrough.
+Welcome to the OmniSolo Hybrid Environment Setup Walkthrough.
 
 ## 1. Cloud-Native vs Standalone Initialization
 

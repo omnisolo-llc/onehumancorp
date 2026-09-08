@@ -3,7 +3,7 @@
 # OHC AI OS Orchestration: KAIROS Hybrid Agentic OS Master Design
 
 ## 1. Executive Summary
-The One Human Corp (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**. This architecture relies on three primary pillars: a distributed state machine for tasks, a low-latency Teammate Mesh for communication, and the autoDream pipeline for long-term vector memory consolidation.
+The OmniSolo (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**. This architecture relies on three primary pillars: a distributed state machine for tasks, a low-latency Teammate Mesh for communication, and the autoDream pipeline for long-term vector memory consolidation.
 
 ## 2. Shared Task List & DAG Schema
 The Shared Task List relies on database-backed state machines to prevent race conditions during task claiming. Tasks are represented as nodes in a Directed Acyclic Graph (DAG) using a JSONB `dependencies` array.

@@ -11,7 +11,7 @@ describe('GET /api/v1/growth/work-intake/embed', () => {
 
         expect(html).toContain('Work Request'); // Default title
         expect(html).toContain('background-color: #ffffff'); // Default light theme
-        expect(html).toContain('Powered by OHC'); // Branding enabled by default
+        expect(html).toContain('Powered by OmniSolo'); // Branding enabled by default
         expect(html).toContain('ref=demo'); // Default tenant
         expect(html).toContain("fetch(\"/api/v1/work-intake/submit?tenant=demo\"");
         expect(html).not.toContain('setTimeout');
@@ -25,7 +25,7 @@ describe('GET /api/v1/growth/work-intake/embed', () => {
 
         expect(html).toContain('Contact Sales');
         expect(html).toContain('background-color: #1a1a1a'); // Dark theme
-        expect(html).not.toContain('Powered by OHC'); // Branding disabled
+        expect(html).not.toContain('Powered by OmniSolo'); // Branding disabled
     });
 
     it('escapes user input to prevent XSS vulnerabilities', async () => {

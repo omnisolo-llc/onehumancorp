@@ -19,12 +19,14 @@ impl SendGridClient {
             "personalizations": [{
                 "to": [{"email": to}]
             }],
-            "from": {"email": "no-reply@onehumancorp.com"},
+            "from": {"email": "no-reply@omnisolo.co"},
             "subject": subject,
             "content": [{"type": "text/plain", "value": body}]
         });
 
-        let res = self.http_client.post(url)
+        let res = self
+            .http_client
+            .post(url)
             .bearer_auth(&self.api_key)
             .json(&payload)
             .send()

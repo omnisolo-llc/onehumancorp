@@ -47,7 +47,7 @@ export async function GET(request: Request) {
         <div class="discount">${escapeHtml(percent)}% OFF</div>
         <div class="code">${escapeHtml(code)}</div>
         <div class="footer">
-          <a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">⚡ Powered by OHC</a>
+          <a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">⚡ Powered by OmniSolo</a>
         </div>
       </div>
     </body>

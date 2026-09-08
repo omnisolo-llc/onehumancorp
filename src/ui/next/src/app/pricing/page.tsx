@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { ViralTrialExtensionWidget } from '../components/ViralTrialExtensionWidget';
 import { PricingCard } from './PricingCard';
 
@@ -217,7 +217,7 @@ export default function PricingPage() {
         </div>
 
         <div className="flex justify-center mt-4">
-          <PoweredByOHC tenantId="ohc" />
+          <PoweredByOmniSolo tenantId="ohc" />
         </div>
       </main>
 

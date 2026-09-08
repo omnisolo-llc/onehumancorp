@@ -1,12 +1,12 @@
-use sqlx::{PgPool, FromRow};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
 use axum::{
-    extract::{State, Path},
-    routing::{get, post, patch},
     Json, Router,
+    extract::{Path, State},
+    routing::{get, patch, post},
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool};
+use uuid::Uuid;
 
 pub fn router(pool: PgPool) -> Router {
     Router::new()

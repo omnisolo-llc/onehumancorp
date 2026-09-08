@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { useProPlan } from '../components/useProPlan';
 
 function escapeHtmlAttribute(value: string): string {
@@ -34,7 +34,7 @@ export default function SocialProofNudgePage() {
   };
 
   const getEmbedCode = () => {
-    return `<!-- Social Proof Nudge Widget -->\n<div id="ohc-social-proof" data-product="${escapeHtmlAttribute(productName || 'A product')}" data-location="${escapeHtmlAttribute(customerLocation || 'Someone')}" data-time="${escapeHtmlAttribute(timeAgo)}" data-theme="${escapeHtmlAttribute(theme)}" data-branding="${!hasPro}"></div>\n<script src="https://ohc.app/widgets/social-proof.js" async></script>\n${!hasPro ? '<!-- ⚡ Powered by OHC -->' : ''}`;
+    return `<!-- Social Proof Nudge Widget -->\n<div id="ohc-social-proof" data-product="${escapeHtmlAttribute(productName || 'A product')}" data-location="${escapeHtmlAttribute(customerLocation || 'Someone')}" data-time="${escapeHtmlAttribute(timeAgo)}" data-theme="${escapeHtmlAttribute(theme)}" data-branding="${!hasPro}"></div>\n<script src="https://cloud.omnisolo.co/widgets/social-proof.js" async></script>\n${!hasPro ? '<!-- ⚡ Powered by OmniSolo -->' : ''}`;
   };
 
   const getThemeStyles = () => {
@@ -47,7 +47,7 @@ export default function SocialProofNudgePage() {
   const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
     try {
       const response = await fetch('/api/v1/growth/trial-extension/claim', { method: 'POST' });
       if (!response.ok) throw new Error('Pro activation is unavailable.');
@@ -136,7 +136,7 @@ export default function SocialProofNudgePage() {
                             className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                         />
                         <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                            Remove "Powered by OHC" Badge
+                            Remove "Powered by OmniSolo" Badge
                             {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                         </label>
                     </div>
@@ -197,7 +197,7 @@ export default function SocialProofNudgePage() {
 
                  {!hasPro && (
                      <div className="absolute bottom-2 left-6 z-10">
-                         <PoweredByOHC tenantId="social-proof-nudge" />
+                         <PoweredByOmniSolo tenantId="social-proof-nudge" />
                      </div>
                  )}
              </div>
@@ -226,7 +226,7 @@ export default function SocialProofNudgePage() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Social Proof Nudge 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock premium widget themes.
+              Make the Social Proof Nudge 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark and unlock premium widget themes.
             </p>
 
             <button

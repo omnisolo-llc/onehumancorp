@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,7 +60,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
                 JourneyStep {
                     id: "referral".to_string(),
                     question: "How does Maya bring in new users?".to_string(),
-                    ai_action: "Maya adds a 'Powered by OHC - Get your own site' badge to her site footer. Another baker clicks it.".to_string(),
+                    ai_action: "Maya adds a 'OmniSolo - Get your own site' badge to her site footer. Another baker clicks it.".to_string(),
                     required_modules: vec!["referrals".to_string(), "storefront".to_string()],
                 },
             ];
@@ -315,7 +314,10 @@ mod tests {
         for j in &journeys {
             assert!(j.steps.len() > 100);
         }
-        let maya = journeys.iter().find(|j| j.name == "Maya").expect("Maya persona not found");
+        let maya = journeys
+            .iter()
+            .find(|j| j.name == "Maya")
+            .expect("Maya persona not found");
         assert_eq!(maya.business_type, "Home Baker");
     }
 }

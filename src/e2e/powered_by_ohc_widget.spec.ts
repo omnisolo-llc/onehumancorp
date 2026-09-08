@@ -1,12 +1,12 @@
 import { test, expect } from './fixtures';
 
-test.describe('Powered by OHC Widget', () => {
+test.describe('OmniSolo Widget', () => {
   test('should navigate from dashboard to the widget and generate embed code', async ({ page }) => {
     await page.goto('/ui/dashboard.html');
     await page.click('#powered-by-ohc-link');
     await expect(page).toHaveURL(/.*powered-by-ohc-widget\.html/);
 
-    await expect(page.locator('h1')).toHaveText('Powered by OHC');
+    await expect(page.locator('h1')).toHaveText('OmniSolo');
     const generateBtn = page.locator('#generate-btn');
     await expect(generateBtn).toBeVisible();
 
@@ -47,7 +47,7 @@ test.describe('Powered by OHC Widget', () => {
         const clipboardText = await page.evaluate(async () => {
             return await navigator.clipboard.readText();
         });
-        expect(clipboardText).toContain('Powered by OHC');
+        expect(clipboardText).toContain('OmniSolo');
     } catch (e) {
         console.warn('Clipboard read failed (expected in some headless environments): ', e);
     }
@@ -58,7 +58,7 @@ test.describe('Powered by OHC Widget', () => {
     await page.goto('/ui/powered-by-ohc-widget.html');
     await page.waitForTimeout(100);
 
-    await expect(page.locator('h1')).toHaveText('Powered by OHC');
+    await expect(page.locator('h1')).toHaveText('OmniSolo');
 
     const container = page.locator('.container');
     const box = await container.boundingBox();

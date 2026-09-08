@@ -53,7 +53,7 @@ export default function MenuGeneratorPage() {
 
   const handleCopy = () => {
     if (navigator.clipboard && menuLink) {
-      navigator.clipboard.writeText(`${menuLink}\n\n⚡ Powered by OHC`);
+      navigator.clipboard.writeText(`${menuLink}\n\n⚡ Powered by OmniSolo`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -170,7 +170,7 @@ export default function MenuGeneratorPage() {
         )}
 
         <div className="mt-6 text-center">
-          <a href="/onboarding?ref=menu" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OHC</a>
+          <a href="/onboarding?ref=menu" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OmniSolo</a>
         </div>
       </main>
 

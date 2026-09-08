@@ -2,11 +2,11 @@
 Invisible AI Fraud Prevention & Dispute Resolution Engine
 
 ### Problem Statement
-Small business owners—like Priya selling boutique clothing or Leo running online tutorials—often lose hard-earned money to chargebacks, friendly fraud, and payment disputes simply because they lack the time, technical expertise, and energy to fight them. When a dispute is filed, it feels like a stressful, overwhelming administrative burden. OneHumanCorp needs to ensure that its merchants are protected automatically so they can focus on their business, not navigating payment gateway resolution centers.
+Small business owners—like Priya selling boutique clothing or Leo running online tutorials—often lose hard-earned money to chargebacks, friendly fraud, and payment disputes simply because they lack the time, technical expertise, and energy to fight them. When a dispute is filed, it feels like a stressful, overwhelming administrative burden. OmniSolo needs to ensure that its merchants are protected automatically so they can focus on their business, not navigating payment gateway resolution centers.
 
 ### Research Report
 Currently, major platforms like Shopify (Fraud Protect) and Stripe (Radar) offer robust, machine-learning-based fraud detection. However, they are often complex to configure and require manual intervention when disputes arise. For non-technical SMB owners, managing dispute evidence submission (gathering chat logs, shipping updates, and transaction details) is painful.
-The opportunity for OneHumanCorp is to create an "Invisible" layer that doesn't just score risk, but actively intercepts risky transactions (e.g., auto-triggering SMS verifications for high-value orders) and fully automates the dispute compilation and submission process via our autonomous agents.
+The opportunity for OmniSolo is to create an "Invisible" layer that doesn't just score risk, but actively intercepts risky transactions (e.g., auto-triggering SMS verifications for high-value orders) and fully automates the dispute compilation and submission process via our autonomous agents.
 
 ### Design Doc
 

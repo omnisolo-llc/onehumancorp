@@ -1,6 +1,6 @@
 # CDN Edge Caching Integration & Strategy
 
-OneHumanCorp (OHC) employs an edge-caching layer to ensure sub-100ms storefront delivery globally, heavily relying on CDN features to merge static speeds with dynamic inventory updates.
+OmniSolo (OHC) employs an edge-caching layer to ensure sub-100ms storefront delivery globally, heavily relying on CDN features to merge static speeds with dynamic inventory updates.
 
 ## Architecture
 

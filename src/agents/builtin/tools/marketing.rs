@@ -1,8 +1,11 @@
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+};
 use ohc_builtin_agent_core::types::ToolError;
+use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-use serde::Deserialize;
 use tracing::info;
 
 #[derive(Deserialize)]
@@ -15,15 +18,15 @@ pub struct QrGenerateExecutor;
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<QrGenerateArgs> for QrGenerateExecutor {
-    async fn execute_typed(
-        &self,
-        args: QrGenerateArgs,
-    ) -> Result<String, ToolError> {
+    async fn execute_typed(&self, args: QrGenerateArgs) -> Result<String, ToolError> {
         let content = args.content;
         let label = args.label.unwrap_or_else(|| "QR Code".to_string());
 
         // Functional QR generation using qrcode crate.
-        info!("Generating QR code for content: {} with label: {}", content, label);
+        info!(
+            "Generating QR code for content: {} with label: {}",
+            content, label
+        );
 
         use qrcode::QrCode;
 
@@ -31,7 +34,8 @@ impl PydanticToolExecutor<QrGenerateArgs> for QrGenerateExecutor {
             .map_err(|e| ToolError::LlmRecoverable(format!("failed to generate QR code: {}", e)))?;
 
         // Render the bits into a string.
-        let image_str = code.render::<char>()
+        let image_str = code
+            .render::<char>()
             .quiet_zone(false)
             .module_dimensions(1, 1)
             .build();
@@ -43,7 +47,8 @@ impl PydanticToolExecutor<QrGenerateArgs> for QrGenerateExecutor {
             "message": message,
             "label": label,
             "ascii_art": image_str
-        }).to_string())
+        })
+        .to_string())
     }
 }
 

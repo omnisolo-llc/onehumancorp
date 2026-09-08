@@ -1,4 +1,4 @@
-site_name: One Human Corp Docs
+site_name: OmniSolo Docs
 site_description: Markdown-first product, architecture, and operations documentation for the OHC monorepo.
 docs_dir: docs
 site_dir: site
@@ -66,7 +66,7 @@ nav:
       - Research: technical/research/index.md
       - Universal Edge-Cached Dynamic Storefront: technical/research/universal_edge_cached_dynamic_storefront_agentic_seo_pre_rendering_architecture.md
   - Reports:
-      - OneHumanCorp (OHC) SMB Market Research Report: reports/ohc_smb_market_research_report.md
+      - OmniSolo (OHC) SMB Market Research Report: reports/ohc_smb_market_research_report.md
       - Global SMB Market Research Report: reports/ohc_global_smb_market_research_report.md
       - SMB Platform Research Report: reports/ohc_smb_platform_research_report.md
       - Small Business Platform Strategic Research Report: reports/ohc_small_business_platform_strategic_research_report.md

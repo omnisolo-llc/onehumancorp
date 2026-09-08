@@ -22,7 +22,7 @@ describe('ViralGrowthWidget', () => {
         render(<ViralGrowthWidget />);
 
         expect(screen.getByText('Invite Your Network')).toBeInTheDocument();
-        expect(screen.getByText('https://ohc.app/join/ohc')).toBeInTheDocument();
+        expect(screen.getByText('https://cloud.omnisolo.co/join/ohc')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Copy Link' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /post/i })).toHaveAttribute('href', expect.stringContaining('https://twitter.com/intent/tweet'));
         expect(screen.getByRole('link', { name: /share/i })).toHaveAttribute('href', expect.stringContaining('https://wa.me/'));
@@ -30,7 +30,7 @@ describe('ViralGrowthWidget', () => {
 
     it('renders correctly with custom tenantId', () => {
         render(<ViralGrowthWidget tenantId="my-custom-store" />);
-        expect(screen.getByText('https://ohc.app/join/my-custom-store')).toBeInTheDocument();
+        expect(screen.getByText('https://cloud.omnisolo.co/join/my-custom-store')).toBeInTheDocument();
     });
 
     it('copies to clipboard and shows copied state', async () => {
@@ -42,7 +42,7 @@ describe('ViralGrowthWidget', () => {
             fireEvent.click(copyButton);
         });
 
-        expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/join/test-store');
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://cloud.omnisolo.co/join/test-store');
         expect(screen.getByRole('button', { name: 'Copied!' })).toBeInTheDocument();
 
         await act(async () => {

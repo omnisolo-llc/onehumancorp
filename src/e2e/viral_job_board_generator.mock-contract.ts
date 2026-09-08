@@ -28,7 +28,7 @@ test.describe('Viral Job Board Widget', () => {
 
       expect(embedText).toContain('Globex Corporation');
       expect(embedText).toContain('<iframe');
-      expect(embedText).toContain('Powered by OHC');
+      expect(embedText).toContain('OmniSolo');
     });
   });
 
@@ -55,7 +55,7 @@ test.describe('Viral Job Board Widget', () => {
               return await navigator.clipboard.readText();
           });
           expect(clipboardText).toContain('<iframe');
-          expect(clipboardText).toContain('Powered by OHC');
+          expect(clipboardText).toContain('OmniSolo');
       } catch (e) {
           console.warn('Clipboard read failed: ', e);
       }
@@ -85,7 +85,7 @@ test.describe('Viral Job Board Widget', () => {
 
       expect(embedText).toContain('Stark Industries');
       expect(embedText).toContain('<iframe');
-      expect(embedText).not.toContain('Powered by OHC');
+      expect(embedText).not.toContain('OmniSolo');
     });
   });
 
@@ -123,7 +123,7 @@ test.describe('Viral Job Board Widget', () => {
 
     const brandingLink = page.locator('#branding-link');
     await expect(brandingLink).toBeVisible();
-    await expect(brandingLink).toHaveText('⚡ Powered by OHC');
+    await expect(brandingLink).toHaveText('⚡ OmniSolo');
   });
 
   test('should hide branding in the embedded job board when hideBranding=true', async ({ page }) => {

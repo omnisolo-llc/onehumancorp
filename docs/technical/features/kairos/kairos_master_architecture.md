@@ -3,7 +3,7 @@
 # KAIROS Orchestration: Master Architecture
 
 ## Executive Summary
-KAIROS is the orchestration engine that powers the One Human Corp (OHC) Swarm. It enables a single human to orchestrate a vast swarm of AI agents with zero friction and maximum visual delight. KAIROS bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments through a unified, hybrid architecture.
+KAIROS is the orchestration engine that powers the OmniSolo (OHC) Swarm. It enables a single human to orchestrate a vast swarm of AI agents with zero friction and maximum visual delight. KAIROS bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments through a unified, hybrid architecture.
 
 ## Phase 1: Shared Task List (Decomposition & UltraPlan)
 - **Goal**: Decompose high-level feature requests into a Distributed Shared Task List to be consumed by the Sub-Agent Queue.

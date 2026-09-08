@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
 export default function CustomerReferralProgramPage() {
   const router = useRouter();
@@ -23,10 +23,10 @@ export default function CustomerReferralProgramPage() {
     }
   }, []);
 
-  const embedUrl = `https://ohc.app/api/v1/growth/customer-referral/embed?tenant=${tenant}&give=${encodeURIComponent(giveAmount)}&get=${encodeURIComponent(getAmount)}&hideBranding=${removeBranding}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/customer-referral/embed?tenant=${tenant}&give=${encodeURIComponent(giveAmount)}&get=${encodeURIComponent(getAmount)}&hideBranding=${removeBranding}`;
 
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="250" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `
-<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleGenerate = () => {
     setShowModal(true);
@@ -111,7 +111,7 @@ export default function CustomerReferralProgramPage() {
                       <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${removeBranding ? 'translate-x-6' : 'translate-x-0'}`}></div>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Remove "Powered by OHC" Badge (Pro)</span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Remove "Powered by OmniSolo" Badge (Pro)</span>
                       <span className="text-xs text-gray-500">Make the widget 100% white-labeled</span>
                     </div>
                   </label>
@@ -128,7 +128,7 @@ export default function CustomerReferralProgramPage() {
                 </div>
                 {!removeBranding && (
                     <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700 text-center">
-                        <span className="text-xs font-semibold tracking-wide" style={{ color: '#6b7280' }}>⚡ Powered by OHC</span>
+                        <span className="text-xs font-semibold tracking-wide" style={{ color: '#6b7280' }}>⚡ Powered by OmniSolo</span>
                     </div>
                 )}
               </div>
@@ -151,7 +151,7 @@ export default function CustomerReferralProgramPage() {
 
                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
                   <span className="text-sm font-mono text-gray-500 dark:text-gray-400 flex-1 truncate select-all px-2">
-                    https://ohc.app/ref/{tenant.slice(0,6)}
+                    https://cloud.omnisolo.co/ref/{tenant.slice(0,6)}
                   </span>
                   <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-md transition-colors">
                     Copy
@@ -191,7 +191,7 @@ export default function CustomerReferralProgramPage() {
             </div>
             <h3 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Pro Feature</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Make the Customer Referral Program 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock full white-label customization.
+              Make the Customer Referral Program 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark and unlock full white-label customization.
             </p>
             <div className="space-y-3">
               <button
@@ -239,12 +239,12 @@ export default function CustomerReferralProgramPage() {
 
             <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-700 dark:text-blue-400">
               <span className="text-xl">ℹ️</span>
-              <p className="text-sm">The <strong>Powered by OHC</strong> badge helps us grow the community. If a new business owner signs up through your widget, you earn $50 in platform credits!</p>
+              <p className="text-sm">The <strong>Powered by OmniSolo</strong> badge helps us grow the community. If a new business owner signs up through your widget, you earn $50 in platform credits!</p>
             </div>
           </div>
         </div>
       )}
-      <PoweredByOHC tenantId={tenant} />
+      <PoweredByOmniSolo tenantId={tenant} />
     </div>
   );
 }

@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
 4. During subsequent sessions, sub-agents can query the `autodream_memories` table to retrieve relevant architectural insights via cosine similarity.
 
 ---
-*Powered by OHC-SIP (Swarm Intelligence Protocol)*
+*OmniSolo-SIP (Swarm Intelligence Protocol)*
 *Display settings: Premium Glassmorphism UI*
 
 </div>

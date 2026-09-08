@@ -6,8 +6,8 @@ function safeTenant(value: string | null): string {
 }
 
 function safeHost(value: string | null): string {
-  const host = (value || 'ohc.app').trim().toLowerCase();
-  return /^[a-z0-9.-]+(?::\d{1,5})?$/.test(host) ? host : 'ohc.app';
+  const host = (value || 'omnisolo.co').trim().toLowerCase();
+  return /^[a-z0-9.-]+(?::\d{1,5})?$/.test(host) ? host : 'omnisolo.co';
 }
 
 function safeProtocol(value: string | null): 'http' | 'https' {
@@ -170,7 +170,7 @@ export async function GET(request: Request) {
             <!-- Viral Growth Loop Footer -->
             <div class="footer">
                <span>⚡ Powered by</span>
-               <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}">OHC</a>
+               <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}">OmniSolo</a>
             </div>
         </div>
       </div>

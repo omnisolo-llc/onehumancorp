@@ -1,7 +1,7 @@
 # OHC Market Strategy & SMB Research Report
 
 ## Executive Summary
-OneHumanCorp (OHC) aims to democratize digital commerce by enabling non-technical founders to launch and manage businesses entirely via an AI-agentic platform in under 10 minutes. This report covers a comprehensive analysis of the SMB landscape, competitor positioning, AI differentiation, market sizing, and feature gaps.
+OmniSolo (OHC) aims to democratize digital commerce by enabling non-technical founders to launch and manage businesses entirely via an AI-agentic platform in under 10 minutes. This report covers a comprehensive analysis of the SMB landscape, competitor positioning, AI differentiation, market sizing, and feature gaps.
 
 ## Track 1: Deep Competitor Audit
 

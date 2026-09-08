@@ -6,7 +6,7 @@
 **Status:** Approved
 
 ## Executive Summary
-This document outlines the final orchestration phases for the One Human Corp (OHC) Swarm under the KAIROS architecture.
+This document outlines the final orchestration phases for the OmniSolo (OHC) Swarm under the KAIROS architecture.
 
 ## Phase 1: Shared Task List (The Brain)
 - **Architecture**: Distributed state machine tracking DAG task dependencies.

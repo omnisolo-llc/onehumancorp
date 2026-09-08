@@ -297,7 +297,7 @@ export function HelpWidget() {
 
                                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
-                  <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OHC.">
+                  <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OmniSolo.">
                   <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/store-setup").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." }, { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" }])); }} className="w-full text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
@@ -410,7 +410,7 @@ export function HelpWidget() {
                   <h4 className="font-bold font-outfit text-gray-900 text-base mb-2">New AI Store Builder</h4>
                   <p className="text-sm text-gray-600 leading-relaxed mb-4">You can now generate a complete storefront from just a short description of your business. Try it out in the Storefront Builder.</p>
 
-                  <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest OneHumanCorp updates.">
+                  <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest OmniSolo updates.">
                     <a href="/changelog" className="inline-flex items-center text-blue-600 text-sm font-bold hover:text-blue-800 transition-colors bg-blue-50/80 px-4 py-2 rounded-xl min-h-[44px]">
                       Read full release notes
                       <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>

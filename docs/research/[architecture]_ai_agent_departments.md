@@ -2,7 +2,7 @@
 AI Agent Department Architecture and Implementation Playbook
 
 ## Problem Statement
-Small business owners often manage too many tools and processes, from handling simple inquiries via Instagram DMs to updating inventory, and publishing posts on social media. Existing platforms act as disjointed tools requiring complex integrations or constant manual input. They do not operate seamlessly to take the cognitive load off the business owner. OneHumanCorp needs a structured architecture to organize its AI agents into intuitive, business-friendly departments ("The Promoter", "The Manager", etc.) that coordinate invisibly and proactively to run a small business end-to-end, with minimum setup and mobile-first, one-tap approvals.
+Small business owners often manage too many tools and processes, from handling simple inquiries via Instagram DMs to updating inventory, and publishing posts on social media. Existing platforms act as disjointed tools requiring complex integrations or constant manual input. They do not operate seamlessly to take the cognitive load off the business owner. OmniSolo needs a structured architecture to organize its AI agents into intuitive, business-friendly departments ("The Promoter", "The Manager", etc.) that coordinate invisibly and proactively to run a small business end-to-end, with minimum setup and mobile-first, one-tap approvals.
 
 ## Research Report
 Based on a synthesis of user feedback (e.g., from r/smallbusiness, Trustpilot, app stores):

@@ -41,7 +41,7 @@ ManyChat is a leading chat marketing platform that aggregates messages from Meta
 *   **OHC Integration:** OHC should do ManyChat integration because it reliably handles Meta's complex APIs and provides a unified webhook stream for incoming messages.
 
 **Design Doc**
-*   **Trigger:** User connects their ManyChat account via OAuth in the OHC settings page.
+*   **Trigger:** User connects their ManyChat account via OAuth in the OmniSolo settings page.
 *   **Action:** OHC listens for new messages via webhooks. When a customer messages the business on IG/FB, it appears in the OHC unified inbox.
 *   **UX:** A simple "Connect Instagram/Facebook" button. The unified inbox shows the platform icon next to the customer's name.
 *   **Mobile UX:**

@@ -1,7 +1,7 @@
 # Comprehensive Research Report: Tool Integrations for Small Business Owners
 
 ## Executive Summary
-This report evaluates 7 key integration categories critical for One Human Corp (OHC) to deliver value to non-technical small business owners. The focus is on tools that reduce manual administrative work, improve customer communication, and support global operations in both Cloud and Standalone modes.
+This report evaluates 7 key integration categories critical for OmniSolo (OHC) to deliver value to non-technical small business owners. The focus is on tools that reduce manual administrative work, improve customer communication, and support global operations in both Cloud and Standalone modes.
 
 ## Evaluated Categories
 

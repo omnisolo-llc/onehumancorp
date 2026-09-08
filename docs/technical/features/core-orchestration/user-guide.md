@@ -3,7 +3,7 @@
 # User Guide: Core Orchestration
 
 ## 1. Introduction & Value Proposition
-Core Orchestration serves as the foundational communication and execution framework within One Human Corp. It orchestrates the asynchronous and synchronous interactions (Virtual Meeting Rooms) between various specialized AI agents and the human CEO. Its value lies in breaking down complex epics into manageable, verifiable tasks while maintaining the rigid organizational hierarchy defined in your configuration.
+Core Orchestration serves as the foundational communication and execution framework within OmniSolo. It orchestrates the asynchronous and synchronous interactions (Virtual Meeting Rooms) between various specialized AI agents and the human CEO. Its value lies in breaking down complex epics into manageable, verifiable tasks while maintaining the rigid organizational hierarchy defined in your configuration.
 
 ## 2. Prerequisites & Requirements
 - **Hardware/Software**: The central OHC Orchestration Hub deployed on the Kubernetes cluster.

@@ -33,7 +33,7 @@ export default function ShareCardsPage() {
   const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked premium viral share cards for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked premium viral share cards for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
     if (!await claimTrial()) return;
     setShowSoftPaywall(false);
     setTrialStatus('Pro access activated.');
@@ -53,7 +53,7 @@ export default function ShareCardsPage() {
     }
   };
 
-  const shareText = `Check out my storefront: ${storeName} - ${tagline} ${shareLink}${!removeBranding ? '\n\n⚡ Powered by OHC' : ''}`;
+  const shareText = `Check out my storefront: ${storeName} - ${tagline} ${shareLink}${!removeBranding ? '\n\n⚡ Powered by OmniSolo' : ''}`;
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
@@ -114,7 +114,7 @@ export default function ShareCardsPage() {
 
                     <div className="mt-2 pt-4 border-t border-gray-100 flex items-center justify-between">
                         <label htmlFor="remove-branding" className="text-sm font-medium text-gray-700 cursor-pointer flex-1 flex items-center">
-                            Remove "Powered by OHC" Badge
+                            Remove "Powered by OmniSolo" Badge
                             {!hasPro && (
                                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
                                     Pro
@@ -217,7 +217,7 @@ export default function ShareCardsPage() {
                  </div>
 
                  <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center opacity-80">
-                     <span className="text-sm font-semibold tracking-wider uppercase">{removeBranding ? '' : 'Powered by OHC'}</span>
+                     <span className="text-sm font-semibold tracking-wider uppercase">{removeBranding ? '' : 'Powered by OmniSolo'}</span>
                      <span className="text-sm font-medium">{shareLink.replace('https://', '')}</span>
                  </div>
              </div>
@@ -247,7 +247,7 @@ export default function ShareCardsPage() {
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Social Share Cards 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+              Make the Social Share Cards 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
             </p>
 
             <button

@@ -3,7 +3,7 @@
 # KAIROS Orchestrator: Premium Design Document
 
 ## 1. Vision
-The One Human Corp (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**.
+The OmniSolo (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**.
 
 ## 2. Shared Task List & Distributed State Machine
 - **Goal:** Robustly track the decomposition of human goals into tasks that can be claimed by Swarm Agents without race conditions.

@@ -504,7 +504,7 @@
           <div class="form-group">
             <label class="checkbox-label">
               <input type="checkbox" id="remove-branding" />
-              Remove "Powered by OHC" Badge (Pro)
+              Remove "OmniSolo" Badge (Pro)
             </label>
           </div>
 
@@ -534,12 +534,12 @@
               </p>
 
               <div class="widget-input-group">
-                <input type="text" class="widget-link-input" readonly value="https://app.onehumancorp.com/setup.html?ref=my-store&promo=ref123" id="preview-link" />
+                <input type="text" class="widget-link-input" readonly value="https://cloud.omnisolo.co/setup.html?ref=my-store&promo=ref123" id="preview-link" />
                 <button class="widget-copy-btn">Copy Link</button>
               </div>
 
               <div class="widget-footer" id="preview-branding">
-                <a href="#" class="widget-brand">⚡ Powered by OHC</a>
+                <a href="#" class="widget-brand">⚡ OmniSolo</a>
               </div>
             </div>
           </div>
@@ -570,7 +570,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p class="modal-desc">Make the Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p class="modal-desc">Make the Referral Widget 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
       <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
         <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
         <button class="primary-btn" id="upgrade-btn">Upgrade to Pro</button>
@@ -617,7 +617,7 @@
       const softPaywallStatus = document.getElementById('soft-paywall-status');
 
       // Initialize
-      previewLink.value = `https://app.onehumancorp.com/setup.html?ref=${state.tenant}&promo=ref123`;
+      previewLink.value = `https://cloud.omnisolo.co/setup.html?ref=${state.tenant}&promo=ref123`;
       updatePreview();
 
       // Event Listeners
@@ -689,7 +689,7 @@
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
           const tenantId = state.tenant;
-          const message = `Check out my new Referral Program built with OneHumanCorp! 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+          const message = `Check out my new Referral Program built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           // Open share dialog
@@ -757,12 +757,12 @@
       }
 
       function generateEmbedCode() {
-        const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
+        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
         const sign = state.type === '$' ? '$' : '';
         const pct = state.type === '%' ? '%' : '';
         const val = state.amount;
 
-        const code = `<iframe src="${origin}/api/v1/growth/customer-referral/embed?tenant=${state.tenant}&theme=${state.theme}&give=${sign}${val}${pct}&get=${sign}${val}${pct}&hide_branding=${state.removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Referral Widget"></iframe>`;
+        const code = `<iframe src="${origin}/api/v1/growth/customer-referral/embed?tenant=${state.tenant}&theme=${state.theme}&give=${sign}${val}${pct}&get=${sign}${val}${pct}&hide_branding=${state.removeBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Referral Widget"></iframe>`;
 
         embedCodeTextarea.value = code;
       }

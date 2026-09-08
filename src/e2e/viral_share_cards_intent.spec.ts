@@ -10,8 +10,8 @@ test.describe('Social Share Cards Direct Intents - Owner Journey', () => {
         const copyButton = page.locator('button', { hasText: 'Copy Link' });
         await expect(copyButton).toBeVisible();
 
-        // Check for the "Powered by OHC" watermark text in the preview
-        const poweredBy = page.locator('span', { hasText: 'Powered by OHC' });
+        // Check for the "OmniSolo" watermark text in the preview
+        const poweredBy = page.locator('span', { hasText: 'OmniSolo' });
         await expect(poweredBy).toBeVisible();
 
         // Validate X (Twitter) Share Link
@@ -20,10 +20,10 @@ test.describe('Social Share Cards Direct Intents - Owner Journey', () => {
         const twitterHref = await twitterShare.getAttribute('href');
         expect(twitterHref).toContain('twitter.com/intent/tweet');
 
-        // Ensure "Powered by OHC" is embedded in the encoded text, if applicable,
+        // Ensure "OmniSolo" is embedded in the encoded text, if applicable,
         // or check that the URL contains the encoded store link logic.
         expect(twitterHref).toContain('text=');
-        expect(twitterHref).toContain(encodeURIComponent('Powered by OHC'));
+        expect(twitterHref).toContain(encodeURIComponent('OmniSolo'));
 
         // Validate Facebook Share Link
         const facebookShare = page.locator('a', { hasText: 'Share on Facebook' });
@@ -31,14 +31,14 @@ test.describe('Social Share Cards Direct Intents - Owner Journey', () => {
         const fbHref = await facebookShare.getAttribute('href');
         expect(fbHref).toContain('facebook.com/sharer/sharer.php');
         expect(fbHref).toContain('quote=');
-        expect(fbHref).toContain(encodeURIComponent('Powered by OHC'));
+        expect(fbHref).toContain(encodeURIComponent('OmniSolo'));
 
         // Validate WhatsApp Share Link
         const whatsappShare = page.locator('a', { hasText: 'Share to WhatsApp' });
         await expect(whatsappShare).toBeVisible();
         const waHref = await whatsappShare.getAttribute('href');
         expect(waHref).toContain('wa.me/?text=');
-        expect(waHref).toContain(encodeURIComponent('Powered by OHC'));
+        expect(waHref).toContain(encodeURIComponent('OmniSolo'));
 
         // Validate LinkedIn Share Link
         const linkedinShare = page.locator('a', { hasText: 'Share on LinkedIn' });

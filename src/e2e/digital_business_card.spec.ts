@@ -24,7 +24,7 @@ test.describe('Digital Business Card Generator E2E', () => {
     });
 
     await test.step('Trigger soft paywall', async () => {
-      // Check "Remove Powered by OHC branding" checkbox
+      // Check "Remove OmniSolo branding" checkbox
       await page.locator('input[type="checkbox"]').click({ force: true });
 
       // Soft paywall should appear
@@ -58,7 +58,7 @@ test.describe('Digital Business Card Generator E2E', () => {
 
       // Verify viral loop footer
       await expect(page.getByText('Create your own free digital business card')).toBeVisible();
-      await expect(page.getByText('Powered by OHC')).toBeVisible();
+      await expect(page.getByText('OmniSolo')).toBeVisible();
     });
   });
 });

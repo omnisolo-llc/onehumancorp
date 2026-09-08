@@ -6,8 +6,27 @@ const TopNav = ({ title }: { title: string }) => <div className="font-semibold p
 
 
 
-const fetchJson = async (url: string) => { return { tenant: { base_currency: 'USD', enabled_currencies: ['USD', 'EUR'] } }; };
-const putJson = async (url: string, data: any) => { return {}; };
+type GlobalCommerceResponse = {
+  tenant?: {
+    base_currency?: string | null;
+    enabled_currencies?: string[] | null;
+  };
+};
+
+async function fetchJson(url: string): Promise<GlobalCommerceResponse> {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Failed to load settings (${response.status})`);
+  return response.json() as Promise<GlobalCommerceResponse>;
+}
+
+async function putJson(url: string, data: unknown): Promise<void> {
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(`Failed to save settings (${response.status})`);
+}
 
 export default function GlobalCommerceSettings() {
   const [baseCurrency, setBaseCurrency] = useState('USD');
@@ -20,7 +39,7 @@ export default function GlobalCommerceSettings() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const res = await fetchJson('/api/v1/settings');
+        const res = await fetchJson('/api/v1/settings/global-commerce');
         if (res.tenant) {
           setBaseCurrency(res.tenant.base_currency || 'USD');
           setEnabledCurrencies(res.tenant.enabled_currencies || ['USD']);
@@ -37,7 +56,7 @@ export default function GlobalCommerceSettings() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await putJson('/api/v1/settings', {
+      await putJson('/api/v1/settings/global-commerce', {
         base_currency: baseCurrency,
         enabled_currencies: enabledCurrencies,
       });
@@ -61,7 +80,7 @@ export default function GlobalCommerceSettings() {
 
   if (isLoading) {
     return (
-      <AppShell>
+      <AppShell title="Global Commerce">
         <div className="flex flex-col h-full bg-white dark:bg-[#1C1C1E]">
           <TopNav title="Global Commerce" />
           <div className="flex-1 p-4 flex items-center justify-center">
@@ -73,7 +92,7 @@ export default function GlobalCommerceSettings() {
   }
 
   return (
-    <AppShell>
+    <AppShell title="Global Commerce">
       <div className="flex flex-col h-full bg-[#F2F2F7] dark:bg-black overflow-y-auto">
         <TopNav title="Global Commerce" />
 

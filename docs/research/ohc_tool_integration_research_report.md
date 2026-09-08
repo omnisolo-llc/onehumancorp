@@ -11,7 +11,7 @@
 *Key Risks:* Self-hosting requires maintenance. Sync issues if webhooks fail.
 *Modes Supported:* Cloud (self-hosted backend), Standalone (via cloud APIs or embedded local instance).
 **Design Doc:**
-- User clicks "Connect Instagram" in OHC settings.
+- User clicks "Connect Instagram" in OmniSolo settings.
 - OHC initiates OAuth flow via Chatwoot APIs.
 - Webhooks from Chatwoot are routed to the OHC agent "Customer Success - The Ambassador".
 - The Ambassador agent reads messages, auto-drafts replies, and displays them in the unified OHC inbox.
@@ -114,7 +114,7 @@
 *Key Risks:* OAuth token expiration issues, free tier 40-minute limit for group meetings.
 *Modes Supported:* Both Cloud (Platform OAuth App) and Standalone (Server-to-Server OAuth or individual OAuth).
 **Design Doc:**
-- User connects Zoom via OAuth in OHC settings.
+- User connects Zoom via OAuth in OmniSolo settings.
 - For online service types, the "Operations" agent hooks into the booking flow.
 - OHC calls Zoom API `POST /users/me/meetings` upon successful booking.
 - OHC saves the `join_url` and sends it to the customer via the calendar invite and email.

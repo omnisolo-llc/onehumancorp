@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::types::DepartmentType;
-use opentelemetry::global;
 use opentelemetry::KeyValue;
+use opentelemetry::global;
 use opentelemetry::metrics::Counter;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticRoutingRequest {
@@ -34,10 +34,12 @@ impl SemanticRouter {
         if a.len() != b.len() || a.is_empty() {
             return 0.0;
         }
-        let (dot, na, nb) = a.iter().zip(b.iter()).fold(
-            (0.0f32, 0.0f32, 0.0f32),
-            |(dot, na, nb), (&x, &y)| (dot + x * y, na + x * x, nb + y * y),
-        );
+        let (dot, na, nb) = a
+            .iter()
+            .zip(b.iter())
+            .fold((0.0f32, 0.0f32, 0.0f32), |(dot, na, nb), (&x, &y)| {
+                (dot + x * y, na + x * x, nb + y * y)
+            });
         if na == 0.0 || nb == 0.0 {
             return 0.0;
         }
@@ -48,19 +50,44 @@ impl SemanticRouter {
     fn generate_embedding(&self, prompt: &str) -> Vec<f32> {
         let text = prompt.to_lowercase();
         // A simple heuristic for tests
-        if text.contains("website") || text.contains("design") || text.contains("marketing") || text.contains("seo") {
+        if text.contains("website")
+            || text.contains("design")
+            || text.contains("marketing")
+            || text.contains("seo")
+        {
             vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        } else if text.contains("refund") || text.contains("inventory") || text.contains("order") || text.contains("operations") {
+        } else if text.contains("refund")
+            || text.contains("inventory")
+            || text.contains("order")
+            || text.contains("operations")
+        {
             vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        } else if text.contains("price") || text.contains("pricing") || text.contains("tax") || text.contains("finance") || text.contains("accountant") {
+        } else if text.contains("price")
+            || text.contains("pricing")
+            || text.contains("tax")
+            || text.contains("finance")
+            || text.contains("accountant")
+        {
             vec![0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]
-        } else if text.contains("quote") || text.contains("proposal") || text.contains("lead") || text.contains("sales") {
+        } else if text.contains("quote")
+            || text.contains("proposal")
+            || text.contains("lead")
+            || text.contains("sales")
+        {
             vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
-        } else if text.contains("contract") || text.contains("policy") || text.contains("legal") || text.contains("terms") {
+        } else if text.contains("contract")
+            || text.contains("policy")
+            || text.contains("legal")
+            || text.contains("terms")
+        {
             vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
         } else if text.contains("customer") || text.contains("support") || text.contains("chat") {
             vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]
-        } else if text.contains("trend") || text.contains("report") || text.contains("advisory") || text.contains("health") {
+        } else if text.contains("trend")
+            || text.contains("report")
+            || text.contains("advisory")
+            || text.contains("health")
+        {
             vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
         } else {
             // default fallback
@@ -68,21 +95,48 @@ impl SemanticRouter {
         }
     }
 
-    pub fn route(&self, request: &SemanticRoutingRequest) -> Result<SemanticRoutingResponse, String> {
+    pub fn route(
+        &self,
+        request: &SemanticRoutingRequest,
+    ) -> Result<SemanticRoutingResponse, String> {
         if request.tenant_id.is_empty() {
             return Err("tenant_id is required".to_string());
         }
 
-        let embedding = request.embedding.clone().unwrap_or_else(|| self.generate_embedding(&request.prompt));
+        let embedding = request
+            .embedding
+            .clone()
+            .unwrap_or_else(|| self.generate_embedding(&request.prompt));
 
         let centroids = vec![
-            (DepartmentType::Marketing, vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-            (DepartmentType::Operations, vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-            (DepartmentType::Finance, vec![0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0]),
-            (DepartmentType::Sales, vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]),
-            (DepartmentType::Legal, vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
-            (DepartmentType::CustomerSuccess, vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0]),
-            (DepartmentType::BusinessAdvisory, vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
+            (
+                DepartmentType::Marketing,
+                vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ),
+            (
+                DepartmentType::Operations,
+                vec![0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            ),
+            (
+                DepartmentType::Finance,
+                vec![0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            ),
+            (
+                DepartmentType::Sales,
+                vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            ),
+            (
+                DepartmentType::Legal,
+                vec![0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+            ),
+            (
+                DepartmentType::CustomerSuccess,
+                vec![0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+            ),
+            (
+                DepartmentType::BusinessAdvisory,
+                vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+            ),
         ];
 
         let mut best_dept = DepartmentType::Operations; // default
@@ -96,10 +150,13 @@ impl SemanticRouter {
             }
         }
 
-        self.route_counter.add(1, &[
-            KeyValue::new("tenant_id", request.tenant_id.clone()),
-            KeyValue::new("department", best_dept.to_string()),
-        ]);
+        self.route_counter.add(
+            1,
+            &[
+                KeyValue::new("tenant_id", request.tenant_id.clone()),
+                KeyValue::new("department", best_dept.to_string()),
+            ],
+        );
 
         Ok(SemanticRoutingResponse {
             tenant_id: request.tenant_id.clone(),
@@ -119,12 +176,27 @@ mod tests {
 
         let cases = vec![
             ("I need a website designed", DepartmentType::Marketing),
-            ("Can you help me process a refund for order 123", DepartmentType::Operations),
-            ("What is my revenue this week and pricing strategy?", DepartmentType::Finance),
-            ("Can you generate a quote for this lead?", DepartmentType::Sales),
+            (
+                "Can you help me process a refund for order 123",
+                DepartmentType::Operations,
+            ),
+            (
+                "What is my revenue this week and pricing strategy?",
+                DepartmentType::Finance,
+            ),
+            (
+                "Can you generate a quote for this lead?",
+                DepartmentType::Sales,
+            ),
             ("I need to draft terms of service", DepartmentType::Legal),
-            ("Respond to this customer chat", DepartmentType::CustomerSuccess),
-            ("What are the seasonal trends for my business?", DepartmentType::BusinessAdvisory),
+            (
+                "Respond to this customer chat",
+                DepartmentType::CustomerSuccess,
+            ),
+            (
+                "What are the seasonal trends for my business?",
+                DepartmentType::BusinessAdvisory,
+            ),
         ];
 
         for (prompt, expected_dept) in cases {
@@ -136,7 +208,11 @@ mod tests {
 
             let res = router.route(&req).expect("Routing failed");
             assert_eq!(res.tenant_id, "tenant_123");
-            assert_eq!(res.target_department, expected_dept, "Failed for prompt: {}", prompt);
+            assert_eq!(
+                res.target_department, expected_dept,
+                "Failed for prompt: {}",
+                prompt
+            );
         }
     }
 
@@ -196,7 +272,8 @@ Return strict JSON:
         let max_retries = 3;
         let mut retry_count = 0;
         let mut result = DraftReply {
-            final_draft: "Thanks for reaching out! We will review this and get back to you soon.".to_string(),
+            final_draft: "Thanks for reaching out! We will review this and get back to you soon."
+                .to_string(),
             operations_context: None,
             sales_context: None,
             customer_context: None,
@@ -211,26 +288,48 @@ Return strict JSON:
                     .as_deref()
                 {
                     Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                        let api_key = std::env::var("MINIMAX_API_KEY")
+                            .unwrap_or_else(|_| "fake-key".to_string());
                         if !api_key.is_empty() {
-                            crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt_clone).await
+                            crate::minimax::MinimaxClient::new(api_key)
+                                .reason(&compressed_prompt_clone)
+                                .await
                         } else {
-                            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt_clone).await
+                            crate::minimax::LocalLLMClient::new()
+                                .reason(&compressed_prompt_clone)
+                                .await
                         }
                     }
-                    _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt_clone).await,
+                    _ => {
+                        crate::minimax::LocalLLMClient::new()
+                            .reason(&compressed_prompt_clone)
+                            .await
+                    }
                 }
             };
 
             match tokio::time::timeout(std::time::Duration::from_secs(60), llm_call).await {
                 Ok(Ok(reply)) => {
-                    let cleaned = reply.replace("```json", "").replace("```", "").trim().to_string();
+                    let cleaned = reply
+                        .replace("```json", "")
+                        .replace("```", "")
+                        .trim()
+                        .to_string();
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&cleaned) {
                         if json.get("final_draft").is_some() {
                             result.final_draft = json.get("final_draft").unwrap().as_str().unwrap_or("Thanks for reaching out! We will review this and get back to you soon.").to_string();
-                            result.operations_context = json.get("operations_context").and_then(|v| v.as_str()).map(|s| s.to_string());
-                            result.sales_context = json.get("sales_context").and_then(|v| v.as_str()).map(|s| s.to_string());
-                            result.customer_context = json.get("customer_context").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            result.operations_context = json
+                                .get("operations_context")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+                            result.sales_context = json
+                                .get("sales_context")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+                            result.customer_context = json
+                                .get("customer_context")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
                             success = true;
                             break;
                         }
@@ -245,33 +344,40 @@ Return strict JSON:
 
         // If tests are mocking without an LLM, provide basic deterministic output to avoid flaky tests.
         if std::env::var("CI").is_ok() && !success {
-           let content_lower = msg.content.to_lowercase();
-           let mut ops_context = None;
-           let mut sales_context = None;
+            let content_lower = msg.content.to_lowercase();
+            let mut ops_context = None;
+            let mut sales_context = None;
 
-           if content_lower.contains("vegan options") {
+            if content_lower.contains("vegan options") {
                 result.final_draft = "Hi there! Yes, we do offer vegan options. I see you've previously ordered with us. Would you like to see our menu?".to_string();
                 return Ok(result);
-           }
+            }
 
-           let customer_context = Some(format!("Drafted reply to {} from {}.", msg.sender, msg.source));
-           if content_lower.contains("schedule") || content_lower.contains("calendar") {
-               ops_context = Some("Checked schedule: Available next Tuesday.".to_string());
-           }
-           if content_lower.contains("quote") || content_lower.contains("price") {
-               sales_context = Some("Generated quote: $150.".to_string());
-           }
-           let mut final_draft = "Hello!".to_string();
-           if let Some(ref ops) = ops_context { final_draft.push_str(&format!(" {}", ops)); }
-           if let Some(ref sales) = sales_context { final_draft.push_str(&format!(" {}", sales)); }
+            let customer_context = Some(format!(
+                "Drafted reply to {} from {}.",
+                msg.sender, msg.source
+            ));
+            if content_lower.contains("schedule") || content_lower.contains("calendar") {
+                ops_context = Some("Checked schedule: Available next Tuesday.".to_string());
+            }
+            if content_lower.contains("quote") || content_lower.contains("price") {
+                sales_context = Some("Generated quote: $150.".to_string());
+            }
+            let mut final_draft = "Hello!".to_string();
+            if let Some(ref ops) = ops_context {
+                final_draft.push_str(&format!(" {}", ops));
+            }
+            if let Some(ref sales) = sales_context {
+                final_draft.push_str(&format!(" {}", sales));
+            }
 
-           result = DraftReply {
-               final_draft,
-               operations_context: ops_context,
-               sales_context,
-               customer_context,
-           };
-           success = true;
+            result = DraftReply {
+                final_draft,
+                operations_context: ops_context,
+                sales_context,
+                customer_context,
+            };
+            success = true;
         }
 
         if !success {
@@ -288,7 +394,9 @@ mod omni_tests {
 
     #[tokio::test]
     async fn test_omni_context_router_scheduling() {
-        unsafe { std::env::set_var("CI", "1"); }
+        unsafe {
+            std::env::set_var("CI", "1");
+        }
         let router = OmniContextRouter::new();
         let msg = InboundMessage {
             source: "Instagram".to_string(),
@@ -299,12 +407,17 @@ mod omni_tests {
         let result = router.route_and_synthesize(&msg).await.unwrap();
         assert!(result.operations_context.is_some());
         assert!(result.sales_context.is_none());
-        assert!(result.final_draft.contains("schedule") || result.final_draft.contains("Thanks for reaching out!"));
+        assert!(
+            result.final_draft.contains("schedule")
+                || result.final_draft.contains("Thanks for reaching out!")
+        );
     }
 
     #[tokio::test]
     async fn test_omni_context_router_quote() {
-        unsafe { std::env::set_var("CI", "1"); }
+        unsafe {
+            std::env::set_var("CI", "1");
+        }
         let router = OmniContextRouter::new();
         let msg = InboundMessage {
             source: "Email".to_string(),
@@ -315,6 +428,9 @@ mod omni_tests {
         let result = router.route_and_synthesize(&msg).await.unwrap();
         assert!(result.operations_context.is_none());
         assert!(result.sales_context.is_some());
-        assert!(result.final_draft.contains("quote") || result.final_draft.contains("Thanks for reaching out!"));
+        assert!(
+            result.final_draft.contains("quote")
+                || result.final_draft.contains("Thanks for reaching out!")
+        );
     }
 }

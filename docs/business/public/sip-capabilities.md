@@ -7,7 +7,7 @@
 
 ## 1. Introduction to Swarm Intelligence Protocol (OHC-SIP)
 
-The One Human Corp (OHC) Swarm Intelligence Protocol (OHC-SIP) dictates how the autonomous agent swarm operates, coordinates, and persists memory across the **Hybrid Architecture (OHC-HA)**. This document outlines the fundamental capabilities exposed by the OHC-SIP to orchestrate swarm nodes efficiently and autonomously.
+The OmniSolo (OHC) Swarm Intelligence Protocol (OHC-SIP) dictates how the autonomous agent swarm operates, coordinates, and persists memory across the **Hybrid Architecture (OHC-HA)**. This document outlines the fundamental capabilities exposed by the OHC-SIP to orchestrate swarm nodes efficiently and autonomously.
 
 ## 2. Core Capabilities
 

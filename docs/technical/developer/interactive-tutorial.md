@@ -2,7 +2,7 @@
 
 # Interactive Developer Tutorial: Building a New Agent Persona
 
-Welcome to the One Human Corp (OHC) interactive developer tutorial. This guide will walk you through the process of registering a new agent persona and wiring it into the Swarm Intelligence Protocol (OHC-SIP).
+Welcome to the OmniSolo (OHC) interactive developer tutorial. This guide will walk you through the process of registering a new agent persona and wiring it into the Swarm Intelligence Protocol (OHC-SIP).
 
 ## Step 1: Define the Persona Configuration
 

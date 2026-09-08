@@ -4,32 +4,32 @@
 
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { PoweredByOHC } from './PoweredByOHC';
+import { PoweredByOmniSolo } from './PoweredByOmniSolo';
 import { describe, it, expect, afterEach } from 'vitest';
 
-describe('PoweredByOHC Component', () => {
+describe('PoweredByOmniSolo Component', () => {
   afterEach(() => {
     cleanup();
   });
   const testTenantId = 'test-org-123';
 
   it('renders the base button correctly', () => {
-    render(<PoweredByOHC tenantId={testTenantId} />);
+    render(<PoweredByOmniSolo tenantId={testTenantId} />);
 
     // The main base link should be rendered
     const linkElements = screen.getAllByRole('link');
-    // Find the one that has the text Powered by OHC
-    const baseLink = linkElements.find(el => el.textContent?.includes('Powered by OHC'));
+    // Find the one that has the text Powered by OmniSolo
+    const baseLink = linkElements.find(el => el.textContent?.includes('Powered by OmniSolo'));
 
     expect(baseLink).toBeDefined();
     expect(baseLink?.getAttribute('href')).toBe(`/onboarding?ref=${testTenantId}&source=footer_widget`);
   });
 
   it('shows the visitor popover when hovered and not owner', async () => {
-    render(<PoweredByOHC tenantId={testTenantId} />);
+    render(<PoweredByOmniSolo tenantId={testTenantId} />);
 
     // The popover content shouldn't be there initially
-    expect(screen.queryByText(/Built with OneHumanCorp/i)).toBeNull();
+    expect(screen.queryByText(/Built with OmniSolo/i)).toBeNull();
 
     // Find the container wrapper and trigger hover
     const wrapper = screen.getAllByRole('link')[0].parentElement;
@@ -38,7 +38,7 @@ describe('PoweredByOHC Component', () => {
     fireEvent.mouseEnter(wrapper);
 
     // Wait for the popover content to appear
-    expect(screen.getByText(/Built with OneHumanCorp/i)).toBeDefined();
+    expect(screen.getByText(/Built with OmniSolo/i)).toBeDefined();
 
     // There should now be two links to the onboarding URL (one in base, one in popover CTA)
     const links = screen.getAllByRole('link');
@@ -51,7 +51,7 @@ describe('PoweredByOHC Component', () => {
   });
 
   it('shows the upgrade popover when hovered and is owner', async () => {
-    render(<PoweredByOHC tenantId={testTenantId} isOwner={true} />);
+    render(<PoweredByOmniSolo tenantId={testTenantId} isOwner={true} />);
 
     // The popover content shouldn't be there initially
     expect(screen.queryByText(/Remove Branding/i)).toBeNull();

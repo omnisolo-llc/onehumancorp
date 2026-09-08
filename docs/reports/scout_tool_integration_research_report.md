@@ -1,7 +1,7 @@
 # 🔍 Scout: Tool Integration Research Report
 
 ## Executive Summary
-This report summarizes the research and evaluation of seven tool integration categories designed to expand OneHumanCorp's (OHC) capabilities for small business owners. The focus is on tools that directly address pain points for non-technical users, ensuring high usability, fair pricing, and clear benefits across multiple business personas.
+This report summarizes the research and evaluation of seven tool integration categories designed to expand OmniSolo's (OHC) capabilities for small business owners. The focus is on tools that directly address pain points for non-technical users, ensuring high usability, fair pricing, and clear benefits across multiple business personas.
 
 ---
 

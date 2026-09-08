@@ -571,7 +571,9 @@ async fn subscription_action(
 
     match update {
         Ok(_) => match transaction.commit().await {
-            Ok(()) => (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response(),
+            Ok(()) => {
+                (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response()
+            }
             Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
         },
         Err(e) => {

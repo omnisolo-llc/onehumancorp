@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-20
 
 ## 1. Overview
-The "Advanced Agentic Capabilities" initiative represents Phase 8 of the One Human Corp (OHC) Strategic Roadmap. Its objective is to integrate the most critical features identified across leading AI frameworks (CrewAI, AutoGen, LangGraph) to establish OHC as the definitive orchestration platform. This design addresses the core challenge of scaling autonomous multi-agent systems efficiently, directly mitigating "Agent Amnesia," static tool binding, and orchestration context bloat.
+The "Advanced Agentic Capabilities" initiative represents Phase 8 of the OmniSolo (OHC) Strategic Roadmap. Its objective is to integrate the most critical features identified across leading AI frameworks (CrewAI, AutoGen, LangGraph) to establish OHC as the definitive orchestration platform. This design addresses the core challenge of scaling autonomous multi-agent systems efficiently, directly mitigating "Agent Amnesia," static tool binding, and orchestration context bloat.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

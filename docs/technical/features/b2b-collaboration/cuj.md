@@ -3,7 +3,7 @@
 # Core User Journey: B2B Agent Exchange
 
 ## 1. Overview
-This document outlines the user journey for establishing and utilizing a Cross-Org Collaboration (B2B Agent Exchange) between two independent One Human Corp organizations.
+This document outlines the user journey for establishing and utilizing a Cross-Org Collaboration (B2B Agent Exchange) between two independent OmniSolo organizations.
 
 ## 2. Persona
 - **Procurement Manager (Human Operator):** Desires to automate software or resource procurement from external vendors using AI agents.

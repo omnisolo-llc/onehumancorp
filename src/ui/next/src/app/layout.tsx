@@ -18,8 +18,8 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'In-App Help Center',
-  description: 'Automated storefront builder',
+  title: 'OmniSolo',
+  description: 'OmniSolo business operations workspace',
 };
 
 export default function RootLayout({

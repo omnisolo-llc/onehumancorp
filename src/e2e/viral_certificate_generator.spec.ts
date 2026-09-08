@@ -70,8 +70,8 @@ test.describe('Viral Certificate Generator', () => {
         await expect(publicPage.locator('.recipient', { hasText: 'John E2E Doe' })).toBeVisible();
         await expect(publicPage.locator('h2', { hasText: 'E2E Mastery Course' })).toBeVisible();
 
-        // Verify "Powered by OHC" viral loop footer
-        const footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OHC' }).first();
+        // Verify "OmniSolo" viral loop footer
+        const footerLink = publicPage.locator('a', { hasText: '⚡ OmniSolo' }).first();
         await expect(footerLink).toBeVisible();
         const footerHref = await footerLink.getAttribute('href');
         expect(footerHref).toContain('/onboarding');

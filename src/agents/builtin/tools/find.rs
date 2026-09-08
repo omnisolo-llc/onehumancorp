@@ -1,11 +1,14 @@
 #![allow(clippy::if_same_then_else)]
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::json;
 use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+};
 
 #[derive(Deserialize)]
 struct FindArgs {
@@ -17,7 +20,9 @@ struct FindArgs {
     file_type: Option<String>, // "f" for file, "d" for dir
 }
 
-fn default_path() -> String { ".".to_string() }
+fn default_path() -> String {
+    ".".to_string()
+}
 
 struct FindExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -25,10 +30,7 @@ struct FindExecutor {
 
 #[async_trait::async_trait]
 impl PydanticToolExecutor<FindArgs> for FindExecutor {
-    async fn execute_typed(
-        &self,
-        args: FindArgs,
-    ) -> Result<String, ToolError> {
+    async fn execute_typed(&self, args: FindArgs) -> Result<String, ToolError> {
         let base_dir = args.path;
         let safe_base = base_dir.strip_prefix("/").unwrap_or(&base_dir);
 
@@ -39,11 +41,15 @@ impl PydanticToolExecutor<FindArgs> for FindExecutor {
         };
 
         if !search_path.exists() {
-            return Err(ToolError::LlmRecoverable(format!("Directory not found: {}", search_path.display())));
+            return Err(ToolError::LlmRecoverable(format!(
+                "Directory not found: {}",
+                search_path.display()
+            )));
         }
 
         let mut matches = Vec::new();
-        self.search_recursive(&search_path, &args.name, &args.file_type, &mut matches).await
+        self.search_recursive(&search_path, &args.name, &args.file_type, &mut matches)
+            .await
             .map_err(|e| ToolError::LlmRecoverable(format!("Failed to search directory: {}", e)))?;
 
         // Just-in-Time (JIT) Retrieval Mechanic:
@@ -77,7 +83,11 @@ impl FindExecutor {
             let file_name = entry.file_name().to_string_lossy().to_string();
 
             // Skip hidden directories and build artifacts
-            if metadata.is_dir() && (file_name.starts_with('.') || file_name == "target" || file_name == "node_modules") {
+            if metadata.is_dir()
+                && (file_name.starts_with('.')
+                    || file_name == "target"
+                    || file_name == "node_modules")
+            {
                 continue;
             }
 
@@ -111,7 +121,8 @@ impl FindExecutor {
             }
 
             if metadata.is_dir() {
-                self.search_recursive(&path, name_filter, type_filter, matches).await?;
+                self.search_recursive(&path, name_filter, type_filter, matches)
+                    .await?;
             }
         }
         Ok(())
@@ -120,7 +131,10 @@ impl FindExecutor {
 
 // Simple glob matcher for name filters
 fn glob_match(pattern: &str, text: &str) -> bool {
-    let re_pattern = pattern.replace(".", "\\.").replace("*", ".*").replace("?", ".");
+    let re_pattern = pattern
+        .replace(".", "\\.")
+        .replace("*", ".*")
+        .replace("?", ".");
     if let Ok(re) = regex::Regex::new(&format!("^{}$", re_pattern)) {
         re.is_match(text)
     } else {
@@ -165,11 +179,19 @@ mod tests {
         let test_dir = temp_dir.join(format!("find_test_{}", uuid::Uuid::new_v4()));
         tokio::fs::create_dir_all(&test_dir).await.unwrap();
 
-        tokio::fs::write(test_dir.join("test1.txt"), "hello").await.unwrap();
-        tokio::fs::write(test_dir.join("test2.rs"), "hello").await.unwrap();
-        tokio::fs::write(test_dir.join("test3.txt"), "hello").await.unwrap();
+        tokio::fs::write(test_dir.join("test1.txt"), "hello")
+            .await
+            .unwrap();
+        tokio::fs::write(test_dir.join("test2.rs"), "hello")
+            .await
+            .unwrap();
+        tokio::fs::write(test_dir.join("test3.txt"), "hello")
+            .await
+            .unwrap();
 
-        let executor = FindExecutor { working_dir: Some(test_dir.clone()) };
+        let executor = FindExecutor {
+            working_dir: Some(test_dir.clone()),
+        };
 
         let args = FindArgs {
             path: ".".to_string(),
@@ -193,9 +215,13 @@ mod tests {
 
         let sub_dir = test_dir.join("subdir");
         tokio::fs::create_dir_all(&sub_dir).await.unwrap();
-        tokio::fs::write(test_dir.join("file.txt"), "hello").await.unwrap();
+        tokio::fs::write(test_dir.join("file.txt"), "hello")
+            .await
+            .unwrap();
 
-        let executor = FindExecutor { working_dir: Some(test_dir.clone()) };
+        let executor = FindExecutor {
+            working_dir: Some(test_dir.clone()),
+        };
 
         let args = FindArgs {
             path: ".".to_string(),
@@ -234,9 +260,9 @@ mod tests {
         let err = tool.execute.execute(bad_args).await;
         assert!(err.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = err {
-             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
         } else {
-             panic!("Expected Pydantic Validation Error");
+            panic!("Expected Pydantic Validation Error");
         }
     }
 }

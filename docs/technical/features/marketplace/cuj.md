@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. User Journey Overview
-A high-level view of how the human CEO navigates the "One Human Corp" Marketplace to find, import, and deploy a specialized community-created AI agent template.
+A high-level view of how the human CEO navigates the "OmniSolo" Marketplace to find, import, and deploy a specialized community-created AI agent template.
 
 ## 2. Detailed Step-by-Step Breakdown
 

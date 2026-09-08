@@ -1,7 +1,7 @@
 # Research Report: Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture
 
 ## Problem Statement
-Small business owners using OneHumanCorp (OHC) need their storefronts to load instantly for customers worldwide and rank highly on search engines (Google, Bing). However, because OHC storefronts are highly dynamic—displaying real-time inventory, booking availability, and personalized AI-driven content—traditional static site generation (SSG) is insufficient. Furthermore, search engine crawlers struggle with complex, client-side rendered JavaScript applications, leading to poor SEO performance for our users. We need an architecture that combines the speed of edge-cached static sites with the freshness of dynamic data, fully optimized for search engines via AI.
+Small business owners using OmniSolo (OHC) need their storefronts to load instantly for customers worldwide and rank highly on search engines (Google, Bing). However, because OHC storefronts are highly dynamic—displaying real-time inventory, booking availability, and personalized AI-driven content—traditional static site generation (SSG) is insufficient. Furthermore, search engine crawlers struggle with complex, client-side rendered JavaScript applications, leading to poor SEO performance for our users. We need an architecture that combines the speed of edge-cached static sites with the freshness of dynamic data, fully optimized for search engines via AI.
 
 ## Research Findings
 Our user personas rely heavily on organic discovery and immediate load times:

@@ -36,7 +36,7 @@ Logout must clear the web session cookie even when backend revocation is unavail
 
 ### OmniSolo rename and repository migration
 
-OmniSolo becomes the canonical product, package, UI, documentation, and repository name. User-visible `OHC`/`One Human Corp` branding, titles, metadata, README text, generated help content, and release labels are renamed to OmniSolo. Technical compatibility identifiers that are part of a deployed contract (for example `OHC_DATABASE_URL`, legacy API paths, cookie names, and existing Kubernetes secret keys) remain accepted as deprecated aliases while new documentation and generated manifests use `OMNISOLO_*`/OmniSolo names. A source contract prevents new user-visible OHC branding and documents each retained compatibility alias.
+OmniSolo becomes the canonical product, package, UI, documentation, and repository name. User-visible `OHC`/`OmniSolo` branding, titles, metadata, README text, generated help content, and release labels are renamed to OmniSolo. Technical compatibility identifiers that are part of a deployed contract (for example `OHC_DATABASE_URL`, legacy API paths, cookie names, and existing Kubernetes secret keys) remain accepted as deprecated aliases while new documentation and generated manifests use `OMNISOLO_*`/OmniSolo names. A source contract prevents new user-visible OHC branding and documents each retained compatibility alias.
 
 The application remote is migrated to `git@github.com:omnisolo-llc/onehumancorp.git`. Existing deployment history is preserved; the current GitOps repository continues to pin immutable image digests until the new upstream repository publishes equivalent release artifacts.
 

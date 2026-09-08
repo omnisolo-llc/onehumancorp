@@ -28,7 +28,7 @@ export default function AiTimeSavingsWidget() {
   const handleShareAndClaim = async () => {
     setIsClaiming(true);
 
-    const message = `My AI agents on OneHumanCorp just saved me ${savingsData.hours_saved} hours this week! 🚀 #OneHumanCorp #SmallBiz #AI`;
+    const message = `My AI agents on OmniSolo just saved me ${savingsData.hours_saved} hours this week! 🚀 #OmniSolo #SmallBiz #AI`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
     // Open the share window

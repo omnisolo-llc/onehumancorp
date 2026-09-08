@@ -24,6 +24,13 @@ export const PUBLIC_ROUTE_ENTRIES = [
     owner: "authentication",
   },
   {
+    method: "GET",
+    invocation: "page",
+    matcher: { kind: "exact", path: "/healthz" },
+    reason: "expose a public liveness check for ingress and orchestration",
+    owner: "authentication",
+  },
+  {
     method: "POST",
     invocation: "route-handler",
     matcher: { kind: "exact", path: "/api/v1/auth/login" },

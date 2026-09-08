@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import ViralPoweredByOHCWidgetPage from './page';
+import ViralPoweredByOmniSoloWidgetPage from './page';
 
 vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({
@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
   })),
 }));
 
-describe('ViralPoweredByOHCWidgetPage', () => {
+describe('ViralPoweredByOmniSoloWidgetPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     Object.assign(navigator, {
@@ -34,12 +34,12 @@ describe('ViralPoweredByOHCWidgetPage', () => {
   });
 
   it('renders correctly', () => {
-    render(<ViralPoweredByOHCWidgetPage />);
+    render(<ViralPoweredByOmniSoloWidgetPage />);
     expect(screen.getByText('Footer Badge Generator')).toBeDefined();
   });
 
   it('copies embed code to clipboard', () => {
-    render(<ViralPoweredByOHCWidgetPage />);
+    render(<ViralPoweredByOmniSoloWidgetPage />);
     const copyButton = screen.getAllByRole('button', { name: /Copy Embed Code/i })[0];
     fireEvent.click(copyButton);
     expect(navigator.clipboard.writeText).toHaveBeenCalled();
@@ -47,8 +47,8 @@ describe('ViralPoweredByOHCWidgetPage', () => {
   });
 
   it('shows paywall when removing branding without pro', () => {
-    render(<ViralPoweredByOHCWidgetPage />);
-    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    render(<ViralPoweredByOmniSoloWidgetPage />);
+    const checkbox = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo" Badge/i });
     fireEvent.click(checkbox);
     expect(screen.getAllByText('Upgrade to Remove Branding').length).toBeGreaterThan(0);
   });

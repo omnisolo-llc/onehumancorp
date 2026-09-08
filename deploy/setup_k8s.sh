@@ -2,7 +2,7 @@
 # Automates the K8s context setup for the local developer experience.
 set -euo pipefail
 
-echo "--- One Human Corp: Local K8s Setup ---"
+echo "--- OmniSolo: Local K8s Setup ---"
 
 # Detect if Docker or minikube is running and switch context
 if command -v kind >/dev/null 2>&1 && kind get clusters 2>/dev/null | grep -q "^kind$"; then

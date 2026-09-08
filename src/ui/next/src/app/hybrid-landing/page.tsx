@@ -29,7 +29,7 @@ export default function HybridLandingPage() {
               d="M13 10V3L4 14h7v7l9-11h-7z"
             />
           </svg>
-          OHC Hybrid OS
+          OmniSolo Hybrid OS
         </div>
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold font-outfit text-gray-900 tracking-tight leading-tight mb-6">
           Your Business.
@@ -80,7 +80,7 @@ export default function HybridLandingPage() {
               Local Sovereignty
             </h2>
             <p className="text-gray-600 mb-8 font-medium leading-relaxed">
-              Run the full OHC OS directly on your hardware. Unparalleled
+              Run the full OmniSolo OS directly on your hardware. Unparalleled
               privacy for prosumers and enterprise operators.
             </p>
 

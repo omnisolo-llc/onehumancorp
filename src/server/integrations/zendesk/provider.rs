@@ -46,10 +46,7 @@ impl ZendeskProvider {
             .await
     }
 
-    pub async fn get_ticket(
-        &self,
-        ticket_id: u64,
-    ) -> Result<super::client::ZendeskTicket, String> {
+    pub async fn get_ticket(&self, ticket_id: u64) -> Result<super::client::ZendeskTicket, String> {
         self._client.get_ticket(ticket_id).await
     }
 
@@ -134,8 +131,7 @@ mod tests {
 
     #[test]
     fn test_zendesk_provider_into() {
-        let provider =
-            ZendeskProvider::new("acme".into(), "user@acme.com".into(), "abc".into());
+        let provider = ZendeskProvider::new("acme".into(), "user@acme.com".into(), "abc".into());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "zendesk");
         assert_eq!(integration.metadata.name, "Zendesk Support");

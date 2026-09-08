@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use serde_json::Value;
+use sqlx::PgPool;
 
 pub async fn dispatch_action(
     feature_type: &str,
@@ -19,7 +19,10 @@ pub async fn dispatch_action(
                 .map_err(|e| e.to_string())?;
         }
         "supply_order" => {
-            tracing::info!("Approved and dispatched supply order via Quartermaster Agent for tenant: {}", tenant_id); // pii-safe
+            tracing::info!(
+                "Approved and dispatched supply order via Quartermaster Agent for tenant: {}",
+                tenant_id
+            ); // pii-safe
             // Simulating outbound communication to vendor via omnichannel dispatcher
             if let Some(_msg) = payload.get("draft_message").and_then(|v| v.as_str()) {
                 tracing::info!("Omnichannel Dispatcher sent: [REDACTED]");
@@ -27,7 +30,10 @@ pub async fn dispatch_action(
         }
         "social_post_draft" => {
             // Real implementation would buffer post here to AYRSHARE.
-            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id); // pii-safe
+            tracing::info!(
+                "Approved and scheduled SocialPostDraft for tenant: {}",
+                tenant_id
+            ); // pii-safe
         }
 
         "create_product" => {
@@ -58,23 +64,39 @@ pub async fn dispatch_action(
             }
         }
         "dispute_resolution" => {
-
             tracing::info!("Approved and resolved dispute for tenant: {}", tenant_id); // pii-safe
             if let Some(_msg) = payload.get("generated_response").and_then(|v| v.as_str()) {
                 tracing::info!("Dispute Resolution Engine sent reply: [REDACTED]");
             }
             if let Some(refund) = payload.get("refund_amount").and_then(|v| v.as_f64()) {
-                tracing::info!("Dispute Resolution Engine processed simulated refund: ${}", refund);
+                tracing::info!(
+                    "Dispute Resolution Engine processed simulated refund: ${}",
+                    refund
+                );
             }
             if let Some(ops) = payload.get("operational_action").and_then(|v| v.as_str()) {
-                tracing::info!("Dispute Resolution Engine executed operational action: {}", ops);
+                tracing::info!(
+                    "Dispute Resolution Engine executed operational action: {}",
+                    ops
+                );
             }
         }
         "loyalty_reward_notification" => {
-            tracing::info!("Approved loyalty reward notification for tenant: {}", tenant_id); // pii-safe
+            tracing::info!(
+                "Approved loyalty reward notification for tenant: {}",
+                tenant_id
+            ); // pii-safe
             if let Some(customer_id) = payload.get("customer_id").and_then(|v| v.as_str()) {
                 let id = uuid::Uuid::new_v4().to_string();
-                let discount_code = format!("LOYALTY-{}", uuid::Uuid::new_v4().to_string().chars().take(8).collect::<String>().to_uppercase());
+                let discount_code = format!(
+                    "LOYALTY-{}",
+                    uuid::Uuid::new_v4()
+                        .to_string()
+                        .chars()
+                        .take(8)
+                        .collect::<String>()
+                        .to_uppercase()
+                );
                 let _ = sqlx::query("INSERT INTO reward_claims (id, tenant_id, customer_id, discount_code, status) VALUES ($1, $2, $3, $4, 'Active')")
                     .bind(&id)
                     .bind(tenant_id)
@@ -83,12 +105,19 @@ pub async fn dispatch_action(
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
-                tracing::info!("Created reward claim {} with discount code {}", id, discount_code);
+                tracing::info!(
+                    "Created reward claim {} with discount code {}",
+                    id,
+                    discount_code
+                );
             }
         }
 
         _ => {
-            tracing::warn!("Unsupported feature_type for action dispatch: {}", feature_type);
+            tracing::warn!(
+                "Unsupported feature_type for action dispatch: {}",
+                feature_type
+            );
         }
     }
     Ok(())

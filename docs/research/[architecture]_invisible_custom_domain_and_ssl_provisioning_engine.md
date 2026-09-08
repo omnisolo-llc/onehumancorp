@@ -4,7 +4,7 @@
 Invisible Custom Domain and SSL Provisioning Engine
 
 ## Problem Statement
-The transition from a default platform subdomain (e.g., `maya-bakery.onehumancorp.com`) to a professional custom domain (e.g., `mayasvegancakes.com`) is a critical milestone for any small business, signaling trust and permanence. However, the current process on many platforms requires non-technical owners to grapple with DNS registrars, A-records, CNAMEs, TXT records, and SSL certificate provisioning. For personas like Maya the Baker or Carlos the Handyman, who run their businesses entirely from a mobile phone, this technical friction often results in abandonment or reliance on expensive third-party technical help. OneHumanCorp (OHC) requires an invisible, zero-config domain engine that allows users to search, purchase, configure, and secure a custom domain with a single tap, entirely from a 375px mobile interface.
+The transition from a default platform subdomain (e.g., `maya-bakery.onehumancorp.com`) to a professional custom domain (e.g., `mayasvegancakes.com`) is a critical milestone for any small business, signaling trust and permanence. However, the current process on many platforms requires non-technical owners to grapple with DNS registrars, A-records, CNAMEs, TXT records, and SSL certificate provisioning. For personas like Maya the Baker or Carlos the Handyman, who run their businesses entirely from a mobile phone, this technical friction often results in abandonment or reliance on expensive third-party technical help. OmniSolo (OHC) requires an invisible, zero-config domain engine that allows users to search, purchase, configure, and secure a custom domain with a single tap, entirely from a 375px mobile interface.
 
 ## Research Report
 ### Context and Personas

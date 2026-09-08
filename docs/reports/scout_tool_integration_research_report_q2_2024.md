@@ -1,6 +1,6 @@
 # Scout: Tool Integration Research Q2
 
-This report details the evaluation of 7 integration tools across requested categories to expand OneHumanCorp's capabilities for small business owners.
+This report details the evaluation of 7 integration tools across requested categories to expand OmniSolo's capabilities for small business owners.
 
 ## 1. Social Media Integration
 **Title**: Integrate Ayrshare for Unified Social Media Inbox and Cross-Posting

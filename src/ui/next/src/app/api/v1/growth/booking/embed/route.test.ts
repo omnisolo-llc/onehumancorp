@@ -15,7 +15,7 @@ describe('booking embed API', () => {
 
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).not.toContain('<script>alert(2)</script>');
-    expect(html).toContain('href="https://ohc.app/booking?tenant=%3Cscript%3Ealert(1)%3C%2Fscript%3E"');
+    expect(html).toContain('href="https://cloud.omnisolo.co/booking?tenant=%3Cscript%3Ealert(1)%3C%2Fscript%3E"');
     expect(html).toContain('&lt;script&gt;alert(2)&lt;/script&gt;');
   });
 

@@ -117,7 +117,7 @@ graph TD
     *   **Payload Size:** Webhook payloads to the external channels should be strictly optimized and < 25KB to maintain performance on low-end mobile networks.
 
 ## Implementation Prompt
-**Context:** We are building the Omnichannel Unified Inbox for OneHumanCorp.
+**Context:** We are building the Omnichannel Unified Inbox for OmniSolo.
 **Task:** Implement the backend event ingestion, the Unified Inbox data model, and the AI drafting coordination pipeline.
 **Acceptance Criteria:**
 1. System can ingest messages from at least two mocked external providers (e.g., IG, SMS).

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { PoweredByOHC } from '../../../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../../../components/PoweredByOmniSolo';
 
 export default function CustomerSubscriptionPortal() {
   const params = useParams();
@@ -206,7 +206,7 @@ export default function CustomerSubscriptionPortal() {
         </div>
 
         <div className="mt-8 flex justify-center">
-            <PoweredByOHC tenantId="demo" />
+            <PoweredByOmniSolo tenantId="demo" />
         </div>
       </div>
     </div>

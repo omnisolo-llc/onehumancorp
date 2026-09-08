@@ -1,7 +1,7 @@
 # Zero Trust SPIFFE/SPIRE Identity Mesh for AI Agents
 
 ## Problem Statement
-Currently, OneHumanCorp (OHC) agents interact with various internal services (Ledger, CRM, Core API) using implicit trust or static API keys. As the platform scales and we introduce third-party integrations (e.g. custom tools via MCP), this model becomes a security risk. A compromised agent could theoretically impersonate another or access unauthorized tenant data. We need a cryptographic, identity-based Zero Trust architecture to securely authenticate and authorize every agent-to-service and agent-to-agent interaction.
+Currently, OmniSolo (OHC) agents interact with various internal services (Ledger, CRM, Core API) using implicit trust or static API keys. As the platform scales and we introduce third-party integrations (e.g. custom tools via MCP), this model becomes a security risk. A compromised agent could theoretically impersonate another or access unauthorized tenant data. We need a cryptographic, identity-based Zero Trust architecture to securely authenticate and authorize every agent-to-service and agent-to-agent interaction.
 
 ## Research Report
 Traditional API keys are static, easily leaked, and hard to rotate. The industry standard for zero-trust microservice identity is SPIFFE (Secure Production Identity Framework for Everyone) and its implementation, SPIRE.

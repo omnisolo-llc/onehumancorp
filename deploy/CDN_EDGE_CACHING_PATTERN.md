@@ -1,7 +1,7 @@
 # Universal Edge-Cached Dynamic Storefront & SEO Architecture
 
 ## Overview
-OneHumanCorp (OHC) platform relies on a high-performance serving layer that delivers instant page loads and strong SEO metrics, leveraging edge caching architectures such as Cloudflare or Varnish. This document outlines the CDN integration pattern and how cache invalidations are automatically triggered when tenants update their products, storefronts, or settings.
+OmniSolo (OHC) platform relies on a high-performance serving layer that delivers instant page loads and strong SEO metrics, leveraging edge caching architectures such as Cloudflare or Varnish. This document outlines the CDN integration pattern and how cache invalidations are automatically triggered when tenants update their products, storefronts, or settings.
 
 ## Edge Caching Mechanism
 The OHC backend is designed to interact natively with edge CDNs. The dynamic storefront endpoints (e.g. `/api/v1/storefront/{tenant_id}/{product_id}` or the builder routes) pre-render HTML and SEO metadata server-side and instruct the edge CDN to cache the result.

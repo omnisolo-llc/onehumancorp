@@ -18,7 +18,7 @@ export default function ReferralFabBuilder() {
       const storedTenant = localStorage.getItem("business_display_name") || "my-business";
       setTenantId(storedTenant);
     }
-    document.title = "Referral FAB Builder | OHC";
+    document.title = "Referral FAB Builder | OmniSolo";
   }, []);
 
   const handleBrandingToggle = () => {
@@ -38,10 +38,10 @@ export default function ReferralFabBuilder() {
     window.location.href = '/pricing';
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/referral-fab/embed?tenant=${encodeURIComponent(tenantId)}&reward=${encodeURIComponent(reward)}&themeColor=${encodeURIComponent(themeColor)}&removeBranding=${removeBranding}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/referral-fab/embed?tenant=${encodeURIComponent(tenantId)}&reward=${encodeURIComponent(reward)}&themeColor=${encodeURIComponent(themeColor)}&removeBranding=${removeBranding}`;
 
   const generatedCode = `
-<!-- OHC Referral FAB -->
+<!-- OmniSolo Referral FAB -->
 <script src="${embedUrl}"></script>
   `.trim();
 
@@ -54,7 +54,7 @@ export default function ReferralFabBuilder() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       <Head>
-        <title>Referral FAB Builder | OHC</title>
+        <title>Referral FAB Builder | OmniSolo</title>
       </Head>
 
       <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
@@ -110,7 +110,7 @@ export default function ReferralFabBuilder() {
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                 <div>
                   <div className="font-medium text-gray-900">Remove Branding</div>
-                  <div className="text-sm text-gray-500">Hide "Powered by OHC"</div>
+                  <div className="text-sm text-gray-500">Hide "Powered by OmniSolo"</div>
                 </div>
                 <button
                   role="switch"
@@ -188,7 +188,7 @@ export default function ReferralFabBuilder() {
                </button>
                {!removeBranding && (
                  <div className="mt-3 text-center text-[10px] text-gray-400 font-medium">
-                   ⚡ Powered by OHC
+                   ⚡ Powered by OmniSolo
                  </div>
                )}
              </div>
@@ -211,7 +211,7 @@ export default function ReferralFabBuilder() {
             </div>
             <h3 className="text-xl font-bold mb-2 text-gray-900">Upgrade to Pro</h3>
             <p className="text-gray-600 mb-6">
-              Remove the "Powered by OHC" branding and unlock premium widgets by upgrading to our Pro plan.
+              Remove the "Powered by OmniSolo" branding and unlock premium widgets by upgrading to our Pro plan.
             </p>
             <button
               onClick={handleUpgrade}

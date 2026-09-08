@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Viral Powered by OHC Widget', () => {
+test.describe('Viral OmniSolo Widget', () => {
   test('should load the widget and generate an embed code snippet', async ({ page }) => {
     await page.goto('/ui/viral-powered-by-ohc-widget.html');
 
@@ -18,7 +18,7 @@ test.describe('Viral Powered by OHC Widget', () => {
 
     // Check embed code generated correctly
     const embedCode = page.locator('#embed-code');
-    await expect(embedCode).toContainText('Powered by OHC');
+    await expect(embedCode).toContainText('OmniSolo');
     await expect(embedCode).toContainText('ohc.network/invite/');
   });
 
@@ -42,7 +42,7 @@ test.describe('Viral Powered by OHC Widget', () => {
         const clipboardText = await page.evaluate(async () => {
             return await navigator.clipboard.readText();
         });
-        expect(clipboardText).toContain('Powered by OHC');
+        expect(clipboardText).toContain('OmniSolo');
     } catch (e) {
         console.warn('Clipboard read failed (expected in some headless environments): ', e);
     }

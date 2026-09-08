@@ -4,7 +4,7 @@
 Autonomous Treasury & Instant Payout Wallet for Zero-Delay Cash Flow
 
 ## Problem Statement
-For OneHumanCorp’s core personas—like Maya (baker), Carlos (handyman), and Fatima (food cart operator)—cash flow is the lifeblood of their business. Traditional payment gateways (like standard Stripe or PayPal) often enforce 2-5 day rolling payout delays, and require manual transfers from a digital balance to an external bank account. Furthermore, small business owners must manually calculate and set aside money for taxes, materials, and savings. If Fatima has a busy weekend at her food cart, she needs those funds *immediately* on Monday morning to buy fresh ingredients. If the money is locked in transit, her business halts. They need a zero-friction, instantaneous financial ledger where incoming payments are instantly available to spend via a physical/virtual debit card, with autonomous AI tax-withholding.
+For OmniSolo’s core personas—like Maya (baker), Carlos (handyman), and Fatima (food cart operator)—cash flow is the lifeblood of their business. Traditional payment gateways (like standard Stripe or PayPal) often enforce 2-5 day rolling payout delays, and require manual transfers from a digital balance to an external bank account. Furthermore, small business owners must manually calculate and set aside money for taxes, materials, and savings. If Fatima has a busy weekend at her food cart, she needs those funds *immediately* on Monday morning to buy fresh ingredients. If the money is locked in transit, her business halts. They need a zero-friction, instantaneous financial ledger where incoming payments are instantly available to spend via a physical/virtual debit card, with autonomous AI tax-withholding.
 
 ## Research Report
 **Market Gap Analysis:**
@@ -13,7 +13,7 @@ For OneHumanCorp’s core personas—like Maya (baker), Carlos (handyman), and F
 - **Current OHC State:** OHC currently handles payments and booking deposits but lacks an embedded treasury system. Merchants still rely on external banks, introducing a 2+ day delay for payouts and manual reconciliation.
 
 **Proposed Solution:**
-Embed a fully compliant banking and treasury layer (using a BaaS provider like Stripe Treasury) directly into OneHumanCorp. Every merchant gets an "OHC Wallet" automatically upon signup. Payments received via OHC storefronts, POS, or invoices are instantly deposited into this wallet, bypassing the standard ACH delay. A Finance AI Agent autonomously sweeps a user-defined percentage of every transaction into a "Tax Reserve" bucket.
+Embed a fully compliant banking and treasury layer (using a BaaS provider like Stripe Treasury) directly into OmniSolo. Every merchant gets an "OHC Wallet" automatically upon signup. Payments received via OHC storefronts, POS, or invoices are instantly deposited into this wallet, bypassing the standard ACH delay. A Finance AI Agent autonomously sweeps a user-defined percentage of every transaction into a "Tax Reserve" bucket.
 
 ## Design Doc
 

@@ -59,7 +59,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
       <div className="relative z-10">
         <h2 className="text-xl font-bold font-outfit mb-2">Neighborhood Pulse</h2>
         <p className="text-sm text-gray-800 dark:text-gray-200 mb-6 font-inter">
-          There are {neighbors.length} OHC businesses in your area. Form a "Main Street Collective" to share customers?
+          There are {neighbors.length} OmniSolo businesses in your area. Form a "Main Street Collective" to share customers?
         </p>
 
         <div className="space-y-4">

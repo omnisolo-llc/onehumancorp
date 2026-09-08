@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Priya (The Boutique Owner, 35) relies on OneHumanCorp (OHC) to run her business smoothly. She has both a physical storefront and an online catalog. Recently, she started using her smartphone to take in-person payments ("Tap-to-Pay"). However, when she sells a limited-edition piece in her physical boutique, her online store doesn't automatically reflect the drop in inventory. This forces her to manually deduct the inventory online to avoid double-selling—a stressful, error-prone task that completely undercuts the promise of OHC doing everything invisibly in the background.
+Priya (The Boutique Owner, 35) relies on OmniSolo (OHC) to run her business smoothly. She has both a physical storefront and an online catalog. Recently, she started using her smartphone to take in-person payments ("Tap-to-Pay"). However, when she sells a limited-edition piece in her physical boutique, her online store doesn't automatically reflect the drop in inventory. This forces her to manually deduct the inventory online to avoid double-selling—a stressful, error-prone task that completely undercuts the promise of OHC doing everything invisibly in the background.
 
 The core issue is that our mobile tap-to-pay infrastructure is completely isolated from our global multi-tenant inventory ledger system. They are currently treated as disparate systems, causing friction for omnichannel merchants who expect their stock to simply be accurate, regardless of where the sale occurred.
 

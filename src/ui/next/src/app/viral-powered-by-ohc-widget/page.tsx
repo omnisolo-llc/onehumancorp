@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 
-export default function ViralPoweredByOHCWidgetPage() {
+export default function ViralPoweredByOmniSoloWidgetPage() {
   const [tenant, setTenant] = useState('my-business');
     const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
@@ -17,7 +17,7 @@ export default function ViralPoweredByOHCWidgetPage() {
       setTenant(storedTenant);
     }
     if (typeof document !== 'undefined') {
-      document.title = "Viral Widget | OHC";
+      document.title = "Viral Widget | OmniSolo";
     }
   }, []);
 
@@ -28,16 +28,16 @@ export default function ViralPoweredByOHCWidgetPage() {
     }
   };
 
-  const referralLink = `https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
+  const referralLink = `https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
 
-  const embedCode = !hasPro ? `<!-- OHC Referral Footer Badge -->
+  const embedCode = !hasPro ? `<!-- OmniSolo Referral Footer Badge -->
 <script>
   (function() {
     var b = document.createElement('a');
     b.href = '${referralLink}';
     b.target = '_blank';
     b.style.cssText = 'position:fixed;bottom:16px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,0,0,0.8);color:#fff;border-radius:100px;font-family:sans-serif;font-size:13px;font-weight:500;text-decoration:none;z-index:9999;backdrop-filter:blur(10px);box-shadow:0 4px 12px rgba(0,0,0,0.1);';
-    b.innerHTML = '<svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC';
+    b.innerHTML = '<svg style="width:14px;height:14px;fill:currentColor;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OmniSolo';
     document.body.appendChild(b);
   })();
 </script>` : '<!-- Badge removed on Pro Plan -->';
@@ -55,7 +55,7 @@ export default function ViralPoweredByOHCWidgetPage() {
       <div className="w-full max-w-4xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-8">
         <div className="flex-1 min-w-0 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Footer Badge Generator</h1>
-          <p className="text-gray-600 mb-8 text-sm">Add a "Powered by OHC" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
+          <p className="text-gray-600 mb-8 text-sm">Add a "Powered by OmniSolo" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
           <div className="space-y-4">
 
              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200">
@@ -67,7 +67,7 @@ export default function ViralPoweredByOHCWidgetPage() {
                     className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
                 <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                    Remove "Powered by OHC" Badge
+                    Remove "Powered by OmniSolo" Badge
                     {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                 </label>
              </div>
@@ -89,7 +89,7 @@ export default function ViralPoweredByOHCWidgetPage() {
            <div className="flex-1 bg-gray-100 rounded-2xl shadow-inner border-2 border-dashed border-gray-300 relative overflow-hidden flex items-center justify-center p-6 min-h-[400px]">
               {!hasPro ? (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'rgba(0,0,0,0.8)', color: '#fff', borderRadius: '100px', fontFamily: 'sans-serif', fontSize: '13px', fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                      <svg style={{ width: '14px', height: '14px', fill: 'currentColor' }} viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OHC
+                      <svg style={{ width: '14px', height: '14px', fill: 'currentColor' }} viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Powered by OmniSolo
                   </div>
               ) : (
                   <div className="text-gray-500 font-medium text-sm">Badge removed.</div>
@@ -116,7 +116,7 @@ export default function ViralPoweredByOHCWidgetPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Viral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Viral Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

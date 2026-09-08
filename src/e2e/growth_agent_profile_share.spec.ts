@@ -6,7 +6,7 @@ test.describe('Agent Profile Cloud Bridge Share', () => {
     await page.goto('/api/v1/ui/agent-profile.html');
 
     // Ensure the page has loaded by checking for the branding link or standard text
-    await expect(page.locator('text=Powered by OHC').first()).toBeVisible();
+    await expect(page.locator('text=OmniSolo').first()).toBeVisible();
 
     // Verify the Share Profile to Cloud Team button is present
     const shareBtn = page.locator('#cloud-bridge-share-btn');

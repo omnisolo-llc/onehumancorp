@@ -1,6 +1,6 @@
 # Technical Documentation
 
-This section contains all technical documentation for the One Human Corp (OHC) platform.
+This section contains all technical documentation for the OmniSolo (OHC) platform.
 
 ## Contents
 

@@ -30,7 +30,7 @@ export default function StoreWrapPage() {
   }, []);
 
   const referralLink = `${origin}/onboarding`;
-  const shareText = `My OHC dashboard reports $${metrics.sales.toLocaleString()} in recorded revenue. ${referralLink}`;
+  const shareText = `My OmniSolo dashboard reports $${metrics.sales.toLocaleString()} in recorded revenue. ${referralLink}`;
 
   const slides = [
     {
@@ -163,7 +163,7 @@ export default function StoreWrapPage() {
             </div>
 
             <div className="absolute bottom-8 text-white/60 text-sm font-semibold tracking-widest uppercase">
-              Powered by OHC
+              Powered by OmniSolo
             </div>
           </div>
         ))}

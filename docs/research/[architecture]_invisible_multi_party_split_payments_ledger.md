@@ -15,7 +15,7 @@ Currently, they must take the full payment from the customer, manually calculate
 *   **Stripe Connect:** Powerful developer API, but requires writing code. Too technical for Carlos or Priya to set up on their own.
 
 ### Opportunity
-OneHumanCorp (OHC) can completely eliminate this friction by offering an invisible, zero-config split payment engine. When Priya adds a consignment product or Carlos drafts an invoice, they simply tag the sub-contractor. The AI Agents automatically handle the ledger splits, issue localized receipts, and route funds directly to the partner's account, removing the primary business owner entirely from the payout burden.
+OmniSolo (OHC) can completely eliminate this friction by offering an invisible, zero-config split payment engine. When Priya adds a consignment product or Carlos drafts an invoice, they simply tag the sub-contractor. The AI Agents automatically handle the ledger splits, issue localized receipts, and route funds directly to the partner's account, removing the primary business owner entirely from the payout burden.
 
 ## Design Doc
 

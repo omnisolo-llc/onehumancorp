@@ -19,7 +19,7 @@ test.describe('Viral WiFi QR Generator', () => {
 
     // Verify default payload
     let src = await qrImage.getAttribute('src');
-    expect(src).toContain(encodeURIComponent('https://ohc.app/checkout?product=Guest%20WiFi'));
+    expect(src).toContain(encodeURIComponent('https://omnisolo.co/checkout?product=Guest%20WiFi'));
 
     // Enter a new network name
     await networkNameInput.fill('CoffeeShop 5G');
@@ -27,12 +27,12 @@ test.describe('Viral WiFi QR Generator', () => {
     // Verify preview updates
     await expect(page.locator('#preview-network-name')).toHaveText('CoffeeShop 5G');
     src = await qrImage.getAttribute('src');
-    expect(src).toContain(encodeURIComponent('https://ohc.app/checkout?product=CoffeeShop%205G'));
+    expect(src).toContain(encodeURIComponent('https://omnisolo.co/checkout?product=CoffeeShop%205G'));
 
-    // Verify "Powered by OHC" branding is present by default
+    // Verify "OmniSolo" branding is present by default
     const branding = page.locator('#preview-branding');
     await expect(branding).toBeVisible();
-    await expect(branding).toHaveText('⚡ Powered by OHC');
+    await expect(branding).toHaveText('⚡ OmniSolo');
 
     // Verify embed code is present and updates
     const embedCode = page.locator('#embed-code');

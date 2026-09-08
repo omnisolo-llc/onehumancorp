@@ -33,7 +33,7 @@ describe('LeadMagnetGeneratorPage', () => {
     expect(headlineInput).toBeInTheDocument();
 
     // Check embed code generated
-    expect(screen.getByText(/<iframe src="https:\/\/ohc.app\/api\/v1\/growth\/lead-magnet\/embed/)).toBeInTheDocument();
+    expect(screen.getByText(/<iframe src="https:\/\/omnisolo.co\/api\/v1\/growth\/lead-magnet\/embed/)).toBeInTheDocument();
   });
 
   it('updates embed code when inputs change', async () => {
@@ -59,11 +59,11 @@ describe('LeadMagnetGeneratorPage', () => {
       </TooltipProvider>
     );
 
-    const checkbox = screen.getByLabelText(/Remove "Powered by OHC" Branding/i);
+    const checkbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Branding/i);
     fireEvent.click(checkbox);
 
     await waitFor(() => {
-        expect(screen.getByText('Upgrade to OHC Pro')).toBeInTheDocument();
+        expect(screen.getByText('Upgrade to OmniSolo Pro')).toBeInTheDocument();
     });
   });
 
@@ -76,25 +76,25 @@ describe('LeadMagnetGeneratorPage', () => {
     );
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
-    const checkbox = screen.getByLabelText(/Remove "Powered by OHC" Branding/i);
+    const checkbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Branding/i);
     fireEvent.click(checkbox);
 
     await waitFor(() => {
         // The modal should NOT appear
-        expect(screen.queryByText('Upgrade to OHC Pro')).not.toBeInTheDocument();
+        expect(screen.queryByText('Upgrade to OmniSolo Pro')).not.toBeInTheDocument();
         // The embed code should include hideBranding=true
         expect(screen.getByText(/hideBranding=true/)).toBeInTheDocument();
     });
   });
 
-  it('has powered by OHC footer in preview by default', () => {
+  it('has powered by OmniSolo footer in preview by default', () => {
     render(
       <TooltipProvider>
         <LeadMagnetGeneratorPage />
       </TooltipProvider>
     );
 
-    const links = screen.getAllByText('⚡ Powered by OHC');
+    const links = screen.getAllByText('⚡ Powered by OmniSolo');
     expect(links.length).toBeGreaterThan(0);
   });
 });

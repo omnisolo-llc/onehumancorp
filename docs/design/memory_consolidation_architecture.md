@@ -1,7 +1,7 @@
 # OHC AI Agent Memory Consolidation Architecture
 
 ## Overview
-One Human Corp's (OHC) AI Swarm acts as the continuous operating system for small businesses. To provide a seamless and deeply personalized experience, the AI agents must retain knowledge across sessions. This document outlines the architecture for the Persistent Memory Layer, designed to consolidate context, detect and resolve conflicting knowledge, and prune stale data automatically.
+OmniSolo's (OHC) AI Swarm acts as the continuous operating system for small businesses. To provide a seamless and deeply personalized experience, the AI agents must retain knowledge across sessions. This document outlines the architecture for the Persistent Memory Layer, designed to consolidate context, detect and resolve conflicting knowledge, and prune stale data automatically.
 
 The system is designed to work in both **Cloud Mode** (PostgreSQL with `pgvector`) and **Standalone Mode** (SQLite with `sqlite-vec` or fallback local cosine distance calculations).
 

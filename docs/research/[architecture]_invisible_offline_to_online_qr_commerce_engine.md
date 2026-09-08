@@ -10,7 +10,7 @@ Small business owners like Fatima (food cart, limited English) and Priya (boutiq
 * **Shopify POS:** Relies heavily on hardware terminals for in-person transactions. QR codes generally link to a storefront, not an instant context-aware checkout.
 * **Square:** Offers QR codes for ordering at tables, but the experience is often clunky, requiring the user to navigate a full digital menu.
 * **Linktree / Biolinks:** Static routing, no native contextual checkout.
-* **OneHumanCorp (OHC) Differentiation - "Invisible Commerce Bridge":** OHC enables the instantaneous generation of Contextual QR Codes directly from the merchant's mobile device. These aren't generic links; they encode the exact intent (e.g., "Buy 1 Vegan Cupcake", "Pay Table 4 Bill", "Book 30min Consultation"). Scanning the QR code instantly invokes a Zero-Trust, edge-cached web-clip (App Clip / Instant App experience) or a deep link to a WhatsApp/SMS conversation pre-loaded with the context. No app downloads, no generic storefront navigation. Just Scan -> FaceID -> Done.
+* **OmniSolo (OHC) Differentiation - "Invisible Commerce Bridge":** OHC enables the instantaneous generation of Contextual QR Codes directly from the merchant's mobile device. These aren't generic links; they encode the exact intent (e.g., "Buy 1 Vegan Cupcake", "Pay Table 4 Bill", "Book 30min Consultation"). Scanning the QR code instantly invokes a Zero-Trust, edge-cached web-clip (App Clip / Instant App experience) or a deep link to a WhatsApp/SMS conversation pre-loaded with the context. No app downloads, no generic storefront navigation. Just Scan -> FaceID -> Done.
 
 ## Design Doc
 

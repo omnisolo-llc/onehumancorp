@@ -24,7 +24,7 @@ test.describe('Viral Chat Embed Loop', () => {
     const copyBtn = page.locator('#dashboard-embed-chat-btn');
     await expect(copyBtn).toHaveText('Copied!');
 
-    const clipboardText = '<iframe src="https://ohc.app/api/v1/ui/chat-embed.html?tenant=e2e-tenant" />';
+    const clipboardText = '<iframe src="https://omnisolo.co/api/v1/ui/chat-embed.html?tenant=e2e-tenant" />';
     expect(clipboardText).toContain('<iframe src="');
     expect(clipboardText).toContain('chat-embed.html');
 
@@ -38,7 +38,7 @@ test.describe('Viral Chat Embed Loop', () => {
 
     const brandingLink = page.locator('#branding-link');
     await expect(brandingLink).toBeVisible();
-    await expect(brandingLink).toContainText('Powered by OHC');
+    await expect(brandingLink).toContainText('OmniSolo');
 
     await page.evaluate(() => {
         const input = document.getElementById('chat-input') as HTMLInputElement;

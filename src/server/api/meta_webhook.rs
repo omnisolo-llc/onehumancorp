@@ -1,14 +1,14 @@
+use crate::hub::Hub;
 use axum::{
     extract::{Query, State},
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    http::{StatusCode, HeaderMap},
 };
+use hmac::{Hmac, Mac};
 use serde::Deserialize;
 use serde_json::Value;
-use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::sync::Arc;
-use crate::hub::Hub;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -28,9 +28,7 @@ pub struct MetaVerifyQuery {
     pub challenge: Option<String>,
 }
 
-pub async fn meta_webhook_get_handler(
-    Query(query): Query<MetaVerifyQuery>,
-) -> impl IntoResponse {
+pub async fn meta_webhook_get_handler(Query(query): Query<MetaVerifyQuery>) -> impl IntoResponse {
     let verify_token = match std::env::var("META_VERIFY_TOKEN") {
         Ok(t) if !t.is_empty() => t,
         _ => {
@@ -40,7 +38,9 @@ pub async fn meta_webhook_get_handler(
         }
     };
 
-    if let (Some(mode), Some(token), Some(challenge)) = (query.mode, query.verify_token, query.challenge) {
+    if let (Some(mode), Some(token), Some(challenge)) =
+        (query.mode, query.verify_token, query.challenge)
+    {
         if mode == "subscribe" && token == verify_token {
             return (StatusCode::OK, challenge).into_response();
         }
@@ -62,7 +62,8 @@ pub async fn meta_webhook_post_handler(
         }
     };
 
-    let signature_header = headers.get("x-hub-signature-256")
+    let signature_header = headers
+        .get("x-hub-signature-256")
         .and_then(|value| value.to_str().ok());
     if !valid_meta_signature(&secret, signature_header, &body_bytes) {
         tracing::warn!("Meta webhook signature verification failed");
@@ -83,43 +84,76 @@ pub async fn meta_webhook_post_handler(
             if let Some(messaging) = entry.get("messaging").and_then(|m| m.as_array()) {
                 for event in messaging {
                     if let Some(message) = event.get("message") {
-                        let sender_id = event.get("sender").and_then(|s| s.get("id")).and_then(|i| i.as_str()).unwrap_or("unknown");
-                        let recipient_id = event.get("recipient").and_then(|r| r.get("id")).and_then(|i| i.as_str()).unwrap_or("test_tenant");
+                        let sender_id = event
+                            .get("sender")
+                            .and_then(|s| s.get("id"))
+                            .and_then(|i| i.as_str())
+                            .unwrap_or("unknown");
+                        let recipient_id = event
+                            .get("recipient")
+                            .and_then(|r| r.get("id"))
+                            .and_then(|i| i.as_str())
+                            .unwrap_or("test_tenant");
                         let text = message.get("text").and_then(|t| t.as_str()).unwrap_or("");
 
                         if !text.is_empty() {
                             tracing::info!("Received Meta message from {}: {}", sender_id, text);
                             let tenant_id = recipient_id.to_string(); // Future: look up by recipient
                             let source = "instagram".to_string();
-                            process_omnichannel_message(&state, tenant_id, source, sender_id.to_string(), text.to_string()).await;
+                            process_omnichannel_message(
+                                &state,
+                                tenant_id,
+                                source,
+                                sender_id.to_string(),
+                                text.to_string(),
+                            )
+                            .await;
                         }
                     }
                 }
             } else if let Some(changes) = entry.get("changes").and_then(|c| c.as_array()) {
                 for change in changes {
-                     if let Some(value) = change.get("value") {
-                         if let Some(messages) = value.get("messages").and_then(|m| m.as_array()) {
-                             for message in messages {
-                                  let sender_id = message.get("from").and_then(|f| f.as_str()).unwrap_or("unknown");
-                                  let display_phone_number = value.get("metadata").and_then(|m| m.get("display_phone_number")).and_then(|p| p.as_str()).unwrap_or("test_tenant");
-                                  let text = if let Some(t) = message.get("text").and_then(|t| t.get("body")).and_then(|b| b.as_str()) {
-                                      t.to_string()
-                                  } else if let Some(img) = message.get("image") {
-                                      let id = img.get("id").and_then(|i| i.as_str()).unwrap_or("unknown");
-                                      let caption = img.get("caption").and_then(|c| c.as_str()).unwrap_or("");
-                                      format!("![Image]({}) {}", id, caption).trim().to_string()
-                                  } else if let Some(audio) = message.get("audio") {
-                                      let id = audio.get("id").and_then(|i| i.as_str()).unwrap_or("unknown");
-                                      format!("[Audio]({})", id)
-                                  } else {
-                                      "".to_string()
-                                  };
+                    if let Some(value) = change.get("value") {
+                        if let Some(messages) = value.get("messages").and_then(|m| m.as_array()) {
+                            for message in messages {
+                                let sender_id = message
+                                    .get("from")
+                                    .and_then(|f| f.as_str())
+                                    .unwrap_or("unknown");
+                                let display_phone_number = value
+                                    .get("metadata")
+                                    .and_then(|m| m.get("display_phone_number"))
+                                    .and_then(|p| p.as_str())
+                                    .unwrap_or("test_tenant");
+                                let text = if let Some(t) = message
+                                    .get("text")
+                                    .and_then(|t| t.get("body"))
+                                    .and_then(|b| b.as_str())
+                                {
+                                    t.to_string()
+                                } else if let Some(img) = message.get("image") {
+                                    let id =
+                                        img.get("id").and_then(|i| i.as_str()).unwrap_or("unknown");
+                                    let caption =
+                                        img.get("caption").and_then(|c| c.as_str()).unwrap_or("");
+                                    format!("![Image]({}) {}", id, caption).trim().to_string()
+                                } else if let Some(audio) = message.get("audio") {
+                                    let id = audio
+                                        .get("id")
+                                        .and_then(|i| i.as_str())
+                                        .unwrap_or("unknown");
+                                    format!("[Audio]({})", id)
+                                } else {
+                                    "".to_string()
+                                };
 
-                                  let pool = &state.db.pool;
-                                  let clean_phone_number = display_phone_number.replace("+", "").replace("whatsapp:", "");
-                                  let resolved_tenant_id = match &state.db.store {
-                                      crate::db::DbStore::Postgres => {
-                                          let mut tid = sqlx::query_scalar::<_, String>(
+                                let pool = &state.db.pool;
+                                let clean_phone_number = display_phone_number
+                                    .replace("+", "")
+                                    .replace("whatsapp:", "");
+                                let resolved_tenant_id = match &state.db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let mut tid = sqlx::query_scalar::<_, String>(
                                               "SELECT tenant_id FROM integration_credentials WHERE (from_phone = $1 OR from_phone = $2) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
                                           )
                                           .bind(display_phone_number)
@@ -127,24 +161,30 @@ pub async fn meta_webhook_post_handler(
                                           .fetch_optional(pool)
                                           .await.unwrap_or(None);
 
-                                          if tid.is_none() {
-                                              tid = sqlx::query_scalar::<_, String>(
+                                        if tid.is_none() {
+                                            tid = sqlx::query_scalar::<_, String>(
                                                   "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 OR sms_critical_phone = $2 OR voice_receptionist_number = $2 LIMIT 1"
                                               )
                                               .bind(display_phone_number)
                                               .bind(&clean_phone_number)
                                               .fetch_optional(pool)
                                               .await.unwrap_or(None);
-                                          }
+                                        }
 
-                                          match tid {
-                                              Some(id) => id,
-                                              None if display_phone_number == "tenant-whatsapp-id" || display_phone_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
-                                              None => "test_tenant".to_string(),
-                                          }
-                                      },
-                                      crate::db::DbStore::Sqlite(sqlite_pool) => {
-                                          let mut tid = sqlx::query_scalar::<_, String>(
+                                        match tid {
+                                            Some(id) => id,
+                                            None if display_phone_number
+                                                == "tenant-whatsapp-id"
+                                                || display_phone_number.contains("1234567890")
+                                                || sender_id.contains("1234567890") =>
+                                            {
+                                                "e2e-tenant".to_string()
+                                            }
+                                            None => "test_tenant".to_string(),
+                                        }
+                                    }
+                                    crate::db::DbStore::Sqlite(sqlite_pool) => {
+                                        let mut tid = sqlx::query_scalar::<_, String>(
                                               "SELECT tenant_id FROM integration_credentials WHERE (from_phone = ? OR from_phone = ?) AND integration_id IN ('twilio', 'whatsapp', 'whatsapp_cloud_api') LIMIT 1"
                                           )
                                           .bind(display_phone_number)
@@ -152,8 +192,8 @@ pub async fn meta_webhook_post_handler(
                                           .fetch_optional(sqlite_pool)
                                           .await.unwrap_or(None);
 
-                                          if tid.is_none() {
-                                              tid = sqlx::query_scalar::<_, String>(
+                                        if tid.is_none() {
+                                            tid = sqlx::query_scalar::<_, String>(
                                                   "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? OR sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
                                               )
                                               .bind(display_phone_number)
@@ -162,24 +202,41 @@ pub async fn meta_webhook_post_handler(
                                               .bind(&clean_phone_number)
                                               .fetch_optional(sqlite_pool)
                                               .await.unwrap_or(None);
-                                          }
+                                        }
 
-                                          match tid {
-                                              Some(id) => id,
-                                              None if display_phone_number == "tenant-whatsapp-id" || display_phone_number.contains("1234567890") || sender_id.contains("1234567890") => "e2e-tenant".to_string(),
-                                              None => "test_tenant".to_string(),
-                                          }
-                                      }
-                                  };
+                                        match tid {
+                                            Some(id) => id,
+                                            None if display_phone_number
+                                                == "tenant-whatsapp-id"
+                                                || display_phone_number.contains("1234567890")
+                                                || sender_id.contains("1234567890") =>
+                                            {
+                                                "e2e-tenant".to_string()
+                                            }
+                                            None => "test_tenant".to_string(),
+                                        }
+                                    }
+                                };
 
-                                  if !text.is_empty() {
-                                      tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
-                                      let source = "whatsapp".to_string();
-                                      process_omnichannel_message(&state, resolved_tenant_id, source, sender_id.to_string(), text.to_string()).await;
-                                  }
-                             }
-                         }
-                     }
+                                if !text.is_empty() {
+                                    tracing::info!(
+                                        "Received Meta WhatsApp message from {}: {}",
+                                        sender_id,
+                                        text
+                                    );
+                                    let source = "whatsapp".to_string();
+                                    process_omnichannel_message(
+                                        &state,
+                                        resolved_tenant_id,
+                                        source,
+                                        sender_id.to_string(),
+                                        text.to_string(),
+                                    )
+                                    .await;
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -192,7 +249,8 @@ fn valid_meta_signature(secret: &str, signature_header: Option<&str>, body: &[u8
     if secret.trim().is_empty() {
         return false;
     }
-    let Some(signature_hex) = signature_header.and_then(|value| value.strip_prefix("sha256=")) else {
+    let Some(signature_hex) = signature_header.and_then(|value| value.strip_prefix("sha256="))
+    else {
         return false;
     };
     let Ok(signature_bytes) = hex::decode(signature_hex) else {
@@ -216,19 +274,36 @@ mod signature_tests {
         mac.update(body);
         let signature = format!("sha256={}", hex::encode(mac.finalize().into_bytes()));
 
-        assert!(valid_meta_signature("configured-secret", Some(&signature), body));
+        assert!(valid_meta_signature(
+            "configured-secret",
+            Some(&signature),
+            body
+        ));
         assert!(!valid_meta_signature("", Some(&signature), body));
         assert!(!valid_meta_signature("configured-secret", None, body));
-        assert!(!valid_meta_signature("configured-secret", Some(&signature), b"changed"));
+        assert!(!valid_meta_signature(
+            "configured-secret",
+            Some(&signature),
+            b"changed"
+        ));
     }
 }
 
-async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String, source: String, sender_id: String, text: String) {
+async fn process_omnichannel_message(
+    state: &MetaWebhookState,
+    tenant_id: String,
+    source: String,
+    sender_id: String,
+    text: String,
+) {
     let inbox_id = Uuid::new_v4().to_string();
     let pool = &state.db.pool;
 
-    let resolver = crate::orchestration::identity_resolution::IdentityResolver::new(state.db.clone());
-    let customer_id_result = resolver.resolve_or_create_customer(&tenant_id, &sender_id, &source).await;
+    let resolver =
+        crate::orchestration::identity_resolution::IdentityResolver::new(state.db.clone());
+    let customer_id_result = resolver
+        .resolve_or_create_customer(&tenant_id, &sender_id, &source)
+        .await;
     let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
 
     let insert_result = match &state.db.store {

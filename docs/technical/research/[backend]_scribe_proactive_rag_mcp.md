@@ -3,7 +3,7 @@
 # Scribe: Document Hybrid MCP RAG Protocol (Proactive RAG MCP)
 
 ## 1. Overview
-The Hybrid MCP RAG Protocol allows One Human Corp (OHC) agents to seamlessly bridge the gap between local, private execution in Standalone Mode (SQLite) and highly scalable orchestration in Cloud-Native Mode (PostgreSQL).
+The Hybrid MCP RAG Protocol allows OmniSolo (OHC) agents to seamlessly bridge the gap between local, private execution in Standalone Mode (SQLite) and highly scalable orchestration in Cloud-Native Mode (PostgreSQL).
 
 This protocol addresses the challenge of maintaining synchronized states across a Hybrid-Agentic Operating System (OHC-HA), enabling a truly global context while preserving data locality for private execution.
 

@@ -13,7 +13,7 @@ Leo (music tutor) wants to offer recurring monthly lesson packages. Maya (baker)
 - **Squarespace:** Good basic digital/physical subscriptions, but lacks deep AI integration for proactive churn management and dynamic membership perks.
 - **Patreon / Substack:** Built only for digital creators, doesn't work for Maya's physical cakes or Leo's tutoring services.
 
-**Opportunity:** By building a natively integrated, multi-tenant subscription engine with AI-driven churn management and flexible billing cycles, OneHumanCorp can offer a seamless "toggle-on" subscription experience for physical, digital, and service-based businesses, eliminating the need for expensive third-party apps.
+**Opportunity:** By building a natively integrated, multi-tenant subscription engine with AI-driven churn management and flexible billing cycles, OmniSolo can offer a seamless "toggle-on" subscription experience for physical, digital, and service-based businesses, eliminating the need for expensive third-party apps.
 
 ## Design Doc
 
@@ -96,7 +96,7 @@ sequenceDiagram
 - **Zero-Configuration:** Complexities like proration, tax on recurring items, and retry schedules are abstracted away with sensible defaults. The merchant only configures the interval and price.
 
 ## Implementation Prompt
-**Task:** Build the Zero-Touch Subscription & Membership Engine for OneHumanCorp.
+**Task:** Build the Zero-Touch Subscription & Membership Engine for OmniSolo.
 **Context:** Small business owners need to offer recurring subscriptions for physical goods, services, and memberships without dealing with complex add-ons.
 **Outcome:**
 - A merchant can toggle any existing product/service to be a subscription.

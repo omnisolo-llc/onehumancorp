@@ -1,7 +1,7 @@
 # Tool Integration Research Report Q4
 
 ## Executive Summary
-This report summarizes research into critical tool integrations for the One Human Corp (OHC) platform, specifically targeting the needs of non-technical small business owners. The objective is to evaluate tools across seven key categories that directly solve operational pain points, reducing context switching and manual data entry.
+This report summarizes research into critical tool integrations for the OmniSolo (OHC) platform, specifically targeting the needs of non-technical small business owners. The objective is to evaluate tools across seven key categories that directly solve operational pain points, reducing context switching and manual data entry.
 
 The research evaluated each category through the lens of user experience (UX), competitor parity, pricing, and technical viability across both OHC's Cloud (multi-tenant) and Standalone (local) deployment modes.
 

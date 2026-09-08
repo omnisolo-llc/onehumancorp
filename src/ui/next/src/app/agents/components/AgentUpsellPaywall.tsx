@@ -67,7 +67,7 @@ export function AgentUpsellPaywall({ onClose }: AgentUpsellPaywallProps) {
             </h3>
           </div>
           <p className="text-indigo-800 text-xs font-medium">
-            Generate a referral link. Any reward or plan entitlement must be confirmed separately by the billing service. ⚡ Powered by OHC
+            Generate a referral link. Any reward or plan entitlement must be confirmed separately by the billing service. ⚡ Powered by OmniSolo
           </p>
         </div>
 
@@ -124,7 +124,7 @@ export function AgentUpsellPaywall({ onClose }: AgentUpsellPaywallProps) {
 
              <div className="flex flex-col gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`I'm building an AI workforce on OHC! Learn more through my referral link: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`I'm building an AI workforce on OmniSolo! Learn more through my referral link: ${referralLink} ⚡ Powered by OmniSolo`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -132,7 +132,7 @@ export function AgentUpsellPaywall({ onClose }: AgentUpsellPaywallProps) {
                   Share on WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I'm building an AI workforce on OHC! Learn more through my referral link: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I'm building an AI workforce on OmniSolo! Learn more through my referral link: ${referralLink} ⚡ Powered by OmniSolo`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"

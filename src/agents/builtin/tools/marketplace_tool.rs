@@ -1,9 +1,12 @@
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
-use ohc_builtin_agent_core::types::ToolError;
-use serde_json::json;
-use serde::Deserialize;
-use std::sync::Arc;
 use super::marketplace::MarketplaceClient;
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+};
+use ohc_builtin_agent_core::types::ToolError;
+use serde::Deserialize;
+use serde_json::json;
+use std::sync::Arc;
 
 use super::marketplace::MarketplaceAgent;
 
@@ -42,7 +45,10 @@ impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
             })?;
 
             match self.client.fetch_agent(agent_id).await {
-                Ok(agent) => Ok(format!("Successfully fetched agent definition:\n{}", serde_json::to_string_pretty(&agent).unwrap_or_default())),
+                Ok(agent) => Ok(format!(
+                    "Successfully fetched agent definition:\n{}",
+                    serde_json::to_string_pretty(&agent).unwrap_or_default()
+                )),
                 Err(e) => Err(ToolError::Transient(e)),
             }
         } else if action == "publish" {
@@ -56,11 +62,17 @@ impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
             };
 
             match self.client.publish_agent(agent).await {
-                Ok(published) => Ok(format!("Successfully published agent to marketplace:\n{}", serde_json::to_string_pretty(&published).unwrap_or_default())),
+                Ok(published) => Ok(format!(
+                    "Successfully published agent to marketplace:\n{}",
+                    serde_json::to_string_pretty(&published).unwrap_or_default()
+                )),
                 Err(e) => Err(ToolError::Transient(e)),
             }
         } else {
-            Err(ToolError::LlmRecoverable(format!("Unknown action: {}", action)))
+            Err(ToolError::LlmRecoverable(format!(
+                "Unknown action: {}",
+                action
+            )))
         }
     }
 }
@@ -115,8 +127,8 @@ pub fn marketplace_tool(client: Arc<MarketplaceClient>) -> Tool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::marketplace::test_utils::MockMarketplaceProvider;
+    use super::*;
 
     #[tokio::test]
     async fn test_marketplace_tool_search() {

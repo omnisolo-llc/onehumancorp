@@ -3,7 +3,7 @@
 # User Guide: B2B Collaboration
 
 ## 1. Introduction & Value Proposition
-B2B Collaboration features in One Human Corp enable seamless interaction between separate OHC environments or external human organizations. By utilizing federated identity and the "Warm Handoff" UI, it ensures secure, provable cross-organizational workflows and inter-agent negotiation. This empowers the CEO to establish true B2B operations efficiently.
+B2B Collaboration features in OmniSolo enable seamless interaction between separate OHC environments or external human organizations. By utilizing federated identity and the "Warm Handoff" UI, it ensures secure, provable cross-organizational workflows and inter-agent negotiation. This empowers the CEO to establish true B2B operations efficiently.
 
 ## 2. Prerequisites & Requirements
 - **Hardware/Software**: Federated SPIFFE/SPIRE configured between clusters or OIDC for human external parties.

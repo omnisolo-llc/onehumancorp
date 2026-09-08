@@ -84,16 +84,16 @@ describe('CustomerReferralProgramPage', () => {
     // Check navigation
   });
 
-  it('renders Powered by OHC branding in preview by default', () => {
+  it('renders Powered by OmniSolo branding in preview by default', () => {
     render(<CustomerReferralProgramPage />);
-    const brandingElements = screen.getAllByText(/Powered by OHC/i);
+    const brandingElements = screen.getAllByText(/Powered by OmniSolo/i);
     expect(brandingElements.length).toBeGreaterThan(0);
   });
 
   it('shows soft paywall when attempting to remove branding without pro', async () => {
     render(<CustomerReferralProgramPage />);
 
-    const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
+    const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo"/i });
 
     await act(async () => {
         fireEvent.click(toggle);
@@ -109,15 +109,15 @@ describe('CustomerReferralProgramPage', () => {
     render(<CustomerReferralProgramPage />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
 
-    const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
+    const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo"/i });
 
     await act(async () => {
         fireEvent.click(toggle);
     });
 
     expect(screen.queryByText('Pro Feature')).toBeNull();
-    // The exact text "⚡ Powered by OHC" in the preview should be removed
-    expect(screen.queryByText('⚡ Powered by OHC')).toBeNull();
+    // The exact text "⚡ Powered by OmniSolo" in the preview should be removed
+    expect(screen.queryByText('⚡ Powered by OmniSolo')).toBeNull();
   });
 
 });

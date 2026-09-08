@@ -8,8 +8,8 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />,
 }));
 
 describe('ViralStreakWidgetPage', () => {
@@ -85,7 +85,7 @@ describe('ViralStreakWidgetPage', () => {
   it('shows paywall when removing branding without pro', () => {
     render(<ViralStreakWidgetPage />);
 
-    const checkbox = screen.getByLabelText(/Remove "Powered by OHC" Badge/);
+    const checkbox = screen.getByLabelText(/Remove "Powered by OmniSolo" Badge/);
     fireEvent.click(checkbox);
 
     expect(screen.getByText('Upgrade to Remove Branding')).toBeDefined();

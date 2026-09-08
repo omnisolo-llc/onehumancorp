@@ -5,7 +5,7 @@
 **Analyst:** Principal Product Researcher & Oracle (L7)
 
 ## Executive Summary
-This report analyzes the core architectural patterns and "Agent Harness" design of the leaked Claude Code repository (v2.1.88) and compares them against One Human Corp's (OHC) current hybrid architecture (OHC-HA).
+This report analyzes the core architectural patterns and "Agent Harness" design of the leaked Claude Code repository (v2.1.88) and compares them against OmniSolo's (OHC) current hybrid architecture (OHC-HA).
 The objective is to identify critical gaps and define actionable missions to elevate the OHC platform towards absolute autonomy and aesthetic excellence.
 
 ## 1. Claude Code: Architecture Deep Dive

@@ -1,7 +1,7 @@
 # Title: KAIROS Hub Architectural Gap Discovery
 
 ## Problem Statement
-While OneHumanCorp provides multi-agent orchestration via KAIROS, a core architectural gap is the lack of a standardized Hub topology to cleanly isolate inter-departmental agent communications via a "Teammate Mesh".
+While OmniSolo provides multi-agent orchestration via KAIROS, a core architectural gap is the lack of a standardized Hub topology to cleanly isolate inter-departmental agent communications via a "Teammate Mesh".
 Currently, we have `src/server/orchestration/mesh.rs` and `src/server/orchestration/hub.rs`, but we lack a comprehensive mesh layer with real-time broadcast APIs and deep integration for inter-agent delegation and state transitions. As SMB users (like Maya the baker) scale their operations, they need AI agents across distinct departments (e.g., Marketing and Operations) to securely and reliably sync context.
 
 ## Research Report
