@@ -62,6 +62,7 @@ rust_library(
         "//src/server/domain/repository:action_required_queue_repo.rs",
     ],
     crate_root = "bazel_lib.rs",
+    compile_data = ["//src/server/migrations"],
     edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
