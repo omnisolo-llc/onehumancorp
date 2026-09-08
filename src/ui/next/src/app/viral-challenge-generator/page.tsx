@@ -23,7 +23,7 @@ export default function ViralChallengeGeneratorPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Viral Challenge Generator | OmniSolo";
+    document.title = "Viral Challenge Generator | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {

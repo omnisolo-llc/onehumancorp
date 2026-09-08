@@ -1,6 +1,6 @@
 {
   "$schema": "https://v2.tauri.app/schemas/2.0.0/config.schema.json",
-  "productName": "OmniSolo",
+  "productName": "OmniSolo OneHumanCorp",
   "version": "0.4.47+1",
   "identifier": "com.omnisolo.app",
   "build": {
@@ -33,7 +33,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "OmniSolo",
+        "title": "OmniSolo OneHumanCorp",
         "width": 1200,
         "height": 800,
         "resizable": true,

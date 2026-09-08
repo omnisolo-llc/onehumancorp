@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject accidental reintroduction of first-party OHC branding.
+"""Enforce OmniSolo branding and the OmniSolo OneHumanCorp product name.
 
 Compatibility-sensitive protocol, migration, metric, SPIFFE, and Kubernetes
 storage identities are deliberately allowlisted below.  The check is kept
@@ -8,6 +8,8 @@ dependency-free so it can run in CI before any application build starts.
 
 from __future__ import annotations
 
+import argparse
+import subprocess
 import re
 import os
 import sys
@@ -15,7 +17,7 @@ from pathlib import Path
 
 
 MONO_ROOT = Path(__file__).resolve().parents[1]
-CLUSTER_ROOT = Path("/home/kevin/myk3s")
+CLUSTER_ROOT: Path | None = None
 
 SKIP_PARTS = {
     ".git",
@@ -37,8 +39,8 @@ SKIP_NAMES = {
 FORBIDDEN = (
     ("uppercase OHC brand", re.compile(r"\bOHC\b")),
     (
-        "legacy company name",
-        re.compile(r"\bOne Human Corp\b|\bOneHumanCorp\b|\bONE HUMAN CORP\b"),
+        "unqualified or legacy product name",
+        re.compile(r"\bOne Human Corp\b|(?<!OmniSolo )\bOneHumanCorp\b|\bONE HUMAN CORP\b"),
     ),
     ("legacy environment prefix", re.compile(r"\bOHC_[A-Z0-9_]+")),
     (
@@ -118,7 +120,7 @@ def is_skipped(path: Path, root: Path) -> bool:
 def compatibility_line(path: Path, root: Path, line: str) -> bool:
     if path.name in {"omnisolo-compatibility.md", "omnisolo_branding_contract_test.rs"}:
         return True
-    if path.name == "production_feature_smoke.spec.ts" and ".test(body)" in line:
+    if path.name == "production_feature_smoke.spec.ts" and ".test(body" in line:
         return True
     # Retain established deployment/test inputs introduced by the live harness
     # integration. These configure credentials or process ownership, not branding.
@@ -212,15 +214,15 @@ def compatibility_line(path: Path, root: Path, line: str) -> bool:
 
 
 def scan_paths(root: Path):
-    if not root.exists():
-        return [f"missing scan root: {root}"]
-
-    failures: list[str] = []
-    for directory, dirs, files in os.walk(root):
-        dirs[:] = [name for name in dirs if name not in SKIP_PARTS and name != ".worktrees"]
-        for name in files:
-            path = Path(directory) / name
-            yield path
+    # Respect repository ignore rules: local secrets and generated outputs are
+    # neither product source nor reliable branding evidence.
+    result = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+        capture_output=True, check=True,
+    )
+    for name in dict.fromkeys(result.stdout.split(b"\0")):
+        if name:
+            yield root / os.fsdecode(name)
 
 
 def scan_root(root: Path) -> list[str]:
@@ -241,7 +243,7 @@ def scan_root(root: Path) -> list[str]:
                 if match and not compatibility_line(path, root, line):
                     failures.append(
                         f"{root.name}/{relative(path, root)}:{line_number}: "
-                        f"{label}: {line.strip()}"
+                        f"{label}"
                     )
                     break
     return failures
@@ -252,16 +254,24 @@ def required_contract_failures() -> list[str]:
         MONO_ROOT / "src/ui/next/src/lib/branding.ts",
         MONO_ROOT / "src/ui/next/src/e2e/omnisolo-branding.spec.ts",
         MONO_ROOT / "deploy/helm/omnisolo/Chart.yaml",
-        CLUSTER_ROOT / "apps/omnisolo/Chart.yaml",
-        CLUSTER_ROOT / "apps/omnisolo/fluxcd.yaml",
     )
+    if CLUSTER_ROOT is not None:
+        required += (
+            CLUSTER_ROOT / "apps/omnisolo/Chart.yaml",
+            CLUSTER_ROOT / "apps/omnisolo/fluxcd.yaml",
+        )
     return [f"missing required OmniSolo contract file: {path}" for path in required if not path.exists()]
 
 
 def main() -> int:
+    global CLUSTER_ROOT
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cluster-root", type=Path, help="also audit an explicitly selected deployment repository")
+    CLUSTER_ROOT = parser.parse_args().cluster_root
     failures = required_contract_failures()
     failures.extend(scan_root(MONO_ROOT))
-    failures.extend(scan_root(CLUSTER_ROOT))
+    if CLUSTER_ROOT is not None:
+        failures.extend(scan_root(CLUSTER_ROOT))
     if failures:
         print("OmniSolo branding contract: FAIL", file=sys.stderr)
         print("\n".join(failures), file=sys.stderr)

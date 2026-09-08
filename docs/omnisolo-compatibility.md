@@ -1,6 +1,9 @@
-# OmniSolo compatibility contract
+# OmniSolo OneHumanCorp naming and compatibility contract
 
-OmniSolo is the canonical product and repository name. Existing installations
+**OmniSolo** is the brand. **OmniSolo OneHumanCorp** is the product name.
+Use the full product name in application titles, product descriptions, onboarding,
+and documentation. Brand attribution, such as “Powered by OmniSolo,” uses the brand name.
+Existing installations
 may still expose legacy identifiers; these are compatibility aliases, not
 user-facing branding.
 
@@ -15,4 +18,5 @@ user-facing branding.
 
 Compatibility identifiers must remain confined to configuration, migration,
 transport, and deployment boundaries. Product UI, metadata, generated help,
-share text, and documentation use **OmniSolo**.
+share text, and documentation name the product **OmniSolo OneHumanCorp**.
+Technical package names, URLs, and compatibility aliases are separate from display wording.

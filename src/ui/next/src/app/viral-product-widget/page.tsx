@@ -23,7 +23,7 @@ export default function ViralProductWidgetPage() {
             const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
             setTenant(storedTenant);
         }
-        document.title = "Viral Product Widget | OmniSolo";
+        document.title = "Viral Product Widget | OmniSolo OneHumanCorp";
     }, []);
 
     const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {

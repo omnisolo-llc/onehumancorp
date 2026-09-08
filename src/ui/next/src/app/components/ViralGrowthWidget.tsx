@@ -55,7 +55,7 @@ export default function ViralGrowthWidget({
           Post
         </a>
         <a
-          href={`https://wa.me/?text=${encodeURIComponent(`I run my business on OmniSolo. Join me! ${referralLink}`)}`}
+          href={`https://wa.me/?text=${encodeURIComponent(`I run my business on OmniSolo OneHumanCorp. Join me! ${referralLink}`)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 py-3 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-sm font-bold transition-all shadow-sm"

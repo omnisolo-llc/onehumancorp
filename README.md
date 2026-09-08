@@ -1,4 +1,6 @@
-# OmniSolo
+# OmniSolo OneHumanCorp
+
+**OmniSolo** is our brand. **OmniSolo OneHumanCorp** is this business operations product.
 
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
@@ -55,7 +57,7 @@ This flow utilizes local `server`, `agent`, and `omnisolo-core` images without r
 
 ## Identity
 
-OmniSolo employs the **OmniSolo-HA Hybrid Architecture** for its identity and security framework, ensuring zero-trust verification seamlessly across both localized and cloud-native deployments.
+OmniSolo employs the **OmniSolo-HA Hybrid Architecture** for its identity and security framework, supporting identity verification across local and cloud deployments.
 
 The platform implements a hybrid identity model:
 - **Agent Identity**: Relies on SPIFFE/SPIRE for universal workload identity, ensuring every inter-agent communication and tool call is cryptographically signed and mTLS validated.
@@ -63,7 +65,7 @@ The platform implements a hybrid identity model:
 
 ## Product Vision & Market Strategy
 
-OmniSolo is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
+OmniSolo OneHumanCorp is a **Hybrid Agentic OS**. For a deep dive into the architecture and product positioning, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
 
 ## Architecture
 

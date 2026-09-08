@@ -63,7 +63,7 @@ export default function ReferralsPage() {
           <div className="max-w-2xl">
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-4">Grow Together & Earn Rewards</h2>
             <p className="text-gray-600 mb-8">
-              When your friends launch their storefront on OmniSolo, they get priority AI setup, and you earn <strong className="text-gray-900">$50 credit</strong> toward your premium tools.
+              When your friends launch their storefront on OmniSolo OneHumanCorp, they get priority AI setup, and you earn <strong className="text-gray-900">$50 credit</strong> toward your premium tools.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">

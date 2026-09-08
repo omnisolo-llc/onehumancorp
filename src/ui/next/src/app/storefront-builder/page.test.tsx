@@ -30,7 +30,7 @@ describe('StorefrontBuilderPage', () => {
 
   it('renders initial setup state', () => {
     render(<TooltipProvider><StorefrontBuilderPage /></TooltipProvider>);
-    expect(screen.getByText('Welcome to OmniSolo Smart Builder')).toBeTruthy();
+    expect(screen.getByText('Welcome to OmniSolo OneHumanCorp Smart Builder')).toBeTruthy();
     expect(screen.getByText('Build My Storefront')).toBeTruthy();
   });
 

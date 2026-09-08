@@ -32,7 +32,7 @@ export default function ViralCountdownWidgetPage() {
         if (storedTenant) setTenant(storedTenant);
       }
     }
-    document.title = "Countdown Widget | OmniSolo";
+    document.title = "Countdown Widget | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import React from 'react';
 
 export const metadata: Metadata = {
-  title: 'Help Center | OmniSolo',
+  title: 'Help Center | OmniSolo OneHumanCorp',
   description: 'In-App Help Center for OmniSolo work assistant.',
 };
 

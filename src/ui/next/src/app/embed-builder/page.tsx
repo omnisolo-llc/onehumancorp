@@ -94,7 +94,7 @@ export default function EmbedBuilderPage() {
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:border-transparent transition-all shadow-inner"
                                     placeholder="your-workspace-id"
                                 />
-                                <p className="text-xs text-gray-500 mt-2">Connects widget submissions to your OmniSolo workspace.</p>
+                                <p className="text-xs text-gray-500 mt-2">Connects widget submissions to your OmniSolo OneHumanCorp workspace.</p>
                             </div>
 
                             <div className="mb-6">

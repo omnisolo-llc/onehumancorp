@@ -24,7 +24,7 @@ export default function ViralStreakWidgetPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Viral Streak Widget | OmniSolo";
+    document.title = "Viral Streak Widget | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {

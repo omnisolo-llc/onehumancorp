@@ -48,7 +48,7 @@ export default function InteractiveDemoPage() {
   };
 
   const claimTrialExtension = async () => {
-    const message = `I just launched an Interactive Demo on OmniSolo! It's an amazing way to show off my products. 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenant}`;
+    const message = `I just launched an Interactive Demo on OmniSolo OneHumanCorp! It's an amazing way to show off my products. 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenant}`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
     window.open(shareUrl, '_blank');

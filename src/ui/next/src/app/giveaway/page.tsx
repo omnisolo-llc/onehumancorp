@@ -47,7 +47,7 @@ export default function GiveawayGeneratorPage() {
 
   const claimTrialExtension = async () => {
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just launched a viral giveaway for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just launched a viral giveaway for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (!await claimTrial()) return;
     setShowSoftPaywall(false);
     generateLink();

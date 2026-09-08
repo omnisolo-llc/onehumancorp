@@ -17,7 +17,7 @@ export default function ZeroClickBuilderPage() {
   }, []);
 
   const handleShare = () => {
-    const shareText = `I just built my AI-powered business in 30 seconds using OmniSolo! Start your own for free: https://cloud.omnisolo.co/zero-click-builder?ref=new_store \n\n⚡ Powered by OmniSolo`;
+    const shareText = `I just built my AI-powered business in 30 seconds using OmniSolo OneHumanCorp! Start your own for free: https://cloud.omnisolo.co/zero-click-builder?ref=new_store \n\n⚡ Powered by OmniSolo`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     window.open(shareUrl, '_blank');
   };

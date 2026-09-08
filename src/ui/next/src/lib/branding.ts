@@ -1,4 +1,8 @@
+/** OmniSolo is the brand; OmniSolo OneHumanCorp is this product. */
 export const OMNISOLO_BRAND = "OmniSolo" as const;
+export const BRAND_NAME = OMNISOLO_BRAND;
+export const PRODUCT_NAME = "OmniSolo OneHumanCorp" as const;
+export const PRODUCT_DESCRIPTION = "OmniSolo OneHumanCorp business operations workspace" as const;
 export const OMNISOLO_CLOUD_ORIGIN = "https://cloud.omnisolo.co" as const;
 
 /**

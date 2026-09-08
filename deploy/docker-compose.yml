@@ -533,7 +533,7 @@ services:
       DB_PASSWORD_FILE: /run/secrets/plandex-database-password
     volumes:
       - plandex-files:/var/lib/plandex
-      - ${OHC_POSTGRES_PASSWORD_FILE:?OHC_POSTGRES_PASSWORD_FILE is required}:/run/secrets/plandex-database-password:ro
+      - ${OMNISOLO_POSTGRES_PASSWORD_FILE:?OMNISOLO_POSTGRES_PASSWORD_FILE is required}:/run/secrets/plandex-database-password:ro
     depends_on:
       harness-plandex:
         condition: service_started
@@ -554,7 +554,7 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/plandex-database-password
     volumes:
       - plandex-postgres-data:/var/lib/postgresql/data
-      - ${OHC_POSTGRES_PASSWORD_FILE:?OHC_POSTGRES_PASSWORD_FILE is required}:/run/secrets/plandex-database-password:ro
+      - ${OMNISOLO_POSTGRES_PASSWORD_FILE:?OMNISOLO_POSTGRES_PASSWORD_FILE is required}:/run/secrets/plandex-database-password:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U plandex -d plandex"]
       interval: 5s

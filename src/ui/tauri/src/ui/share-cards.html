@@ -37,7 +37,7 @@
     </style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Share Cards Generator - OmniSolo</title>
+  <title>Share Cards Generator - OmniSolo OneHumanCorp</title>
   <style>
     body {
       font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -310,7 +310,7 @@
                 previewCard.classList.remove('dark');
             }
 
-            const shareText = `Check out ${storeNameInput.value || 'my store'} on OmniSolo! ${taglineInput.value || ''}\n\n${baseStoreLink}`;
+            const shareText = `Check out ${storeNameInput.value || 'my store'} on OmniSolo OneHumanCorp! ${taglineInput.value || ''}\n\n${baseStoreLink}`;
             document.getElementById('shareX').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
             document.getElementById('shareWA').href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
             document.getElementById('shareFB').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(baseStoreLink)}&quote=${encodeURIComponent(shareText)}`;

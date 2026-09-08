@@ -52,7 +52,7 @@ export default function MultilingualOrderInterceptor() {
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <Head>
-                <title>Multilingual Order Interceptor | OmniSolo</title>
+                <title>Multilingual Order Interceptor | OmniSolo OneHumanCorp</title>
             </Head>
 
             <div className="w-full max-w-[375px] bg-white rounded-2xl shadow-xl overflow-hidden relative font-sans min-h-[600px] flex flex-col">

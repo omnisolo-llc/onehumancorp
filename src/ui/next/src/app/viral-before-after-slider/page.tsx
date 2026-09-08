@@ -22,7 +22,7 @@ export default function ViralBeforeAfterSliderPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
     }
-    document.title = "Before & After Slider | OmniSolo";
+    document.title = "Before & After Slider | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {

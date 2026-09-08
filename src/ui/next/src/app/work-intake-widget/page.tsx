@@ -18,7 +18,7 @@ export default function WorkIntakeWidgetPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
     }
-    document.title = "Embed Work Intake | OmniSolo";
+    document.title = "Embed Work Intake | OmniSolo OneHumanCorp";
   }, []);
 
   const encodedTenant = encodeURIComponent(tenant);
@@ -155,7 +155,7 @@ export default function WorkIntakeWidgetPage() {
 
                     <div className="text-left flex-1 max-w-sm hidden lg:block">
                         <h3 className="text-3xl font-bold mb-4 text-gray-800">Ready to start?</h3>
-                        <p className="text-gray-600 mb-6">Drop your information in the form and we'll get right back to you. This form connects directly to your OmniSolo workspace.</p>
+                        <p className="text-gray-600 mb-6">Drop your information in the form and we'll get right back to you. This form connects directly to your OmniSolo OneHumanCorp workspace.</p>
                         <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
                         <div className="h-4 w-48 bg-gray-200 rounded"></div>
                     </div>

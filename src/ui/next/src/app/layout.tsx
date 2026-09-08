@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { PRODUCT_NAME, PRODUCT_DESCRIPTION } from '../lib/branding';
 import { WalkthroughTarget } from '../components/Walkthrough';
 import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
@@ -17,8 +18,8 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'OmniSolo',
-  description: 'OmniSolo business operations workspace',
+  title: PRODUCT_NAME,
+  description: PRODUCT_DESCRIPTION,
 };
 
 export default function RootLayout({

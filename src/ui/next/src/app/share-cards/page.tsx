@@ -33,7 +33,7 @@ export default function ShareCardsPage() {
   const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'DEFAULT' : 'DEFAULT';
     const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked premium viral share cards for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked premium viral share cards for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (!await claimTrial()) return;
     setShowSoftPaywall(false);
     setTrialStatus('Pro access activated.');

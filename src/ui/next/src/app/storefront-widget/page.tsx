@@ -17,7 +17,7 @@ export default function StorefrontWidgetPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Embed Your Store | OmniSolo";
+    document.title = "Embed Your Store | OmniSolo OneHumanCorp";
   }, []);
 
   const embedCode = `<iframe src="https://cloud.omnisolo.co/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);

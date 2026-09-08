@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OmniSolo Dashboard</title>
+    <title>OmniSolo OneHumanCorp Dashboard</title>
     <style>
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -1053,7 +1053,7 @@
             <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1); width: 100%; box-sizing: border-box;">
                 <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                     <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
-                    Welcome to OmniSolo!
+                    Welcome to OmniSolo OneHumanCorp!
                 </h3>
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                     Your business is ready. Check out your generated storefront and see what's next.
@@ -1499,7 +1499,7 @@
         if (softPaywallShareBtn) {
           softPaywallShareBtn.addEventListener('click', async () => {
             const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
-            const message = `I just discovered Advanced AI Automations on OmniSolo! This is going to revolutionize how I work. 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
+            const message = `I just discovered Advanced AI Automations on OmniSolo OneHumanCorp! This is going to revolutionize how I work. 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
             const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
             // Open share dialog
@@ -1567,7 +1567,7 @@
 
         if (shareSavingsBtn) {
           shareSavingsBtn.addEventListener('click', async () => {
-            const message = `My AI agents on OmniSolo just saved me ${currentHoursSaved} hours this week! 🚀 #OmniSolo #SmallBiz #AI`;
+            const message = `My AI agents on OmniSolo OneHumanCorp just saved me ${currentHoursSaved} hours this week! 🚀 #OmniSolo #SmallBiz #AI`;
             const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
             window.open(shareUrl, '_blank');
 
@@ -1719,7 +1719,7 @@
 
               copyBtn.addEventListener('click', async () => {
                 const link = await getInviteLink();
-                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OmniSolo! Launch your own store today: ${link} ⚡ OmniSolo`;
+                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OmniSolo OneHumanCorp! Launch your own store today: ${link} ⚡ OmniSolo`;
                 const tempInput = document.createElement('textarea');
                 tempInput.value = textToCopy;
                 document.body.appendChild(tempInput);
@@ -1904,7 +1904,7 @@
       }
       if (copyBtn) { copyBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
+        const text = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
 
         navigator.clipboard.writeText(text).then(() => {
           copyBtn.innerText = "Copied!";
@@ -1934,7 +1934,7 @@
       const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
       if (shareWhatsAppBtn) { shareWhatsAppBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
+        const text = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       });
 
@@ -1942,7 +1942,7 @@
       const shareXBtn = document.getElementById('share-x-btn');
       if (shareXBtn) { shareXBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
+        const text = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                 localStorage.setItem(dismissedKey, 'true');
                 document.getElementById('milestone-container').style.display = 'none';
@@ -1988,7 +1988,7 @@
               <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                   <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                       <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
-                      Welcome to OmniSolo!
+                      Welcome to OmniSolo OneHumanCorp!
                   </h3>
                   <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                       Your business is ready. Check out your generated storefront and see what's next.
@@ -2007,7 +2007,7 @@
             <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
                 <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                     <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
-                    Welcome to OmniSolo!
+                    Welcome to OmniSolo OneHumanCorp!
                 </h3>
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
                     Your business is ready. Check out your generated storefront and see what's next.
@@ -3681,7 +3681,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="omnisolo-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Welcome to OmniSolo</a></li>
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Welcome to OmniSolo OneHumanCorp</a></li>
                 <li><a href="/help_article.html?id=my-store-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
                 <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>

@@ -23,7 +23,7 @@ export default function InteractiveInsightWidgetPage() {
         if (storedTenant) setTenant(storedTenant);
       }
     }
-    document.title = "Insight Widget | OmniSolo";
+    document.title = "Insight Widget | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {

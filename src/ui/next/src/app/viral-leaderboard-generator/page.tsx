@@ -21,7 +21,7 @@ export default function ViralLeaderboardGeneratorPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Viral Leaderboard Generator | OmniSolo";
+    document.title = "Viral Leaderboard Generator | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {

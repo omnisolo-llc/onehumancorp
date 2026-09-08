@@ -24,7 +24,7 @@ describe('SuccessMilestoneWidget', () => {
       json: () => Promise.resolve({
         title: "100th Order Delivered! 🎉",
         subtitle: "You're growing fast. Share your success to unlock $50 in OmniSolo credits.",
-        shareText: "I just hit my 100th order using OmniSolo to run my business! 🚀 Check them out and get $50 off your first month:",
+        shareText: "I just hit my 100th order using OmniSolo OneHumanCorp to run my business! 🚀 Check them out and get $50 off your first month:",
         reward: "$50 Credit"
       }),
     } as any);

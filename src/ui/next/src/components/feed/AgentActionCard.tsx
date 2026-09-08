@@ -215,7 +215,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                 <p className="text-sm text-gray-800 dark:text-gray-200">
                   {approval.context_payload?.description ||
                     approval.proposed_action?.description ||
-                    "Welcome to OmniSolo! I've set up your business. Click here to review your new storefront."}
+                    "Welcome to OmniSolo OneHumanCorp! I've set up your business. Click here to review your new storefront."}
                 </p>
               </div>
             )}

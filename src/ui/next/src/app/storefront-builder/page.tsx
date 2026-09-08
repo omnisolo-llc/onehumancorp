@@ -272,7 +272,7 @@ export default function StorefrontBuilderPage() {
             <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
             <div className="flex justify-end mb-4"><button id="storefront-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-semibold transition-colors">Start Tour</button></div>
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Welcome to OmniSolo Smart Builder</h1></WalkthroughTarget>
+              <WalkthroughTarget id="storefront-title"><h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Welcome to OmniSolo OneHumanCorp Smart Builder</h1></WalkthroughTarget>
               <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                 Review and add any extra details to help our AI generate the perfect store.
               </p>

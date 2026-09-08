@@ -71,7 +71,7 @@ test("all application pages render through the real authenticated service", asyn
       if (/Generated Offering|AI description|mock data|fake data/i.test(body)) {
         contentFailures.push(`${route} contains fabricated data`);
       }
-      if (/OneHumanCorp|One Human Corp|Powered by OHC/i.test(body)) {
+      if (/OneHumanCorp|One Human Corp|Powered by OHC/i.test(body.replaceAll("OmniSolo OneHumanCorp", "OmniSolo"))) {
         contentFailures.push(`${route} contains legacy branding`);
       }
     } catch (error) {

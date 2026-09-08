@@ -75,7 +75,7 @@ export function AIUsageLimitWidget() {
     }
   };
 
-  const shareText = `Start your business on OmniSolo! It's super easy. Use my link to get $50 off your first month: ${referralLink}`;
+  const shareText = `Start your business on OmniSolo OneHumanCorp! It's super easy. Use my link to get $50 off your first month: ${referralLink}`;
 
   const handleXShare = () => {
      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank');

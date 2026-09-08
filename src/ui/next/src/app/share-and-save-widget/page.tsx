@@ -22,7 +22,7 @@ export default function ShareAndSaveWidgetPage() {
   }, []);
 
   const handleShareOnTwitter = () => {
-    const text = "I'm checking out this amazing store on OmniSolo! Discover more at:";
+    const text = "I'm checking out this amazing store on OmniSolo OneHumanCorp! Discover more at:";
     const url = `https://cloud.omnisolo.co/store/${tenantId}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
 

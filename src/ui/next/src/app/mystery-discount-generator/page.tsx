@@ -26,7 +26,7 @@ export default function MysteryDiscountGeneratorPage() {
       setTenant(storedTenant);
     }
     if (typeof document !== 'undefined') {
-      document.title = "Mystery Discount Generator | OmniSolo";
+      document.title = "Mystery Discount Generator | OmniSolo OneHumanCorp";
     }
   }, []);
 

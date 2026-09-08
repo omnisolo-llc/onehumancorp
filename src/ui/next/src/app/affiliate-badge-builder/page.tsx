@@ -62,7 +62,7 @@ export default function AffiliateBadgeBuilderPage() {
           </div>
           <h2 className="text-3xl md:text-4xl font-bold font-outfit text-gray-900 mb-4 tracking-tight">Share OmniSolo & Earn Credits</h2>
           <p className="text-gray-600 text-lg leading-relaxed">
-            Create a custom affiliate badge to put on your website, blog, or Link-in-Bio. When another business signs up through your badge, you earn $50 in OmniSolo platform credits!
+            Create a custom affiliate badge to put on your website, blog, or Link-in-Bio. When another business signs up through your badge, you earn $50 in OmniSolo OneHumanCorp platform credits!
           </p>
         </div>
 

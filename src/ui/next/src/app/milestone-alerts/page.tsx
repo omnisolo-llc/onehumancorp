@@ -66,7 +66,7 @@ export default function MilestoneAlertsPage() {
   const getShareText = () => {
     const activeM = milestones.find(m => m.id === selectedMilestone);
     const title = activeM ? activeM.title.replace('🎉 Milestone: ', '') : 'huge business milestone';
-    return `I just hit a huge business milestone (🎉 Milestone: ${title}) using OmniSolo! Launch your own store today: ${shareTarget} ⚡ Powered by OmniSolo`;
+    return `I just hit a huge business milestone (🎉 Milestone: ${title}) using OmniSolo OneHumanCorp! Launch your own store today: ${shareTarget} ⚡ Powered by OmniSolo`;
   };
 
   return (

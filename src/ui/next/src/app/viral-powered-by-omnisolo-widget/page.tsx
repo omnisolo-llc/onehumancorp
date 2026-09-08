@@ -17,7 +17,7 @@ export default function ViralPoweredByOmniSoloWidgetPage() {
       setTenant(storedTenant);
     }
     if (typeof document !== 'undefined') {
-      document.title = "Viral Widget | OmniSolo";
+      document.title = "Viral Widget | OmniSolo OneHumanCorp";
     }
   }, []);
 

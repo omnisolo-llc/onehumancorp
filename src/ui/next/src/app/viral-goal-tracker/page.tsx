@@ -21,7 +21,7 @@ export default function ViralGoalTrackerPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
     }
-    document.title = "Viral Goal Tracker | OmniSolo";
+    document.title = "Viral Goal Tracker | OmniSolo OneHumanCorp";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {

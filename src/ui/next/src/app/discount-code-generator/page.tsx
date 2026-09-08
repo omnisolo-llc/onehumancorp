@@ -34,7 +34,7 @@ export default function DiscountCodeGeneratorPage() {
 
   const claimTrialExtension = async () => {
     const referralUrl = `${window.location.origin}/onboarding?ref=${encodeURIComponent(tenant)}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo! Start your own business today: ' + referralUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (!await claimTrial()) return;
     setShowSoftPaywall(false);
   };

@@ -15,7 +15,7 @@ describe('GettingStartedArticle', () => {
   it('renders the article with the correct title and text', () => {
     render(<GettingStartedArticle />);
     expect(screen.getByRole('heading', { name: 'Getting Started with Your Store' })).toBeInTheDocument();
-    expect(screen.getByText(/Welcome to OmniSolo!/)).toBeInTheDocument();
+    expect(screen.getByText(/Welcome to OmniSolo OneHumanCorp!/)).toBeInTheDocument();
   });
 
   it('navigates back to the help center when the back button is clicked', () => {

@@ -30,7 +30,7 @@ export default function StoreWrapPage() {
   }, []);
 
   const referralLink = `${origin}/onboarding`;
-  const shareText = `My OmniSolo dashboard reports $${metrics.sales.toLocaleString()} in recorded revenue. ${referralLink}`;
+  const shareText = `My OmniSolo OneHumanCorp dashboard reports $${metrics.sales.toLocaleString()} in recorded revenue. ${referralLink}`;
 
   const slides = [
     {

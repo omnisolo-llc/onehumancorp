@@ -1,5 +1,5 @@
-site_name: OmniSolo Docs
-site_description: Markdown-first product, architecture, and operations documentation for the OmniSolo monorepo.
+site_name: OmniSolo OneHumanCorp Docs
+site_description: Markdown-first product, architecture, and operations documentation for OmniSolo OneHumanCorp, a product by OmniSolo.
 docs_dir: docs
 site_dir: site
 repo_name: omnisolo/mono

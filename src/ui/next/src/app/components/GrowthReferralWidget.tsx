@@ -50,7 +50,7 @@ export default function GrowthReferralWidget() {
   const handleWhatsApp = () => {
     if (referralLink) {
       const url = `https://wa.me/?text=${encodeURIComponent(
-        `Hey! I use OmniSolo to run my business. It's super easy. Check it out: ${referralLink}`
+        `Hey! I use OmniSolo OneHumanCorp to run my business. It's super easy. Check it out: ${referralLink}`
       )}`;
       window.open(url, '_blank');
     }
@@ -59,7 +59,7 @@ export default function GrowthReferralWidget() {
   const handleTwitter = () => {
     if (referralLink) {
       const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        `Hey! I use OmniSolo to run my business. It's super easy. Check it out: ${referralLink}\n\n⚡ Powered by OmniSolo`
+        `Hey! I use OmniSolo OneHumanCorp to run my business. It's super easy. Check it out: ${referralLink}\n\n⚡ Powered by OmniSolo`
       )}`;
       window.open(url, '_blank');
     }
@@ -171,7 +171,7 @@ export default function GrowthReferralWidget() {
               You just hit a major milestone! Let your network know that your business is booming.
             </p>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent('I just hit my 10th order on OmniSolo! Check it out: https://cloud.omnisolo.co/invite/default-team')}`}
+              href={`https://wa.me/?text=${encodeURIComponent('I just hit my 10th order on OmniSolo OneHumanCorp! Check it out: https://cloud.omnisolo.co/invite/default-team')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 app-button min-h-[44px] bg-[#25D366] hover:bg-[#1ebd5a] text-white py-2 px-4 rounded-md text-sm font-semibold transition-colors"

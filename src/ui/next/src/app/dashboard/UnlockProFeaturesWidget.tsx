@@ -37,7 +37,7 @@ export function UnlockProFeaturesWidget() {
 
   const referralLink = `/onboarding?ref=${tenantId}&source=unlock_pro`;
   const fullShareLink = typeof window !== "undefined" ? `${window.location.origin}${referralLink}` : `https://cloud.omnisolo.co${referralLink}`;
-  const shareText = `I'm using OmniSolo to manage my business operations. Join me and let's grow together! ${fullShareLink}`;
+  const shareText = `I'm using OmniSolo OneHumanCorp to manage my business operations. Join me and let's grow together! ${fullShareLink}`;
 
   const handleCopy = () => {
     if (navigator.clipboard) {

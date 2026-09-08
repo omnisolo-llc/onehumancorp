@@ -579,7 +579,7 @@ export default function BuilderPage() {
                 WhatsApp
               </a>
               <a
-                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just launched my new business on OmniSolo! Check it out: ${liveUrl}`)}`}
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just launched my new business on OmniSolo OneHumanCorp! Check it out: ${liveUrl}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 bg-black text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   OMNISOLO_BRAND,
+  PRODUCT_NAME,
   OMNISOLO_CLOUD_ORIGIN,
   cloudUrl,
 } from "./branding";
@@ -8,6 +9,7 @@ import {
 describe("OmniSolo branding contract", () => {
   it("exposes the canonical brand and cloud origin", () => {
     expect(OMNISOLO_BRAND).toBe("OmniSolo");
+    expect(PRODUCT_NAME).toBe("OmniSolo OneHumanCorp");
     expect(OMNISOLO_CLOUD_ORIGIN).toBe("https://cloud.omnisolo.co");
   });
 

@@ -27,7 +27,7 @@ export default function GroupBuyWidgetPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
       setTenant(storedTenant);
     }
-    document.title = "Group Buy Widget Builder | OmniSolo";
+    document.title = "Group Buy Widget Builder | OmniSolo OneHumanCorp";
   }, []);
 
   const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {

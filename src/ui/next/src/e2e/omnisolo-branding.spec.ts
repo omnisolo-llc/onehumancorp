@@ -5,7 +5,7 @@ test.describe("OmniSolo browser branding", () => {
     await page.goto("/login?next=/dashboard");
 
     await expect(page).toHaveTitle(/OmniSolo/);
-    await expect(page.getByRole("heading", { name: "Sign in to OmniSolo" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sign in to OmniSolo OneHumanCorp" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
   });
 
@@ -14,7 +14,7 @@ test.describe("OmniSolo browser branding", () => {
     expect(response.ok()).toBe(true);
     const document = await response.text();
 
-    expect(document).not.toMatch(/one human corp|onehumancorp|ohc\.app|ohc\.store|api\.onehumancorp/i);
+    expect(document.replaceAll("OmniSolo OneHumanCorp", "OmniSolo")).not.toMatch(/one human corp|onehumancorp|ohc\.app|ohc\.store|api\.onehumancorp/i);
     expect(document).toContain("OmniSolo");
   });
 
@@ -55,7 +55,7 @@ test.describe("OmniSolo browser branding", () => {
     });
 
     await anonymousPage.goto("/login?next=/dashboard");
-    await expect(anonymousPage.getByRole("heading", { name: "Sign in to OmniSolo" })).toBeVisible();
+    await expect(anonymousPage.getByRole("heading", { name: "Sign in to OmniSolo OneHumanCorp" })).toBeVisible();
     await anonymousPage.waitForTimeout(500);
 
     expect(optionalRequests).toEqual([]);

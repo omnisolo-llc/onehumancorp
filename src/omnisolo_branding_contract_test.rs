@@ -1,4 +1,4 @@
-//! Source contract for the OmniSolo product rename.
+//! Source contract for the OmniSolo brand and OmniSolo OneHumanCorp product.
 //!
 //! This test intentionally checks user-facing source only. Legacy `OHC_*`
 //! environment variables, cookie names, API aliases, and deployment keys are
@@ -67,6 +67,8 @@ fn user_facing_sources_use_omnisolo_branding() {
                 continue;
             };
             for (line_number, line) in source.lines().enumerate() {
+                let normalized_product = line.replace("OmniSolo OneHumanCorp", "OmniSolo");
+                let line = normalized_product.as_str();
                 // Introductory migration context may name the former product.
                 if !source_is_user_facing && line.contains("(formerly One Human Corp / OHC)") {
                     continue;

@@ -477,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <h4>Popular Articles</h4>
             <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="omnisolo-help-articles-list">
-                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to OmniSolo</a></li>
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Welcome to OmniSolo OneHumanCorp</a></li>
                 <li><a href="/help_article.html?id=my-store-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
                 <li><a href="/help_article.html?id=payments-1" style="color: #2563eb; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
             </ul>
