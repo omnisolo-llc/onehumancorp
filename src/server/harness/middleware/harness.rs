@@ -21,8 +21,8 @@ use super::codex_app_server::CodexAppServerV2Codec;
 use super::deepseek_harness::DeepSeekHarnessCodec;
 use super::http_runtime::HttpProcessConfig;
 use super::inference::OpenAiResponsesClient;
-use super::local_services::{LOCAL_SERVICE_BUNDLE_SCHEMA, LocalServiceBundle};
 use super::json_rpc::{JsonRpcError, JsonRpcProcessConfig, JsonRpcProcessRuntime};
+use super::local_services::{LOCAL_SERVICE_BUNDLE_SCHEMA, LocalServiceBundle};
 use super::opencode::{OpenCodeEventCorrelation, OpenCodeHttpAdapter, OpenCodeProcessConfig};
 use super::openhands::{
     CapabilityDowngradePolicy, OpenHandsAdapterConfig, OpenHandsCapabilityDowngrade,
@@ -1131,6 +1131,7 @@ pub struct ProcessHarnessAdapter {
     descriptor: HarnessDescriptor,
     spec: ProcessHarnessSpec,
     channel: Option<ProcessChannel>,
+    shim_task: Option<tokio::task::JoinHandle<()>>,
     protocol: Option<ProtocolProcessAdapter>,
     pi: Option<PiProcessAdapter>,
     opencode: Option<OpenCodeProcessAdapter>,
@@ -1161,14 +1162,42 @@ struct OpenHandsProcessAdapter {
     pending_events: Vec<HarnessEvent>,
 }
 
+/// Ask the Python shim to unwind its native process group and temporary homes.
+/// SIGKILL alone would strand grandchildren launched by the CLI.
+fn request_shim_shutdown(child: &Child) {
+    #[cfg(unix)]
+    if let Some(pid) = child.id().and_then(|pid| i32::try_from(pid).ok()) {
+        unsafe extern "C" {
+            #[link_name = "kill"]
+            fn signal_process(pid: i32, signal: i32) -> i32;
+        }
+        // SAFETY: `pid` is the live owned child ID; SIGTERM (15) takes no pointers.
+        // A concurrent child exit is harmless and returns ESRCH.
+        let _ = unsafe { signal_process(pid, 15) };
+    }
+}
+
+async fn reap_shim_child(mut child: Child) {
+    if tokio::time::timeout(std::time::Duration::from_secs(3), child.wait())
+        .await
+        .is_err()
+    {
+        let _ = child.kill().await;
+        let _ = child.wait().await;
+    }
+}
+
 impl Drop for ProcessHarnessAdapter {
     fn drop(&mut self) {
-        if let Some(protocol) = self.protocol.take() {
-            if let Ok(handle) = tokio::runtime::Handle::try_current() {
-                handle.spawn(async move {
-                    let _ = protocol.runtime.shutdown().await;
-                });
-            }
+        if let Some(task) = self.shim_task.take() {
+            task.abort();
+        }
+        if let Some(protocol) = self.protocol.take()
+            && let Ok(handle) = tokio::runtime::Handle::try_current()
+        {
+            handle.spawn(async move {
+                let _ = protocol.runtime.shutdown().await;
+            });
         }
         if let Some(pi) = self.pi.take()
             && let Ok(handle) = tokio::runtime::Handle::try_current()
@@ -1199,7 +1228,28 @@ impl Drop for ProcessHarnessAdapter {
             });
         }
         if let Some(mut channel) = self.channel.take() {
-            let _ = channel.child.start_kill();
+            if self.uses_openai_compatible_shim() {
+                request_shim_shutdown(&channel.child);
+                if let Ok(handle) = tokio::runtime::Handle::try_current() {
+                    handle.spawn(reap_shim_child(channel.child));
+                } else {
+                    // Outside a Tokio runtime, retain ownership until cleanup
+                    // completes instead of dropping a live child handle.
+                    std::thread::spawn(move || {
+                        let deadline =
+                            std::time::Instant::now() + std::time::Duration::from_secs(3);
+                        while matches!(channel.child.try_wait(), Ok(None)) {
+                            if std::time::Instant::now() >= deadline {
+                                let _ = channel.child.start_kill();
+                                break;
+                            }
+                            std::thread::sleep(std::time::Duration::from_millis(20));
+                        }
+                    });
+                }
+            } else {
+                let _ = channel.child.start_kill();
+            }
         }
     }
 }
@@ -1235,6 +1285,7 @@ impl ProcessHarnessAdapter {
             descriptor,
             spec,
             channel: None,
+            shim_task: None,
             protocol: None,
             pi: None,
             opencode: None,
@@ -2624,7 +2675,7 @@ impl ProcessHarnessAdapter {
         let protocol = self
             .protocol
             .as_ref()
-            .ok_or_else(|| HarnessAdapterError::ProcessExited)?;
+            .ok_or(HarnessAdapterError::ProcessExited)?;
         let thread_id = protocol.state.lock().await.thread_id.clone();
         if thread_id.trim().is_empty() {
             return Err(HarnessAdapterError::InvalidRequest(
@@ -2644,14 +2695,13 @@ impl ProcessHarnessAdapter {
             .get("native_session_id")
             .and_then(Value::as_str)
             .is_none()
+            && let Some(protocol) = &self.protocol
         {
-            if let Some(protocol) = &self.protocol {
-                let thread_id = protocol.state.lock().await.thread_id.clone();
-                if !thread_id.trim().is_empty() {
-                    request
-                        .extensions
-                        .insert("native_session_id".to_owned(), Value::String(thread_id));
-                }
+            let thread_id = protocol.state.lock().await.thread_id.clone();
+            if !thread_id.trim().is_empty() {
+                request
+                    .extensions
+                    .insert("native_session_id".to_owned(), Value::String(thread_id));
             }
         }
         request
@@ -3024,6 +3074,85 @@ impl ProcessHarnessAdapter {
         Ok(Box::pin(tokio_stream::iter(items)))
     }
 
+    async fn shim_attempt_stream(
+        &mut self,
+        operation: AttemptOperation,
+        request: HarnessSessionRequest,
+        attempt_id: &str,
+        prompt: &str,
+        native_session_id: Option<&str>,
+    ) -> Result<HarnessExecutionStream, HarnessAdapterError> {
+        if !matches!(
+            operation,
+            AttemptOperation::Start | AttemptOperation::Execute | AttemptOperation::Resume
+        ) {
+            return self
+                .compatibility_attempt_stream(
+                    operation,
+                    request,
+                    attempt_id,
+                    prompt,
+                    native_session_id,
+                )
+                .await;
+        }
+        if attempt_id.trim().is_empty() || prompt.trim().is_empty() {
+            return Err(HarnessAdapterError::InvalidRequest(
+                "shim attempt id and prompt are required".to_owned(),
+            ));
+        }
+        if let Some(native_session_id) = native_session_id {
+            self.validate_shim_session(request.session_id, native_session_id)?;
+        }
+        if self
+            .shim_task
+            .as_ref()
+            .is_some_and(|task| !task.is_finished())
+        {
+            return Err(HarnessAdapterError::InvalidRequest(
+                "a shim attempt is already active".to_owned(),
+            ));
+        }
+        let mut adapter = ProcessHarnessAdapter::new(self.spec.clone());
+        adapter.pending_portable_imports = Arc::clone(&self.pending_portable_imports);
+        let attempt_id = attempt_id.to_owned();
+        let prompt = prompt.to_owned();
+        let native_session_id = native_session_id.map(str::to_owned);
+        let (sender, receiver) = tokio::sync::mpsc::channel(64);
+        self.shim_task = Some(tokio::spawn(async move {
+            let result = tokio::select! {
+                result = adapter.execute(request, &attempt_id, &prompt, native_session_id.as_deref()) => result,
+                _ = sender.closed() => return,
+            };
+            let _ = adapter.terminate().await;
+            match result {
+                Ok(execution) => {
+                    for event in execution.events {
+                        if sender
+                            .send(Ok(HarnessExecutionItem::Event(event)))
+                            .await
+                            .is_err()
+                        {
+                            return;
+                        }
+                    }
+                    let _ = sender
+                        .send(Ok(HarnessExecutionItem::Completed {
+                            final_text: execution.final_text,
+                            usage: execution.usage,
+                        }))
+                        .await;
+                }
+                Err(error) => {
+                    let _ = sender.send(Err(error)).await;
+                }
+            }
+        }));
+        Ok(Box::pin(tokio_stream::wrappers::ReceiverStream::new(
+            receiver,
+        )))
+    }
+
     async fn ensure_channel(&mut self) -> Result<(), HarnessAdapterError> {
         if self.channel.is_some() {
             return Ok(());
@@ -3035,6 +3164,10 @@ impl ProcessHarnessAdapter {
         }
         let mut command = Command::new(&self.spec.executable);
         command.args(&self.spec.args);
+        #[cfg(unix)]
+        if self.uses_openai_compatible_shim() {
+            command.process_group(0);
+        }
         apply_isolated_environment(&mut command, &self.spec.environment);
         command
             .stdin(Stdio::piped())
@@ -3128,6 +3261,10 @@ impl ProcessHarnessAdapter {
     }
 
     async fn terminate(&mut self) -> Result<(), HarnessAdapterError> {
+        if let Some(task) = self.shim_task.take() {
+            task.abort();
+            let _ = task.await;
+        }
         if let Some(opencode) = self.opencode.take() {
             opencode.runtime.shutdown().await?;
         }
@@ -3149,12 +3286,17 @@ impl ProcessHarnessAdapter {
                 .map_err(classify_protocol_error)?;
         }
         if let Some(mut channel) = self.channel.take() {
-            channel
-                .child
-                .kill()
-                .await
-                .map_err(HarnessAdapterError::Io)?;
-            let _ = channel.child.wait().await;
+            if self.uses_openai_compatible_shim() {
+                request_shim_shutdown(&channel.child);
+                reap_shim_child(channel.child).await;
+            } else {
+                channel
+                    .child
+                    .kill()
+                    .await
+                    .map_err(HarnessAdapterError::Io)?;
+                let _ = channel.child.wait().await;
+            }
         }
         self.pending_portable_imports
             .lock()
@@ -3208,7 +3350,8 @@ impl HarnessAdapter for ProcessHarnessAdapter {
     }
 
     fn supports_concurrent_streaming(&self) -> bool {
-        self.uses_protocol_runtime()
+        self.uses_openai_compatible_shim()
+            || self.uses_protocol_runtime()
             || self.uses_opencode_runtime()
             || self.uses_openhands_runtime()
             || self.uses_openharness_runtime()
@@ -3539,19 +3682,11 @@ impl HarnessAdapter for ProcessHarnessAdapter {
             let prompt = native_session_id
                 .map(|native_session_id| self.prompt_for_native_session(native_session_id, prompt))
                 .unwrap_or_else(|| prompt.to_owned());
-            if native_session_id.is_some() {
-                self.mark_portable_import_applied(
-                    native_session_id.expect("checked for shim prompt translation"),
-                );
+            if let Some(native_session_id) = native_session_id {
+                self.mark_portable_import_applied(native_session_id);
             }
             return self
-                .execute_operation(
-                    "execute",
-                    request,
-                    attempt_id,
-                    &prompt,
-                    native_session_id,
-                )
+                .execute_operation("execute", request, attempt_id, &prompt, native_session_id)
                 .await;
         }
         if self.uses_protocol_runtime() {
@@ -3622,7 +3757,10 @@ impl HarnessAdapter for ProcessHarnessAdapter {
         native_session_id: Option<&str>,
     ) -> Result<HarnessExecutionStream, HarnessAdapterError> {
         let model_binding = self.model_binding_event(operation, &request);
-        let stream = if self.uses_protocol_runtime() {
+        let stream = if self.uses_openai_compatible_shim() {
+            self.shim_attempt_stream(operation, request, attempt_id, prompt, native_session_id)
+                .await?
+        } else if self.uses_protocol_runtime() {
             self.protocol_attempt_stream(operation, request, attempt_id, prompt, native_session_id)
                 .await?
         } else if self.uses_pi_runtime() {
@@ -3910,17 +4048,16 @@ impl HarnessAdapter for ProcessHarnessAdapter {
             let request = self.protocol_request_with_state(&request).await;
             self.protocol_session_command(SessionOperation::Delete, &request)
                 .await?;
-            if let Some(protocol) = &self.protocol {
-                if let Some(thread_id) = request
+            if let Some(protocol) = &self.protocol
+                && let Some(thread_id) = request
                     .extensions
                     .get("native_session_id")
                     .and_then(Value::as_str)
-                {
-                    protocol.states.lock().await.remove(thread_id);
-                    let mut current = protocol.state.lock().await;
-                    if current.thread_id == thread_id {
-                        *current = NativeTurnState::new("");
-                    }
+            {
+                protocol.states.lock().await.remove(thread_id);
+                let mut current = protocol.state.lock().await;
+                if current.thread_id == thread_id {
+                    *current = NativeTurnState::new("");
                 }
             }
             return Ok(());
@@ -4200,7 +4337,10 @@ impl HarnessAdapter for ProcessHarnessAdapter {
                 self.validate_shim_session(request.session_id, native_session_id)?;
             }
             return match operation {
-                "steer" => self.execute(request, attempt_id, prompt, native_session_id).await,
+                "steer" => {
+                    self.execute(request, attempt_id, prompt, native_session_id)
+                        .await
+                }
                 "cancel" | "quiesce" => {
                     self.terminate().await?;
                     Ok(HarnessExecution {
@@ -4427,6 +4567,7 @@ pub struct OmniSoloHarnessAdapterBridge {
     run: Option<OmniSoloHarnessAdapter>,
     imported_capsule: Option<SessionCapsule>,
     provider_client: Option<OpenAiResponsesClient>,
+    local_service_route: Option<super::local_service_route::LocalServiceRoute>,
 }
 
 impl std::fmt::Debug for OmniSoloHarnessAdapterBridge {
@@ -4447,6 +4588,7 @@ impl OmniSoloHarnessAdapterBridge {
             run: None,
             imported_capsule: None,
             provider_client: None,
+            local_service_route: None,
         }
     }
 
@@ -4459,7 +4601,16 @@ impl OmniSoloHarnessAdapterBridge {
             run: None,
             imported_capsule: None,
             provider_client: Some(provider_client),
+            local_service_route: None,
         }
+    }
+
+    pub fn with_local_service_route(
+        mut self,
+        route: Option<super::local_service_route::LocalServiceRoute>,
+    ) -> Self {
+        self.local_service_route = route;
+        self
     }
 
     pub fn imported_capsule(&self) -> Option<&SessionCapsule> {
@@ -4483,7 +4634,9 @@ impl OmniSoloHarnessAdapterBridge {
             .with_session_id(request.session_id)
             .with_harness("omnisolo");
         config.attempt_id = request.attempt_id;
-        if let Some(binding) = request.local_service_bundle.as_ref()
+        if let Some(binding) = request
+            .local_service_bundle
+            .as_ref()
             .and_then(|bundle| bundle.bindings.first())
         {
             config.project_id = binding.project_id.clone();
@@ -4522,7 +4675,9 @@ impl OmniSoloHarnessAdapterBridge {
                 first.and_then(|binding| binding.workspace_id.clone()),
                 request.session_id,
                 request.task_id,
-                request.attempt_id.or_else(|| first.and_then(|binding| binding.attempt_id)),
+                request
+                    .attempt_id
+                    .or_else(|| first.and_then(|binding| binding.attempt_id)),
             );
             run.retain_local_service_references(bundle, &context)
                 .map_err(|error| HarnessAdapterError::InvalidRequest(error.to_string()))?;
@@ -4591,7 +4746,9 @@ impl HarnessAdapter for OmniSoloHarnessAdapterBridge {
                 .map_err(|error| HarnessAdapterError::Capsule(error.to_string()))?;
         self.imported_capsule = Some(capsule.clone());
         let mut request = request.with_capsule(capsule.clone());
-        if request.local_service_bundle.is_none() && !capsule.manifest.local_service_bindings.is_empty() {
+        if request.local_service_bundle.is_none()
+            && !capsule.manifest.local_service_bindings.is_empty()
+        {
             request.local_service_bundle = Some(LocalServiceBundle {
                 schema: LOCAL_SERVICE_BUNDLE_SCHEMA.to_owned(),
                 bindings: capsule.manifest.local_service_bindings.clone(),
@@ -4646,18 +4803,20 @@ impl HarnessAdapter for OmniSoloHarnessAdapterBridge {
                 "attempt id and prompt are required".to_owned(),
             ));
         }
-        if let Some(native_session_id) = native_session_id {
-            if native_session_id != Self::native_session_id(request.session_id) {
-                return Err(HarnessAdapterError::InvalidRequest(
-                    "native session id does not belong to this OmniSolo session".to_owned(),
-                ));
-            }
+        if let Some(native_session_id) = native_session_id
+            && native_session_id != Self::native_session_id(request.session_id)
+        {
+            return Err(HarnessAdapterError::InvalidRequest(
+                "native session id does not belong to this OmniSolo session".to_owned(),
+            ));
         }
         if self.run.is_none() {
             self.start_run(&request)?;
         }
         Self::retain_request_services(
-            self.run.as_mut().expect("start_run initializes the OmniSolo run"),
+            self.run
+                .as_mut()
+                .expect("start_run initializes the OmniSolo run"),
             &request,
         )?;
         if let Some(provider_client) = self.provider_client.clone() {
@@ -4668,7 +4827,7 @@ impl HarnessAdapter for OmniSoloHarnessAdapterBridge {
                 )
             })?;
             let result = provider_client
-                .execute(selection, prompt)
+                .execute_with_local_services(selection, prompt, self.local_service_route.as_ref())
                 .await
                 .map_err(|error| HarnessAdapterError::Remote(error.to_string()))?;
             let run = self
@@ -5047,17 +5206,25 @@ mod tests {
         use crate::middleware::local_services::{LocalServiceRegistry, LocalServiceScopeContext};
         let mut request = request();
         request.attempt_id = Some(Uuid::new_v4());
-        let bundle = LocalServiceRegistry::with_defaults().resolve(
-            LocalServiceScopeContext::for_attempt(
-                &request.tenant_id, Some("project-a"), Some("workspace-a"),
-                request.session_id, request.task_id, request.attempt_id,
-            ),
-        ).unwrap();
+        let bundle = LocalServiceRegistry::with_defaults()
+            .resolve(LocalServiceScopeContext::for_attempt(
+                &request.tenant_id,
+                Some("project-a"),
+                Some("workspace-a"),
+                request.session_id,
+                request.task_id,
+                request.attempt_id,
+            ))
+            .unwrap();
         request.local_service_bundle = Some(bundle.clone());
         let mut bridge = OmniSoloHarnessAdapterBridge::new(native_descriptor());
         bridge.create_session(request).await.unwrap();
-        let capsule = bridge.run.as_ref().unwrap()
-            .export_capsule("codex", Uuid::new_v4()).unwrap();
+        let capsule = bridge
+            .run
+            .as_ref()
+            .unwrap()
+            .export_capsule("codex", Uuid::new_v4())
+            .unwrap();
         assert_eq!(capsule.manifest.local_service_bindings, bundle.bindings);
         capsule.verify_integrity().unwrap();
     }
@@ -5069,23 +5236,47 @@ mod tests {
         let mut bridge = OmniSoloHarnessAdapterBridge::new(native_descriptor());
         bridge.create_session(request.clone()).await.unwrap();
         request.attempt_id = Some(Uuid::new_v4());
-        let bundle = LocalServiceRegistry::with_defaults().resolve(
-            LocalServiceScopeContext::for_attempt(
-                &request.tenant_id, Some("project-a"), Some("workspace-a"),
-                request.session_id, request.task_id, request.attempt_id,
-            ),
-        ).unwrap();
+        let bundle = LocalServiceRegistry::with_defaults()
+            .resolve(LocalServiceScopeContext::for_attempt(
+                &request.tenant_id,
+                Some("project-a"),
+                Some("workspace-a"),
+                request.session_id,
+                request.task_id,
+                request.attempt_id,
+            ))
+            .unwrap();
         request.local_service_bundle = Some(bundle.clone());
-        bridge.execute(request.clone(), &request.attempt_id.unwrap().to_string(),
-            "keep service references", None).await.unwrap();
-        let capsule = bridge.run.as_ref().unwrap()
-            .export_capsule("omnisolo", Uuid::new_v4()).unwrap();
+        bridge
+            .execute(
+                request.clone(),
+                &request.attempt_id.unwrap().to_string(),
+                "keep service references",
+                None,
+            )
+            .await
+            .unwrap();
+        let capsule = bridge
+            .run
+            .as_ref()
+            .unwrap()
+            .export_capsule("omnisolo", Uuid::new_v4())
+            .unwrap();
         assert_eq!(capsule.manifest.local_service_bindings, bundle.bindings);
         let mut imported = OmniSoloHarnessAdapterBridge::new(native_descriptor());
         request.local_service_bundle = None;
         imported.import_session(request, capsule).await.unwrap();
-        assert_eq!(imported.run.as_ref().unwrap().export_capsule("codex", Uuid::new_v4())
-            .unwrap().manifest.local_service_bindings, bundle.bindings);
+        assert_eq!(
+            imported
+                .run
+                .as_ref()
+                .unwrap()
+                .export_capsule("codex", Uuid::new_v4())
+                .unwrap()
+                .manifest
+                .local_service_bindings,
+            bundle.bindings
+        );
     }
 
     #[test]

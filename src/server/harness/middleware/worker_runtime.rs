@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::worker::{
     AttemptCommandEnvelope, SessionOperationEnvelope, WorkerControlEnvelope, WorkerControlKind,
@@ -42,6 +42,7 @@ pub struct HarnessWorkerRuntime {
     accepting_new_attempts: bool,
     operations: HashMap<uuid::Uuid, (i64, String)>,
     attempts: HashMap<uuid::Uuid, (uuid::Uuid, i64, String)>,
+    terminal_attempts: HashSet<uuid::Uuid>,
     command_fences: HashMap<uuid::Uuid, (uuid::Uuid, uuid::Uuid, i64, String)>,
     idempotency_fences: HashMap<(uuid::Uuid, String), (uuid::Uuid, i64, String)>,
 }
@@ -60,9 +61,14 @@ impl HarnessWorkerRuntime {
             accepting_new_attempts: true,
             operations: HashMap::new(),
             attempts: HashMap::new(),
+            terminal_attempts: HashSet::new(),
             command_fences: HashMap::new(),
             idempotency_fences: HashMap::new(),
         }
+    }
+
+    pub fn retire_attempt(&mut self, attempt: uuid::Uuid) {
+        self.terminal_attempts.insert(attempt);
     }
 
     pub fn health(&self) -> WorkerHealth {
@@ -72,7 +78,11 @@ impl HarnessWorkerRuntime {
             harness_id: self.harness_id.clone(),
             ready: self.ready,
             accepting_new_attempts: self.accepting_new_attempts,
-            active_attempts: self.attempts.len(),
+            active_attempts: self
+                .attempts
+                .keys()
+                .filter(|id| !self.terminal_attempts.contains(id))
+                .count(),
         }
     }
 
@@ -176,10 +186,10 @@ impl HarnessWorkerRuntime {
             if envelope.lease_generation < *generation {
                 return Err(WorkerRuntimeError::StaleLease);
             }
-            if envelope.lease_generation == *generation {
-                if *lease_id != envelope.lease_id || token != &envelope.fencing_token {
-                    return Err(WorkerRuntimeError::LeaseConflict);
-                }
+            if envelope.lease_generation == *generation
+                && (*lease_id != envelope.lease_id || token != &envelope.fencing_token)
+            {
+                return Err(WorkerRuntimeError::LeaseConflict);
             }
         }
 
@@ -204,25 +214,24 @@ impl HarnessWorkerRuntime {
             });
         }
 
-        if let Some(idempotency_key) = envelope.idempotency_key.as_deref() {
-            if let Some((lease_id, generation, token)) = self
+        if let Some(idempotency_key) = envelope.idempotency_key.as_deref()
+            && let Some((lease_id, generation, token)) = self
                 .idempotency_fences
                 .get(&(envelope.attempt_id, idempotency_key.to_owned()))
-            {
-                if envelope.lease_generation < *generation {
-                    return Err(WorkerRuntimeError::StaleLease);
-                }
-                if *lease_id == envelope.lease_id && token == &envelope.fencing_token {
-                    return Ok(WorkerReply {
-                        accepted: true,
-                        duplicate: true,
-                    });
-                }
+        {
+            if envelope.lease_generation < *generation {
+                return Err(WorkerRuntimeError::StaleLease);
+            }
+            if *lease_id == envelope.lease_id && token == &envelope.fencing_token {
                 return Ok(WorkerReply {
                     accepted: true,
                     duplicate: true,
                 });
             }
+            return Ok(WorkerReply {
+                accepted: true,
+                duplicate: true,
+            });
         }
 
         self.attempts.insert(
@@ -320,6 +329,37 @@ mod tests {
     use super::*;
     use crate::middleware::worker::{AttemptCommandKind, SessionOperationKind};
     use uuid::Uuid;
+
+    #[test]
+    fn terminal_attempts_leave_health_but_preserve_fencing() {
+        let mut runtime = HarnessWorkerRuntime::new("worker-1", "codex", "pool-1");
+        let attempt = Uuid::new_v4();
+        let lease = Uuid::new_v4();
+        let accepted = command(
+            attempt,
+            Uuid::new_v4(),
+            lease,
+            2,
+            "current",
+            AttemptCommandKind::Execute,
+        );
+        runtime.handle_attempt_command(accepted).unwrap();
+        assert_eq!(runtime.health().active_attempts, 1);
+        runtime.retire_attempt(attempt);
+        assert_eq!(runtime.health().active_attempts, 0);
+        let stale = command(
+            attempt,
+            Uuid::new_v4(),
+            lease,
+            1,
+            "stale",
+            AttemptCommandKind::Cancel,
+        );
+        assert_eq!(
+            runtime.handle_attempt_command(stale),
+            Err(WorkerRuntimeError::StaleLease)
+        );
+    }
 
     fn operation(operation_id: Uuid, generation: i64, token: &str) -> SessionOperationEnvelope {
         SessionOperationEnvelope::new(

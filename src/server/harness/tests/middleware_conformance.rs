@@ -47,12 +47,21 @@ fn native_capsule_export_preserves_validated_service_references() {
     let mut run = OmniSoloHarnessAdapter::start(
         OmniSoloRunConfig::new("tenant-a", "handoff shared services")
             .with_workspace("project-a", "workspace-a"),
-    ).unwrap();
+    )
+    .unwrap();
     let scope = LocalServiceScopeContext::for_attempt(
-        "tenant-a", Some("project-a"), Some("workspace-a"),
-        run.session().session_id, Some(run.task().task_id), Some(run.attempt().attempt_id),
+        "tenant-a",
+        Some("project-a"),
+        Some("workspace-a"),
+        run.session().session_id,
+        Some(run.task().task_id),
+        Some(run.attempt().attempt_id),
     );
-    let bundle = LocalServiceRegistry::with_defaults().resolve(scope).unwrap();
+    let bundle = LocalServiceRegistry::with_defaults()
+        .with_backend_configuration(b"selected-backend")
+        .unwrap()
+        .resolve(scope)
+        .unwrap();
     run.bind_local_services(bundle.clone()).unwrap();
     let capsule = run.export_capsule("codex", Uuid::new_v4()).unwrap();
     assert_eq!(capsule.manifest.local_service_bindings, bundle.bindings);
@@ -61,8 +70,13 @@ fn native_capsule_export_preserves_validated_service_references() {
     let mut forged = bundle.clone();
     forged.bindings[0].tenant_id = "tenant-b".to_owned();
     assert!(run.bind_local_services(forged).is_err());
-    assert_eq!(run.export_capsule("codex", Uuid::new_v4()).unwrap()
-        .manifest.local_service_bindings, bundle.bindings);
+    assert_eq!(
+        run.export_capsule("codex", Uuid::new_v4())
+            .unwrap()
+            .manifest
+            .local_service_bindings,
+        bundle.bindings
+    );
 }
 
 #[test]
@@ -456,9 +470,7 @@ fn shared_service_bindings_remain_visible_across_harnesses_without_cross_workspa
 
     let mut other_workspace = context;
     other_workspace.workspace_id = Some("workspace-other".to_owned());
-    assert!(registry
-        .validate(&first_harness, &other_workspace)
-        .is_err());
+    assert!(registry.validate(&first_harness, &other_workspace).is_err());
     let encoded = serde_json::to_string(&first_harness).unwrap();
     assert!(!encoded.contains("authority"));
     assert!(!encoded.contains("secret"));

@@ -4,11 +4,18 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
 
 rust_library(
     name = "omnisolo_harness_worker",
-    srcs = ["lib.rs"],
+    srcs = ["lib.rs", "local_services.rs", "protected_process.rs"],
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/harness:server_harness",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "@crates//:async-trait",
+        "@crates//:serde",
+        "@crates//:sha2",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:reqwest",
         "//src/server/ohc:server_ohc",
         "@crates//:axum",
         "@crates//:tokio",

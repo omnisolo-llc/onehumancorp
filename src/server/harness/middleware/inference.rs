@@ -108,6 +108,7 @@ impl OpenAiResponsesClient {
             OpenAiResponsesError::InvalidConfiguration("Responses endpoint is invalid".to_owned())
         })?;
         let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
             .timeout(request_timeout)
             .build()
             .map_err(|error| OpenAiResponsesError::Transport(error.to_string()))?;
@@ -123,50 +124,169 @@ impl OpenAiResponsesClient {
         selection: &ResolvedModelSelection,
         prompt: &str,
     ) -> Result<ProviderInferenceResult, OpenAiResponsesError> {
+        self.execute_with_local_services(selection, prompt, None)
+            .await
+    }
+
+    pub async fn execute_with_local_services(
+        &self,
+        selection: &ResolvedModelSelection,
+        prompt: &str,
+        route: Option<&super::local_service_route::LocalServiceRoute>,
+    ) -> Result<ProviderInferenceResult, OpenAiResponsesError> {
         validate_provider_selection(selection)?;
-        if prompt.trim().is_empty() {
+        if prompt.trim().is_empty() || prompt.len() > 1_048_576 {
             return Err(OpenAiResponsesError::InvalidConfiguration(
-                "prompt must be non-empty".to_owned(),
+                "prompt must be non-empty and bounded".into(),
             ));
         }
-        let mut body = json!({
-            "model": selection.model_id.trim(),
-            "input": prompt,
-            "stream": false,
-        });
-        if let Some(effort) = &selection.reasoning_effort {
-            body["reasoning"] = json!({"effort": reasoning_effort_name(effort)?});
-        }
-        if let Some(max_output_tokens) = selection.max_output_tokens {
-            body["max_output_tokens"] = Value::from(max_output_tokens);
-        }
-        let response = self
-            .client
-            .post(self.endpoint.clone())
-            .bearer_auth(&self.api_key)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|error| {
-                OpenAiResponsesError::Transport(redact_secret(&error.to_string(), &self.api_key))
+        let mut input = vec![json!({"role":"user","content":prompt})];
+        let mut total = Usage::default();
+        let mut calls = 0_usize;
+        for _ in 0..32 {
+            let mut body = json!({"model":selection.model_id.trim(),"input":input,"stream":false});
+            if route.is_none() {
+                body["input"] = json!(prompt);
+            }
+            if let Some(effort) = &selection.reasoning_effort {
+                body["reasoning"] = json!({"effort":reasoning_effort_name(effort)?});
+            }
+            if let Some(limit) = selection.max_output_tokens {
+                body["max_output_tokens"] = json!(limit);
+            }
+            if route.is_some() {
+                body["tools"] = json!([{"type":"function","name":"local_service","description":"Execute a scoped shared local-service operation. Use this tool directly instead of shell/curl. request is JSON tagged by operation: memory_write(content), memory_search(query,limit), artifact_write/workspace_write/cache_write(key,content byte array), artifact_read/workspace_read/cache_read(key), mcp_catalog(), mcp_invoke(tool,arguments object), integration_read(key tool name), integration_invoke(action tool name,arguments object), browser_navigate(url), browser_snapshot(). Only admitted capabilities succeed. Never provide scope, credentials or a URL for the service itself.","parameters":{"type":"object","properties":{"request":{"type":"string","description":"JSON object containing operation and its arguments"}},"required":["request"],"additionalProperties":false},"strict":true}]);
+            }
+            let response = self
+                .client
+                .post(self.endpoint.clone())
+                .bearer_auth(&self.api_key)
+                .json(&body)
+                .send()
+                .await
+                .map_err(|_| OpenAiResponsesError::Transport("provider request failed".into()))?;
+            let status = response.status();
+            let payload: Value = serde_json::from_slice(&bounded_inference_body(response).await?)
+                .map_err(|_| {
+                OpenAiResponsesError::InvalidResponse("provider returned invalid JSON".into())
             })?;
-        let status = response.status();
-        let payload = response.json::<Value>().await.map_err(|error| {
-            OpenAiResponsesError::InvalidResponse(redact_secret(&error.to_string(), &self.api_key))
-        })?;
-        if !status.is_success() {
-            let message = payload
-                .pointer("/error/message")
-                .and_then(Value::as_str)
-                .or_else(|| payload.get("message").and_then(Value::as_str))
-                .unwrap_or("provider rejected the request");
-            return Err(OpenAiResponsesError::Provider {
-                status: status.as_u16(),
-                message: redact_secret(message, &self.api_key),
-            });
+            if !status.is_success() {
+                return Err(OpenAiResponsesError::Provider {
+                    status: status.as_u16(),
+                    message: "provider rejected the request".into(),
+                });
+            }
+            if payload["status"] != "completed" {
+                return Err(OpenAiResponsesError::InvalidResponse(
+                    "response status must be completed".into(),
+                ));
+            }
+            total.input_tokens = total.input_tokens.saturating_add(required_provider_u64(
+                payload.pointer("/usage/input_tokens"),
+                "input tokens",
+            )?);
+            total.output_tokens = total.output_tokens.saturating_add(required_provider_u64(
+                payload.pointer("/usage/output_tokens"),
+                "output tokens",
+            )?);
+            total.cached_tokens = total.cached_tokens.saturating_add(
+                payload
+                    .pointer("/usage/input_tokens_details/cached_tokens")
+                    .and_then(Value::as_u64)
+                    .unwrap_or(0),
+            );
+            let output = payload["output"].as_array().ok_or_else(|| {
+                OpenAiResponsesError::InvalidResponse("output must be an array".into())
+            })?;
+            let function_calls: Vec<_> = output
+                .iter()
+                .filter(|item| item["type"] == "function_call")
+                .collect();
+            if function_calls.is_empty() {
+                let mut result = decode_provider_response(payload, selection)?;
+                result.usage = total;
+                return Ok(result);
+            }
+            let route = route.ok_or_else(|| {
+                OpenAiResponsesError::InvalidResponse("unavailable tool requested".into())
+            })?;
+            input.extend(output.iter().cloned());
+            for call in function_calls {
+                calls += 1;
+                if calls > 64 || call["name"] != "local_service" {
+                    return Err(OpenAiResponsesError::InvalidResponse(
+                        "unavailable tool or tool budget exceeded".into(),
+                    ));
+                }
+                let call_id = required_provider_string(call.get("call_id"), "tool call id")?;
+                let arguments: Value =
+                    serde_json::from_str(call["arguments"].as_str().ok_or_else(|| {
+                        OpenAiResponsesError::InvalidResponse("invalid tool arguments".into())
+                    })?)
+                    .map_err(|_| {
+                        OpenAiResponsesError::InvalidResponse("invalid tool arguments".into())
+                    })?;
+                let operation: super::local_service_gateway::LocalServiceOperation =
+                    serde_json::from_str(arguments["request"].as_str().ok_or_else(|| {
+                        OpenAiResponsesError::InvalidResponse("invalid service operation".into())
+                    })?)
+                    .map_err(|_| {
+                        OpenAiResponsesError::InvalidResponse("invalid service operation".into())
+                    })?;
+                let response = self
+                    .client
+                    .post(format!("{}/operations", route.base_url()))
+                    .bearer_auth(route.token())
+                    .json(&operation)
+                    .send()
+                    .await
+                    .map_err(|_| {
+                        OpenAiResponsesError::Transport("local service request failed".into())
+                    })?;
+                if !response.status().is_success() {
+                    return Err(OpenAiResponsesError::InvalidResponse(
+                        "local service rejected operation".into(),
+                    ));
+                }
+                let bytes = bounded_inference_body(response).await?;
+                let value: Value = serde_json::from_slice(&bytes).map_err(|_| {
+                    OpenAiResponsesError::InvalidResponse("invalid service response".into())
+                })?;
+                input.push(json!({"type":"function_call_output","call_id":call_id,"output":value.to_string()}));
+            }
+            if serde_json::to_vec(&input)
+                .map_err(|_| OpenAiResponsesError::InvalidResponse("invalid conversation".into()))?
+                .len()
+                > 8 * 1024 * 1024
+            {
+                return Err(OpenAiResponsesError::InvalidResponse(
+                    "tool conversation exceeds limit".into(),
+                ));
+            }
         }
-        decode_provider_response(payload, selection)
+        Err(OpenAiResponsesError::InvalidResponse(
+            "tool round budget exceeded".into(),
+        ))
     }
+}
+
+async fn bounded_inference_body(
+    mut response: reqwest::Response,
+) -> Result<Vec<u8>, OpenAiResponsesError> {
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|_| OpenAiResponsesError::Transport("response body failed".into()))?
+    {
+        if bytes.len().saturating_add(chunk.len()) > 20 * 1024 * 1024 {
+            return Err(OpenAiResponsesError::InvalidResponse(
+                "response exceeds limit".into(),
+            ));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    Ok(bytes)
 }
 
 fn validate_provider_selection(
@@ -226,11 +346,13 @@ fn decode_provider_response(
         };
         for part in content {
             if part.get("type").and_then(Value::as_str) == Some("output_text") {
-                text.push_str(required_provider_string(part.get("text"), "output text")?);
+                text.push_str(part.get("text").and_then(Value::as_str).ok_or_else(|| {
+                    OpenAiResponsesError::InvalidResponse("output text must be a string".into())
+                })?);
             }
         }
     }
-    if text.is_empty() {
+    if text.trim().is_empty() {
         return Err(OpenAiResponsesError::InvalidResponse(
             "response contained no output text".to_owned(),
         ));
@@ -316,10 +438,6 @@ fn sanitize_provider_json(value: &Value) -> Value {
         Value::Array(values) => Value::Array(values.iter().map(sanitize_provider_json).collect()),
         other => other.clone(),
     }
-}
-
-fn redact_secret(message: &str, secret: &str) -> String {
-    message.replace(secret, "[REDACTED]")
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
@@ -1683,5 +1801,97 @@ mod tests {
         fn admission_mut_for_test(&mut self, admission_id: Uuid) -> &mut InferenceAdmission {
             self.admissions.get_mut(&admission_id).unwrap()
         }
+    }
+}
+
+#[cfg(test)]
+mod local_service_tool_tests {
+    use super::super::{
+        local_service_gateway::{LocalServiceGateway, SqliteAgentMemoryBackend},
+        local_service_route::LocalServiceListener,
+        local_services::{LocalServiceKind, LocalServiceRegistry, LocalServiceScopeContext},
+    };
+    use super::*;
+    use axum::{Json, Router, extract::State, routing::post};
+    use std::sync::Arc;
+    #[tokio::test]
+    async fn native_provider_tool_loop_executes_scoped_operation_and_accounts_every_round() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::query(
+            "CREATE VIRTUAL TABLE agent_memory USING fts5(content,tags,created_at UNINDEXED)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let mut gateway = LocalServiceGateway::new(LocalServiceRegistry::with_defaults());
+        gateway.register(
+            LocalServiceKind::Memory,
+            Arc::new(SqliteAgentMemoryBackend::new(pool.clone())),
+        );
+        let scope = LocalServiceScopeContext::new(
+            "tenant",
+            Some("project".into()),
+            Some("workspace".into()),
+            Uuid::new_v4(),
+            None,
+            Some(Uuid::new_v4()),
+        );
+        let bundle = gateway.resolve(scope.clone()).unwrap();
+        let listener = LocalServiceListener::start(Arc::new(gateway), bundle, scope)
+            .await
+            .unwrap();
+        let seen = Arc::new(tokio::sync::Mutex::new(Vec::<Value>::new()));
+        let app=Router::new().route("/v1/responses",post(|State(seen):State<Arc<tokio::sync::Mutex<Vec<Value>>>>,Json(body):Json<Value>|async move {
+            let mut seen=seen.lock().await;
+            let first=seen.is_empty(); seen.push(body);
+            Json(if first {json!({"id":"response1","model":"test-model","status":"completed","usage":{"input_tokens":3,"output_tokens":2},"output":[{"type":"function_call","call_id":"call1","name":"local_service","arguments":json!({"request":json!({"operation":"memory_write","content":"native-tool-sentinel"}).to_string()}).to_string()}]})}
+            else {json!({"id":"response2","model":"test-model","status":"completed","usage":{"input_tokens":5,"output_tokens":4},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Stored\nverified"}]}]})})
+        })).with_state(seen.clone());
+        let tcp = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = tcp.local_addr().unwrap();
+        let task = tokio::spawn(async move { axum::serve(tcp, app).await.unwrap() });
+        let client = OpenAiResponsesClient::new(
+            format!("http://{addr}/v1"),
+            "fixture-key",
+            Duration::from_secs(3),
+        )
+        .unwrap();
+        let selection = ResolvedModelSelection {
+            provider_route: "fixture".into(),
+            model_id: "test-model".into(),
+            reasoning_effort: None,
+            api_dialect: ModelApiDialect::OpenAiResponses,
+            context_window: None,
+            max_output_tokens: Some(100),
+            capabilities: BTreeSet::new(),
+            binding_revision: "v1".into(),
+            binding_digest: "sha256:test".into(),
+            metadata: Default::default(),
+        };
+        let result = client
+            .execute_with_local_services(&selection, "Remember sentinel", Some(listener.route()))
+            .await
+            .unwrap();
+        assert_eq!(result.text, "Stored\nverified");
+        assert_eq!(result.usage.input_tokens, 8);
+        assert_eq!(result.usage.output_tokens, 6);
+        let count: (i64,) = sqlx::query_as(
+            "SELECT count(*) FROM agent_memory WHERE content='native-tool-sentinel'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(count.0, 1);
+        let requests = seen.lock().await;
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[0]["tools"][0]["name"], "local_service");
+        assert_eq!(requests[1]["input"][2]["type"], "function_call_output");
+        drop(requests);
+        listener.shutdown().await.unwrap();
+        task.abort();
     }
 }

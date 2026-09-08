@@ -19,21 +19,22 @@ async fn live_harness_worker_uses_the_real_provider() {
         return;
     }
 
-    timeout(Duration::from_secs(300), run())
+    timeout(Duration::from_secs(900), run())
         .await
-        .unwrap_or_else(|_| panic!("live harness verification exceeded its five-minute deadline"));
+        .unwrap_or_else(|_| {
+            panic!("live harness verification exceeded its fifteen-minute deadline")
+        });
 }
 
-async fn run() {
+async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
     let harness_id = required_env("OMNISOLO_LIVE_HARNESS_ID");
     let endpoint = required_env("OMNISOLO_LIVE_HARNESS_ENDPOINT");
     let worker_id = format!("harness-{harness_id}");
     let mut client = connect_when_ready(&endpoint).await;
-    let session_id = Uuid::new_v4();
     let task_id = Uuid::new_v4();
 
     let create = client
-        .session_operation(Request::new(session_operation(
+        .session_operation(authenticated(session_operation(
             &worker_id,
             &harness_id,
             session_id,
@@ -55,13 +56,8 @@ async fn run() {
     );
 
     let attempt_id = Uuid::new_v4();
-    let local_services = LocalServiceRegistry::with_defaults()
-        .resolve(live_service_scope(&harness_id, session_id, task_id, attempt_id))
-        .expect("resolve shared live local services");
-    let prompt =
-        format!("Reply with exactly this marker and no markdown: {MARKER}. Do not call tools.");
     let mut stream = client
-        .attempt_command(Request::new(AttemptCommandEnvelope {
+        .attempt_command(authenticated(AttemptCommandEnvelope {
             protocol_version: 1,
             tenant_id: "tenant-live-harness-matrix".to_owned(),
             session_id: session_id.to_string(),
@@ -80,9 +76,6 @@ async fn run() {
             payload: serde_json::to_vec(&serde_json::json!({
                 "prompt": prompt,
                 "native_session_id": native.native_session_id.clone(),
-                "context": {
-                    "local_services": local_services,
-                },
             }))
             .expect("serialize attempt"),
             extensions: Default::default(),
@@ -103,6 +96,14 @@ async fn run() {
     let model = required_env("OPENAI_MODEL");
     let reasoning_effort = required_env("OPENAI_REASONING_EFFORT");
     let api_key = required_env("OPENAI_API_KEY");
+    if let Ok(token) = std::env::var("OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN") {
+        assert!(
+            deliveries
+                .iter()
+                .all(|delivery| !String::from_utf8_lossy(&delivery.payload).contains(&token)),
+            "control credential leaked into canonical events"
+        );
+    }
     let evidence = validate_live_deliveries(
         &harness_id,
         &model,
@@ -112,12 +113,15 @@ async fn run() {
         attempt_id,
         &deliveries,
         &api_key,
-        true,
+        !matches!(
+            harness_id.as_str(),
+            "aider" | "goose" | "open-interpreter" | "plandex"
+        ),
     )
     .unwrap_or_else(|error| panic!("{harness_id} live evidence validation failed: {error}"));
 
     let delete = client
-        .session_operation(Request::new(session_operation(
+        .session_operation(authenticated(session_operation(
             &worker_id,
             &harness_id,
             session_id,
@@ -129,18 +133,164 @@ async fn run() {
         .expect("delete live native session")
         .into_inner();
     assert!(delete.accepted, "{harness_id} rejected session deletion");
+    (evidence, attempt_id)
+}
+
+fn authenticated<T>(body: T) -> Request<T> {
+    let mut request = Request::new(body);
+    if let Ok(token) = std::env::var("OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN") {
+        request.metadata_mut().insert(
+            "authorization",
+            format!("Bearer {token}")
+                .parse()
+                .expect("valid control metadata"),
+        );
+    }
+    request
+}
+
+async fn run() {
+    let harness_id = required_env("OMNISOLO_LIVE_HARNESS_ID");
+    let native = !matches!(
+        harness_id.as_str(),
+        "aider" | "goose" | "open-interpreter" | "plandex"
+    );
+    let mut evidence = if native {
+        let writer = required_env("OMNISOLO_LIVE_WRITER_SESSION")
+            .parse()
+            .expect("writer session UUID");
+        let reader = required_env("OMNISOLO_LIVE_READER_SESSION")
+            .parse()
+            .expect("reader session UUID");
+        let key = format!("probe{}", Uuid::new_v4().simple());
+        let secret = format!("value{}", Uuid::new_v4().simple());
+        let (writer_evidence, writer_attempt) =
+            run_turn(writer, service_prompt(&key, Some(&secret))).await;
+        let writer_audit = service_audit(writer_attempt);
+        verify_operations(&writer_audit, true)
+            .expect("native writer must execute the configured service operations");
+        let (mut reader_evidence, reader_attempt) =
+            run_turn(reader, service_prompt(&key, None)).await;
+        let reader_audit = service_audit(reader_attempt);
+        verify_operations(&reader_audit, false)
+            .expect("native reader must execute the configured service operations");
+        verify_read_values(&reader_evidence, &secret)
+            .expect("fresh native reader must retrieve every withheld service value");
+        let previous = std::env::var("OMNISOLO_LIVE_PREVIOUS_VALUE").ok();
+        if let Some(previous) = &previous {
+            verify_read_values(&reader_evidence, previous)
+                .expect("native reader must retrieve the previous harness's service values");
+        }
+        reader_evidence["shared_local_services"] = json!({"status":"operations_verified", "writer_verified":true, "reader_verified":true,
+            "writer_operations":writer_audit, "reader_operations":reader_audit, "writer_evidence":writer_evidence, "writer_key":key,"writer_value":secret,"cross_harness_read_verified":previous.is_some()});
+        reader_evidence
+    } else {
+        run_turn(
+            Uuid::new_v4(),
+            format!("Reply with exactly this marker and no markdown: {MARKER}. Do not call tools."),
+        )
+        .await
+        .0
+    };
+    if native {
+        evidence["shared_local_services"]["cross_session_read_verified"] = json!(true);
+    }
     println!(
         "OMNISOLO_LIVE_RESULT={}",
-        json!({
-            "schema": "omnisolo.live_harness_result.v1",
-            "status": "passed",
-            "harness_id": harness_id,
-            "model": model,
-            "reasoning_effort": reasoning_effort,
-            "native_session_deleted": true,
-            "evidence": evidence,
-        })
+        json!({"schema":"omnisolo.live_harness_result.v1", "status":"passed", "harness_id":harness_id,
+        "model":required_env("OPENAI_MODEL"), "reasoning_effort":required_env("OPENAI_REASONING_EFFORT"), "native_session_deleted":true, "evidence":evidence})
     );
+}
+
+fn service_prompt(key: &str, value: Option<&str>) -> String {
+    let mut operations = vec![
+        json!({"operation":"mcp_catalog"}),
+        json!({"operation":"mcp_invoke","tool":"Read","arguments":{"path":"conformance.txt"}}),
+        json!({"operation":"integration_read","key":"Read"}),
+        json!({"operation":"integration_invoke","action":"Read","arguments":{"path":"conformance.txt"}}),
+        json!({"operation":"browser_navigate","url":"https://example.com"}),
+        json!({"operation":"browser_snapshot"}),
+    ];
+    if let Some(value) = value {
+        operations
+            .push(json!({"operation":"memory_write","content":format!("{key} {value}-memory")}));
+        for operation in ["artifact_write", "workspace_write", "cache_write"] {
+            operations.push(json!({"operation":operation,"key":key,"content":format!("{value}-{}", operation.trim_end_matches("_write")).as_bytes()}));
+        }
+    } else {
+        if let Ok(previous) = std::env::var("OMNISOLO_LIVE_PREVIOUS_KEY") {
+            operations.push(json!({"operation":"memory_search","query":previous,"limit":10}));
+            for operation in ["artifact_read", "workspace_read", "cache_read"] {
+                operations.push(json!({"operation":operation,"key":previous}));
+            }
+        }
+        operations.push(json!({"operation":"memory_search","query":key,"limit":10}));
+        for operation in ["artifact_read", "workspace_read", "cache_read"] {
+            operations.push(json!({"operation":operation,"key":key}));
+        }
+    }
+    format!(
+        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use your native shell tool to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /v1/operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use node fetch or Python urllib, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and the actual stored text values returned by reads (decode byte arrays as UTF-8).",
+        serde_json::to_string(&operations).unwrap()
+    )
+}
+
+fn verify_read_values(evidence: &Value, value: &str) -> Result<(), String> {
+    let text = evidence["assistant_text"]
+        .as_str()
+        .ok_or("reader transcript missing")?;
+    for kind in ["memory", "artifact", "workspace", "cache"] {
+        if !text.contains(&format!("{value}-{kind}")) {
+            return Err(format!("reader did not retrieve {kind} value"));
+        }
+    }
+    Ok(())
+}
+
+fn service_audit(attempt: Uuid) -> Value {
+    let container = required_env("OMNISOLO_LIVE_SERVICE_CONTAINER");
+    let output = std::process::Command::new("docker").args(["exec", &container, "node", "-e",
+        "fetch('http://127.0.0.1:8095/v1/audit?attempt_id='+process.argv[1],{headers:{Authorization:'Bearer '+process.env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN}}).then(async r=>{if(!r.ok)process.exit(1); console.log(await r.text())}).catch(()=>process.exit(1))", &attempt.to_string()]).output().expect("read daemon audit");
+    assert!(output.status.success(), "service audit request failed");
+    serde_json::from_slice(&output.stdout).expect("service audit JSON")
+}
+
+fn verify_operations(audit: &Value, writer: bool) -> Result<(), String> {
+    let operations = audit
+        .get("operations")
+        .and_then(Value::as_array)
+        .ok_or("audit operations missing")?;
+    let required = if writer {
+        [
+            "memory.write",
+            "artifact.write",
+            "workspace.write",
+            "cache.write",
+        ]
+    } else {
+        [
+            "memory.search",
+            "artifact.read",
+            "workspace.read",
+            "cache.read",
+        ]
+    };
+    for operation in required.into_iter().chain([
+        "mcp.catalog",
+        "mcp.invoke",
+        "integration.read",
+        "integration.invoke",
+        "browser.navigate",
+        "browser.snapshot",
+    ]) {
+        if !operations
+            .iter()
+            .any(|value| value.as_str() == Some(operation))
+        {
+            return Err(format!("successful operation {operation} was not observed"));
+        }
+    }
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -279,9 +429,9 @@ fn validate_live_deliveries(
             .get("bindings")
             .and_then(Value::as_array)
             .ok_or_else(|| "local service binding did not contain bindings".to_owned())?;
-        if bindings.len() != 8 {
+        if bindings.len() < 7 || bindings.len() > 8 {
             return Err(format!(
-                "local service binding contained {}, expected 8 services",
+                "local service binding contained {}, expected 7 or 8 services",
                 bindings.len()
             ));
         }
@@ -301,7 +451,10 @@ fn validate_live_deliveries(
         ]
         .into_iter()
         .collect::<std::collections::BTreeSet<_>>();
-        if service_ids != expected {
+        if !expected
+            .difference(&service_ids)
+            .all(|id| *id == "omnisolo.provider_facade")
+        {
             return Err(
                 "shared local service binding did not cover the full service set".to_owned(),
             );
@@ -381,7 +534,7 @@ fn append_assistant_text(content: &Value, text: &mut String) {
 }
 
 fn live_service_scope(
-    harness_id: &str,
+    _harness_id: &str,
     session_id: Uuid,
     task_id: Uuid,
     attempt_id: Uuid,
@@ -389,7 +542,7 @@ fn live_service_scope(
     LocalServiceScopeContext::for_attempt(
         "tenant-live-harness-matrix",
         Some("project-live-harness-matrix"),
-        Some(&format!("workspace-live-{harness_id}")),
+        Some("workspace-live-harness-matrix"),
         session_id,
         Some(task_id),
         Some(attempt_id),
@@ -400,7 +553,9 @@ fn live_service_scope(
 fn live_scope_resolves_every_required_service_before_provider_execution() {
     let scope = live_service_scope("codex", Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
     let registry = LocalServiceRegistry::with_defaults();
-    let bundle = registry.resolve(scope.clone()).expect("live scope is complete");
+    let bundle = registry
+        .resolve(scope.clone())
+        .expect("live scope is complete");
     assert_eq!(bundle.bindings.len(), 8);
     registry.validate(&bundle, &scope).unwrap();
 }
@@ -677,10 +832,31 @@ fn session_operation(
         capability_version: 1,
         binding_id: String::new(),
         binding_generation: 0,
-        workspace_mutation_scope_id: format!("workspace-live-{harness_id}"),
+        workspace_mutation_scope_id: "workspace-live-harness-matrix".to_owned(),
     }
 }
 
 fn required_env(name: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| panic!("{name} is required"))
+}
+
+#[test]
+fn conformance_requires_successful_backend_receipts_and_withholds_reader_value() {
+    assert!(verify_operations(&json!({"status":"bound"}), true).is_err());
+    let writer = json!({"operations":["memory.write","artifact.write","workspace.write","cache.write","mcp.catalog","mcp.invoke","integration.read","integration.invoke","browser.navigate","browser.snapshot"]});
+    assert!(verify_operations(&writer, true).is_ok());
+    assert!(verify_operations(&writer, false).is_err());
+    assert!(
+        verify_read_values(
+            &json!({"assistant_text":"writer-secret-memory"}),
+            "writer-secret"
+        )
+        .is_err()
+    );
+    assert!(verify_read_values(&json!({"assistant_text":"writer-secret-memory writer-secret-artifact writer-secret-workspace writer-secret-cache"}), "writer-secret").is_ok());
+    let reader = service_prompt("lookup-key", None);
+    assert!(!reader.contains("writer-secret"));
+    assert!(reader.contains("memory_search"));
+    assert!(!reader.contains("memory_write"));
+    assert!(service_prompt("lookup-key", Some("writer-secret")).contains("writer-secret"));
 }

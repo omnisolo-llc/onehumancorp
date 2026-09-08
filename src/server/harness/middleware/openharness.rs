@@ -86,6 +86,8 @@ impl OpenHarnessResolvedModel {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+// Keep owned payloads in this established public protocol representation.
+#[allow(clippy::large_enum_variant)]
 pub enum OpenHarnessCommand {
     CreateSession {
         id: String,

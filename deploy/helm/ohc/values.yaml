@@ -200,6 +200,10 @@ valkey:
     runAsUser: 1000
   service:
     port: 6379
+# Optional per-worker localServices: {image: omnisolo/harness-local-services:local,
+# configMap: admitted-service-config, dataClaim: selected-service-data,
+# controlSecretName: worker-control, controlSecretKey: token}.
+# ConfigMap must contain configuration.json; data PVC is mounted only in daemon at /services.
 harnessWorkers:
   enabled: false
   image: omnisolo/harness-worker:0.1.0
@@ -422,6 +426,10 @@ harnessWorkers:
       harnessId: plandex
       poolId: plandex
       image: omnisolo/harness-worker-plandex:2.2.1
+      plandexServer:
+        image: omnisolo/plandex-server:2.2.1
+        databaseSecretName: plandex-database
+        databaseSecretKey: database-url
       replicas: 1
       autoscaling:
         enabled: false

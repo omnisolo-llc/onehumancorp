@@ -149,6 +149,31 @@ impl SqliteMemoryStore {
 
 #[async_trait]
 impl LongTermMemory for SqliteMemoryStore {
+    fn service_configuration_identity(&self) -> String {
+        format!(
+            "sqlite-fts5:{}",
+            self.pool.connect_options().get_filename().to_string_lossy()
+        )
+    }
+
+    fn supports_scoped_services(&self) -> bool {
+        true
+    }
+    async fn store_scoped(&self, namespace: &str, content: &str) -> Result<(), String> {
+        self.store(content, vec![format!("omnisolo.scope:{namespace}")])
+            .await
+    }
+    async fn retrieve_scoped(
+        &self,
+        namespace: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<String>, String> {
+        let rows:Vec<(String,)> = sqlx::query_as("SELECT content FROM agent_memory WHERE EXISTS (SELECT 1 FROM json_each(agent_memory.tags) WHERE value=?) AND instr(lower(content),lower(?))>0 ORDER BY rowid DESC LIMIT ?")
+            .bind(format!("omnisolo.scope:{namespace}")).bind(query).bind(limit.min(1000) as i64)
+            .fetch_all(&self.pool).await.map_err(|error|error.to_string())?;
+        Ok(rows.into_iter().map(|row| row.0).collect())
+    }
     async fn search_cross_session_messages(
         &self,
         query: &str,

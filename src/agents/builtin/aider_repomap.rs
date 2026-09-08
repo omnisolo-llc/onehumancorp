@@ -38,38 +38,33 @@ impl RepoMap {
         for line in content.lines() {
             let trimmed = line.trim();
             match ext {
-                "rs" => {
-                    if trimmed.starts_with("fn ")
-                        || trimmed.starts_with("pub fn ")
-                        || trimmed.starts_with("pub(crate) fn ")
-                        || trimmed.starts_with("struct ")
-                        || trimmed.starts_with("pub struct ")
-                        || trimmed.starts_with("impl ")
-                        || trimmed.starts_with("trait ")
-                        || trimmed.starts_with("pub trait ")
-                        || trimmed.starts_with("enum ")
-                        || trimmed.starts_with("pub enum ")
-                    {
-                        signatures.push(trimmed.to_string());
-                    }
+                "rs" if (trimmed.starts_with("fn ")
+                    || trimmed.starts_with("pub fn ")
+                    || trimmed.starts_with("pub(crate) fn ")
+                    || trimmed.starts_with("struct ")
+                    || trimmed.starts_with("pub struct ")
+                    || trimmed.starts_with("impl ")
+                    || trimmed.starts_with("trait ")
+                    || trimmed.starts_with("pub trait ")
+                    || trimmed.starts_with("enum ")
+                    || trimmed.starts_with("pub enum ")) =>
+                {
+                    signatures.push(trimmed.to_string());
                 }
-                "go" => {
-                    if trimmed.starts_with("func ") || trimmed.starts_with("type ") {
-                        signatures.push(trimmed.to_string());
-                    }
+                "go" if (trimmed.starts_with("func ") || trimmed.starts_with("type ")) => {
+                    signatures.push(trimmed.to_string());
                 }
-                "ts" | "js" => {
-                    if trimmed.starts_with("class ")
+                "ts" | "js"
+                    if (trimmed.starts_with("class ")
                         || trimmed.starts_with("export class ")
                         || trimmed.starts_with("function ")
                         || trimmed.starts_with("export function ")
                         || trimmed.starts_with("interface ")
                         || trimmed.starts_with("export interface ")
                         || trimmed.starts_with("type ")
-                        || trimmed.starts_with("export type ")
-                    {
-                        signatures.push(trimmed.to_string());
-                    }
+                        || trimmed.starts_with("export type ")) =>
+                {
+                    signatures.push(trimmed.to_string());
                 }
                 _ => {}
             }

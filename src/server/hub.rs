@@ -43,6 +43,8 @@ pub struct Hub {
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub pool: sqlx::PgPool,
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
+    execution_measurements:
+        RwLock<HashMap<String, crate::api::agent_metrics::ExecutionMeasurements>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
     referral_tracker: Arc<crate::services::growth::referrals::ReferralTracker>,
 }
@@ -118,6 +120,7 @@ impl Hub {
             telemetry_tx: telemetry_tx.clone(),
             agents: RwLock::new(HashMap::new()),
             agent_cache: RwLock::new(None),
+            execution_measurements: RwLock::new(HashMap::new()),
             meetings: RwLock::new(HashMap::new()),
             meetings_cache: RwLock::new(None),
             inbox: RwLock::new(HashMap::new()),
@@ -303,12 +306,11 @@ impl Hub {
     pub async fn publish(self: std::sync::Arc<Self>, msg: Message) -> Result<(), String> {
         // Check rate limiting BEFORE acquiring locks, since the warning publish recurses into publish()
         if msg.from_agent != "system-scheduler" && msg.r#type != "warning" {
-            let tenant_id = msg
-                .to_agent
-                .split("-")
-                .next()
-                .unwrap_or("default")
-                .to_string();
+            let tenant_id = self
+                .get_agent(&msg.to_agent)
+                .await
+                .map(|agent| agent.organization_id)
+                .unwrap_or_else(|| "default".to_owned());
             let agent_id = msg.to_agent.clone();
             let meeting_id = msg.meeting_id.clone();
             let tracker = self.tracker.clone();
@@ -482,6 +484,48 @@ impl Hub {
         arc
     }
 
+    pub(crate) async fn record_agent_execution(
+        &self,
+        id: &str,
+        duration: std::time::Duration,
+        failed: bool,
+    ) {
+        self.execution_measurements
+            .write()
+            .await
+            .entry(id.to_owned())
+            .or_default()
+            .record(duration, failed);
+    }
+
+    pub(crate) async fn agent_measurements(
+        &self,
+        id: &str,
+    ) -> (crate::api::agent_metrics::ExecutionMeasurements, usize) {
+        let sample = self
+            .execution_measurements
+            .read()
+            .await
+            .get(id)
+            .cloned()
+            .unwrap_or_default();
+        let connections = self
+            .subs
+            .read()
+            .await
+            .get(id)
+            .map_or(0, broadcast::Sender::receiver_count);
+        (sample, connections)
+    }
+
+    pub(crate) async fn remove_transient_agent(&self, id: &str) {
+        self.agents.write().await.remove(id);
+        self.inbox.write().await.remove(id);
+        self.subs.write().await.remove(id);
+        self.execution_measurements.write().await.remove(id);
+        self.invalidate_agent_cache().await;
+    }
+
     pub async fn get_inbox(&self, agent_id: &str) -> Vec<Message> {
         let mut inbox = self.inbox.write().await;
         inbox.remove(agent_id).unwrap_or_default()
@@ -504,11 +548,19 @@ impl Hub {
     ) -> Result<(), String> {
         check_documentation_gate(&task.content)?;
 
-        if !self.agents.read().await.contains_key(&from_agent_id) {
-            return Err("sender agent is not registered".to_string());
-        }
-        if !self.agents.read().await.contains_key(&to_agent_id) {
-            return Err("recipient agent is not registered".to_string());
+        {
+            let agents = self.agents.read().await;
+            let sender = agents
+                .get(&from_agent_id)
+                .ok_or("sender agent is not registered")?;
+            let recipient = agents
+                .get(&to_agent_id)
+                .ok_or("recipient agent is not registered")?;
+            if sender.organization_id.is_empty()
+                || sender.organization_id != recipient.organization_id
+            {
+                return Err("delegation crosses organization boundary".into());
+            }
         }
 
         task.from_agent = from_agent_id;
@@ -526,70 +578,38 @@ impl Hub {
     ) -> Result<String, String> {
         check_documentation_gate(instruction)?;
 
-        let mut agents = self.agents.write().await;
-
-        if !agents.contains_key(from_agent_id) {
-            return Err("sender agent is not registered".to_string());
-        }
-
-        if agents.len() >= 10 {
-            // Soft limit: allow even if VRAM limit is exceeded
-            tracing::warn!("VRAM quota limit exceeded, but soft limit allows sub-agent creation");
-        }
-
-        let sub_agent_id = format!(
-            "sub-agent-{}-{}",
-            target_role,
-            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
-        );
-        let sub_agent = Agent {
-            id: sub_agent_id.clone(),
-            name: format!("Specialized {} Agent", target_role),
-            role: target_role.to_string(),
-            organization_id: "dynamic-delegation".to_string(),
-            status: "IDLE".to_string(),
-            provider_type: "builtin".to_string(),
-        };
-
-        agents.insert(sub_agent_id.clone(), sub_agent);
-        drop(agents);
-        self.invalidate_agent_cache().await;
-
-        // Spawn K8s Pod via Operator
-        // We simulate context isolation and result aggregation here.
-        let pod_id = format!("pod-sub-agent-{}-{}", target_role, uuid::Uuid::new_v4());
-
-        let k8s_result = format!(
-            "Sub-agent {} completed in context {}: {}",
-            target_role,
-            pod_id,
-            if instruction.contains("landing page") {
-                "Landing Page HTML generated with OHC tokens"
-            } else if instruction.contains("social copy") {
-                "Generated 3 posts for Valentine's Day campaign"
-            } else if instruction.contains("fetch") {
-                "Fetched external data successfully"
-            } else {
-                "Task completed by sub-agent"
+        let target_id = {
+            let agents = self.agents.read().await;
+            let sender = agents
+                .get(from_agent_id)
+                .ok_or("sender agent is not registered")?;
+            if sender.organization_id.is_empty() {
+                return Err("sender organization is missing".into());
             }
-        );
-
-        let msg = Message {
-            id: format!("msg-{}", uuid::Uuid::new_v4()),
-            from_agent: from_agent_id.to_string(),
-            to_agent: sub_agent_id.clone(),
-            r#type: "TaskDelegation".to_string(),
-            content: format!(
-                "Execute Task: {}\nContext: {}\nK8sPod: {}\nAggregatedResult: {}",
-                instruction, parent_thread_id, pod_id, k8s_result
-            ),
-            occurred_at_unix: chrono::Utc::now().timestamp(),
-            meeting_id: String::new(),
+            agents
+                .values()
+                .filter(|agent| {
+                    agent.id != from_agent_id
+                        && agent.organization_id == sender.organization_id
+                        && agent.role == target_role
+                })
+                .map(|agent| agent.id.clone())
+                .min()
+                .ok_or("no registered agent is available for the requested role")?
         };
-
-        self.publish(msg).await?;
-
-        Ok(format!("{} | Result: {}", sub_agent_id, k8s_result))
+        let task = Message {
+            id: uuid::Uuid::new_v4().to_string(),
+            from_agent: from_agent_id.to_owned(),
+            to_agent: target_id.clone(),
+            r#type: "TaskDelegation".into(),
+            content: serde_json::json!({"task": instruction, "parent_thread_id": parent_thread_id})
+                .to_string(),
+            occurred_at_unix: Utc::now().timestamp(),
+            meeting_id: parent_thread_id.to_owned(),
+        };
+        self.delegate_task(from_agent_id.to_owned(), target_id.clone(), task)
+            .await?;
+        Ok(target_id)
     }
 
     pub fn minimax_api_key(&self) -> &str {
@@ -1103,11 +1123,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_sub_task_valid_hierarchy() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            return;
-        }
-
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
+        let db_url = "postgres://localhost/test";
         let pool = crate::db::secure_pg_pool_options()
             .after_release(|conn, _meta| {
                 Box::pin(async move {
@@ -1132,13 +1148,25 @@ mod tests {
         })
         .await;
 
+        hub.register_agent(Agent {
+            id: "developer-worker".into(),
+            role: "developer".into(),
+            organization_id: "org1".into(),
+            ..Default::default()
+        })
+        .await;
         let res = hub
+            .clone()
             .delegate_sub_task("manager_agent", "developer", "fix the bug", "thread123")
             .await;
 
         assert!(res.is_ok());
         let spawned_id = res.unwrap();
-        assert!(spawned_id.starts_with("sub-agent-developer-"));
+        assert_eq!(spawned_id, "developer-worker");
+        assert_eq!(
+            hub.get_inbox("developer-worker").await[0].r#type,
+            "TaskDelegation"
+        );
     }
 
     #[tokio::test]

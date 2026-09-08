@@ -807,7 +807,7 @@ pub enum RuntimeReadiness {
     Unhealthy,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Default)]
 pub struct ModelRuntimeDescriptor {
     pub runtime_id: String,
     pub model: ModelDescriptor,
@@ -830,34 +830,6 @@ pub struct ModelRuntimeDescriptor {
     pub health_endpoint: Option<String>,
     pub draining: bool,
     pub metadata: JsonMap,
-}
-
-impl Default for ModelRuntimeDescriptor {
-    fn default() -> Self {
-        Self {
-            runtime_id: String::new(),
-            model: ModelDescriptor::default(),
-            kind: ModelRuntimeKind::default(),
-            engine: None,
-            api_dialect: None,
-            api_version: None,
-            endpoint: None,
-            capability_discovery_endpoint: None,
-            credential_ref: None,
-            image: None,
-            supported_revisions: BTreeSet::new(),
-            adapter_refs: BTreeSet::new(),
-            gpu_profile: None,
-            lora_adapter: None,
-            placement: None,
-            capacity: RuntimeCapacity::default(),
-            autoscaling: None,
-            readiness: RuntimeReadiness::default(),
-            health_endpoint: None,
-            draining: false,
-            metadata: JsonMap::new(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]

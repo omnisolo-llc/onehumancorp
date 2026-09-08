@@ -25,7 +25,9 @@ struct ProviderFacadeState {
     upstream_api_key: String,
     model_id: String,
     reasoning_effort: Option<Value>,
+    max_output_tokens: Option<u64>,
     revoked: watch::Receiver<bool>,
+    inference_allowed: bool,
     token: String,
 }
 
@@ -35,6 +37,7 @@ pub struct ProviderFacadeConfig {
     pub upstream_api_key: String,
     pub selection: ResolvedModelSelection,
     pub request_timeout: Duration,
+    pub inference_allowed: bool,
 }
 
 impl ProviderFacadeConfig {
@@ -48,6 +51,7 @@ impl ProviderFacadeConfig {
             upstream_api_key: upstream_api_key.into(),
             selection,
             request_timeout: DEFAULT_REQUEST_TIMEOUT,
+            inference_allowed: true,
         }
     }
 
@@ -197,10 +201,12 @@ impl ProviderFacade {
             upstream_base_url,
             upstream_api_key: config.upstream_api_key,
             model_id: config.selection.model_id,
+            max_output_tokens: config.selection.max_output_tokens,
             reasoning_effort: config.selection.reasoning_effort.map(|effort| {
                 serde_json::to_value(effort).expect("reasoning effort serializes as a string")
             }),
             revoked,
+            inference_allowed: config.inference_allowed,
             token,
         };
         let app = Router::new()
@@ -226,6 +232,14 @@ impl ProviderFacade {
 
     pub fn route(&self) -> &ProviderFacadeRoute {
         &self.route
+    }
+
+    pub fn revocation(&self) -> watch::Receiver<bool> {
+        self.revoke.subscribe()
+    }
+
+    pub fn revoke(&self) {
+        self.revoke.send_replace(true);
     }
 
     pub async fn shutdown(mut self) -> Result<(), ProviderFacadeError> {
@@ -290,6 +304,12 @@ async fn json_proxy(
             "provider facade authorization failed",
         );
     }
+    if !state.inference_allowed {
+        return error_response(
+            StatusCode::FORBIDDEN,
+            "provider inference requires an active attempt",
+        );
+    }
     let mut payload: Value = match serde_json::from_slice(&body) {
         Ok(payload) => payload,
         Err(_) => return error_response(StatusCode::BAD_REQUEST, "request body must be JSON"),
@@ -301,6 +321,9 @@ async fn json_proxy(
         return error_response(StatusCode::BAD_REQUEST, "request model is not admitted");
     }
     if let Err(message) = bind_reasoning(&mut payload, path, state.reasoning_effort.as_ref()) {
+        return error_response(StatusCode::BAD_REQUEST, message);
+    }
+    if let Err(message) = bind_output_limit(&mut payload, path, state.max_output_tokens) {
         return error_response(StatusCode::BAD_REQUEST, message);
     }
     let body = Bytes::from(serde_json::to_vec(&payload).expect("JSON value serializes"));
@@ -341,7 +364,11 @@ async fn forward(
         Ok(response) => response,
         Err(error) => {
             return error_response(
-                StatusCode::BAD_GATEWAY,
+                if error.is_timeout() {
+                    StatusCode::GATEWAY_TIMEOUT
+                } else {
+                    StatusCode::BAD_GATEWAY
+                },
                 &redact(&error.to_string(), &state.upstream_api_key),
             );
         }
@@ -364,12 +391,12 @@ async fn forward(
         return response_with_body(status, content_type.as_ref(), body.into_bytes());
     }
     let secret = state.upstream_api_key.clone();
-    let stream = response
-        .bytes_stream()
-        .take_until(wait_for_revocation(state.revoked.clone()))
-        .map(move |chunk| {
-            chunk.map_err(|error| std::io::Error::other(redact(&error.to_string(), &secret)))
-        });
+    let errors_secret = secret.clone();
+    let stream = response.bytes_stream().map(move |chunk| {
+        chunk.map_err(|error| std::io::Error::other(redact(&error.to_string(), &errors_secret)))
+    });
+    let stream = redact_success_stream(stream, secret)
+        .take_until(wait_for_revocation(state.revoked.clone()));
     let mut output = Response::new(Body::from_stream(stream));
     *output.status_mut() = status;
     if let Some(content_type) = content_type
@@ -398,10 +425,15 @@ fn response_with_body(
 }
 
 fn error_response(status: StatusCode, message: &str) -> Response {
+    let body = serde_json::json!({"error": {
+        "message": message,
+        "type": if status.is_client_error() { "invalid_request_error" } else { "provider_error" },
+        "code": status.as_u16(),
+    }});
     response_with_body(
         status,
-        Some(&HeaderValue::from_static("text/plain; charset=utf-8")),
-        message.as_bytes().to_vec(),
+        Some(&HeaderValue::from_static("application/json")),
+        serde_json::to_vec(&body).expect("provider error JSON"),
     )
 }
 
@@ -469,10 +501,10 @@ fn bind_reasoning(
     if path == "responses" {
         if let Some(reasoning) = object.get(field) {
             let reasoning = reasoning.as_object().ok_or("reasoning must be an object")?;
-            if let Some(requested) = reasoning.get("effort") {
-                if Some(requested) != effort {
-                    return Err("request reasoning effort is not admitted");
-                }
+            if let Some(requested) = reasoning.get("effort")
+                && Some(requested) != effort
+            {
+                return Err("request reasoning effort is not admitted");
             }
         }
         if let Some(effort) = effort {
@@ -483,14 +515,106 @@ fn bind_reasoning(
                 .insert("effort".to_owned(), effort.clone());
         }
     } else {
-        if let Some(requested) = object.get(field) {
-            if Some(requested) != effort {
-                return Err("request reasoning effort is not admitted");
-            }
+        if let Some(requested) = object.get(field)
+            && Some(requested) != effort
+        {
+            return Err("request reasoning effort is not admitted");
         }
         if let Some(effort) = effort {
             object.insert(field.to_owned(), effort.clone());
         }
     }
     Ok(())
+}
+
+fn bind_output_limit(
+    payload: &mut Value,
+    path: &str,
+    limit: Option<u64>,
+) -> Result<(), &'static str> {
+    let Some(limit) = limit else { return Ok(()) };
+    let fields: &[&str] = if path == "responses" {
+        &["max_output_tokens"]
+    } else {
+        &["max_completion_tokens", "max_tokens"]
+    };
+    let object = payload
+        .as_object_mut()
+        .ok_or("request body must be an object")?;
+    for field in ["max_output_tokens", "max_completion_tokens", "max_tokens"] {
+        if let Some(value) = object.get(field) {
+            if !fields.contains(&field) {
+                return Err("output limit field does not match request dialect");
+            }
+            if !value
+                .as_u64()
+                .is_some_and(|value| value > 0 && value <= limit)
+            {
+                return Err("request output limit is not admitted");
+            }
+        }
+    }
+    if !fields.iter().any(|field| object.contains_key(*field)) {
+        object.insert(fields[0].to_owned(), Value::from(limit));
+    }
+    Ok(())
+}
+
+// Keep only the possible trailing prefix of a secret between network chunks;
+// this prevents a credential split across chunks from escaping redaction.
+fn redact_success_stream(
+    stream: impl futures_util::Stream<Item = Result<Bytes, std::io::Error>> + Send + 'static,
+    secret: String,
+) -> impl futures_util::Stream<Item = Result<Bytes, std::io::Error>> + Send {
+    futures_util::stream::unfold(
+        (Box::pin(stream), Vec::<u8>::new(), false),
+        move |(mut stream, mut pending, mut finished)| {
+            let secret = secret.clone();
+            async move {
+                loop {
+                    let mut output = Vec::new();
+                    while pending.len() >= secret.len() && !pending.is_empty() {
+                        if let Some(position) = pending
+                            .windows(secret.len())
+                            .position(|bytes| bytes == secret.as_bytes())
+                        {
+                            output.extend_from_slice(&pending[..position]);
+                            output.extend_from_slice(b"[REDACTED]");
+                            pending.drain(..position + secret.len());
+                        } else {
+                            // Retain only a suffix which can still become a secret.
+                            let retain = (1..secret.len())
+                                .rev()
+                                .find(|size| pending.ends_with(&secret.as_bytes()[..*size]))
+                                .unwrap_or(0);
+                            let emit = pending.len() - retain;
+                            output.extend(pending.drain(..emit));
+                            break;
+                        }
+                    }
+                    if finished {
+                        output.append(&mut pending);
+                    } else if pending.len() < secret.len() {
+                        let retain = (1..=pending.len())
+                            .rev()
+                            .find(|size| pending.ends_with(&secret.as_bytes()[..*size]))
+                            .unwrap_or(0);
+                        let emit = pending.len() - retain;
+                        output.extend(pending.drain(..emit));
+                    }
+                    if !output.is_empty() {
+                        return Some((Ok(Bytes::from(output)), (stream, pending, finished)));
+                    }
+                    if finished {
+                        return None;
+                    }
+                    match stream.next().await {
+                        Some(Ok(chunk)) => pending.extend_from_slice(&chunk),
+                        Some(Err(error)) => return Some((Err(error), (stream, Vec::new(), true))),
+                        None => finished = true,
+                    }
+                }
+            }
+        },
+    )
 }

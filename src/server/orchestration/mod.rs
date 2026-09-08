@@ -2,7 +2,6 @@ pub mod departments;
 pub mod dynamic_workflows;
 pub mod handoff;
 pub mod health;
-pub mod hierarchical;
 pub mod hub;
 pub mod hybrid_sync;
 pub mod identity_resolution;

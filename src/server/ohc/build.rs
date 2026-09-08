@@ -23,7 +23,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../src/proto/harness_middleware.proto",
     ];
 
+    // Watch protobuf sources, not the whole repository and build output tree.
+    for proto in &protos {
+        println!("cargo:rerun-if-changed={proto}");
+    }
     tonic_build::configure()
+        .emit_rerun_if_changed(false)
         .build_client(true)
         .build_server(true)
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")

@@ -809,6 +809,21 @@ impl AgentServiceImpl {
         out
     }
 
+    /// Reuse the canonical configured catalog for the service-owned gateway.
+    pub async fn local_service_tools(&self, root: PathBuf, allowed: &[String]) -> Vec<Tool> {
+        let mut tools = self
+            .build_tools(
+                None,
+                "",
+                Some(root),
+                None,
+                Arc::new(dashmap::DashMap::new()),
+            )
+            .await;
+        tools.retain(|tool| allowed.contains(&tool.name));
+        tools
+    }
+
     async fn build_tools(
         &self,
         toolset: Option<&ToolsetConfig>,
@@ -1027,7 +1042,7 @@ impl AgentService for AgentServiceImpl {
             task_req.harness_id.clone()
         };
         if let Some(capsule) = imported_capsule.as_ref() {
-            OmniSoloHarnessAdapter::import_capsule(&capsule, self.tenant.as_str(), &harness_id)
+            OmniSoloHarnessAdapter::import_capsule(capsule, self.tenant.as_str(), &harness_id)
                 .map_err(|error| {
                     Status::invalid_argument(format!("session capsule rejected: {error:?}"))
                 })?;
@@ -1141,6 +1156,70 @@ impl AgentService for AgentServiceImpl {
             )
             .await;
 
+        let mut tools = tools;
+        let mut local_service_lease = None;
+        if middleware_run.session().workspace_id.is_some() {
+            use server_harness::middleware::local_services::{
+                LocalServiceRegistry, LocalServiceScopeContext,
+            };
+            let scope = LocalServiceScopeContext::for_attempt(
+                self.tenant.as_str(),
+                middleware_run.session().project_id.as_deref(),
+                middleware_run.session().workspace_id.as_deref(),
+                middleware_run.session().session_id,
+                Some(middleware_run.task().task_id),
+                Some(middleware_run.attempt().attempt_id),
+            );
+            let registry = LocalServiceRegistry::with_defaults();
+            let blobs = run_cfg.workspace_path.as_ref().map(|root| {
+                Arc::new(crate::memory_store::FileBasedMemory::new(root))
+                    as Arc<dyn crate::memory_store::OHCMemory>
+            });
+            let mut gateway =
+                crate::local_service_adapters::gateway_for_agent_run(&run_cfg, registry, blobs);
+            for kind in [
+                server_harness::middleware::local_services::LocalServiceKind::Mcp,
+                server_harness::middleware::local_services::LocalServiceKind::Integration,
+            ] {
+                gateway.register(
+                    kind,
+                    Arc::new(crate::local_service_adapters::ExistingToolBackend::new(
+                        kind, &tools, &run_cfg, &scope,
+                    )),
+                );
+            }
+            if let Some(screenshot) = tools.iter().find(|tool| tool.name == "Screenshot") {
+                gateway.register(
+                    server_harness::middleware::local_services::LocalServiceKind::Browser,
+                    Arc::new(
+                        crate::local_service_adapters::ScreenshotBrowserBackend::new(
+                            screenshot.clone(),
+                            Self::workspace_path(),
+                            &scope,
+                            &run_cfg,
+                        ),
+                    ),
+                );
+            }
+            let gateway = Arc::new(gateway);
+            let bundle = gateway.resolve(scope.clone()).map_err(|_| {
+                Status::failed_precondition("scoped services could not be admitted")
+            })?;
+            middleware_run
+                .bind_local_services(bundle.clone())
+                .map_err(|_| Status::permission_denied("scoped service references rejected"))?;
+            if !bundle.bindings.is_empty() {
+                let (tool, lease) =
+                    crate::local_service_adapters::gateway_tool(gateway, bundle, scope);
+                if let Some(allowed) = run_cfg.allowed_tools.as_mut()
+                    && !allowed.contains(&tool.name)
+                {
+                    allowed.push(tool.name.clone());
+                }
+                tools.push(tool);
+                local_service_lease = Some(lease);
+            }
+        }
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
         if let Some(wd) = &run_cfg.workspace_path {
@@ -1200,6 +1279,10 @@ impl AgentService for AgentServiceImpl {
                     res
                 };
 
+                if let Some(lease) = &local_service_lease {
+                    lease.revoke_current();
+                }
+
                 match res {
                     Ok(Ok(content)) => {
                         if !middleware_run.attempt().state.is_terminal() {
@@ -1244,6 +1327,19 @@ impl AgentService for AgentServiceImpl {
                                     "failed to create middleware recovery attempt"
                                 );
                             }
+                            if let Some(lease) = &local_service_lease {
+                                match lease
+                                    .rebind_attempt(middleware_run.attempt().attempt_id)
+                                    .and_then(|bundle| middleware_run.bind_local_services(bundle))
+                                {
+                                    Ok(()) => {}
+                                    Err(_) => {
+                                        last_result =
+                                            Err("local services could not be rebound".into());
+                                        break;
+                                    }
+                                }
+                            }
                             continue;
                         }
                         last_result = Err(e);
@@ -1273,6 +1369,19 @@ impl AgentService for AgentServiceImpl {
                                     "failed to create middleware recovery attempt"
                                 );
                             }
+                            if let Some(lease) = &local_service_lease {
+                                match lease
+                                    .rebind_attempt(middleware_run.attempt().attempt_id)
+                                    .and_then(|bundle| middleware_run.bind_local_services(bundle))
+                                {
+                                    Ok(()) => {}
+                                    Err(_) => {
+                                        last_result =
+                                            Err("local services could not be rebound".into());
+                                        break;
+                                    }
+                                }
+                            }
                             continue;
                         }
                     }
@@ -1293,7 +1402,7 @@ impl AgentService for AgentServiceImpl {
                 );
                 tokio::select! {
                     biased;
-                    _ = tx.closed() => return,
+                    _ = tx.closed() => (),
                     _ = store.upsert(&record) => {}
                 }
             }

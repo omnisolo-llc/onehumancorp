@@ -13,6 +13,8 @@ use super::json_rpc::{
 };
 
 #[derive(Clone, Debug)]
+// Keep owned payloads in this established public protocol representation.
+#[allow(clippy::large_enum_variant)]
 pub enum SessionOperation {
     Create,
     Import(SessionCapsule),

@@ -1,3 +1,6 @@
+pub mod local_services;
+mod protected_process;
+
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::net::SocketAddr;
@@ -10,8 +13,9 @@ use axum::{
 };
 use server_harness::middleware::grpc::HarnessWorkerGrpcService;
 use server_harness::middleware::harness::{HarnessProtocolKind, ProcessHarnessSpec};
-use server_harness::middleware::inference::OpenAiResponsesClient;
-use server_harness::middleware::provider_facade::{ProviderFacade, ProviderFacadeRoute};
+#[cfg(test)]
+use server_harness::middleware::provider_facade::ProviderFacade;
+use server_harness::middleware::provider_facade::ProviderFacadeConfig;
 use server_harness::middleware::types::{ModelApiDialect, ReasoningEffort, ResolvedModelSelection};
 use server_ohc::harness_middleware::harness_worker_service_server::HarnessWorkerServiceServer;
 use tokio::net::TcpListener;
@@ -84,6 +88,7 @@ pub struct WorkerConfig {
     pub default_resolved_model: Option<ResolvedModelSelection>,
     pub api_base_url: Option<String>,
     pub process_spec: Option<ProcessHarnessSpec>,
+    pub request_timeout: Duration,
     provider_api_key: Option<SecretValue>,
 }
 
@@ -192,6 +197,7 @@ impl WorkerConfig {
             default_resolved_model: None,
             api_base_url: None,
             process_spec: None,
+            request_timeout: Duration::from_secs(30),
             provider_api_key: None,
         })
     }
@@ -212,6 +218,7 @@ impl WorkerConfig {
         config.default_resolved_model = Some(routing.resolved_model.clone());
         config.api_base_url = routing.api_base_url.clone();
         config.provider_api_key = routing.api_key.clone().map(SecretValue);
+        config.request_timeout = parse_request_timeout(input.timeout_secs.as_deref())?;
         config.process_spec = process_spec_from_input(&input, routing)?;
         Ok(config)
     }
@@ -221,25 +228,35 @@ pub async fn run(config: WorkerConfig) -> Result<(), Box<dyn std::error::Error +
     run_until_shutdown(config, shutdown_signal()).await
 }
 
+// Tonic interceptors must return the generated service's Status value directly.
+#[allow(clippy::result_large_err)]
 pub async fn run_until_shutdown(
     config: WorkerConfig,
     shutdown: impl Future<Output = ()> + Send + 'static,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let provider_facade = if let Some(api_key) = config.provider_api_key.as_ref() {
+    let mut service = match config.process_spec.clone() {
+        Some(spec) => HarnessWorkerGrpcService::with_process_spec_for_worker(
+            config.worker_id.clone(),
+            config.pool_id.clone(),
+            spec,
+        ),
+        None => HarnessWorkerGrpcService::new(
+            config.worker_id.clone(),
+            config.harness_id.clone(),
+            config.pool_id.clone(),
+        ),
+    };
+    if let Some(api_key) = config.provider_api_key.as_ref() {
+        protected_process::protect_credentials()?;
         let selection = match config.default_resolved_model.clone() {
             Some(selection) => selection,
-            None => resolve_model_routing(
-                None,
-                config.api_base_url.clone(),
-                None,
-                None,
-                None,
-                None,
-            )?
-            .resolved_model,
+            None => {
+                resolve_model_routing(None, config.api_base_url.clone(), None, None, None, None)?
+                    .resolved_model
+            }
         };
-        Some(
-            ProviderFacade::start(
+        service = service.with_provider_facade(
+            ProviderFacadeConfig::new(
                 config
                     .api_base_url
                     .as_deref()
@@ -247,49 +264,16 @@ pub async fn run_until_shutdown(
                 api_key.expose(),
                 selection,
             )
-            .await?,
-        )
-    } else {
-        None
-    };
-    let process_spec = config.process_spec.clone().map(|spec| {
-        match provider_facade.as_ref() {
-            Some(facade) => bind_process_spec_to_facade(spec, facade.route()),
-            None => spec,
-        }
-    });
-    let mut service = match (
-        process_spec,
-        config.harness_id.as_str(),
-        provider_facade.as_ref(),
-    ) {
-        (None, "omnisolo", Some(facade)) => {
-            let provider_client = OpenAiResponsesClient::new(
-                facade.route().base_url(),
-                facade.route().token(),
-                Duration::from_secs(30),
-            )?;
-            HarnessWorkerGrpcService::with_omnisolo_provider_client(
-                config.worker_id.clone(),
-                config.pool_id.clone(),
-                provider_client,
-            )
-        }
-        (Some(spec), _, _) => HarnessWorkerGrpcService::with_process_spec_for_worker(
-            config.worker_id.clone(),
-            config.pool_id.clone(),
-            spec,
-        ),
-        (None, _, _) => HarnessWorkerGrpcService::new(
-            config.worker_id.clone(),
-            config.harness_id.clone(),
-            config.pool_id.clone(),
-        ),
-    };
+            .with_timeout(config.request_timeout),
+        );
+    }
     if let Some(default_resolved_model) = config.default_resolved_model.clone() {
         service = service.with_default_resolved_model(default_resolved_model);
     }
+    let (service, control_token) =
+        local_services::configure_worker(service, config.provider_api_key.is_some()).await?;
     service.preflight().await?;
+    let shutdown_service = service.clone();
     let health_service = service.clone();
     let ready_service = service.clone();
     let health_app = Router::new()
@@ -314,10 +298,37 @@ pub async fn run_until_shutdown(
             }),
         );
     let health_listener = TcpListener::bind(config.health_addr).await?;
-    let grpc_server = Server::builder().add_service(HarnessWorkerServiceServer::new(service));
+    let grpc_server = Server::builder().add_service(HarnessWorkerServiceServer::with_interceptor(
+        service,
+        move |request: tonic::Request<()>| {
+            if let Some(expected) = control_token.as_ref() {
+                let supplied = request
+                    .metadata()
+                    .get("authorization")
+                    .and_then(|value| value.to_str().ok())
+                    .and_then(|value| value.strip_prefix("Bearer "));
+                let valid = supplied.is_some_and(|supplied| {
+                    supplied.len() == expected.len()
+                        && supplied
+                            .bytes()
+                            .zip(expected.bytes())
+                            .fold(0_u8, |difference, (a, b)| difference | (a ^ b))
+                            == 0
+                });
+                if !valid {
+                    return Err(tonic::Status::unauthenticated(
+                        "worker control credential required",
+                    ));
+                }
+            }
+            Ok(request)
+        },
+    ));
     let (shutdown_sender, shutdown_receiver) = tokio::sync::watch::channel(false);
+    let authority_shutdown = shutdown_service.clone();
     let shutdown_task = tokio::spawn(async move {
         shutdown.await;
+        authority_shutdown.revoke_provider_routes();
         let _ = shutdown_sender.send(true);
     });
     let grpc_shutdown = shutdown_receiver.clone();
@@ -336,9 +347,7 @@ pub async fn run_until_shutdown(
     };
     let result = tokio::try_join!(grpc, health);
     shutdown_task.abort();
-    if let Some(provider_facade) = provider_facade {
-        provider_facade.shutdown().await?;
-    }
+    shutdown_service.revoke_provider_routes();
     result?;
     Ok(())
 }
@@ -382,7 +391,6 @@ async fn shutdown_signal() {
                 let _ = signal.recv().await;
             });
         wait_for_process_signal(ctrl_c, terminate).await;
-        return;
     }
     #[cfg(not(unix))]
     wait_for_process_signal(ctrl_c, None::<std::future::Ready<()>>).await;
@@ -456,6 +464,18 @@ fn process_spec_from_input(
     )
 }
 
+fn parse_request_timeout(value: Option<&str>) -> Result<Duration, WorkerConfigError> {
+    match value.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => value
+            .parse::<u64>()
+            .ok()
+            .filter(|seconds| *seconds > 0)
+            .map(Duration::from_secs)
+            .ok_or_else(|| WorkerConfigError::InvalidTimeout(value.to_owned())),
+        None => Ok(Duration::from_secs(30)),
+    }
+}
+
 fn build_process_spec(
     harness_id: &str,
     executable: Option<String>,
@@ -480,14 +500,7 @@ fn build_process_spec(
                 .unwrap_or(HarnessProtocolKind::Custom)
         }
     };
-    let timeout = match timeout_secs {
-        Some(value) if !value.trim().is_empty() => Duration::from_secs(
-            value
-                .parse::<u64>()
-                .map_err(|_| WorkerConfigError::InvalidTimeout(value.clone()))?,
-        ),
-        _ => Duration::from_secs(30),
-    };
+    let timeout = parse_request_timeout(timeout_secs.as_deref())?;
     let model_id = routing.resolved_model.model_id.clone();
     let reasoning_effort = routing
         .resolved_model
@@ -510,36 +523,23 @@ fn build_process_spec(
             spec = spec.with_environment("OPENAI_BASE_URL", base_url.clone());
         }
     }
+    if harness_id == "plandex" && protocol_kind == HarnessProtocolKind::OpenAiCompatibleShim {
+        // The native server shares the worker's network namespace. Credentials
+        // belong to that server; only its fixed loopback endpoint reaches the CLI.
+        spec = spec
+            .with_environment("PLANDEX_ENV", "development")
+            .with_environment("PLANDEX_API_HOST", "http://127.0.0.1:8099");
+    }
     spec = spec.with_environment(OPENAI_MODEL, model_id);
     if let Some(reasoning_effort) = reasoning_effort {
         spec = spec.with_environment(OPENAI_REASONING_EFFORT, reasoning_effort);
     }
-    if matches!(protocol_kind, HarnessProtocolKind::CodexAppServer) {
-        if let Some(base_url) = direct_api_base_url {
-            spec.args = codex_provider_args(spec.args, &base_url);
-        }
-    }
-    Ok(Some(spec))
-}
-
-fn bind_process_spec_to_facade(
-    mut spec: ProcessHarnessSpec,
-    route: &ProviderFacadeRoute,
-) -> ProcessHarnessSpec {
-    let base_url = route.base_url().to_owned();
-    spec.api_base_url = Some(base_url.clone());
-    spec.environment
-        .insert(OPENAI_API_KEY.to_owned(), route.token().to_owned());
-    spec.environment
-        .insert(OPENAI_API_BASE_URL.to_owned(), base_url.clone());
-    if matches!(spec.protocol_kind, HarnessProtocolKind::KimiAcp) {
-        spec.environment
-            .insert("OPENAI_BASE_URL".to_owned(), base_url.clone());
-    }
-    if matches!(spec.protocol_kind, HarnessProtocolKind::CodexAppServer) {
+    if matches!(protocol_kind, HarnessProtocolKind::CodexAppServer)
+        && let Some(base_url) = direct_api_base_url
+    {
         spec.args = codex_provider_args(spec.args, &base_url);
     }
-    spec
+    Ok(Some(spec))
 }
 
 fn reasoning_effort_env_name(effort: &ReasoningEffort) -> &'static str {
@@ -1016,6 +1016,27 @@ mod tests {
     }
 
     #[test]
+    fn plandex_worker_supplies_only_loopback_native_server_configuration() {
+        let mut input = worker_input();
+        input.harness_id = "plandex".to_owned();
+        input.args_json = Some("[]".to_owned());
+        input.executable = Some("omnisolo-openai-shim".to_owned());
+        input.protocol = Some("openai_compatible_shim".to_owned());
+        let config = WorkerConfig::from_input(input).unwrap();
+        let spec = config.process_spec.unwrap();
+        assert_eq!(
+            spec.environment.get("PLANDEX_ENV").map(String::as_str),
+            Some("development")
+        );
+        assert_eq!(
+            spec.environment.get("PLANDEX_API_HOST").map(String::as_str),
+            Some("http://127.0.0.1:8099")
+        );
+        assert!(!spec.environment.contains_key("DATABASE_URL"));
+        assert!(!spec.environment.contains_key("DB_PASSWORD"));
+    }
+
+    #[test]
     fn openai_inputs_win_and_secrets_stay_out_of_the_process_spec_until_facade_binding() {
         let mut input = worker_input();
         input.openai_api_key = Some("new-key".to_owned());
@@ -1044,7 +1065,12 @@ mod tests {
         assert_eq!(selection.api_dialect, ModelApiDialect::OpenAiResponses);
         assert_eq!(selection.provider_route, "openai-compatible");
         assert!(!spec.args.iter().any(|arg| arg.contains("model_provider")));
-        assert!(!spec.args.iter().any(|arg| arg.contains("llmapi.omnisolo.co")));
+        assert!(
+            !spec
+                .args
+                .iter()
+                .any(|arg| arg.contains("llmapi.omnisolo.co"))
+        );
         assert_eq!(
             config.provider_api_key.as_ref().map(SecretValue::expose),
             Some("new-key")
@@ -1245,6 +1271,21 @@ mod tests {
     }
 
     #[test]
+    fn native_worker_honors_request_timeout_without_a_process() {
+        let mut input = worker_input();
+        input.harness_id = "omnisolo".into();
+        input.executable = None;
+        input.timeout_secs = Some("300".into());
+        let config = WorkerConfig::from_input(input.clone()).unwrap();
+        assert!(config.process_spec.is_none());
+        assert_eq!(config.request_timeout, Duration::from_secs(300));
+        input.timeout_secs = Some("0".into());
+        assert!(WorkerConfig::from_input(input.clone()).is_err());
+        input.timeout_secs = Some("invalid".into());
+        assert!(WorkerConfig::from_input(input).is_err());
+    }
+
+    #[test]
     fn process_environment_is_explicit_and_uses_harness_protocol_defaults() {
         let spec = process_spec_from_env(
             "codex",
@@ -1357,7 +1398,10 @@ mod tests {
         .await
         .unwrap();
         let route = facade.route().clone();
-        let bound = bind_process_spec_to_facade(spec, &route);
+        let selection = spec.resolved_model.clone().unwrap();
+        let bound = server_harness::middleware::grpc::bind_process_spec_to_provider(
+            spec, &route, &selection,
+        );
 
         assert_eq!(
             bound.environment.get(OPENAI_API_KEY),
@@ -1368,14 +1412,12 @@ mod tests {
             Some(&route.base_url().to_owned())
         );
         assert_eq!(bound.api_base_url.as_deref(), Some(route.base_url()));
-        assert!(
-            bound.args.iter().any(|arg| {
-                arg == &format!(
-                    "model_providers.omnisolo.base_url={}",
-                    serde_json::to_string(route.base_url()).unwrap()
-                )
-            })
-        );
+        assert!(bound.args.iter().any(|arg| {
+            arg == &format!(
+                "model_providers.omnisolo.base_url={}",
+                serde_json::to_string(route.base_url()).unwrap()
+            )
+        }));
         assert!(!format!("{bound:?}").contains("sub2api-test-key"));
         facade.shutdown().await.unwrap();
     }

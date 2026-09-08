@@ -91,10 +91,19 @@ preflight_file="$(mktemp)"
 attempt_file="$(mktemp)"
 result_file="$(mktemp)"
 
+plandex_services_started=0
+service_state=""
+service_image="${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}"
+export OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+
 cleanup() {
+  if [[ "$plandex_services_started" == "1" ]]; then
+    docker rm --force omnisolo-live-plandex-server omnisolo-live-plandex-db >/dev/null 2>&1 || true
+  fi
   for harness in "${harnesses[@]}"; do
-    docker rm --force "omnisolo-live-$harness" >/dev/null 2>&1 || true
+    docker rm --force "omnisolo-live-$harness" "omnisolo-live-services-$harness" >/dev/null 2>&1 || true
   done
+  if [[ -n "$service_state" ]]; then rm -rf -- "$service_state"; fi
   rm -f "$matrix_file" "$models_file" "$preflight_file" "$attempt_file" "$result_file"
 }
 trap cleanup EXIT
@@ -131,6 +140,13 @@ if [[ "$preflight_status" != "200" ]] \
   exit 1
 fi
 
+service_state="$(mktemp -d)"
+python3 scripts/live-harness-services.py "$service_state" "${harnesses[@]:0:native_harness_count}"
+if [[ "${OMNISOLO_LIVE_BUILD_IMAGES:-1}" == "1" ]]; then
+  docker buildx build --load --file deploy/docker/Dockerfile.harness-worker \
+    --target local-service-daemon --tag "$service_image" . >&2
+fi
+
 if [[ "${OMNISOLO_LIVE_BUILD_IMAGES:-1}" == "1" ]]; then
   for index in "${!harnesses[@]}"; do
     if ! is_selected "${harnesses[$index]}"; then
@@ -145,6 +161,49 @@ if [[ "${OMNISOLO_LIVE_BUILD_IMAGES:-1}" == "1" ]]; then
   done
 fi
 
+plandex_server_image="${OMNISOLO_PLANDEX_SERVER_IMAGE:-omnisolo/plandex-server:2.2.1}"
+if is_selected plandex && [[ "${OMNISOLO_LIVE_BUILD_IMAGES:-1}" == "1" ]]; then
+  docker buildx build --load --file deploy/docker/Dockerfile.plandex-server \
+    --tag "$plandex_server_image" . >&2
+fi
+
+start_plandex_services() {
+  if [[ "$plandex_services_started" == "0" ]]; then
+    plandex_services_started=1
+    plandex_db_password="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"
+    docker rm --force omnisolo-live-plandex-db >/dev/null 2>&1 || true
+    POSTGRES_PASSWORD="$plandex_db_password" docker run --detach \
+      --name omnisolo-live-plandex-db --env POSTGRES_PASSWORD \
+      --env POSTGRES_USER=plandex --env POSTGRES_DB=plandex \
+      --tmpfs /var/lib/postgresql/data \
+      pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee >&2 || return 1
+  fi
+  for probe in $(seq 1 60); do
+    if docker exec omnisolo-live-plandex-db pg_isready -U plandex -d plandex >/dev/null 2>&1; then
+      break
+    fi
+    if [[ "$probe" == "60" ]]; then return 1; fi
+    sleep 1
+  done
+  plandex_db_host="$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' omnisolo-live-plandex-db)"
+  docker rm --force omnisolo-live-plandex-server >/dev/null 2>&1 || true
+  DB_PASSWORD="$plandex_db_password" docker run --detach --name omnisolo-live-plandex-server \
+    --network container:omnisolo-live-plandex --read-only \
+    --tmpfs /tmp:mode=1777 --tmpfs /var/lib/plandex:mode=0700,uid=1000,gid=1000 \
+    --cap-drop ALL --security-opt no-new-privileges:true \
+    --env "DB_HOST=$plandex_db_host" --env DB_PORT=5432 --env DB_NAME=plandex \
+    --env DB_USER=plandex --env DB_PASSWORD "$plandex_server_image" >&2 || return 1
+  for probe in $(seq 1 60); do
+    if docker exec omnisolo-live-plandex-server python3 -c \
+      'import socket; socket.create_connection(("127.0.0.1",8099),2).close()' >/dev/null 2>&1; then
+      return 0
+    fi
+    if [[ "$probe" == "60" ]]; then return 1; fi
+    sleep 1
+  done
+}
+
+unset OMNISOLO_LIVE_PREVIOUS_KEY OMNISOLO_LIVE_PREVIOUS_VALUE
 failed_harnesses=()
 native_gate_failed=0
 for index in "${!harnesses[@]}"; do
@@ -180,7 +239,6 @@ for index in "${!harnesses[@]}"; do
   run_args=(
     --detach
     --name "$container"
-    --publish "127.0.0.1:${ports[$index]}:8090"
     --read-only
     --tmpfs "$tmp_mount"
     --tmpfs /workspace:mode=0700,uid=1000,gid=1000
@@ -194,49 +252,102 @@ for index in "${!harnesses[@]}"; do
     --env OPENAI_API_BASE_URL
     --env OPENAI_MODEL
     --env OPENAI_REASONING_EFFORT
+    --env OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS=300
   )
+  if (( index < native_harness_count )); then
+    run_args+=(--network "container:omnisolo-live-services-$harness"
+      --env OMNISOLO_LOCAL_SERVICE_ENDPOINT=http://127.0.0.1:8095
+      --env OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN)
+  else
+    run_args+=(--publish "127.0.0.1:${ports[$index]}:8090")
+  fi
   if [[ -n "${executables[$index]}" ]]; then
     run_args+=(
       --env "OMNISOLO_HARNESS_EXECUTABLE=${executables[$index]}"
       --env "OMNISOLO_HARNESS_ARGS_JSON=${arguments[$index]}"
       --env "OMNISOLO_HARNESS_PROTOCOL=${protocols[$index]}"
-      --env OMNISOLO_HARNESS_REQUEST_TIMEOUT_SECS=90
     )
+  fi
+  if [[ "$harness" == "plandex" ]]; then
+    run_args+=(--env PLANDEX_ENV=development --env PLANDEX_API_HOST=http://127.0.0.1:8099)
   fi
   start_worker() {
     docker rm --force "$container" >/dev/null 2>&1 || true
-    docker run "${run_args[@]}" "${images[$index]}" >&2
+    if [[ "$harness" == "plandex" ]]; then
+      docker rm --force omnisolo-live-plandex-server >/dev/null 2>&1 || true
+    fi
+    if (( index < native_harness_count )); then
+      docker rm --force "omnisolo-live-services-$harness" >/dev/null 2>&1 || true
+      docker run --detach --name "omnisolo-live-services-$harness" \
+        --publish "127.0.0.1:${ports[$index]}:8090" --read-only \
+        --tmpfs /tmp:mode=1777 --tmpfs /home/omnisolo:mode=0700,uid=1000,gid=1000 \
+        --cap-drop ALL --security-opt no-new-privileges:true \
+        --volume "$service_state:/services" \
+        --env OMNISOLO_LOCAL_SERVICE_CONFIG_FILE=/services/config.json \
+        --env OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN "$service_image" >&2 || return 1
+      for probe in $(seq 1 60); do
+        if docker exec "omnisolo-live-services-$harness" node -e \
+          'fetch("http://127.0.0.1:8095/v1/configuration",{headers:{Authorization:"Bearer "+process.env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))' >/dev/null 2>&1; then break; fi
+        if [[ "$probe" == "60" ]]; then return 1; fi
+        sleep 1
+      done
+    fi
+    docker run "${run_args[@]}" "${images[$index]}" >&2 || return 1
+    if [[ "$harness" == "plandex" ]]; then
+      start_plandex_services
+    fi
   }
-  start_worker
+  worker_started=1
+  if ! start_worker; then
+    worker_started=0
+    if (( index < native_harness_count )); then
+      docker logs --tail 200 "omnisolo-live-services-$harness" 2>&1 | jq -Rr 'split(env.OPENAI_API_KEY) | join("[REDACTED]") | split(env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN) | join("[REDACTED]")' >&2 || true
+    fi
+  fi
   succeeded=0
   started_at=$(date +%s)
   for attempt in $(seq 1 "$OMNISOLO_LIVE_ATTEMPTS"); do
+    if [[ "$worker_started" == "0" ]]; then break; fi
     if [[ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null || true)" != "true" ]]; then
       echo "[$harness] worker exited; recreating it before retry $attempt" >&2
       start_worker
     fi
     echo "[$harness] live verification attempt $attempt/$OMNISOLO_LIVE_ATTEMPTS" >&2
+    if (( index < native_harness_count )); then
+      export OMNISOLO_LIVE_WRITER_SESSION="$(jq -r --arg h "$harness" '.[$h].writer' "$service_state/sessions.json")"
+      export OMNISOLO_LIVE_READER_SESSION="$(jq -r --arg h "$harness" '.[$h].reader' "$service_state/sessions.json")"
+      export OMNISOLO_LIVE_SERVICE_CONTAINER="omnisolo-live-services-$harness"
+    else
+      unset OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN
+    fi
     if OMNISOLO_LIVE_HARNESS_E2E=1 \
       OMNISOLO_LIVE_HARNESS_ID="$harness" \
       OMNISOLO_LIVE_HARNESS_ENDPOINT="http://127.0.0.1:${ports[$index]}" \
       cargo test -p omnisolo_harness_worker --test live_harness_matrix \
         live_harness_worker_uses_the_real_provider -- --ignored --exact --nocapture >"$attempt_file" 2>&1; then
-      if jq -Rsc --arg harness "$harness" --arg model "$OPENAI_MODEL" '
+      if jq -Rsc --arg harness "$harness" --arg model "$OPENAI_MODEL" --arg mode "${integration_modes[$index]}" '
         [split("\n")[] | select(startswith("OMNISOLO_LIVE_RESULT=")) |
           ltrimstr("OMNISOLO_LIVE_RESULT=") | fromjson] |
         select(length == 1) | .[0] |
         select(.schema == "omnisolo.live_harness_result.v1" and
           .status == "passed" and .harness_id == $harness and .model == $model and
           .native_session_deleted == true and .evidence.usage_observed == true and
-          .evidence.terminal_success_observed == true and .evidence.provider_marker_observed == true)
+          .evidence.terminal_success_observed == true and .evidence.provider_marker_observed == true and
+          ($mode != "native" or (.evidence.shared_local_services.status == "operations_verified" and
+            .evidence.shared_local_services.writer_verified == true and
+            .evidence.shared_local_services.reader_verified == true and
+            ((env.OMNISOLO_LIVE_PREVIOUS_KEY // "") == "" or
+              .evidence.shared_local_services.cross_harness_read_verified == true) and
+            (.evidence.shared_local_services.writer_key | type == "string" and length > 0) and
+            (.evidence.shared_local_services.writer_value | type == "string" and length > 0))))
       ' "$attempt_file" >"$result_file" && [[ -s "$result_file" ]]; then
         succeeded=1
         break
       fi
       echo "[$harness] test exited successfully without valid live evidence" >&2
     fi
-    jq -Rr 'split(env.OPENAI_API_KEY) | join("[REDACTED]")' "$attempt_file" >&2
-    docker logs --tail 200 "$container" >&2 || true
+    jq -Rr 'split(env.OPENAI_API_KEY) | join("[REDACTED]") | if (env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN // "") != "" then split(env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN) | join("[REDACTED]") else . end' "$attempt_file" >&2
+    docker logs --tail 200 "$container" 2>&1 | jq -Rr 'split(env.OPENAI_API_KEY) | join("[REDACTED]") | if (env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN // "") != "" then split(env.OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN) | join("[REDACTED]") else . end' >&2 || true
     docker inspect --format \
       'container={{.Name}} status={{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{.State.Error}}' \
       "$container" >&2 || true
@@ -252,6 +363,10 @@ for index in "${!harnesses[@]}"; do
   fi
   duration_seconds=$(($(date +%s) - started_at))
   if [[ "$succeeded" == "1" ]]; then
+    if (( index < native_harness_count )); then
+      export OMNISOLO_LIVE_PREVIOUS_KEY="$(jq -r '.evidence.shared_local_services.writer_key // empty' "$result_file")"
+      export OMNISOLO_LIVE_PREVIOUS_VALUE="$(jq -r '.evidence.shared_local_services.writer_value // empty' "$result_file")"
+    fi
     jq -c \
       --arg native_protocol "$native_protocol" \
       --arg integration_mode "${integration_modes[$index]}" \
@@ -270,6 +385,7 @@ for index in "${!harnesses[@]}"; do
       >>"$matrix_file"
   fi
   docker stop "$container" >/dev/null || true
+  if (( index < native_harness_count )); then docker stop "omnisolo-live-services-$harness" >/dev/null || true; fi
 done
 
 matrix_status="passed"

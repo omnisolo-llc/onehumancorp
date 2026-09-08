@@ -1161,6 +1161,10 @@ impl VectorRepository {
 
 #[async_trait]
 pub trait OHCMemory: Send + Sync {
+    fn service_configuration_identity(&self) -> String {
+        format!("{}:{self:p}", std::any::type_name::<Self>())
+    }
+
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String>;
     async fn read(&self, namespace: &str, key: &str) -> Result<Vec<u8>, String>;
 }
@@ -1193,6 +1197,10 @@ impl FileBasedMemory {
 
 #[async_trait]
 impl OHCMemory for FileBasedMemory {
+    fn service_configuration_identity(&self) -> String {
+        format!("file:{}", self.base_dir.to_string_lossy())
+    }
+
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String> {
         let dir = self.secure_join(&[namespace])?;
         tokio::fs::create_dir_all(&dir)
@@ -1511,6 +1519,29 @@ mod tests {
 
 #[async_trait]
 pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
+    /// Backend configuration identity, never memory contents or exported credentials.
+    /// Unknown implementations conservatively retain only process-local identity.
+    fn service_configuration_identity(&self) -> String {
+        format!("{}:{self:p}", std::any::type_name::<Self>())
+    }
+
+    /// Scoped service operations must be implemented by the selected backend.
+    /// A backend without namespace isolation is never exposed by the gateway.
+    async fn store_scoped(&self, _namespace: &str, _content: &str) -> Result<(), String> {
+        Err("selected memory backend has no scoped service surface".to_owned())
+    }
+    async fn retrieve_scoped(
+        &self,
+        _namespace: &str,
+        _query: &str,
+        _limit: usize,
+    ) -> Result<Vec<String>, String> {
+        Err("selected memory backend has no scoped service surface".to_owned())
+    }
+    fn supports_scoped_services(&self) -> bool {
+        false
+    }
+
     /// Retrieve relevant past conversations or state based on a query
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
 
@@ -1597,6 +1628,72 @@ impl std::fmt::Debug for PersistentMemoryStore {
 
 #[async_trait]
 impl LongTermMemory for PersistentMemoryStore {
+    fn service_configuration_identity(&self) -> String {
+        let location = match self.repo.get_store() {
+            VectorMemoryStore::Sqlite(pool) => format!(
+                "sqlite:{}",
+                pool.connect_options().get_filename().to_string_lossy()
+            ),
+            VectorMemoryStore::Postgres(pool) => {
+                let options = pool.connect_options();
+                format!(
+                    "postgres:{:?}",
+                    (
+                        options.get_host(),
+                        options.get_port(),
+                        options.get_socket(),
+                        options.get_database(),
+                        options.get_username(),
+                        options.get_options()
+                    )
+                )
+            }
+        };
+        serde_json::json!(["vector", location, self.tenant_id, self.agent_id]).to_string()
+    }
+
+    fn supports_scoped_services(&self) -> bool {
+        true
+    }
+    async fn store_scoped(&self, namespace: &str, content: &str) -> Result<(), String> {
+        let now = chrono::Utc::now();
+        self.repo
+            .upsert(&EmbeddingRecord {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: self.tenant_id.clone(),
+                agent_id: self.agent_id.clone(),
+                content: content.to_owned(),
+                embedding: self
+                    .llm
+                    .generate_embedding(content)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                source_type: "MANUAL".to_owned(),
+                created_at: now,
+                last_referenced_at: now,
+                reference_count: 0,
+                reliability_score: 100,
+                owner_override: false,
+                metadata: Some(
+                    serde_json::json!({"local_service_namespace":namespace}).to_string(),
+                ),
+            })
+            .await
+    }
+    async fn retrieve_scoped(
+        &self,
+        namespace: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<String>, String> {
+        let rows:Vec<(String,)> = match self.repo.get_store() {
+            VectorMemoryStore::Sqlite(pool)=>sqlx::query_as("SELECT content FROM consolidated_memory WHERE tenant_id=? AND json_extract(metadata,'$.local_service_namespace')=? AND instr(lower(content),lower(?))>0 ORDER BY created_at DESC LIMIT ?")
+                .bind(&self.tenant_id).bind(namespace).bind(query).bind(limit.min(1000) as i64).fetch_all(pool).await.map_err(|e|e.to_string())?,
+            VectorMemoryStore::Postgres(pool)=>sqlx::query_as("SELECT content FROM consolidated_memory WHERE tenant_id=$1 AND metadata::jsonb->>'local_service_namespace'=$2 AND strpos(lower(content),lower($3))>0 ORDER BY created_at DESC LIMIT $4")
+                .bind(&self.tenant_id).bind(namespace).bind(query).bind(limit.min(1000) as i64).fetch_all(pool).await.map_err(|e|e.to_string())?,
+        };
+        Ok(rows.into_iter().map(|row| row.0).collect())
+    }
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let embedding = self
             .llm
@@ -1764,6 +1861,34 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
 
 #[async_trait]
 impl LongTermMemory for Anthropic3TierMemoryStore {
+    fn service_configuration_identity(&self) -> String {
+        format!("anthropic:{}", self.memory.service_configuration_identity())
+    }
+
+    fn supports_scoped_services(&self) -> bool {
+        true
+    }
+    async fn store_scoped(&self, namespace: &str, content: &str) -> Result<(), String> {
+        self.memory
+            .scoped(namespace)
+            .map_err(|e| e.to_string())?
+            .append_transcript(&uuid::Uuid::new_v4().to_string(), content)
+            .await
+            .map_err(|e| e.to_string())
+    }
+    async fn retrieve_scoped(
+        &self,
+        namespace: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<String>, String> {
+        self.memory
+            .scoped(namespace)
+            .map_err(|e| e.to_string())?
+            .search_transcripts(query, limit.min(1000))
+            .await
+            .map_err(|e| e.to_string())
+    }
     fn get_customer_session_summaries<'a>(
         &'a self,
         _tenant_id: &'a str,
@@ -1895,6 +2020,60 @@ impl RedisMemoryStore {
 
 #[async_trait]
 impl LongTermMemory for RedisMemoryStore {
+    fn service_configuration_identity(&self) -> String {
+        let info = self.client.get_connection_info();
+        serde_json::json!([
+            "redis",
+            format!("{:?}", info.addr),
+            info.redis.db.to_string(),
+            self.namespace.clone()
+        ])
+        .to_string()
+    }
+
+    fn supports_scoped_services(&self) -> bool {
+        true
+    }
+    async fn store_scoped(&self, namespace: &str, content: &str) -> Result<(), String> {
+        let mut conn = self.get_connection().await?;
+        let key = format!(
+            "{}:scope:{}:memory",
+            self.namespace,
+            crate::local_service_adapters::scope_key(namespace)
+        );
+        let _: () = redis::cmd("LPUSH")
+            .arg(key)
+            .arg(content)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    async fn retrieve_scoped(
+        &self,
+        namespace: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<String>, String> {
+        let mut conn = self.get_connection().await?;
+        let key = format!(
+            "{}:scope:{}:memory",
+            self.namespace,
+            crate::local_service_adapters::scope_key(namespace)
+        );
+        let rows: Vec<String> = redis::cmd("LRANGE")
+            .arg(key)
+            .arg(0)
+            .arg(9999)
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(rows
+            .into_iter()
+            .filter(|content| content.to_lowercase().contains(&query.to_lowercase()))
+            .take(limit.min(1000))
+            .collect())
+    }
     async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut conn = self.get_connection().await?;
         let key = format!("{}:memory", self.namespace);

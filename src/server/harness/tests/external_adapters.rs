@@ -463,11 +463,7 @@ fn default_registry_contains_eight_native_and_four_openai_shim_harnesses() {
 fn shim_presets_have_exact_pins_and_explicit_protocol_kind() {
     let registry = HarnessRegistry::with_defaults();
     let expected = [
-        (
-            "aider",
-            "0.86.0",
-            "omnisolo/harness-worker-aider:0.86.0",
-        ),
+        ("aider", "0.86.0", "omnisolo/harness-worker-aider:0.86.0"),
         ("goose", "1.33.1", "omnisolo/harness-worker-goose:1.33.1"),
         (
             "open-interpreter",
@@ -489,10 +485,7 @@ fn shim_presets_have_exact_pins_and_explicit_protocol_kind() {
             serde_json::to_value(&descriptor.protocol_kind).unwrap(),
             json!("openai_compatible_shim")
         );
-        assert_eq!(
-            descriptor.metadata["integration_mode"],
-            "openai_compatible"
-        );
+        assert_eq!(descriptor.metadata["integration_mode"], "openai_compatible");
     }
 }
 
@@ -2016,10 +2009,7 @@ fn portable_capsule_preserves_scoped_local_service_references_without_authority(
         })
         .unwrap();
 
-    assert_eq!(
-        capsule.manifest.local_service_bindings,
-        bundle.bindings
-    );
+    assert_eq!(capsule.manifest.local_service_bindings, bundle.bindings);
     assert_eq!(
         capsule
             .manifest
@@ -2030,9 +2020,19 @@ fn portable_capsule_preserves_scoped_local_service_references_without_authority(
             .generation,
         1
     );
-    let encoded = serde_json::to_string(&capsule).unwrap().to_ascii_lowercase();
-    for forbidden in ["authorization", "facade_token", "browser_cookie", "upstream_key"] {
-        assert!(!encoded.contains(forbidden), "portable capsule contains {forbidden}");
+    let encoded = serde_json::to_string(&capsule)
+        .unwrap()
+        .to_ascii_lowercase();
+    for forbidden in [
+        "authorization",
+        "facade_token",
+        "browser_cookie",
+        "upstream_key",
+    ] {
+        assert!(
+            !encoded.contains(forbidden),
+            "portable capsule contains {forbidden}"
+        );
     }
 }
 

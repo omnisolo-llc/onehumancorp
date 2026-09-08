@@ -253,6 +253,7 @@ impl CommandRunner for SandboxedCommandRunner {
                     &runtime,
                 );
                 let mut cmd = Command::new(runtime);
+                cmd.kill_on_drop(true);
                 cmd.args(&container_args);
                 return cmd.output().await;
             }
@@ -307,6 +308,7 @@ impl CommandRunner for SandboxedCommandRunner {
             }
 
             let mut bwrap_cmd = Command::new("bwrap");
+            bwrap_cmd.kill_on_drop(true);
             bwrap_cmd.args(&bwrap_args);
 
             if let Some(dir) = current_dir {
@@ -324,6 +326,7 @@ impl CommandRunner for SandboxedCommandRunner {
         }
 
         let mut cmd = Command::new(program);
+        cmd.kill_on_drop(true);
         cmd.args(args);
         if let Some(dir) = current_dir {
             cmd.current_dir(dir);

@@ -157,3 +157,64 @@ fn authorization_rejects_invalid_binding_identity_and_scope_associations() {
         );
     }
 }
+
+#[test]
+fn issued_bindings_are_revoked_and_rebound_without_accepting_forged_generations() {
+    let registry = LocalServiceRegistry::with_defaults();
+    let scope = LocalServiceScopeContext::for_attempt(
+        "tenant",
+        Some("project"),
+        Some("workspace"),
+        Uuid::new_v4(),
+        Some(Uuid::new_v4()),
+        Some(Uuid::new_v4()),
+    );
+    let bundle = registry.resolve(scope.clone()).unwrap();
+    let memory = bundle.binding(LocalServiceKind::Memory).unwrap();
+    registry.authorize(memory, &scope, "memory.read").unwrap();
+    assert!(
+        LocalServiceRegistry::with_defaults()
+            .authorize(memory, &scope, "memory.read")
+            .is_err()
+    );
+    let mut forged = memory.clone();
+    forged.generation += 1;
+    assert!(registry.authorize(&forged, &scope, "memory.read").is_err());
+    registry.revoke_attempt(&scope.tenant_id, scope.attempt_id.unwrap());
+    assert!(registry.authorize(memory, &scope, "memory.read").is_err());
+    let mut next = scope.clone();
+    next.attempt_id = Some(Uuid::new_v4());
+    let rebound = registry.rebind(&bundle, next.clone()).unwrap();
+    let current = rebound.binding(LocalServiceKind::Memory).unwrap();
+    assert_eq!(current.generation, memory.generation + 1);
+    assert_ne!(current.binding_id, memory.binding_id);
+    registry.authorize(current, &next, "memory.read").unwrap();
+    assert!(registry.authorize(memory, &scope, "memory.read").is_err());
+    let mut foreign = next;
+    foreign.workspace_id = Some("other".to_owned());
+    assert!(registry.rebind(&rebound, foreign).is_err());
+}
+
+#[test]
+fn revoked_attempts_cannot_be_reissued_from_portable_references() {
+    let registry = LocalServiceRegistry::with_defaults();
+    let scope = LocalServiceScopeContext::for_attempt(
+        "tenant",
+        Some("project"),
+        Some("workspace"),
+        Uuid::new_v4(),
+        Some(Uuid::new_v4()),
+        Some(Uuid::new_v4()),
+    );
+    let bundle = registry.resolve(scope.clone()).unwrap();
+    registry.revoke_attempt(&scope.tenant_id, scope.attempt_id.unwrap());
+    assert!(registry.resolve(scope.clone()).is_err());
+    assert!(registry.rebind(&bundle, scope).is_err());
+}
+
+#[test]
+fn default_empty_bundle_is_a_valid_portable_contract() {
+    server_harness::middleware::local_services::LocalServiceBundle::default()
+        .validate()
+        .unwrap();
+}

@@ -4,7 +4,10 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 COPY . .
-RUN cargo build --release -p omnisolo_harness_worker --bin omnisolo-harness-worker
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/workspace/target \
+    CARGO_BUILD_JOBS=2 cargo build --locked --release -p omnisolo_harness_worker --bin omnisolo-harness-worker \
+    && cp target/release/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
 
 FROM debian:bookworm-slim AS worker-base
 RUN apt-get update \
@@ -12,7 +15,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 1000 --create-home --shell /usr/sbin/nologin omnisolo
 RUN install --directory --owner=1000 --group=1000 --mode=0700 /workspace
-COPY --from=build /workspace/target/release/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
+COPY --from=build /usr/local/bin/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
 WORKDIR /workspace
 USER 1000:1000
 ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
@@ -32,7 +35,7 @@ RUN apt-get update \
     && groupmod --new-name omnisolo node \
     && usermod --login omnisolo --home /home/omnisolo --move-home --shell /usr/sbin/nologin node
 RUN install --directory --owner=1000 --group=1000 --mode=0700 /workspace
-COPY --from=build /workspace/target/release/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
+COPY --from=build /usr/local/bin/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
 WORKDIR /workspace
 ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
     OMNISOLO_HARNESS_HEALTH_ADDR=0.0.0.0:8091 \
@@ -41,6 +44,16 @@ ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
     RUST_LOG=info
 EXPOSE 8090 8091
 ENTRYPOINT ["/usr/local/bin/omnisolo-harness-worker"]
+
+FROM node-worker-base AS local-service-daemon
+USER root
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+RUN npm install --global playwright@1.61.0 \
+    && playwright install --with-deps chromium \
+    && chmod -R a+rX /opt/playwright-browsers \
+    && install --directory --owner=1000 --group=1000 --mode=0700 /services
+USER 1000:1000
+CMD ["--local-service-daemon"]
 
 FROM node-worker-base AS codex
 USER root
@@ -84,7 +97,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 1000 --create-home --shell /usr/sbin/nologin omnisolo
 RUN install --directory --owner=1000 --group=1000 --mode=0700 /workspace
-COPY --from=build /workspace/target/release/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
+COPY --from=build /usr/local/bin/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
 COPY --chmod=0755 src/server/harness/sidecars/openai_compatible_shim.py /usr/local/bin/omnisolo-openai-shim
 WORKDIR /workspace
 ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
@@ -107,7 +120,7 @@ USER root
 RUN command -v openhands-agent-server \
     && openhands-agent-server --help >/dev/null \
     && install --directory --owner=1000 --group=1000 --mode=0700 /workspace
-COPY --from=build /workspace/target/release/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
+COPY --from=build /usr/local/bin/omnisolo-harness-worker /usr/local/bin/omnisolo-harness-worker
 WORKDIR /workspace
 ENV OMNISOLO_HARNESS_GRPC_ADDR=0.0.0.0:8090 \
     OMNISOLO_HARNESS_HEALTH_ADDR=0.0.0.0:8091 \

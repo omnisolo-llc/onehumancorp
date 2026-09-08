@@ -249,7 +249,7 @@ impl EventStore {
             let parent_sequence = parent
                 .durable_sequence
                 .ok_or(EventStoreError::ParentNotDurable(*parent_id))?;
-            if parent_sequence >= self.next_durable_sequence + 1 {
+            if parent_sequence > self.next_durable_sequence {
                 return Err(EventStoreError::ParentNotEarlier(*parent_id));
             }
         }

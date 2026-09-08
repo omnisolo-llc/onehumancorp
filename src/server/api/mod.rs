@@ -49,6 +49,8 @@ pub mod payment_ledger;
 pub mod quotes;
 pub mod sync_gateway;
 
+pub mod agent_metrics;
+pub mod agent_orchestrate;
 pub mod agent_stream;
 pub mod checkout_api;
 pub mod field_ops;

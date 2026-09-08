@@ -775,7 +775,7 @@ for line in sys.stdin:
 async fn native_runtime_reports_timeout_malformed_output_and_process_exit() {
     let timeout_runtime = OpenHarnessRuntime::spawn(fake_runtime_config(
         "import sys, time; sys.stdin.readline(); time.sleep(10)",
-        Duration::from_millis(50),
+        Duration::from_secs(1),
     ))
     .await
     .unwrap();

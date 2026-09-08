@@ -8,9 +8,7 @@ use uuid::Uuid;
 
 use super::events::EventStore;
 use super::lifecycle::{HandoffState, LifecycleError, LifecycleState, VersionedState};
-use super::local_services::{
-    LOCAL_SERVICE_BUNDLE_SCHEMA, LocalServiceBinding, LocalServiceBundle,
-};
+use super::local_services::{LOCAL_SERVICE_BUNDLE_SCHEMA, LocalServiceBinding, LocalServiceBundle};
 use super::types::{
     ArtifactKind, ArtifactRef, Attempt, AttemptKind, AttemptState, BindingAccessMode, BindingScope,
     BindingState, CapabilitySnapshot, Compaction, ContentAnnotation, ContentPart, ErrorRecord,
@@ -270,6 +268,8 @@ pub struct PortableStructuredRecord {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+// Keep owned payloads in this established public protocol representation.
+#[allow(clippy::large_enum_variant)]
 pub enum PortableRecord {
     Session(PortableSession),
     Task(PortableTask),
@@ -307,6 +307,8 @@ pub enum PortableRecord {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+// Keep owned payloads in this established public protocol representation.
+#[allow(clippy::large_enum_variant)]
 pub enum CanonicalRecord {
     Session(Session),
     Task(Task),
@@ -518,44 +520,41 @@ impl SessionCapsule {
                     }
                     session_record_seen = true;
                 }
-                PortableRecord::Task(task) => {
-                    if task.task_id.is_nil()
+                PortableRecord::Task(task)
+                    if (task.task_id.is_nil()
                         || task.session_id != self.manifest.session_id
-                        || !task_ids.insert(task.task_id)
-                    {
-                        return Err(CapsuleError::IntegrityMismatch(
-                            "record_identity".to_owned(),
-                        ));
-                    }
+                        || !task_ids.insert(task.task_id)) =>
+                {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
                 }
-                PortableRecord::Turn(turn) => {
-                    if turn.turn_id.is_nil()
+                PortableRecord::Turn(turn)
+                    if (turn.turn_id.is_nil()
                         || turn.session_id != self.manifest.session_id
-                        || !turn_ids.insert(turn.turn_id)
-                    {
-                        return Err(CapsuleError::IntegrityMismatch(
-                            "record_identity".to_owned(),
-                        ));
-                    }
+                        || !turn_ids.insert(turn.turn_id)) =>
+                {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
                 }
-                PortableRecord::Attempt(attempt) => {
-                    if attempt.attempt_id.is_nil()
+                PortableRecord::Attempt(attempt)
+                    if (attempt.attempt_id.is_nil()
                         || attempt.harness_id.trim().is_empty()
                         || attempt.session_id != self.manifest.session_id
-                        || !attempt_ids.insert(attempt.attempt_id)
-                    {
-                        return Err(CapsuleError::IntegrityMismatch(
-                            "record_identity".to_owned(),
-                        ));
-                    }
+                        || !attempt_ids.insert(attempt.attempt_id)) =>
+                {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
                 }
-                PortableRecord::Message(message) => {
-                    if message.message_id.is_nil() || message.session_id != self.manifest.session_id
-                    {
-                        return Err(CapsuleError::IntegrityMismatch(
-                            "record_identity".to_owned(),
-                        ));
-                    }
+                PortableRecord::Message(message)
+                    if (message.message_id.is_nil()
+                        || message.session_id != self.manifest.session_id) =>
+                {
+                    return Err(CapsuleError::IntegrityMismatch(
+                        "record_identity".to_owned(),
+                    ));
                 }
                 record if !typed_record_identity_is_valid(record, self.manifest.session_id) => {
                     return Err(CapsuleError::IntegrityMismatch(

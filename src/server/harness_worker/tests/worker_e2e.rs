@@ -170,8 +170,7 @@ async fn models_provider() -> (
             let read = stream.read(&mut buffer).await.unwrap();
             assert!(read > 0);
             request.extend_from_slice(&buffer[..read]);
-            let Some(headers_end) = request.windows(4).position(|part| part == b"\r\n\r\n")
-            else {
+            let Some(headers_end) = request.windows(4).position(|part| part == b"\r\n\r\n") else {
                 continue;
             };
             let headers = String::from_utf8_lossy(&request[..headers_end]);
@@ -329,7 +328,7 @@ done
 
 #[tokio::test]
 async fn worker_binary_routes_native_process_through_provider_facade_without_leaking_upstream_credentials()
-{
+ {
     let grpc_port = free_port().await;
     let health_port = free_port().await;
     let (provider_address, provider) = models_provider().await;
@@ -397,8 +396,7 @@ done
             idempotency_key: "native-facade-create".to_owned(),
             payload_schema: "omnisolo.session.create.v1".to_owned(),
             payload_version: 1,
-            payload: serde_json::to_vec(&serde_json::json!({"objective":"native facade"}))
-                .unwrap(),
+            payload: serde_json::to_vec(&serde_json::json!({"objective":"native facade"})).unwrap(),
             extensions: Default::default(),
             worker_id: "worker-native-facade-e2e".to_owned(),
             pool_id: "codex".to_owned(),

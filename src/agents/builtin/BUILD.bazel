@@ -82,6 +82,7 @@ rust_library(
         "local_provider.rs",
         "memory_exhaustive_tests.rs",
         "memory_store.rs",
+        "local_service_adapters.rs",
         "middleware.rs",
         "middleware_integration_tests.rs",
         "memory/mod.rs",

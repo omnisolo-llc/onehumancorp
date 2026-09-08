@@ -493,6 +493,8 @@ services:
     security_opt: ["no-new-privileges:true"]
     environment:
       OMNISOLO_HARNESS_WORKER_ID: harness-plandex
+      PLANDEX_ENV: development
+      PLANDEX_API_HOST: http://127.0.0.1:8099
       OMNISOLO_HARNESS_ID: plandex
       OMNISOLO_HARNESS_POOL_ID: plandex
       OMNISOLO_HARNESS_GRPC_ADDR: 0.0.0.0:8090
@@ -509,6 +511,54 @@ services:
       - "${OMNISOLO_HARNESS_PLANDEX_GRPC_PORT:-127.0.0.1:8116}:8090"
       - "${OMNISOLO_HARNESS_PLANDEX_HEALTH_PORT:-127.0.0.1:8117}:8091"
     healthcheck: *harness-healthcheck
+
+  # Plandex's native server shares loopback with its CLI worker, while owning
+  # its database credentials and filesystem in separate containers/volumes.
+  plandex-server:
+    profiles: ["harness"]
+    image: ${OMNISOLO_PLANDEX_SERVER_IMAGE:-omnisolo/plandex-server:2.2.1}
+    network_mode: service:harness-plandex
+    user: "1000:1000"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      DB_HOST: plandex-postgres
+      DB_PORT: "5432"
+      DB_USER: plandex
+      DB_NAME: plandex
+      DB_PASSWORD_FILE: /run/secrets/plandex-database-password
+    volumes:
+      - plandex-files:/var/lib/plandex
+      - ${OHC_POSTGRES_PASSWORD_FILE:?OHC_POSTGRES_PASSWORD_FILE is required}:/run/secrets/plandex-database-password:ro
+    depends_on:
+      harness-plandex:
+        condition: service_started
+      plandex-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('127.0.0.1',8099),2).close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  plandex-postgres:
+    profiles: ["harness"]
+    image: pgvector/pgvector:pg15@sha256:18d16372b8406bb38a9f94cbff15d125c463d71fde2770aa8b5c64bfcc1578ee
+    environment:
+      POSTGRES_USER: plandex
+      POSTGRES_DB: plandex
+      POSTGRES_PASSWORD_FILE: /run/secrets/plandex-database-password
+    volumes:
+      - plandex-postgres-data:/var/lib/postgresql/data
+      - ${OHC_POSTGRES_PASSWORD_FILE:?OHC_POSTGRES_PASSWORD_FILE is required}:/run/secrets/plandex-database-password:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plandex -d plandex"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   # Optional model-runtime pool. This is a protocol placeholder until an
   # approved managed or self-hosted serving image is selected.
@@ -771,4 +821,6 @@ services:
 volumes:
   # Persist the real database across normal Compose restarts.
   postgres-data:
+  plandex-postgres-data:
+  plandex-files:
   nginx-cache:

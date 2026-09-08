@@ -11,3 +11,8 @@ bazel-out/
 bazel-testlogs/
 **/__pycache__/
 **/*.pyc
+.env
+.env.*
+**/.env
+**/.env.*
+.ohc/

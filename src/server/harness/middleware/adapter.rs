@@ -734,17 +734,25 @@ impl OmniSoloHarnessAdapter {
         if context.session_id != self.session.session_id {
             return Err(LocalServiceError::SessionMismatch);
         }
-        if self.session.project_id.as_ref()
+        if self
+            .session
+            .project_id
+            .as_ref()
             .is_some_and(|id| context.project_id.as_ref() != Some(id))
         {
             return Err(LocalServiceError::ScopeMismatch(LocalServiceScope::Project));
         }
-        if self.session.workspace_id.as_ref()
+        if self
+            .session
+            .workspace_id
+            .as_ref()
             .is_some_and(|id| context.workspace_id.as_ref() != Some(id))
         {
-            return Err(LocalServiceError::ScopeMismatch(LocalServiceScope::Workspace));
+            return Err(LocalServiceError::ScopeMismatch(
+                LocalServiceScope::Workspace,
+            ));
         }
-        LocalServiceRegistry::with_defaults().validate(&bundle, context)?;
+        LocalServiceRegistry::with_defaults().validate_portable(&bundle, context)?;
         self.local_service_bindings = bundle.bindings;
         Ok(())
     }

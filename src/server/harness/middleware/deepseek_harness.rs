@@ -354,10 +354,12 @@ fn decode_session_event(
     })
 }
 
+type AssistantChunk = (&'static str, bool, Value, Option<String>, Option<Value>);
+
 fn decode_assistant_chunk(
     data: &Map<String, Value>,
     native: &Value,
-) -> Result<(&'static str, bool, Value, Option<String>, Option<Value>), HarnessAdapterError> {
+) -> Result<AssistantChunk, HarnessAdapterError> {
     let chunk = data
         .get("chunk")
         .and_then(Value::as_object)

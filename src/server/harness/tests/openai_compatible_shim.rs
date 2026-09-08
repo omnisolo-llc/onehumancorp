@@ -7,10 +7,8 @@ use server_harness::middleware::harness::{
     HarnessAdapter, HarnessProtocolKind, HarnessSessionRequest, ProcessHarnessAdapter,
     ProcessHarnessSpec,
 };
-use server_harness::middleware::types::{
-    ModelApiDialect, ReasoningEffort, ResolvedModelSelection,
-};
 use server_harness::middleware::protocol::{AttemptOperation, HarnessExecutionItem};
+use server_harness::middleware::types::{ModelApiDialect, ReasoningEffort, ResolvedModelSelection};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio_stream::StreamExt;
@@ -31,10 +29,7 @@ fn resolved_model() -> ResolvedModelSelection {
     }
 }
 
-async fn responses_provider() -> (
-    SocketAddr,
-    tokio::task::JoinHandle<(String, String, Value)>,
-) {
+async fn responses_provider() -> (SocketAddr, tokio::task::JoinHandle<(String, String, Value)>) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let task = tokio::spawn(async move {
@@ -45,8 +40,7 @@ async fn responses_provider() -> (
             let read = stream.read(&mut buffer).await.unwrap();
             assert!(read > 0);
             request.extend_from_slice(&buffer[..read]);
-            let Some(headers_end) = request.windows(4).position(|part| part == b"\r\n\r\n")
-            else {
+            let Some(headers_end) = request.windows(4).position(|part| part == b"\r\n\r\n") else {
                 continue;
             };
             let headers = String::from_utf8_lossy(&request[..headers_end]);
@@ -112,6 +106,21 @@ async fn openai_compatible_shim_dispatches_sessions_and_prompts_over_the_facade(
     let (provider_address, provider) = responses_provider().await;
     let secret = "shim-scoped-token-canary";
     let shim = Path::new(env!("CARGO_MANIFEST_DIR")).join("sidecars/openai_compatible_shim.py");
+    let fixture_dir = std::env::temp_dir().join(format!("omnisolo-shim-cli-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&fixture_dir).unwrap();
+    let fixture = fixture_dir.join("aider");
+    std::fs::write(&fixture, r#"#!/usr/bin/env python3
+import json, os, sys, urllib.request
+prompt = sys.stdin.read()
+assert '--message-file' in sys.argv
+request = urllib.request.Request(os.environ['OPENAI_API_BASE_URL'] + '/responses',
+    data=json.dumps({'model':os.environ['OPENAI_MODEL'], 'input':prompt}).encode(),
+    headers={'Authorization':'Bearer ' + os.environ['OPENAI_API_KEY'], 'Content-Type':'application/json'})
+response = json.load(urllib.request.urlopen(request))
+print(response['output'][0]['content'][0]['text'])
+"#).unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(&fixture, std::fs::Permissions::from_mode(0o755)).unwrap();
     let selection = resolved_model();
     let request = HarnessSessionRequest::new("tenant-shim", Uuid::new_v4(), Uuid::new_v4())
         .with_task(Uuid::new_v4(), "exercise the OpenAI-compatible shim")
@@ -123,9 +132,14 @@ async fn openai_compatible_shim_dispatches_sessions_and_prompts_over_the_facade(
             "aider",
         )
         .with_protocol(HarnessProtocolKind::OpenAiCompatibleShim)
-        .with_model_routing(
-            selection,
-            Some(format!("http://{provider_address}/v1")),
+        .with_model_routing(selection, Some(format!("http://{provider_address}/v1")))
+        .with_environment(
+            "PATH",
+            format!(
+                "{}:{}",
+                fixture_dir.display(),
+                std::env::var("PATH").unwrap()
+            ),
         )
         .with_environment("OPENAI_API_KEY", secret)
         .with_environment(
@@ -185,7 +199,129 @@ async fn openai_compatible_shim_dispatches_sessions_and_prompts_over_the_facade(
     assert_eq!(authorization, format!("Bearer {secret}"));
     assert_eq!(body["model"], "gpt-5.6-luna");
     assert_eq!(body["input"], "Answer through the shared provider");
-    assert!(!events
-        .iter()
-        .any(|event| event.payload.to_string().contains(secret)));
+    std::fs::remove_dir_all(fixture_dir).unwrap();
+    assert!(
+        !events
+            .iter()
+            .any(|event| event.payload.to_string().contains(secret))
+    );
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn dropping_shim_attempt_reaps_cli_and_removes_its_home() {
+    use std::os::unix::fs::PermissionsExt;
+    let directory = std::env::temp_dir().join(format!("shim-drop-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let fixture = directory.join("aider");
+    std::fs::write(&fixture, r#"#!/usr/bin/env python3
+import json, os, pathlib, time
+pathlib.Path(__file__).with_suffix('.state').write_text(json.dumps({'pid':os.getpid(),'home':os.environ['HOME']}))
+time.sleep(60)
+"#).unwrap();
+    std::fs::set_permissions(&fixture, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let shim = Path::new(env!("CARGO_MANIFEST_DIR")).join("sidecars/openai_compatible_shim.py");
+    let mut adapter = ProcessHarnessAdapter::new(
+        ProcessHarnessSpec::command("python3", [shim.to_string_lossy().into_owned()], "aider")
+            .with_protocol(HarnessProtocolKind::OpenAiCompatibleShim)
+            .with_environment(
+                "PATH",
+                format!("{}:{}", directory.display(), std::env::var("PATH").unwrap()),
+            )
+            .with_environment("OPENAI_API_KEY", "drop-fixture-token")
+            .with_environment("OPENAI_API_BASE_URL", "http://127.0.0.1:1/v1")
+            .with_environment("OPENAI_MODEL", "gpt-5.6-luna")
+            .with_timeout(Duration::from_secs(90)),
+    );
+    let attempt = tokio::spawn(async move {
+        let request = HarnessSessionRequest::new("tenant", Uuid::new_v4(), Uuid::new_v4());
+        adapter.execute(request, "drop-attempt", "wait", None).await
+    });
+    let state = fixture.with_extension("state");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while !state.exists() {
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let state: Value = serde_json::from_slice(&std::fs::read(state).unwrap()).unwrap();
+    attempt.abort();
+    let _ = attempt.await;
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while Path::new(state["home"].as_str().unwrap()).exists()
+            || Path::new(&format!("/proc/{}", state["pid"])).exists()
+        {
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await
+    .expect("dropping adapter must reap CLI and remove temporary home");
+    std::fs::remove_dir_all(directory).unwrap();
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn shim_stream_admits_prompt_without_blocking_and_cancel_reaps_cli() {
+    use std::os::unix::fs::PermissionsExt;
+    let directory = std::env::temp_dir().join(format!("shim-drop-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&directory).unwrap();
+    let fixture = directory.join("aider");
+    std::fs::write(&fixture, r#"#!/usr/bin/env python3
+import json, os, pathlib, time
+pathlib.Path(__file__).with_suffix('.state').write_text(json.dumps({'pid':os.getpid(),'home':os.environ['HOME']}))
+time.sleep(60)
+"#).unwrap();
+    std::fs::set_permissions(&fixture, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let shim = Path::new(env!("CARGO_MANIFEST_DIR")).join("sidecars/openai_compatible_shim.py");
+    let mut adapter = ProcessHarnessAdapter::new(
+        ProcessHarnessSpec::command("python3", [shim.to_string_lossy().into_owned()], "aider")
+            .with_protocol(HarnessProtocolKind::OpenAiCompatibleShim)
+            .with_environment(
+                "PATH",
+                format!("{}:{}", directory.display(), std::env::var("PATH").unwrap()),
+            )
+            .with_environment("OPENAI_API_KEY", "drop-fixture-token")
+            .with_environment("OPENAI_API_BASE_URL", "http://127.0.0.1:1/v1")
+            .with_environment("OPENAI_MODEL", "gpt-5.6-luna")
+            .with_timeout(Duration::from_secs(90)),
+    );
+    let request = HarnessSessionRequest::new("tenant", Uuid::new_v4(), Uuid::new_v4());
+    let stream = tokio::time::timeout(
+        Duration::from_millis(500),
+        adapter.attempt_stream(
+            AttemptOperation::Execute,
+            request.clone(),
+            "cancel-attempt",
+            "wait",
+            None,
+        ),
+    )
+    .await
+    .expect("shim stream admission must release the adapter before CLI completion")
+    .unwrap();
+    let state = fixture.with_extension("state");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while !state.exists() {
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let state: Value = serde_json::from_slice(&std::fs::read(state).unwrap()).unwrap();
+    adapter
+        .control_attempt(request, "cancel-attempt", "cancel", "", None)
+        .await
+        .unwrap();
+    drop(stream);
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while Path::new(state["home"].as_str().unwrap()).exists()
+            || Path::new(&format!("/proc/{}", state["pid"])).exists()
+        {
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    })
+    .await
+    .expect("dropping adapter must reap CLI and remove temporary home");
+    std::fs::remove_dir_all(directory).unwrap();
 }

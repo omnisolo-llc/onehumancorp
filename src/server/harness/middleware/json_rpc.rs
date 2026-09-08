@@ -410,10 +410,10 @@ impl JsonRpcProcessRuntime {
     }
 
     fn add_jsonrpc_header(&self, message: &mut Value) {
-        if self.inner.include_jsonrpc_header {
-            if let Some(object) = message.as_object_mut() {
-                object.insert("jsonrpc".to_owned(), Value::String("2.0".to_owned()));
-            }
+        if self.inner.include_jsonrpc_header
+            && let Some(object) = message.as_object_mut()
+        {
+            object.insert("jsonrpc".to_owned(), Value::String("2.0".to_owned()));
         }
     }
 

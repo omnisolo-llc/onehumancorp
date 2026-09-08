@@ -33,6 +33,7 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+        fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -62,6 +63,15 @@ spec:
               value: {{ printf "0.0.0.0:%v" (default $.Values.harnessWorkers.defaultGrpcPort $worker.grpcPort) | quote }}
             - name: OMNISOLO_HARNESS_HEALTH_ADDR
               value: {{ printf "0.0.0.0:%v" (default $.Values.harnessWorkers.defaultHealthPort $worker.healthPort) | quote }}
+            {{- if $worker.localServices }}
+            - name: OMNISOLO_LOCAL_SERVICE_ENDPOINT
+              value: http://127.0.0.1:8095
+            - name: OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "localServices.controlSecretName is required" $worker.localServices.controlSecretName | quote }}
+                  key: {{ default "token" $worker.localServices.controlSecretKey | quote }}
+            {{- end }}
             {{- range $key, $value := $worker.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
@@ -94,6 +104,71 @@ spec:
               mountPath: /workspace
             - name: harness-home
               mountPath: /home/omnisolo
+        {{- if $worker.localServices }}
+        - name: local-services
+          image: {{ required "localServices.image is required" $worker.localServices.image | quote }}
+          imagePullPolicy: {{ $.Values.harnessWorkers.imagePullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: OMNISOLO_LOCAL_SERVICE_ADDR
+              value: 127.0.0.1:8095
+            - name: OMNISOLO_LOCAL_SERVICE_CONFIG_FILE
+              value: /services-config/configuration.json
+            - name: OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $worker.localServices.controlSecretName | quote }}
+                  key: {{ default "token" $worker.localServices.controlSecretKey | quote }}
+            {{- with $worker.localServices.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml (default $.Values.harnessWorkers.resources $worker.localServices.resources) | nindent 12 }}
+          volumeMounts:
+            - name: local-service-config
+              mountPath: /services-config
+              readOnly: true
+            - name: local-service-data
+              mountPath: /services
+            - name: local-service-tmp
+              mountPath: /tmp
+        {{- end }}
+        {{- if $worker.plandexServer }}
+        - name: plandex-server
+          image: {{ $worker.plandexServer.image | quote }}
+          imagePullPolicy: {{ $.Values.harnessWorkers.imagePullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $worker.plandexServer.databaseSecretName | quote }}
+                  key: {{ $worker.plandexServer.databaseSecretKey | quote }}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          readinessProbe:
+            exec:
+              command: ["python3", "-c", "import socket; socket.create_connection(('127.0.0.1',8099),2).close()"]
+            periodSeconds: 5
+          volumeMounts:
+            - name: plandex-tmp
+              mountPath: /tmp
+            - name: plandex-files
+              mountPath: /var/lib/plandex
+        {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
@@ -101,6 +176,30 @@ spec:
           emptyDir: {}
         - name: harness-home
           emptyDir: {}
+        {{- if $worker.localServices }}
+        - name: local-service-config
+          {{- if and $worker.localServices.configSecret $worker.localServices.configMap }}
+          {{- fail "configure exactly one localServices.configSecret or configMap" }}
+          {{- end }}
+          {{- if $worker.localServices.configSecret }}
+          secret:
+            secretName: {{ $worker.localServices.configSecret | quote }}
+          {{- else }}
+          configMap:
+            name: {{ required "localServices.configMap or configSecret is required" $worker.localServices.configMap | quote }}
+          {{- end }}
+        - name: local-service-data
+          persistentVolumeClaim:
+            claimName: {{ required "localServices.dataClaim is required" $worker.localServices.dataClaim | quote }}
+        - name: local-service-tmp
+          emptyDir: {}
+        {{- end }}
+        {{- if $worker.plandexServer }}
+        - name: plandex-tmp
+          emptyDir: {}
+        - name: plandex-files
+          emptyDir: {}
+        {{- end }}
 ---
 apiVersion: v1
 kind: Service

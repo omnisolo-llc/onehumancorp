@@ -337,16 +337,32 @@ async fn grpc_attempt_context_carries_validated_local_service_bindings_to_the_wo
     let session_id = Uuid::from_u128(300);
     let task_id = Uuid::from_u128(301);
     let attempt_id = Uuid::from_u128(302);
-    let bundle = LocalServiceRegistry::with_defaults()
-        .resolve(LocalServiceScopeContext::for_attempt(
-            "tenant-local-services",
-            Some("project-local"),
-            Some("workspace-local"),
-            session_id,
-            Some(task_id),
-            Some(attempt_id),
-        ))
+    use server_harness::middleware::local_service_gateway::{
+        LocalServiceGateway, SqliteAgentMemoryBackend,
+    };
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
         .unwrap();
+    sqlx::query("CREATE VIRTUAL TABLE agent_memory USING fts5(content,tags,created_at UNINDEXED)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let scope = LocalServiceScopeContext::for_attempt(
+        "tenant-local-services",
+        Some("project-local"),
+        Some("workspace-local"),
+        session_id,
+        Some(task_id),
+        Some(attempt_id),
+    );
+    let mut gateway = LocalServiceGateway::new(LocalServiceRegistry::with_defaults());
+    gateway.register(
+        LocalServiceKind::Memory,
+        std::sync::Arc::new(SqliteAgentMemoryBackend::new(pool)),
+    );
+    let bundle = gateway.resolve(scope.clone()).unwrap();
     let memory_binding_id = bundle
         .binding(LocalServiceKind::Memory)
         .unwrap()
@@ -357,8 +373,8 @@ async fn grpc_attempt_context_carries_validated_local_service_bindings_to_the_wo
 while IFS= read -r line; do
   request_id=$(printf '%s' "$line" | sed -n 's/.*"request_id":"\([^"]*\)".*/\1/p')
   if printf '%s' "$line" | grep -q '"local_services"' \
-    && printf '%s' "$line" | grep -q '"binding_id":"{memory_binding_id}"'; then
-    printf '{{"request_id":"%s","ok":true,"payload":{{"events":[],"final_text":"local-services-bound"}}}}\n' "$request_id"
+    && printf '%s' "$line" | grep -q '"service_id":"omnisolo.memory"'; then
+    printf '{{"request_id":"%s","ok":true,"payload":{{"native_session_id":"local-services-session","events":[],"final_text":"local-services-bound"}}}}\n' "$request_id"
   else
     printf '{{"request_id":"%s","ok":false,"error":"local service binding missing"}}\n' "$request_id"
   fi
@@ -368,7 +384,9 @@ done
     let service = HarnessWorkerGrpcService::with_process_spec(
         ProcessHarnessSpec::command("/bin/sh", ["-c".to_owned(), script], "codex")
             .with_protocol(server_harness::middleware::harness::HarnessProtocolKind::Custom),
-    );
+    )
+    .with_local_service_gateway(std::sync::Arc::new(gateway))
+    .with_trusted_service_scope(scope);
     let command = AttemptCommandEnvelope {
         protocol_version: 1,
         tenant_id: "tenant-local-services".to_owned(),
@@ -416,10 +434,26 @@ done
                 .to_owned()
         })
         .collect::<Vec<_>>();
-    assert_eq!(event_types.first().map(String::as_str), Some("local_services.bound"));
-    assert!(payloads
+    let bound_index = event_types
         .iter()
-        .any(|payload| payload.contains("local-services-bound")));
+        .position(|kind| kind == "local_services.bound")
+        .unwrap();
+    assert!(
+        event_types[..bound_index]
+            .iter()
+            .all(|kind| kind == "user.message")
+    );
+    let bound: serde_json::Value = serde_json::from_str(&payloads[bound_index]).unwrap();
+    assert_ne!(
+        bound["payload"]["bindings"][0]["binding_id"].as_str(),
+        Some(memory_binding_id.as_str())
+    );
+    assert_eq!(bound["payload"]["bindings"][0]["generation"], 2);
+    assert!(
+        payloads
+            .iter()
+            .any(|payload| payload.contains("local-services-bound"))
+    );
 }
 
 #[tokio::test]

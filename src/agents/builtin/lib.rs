@@ -42,6 +42,7 @@ pub mod goose;
 pub mod guardrails;
 pub mod in_memory_store;
 pub mod json_store;
+pub mod local_service_adapters;
 pub mod memory;
 pub mod memory_exhaustive_tests;
 pub mod memory_store;
@@ -271,29 +272,21 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             "--ralph-loop" => {
                 ralph_loop = true;
             }
-            "--task" => {
-                if i + 1 < args.len() {
-                    task = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "--task" if i + 1 < args.len() => {
+                task = Some(args[i + 1].clone());
+                i += 1;
             }
-            "--parent-context-file" => {
-                if i + 1 < args.len() {
-                    parent_context_file = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "--parent-context-file" if i + 1 < args.len() => {
+                parent_context_file = Some(args[i + 1].clone());
+                i += 1;
             }
-            "--worktree" => {
-                if i + 1 < args.len() {
-                    worktree = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "--worktree" if i + 1 < args.len() => {
+                worktree = Some(args[i + 1].clone());
+                i += 1;
             }
-            "--mailbox" => {
-                if i + 1 < args.len() {
-                    mailbox = Some(args[i + 1].clone());
-                    i += 1;
-                }
+            "--mailbox" if i + 1 < args.len() => {
+                mailbox = Some(args[i + 1].clone());
+                i += 1;
             }
             _ => {}
         }

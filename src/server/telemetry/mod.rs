@@ -2126,6 +2126,17 @@ mod dashboard_test;
 
 static SANDBOX_CPU_USAGE: OnceLock<Gauge<f64>> = OnceLock::new();
 static SANDBOX_MEMORY_BYTES: OnceLock<Gauge<f64>> = OnceLock::new();
+static SANDBOX_MEMORY_SAMPLES: OnceLock<std::sync::RwLock<std::collections::HashMap<String, u64>>> =
+    OnceLock::new();
+
+pub fn sandbox_memory_sample(agent_id: &str) -> Option<u64> {
+    SANDBOX_MEMORY_SAMPLES
+        .get()?
+        .read()
+        .ok()?
+        .get(agent_id)
+        .copied()
+}
 
 pub fn get_sandbox_cpu_usage() -> &'static Gauge<f64> {
     SANDBOX_CPU_USAGE.get_or_init(|| {
@@ -2162,6 +2173,12 @@ pub fn record_sandbox_cpu_usage(agent_id: &str, value: f64) {
 }
 
 pub fn record_sandbox_memory_bytes(agent_id: &str, value: f64) {
+    if value.is_finite()
+        && value >= 0.0
+        && let Ok(mut samples) = SANDBOX_MEMORY_SAMPLES.get_or_init(Default::default).write()
+    {
+        samples.insert(agent_id.to_owned(), value as u64);
+    }
     if !::server_config::get().telemetry_enabled {
         return;
     }

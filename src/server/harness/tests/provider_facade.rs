@@ -422,3 +422,134 @@ async fn facade_injects_bound_reasoning_when_child_omits_it() {
     facade.shutdown().await.unwrap();
     upstream.shutdown().await;
 }
+
+#[tokio::test]
+async fn facade_enforces_bound_output_limit_in_both_dialects() {
+    let upstream = UpstreamFixture::start().await;
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("model-a"))
+        .await
+        .unwrap();
+    for (path, field) in [
+        ("responses", "max_output_tokens"),
+        ("chat/completions", "max_completion_tokens"),
+    ] {
+        let mut body = json!({"model":"model-a"});
+        body[field] = json!(129);
+        let response = reqwest::Client::new()
+            .post(format!("{}/{path}", facade.route().base_url()))
+            .bearer_auth(facade.route().token())
+            .json(&body)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
+        body.as_object_mut().unwrap().remove(field);
+        let response = reqwest::Client::new()
+            .post(format!("{}/{path}", facade.route().base_url()))
+            .bearer_auth(facade.route().token())
+            .json(&body)
+            .send()
+            .await
+            .unwrap();
+        assert!(response.status().is_success());
+        assert_eq!(upstream.bodies.lock().await.last().unwrap()[field], 128);
+    }
+    facade.shutdown().await.unwrap();
+    upstream.shutdown().await;
+}
+
+#[tokio::test]
+async fn successful_stream_redacts_upstream_secret_across_chunks() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let upstream = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        read_request(&mut socket).await.unwrap();
+        socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nTransfer-Encoding: chunked\r\n\r\n").await.unwrap();
+        for chunk in ["data: upstream-secret-", "canary\n\n", "data: [DONE]\n\n"] {
+            socket
+                .write_all(format!("{:x}\r\n{chunk}\r\n", chunk.len()).as_bytes())
+                .await
+                .unwrap();
+            tokio::task::yield_now().await;
+        }
+        socket.write_all(b"0\r\n\r\n").await.unwrap();
+    });
+    let facade = ProviderFacade::start(
+        format!("http://{address}/v1"),
+        UPSTREAM_SECRET,
+        selection("model-a"),
+    )
+    .await
+    .unwrap();
+    let response = reqwest::Client::new()
+        .post(format!("{}/responses", facade.route().base_url()))
+        .bearer_auth(facade.route().token())
+        .json(&json!({"model":"model-a"}))
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert_eq!(response, "data: [REDACTED]\n\ndata: [DONE]\n\n");
+    upstream.await.unwrap();
+    facade.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn session_setup_route_cannot_issue_inference() {
+    use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    let upstream = UpstreamFixture::start().await;
+    let mut config =
+        ProviderFacadeConfig::new(upstream.url(), UPSTREAM_SECRET, selection("model-a"));
+    config.inference_allowed = false;
+    let facade = ProviderFacade::start_with_config(config).await.unwrap();
+    let response = reqwest::Client::new()
+        .post(format!("{}/responses", facade.route().base_url()))
+        .bearer_auth(facade.route().token())
+        .json(&json!({"model":"model-a"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    assert_eq!(upstream.request_count().await, 0);
+    facade.shutdown().await.unwrap();
+    upstream.shutdown().await;
+}
+
+#[tokio::test]
+async fn timeout_returns_a_structured_provider_error() {
+    use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        read_request(&mut socket).await.unwrap();
+        let mut byte = [0];
+        let _ = socket.read(&mut byte).await;
+    });
+    let facade = ProviderFacade::start_with_config(
+        ProviderFacadeConfig::new(
+            format!("http://{address}/v1"),
+            UPSTREAM_SECRET,
+            selection("model-a"),
+        )
+        .with_timeout(std::time::Duration::from_millis(25)),
+    )
+    .await
+    .unwrap();
+    let response = reqwest::Client::new()
+        .post(format!("{}/responses", facade.route().base_url()))
+        .bearer_auth(facade.route().token())
+        .json(&json!({"model":"model-a"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::GATEWAY_TIMEOUT);
+    let error: Value = response.json().await.unwrap();
+    assert!(error["error"]["message"].is_string());
+    assert!(!error.to_string().contains(UPSTREAM_SECRET));
+    facade.shutdown().await.unwrap();
+    server.await.unwrap();
+}
