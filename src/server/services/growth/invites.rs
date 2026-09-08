@@ -41,7 +41,12 @@ impl InviteRepository {
         Ok(())
     }
 
-    pub async fn get_team_invites(&self, team_id: &str, cursor: Option<String>, limit: i64) -> Result<Vec<TeamInvite>, String> {
+    pub async fn get_team_invites(
+        &self,
+        team_id: &str,
+        cursor: Option<String>,
+        limit: i64,
+    ) -> Result<Vec<TeamInvite>, String> {
         let rows = if let Some(c) = cursor {
             sqlx::query("SELECT id, tenant_id, team_id, inviter_id, invitee_id, status, created_at, updated_at FROM team_invites WHERE team_id = $1 AND created_at <= (SELECT created_at FROM team_invites WHERE id = $2) AND id < $2 ORDER BY created_at DESC, id DESC LIMIT $3")
                 .bind(team_id)
@@ -59,16 +64,19 @@ impl InviteRepository {
                 .map_err(|e| e.to_string())?
         };
 
-        let invites = rows.into_iter().map(|row| TeamInvite {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            team_id: row.get("team_id"),
-            inviter_id: row.get("inviter_id"),
-            invitee_id: row.get("invitee_id"),
-            status: row.get("status"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
-        }).collect();
+        let invites = rows
+            .into_iter()
+            .map(|row| TeamInvite {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                team_id: row.get("team_id"),
+                inviter_id: row.get("inviter_id"),
+                invitee_id: row.get("invitee_id"),
+                status: row.get("status"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+            })
+            .collect();
 
         Ok(invites)
     }
@@ -79,7 +87,7 @@ impl InviteRepository {
             .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         let count: i64 = row.get(0);
         Ok(count)
     }
@@ -127,7 +135,7 @@ impl InviteRepository {
             .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-            
+
         let count: i64 = row.get(0);
         Ok(count)
     }
@@ -165,7 +173,13 @@ impl InviteTracker {
         InviteTracker { repo }
     }
 
-    pub async fn record_invite(&self, tenant_id: &str, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<TeamInvite, String> {
+    pub async fn record_invite(
+        &self,
+        tenant_id: &str,
+        team_id: &str,
+        inviter_id: &str,
+        invitee_id: &str,
+    ) -> Result<TeamInvite, String> {
         let invite = TeamInvite {
             id: format!("inv-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)),
             tenant_id: tenant_id.to_string(), // Ensure isolation mapping
@@ -178,11 +192,16 @@ impl InviteTracker {
         };
 
         self.repo.create_invite(&invite).await?;
-        
+
         Ok(invite)
     }
 
-    pub async fn get_team_invites(&self, team_id: &str, cursor: Option<String>, limit: i64) -> Result<Vec<TeamInvite>, String> {
+    pub async fn get_team_invites(
+        &self,
+        team_id: &str,
+        cursor: Option<String>,
+        limit: i64,
+    ) -> Result<Vec<TeamInvite>, String> {
         self.repo.get_team_invites(team_id, cursor, limit).await
     }
 
@@ -198,11 +217,21 @@ impl InviteTracker {
         self.repo.get_total_invites_count(tenant_id).await
     }
 
-    pub async fn record_invites(&self, tenant_id: &str, team_id: &str, inviter_id: &str, invitee_ids: &[String]) -> Result<(), String> {
+    pub async fn record_invites(
+        &self,
+        tenant_id: &str,
+        team_id: &str,
+        inviter_id: &str,
+        invitee_ids: &[String],
+    ) -> Result<(), String> {
         let mut invites = Vec::new();
         for invitee_id in invitee_ids {
             invites.push(TeamInvite {
-                id: format!("inv-{}-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0), invitee_id),
+                id: format!(
+                    "inv-{}-{}",
+                    Utc::now().timestamp_nanos_opt().unwrap_or(0),
+                    invitee_id
+                ),
                 tenant_id: tenant_id.to_string(),
                 team_id: team_id.to_string(),
                 inviter_id: inviter_id.to_string(),
@@ -214,7 +243,7 @@ impl InviteTracker {
         }
 
         self.repo.create_invites(&invites).await?;
-        
+
         Ok(())
     }
 }

@@ -1,8 +1,8 @@
-use std::sync::Arc;
 use crate::db::DB;
+use serde_json::json;
+use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
-use serde_json::json;
 
 pub struct ProactiveOperationsWorker {
     pub db: Arc<DB>,
@@ -27,18 +27,14 @@ impl ProactiveOperationsWorker {
 
                 // 1. Get all active tenants
                 let tenants: Vec<String> = match &db.store {
-                    crate::db::DbStore::Postgres => {
-                        sqlx::query_scalar("SELECT id FROM tenants")
-                            .fetch_all(&db.pool)
-                            .await
-                            .unwrap_or_default()
-                    },
-                    crate::db::DbStore::Sqlite(_) => {
-                        sqlx::query_scalar("SELECT id FROM tenants")
-                            .fetch_all(&db.pool)
-                            .await
-                            .unwrap_or_default()
-                    }
+                    crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT id FROM tenants")
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or_default(),
+                    crate::db::DbStore::Sqlite(_) => sqlx::query_scalar("SELECT id FROM tenants")
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or_default(),
                 };
 
                 for tenant_id in tenants {
@@ -69,18 +65,18 @@ impl ProactiveOperationsWorker {
                         (
                             "Review Daily Prep Checklist",
                             "Review Checklist",
-                            "mark_complete"
+                            "mark_complete",
                         ),
                         (
                             "Follow up on delayed supplier delivery from yesterday",
                             "Assign to Staff",
-                            "assign_to_staff"
+                            "assign_to_staff",
                         ),
                         (
                             "Staffing alert: Only 1 person scheduled for closing shift.",
                             "Draft Schedule Request",
-                            "draft_schedule_request"
-                        )
+                            "draft_schedule_request",
+                        ),
                     ];
 
                     for (description, action_msg, action_type) in tasks {
@@ -108,7 +104,7 @@ impl ProactiveOperationsWorker {
                                 .bind("PENDING_APPROVAL")
                                 .execute(&db.pool)
                                 .await;
-                            },
+                            }
                             crate::db::DbStore::Sqlite(_) => {
                                 let _ = sqlx::query(
                                     "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"

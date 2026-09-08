@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use sqlx::PgPool;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,10 +23,18 @@ impl OHCUniversalLedger {
         Self { pool }
     }
 
-    pub async fn append_entry(&self, tenant_id: &str, event_type: &str, department: &str, payload: &serde_json::Value) -> Result<String, String> {
+    pub async fn append_entry(
+        &self,
+        tenant_id: &str,
+        event_type: &str,
+        department: &str,
+        payload: &serde_json::Value,
+    ) -> Result<String, String> {
         let entry_id = Uuid::new_v4().to_string();
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         sqlx::query(
             "INSERT INTO ohc_universal_ledger (id, tenant_id, event_type, department, payload, created_at)
@@ -45,16 +53,22 @@ impl OHCUniversalLedger {
         Ok(entry_id)
     }
 
-    pub async fn get_entries(&self, tenant_id: &str, limit: i64) -> Result<Vec<OHCLedgerEntry>, String> {
+    pub async fn get_entries(
+        &self,
+        tenant_id: &str,
+        limit: i64,
+    ) -> Result<Vec<OHCLedgerEntry>, String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let rows = sqlx::query(
             "SELECT id, tenant_id, event_type, department, payload, created_at
              FROM ohc_universal_ledger
              WHERE tenant_id = $1
              ORDER BY created_at DESC
-             LIMIT $2"
+             LIMIT $2",
         )
         .bind(tenant_id)
         .bind(limit)
@@ -65,7 +79,8 @@ impl OHCUniversalLedger {
         let mut entries = Vec::new();
         use sqlx::Row;
         for row in rows {
-            let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
+            let payload_val: serde_json::Value =
+                row.try_get("payload").unwrap_or(serde_json::Value::Null);
             let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
             entries.push(OHCLedgerEntry {
                 id: row.get("id"),

@@ -10,3 +10,7 @@ sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustl
 
 [lib]
 path = "mod.rs"
+
+[dev-dependencies]
+temp-env = "0.3.6"
+tempfile = "3"

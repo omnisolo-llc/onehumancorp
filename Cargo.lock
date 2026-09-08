@@ -781,6 +781,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "backon"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cffb0e931875b666fc4fcb20fee52e9bbd1ef836fd9e9e04ec21555f9f85f7ef"
+dependencies = [
+ "fastrand",
+]
+
+[[package]]
 name = "backtrace"
 version = "0.3.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5975,6 +5984,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "omnisolo_harness_worker"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum 0.8.9",
+ "ohc_builtin_agent",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "server_harness",
+ "server_ohc",
+ "sha2",
+ "sqlx",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.12.3",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7566,8 +7597,10 @@ checksum = "09d8f99a4090c89cc489a94833c901ead69bfbf3877b4867d5482e321ee875bc"
 dependencies = [
  "arc-swap",
  "async-trait",
+ "backon",
  "bytes",
  "combine",
+ "futures",
  "futures-util",
  "itertools 0.13.0",
  "itoa",
@@ -8867,6 +8900,8 @@ dependencies = [
  "serde",
  "server_config",
  "sqlx",
+ "temp-env",
+ "tempfile",
 ]
 
 [[package]]
@@ -8875,6 +8910,7 @@ version = "0.1.0"
 dependencies = [
  "config",
  "serde",
+ "temp-env",
  "tracing",
 ]
 
@@ -8883,17 +8919,25 @@ name = "server_harness"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "axum 0.8.9",
  "chrono",
+ "futures-util",
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
+ "prost 0.13.5",
  "regex",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "server_common",
+ "server_ohc",
  "server_telemetry",
+ "sha2",
  "sqlx",
  "tokio",
+ "tokio-stream",
+ "tonic 0.12.3",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",

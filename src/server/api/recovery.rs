@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::Path,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 
 #[derive(Clone)]

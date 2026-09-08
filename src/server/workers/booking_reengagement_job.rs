@@ -1,8 +1,8 @@
-use std::sync::Arc;
 use crate::db::DB;
+use serde_json::json;
+use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
-use serde_json::json;
 
 pub struct BookingReengagementJob {
     pub db: Arc<DB>,
@@ -21,18 +21,14 @@ impl BookingReengagementJob {
                 interval.tick().await;
 
                 let tenants: Vec<String> = match &db.store {
-                    crate::db::DbStore::Postgres => {
-                        sqlx::query_scalar("SELECT id FROM tenants")
-                            .fetch_all(&db.pool)
-                            .await
-                            .unwrap_or_default()
-                    },
-                    crate::db::DbStore::Sqlite(_) => {
-                        sqlx::query_scalar("SELECT id FROM tenants")
-                            .fetch_all(&db.pool)
-                            .await
-                            .unwrap_or_default()
-                    }
+                    crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT id FROM tenants")
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or_default(),
+                    crate::db::DbStore::Sqlite(_) => sqlx::query_scalar("SELECT id FROM tenants")
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or_default(),
                 };
 
                 for tenant_id in tenants {
@@ -104,7 +100,7 @@ impl BookingReengagementJob {
                                 .bind(&payload)
                                 .execute(&db.pool)
                                 .await;
-                            },
+                            }
                             crate::db::DbStore::Sqlite(_) => {
                                 let _ = sqlx::query(
                                     "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'booking_reengagement_check', ?, 'PENDING') ON CONFLICT DO NOTHING"

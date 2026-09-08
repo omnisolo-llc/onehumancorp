@@ -41,7 +41,7 @@ impl GoogleCalendarProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 
@@ -49,7 +49,14 @@ impl GoogleCalendarProvider {
         self.client.get_free_busy(time_min, time_max).await
     }
 
-    pub async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
-        self.client.create_event(summary, start_time, end_time).await
+    pub async fn create_event(
+        &self,
+        summary: &str,
+        start_time: &str,
+        end_time: &str,
+    ) -> Result<String, String> {
+        self.client
+            .create_event(summary, start_time, end_time)
+            .await
     }
 }

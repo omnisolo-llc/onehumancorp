@@ -1,15 +1,15 @@
+use super::blob::{BlobProvider, create_blob_provider};
 use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
 use ::server_ohc::mcp_proxy::{ProxyToServer, RegisterProxyRequest, proxy_to_server};
-use tonic::transport::Channel;
-use tonic::Request;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use tracing::{info, error};
-use super::blob::{create_blob_provider, BlobProvider};
-use std::sync::Arc;
+use tonic::Request;
+use tonic::transport::Channel;
+use tracing::{error, info};
 
-use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig};
 use crate::orchestration::local_sandbox::LocalSandbox;
+use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig};
 
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
@@ -19,7 +19,8 @@ pub struct LocalProxyClient {
 
 impl LocalProxyClient {
     pub async fn new(endpoint_url: String, spiffe_id: String) -> Self {
-        let channel = Channel::from_shared(endpoint_url).unwrap()
+        let channel = Channel::from_shared(endpoint_url)
+            .unwrap()
             .connect()
             .await
             .unwrap();
@@ -31,7 +32,10 @@ impl LocalProxyClient {
         }
     }
 
-    pub fn new_with_channel(client: McpReverseTunnelServiceClient<Channel>, spiffe_id: String) -> Self {
+    pub fn new_with_channel(
+        client: McpReverseTunnelServiceClient<Channel>,
+        spiffe_id: String,
+    ) -> Self {
         Self {
             client,
             spiffe_id,
@@ -45,15 +49,24 @@ impl LocalProxyClient {
         // Initial registration
         let reg = RegisterProxyRequest {
             spiffe_id: self.spiffe_id.clone(),
-            supported_tools: vec!["shell".to_string(), "fs_read".to_string(), "fs_write".to_string()],
+            supported_tools: vec![
+                "shell".to_string(),
+                "fs_read".to_string(),
+                "fs_write".to_string(),
+            ],
         };
-        let _ = tx.send(ProxyToServer {
-            request_id: "init".to_string(),
-            payload: Some(proxy_to_server::Payload::Register(reg)),
-        }).await;
+        let _ = tx
+            .send(ProxyToServer {
+                request_id: "init".to_string(),
+                payload: Some(proxy_to_server::Payload::Register(reg)),
+            })
+            .await;
 
         let request_stream = ReceiverStream::new(rx);
-        let response = self.client.establish_tunnel(Request::new(request_stream)).await?;
+        let response = self
+            .client
+            .establish_tunnel(Request::new(request_stream))
+            .await?;
         let mut in_stream = response.into_inner();
 
         let tx_clone = tx.clone();
@@ -68,7 +81,10 @@ impl LocalProxyClient {
                             let (success, result, error_details) = match req.tool_id.as_str() {
                                 "shell" => {
                                     let config = SandboxConfig {
-                                        deny_list_dirs: vec!["/root".to_string(), "/etc/shadow".to_string()],
+                                        deny_list_dirs: vec![
+                                            "/root".to_string(),
+                                            "/etc/shadow".to_string(),
+                                        ],
                                         ..Default::default()
                                     };
                                     let sandbox = LocalSandbox::new(config, None);
@@ -82,7 +98,10 @@ impl LocalProxyClient {
                                             }
                                         }
                                         Err(e) => {
-                                            let error_msg = format!("Sandbox Violation: {} ({})", e.reason, e.command);
+                                            let error_msg = format!(
+                                                "Sandbox Violation: {} ({})",
+                                                e.reason, e.command
+                                            );
                                             error!("{}", error_msg);
 
                                             let details = serde_json::json!({
@@ -95,10 +114,13 @@ impl LocalProxyClient {
                                                 "sandbox_violation_event",
                                                 "counter",
                                                 1.0,
-                                                details
-                                            ).await;
+                                                details,
+                                            )
+                                            .await;
 
-                                            ::server_telemetry::record_sandbox_violation(&e.reason, &e.command);
+                                            ::server_telemetry::record_sandbox_violation(
+                                                &e.reason, &e.command,
+                                            );
 
                                             (false, "".to_string(), error_msg)
                                         }
@@ -110,34 +132,59 @@ impl LocalProxyClient {
                                         Ok(content) => (true, content, "".to_string()),
                                         Err(e) => (false, "".to_string(), e.to_string()),
                                     };
-                                    ::server_telemetry::record_harness_db_io_latency("fs_read", start.elapsed().as_secs_f64());
+                                    ::server_telemetry::record_harness_db_io_latency(
+                                        "fs_read",
+                                        start.elapsed().as_secs_f64(),
+                                    );
                                     res
                                 }
                                 "fs_write" => {
                                     let parts: Vec<&str> = req.params.splitn(2, "||").collect();
                                     if parts.len() == 2 {
                                         let start = std::time::Instant::now();
-                                        let res = match blob_provider.write_blob(parts[0], parts[1]).await {
-                                            Ok(_) => (true, "Successfully wrote file".to_string(), "".to_string()),
+                                        let res = match blob_provider
+                                            .write_blob(parts[0], parts[1])
+                                            .await
+                                        {
+                                            Ok(_) => (
+                                                true,
+                                                "Successfully wrote file".to_string(),
+                                                "".to_string(),
+                                            ),
                                             Err(e) => (false, "".to_string(), e.to_string()),
                                         };
-                                        ::server_telemetry::record_harness_db_io_latency("fs_write", start.elapsed().as_secs_f64());
+                                        ::server_telemetry::record_harness_db_io_latency(
+                                            "fs_write",
+                                            start.elapsed().as_secs_f64(),
+                                        );
                                         res
                                     } else {
-                                        (false, "".to_string(), "Invalid params for fs_write".to_string())
+                                        (
+                                            false,
+                                            "".to_string(),
+                                            "Invalid params for fs_write".to_string(),
+                                        )
                                     }
                                 }
-                                _ => (false, "".to_string(), format!("Unknown tool: {}", req.tool_id)),
+                                _ => (
+                                    false,
+                                    "".to_string(),
+                                    format!("Unknown tool: {}", req.tool_id),
+                                ),
                             };
 
-                            let _ = tx_clone.send(ProxyToServer {
-                                request_id: msg.request_id,
-                                payload: Some(proxy_to_server::Payload::InvokeResponse(::server_ohc::mcp_proxy::InvokeCommandResponse {
-                                    success,
-                                    result,
-                                    error_details,
-                                })),
-                            }).await;
+                            let _ = tx_clone
+                                .send(ProxyToServer {
+                                    request_id: msg.request_id,
+                                    payload: Some(proxy_to_server::Payload::InvokeResponse(
+                                        ::server_ohc::mcp_proxy::InvokeCommandResponse {
+                                            success,
+                                            result,
+                                            error_details,
+                                        },
+                                    )),
+                                })
+                                .await;
                         }
                     }
                 }

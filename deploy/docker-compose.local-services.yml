@@ -1,0 +1,291 @@
+# Optional overlay: add -f deploy/docker-compose.local-services.yml to the base Compose command.
+# Provision each <root>/<harness>/configuration.json and data directory before startup.
+services:
+  harness-omnisolo:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-omnisolo-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-omnisolo
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/omnisolo/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/omnisolo/data:/services
+    depends_on:
+      harness-omnisolo:
+        condition: service_started
+  harness-codex:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_CODEX_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-codex-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-codex
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_CODEX_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/codex/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/codex/data:/services
+    depends_on:
+      harness-codex:
+        condition: service_started
+  harness-opencode:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OPENCODE_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-opencode-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-opencode
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OPENCODE_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/opencode/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/opencode/data:/services
+    depends_on:
+      harness-opencode:
+        condition: service_started
+  harness-deepseek:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_DEEPSEEK_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-deepseek-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-deepseek
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_DEEPSEEK_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/deepseek/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/deepseek/data:/services
+    depends_on:
+      harness-deepseek:
+        condition: service_started
+  harness-pi:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_PI_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-pi-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-pi
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_PI_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/pi/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/pi/data:/services
+    depends_on:
+      harness-pi:
+        condition: service_started
+  harness-kimi:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_KIMI_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-kimi-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-kimi
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_KIMI_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/kimi/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/kimi/data:/services
+    depends_on:
+      harness-kimi:
+        condition: service_started
+  harness-openhands:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OPENHANDS_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-openhands-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-openhands
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OPENHANDS_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/openhands/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/openhands/data:/services
+    depends_on:
+      harness-openhands:
+        condition: service_started
+  harness-openharness:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OPENHARNESS_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-openharness-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-openharness
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OPENHARNESS_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/openharness/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/openharness/data:/services
+    depends_on:
+      harness-openharness:
+        condition: service_started
+  harness-aider:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_AIDER_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-aider-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-aider
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_AIDER_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/aider/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/aider/data:/services
+    depends_on:
+      harness-aider:
+        condition: service_started
+  harness-goose:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_GOOSE_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-goose-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-goose
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_GOOSE_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/goose/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/goose/data:/services
+    depends_on:
+      harness-goose:
+        condition: service_started
+  harness-open-interpreter:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OPEN_INTERPRETER_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-open-interpreter-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-open-interpreter
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_OPEN_INTERPRETER_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/open-interpreter/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/open-interpreter/data:/services
+    depends_on:
+      harness-open-interpreter:
+        condition: service_started
+  harness-plandex:
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ENDPOINT: http://127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_PLANDEX_LOCAL_SERVICE_CONTROL_TOKEN:-}
+  harness-plandex-local-services:
+    profiles: ["harness"]
+    image: ${OMNISOLO_LOCAL_SERVICE_IMAGE:-omnisolo/harness-local-services:local}
+    network_mode: service:harness-plandex
+    user: "${OHC_DOCKER_UID:-1000}:${OHC_DOCKER_GID:-1000}"
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      OMNISOLO_LOCAL_SERVICE_ADDR: 127.0.0.1:8095
+      OMNISOLO_LOCAL_SERVICE_CONFIG_FILE: /services-config/configuration.json
+      OMNISOLO_LOCAL_SERVICE_CONTROL_TOKEN: ${OMNISOLO_PLANDEX_LOCAL_SERVICE_CONTROL_TOKEN:-}
+    volumes:
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/plandex/configuration.json:/services-config/configuration.json:ro
+      - ${OMNISOLO_LOCAL_SERVICE_ROOT:?service configuration root required}/plandex/data:/services
+    depends_on:
+      harness-plandex:
+        condition: service_started

@@ -53,6 +53,7 @@ export type BackendTransportDependencies = ServerSessionDependencies &
   }>;
 
 export type BackendRequestOptions = Readonly<{
+  streamResponse?: true;
   backendMethod?: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
   forwardQuery?: boolean;
   requestContentType?: "application/json";
@@ -235,7 +236,7 @@ function requestHeaders(request: Request, session: Awaited<ReturnType<typeof rea
     "x-tenant-id": session.user.organizationId,
     "x-user-id": session.user.id,
   });
-  for (const name of ["accept", "content-type", "idempotency-key"]) {
+  for (const name of ["accept", "content-type", "idempotency-key", "last-event-id"]) {
     const value = request.headers.get(name);
     if (value !== null && SAFE_FORWARD_VALUE.test(value)) headers.set(name, value);
   }
@@ -287,7 +288,10 @@ export async function proxyAuthenticatedRequest(
     return error(413, "request too large");
   }
 
-  const timeout = linkedTimeout(request.signal, dependencies.timeoutMs);
+  const timeout = linkedTimeout(request.signal, options.streamResponse
+    ? Math.max(1, Math.min(300_000, (session!.exp - dependencies.now()) * 1000))
+    : dependencies.timeoutMs);
+  let streaming = false;
   try {
     let encodedRequest: Uint8Array<ArrayBuffer>;
     try {
@@ -344,6 +348,43 @@ export async function proxyAuthenticatedRequest(
       void backend.body?.cancel().catch(() => undefined);
       return error(502, "backend response too large");
     }
+    if (options.streamResponse && backend.ok && backend.body &&
+        backend.headers.get("content-type")?.split(";", 1)[0].trim() === "text/event-stream") {
+      const reader = backend.body.getReader();
+      let bytes = 0;
+      let finished = false;
+      const finish = () => { finished = true; timeout.cleanup(); };
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          timeout.signal.addEventListener("abort", () => {
+            if (finished) return;
+            finish();
+            void reader.cancel().catch(() => undefined);
+            controller.error(new Error("backend stream interrupted"));
+          }, { once: true });
+        },
+        async pull(controller) {
+          try {
+            const chunk = await reader.read();
+            if (finished) return;
+            if (chunk.done) { finish(); controller.close(); return; }
+            bytes += chunk.value.byteLength;
+            if (bytes > dependencies.responseLimitBytes) {
+              finish();
+              await reader.cancel();
+              controller.error(new Error("backend stream limit exceeded"));
+              return;
+            }
+            controller.enqueue(chunk.value);
+          } catch {
+            if (!finished) { finish(); controller.error(new Error("backend stream interrupted")); }
+          }
+        },
+        async cancel() { finish(); await reader.cancel(); },
+      });
+      streaming = true;
+      return new Response(body, { status: backend.status, headers: responseHeaders(backend.headers) });
+    }
     const encodedResponse = await readBoundedBody(
       backend.body,
       dependencies.responseLimitBytes,
@@ -364,7 +405,7 @@ export async function proxyAuthenticatedRequest(
     }
     return error(502, "backend unavailable");
   } finally {
-    timeout.cleanup();
+    if (!streaming) timeout.cleanup();
   }
 }
 

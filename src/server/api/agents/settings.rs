@@ -1,16 +1,15 @@
-use axum::{
-    extract::{Extension, State, Path},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-    Json,
-};
-use std::sync::Arc;
-use serde::Serialize;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::DepartmentConfig;
 use ::server_common::Claims;
+use axum::{
+    Json, Router,
+    extract::{Extension, Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
+use serde::Serialize;
+use std::sync::Arc;
 
 #[derive(Serialize)]
 pub struct SettingResponse {
@@ -34,11 +33,24 @@ async fn update_setting(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(SettingResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(SettingResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
-    match orchestrator.update_department_config(&tenant_id, &department, payload).await {
+    match orchestrator
+        .update_department_config(&tenant_id, &department, payload)
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(SettingResponse { success: true })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(SettingResponse { success: false })).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(SettingResponse { success: false }),
+        )
+            .into_response(),
     }
 }

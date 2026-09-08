@@ -1,9 +1,8 @@
-
+use ::server_telemetry::record_bubblewrap_violation;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::oneshot;
-use ::server_telemetry::record_bubblewrap_violation;
 
 pub struct NetworkProxy {
     allowed_domains: Arc<Vec<String>>,
@@ -59,7 +58,12 @@ impl NetworkProxy {
     }
 }
 
-async fn handle_connection(mut stream: TcpStream, allowed_domains: Arc<Vec<String>>, agent_id: String, task_id: String) -> Result<(), String> {
+async fn handle_connection(
+    mut stream: TcpStream,
+    allowed_domains: Arc<Vec<String>>,
+    agent_id: String,
+    task_id: String,
+) -> Result<(), String> {
     let mut buffer = [0; 4096];
     let bytes_read = stream.read(&mut buffer).await.map_err(|e| e.to_string())?;
 
@@ -92,10 +96,9 @@ async fn handle_connection(mut stream: TcpStream, allowed_domains: Arc<Vec<Strin
         return Err("Missing Host header or CONNECT target".to_string());
     }
 
-
-    let is_allowed = allowed_domains.iter().any(|d| {
-        host_without_port == d || host_without_port.ends_with(&format!(".{}", d))
-    });
+    let is_allowed = allowed_domains
+        .iter()
+        .any(|d| host_without_port == d || host_without_port.ends_with(&format!(".{}", d)));
 
     if !is_allowed {
         record_bubblewrap_violation(&agent_id, &task_id, "network_violation_denied");
@@ -106,9 +109,15 @@ async fn handle_connection(mut stream: TcpStream, allowed_domains: Arc<Vec<Strin
 
     // Proxy forwarding logic using hyper or basic TCP bridging for CONNECT
     if request_str.starts_with("CONNECT") {
-        let target_port = if host_with_port.contains(':') { host_with_port.to_string() } else { format!("{}:443", host_with_port) };
+        let target_port = if host_with_port.contains(':') {
+            host_with_port.to_string()
+        } else {
+            format!("{}:443", host_with_port)
+        };
         if let Ok(mut target_stream) = TcpStream::connect(&target_port).await {
-            let _ = stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n").await;
+            let _ = stream
+                .write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+                .await;
 
             let (mut ri, mut wi) = stream.split();
             let (mut ro, mut wo) = target_stream.split();
@@ -121,7 +130,11 @@ async fn handle_connection(mut stream: TcpStream, allowed_domains: Arc<Vec<Strin
             let _ = stream.write_all(b"HTTP/1.1 502 Bad Gateway\r\n\r\n").await;
         }
     } else {
-        let target_port = if host_with_port.contains(':') { host_with_port.to_string() } else { format!("{}:80", host_with_port) };
+        let target_port = if host_with_port.contains(':') {
+            host_with_port.to_string()
+        } else {
+            format!("{}:80", host_with_port)
+        };
         if let Ok(mut target_stream) = TcpStream::connect(&target_port).await {
             let _ = target_stream.write_all(&buffer[..bytes_read]).await;
 
@@ -147,13 +160,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_proxy_denied() {
-        let proxy = NetworkProxy::new(vec!["example.com".to_string()], "test_agent".to_string(), "test_task".to_string());
+        let proxy = NetworkProxy::new(
+            vec!["example.com".to_string()],
+            "test_agent".to_string(),
+            "test_task".to_string(),
+        );
         let (port, _shutdown) = proxy.start(0).await.unwrap();
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", port)).await.unwrap();
-        stream.write_all(b"GET / HTTP/1.1\r\nHost: evil.com\r\n\r\n").await.unwrap();
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", port))
+            .await
+            .unwrap();
+        stream
+            .write_all(b"GET / HTTP/1.1\r\nHost: evil.com\r\n\r\n")
+            .await
+            .unwrap();
 
         let mut buffer = [0; 1024];
         let bytes_read = stream.read(&mut buffer).await.unwrap();
@@ -164,13 +186,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_proxy_allowed() {
-        let proxy = NetworkProxy::new(vec!["example.com".to_string()], "test_agent".to_string(), "test_task".to_string());
+        let proxy = NetworkProxy::new(
+            vec!["example.com".to_string()],
+            "test_agent".to_string(),
+            "test_task".to_string(),
+        );
         let (port, _shutdown) = proxy.start(0).await.unwrap();
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", port)).await.unwrap();
-        stream.write_all(b"CONNECT api.example.com:443 HTTP/1.1\r\n\r\n").await.unwrap();
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", port))
+            .await
+            .unwrap();
+        stream
+            .write_all(b"CONNECT api.example.com:443 HTTP/1.1\r\n\r\n")
+            .await
+            .unwrap();
 
         let mut buffer = [0; 1024];
         let bytes_read = stream.read(&mut buffer).await.unwrap();
@@ -178,6 +209,8 @@ mod tests {
 
         // It will likely return 502 because api.example.com may not be reachable or exist
         // or 200 if it is reachable. Both mean it passed the sandbox check.
-        assert!(response.contains("200 Connection Established") || response.contains("502 Bad Gateway"));
+        assert!(
+            response.contains("200 Connection Established") || response.contains("502 Bad Gateway")
+        );
     }
 }

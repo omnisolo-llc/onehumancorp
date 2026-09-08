@@ -2,11 +2,11 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use tower::ServiceExt;
 use std::sync::Arc;
+use tower::ServiceExt;
 
-use tokio::sync::mpsc;
 use sqlx::postgres::PgPoolOptions;
+use tokio::sync::mpsc;
 
 async fn create_mock_hub() -> Arc<crate::hub::Hub> {
     let (tx, _) = mpsc::channel(100);
@@ -81,14 +81,17 @@ async fn test_download_invoice_authenticated_success() {
     let router = crate::api::billing_api::router(hub);
     let app = axum::Router::new()
         .merge(router)
-        .route_layer(axum::middleware::from_fn(|mut req: Request<Body>, next: axum::middleware::Next| async move {
-            req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "test-spiffe".to_string(),
-                org_id: "test-tenant".to_string(),
-                agent_id: "test-agent".to_string(),
-            });
-            Ok::<axum::http::Response<axum::body::Body>, StatusCode>(next.run(req).await)
-        }));
+        .route_layer(axum::middleware::from_fn(
+            |mut req: Request<Body>, next: axum::middleware::Next| async move {
+                req.extensions_mut()
+                    .insert(::server_auth::orchestration::AuthInfo {
+                        spiffe_id: "test-spiffe".to_string(),
+                        org_id: "test-tenant".to_string(),
+                        agent_id: "test-agent".to_string(),
+                    });
+                Ok::<axum::http::Response<axum::body::Body>, StatusCode>(next.run(req).await)
+            },
+        ));
 
     let response = app
         .oneshot(
@@ -103,7 +106,9 @@ async fn test_download_invoice_authenticated_success() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
     assert!(body_str.contains("Invoice download is ready"));
 }
@@ -114,14 +119,17 @@ async fn test_my_plan_authenticated_success() {
     let router = crate::api::billing_api::router(hub);
     let app = axum::Router::new()
         .merge(router)
-        .route_layer(axum::middleware::from_fn(|mut req: Request<Body>, next: axum::middleware::Next| async move {
-            req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-                spiffe_id: "test-spiffe".to_string(),
-                org_id: "test-tenant".to_string(),
-                agent_id: "test-agent".to_string(),
-            });
-            Ok::<axum::http::Response<axum::body::Body>, StatusCode>(next.run(req).await)
-        }));
+        .route_layer(axum::middleware::from_fn(
+            |mut req: Request<Body>, next: axum::middleware::Next| async move {
+                req.extensions_mut()
+                    .insert(::server_auth::orchestration::AuthInfo {
+                        spiffe_id: "test-spiffe".to_string(),
+                        org_id: "test-tenant".to_string(),
+                        agent_id: "test-agent".to_string(),
+                    });
+                Ok::<axum::http::Response<axum::body::Body>, StatusCode>(next.run(req).await)
+            },
+        ));
 
     let response = app
         .oneshot(
@@ -136,12 +144,23 @@ async fn test_my_plan_authenticated_success() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
 
     // Attempt to deserialize it into `MyPlanResponse` shape to assert it successfully parses
     let parsed: serde_json::Value = serde_json::from_slice(&body).expect("Failed to parse JSON");
     assert!(parsed.get("current_plan").is_some(), "missing current_plan");
-    assert!(parsed.get("ai_actions_used").is_some(), "missing ai_actions_used");
-    assert!(parsed.get("storage_used_bytes").is_some(), "missing storage_used_bytes");
-    assert!(parsed.get("next_bill_estimated").is_some(), "missing next_bill_estimated");
+    assert!(
+        parsed.get("ai_actions_used").is_some(),
+        "missing ai_actions_used"
+    );
+    assert!(
+        parsed.get("storage_used_bytes").is_some(),
+        "missing storage_used_bytes"
+    );
+    assert!(
+        parsed.get("next_bill_estimated").is_some(),
+        "missing next_bill_estimated"
+    );
 }

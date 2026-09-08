@@ -1,0 +1,133 @@
+{
+  "evidence": {
+    "assistant_text": "OMNISOLO_LIVE_HARNESS_OK\n\nDecoded stored text values:\n\n- `OMNISOLO_LOCAL_TOOL_OK`\n- `OMNISOLO_LOCAL_TOOL_OK`\n- `probedb81da60286c49dabb55a96886929c0b valuec63e34f828204c8ba4eebfcf27356ccc-memory`\n- `valuec63e34f828204c8ba4eebfcf27356ccc-artifact`\n- `valuec63e34f828204c8ba4eebfcf27356ccc-workspace`\n- `valuec63e34f828204c8ba4eebfcf27356ccc-cache`OMNISOLO_LIVE_HARNESS_OK\n\nDecoded stored text values:\n\n- `OMNISOLO_LOCAL_TOOL_OK`\n- `OMNISOLO_LOCAL_TOOL_OK`\n- `probedb81da60286c49dabb55a96886929c0b valuec63e34f828204c8ba4eebfcf27356ccc-memory`\n- `valuec63e34f828204c8ba4eebfcf27356ccc-artifact`\n- `valuec63e34f828204c8ba4eebfcf27356ccc-workspace`\n- `valuec63e34f828204c8ba4eebfcf27356ccc-cache`",
+    "credential_leak_observed": false,
+    "delivery_count": 6,
+    "event_types": [
+      "user.message",
+      "local_services.bound",
+      "inference.model_binding",
+      "assistant.text_chunk",
+      "assistant.final",
+      "usage.recorded"
+    ],
+    "harness_id": "omnisolo",
+    "integration_mode": "native",
+    "last_durable_sequence": 5,
+    "model_binding": {
+      "binding_digest": "sha256:runtime-unbound",
+      "binding_revision": "worker-env-v1",
+      "integration_mode": "native",
+      "model_id": "gpt-5.6-luna",
+      "provider_route": "openai-compatible",
+      "reasoning_effort": "max",
+      "response_id": "resp_039547be55dd9a1d016aa037cf565087d0a3d2621cd9589bab"
+    },
+    "provider_marker_observed": true,
+    "reasoning_translation": {
+      "effective": "max",
+      "kind": "native",
+      "requested": "max"
+    },
+    "shared_local_services": {
+      "cross_harness_read_verified": false,
+      "cross_session_read_verified": true,
+      "reader_operations": {
+        "attempt_id": "65064f4c-acf4-429e-8c32-766f276bc573",
+        "operations": [
+          "artifact.read",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.read",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.search",
+          "workspace.read"
+        ]
+      },
+      "reader_verified": true,
+      "status": "operations_verified",
+      "writer_evidence": {
+        "assistant_text": "OMNISOLO_LIVE_HARNESS_OK\n\n`OMNISOLO_LOCAL_TOOL_OK`  \n`OMNISOLO_LOCAL_TOOL_OK`OMNISOLO_LIVE_HARNESS_OK\n\n`OMNISOLO_LOCAL_TOOL_OK`  \n`OMNISOLO_LOCAL_TOOL_OK`",
+        "credential_leak_observed": false,
+        "delivery_count": 6,
+        "event_types": [
+          "user.message",
+          "local_services.bound",
+          "inference.model_binding",
+          "assistant.text_chunk",
+          "assistant.final",
+          "usage.recorded"
+        ],
+        "harness_id": "omnisolo",
+        "integration_mode": "native",
+        "last_durable_sequence": 5,
+        "model_binding": {
+          "binding_digest": "sha256:runtime-unbound",
+          "binding_revision": "worker-env-v1",
+          "integration_mode": "native",
+          "model_id": "gpt-5.6-luna",
+          "provider_route": "openai-compatible",
+          "reasoning_effort": "max",
+          "response_id": "resp_04b1433721b57cf2016aa0378490bc87d0aa976c7984be655e"
+        },
+        "provider_marker_observed": true,
+        "reasoning_translation": {
+          "effective": "max",
+          "kind": "native",
+          "requested": "max"
+        },
+        "shared_local_services": {
+          "binding_count": 8,
+          "memory_scope": "workspace",
+          "memory_service_id": "omnisolo.memory",
+          "status": "bound"
+        },
+        "terminal_success_observed": true,
+        "usage": [
+          {
+            "cached_tokens": 25088,
+            "input_tokens": 226339,
+            "output_tokens": 1905
+          }
+        ],
+        "usage_observed": true
+      },
+      "writer_key": "probedb81da60286c49dabb55a96886929c0b",
+      "writer_operations": {
+        "attempt_id": "40550f3e-0845-419b-a705-f63c27f73532",
+        "operations": [
+          "artifact.write",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.write",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.write",
+          "workspace.write"
+        ]
+      },
+      "writer_value": "valuec63e34f828204c8ba4eebfcf27356ccc",
+      "writer_verified": true
+    },
+    "terminal_success_observed": true,
+    "usage": [
+      {
+        "cached_tokens": 26112,
+        "input_tokens": 222070,
+        "output_tokens": 2421
+      }
+    ],
+    "usage_observed": true
+  },
+  "harness_id": "omnisolo",
+  "model": "gpt-5.6-luna",
+  "native_session_deleted": true,
+  "reasoning_effort": "max",
+  "schema": "omnisolo.live_harness_result.v1",
+  "status": "passed"
+}

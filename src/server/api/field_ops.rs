@@ -1,7 +1,7 @@
 use axum::{
+    Json, Router,
     extract::{Query, State},
     routing::get,
-    Json, Router,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -49,9 +49,6 @@ pub async fn get_appointments(
     State(state): State<Arc<FieldOpsState>>,
     Query(query): Query<GetAppointmentsQuery>,
 ) -> Result<Json<GetAppointmentsResponse>, (axum::http::StatusCode, String)> {
-
-
-
     let query_str = if query.mobile_optimized.unwrap_or(false) {
         r#"
         SELECT
@@ -102,21 +99,16 @@ pub async fn get_appointments(
         .bind(&query.tenant_id)
         .fetch_all(&state.pool)
         .await
-        .map_err(|e| {
-            (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                e.to_string(),
-            )
-        })?;
-
-
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let mut appointments = Vec::new();
     for row in rows {
         appointments.push(Appointment {
             id: row.get("id"),
             customer_id: row.get("customer_id"),
-            customer_name: row.get::<Option<String>, _>("customer_name").unwrap_or_default(),
+            customer_name: row
+                .get::<Option<String>, _>("customer_name")
+                .unwrap_or_default(),
             job_template_id: row.get("job_template_id"),
             job_name: row.get::<Option<String>, _>("job_name").unwrap_or_default(),
             status: row.get("status"),
@@ -162,18 +154,21 @@ pub async fn update_appointment(
     State(state): State<Arc<FieldOpsState>>,
     Json(payload): Json<UpdateAppointmentRequest>,
 ) -> Result<Json<UpdateAppointmentResponse>, (axum::http::StatusCode, String)> {
-    let mut tx = state.pool.begin().await.map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            e.to_string(),
-        )
-    })?;
+    let mut tx = state
+        .pool
+        .begin()
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     // Extract tenant_id from spiffe-id or fallback to x-tenant-id header securely.
     // Ensure we do not arbitrarily fall back to a hardcoded "default" if neither exists,
     // unless authorized or explicitly checking the DB based on identity.
-    let spiffe_id_str = headers.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-    let (spiffe_tenant_id, _) = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+    let spiffe_id_str = headers
+        .get("x-spiffe-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let (spiffe_tenant_id, _) =
+        crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
 
     let header_tenant_id = headers
         .get("x-tenant-id")
@@ -188,18 +183,20 @@ pub async fn update_appointment(
     };
 
     if tenant_id.is_empty() {
-        let tenant_query: Result<(String,), sqlx::Error> = sqlx::query_as(
-            "SELECT tenant_id FROM appointments WHERE id = $1",
-        )
-        .bind(&payload.id)
-        .fetch_one(&mut *tx)
-        .await;
+        let tenant_query: Result<(String,), sqlx::Error> =
+            sqlx::query_as("SELECT tenant_id FROM appointments WHERE id = $1")
+                .bind(&payload.id)
+                .fetch_one(&mut *tx)
+                .await;
 
         if let Ok((t_id,)) = tenant_query {
             tenant_id = t_id;
         } else {
             let _ = tx.rollback().await;
-            return Err((axum::http::StatusCode::UNAUTHORIZED, "Missing tenant identity".to_string()));
+            return Err((
+                axum::http::StatusCode::UNAUTHORIZED,
+                "Missing tenant identity".to_string(),
+            ));
         }
     }
 
@@ -212,7 +209,10 @@ pub async fn update_appointment(
             .unwrap_or((0,));
 
         if exists.0 > 0 {
-            tracing::info!("Idempotency key hit for client_mutation_id: {}, skipping.", idempotency_key); // pii-safe
+            tracing::info!(
+                "Idempotency key hit for client_mutation_id: {}, skipping.",
+                idempotency_key
+            ); // pii-safe
             let _ = tx.rollback().await;
             return Ok(Json(UpdateAppointmentResponse {
                 success: true,
@@ -237,19 +237,16 @@ pub async fn update_appointment(
     .bind(&payload.id)
     .execute(&mut *tx)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            e.to_string(),
-        )
-    })?;
+    .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     if let Some(idempotency_key) = headers.get("Idempotency-Key").and_then(|h| h.to_str().ok()) {
-        let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
-            .bind(idempotency_key)
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await;
+        let _ = sqlx::query(
+            "INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)",
+        )
+        .bind(idempotency_key)
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await;
     }
 
     if payload.status == "Completed" {
@@ -262,7 +259,7 @@ pub async fn update_appointment(
 
         sqlx::query(
             "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-             VALUES ($1, $2, 'operations', 'field_ops.job_completed', $3::jsonb, 'PENDING')"
+             VALUES ($1, $2, 'operations', 'field_ops.job_completed', $3::jsonb, 'PENDING')",
         )
         .bind(&task_id)
         .bind(&tenant_id)
@@ -271,19 +268,13 @@ pub async fn update_appointment(
         .await
         .map_err(|e| {
             tracing::error!("Failed to insert into department_tasks: {}", e);
-            (
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                e.to_string(),
-            )
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         })?;
     }
 
-    tx.commit().await.map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            e.to_string(),
-        )
-    })?;
+    tx.commit()
+        .await
+        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     let event = ::server_ohc::orchestration::TeammateMeshEvent {
         agent_id: "system".into(),
@@ -303,7 +294,6 @@ pub async fn update_appointment(
         location_lng: payload.location_lng,
     }))
 }
-
 
 #[derive(Deserialize)]
 pub struct OptimizeRouteRequest {
@@ -393,13 +383,17 @@ pub async fn optimize_route(
     if let Some(tenant_id) = payload.tenant_id {
         let route_id = uuid::Uuid::new_v4().to_string();
 
-        let staff_profile_id = match sqlx::query("SELECT id FROM staff_profiles WHERE tenant_id = $1 LIMIT 1")
-            .bind(&tenant_id)
-            .fetch_optional(&state.pool)
-            .await {
-                Ok(Some(row)) => row.try_get::<String, _>("id").unwrap_or_else(|_| "default-staff".to_string()),
+        let staff_profile_id =
+            match sqlx::query("SELECT id FROM staff_profiles WHERE tenant_id = $1 LIMIT 1")
+                .bind(&tenant_id)
+                .fetch_optional(&state.pool)
+                .await
+            {
+                Ok(Some(row)) => row
+                    .try_get::<String, _>("id")
+                    .unwrap_or_else(|_| "default-staff".to_string()),
                 _ => "default-staff".to_string(),
-        };
+            };
 
         let route_date = chrono::Utc::now().date_naive();
 
@@ -415,16 +409,16 @@ pub async fn optimize_route(
 
         if !optimized.is_empty() {
             let mut query_builder = sqlx::QueryBuilder::new(
-                "INSERT INTO job_locations (id, tenant_id, service_route_id, appointment_id, sequence_order, status) "
+                "INSERT INTO job_locations (id, tenant_id, service_route_id, appointment_id, sequence_order, status) ",
             );
 
             query_builder.push_values(optimized.iter().enumerate(), |mut b, (i, appt)| {
                 b.push_bind(uuid::Uuid::new_v4().to_string())
-                 .push_bind(tenant_id.clone())
-                 .push_bind(route_id.clone())
-                 .push_bind(appt.id.clone())
-                 .push_bind(i as i32)
-                 .push_bind("pending");
+                    .push_bind(tenant_id.clone())
+                    .push_bind(route_id.clone())
+                    .push_bind(appt.id.clone())
+                    .push_bind(i as i32)
+                    .push_bind("pending");
             });
 
             query_builder.push(" ON CONFLICT (service_route_id, sequence_order) DO NOTHING");
@@ -434,7 +428,10 @@ pub async fn optimize_route(
     }
 
     let agent_suggestion = if optimized.iter().any(|a| a.status == "Completed") {
-        Some("You finished early! Should I text the next client to see if we can arrive early?".to_string())
+        Some(
+            "You finished early! Should I text the next client to see if we can arrive early?"
+                .to_string(),
+        )
     } else {
         None
     };
@@ -476,7 +473,10 @@ pub async fn running_late(
     }
 
     if delay_index.is_none() {
-        return Err((axum::http::StatusCode::NOT_FOUND, "Job not found".to_string()));
+        return Err((
+            axum::http::StatusCode::NOT_FOUND,
+            "Job not found".to_string(),
+        ));
     }
     let delay_index = delay_index.unwrap();
 
@@ -500,7 +500,10 @@ pub async fn running_late(
     }
 
     let agent_suggestion = if subsequent_count > 0 {
-        Some(format!("Drafting delay notifications for the next {} clients. Approve?", subsequent_count))
+        Some(format!(
+            "Drafting delay notifications for the next {} clients. Approve?",
+            subsequent_count
+        ))
     } else {
         Some("No subsequent appointments to notify.".to_string())
     };
@@ -519,7 +522,10 @@ pub fn router<S: Clone + Send + Sync + 'static>(
 ) -> Router<S> {
     let state = Arc::new(FieldOpsState { pool, mesh });
     Router::new()
-        .route("/appointments", get(get_appointments).post(update_appointment))
+        .route(
+            "/appointments",
+            get(get_appointments).post(update_appointment),
+        )
         .route("/optimize-route", axum::routing::post(optimize_route))
         .route("/running-late", axum::routing::post(running_late))
         .with_state(state)
@@ -534,8 +540,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_appointments_empty() {
         // Use connect_lazy so it doesn't fail immediately, then it hits the query and fails
-        let pool = sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
-        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let pool =
+            sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
+        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
+            Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let app = router(pool, mesh);
         let req = Request::builder()
             .uri("/appointments?tenant_id=t1")
@@ -551,8 +559,10 @@ mod tests {
         // Verify code compiles and execution does not panic.
         // Actual db interaction will fail with INTERNAL_SERVER_ERROR due to lazy invalid connection,
         // but we verify the parallel setup doesn't break basic request handling.
-        let pool = sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
-        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+        let pool =
+            sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
+        let mesh: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
+            Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
         let app = router(pool, mesh);
 
         let payload = serde_json::json!({

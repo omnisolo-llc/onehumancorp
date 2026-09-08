@@ -1,14 +1,12 @@
-use crate::tasks::SharedTask;
 use crate::db::DB;
+use crate::tasks::SharedTask;
 use async_trait::async_trait;
-use std::sync::Arc;
-use sqlx::Row;
 use chrono::Utc;
+use sqlx::Row;
+use std::sync::Arc;
 
-
-
-use crate::orchestration::mesh::TeammateMesh;
 use super::MeshLockGuard;
+use crate::orchestration::mesh::TeammateMesh;
 
 pub struct CloudStateManager {
     db: Arc<DB>,
@@ -31,7 +29,9 @@ impl CloudStateManager {
         _lock_guard: &MeshLockGuard,
     ) -> Result<(), String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         // 1. Verify current state with FOR UPDATE
         let row = sqlx::query(
@@ -56,7 +56,9 @@ impl CloudStateManager {
             ));
         }
 
-        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id_db: String = row
+            .try_get("tenant_id")
+            .unwrap_or_else(|_| "system".to_string());
 
         if _tenant_id != tenant_id_db && _tenant_id != "system" {
             return Err("Unauthorized: task belongs to a different tenant".to_string());
@@ -64,19 +66,22 @@ impl CloudStateManager {
 
         // DAG validation
         if to_state == "IN_PROGRESS" {
-            let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));
+            let deps_val: serde_json::Value = row
+                .try_get("dependencies")
+                .unwrap_or_else(|_| serde_json::json!([]));
             let dependencies: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
 
             if !dependencies.is_empty() {
                 // Parse UUIDs carefully, return an error if a dependency id is invalid
                 let mut dep_uuids = Vec::with_capacity(dependencies.len());
                 for dep in &dependencies {
-                    let parsed = uuid::Uuid::parse_str(dep).map_err(|_| format!("Invalid dependency UUID: {}", dep))?;
+                    let parsed = uuid::Uuid::parse_str(dep)
+                        .map_err(|_| format!("Invalid dependency UUID: {}", dep))?;
                     dep_uuids.push(parsed);
                 }
 
                 let completed_count: i64 = sqlx::query_scalar(
-                    "SELECT count(*) FROM swarm_tasks WHERE id = ANY($1) AND status = 'COMPLETED'"
+                    "SELECT count(*) FROM swarm_tasks WHERE id = ANY($1) AND status = 'COMPLETED'",
                 )
                 .bind(&dep_uuids)
                 .fetch_one(&mut *tx)
@@ -84,7 +89,11 @@ impl CloudStateManager {
                 .map_err(|e| e.to_string())?;
 
                 if completed_count as usize != dep_uuids.len() {
-                    return Err(format!("Not all dependencies are COMPLETED (found {}, expected {})", completed_count, dep_uuids.len()));
+                    return Err(format!(
+                        "Not all dependencies are COMPLETED (found {}, expected {})",
+                        completed_count,
+                        dep_uuids.len()
+                    ));
                 }
             }
         }
@@ -142,11 +151,31 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         let lock_key = format!("ohc:lock:{}:task:{}", tenant_id, task_id);
 
         let transition_future = async {
-            let lock_guard = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30).await?;
-            self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
+            let lock_guard = MeshLockGuard::acquire(
+                self.mesh.clone(),
+                lock_key.clone(),
+                "cloud_state_manager".to_string(),
+                30,
+            )
+            .await?;
+            self.transition_state_inner(
+                task_id,
+                tenant_id,
+                from_state,
+                to_state,
+                agent_id,
+                reason,
+                &lock_guard,
+            )
+            .await
         };
 
-        match tokio::time::timeout(crate::orchestration::state::state_manager_timeout(), transition_future).await {
+        match tokio::time::timeout(
+            crate::orchestration::state::state_manager_timeout(),
+            transition_future,
+        )
+        .await
+        {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
@@ -165,7 +194,9 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             .await?;
 
             let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-            ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+            ::server_common::auth_utils::set_system_context(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
             let rows = sqlx::query(
                 r#"
@@ -180,7 +211,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
                   )
                 LIMIT $1
                 FOR UPDATE SKIP LOCKED
-                "#
+                "#,
             )
             .bind(limit)
             .fetch_all(&mut *tx)
@@ -198,7 +229,11 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         {
             Ok(Ok(result)) => result,
             Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") || e.contains("database is locked") || e.contains("Timeout") {
+                if e.contains("Timeout acquiring lock")
+                    || e.contains("is currently locked")
+                    || e.contains("database is locked")
+                    || e.contains("Timeout")
+                {
                     tracing::warn!(
                         "Lock timeout or unavailable in CloudStateManager::pull_available_tasks, fail-safing to empty list."
                     );
@@ -221,13 +256,19 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             let id: uuid::Uuid = row.get("id");
             let id_str = id.to_string();
 
-            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+            let tenant_id: String = row
+                .try_get("tenant_id")
+                .unwrap_or_else(|_| "system".to_string());
             task_ids.push((id_str.clone(), tenant_id.clone()));
 
-            let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));
+            let deps_val: serde_json::Value = row
+                .try_get("dependencies")
+                .unwrap_or_else(|_| serde_json::json!([]));
             let dependencies: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
 
-            let payload_val: serde_json::Value = row.try_get("payload").unwrap_or_else(|_| serde_json::json!({}));
+            let payload_val: serde_json::Value = row
+                .try_get("payload")
+                .unwrap_or_else(|_| serde_json::json!({}));
             let payload = payload_val.to_string();
 
             tasks.push(SharedTask {

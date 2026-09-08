@@ -1,7 +1,7 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::sync_service_server::SyncService;
 use crate::sip::SipDB;
+use ::server_ohc::orchestration::sync_service_server::SyncService;
+use ::server_ohc::orchestration::*;
+use tonic::{Request, Response, Status};
 
 pub struct MySyncService {
     pool: sqlx::PgPool,
@@ -45,16 +45,22 @@ impl SyncService for MySyncService {
                 p.status
             };
 
-            let force_local = md.get("x-ohc-conflict-resolution")
+            let force_local = md
+                .get("x-ohc-conflict-resolution")
                 .map(|v| v.to_str().unwrap_or_default() == "force-local")
                 .unwrap_or(false);
 
-            match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
+            match sip_db
+                .upsert_mission(&p.id, &status, &p.payload, force_local)
+                .await
+            {
                 Ok(_) => {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    ::server_telemetry::record_error_signal("[bug] failed to upsert mission from sync daemon: error=");
+                    ::server_telemetry::record_error_signal(
+                        "[bug] failed to upsert mission from sync daemon: error=",
+                    );
                     tracing::error!("failed to upsert mission from sync daemon: error={}", e);
                 }
             }
@@ -85,8 +91,12 @@ impl SyncService for MySyncService {
         let req = request.into_inner();
         tracing::debug!("PowerSync received push request.");
 
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let spiffe_id_str = md
+            .get("x-spiffe-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str)
+            .unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
         if tenant_id.is_empty() {
             tenant_id = "system".to_string();
@@ -99,8 +109,14 @@ impl SyncService for MySyncService {
             }));
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         for item in items {
             if item["table"].as_str() == Some("agent_missions") {
@@ -142,13 +158,17 @@ impl SyncService for MySyncService {
                     .execute(&mut *tx)
                     .await
                 {
-                    ::server_telemetry::record_error_signal("[bug] failed to upsert agent_missions via PowerSync");
+                    ::server_telemetry::record_error_signal(
+                        "[bug] failed to upsert agent_missions via PowerSync",
+                    );
                     tracing::error!("failed to upsert agent_missions via PowerSync: {}", e);
                 }
             }
         }
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(PowerSyncPushResponse {
             status: "ok".to_string(),
@@ -163,15 +183,25 @@ impl SyncService for MySyncService {
         tracing::debug!("PowerSync received pull request");
 
         let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+        let spiffe_id_str = md
+            .get("x-spiffe-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str)
+            .unwrap_or(("system".to_string(), "".to_string()));
         let mut tenant_id = parsed.0;
         if tenant_id.is_empty() {
             tenant_id = "system".to_string();
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let rows = match sqlx::query(
             "SELECT id, status, payload, organization_id, updated_at, version FROM agent_missions WHERE _sync_status = 'pending'"
@@ -194,7 +224,9 @@ impl SyncService for MySyncService {
             let status: String = row.get("status");
             let payload: String = row.get("payload");
             let org_id: String = row.get("organization_id");
-            let updated_at: chrono::DateTime<chrono::Utc> = row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
+            let updated_at: chrono::DateTime<chrono::Utc> = row
+                .try_get("updated_at")
+                .unwrap_or_else(|_| chrono::Utc::now());
             let version: i32 = row.try_get("version").unwrap_or(1);
 
             payload_items.push(serde_json::json!({
@@ -212,16 +244,20 @@ impl SyncService for MySyncService {
 
         if !pulled_ids.is_empty() {
             for id in pulled_ids {
-                let _ = sqlx::query("UPDATE agent_missions SET _sync_status = 'synced' WHERE id = $1")
-                    .bind(id)
-                    .execute(&mut *tx)
-                    .await;
+                let _ =
+                    sqlx::query("UPDATE agent_missions SET _sync_status = 'synced' WHERE id = $1")
+                        .bind(id)
+                        .execute(&mut *tx)
+                        .await;
             }
         }
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
-        let payload_str = serde_json::to_string(&payload_items).unwrap_or_else(|_| "[]".to_string());
+        let payload_str =
+            serde_json::to_string(&payload_items).unwrap_or_else(|_| "[]".to_string());
 
         Ok(Response::new(PowerSyncPullResponse {
             payload: payload_str,
@@ -236,12 +272,18 @@ impl SyncService for MySyncService {
         let req = request.into_inner();
         let deltas = req.deltas;
 
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+        let spiffe_id_str = md
+            .get("x-spiffe-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str)
+            .unwrap_or(("".to_string(), "".to_string()));
         let tenant_id = parsed.0;
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         if deltas.is_empty() {
@@ -252,13 +294,23 @@ impl SyncService for MySyncService {
             }));
         }
 
-        let mut tx = self.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         let mut synced_count = 0;
 
         for delta in deltas {
-            if delta.id.is_empty() || delta.entity_id.is_empty() || delta.data.is_empty() || delta.updated_at.is_empty() {
+            if delta.id.is_empty()
+                || delta.entity_id.is_empty()
+                || delta.data.is_empty()
+                || delta.updated_at.is_empty()
+            {
                 continue;
             }
 
@@ -282,13 +334,17 @@ impl SyncService for MySyncService {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    ::server_telemetry::record_error_signal("[bug] failed to upsert CRDT delta: error=");
+                    ::server_telemetry::record_error_signal(
+                        "[bug] failed to upsert CRDT delta: error=",
+                    );
                     tracing::error!("failed to upsert CRDT delta: error={}", e);
                 }
             }
         }
 
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
 
         Ok(Response::new(SyncMcpDeltasResponse {
             status: "success".to_string(),
@@ -302,9 +358,17 @@ impl SyncService for MySyncService {
         request: Request<SyncEscalationRequest>,
     ) -> Result<Response<SyncEscalationResponse>, Status> {
         let md = request.metadata().clone();
-        let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
-        let tenant_id = if parsed.0.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { parsed.0 };
+        let spiffe_id_str = md
+            .get("x-spiffe-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        let parsed = ::server_auth::parse_spiffe_id(spiffe_id_str)
+            .unwrap_or(("".to_string(), "".to_string()));
+        let tenant_id = if parsed.0.is_empty() {
+            ::server_common::auth_utils::get_default_tenant()
+        } else {
+            parsed.0
+        };
 
         let req = request.into_inner();
         let payloads = req.payloads;
@@ -340,13 +404,15 @@ impl SyncService for MySyncService {
             };
 
             let q = crate::queue::PostgresTaskQueue::new(self.pool.clone());
-            
+
             match crate::queue::TaskQueue::enqueue(&q, job).await {
                 Ok(_) => {
                     synced_count += 1;
                 }
                 Err(e) => {
-                    ::server_telemetry::record_error_signal("[bug] failed to enqueue escalation job: error=");
+                    ::server_telemetry::record_error_signal(
+                        "[bug] failed to enqueue escalation job: error=",
+                    );
                     tracing::error!("failed to enqueue escalation job: error={}", e);
                 }
             }
@@ -368,7 +434,8 @@ mod tests {
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
         let pool = crate::db::secure_pg_pool_options()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
         let resp = service.hybrid_sync_missions(req).await.unwrap();
@@ -379,9 +446,12 @@ mod tests {
     #[tokio::test]
     async fn test_power_sync_push() {
         let pool = crate::db::secure_pg_pool_options()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(PowerSyncPushRequest { payload: "[]".to_string() });
+        let req = Request::new(PowerSyncPushRequest {
+            payload: "[]".to_string(),
+        });
         let resp = service.power_sync_push(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "ok");
     }
@@ -400,7 +470,8 @@ mod tests {
         // This is safe since we only check that it doesn't panic.
         #[allow(unused_variables)]
         let pool = crate::db::secure_pg_pool_options()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
         let resp = service.power_sync_pull(req).await;
@@ -410,16 +481,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push_and_pull() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
             // Only run e2e flow if real test db is available. Dummy will fail.
             return;
         }
 
         let pool = crate::db::secure_pg_pool_options()
-
-
-            .connect(&database_url).await.unwrap();
+            .connect(&database_url)
+            .await
+            .unwrap();
 
         let service = MySyncService::new(pool.clone());
 
@@ -432,10 +504,16 @@ mod tests {
             "organization_id": "system",
             "updated_at": chrono::Utc::now().to_rfc3339(),
             "version": 2
-        }]).to_string();
+        }])
+        .to_string();
 
-        let mut push_req = Request::new(PowerSyncPushRequest { payload: payload_json });
-        push_req.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/system".parse().unwrap());
+        let mut push_req = Request::new(PowerSyncPushRequest {
+            payload: payload_json,
+        });
+        push_req.metadata_mut().insert(
+            "x-spiffe-id",
+            "spiffe://onehumancorp.io/system/system".parse().unwrap(),
+        );
 
         let push_resp = service.power_sync_push(push_req).await.unwrap();
         assert_eq!(push_resp.get_ref().status, "ok");
@@ -444,26 +522,39 @@ mod tests {
         sqlx::query("UPDATE agent_missions SET _sync_status = 'pending' WHERE id = $1")
             .bind(mission_id)
             .execute(&pool)
-            .await.unwrap();
+            .await
+            .unwrap();
 
         let pull_req = Request::new(PowerSyncPullRequest {});
         let pull_resp = service.power_sync_pull(pull_req).await.unwrap();
 
-        let pulled_items: Vec<serde_json::Value> = serde_json::from_str(&pull_resp.get_ref().payload).unwrap();
+        let pulled_items: Vec<serde_json::Value> =
+            serde_json::from_str(&pull_resp.get_ref().payload).unwrap();
 
         let found = pulled_items.iter().find(|i| i["id"] == mission_id);
         assert!(found.is_some());
         assert_eq!(found.unwrap()["status"], "COMPLETED");
 
-        sqlx::query("DELETE FROM agent_missions WHERE id = $1").bind(mission_id).execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM agent_missions WHERE id = $1")
+            .bind(mission_id)
+            .execute(&pool)
+            .await
+            .unwrap();
     }
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
         let pool = crate::db::secure_pg_pool_options()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
-        let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
-        req.metadata_mut().insert("x-spiffe-id", "spiffe://ohc.local/org/org1/agent/agent1".parse().unwrap());
+        let mut req = Request::new(SyncMcpDeltasRequest {
+            tenant_id: "org1".to_string(),
+            deltas: vec![],
+        });
+        req.metadata_mut().insert(
+            "x-spiffe-id",
+            "spiffe://ohc.local/org/org1/agent/agent1".parse().unwrap(),
+        );
         let resp = service.sync_mcp_deltas(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);
@@ -471,7 +562,8 @@ mod tests {
     #[tokio::test]
     async fn test_sync_escalation_empty() {
         let pool = crate::db::secure_pg_pool_options()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
         let resp = service.sync_escalation(req).await.unwrap();
@@ -481,7 +573,8 @@ mod tests {
     #[tokio::test]
     async fn test_vector_sync() {
         let pool = crate::db::secure_pg_pool_options()
-            .connect_lazy("postgres://localhost/dummy").unwrap();
+            .connect_lazy("postgres://localhost/dummy")
+            .unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();

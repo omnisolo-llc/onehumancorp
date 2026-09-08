@@ -284,13 +284,9 @@ impl ShipdayClient {
         let mut encoded = String::new();
         for byte in value.as_bytes() {
             match byte {
-                b'A'..=b'Z'
-                | b'a'..=b'z'
-                | b'0'..=b'9'
-                | b'-'
-                | b'_'
-                | b'.'
-                | b'~' => encoded.push(*byte as char),
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                    encoded.push(*byte as char)
+                }
                 other => encoded.push_str(&format!("%{other:02X}")),
             }
         }
@@ -383,9 +379,10 @@ mod tests {
         assert_eq!(status.driver_name.as_deref(), Some("Sam"));
 
         let request = rx.recv().unwrap();
-        assert!(request.starts_with(
-            "GET /order/progress/track_123?isStaticDataRequired=false HTTP/1.1"
-        ));
+        assert!(
+            request
+                .starts_with("GET /order/progress/track_123?isStaticDataRequired=false HTTP/1.1")
+        );
         assert!(request.contains("authorization: Basic live_shipday_key"));
     }
 

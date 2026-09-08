@@ -1,2 +1,2 @@
-pub mod provider;
 pub mod client;
+pub mod provider;

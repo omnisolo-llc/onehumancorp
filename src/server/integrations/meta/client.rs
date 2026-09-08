@@ -3,7 +3,13 @@ use reqwest::Client;
 
 #[async_trait]
 pub trait MetaClientWrapper: Send + Sync {
-    async fn send_message(&self, platform: &str, from: Option<&str>, to: &str, body: &str) -> Result<(), String>;
+    async fn send_message(
+        &self,
+        platform: &str,
+        from: Option<&str>,
+        to: &str,
+        body: &str,
+    ) -> Result<(), String>;
 }
 
 pub struct RealMetaClient {
@@ -22,7 +28,13 @@ impl RealMetaClient {
 
 #[async_trait]
 impl MetaClientWrapper for RealMetaClient {
-    async fn send_message(&self, platform: &str, from: Option<&str>, to: &str, body: &str) -> Result<(), String> {
+    async fn send_message(
+        &self,
+        platform: &str,
+        from: Option<&str>,
+        to: &str,
+        body: &str,
+    ) -> Result<(), String> {
         let url = match platform {
             "whatsapp" => {
                 if let Some(from_id) = from {
@@ -30,7 +42,7 @@ impl MetaClientWrapper for RealMetaClient {
                 } else {
                     "https://graph.facebook.com/v19.0/me/messages".to_string()
                 }
-            },
+            }
             _ => "https://graph.facebook.com/v19.0/me/messages".to_string(), // Simplified URL mapping
         };
 
@@ -66,7 +78,9 @@ impl MetaClientWrapper for RealMetaClient {
             })
         };
 
-        let res = self.http_client.post(&url)
+        let res = self
+            .http_client
+            .post(&url)
             .bearer_auth(&self.access_token)
             .json(&payload)
             .send()

@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use super::Tool;
 
+use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
 use serde::Deserialize;
-use super::pydantic::{PydanticToolExecutor, PydanticAdapter};
 
 #[derive(Deserialize)]
 struct SuperpowersArgs {
