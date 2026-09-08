@@ -106,3 +106,14 @@ eight bridge Python tests and five live-fixture tests pass. The live fixture
 responds to session-matched Kimi one-time tool permissions and OpenHands
 approvals through the authenticated controller exchange. Native reruns for
 these fixes remain pending.
+
+OpenHarness 0.6.0 now passes the complete native writer/fresh-reader probe with
+real usage; see [OpenHarness acceptance](2026-09-08-native-openharness-acceptance.json).
+The latest coverage run passed 468 tests across 26 suites and measured 91.523713%
+lines and 90.925409% regions. The subsequent pinned DeepSeek source-call-ID
+regression passes with all 16 codec tests. OpenHands usage validation now reads
+the SDK's nested `agent.accumulated_token_usage` counters. Kimi's bridge now
+returns actual provider usage through ACP's supported prompt-response usage
+field; the pinned CLI wire probe returned 14,269 input and 12 output tokens
+with exact `max` reasoning. Seven Kimi bridge tests and five fixture tests pass.
+The full ordered native-first acceptance matrix is running.

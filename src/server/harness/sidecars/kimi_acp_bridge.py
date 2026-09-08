@@ -7,9 +7,46 @@ import asyncio
 import json
 import os
 import tempfile
+from contextvars import ContextVar
 from pathlib import Path
 from typing import MutableMapping
 from urllib.parse import urlsplit
+
+_turn_usage: ContextVar[list | None] = ContextVar("omnisolo_kimi_turn_usage", default=None)
+
+
+class UsageObservedMessage:
+    """Forward the native stream and capture its final provider usage."""
+    def __init__(self, source, collector):
+        self.source = source
+        self.collector = collector
+        self.recorded = False
+
+    def __getattr__(self, name):
+        return getattr(self.source, name)
+
+    async def __aiter__(self):
+        async for part in self.source:
+            yield part
+        if not self.recorded and self.source.usage is not None:
+            self.collector.append(self.source.usage)
+            self.recorded = True
+
+
+def acp_usage(records):
+    if not records:
+        return None
+    counts = {"inputTokens": 0, "outputTokens": 0, "cachedReadTokens": 0, "cachedWriteTokens": 0}
+    for usage in records:
+        for field, attribute in (("inputTokens", "input"), ("outputTokens", "output"),
+                                 ("cachedReadTokens", "input_cache_read"),
+                                 ("cachedWriteTokens", "input_cache_creation")):
+            value = getattr(usage, attribute)
+            if type(value) is not int or value < 0:
+                raise ValueError("invalid native provider token usage")
+            counts[field] += value
+    counts["totalTokens"] = counts["inputTokens"] + counts["outputTokens"]
+    return counts
 
 
 def _valid_base_url(value: str) -> bool:
@@ -109,7 +146,9 @@ def bind_requested_reasoning(effort: str | None, provider_type=None) -> None:
         configured = self.with_generation_kwargs(
             extra_body={"reasoning": {"effort": effort, "summary": "auto"}}
         )
-        return await original_generate(configured, *args, **kwargs)
+        message = await original_generate(configured, *args, **kwargs)
+        collector = _turn_usage.get()
+        return message if collector is None else UsageObservedMessage(message, collector)
 
     provider_type.generate = generate
 
@@ -118,6 +157,19 @@ def _server(static_provider_configured: bool):
     from kimi_cli.acp.server import ACPServer
 
     class OmniSoloKimiACPServer(ACPServer):
+        async def prompt(self, prompt, session_id, **kwargs):
+            from acp.schema import Usage
+            records = []
+            token = _turn_usage.set(records)
+            try:
+                response = await super().prompt(prompt, session_id, **kwargs)
+                usage = acp_usage(records)
+                if usage is not None:
+                    response = response.model_copy(update={"usage": Usage.model_validate(usage)})
+                return response
+            finally:
+                _turn_usage.reset(token)
+
         def _check_auth(self) -> None:
             if static_provider_configured:
                 return

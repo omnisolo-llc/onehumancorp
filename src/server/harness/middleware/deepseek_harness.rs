@@ -322,7 +322,12 @@ fn decode_session_event(
                 .get("message")
                 .and_then(Value::as_object)
                 .ok_or_else(|| invalid_response("tool/result message must be an object"))?;
-            let call_id = required_string(message.get("toolCallId"), "tool/result toolCallId")?;
+            let call_id = required_string(
+                message
+                    .get("source")
+                    .and_then(|source| source.get("callId")),
+                "tool/result message.source.callId",
+            )?;
             (
                 "tool.completed",
                 true,

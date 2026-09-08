@@ -22,6 +22,27 @@ def load_bridge():
 
 
 class KimiAcpBridgeTest(unittest.TestCase):
+    def test_native_stream_usage_is_preserved_and_summed_without_fabrication(self):
+        import asyncio
+        from types import SimpleNamespace
+        bridge = load_bridge()
+        class Message:
+            id = "native-response"
+            usage = None
+            async def __aiter__(self):
+                yield "part"
+                self.usage = SimpleNamespace(input=17, output=9, input_cache_read=3, input_cache_creation=0)
+        async def run():
+            records = []
+            message = bridge.UsageObservedMessage(Message(), records)
+            self.assertEqual(message.id, "native-response")
+            self.assertEqual([part async for part in message], ["part"])
+            self.assertEqual(bridge.acp_usage(records), {"inputTokens":17,"outputTokens":9,
+                "cachedReadTokens":3,"cachedWriteTokens":0,"totalTokens":26})
+            self.assertIsNone(bridge.acp_usage([]))
+            self.assertEqual(bridge.acp_usage(records * 2)["totalTokens"], 52)
+        asyncio.run(run())
+
     def test_static_provider_writes_secret_free_isolated_config(self):
         bridge = load_bridge()
         with tempfile.TemporaryDirectory() as directory:

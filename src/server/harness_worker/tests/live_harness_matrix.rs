@@ -95,13 +95,16 @@ async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
     let mut deliveries = Vec::new();
     while let Some(delivery) = stream.next().await {
         let delivery = delivery.expect("receive live harness event");
+        assert_eq!(delivery.session_id, session_id.to_string());
+        assert_eq!(delivery.task_id, task_id.to_string());
+        assert_eq!(delivery.source_attempt_id, attempt_id.to_string());
+        assert_eq!(delivery.ingest_attempt_id, attempt_id.to_string());
         let event: Value = serde_json::from_slice(&delivery.payload).expect("canonical event JSON");
         if event["event_type"] == "interaction.required" {
             // This explicitly opted-in fixture authorizes its requested tool operations.
             // Exercise the controller approval exchange rather than changing native policy.
-            let (kind, response) =
-                fixture_approval(&harness_id, &native.native_session_id, &event["payload"])
-                    .expect("supported fixture tool approval");
+            let (kind, response) = fixture_approval(&harness_id, &event["payload"])
+                .expect("supported fixture tool approval");
             eprintln!("live {harness_id}: responding to native tool approval");
             let reply = client
                 .interaction(authenticated(WorkerExchangeEnvelope {
@@ -178,14 +181,14 @@ async fn run_turn(session_id: Uuid, prompt: String) -> (Value, Uuid) {
     (evidence, attempt_id)
 }
 
-fn fixture_approval(
-    harness: &str,
-    native_session: &str,
-    payload: &Value,
-) -> Option<(String, Value)> {
+fn fixture_approval(harness: &str, payload: &Value) -> Option<(String, Value)> {
+    // The authenticated delivery is fenced to the admitted attempt above.
+    // Each attempt has a fresh native session, distinct from the public alias.
     if harness == "kimi"
         && payload["native_method"] == "session/request_permission"
-        && payload["native_params"]["sessionId"] == native_session
+        && payload["native_params"]["sessionId"]
+            .as_str()
+            .is_some_and(|id| !id.is_empty())
     {
         let option = payload["native_params"]["options"]
             .as_array()?
@@ -201,13 +204,15 @@ fn fixture_approval(
         ));
     }
     if harness == "openhands"
-        && payload["native_session_id"] == native_session
+        && payload["native_session_id"]
+            .as_str()
+            .is_some_and(|id| !id.is_empty())
         && payload["interaction_kind"] == "approval"
     {
         return Some((
             "approval.response".to_owned(),
             json!({
-                "native_session_id":native_session, "accept":true,
+                "native_session_id":payload["native_session_id"], "accept":true,
                 "reason":"explicitly opted-in isolated service acceptance fixture"
             }),
         ));
@@ -216,16 +221,18 @@ fn fixture_approval(
 }
 
 #[test]
-fn fixture_approval_requires_matching_session_and_one_time_tool_option() {
+fn fixture_approval_requires_native_session_and_one_time_tool_option() {
     let mut payload = json!({"native_request_id":7,"native_method":"session/request_permission",
         "native_params":{"sessionId":"native-1","options":[
             {"kind":"allow_always","optionId":"always"}, {"kind":"allow_once","optionId":"once"}]}});
-    let (_, reply) = fixture_approval("kimi", "native-1", &payload).unwrap();
+    let (_, reply) = fixture_approval("kimi", &payload).unwrap();
     assert_eq!(reply["result"]["outcome"]["optionId"], "once");
-    assert!(fixture_approval("kimi", "another", &payload).is_none());
-    assert!(fixture_approval("other", "native-1", &payload).is_none());
+    assert!(fixture_approval("other", &payload).is_none());
+    payload["native_params"]["sessionId"] = json!("");
+    assert!(fixture_approval("kimi", &payload).is_none());
+    payload["native_params"]["sessionId"] = json!("native-2");
     payload["native_params"]["options"] = json!([{ "kind":"allow_always","optionId":"always"}]);
-    assert!(fixture_approval("kimi", "native-1", &payload).is_none());
+    assert!(fixture_approval("kimi", &payload).is_none());
 }
 
 fn authenticated<T>(body: T) -> Request<T> {
@@ -687,9 +694,17 @@ fn has_token_usage(value: &Value) -> bool {
                 | "cacheRead"
                 | "cacheWrite"
         ) && value.as_u64().is_some_and(|count| count > 0)
-    }) || ["total", "last", "token_usage", "tokens", "usage"]
-        .iter()
-        .any(|key| object.get(*key).is_some_and(has_token_usage))
+    }) || [
+        "total",
+        "last",
+        "token_usage",
+        "tokens",
+        "usage",
+        "agent",
+        "accumulated_token_usage",
+    ]
+    .iter()
+    .any(|key| object.get(*key).is_some_and(has_token_usage))
 }
 
 #[test]
@@ -709,6 +724,7 @@ fn live_evidence_extracts_native_text_and_requires_positive_token_counts() {
         json!({"input":2}),
         json!({"prompt_tokens":1}),
         json!({"tokens":{"output":3}}),
+        json!({"agent":{"accumulated_token_usage":{"prompt_tokens":23,"completion_tokens":9}}}),
     ] {
         assert!(has_token_usage(&usage));
     }

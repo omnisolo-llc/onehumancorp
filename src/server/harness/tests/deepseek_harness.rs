@@ -16,6 +16,18 @@ use server_harness::middleware::types::{ModelApiDialect, ReasoningEffort, Resolv
 use uuid::Uuid;
 
 #[test]
+fn tool_result_uses_pinned_sdk_message_source_call_id() {
+    let codec = DeepSeekHarnessCodec::for_request("/tmp", &request()).unwrap();
+    let mut state = NativeTurnState::new("session-1");
+    let event = codec.decode_notification(&notification("session.event", json!({
+        "sessionId":"session-1", "event":{"type":"tool/result", "seq":1, "time":1,
+            "data":{"message":{"source":{"kind":"tool","callId":"call-1"}, "content":[{"type":"text", "text":"done"}]}}}
+    })), &mut state).unwrap();
+    assert_eq!(event.event.event_type, "tool.completed");
+    assert_eq!(event.event.payload["call_id"], "call-1");
+}
+
+#[test]
 fn text_and_reasoning_deltas_preserve_empty_and_whitespace_strings() {
     let codec = DeepSeekHarnessCodec::for_request("/tmp", &request()).unwrap();
     for kind in ["text-delta", "reasoning-delta"] {
@@ -380,7 +392,7 @@ fn session_events_map_text_tools_and_usage() {
                     "event": {
                         "type": "tool/result", "seq": 6, "time": 3,
                         "data": {"turn": 1, "step": 1, "message": {
-                            "role": "tool", "toolCallId": "call-1", "content": [{"type": "text", "text": "ok"}]
+                            "role": "user", "source": {"kind":"tool", "callId":"call-1"}, "content": [{"type": "text", "text": "ok"}]
                         }}
                     }
                 }),
