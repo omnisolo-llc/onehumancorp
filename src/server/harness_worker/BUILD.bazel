@@ -6,11 +6,11 @@ rust_library(
     name = "omnisolo_harness_worker",
     srcs = ["lib.rs", "local_services.rs", "protected_process.rs"],
     edition = "2024",
+    proc_macro_deps = ["@crates//:async-trait"],
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/harness:server_harness",
         "//src/agents/builtin:omnisolo_builtin_agent_lib",
-        "@crates//:async-trait",
         "@crates//:serde",
         "@crates//:sha2",
         "@crates//:sqlx",
