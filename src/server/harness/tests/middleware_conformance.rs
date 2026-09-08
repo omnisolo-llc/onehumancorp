@@ -43,6 +43,29 @@ fn fixture(name: &str) -> Value {
 }
 
 #[test]
+fn native_capsule_export_preserves_validated_service_references() {
+    let mut run = OmniSoloHarnessAdapter::start(
+        OmniSoloRunConfig::new("tenant-a", "handoff shared services")
+            .with_workspace("project-a", "workspace-a"),
+    ).unwrap();
+    let scope = LocalServiceScopeContext::for_attempt(
+        "tenant-a", Some("project-a"), Some("workspace-a"),
+        run.session().session_id, Some(run.task().task_id), Some(run.attempt().attempt_id),
+    );
+    let bundle = LocalServiceRegistry::with_defaults().resolve(scope).unwrap();
+    run.bind_local_services(bundle.clone()).unwrap();
+    let capsule = run.export_capsule("codex", Uuid::new_v4()).unwrap();
+    assert_eq!(capsule.manifest.local_service_bindings, bundle.bindings);
+    capsule.verify_integrity().unwrap();
+
+    let mut forged = bundle.clone();
+    forged.bindings[0].tenant_id = "tenant-b".to_owned();
+    assert!(run.bind_local_services(forged).is_err());
+    assert_eq!(run.export_capsule("codex", Uuid::new_v4()).unwrap()
+        .manifest.local_service_bindings, bundle.bindings);
+}
+
+#[test]
 fn session_task_fixture_covers_durable_replay_and_transient_delivery() {
     let fixture = fixture("session_task_run");
     let mut run = OmniSoloHarnessAdapter::start(

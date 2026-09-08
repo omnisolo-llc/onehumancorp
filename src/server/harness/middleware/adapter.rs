@@ -12,6 +12,10 @@ use super::capsule::{
 use super::events::{AppendResult, EventStore, EventStoreError};
 use super::lease::{FenceToken, Lease, LeaseError};
 use super::lifecycle::{LifecycleError, VersionedState};
+use super::local_services::{
+    LocalServiceBinding, LocalServiceBundle, LocalServiceError, LocalServiceRegistry,
+    LocalServiceScope, LocalServiceScopeContext,
+};
 use super::types::{
     ActorDescriptor, Attempt, AttemptKind, AttemptState, ContentPart, EventDurability,
     EventEnvelope, JsonMap, Message, MessageRole, MessageStatus, ReplayRequirement, Session,
@@ -24,6 +28,8 @@ pub struct OmniSoloRunConfig {
     pub objective: String,
     pub session_id: Option<Uuid>,
     pub task_id: Option<Uuid>,
+    #[serde(default)]
+    pub attempt_id: Option<Uuid>,
     pub project_id: Option<String>,
     pub workspace_id: Option<String>,
     pub title: Option<String>,
@@ -44,6 +50,7 @@ impl OmniSoloRunConfig {
             objective: objective.into(),
             session_id: None,
             task_id: None,
+            attempt_id: None,
             project_id: None,
             workspace_id: None,
             title: None,
@@ -347,6 +354,7 @@ pub struct OmniSoloHarnessAdapter {
     last_durable_event_id: Option<Uuid>,
     last_durable_sequence: Option<i64>,
     idempotency_key: Option<String>,
+    local_service_bindings: Vec<LocalServiceBinding>,
 }
 
 impl std::fmt::Debug for OmniSoloHarnessAdapter {
@@ -379,7 +387,7 @@ impl OmniSoloHarnessAdapter {
         let session_id = config.session_id.unwrap_or_else(Uuid::new_v4);
         let task_id = config.task_id.unwrap_or_else(Uuid::new_v4);
         let turn_id = config.create_turn.then(Uuid::new_v4);
-        let attempt_id = Uuid::new_v4();
+        let attempt_id = config.attempt_id.unwrap_or_else(Uuid::new_v4);
         let branch_id = Uuid::new_v4();
 
         let session = Session {
@@ -478,6 +486,7 @@ impl OmniSoloHarnessAdapter {
             last_durable_event_id: None,
             last_durable_sequence: None,
             idempotency_key: config.idempotency_key,
+            local_service_bindings: Vec::new(),
         };
         adapter.event_store.register_lease(adapter.lease.clone());
         adapter.record(OmniSoloEvent::RunStarted { iteration: 0 })?;
@@ -697,6 +706,49 @@ impl OmniSoloHarnessAdapter {
         Ok(())
     }
 
+    /// Retain validated portable references for subsequent handoff exports.
+    /// Binding references do not confer authority to invoke a service.
+    pub fn bind_local_services(
+        &mut self,
+        bundle: LocalServiceBundle,
+    ) -> Result<(), LocalServiceError> {
+        let context = LocalServiceScopeContext::for_attempt(
+            &self.session.tenant_id,
+            self.session.project_id.as_deref(),
+            self.session.workspace_id.as_deref(),
+            self.session.session_id,
+            Some(self.task.task_id),
+            Some(self.attempt.attempt_id),
+        );
+        self.retain_local_service_references(bundle, &context)
+    }
+
+    pub(crate) fn retain_local_service_references(
+        &mut self,
+        bundle: LocalServiceBundle,
+        context: &LocalServiceScopeContext,
+    ) -> Result<(), LocalServiceError> {
+        if context.tenant_id != self.session.tenant_id {
+            return Err(LocalServiceError::TenantMismatch);
+        }
+        if context.session_id != self.session.session_id {
+            return Err(LocalServiceError::SessionMismatch);
+        }
+        if self.session.project_id.as_ref()
+            .is_some_and(|id| context.project_id.as_ref() != Some(id))
+        {
+            return Err(LocalServiceError::ScopeMismatch(LocalServiceScope::Project));
+        }
+        if self.session.workspace_id.as_ref()
+            .is_some_and(|id| context.workspace_id.as_ref() != Some(id))
+        {
+            return Err(LocalServiceError::ScopeMismatch(LocalServiceScope::Workspace));
+        }
+        LocalServiceRegistry::with_defaults().validate(&bundle, context)?;
+        self.local_service_bindings = bundle.bindings;
+        Ok(())
+    }
+
     pub fn export_capsule(
         &self,
         target_harness_id: impl Into<String>,
@@ -736,7 +788,7 @@ impl OmniSoloHarnessAdapter {
             records,
             workspace_snapshot_digests: Vec::new(),
             artifact_digests: Vec::new(),
-            local_service_bindings: Vec::new(),
+            local_service_bindings: self.local_service_bindings.clone(),
             created_at: Utc::now(),
         };
         CapsuleCompiler::new("omnisolo", "omnisolo.portable.v2", 1)

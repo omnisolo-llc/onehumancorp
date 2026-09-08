@@ -4482,14 +4482,22 @@ impl OmniSoloHarnessAdapterBridge {
         let mut config = OmniSoloRunConfig::new(request.tenant_id.clone(), objective)
             .with_session_id(request.session_id)
             .with_harness("omnisolo");
+        config.attempt_id = request.attempt_id;
+        if let Some(binding) = request.local_service_bundle.as_ref()
+            .and_then(|bundle| bundle.bindings.first())
+        {
+            config.project_id = binding.project_id.clone();
+            config.workspace_id = binding.workspace_id.clone();
+        }
         if let Some(task_id) = request.task_id {
             config = config.with_task_id(task_id);
         }
         if request.turn_id.is_some() {
             config = config.with_turn();
         }
-        let run = OmniSoloHarnessAdapter::start(config)
+        let mut run = OmniSoloHarnessAdapter::start(config)
             .map_err(|error| HarnessAdapterError::Remote(error.to_string()))?;
+        Self::retain_request_services(&mut run, request)?;
         self.run = Some(run);
         Ok(NativeSession {
             native_session_id: Self::native_session_id(request.session_id),
@@ -4499,6 +4507,27 @@ impl OmniSoloHarnessAdapterBridge {
                 .and_then(OmniSoloHarnessAdapter::last_durable_sequence)
                 .map(|sequence| sequence.to_string()),
         })
+    }
+
+    fn retain_request_services(
+        run: &mut OmniSoloHarnessAdapter,
+        request: &HarnessSessionRequest,
+    ) -> Result<(), HarnessAdapterError> {
+        use super::local_services::LocalServiceScopeContext;
+        if let Some(bundle) = request.local_service_bundle.clone() {
+            let first = bundle.bindings.first();
+            let context = LocalServiceScopeContext::new(
+                request.tenant_id.clone(),
+                first.and_then(|binding| binding.project_id.clone()),
+                first.and_then(|binding| binding.workspace_id.clone()),
+                request.session_id,
+                request.task_id,
+                request.attempt_id.or_else(|| first.and_then(|binding| binding.attempt_id)),
+            );
+            run.retain_local_service_references(bundle, &context)
+                .map_err(|error| HarnessAdapterError::InvalidRequest(error.to_string()))?;
+        }
+        Ok(())
     }
 
     fn execution_since(&self, start: usize) -> HarnessExecution {
@@ -4561,7 +4590,13 @@ impl HarnessAdapter for OmniSoloHarnessAdapterBridge {
             OmniSoloHarnessAdapter::import_capsule(&capsule, &request.tenant_id, "omnisolo")
                 .map_err(|error| HarnessAdapterError::Capsule(error.to_string()))?;
         self.imported_capsule = Some(capsule.clone());
-        let mut request = request.with_capsule(capsule);
+        let mut request = request.with_capsule(capsule.clone());
+        if request.local_service_bundle.is_none() && !capsule.manifest.local_service_bindings.is_empty() {
+            request.local_service_bundle = Some(LocalServiceBundle {
+                schema: LOCAL_SERVICE_BUNDLE_SCHEMA.to_owned(),
+                bindings: capsule.manifest.local_service_bindings.clone(),
+            });
+        }
         if request.objective.trim().is_empty() {
             request.objective = imported
                 .records
@@ -4621,6 +4656,10 @@ impl HarnessAdapter for OmniSoloHarnessAdapterBridge {
         if self.run.is_none() {
             self.start_run(&request)?;
         }
+        Self::retain_request_services(
+            self.run.as_mut().expect("start_run initializes the OmniSolo run"),
+            &request,
+        )?;
         if let Some(provider_client) = self.provider_client.clone() {
             let selection = request.resolved_model.as_ref().ok_or_else(|| {
                 HarnessAdapterError::InvalidRequest(
@@ -5001,6 +5040,52 @@ mod tests {
         HarnessSessionRequest::new("tenant-harness", Uuid::new_v4(), Uuid::new_v4())
             .with_task(Uuid::new_v4(), "exercise the harness")
             .with_turn(Uuid::new_v4())
+    }
+
+    #[tokio::test]
+    async fn native_bridge_retains_request_service_references_for_export() {
+        use crate::middleware::local_services::{LocalServiceRegistry, LocalServiceScopeContext};
+        let mut request = request();
+        request.attempt_id = Some(Uuid::new_v4());
+        let bundle = LocalServiceRegistry::with_defaults().resolve(
+            LocalServiceScopeContext::for_attempt(
+                &request.tenant_id, Some("project-a"), Some("workspace-a"),
+                request.session_id, request.task_id, request.attempt_id,
+            ),
+        ).unwrap();
+        request.local_service_bundle = Some(bundle.clone());
+        let mut bridge = OmniSoloHarnessAdapterBridge::new(native_descriptor());
+        bridge.create_session(request).await.unwrap();
+        let capsule = bridge.run.as_ref().unwrap()
+            .export_capsule("codex", Uuid::new_v4()).unwrap();
+        assert_eq!(capsule.manifest.local_service_bindings, bundle.bindings);
+        capsule.verify_integrity().unwrap();
+    }
+
+    #[tokio::test]
+    async fn native_bridge_retains_bindings_admitted_after_session_creation() {
+        use crate::middleware::local_services::{LocalServiceRegistry, LocalServiceScopeContext};
+        let mut request = request();
+        let mut bridge = OmniSoloHarnessAdapterBridge::new(native_descriptor());
+        bridge.create_session(request.clone()).await.unwrap();
+        request.attempt_id = Some(Uuid::new_v4());
+        let bundle = LocalServiceRegistry::with_defaults().resolve(
+            LocalServiceScopeContext::for_attempt(
+                &request.tenant_id, Some("project-a"), Some("workspace-a"),
+                request.session_id, request.task_id, request.attempt_id,
+            ),
+        ).unwrap();
+        request.local_service_bundle = Some(bundle.clone());
+        bridge.execute(request.clone(), &request.attempt_id.unwrap().to_string(),
+            "keep service references", None).await.unwrap();
+        let capsule = bridge.run.as_ref().unwrap()
+            .export_capsule("omnisolo", Uuid::new_v4()).unwrap();
+        assert_eq!(capsule.manifest.local_service_bindings, bundle.bindings);
+        let mut imported = OmniSoloHarnessAdapterBridge::new(native_descriptor());
+        request.local_service_bundle = None;
+        imported.import_session(request, capsule).await.unwrap();
+        assert_eq!(imported.run.as_ref().unwrap().export_capsule("codex", Uuid::new_v4())
+            .unwrap().manifest.local_service_bindings, bundle.bindings);
     }
 
     #[test]

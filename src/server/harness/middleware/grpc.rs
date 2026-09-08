@@ -18,7 +18,9 @@ use super::harness::{
     OmniSoloHarnessAdapterBridge, ProcessHarnessAdapter, ProcessHarnessSpec,
 };
 use super::inference::OpenAiResponsesClient;
-use super::local_services::{LOCAL_SERVICE_BUNDLE_SCHEMA, LocalServiceBundle};
+use super::local_services::{
+    LOCAL_SERVICE_BUNDLE_SCHEMA, LocalServiceBundle, LocalServiceRegistry, LocalServiceScopeContext,
+};
 use super::openhands::OpenHandsProviderErrorKind;
 use super::protocol::{AttemptOperation, HarnessExecutionItem};
 use super::types::{ResolvedModelSelection, sanitize_credential_value};
@@ -1102,13 +1104,29 @@ fn apply_request_context(
             request.local_service_bundle = if local_services.is_null() {
                 None
             } else {
-                Some(serde_json::from_value::<LocalServiceBundle>(local_services.clone()).map_err(
-                    |_| Status::invalid_argument("context local_services is invalid"),
-                )?)
+                Some(
+                    serde_json::from_value::<LocalServiceBundle>(local_services.clone()).map_err(
+                        |_| Status::invalid_argument("context local_services is invalid"),
+                    )?,
+                )
             };
             if let Some(bundle) = &request.local_service_bundle {
-                bundle
-                    .validate()
+                // The wire request has no project/workspace identity fields. Require a
+                // consistent namespace across the bundle, while anchoring the session,
+                // task and attempt to the command rather than trusting the binding.
+                let first_binding = bundle.bindings.first();
+                let scope = LocalServiceScopeContext::new(
+                    request.tenant_id.clone(),
+                    first_binding.and_then(|binding| binding.project_id.clone()),
+                    first_binding.and_then(|binding| binding.workspace_id.clone()),
+                    request.session_id,
+                    request.task_id,
+                    request
+                        .attempt_id
+                        .or_else(|| first_binding.and_then(|binding| binding.attempt_id)),
+                );
+                LocalServiceRegistry::with_defaults()
+                    .validate(bundle, &scope)
                     .map_err(|_| Status::invalid_argument("context local_services is invalid"))?;
                 if bundle.bindings.iter().any(|binding| {
                     binding.tenant_id != request.tenant_id
@@ -1711,6 +1729,67 @@ mod tests {
         )
         .unwrap();
         assert!(request.extensions.is_empty());
+    }
+
+    #[test]
+    fn request_context_rejects_forged_local_service_descriptors_and_scopes() {
+        use super::super::local_services::{LocalServiceRegistry, LocalServiceScopeContext};
+
+        let scope = LocalServiceScopeContext::for_attempt(
+            "tenant-services",
+            Some("project-services"),
+            Some("workspace-services"),
+            Uuid::from_u128(70),
+            Some(Uuid::from_u128(71)),
+            Some(Uuid::from_u128(72)),
+        );
+        let bundle = LocalServiceRegistry::with_defaults()
+            .resolve(scope.clone())
+            .unwrap();
+        let request =
+            HarnessSessionRequest::new(&scope.tenant_id, scope.session_id, Uuid::from_u128(73))
+                .with_task(scope.task_id.unwrap(), "services")
+                .with_attempt_id(scope.attempt_id.unwrap());
+        assert!(
+            apply_request_context(
+                request.clone(),
+                &json!({"context": {"local_services": bundle}})
+            )
+            .is_ok()
+        );
+
+        for mutation in [
+            "capability",
+            "digest",
+            "service",
+            "missing_workspace",
+            "mixed_workspace",
+            "mixed_project",
+            "scope",
+        ] {
+            let mut forged = bundle.clone();
+            let binding = &mut forged.bindings[0];
+            match mutation {
+                "capability" => {
+                    binding
+                        .granted_capabilities
+                        .insert("browser.navigate".to_owned());
+                }
+                "digest" => binding.configuration_digest = "forged".to_owned(),
+                "service" => binding.service_id = "unknown-service".to_owned(),
+                "missing_workspace" => binding.workspace_id = None,
+                "mixed_workspace" => binding.workspace_id = Some("other-workspace".to_owned()),
+                "mixed_project" => binding.project_id = Some("other-project".to_owned()),
+                "scope" => binding.scope = super::super::local_services::LocalServiceScope::Tenant,
+                _ => unreachable!(),
+            }
+            let error = apply_request_context(
+                request.clone(),
+                &json!({"context": {"local_services": forged}}),
+            )
+            .expect_err(mutation);
+            assert_eq!(error.code(), tonic::Code::InvalidArgument, "{mutation}");
+        }
     }
 
     #[test]

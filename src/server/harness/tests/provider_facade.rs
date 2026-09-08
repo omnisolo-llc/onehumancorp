@@ -2,9 +2,7 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 use server_harness::middleware::provider_facade::ProviderFacade;
-use server_harness::middleware::types::{
-    ModelApiDialect, ReasoningEffort, ResolvedModelSelection,
-};
+use server_harness::middleware::types::{ModelApiDialect, ReasoningEffort, ResolvedModelSelection};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::{Mutex, oneshot};
@@ -31,6 +29,7 @@ struct UpstreamFixture {
     base_url: String,
     authorizations: Arc<Mutex<Vec<String>>>,
     requests: Arc<Mutex<Vec<String>>>,
+    bodies: Arc<Mutex<Vec<Value>>>,
     shutdown: Option<oneshot::Sender<()>>,
     task: Option<JoinHandle<()>>,
 }
@@ -41,6 +40,8 @@ impl UpstreamFixture {
         let address = listener.local_addr().unwrap();
         let authorizations = Arc::new(Mutex::new(Vec::new()));
         let requests = Arc::new(Mutex::new(Vec::new()));
+        let bodies = Arc::new(Mutex::new(Vec::new()));
+        let bodies_for_task = Arc::clone(&bodies);
         let authorizations_for_task = Arc::clone(&authorizations);
         let requests_for_task = Arc::clone(&requests);
         let (shutdown, mut shutdown_receiver) = oneshot::channel();
@@ -54,6 +55,7 @@ impl UpstreamFixture {
                         let (path, authorization, body) = parse_request(&request);
                         authorizations_for_task.lock().await.push(authorization);
                         requests_for_task.lock().await.push(path.clone());
+                        bodies_for_task.lock().await.push(body.clone());
                         let response_body = if path == "/v1/models" {
                             json!({"object":"list","data":[]}).to_string()
                         } else {
@@ -84,6 +86,7 @@ impl UpstreamFixture {
             base_url: format!("http://{address}/v1"),
             authorizations,
             requests,
+            bodies,
             shutdown: Some(shutdown),
             task: Some(task),
         }
@@ -222,7 +225,10 @@ async fn facade_rejects_wrong_token_model_method_and_unallowlisted_route() {
         .send()
         .await
         .unwrap();
-    assert_eq!(wrong_method.status(), reqwest::StatusCode::METHOD_NOT_ALLOWED);
+    assert_eq!(
+        wrong_method.status(),
+        reqwest::StatusCode::METHOD_NOT_ALLOWED
+    );
 
     let admin = client
         .post(format!("{}/admin", facade.route().base_url()))
@@ -233,6 +239,186 @@ async fn facade_rejects_wrong_token_model_method_and_unallowlisted_route() {
     assert_eq!(admin.status(), reqwest::StatusCode::NOT_FOUND);
     assert_eq!(upstream.request_count().await, 0);
 
+    facade.shutdown().await.unwrap();
+    upstream.shutdown().await;
+}
+
+#[test]
+fn config_debug_does_not_expose_unvalidated_url_credentials() {
+    use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    let config = ProviderFacadeConfig::new(
+        "https://username:password-canary@example.com/v1?token=query-canary",
+        UPSTREAM_SECRET,
+        selection("gpt-5.6-luna"),
+    );
+    let debug = format!("{config:?}");
+    assert!(!debug.contains("password-canary"));
+    assert!(!debug.contains("query-canary"));
+}
+
+#[tokio::test]
+async fn facade_rejects_reasoning_override_for_both_request_dialects() {
+    let upstream = UpstreamFixture::start().await;
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+        .await
+        .unwrap();
+    let client = reqwest::Client::new();
+    for (path, body) in [
+        (
+            "responses",
+            json!({"model":"gpt-5.6-luna", "reasoning":{"effort":"low"}}),
+        ),
+        (
+            "chat/completions",
+            json!({"model":"gpt-5.6-luna", "reasoning_effort":"low"}),
+        ),
+        (
+            "responses",
+            json!({"model":"gpt-5.6-luna", "reasoning_effort":"low"}),
+        ),
+        (
+            "chat/completions",
+            json!({"model":"gpt-5.6-luna", "reasoning":{"effort":"low"}}),
+        ),
+    ] {
+        let response = client
+            .post(format!("{}/{path}", facade.route().base_url()))
+            .bearer_auth(facade.route().token())
+            .json(&body)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
+    }
+    assert_eq!(upstream.request_count().await, 0);
+    facade.shutdown().await.unwrap();
+    upstream.shutdown().await;
+}
+
+#[tokio::test]
+async fn facade_does_not_follow_upstream_redirects() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let target = UpstreamFixture::start().await;
+    let location = format!("{}/models", target.url());
+    let task = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        read_request(&mut socket).await.unwrap();
+        socket.write_all(format!("HTTP/1.1 307 Temporary Redirect\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
+    });
+    let facade = ProviderFacade::start(
+        format!("http://{address}/v1"),
+        UPSTREAM_SECRET,
+        selection("gpt-5.6-luna"),
+    )
+    .await
+    .unwrap();
+    let response = reqwest::Client::new()
+        .get(format!("{}/models", facade.route().base_url()))
+        .bearer_auth(facade.route().token())
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::TEMPORARY_REDIRECT);
+    assert_eq!(target.request_count().await, 0);
+    task.await.unwrap();
+    facade.shutdown().await.unwrap();
+    target.shutdown().await;
+}
+
+async fn assert_revocation_aborts_upstream(streaming: bool, drop_facade: bool) {
+    use std::time::Duration;
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let (started, received) = oneshot::channel();
+    let upstream = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        read_request(&mut socket).await.unwrap();
+        if streaming {
+            socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nTransfer-Encoding: chunked\r\n\r\n6\r\ndata: \r\n").await.unwrap();
+        }
+        started.send(()).unwrap();
+        let mut byte = [0];
+        socket.read(&mut byte).await.unwrap_or(0)
+    });
+    let facade = ProviderFacade::start(
+        format!("http://{address}/v1"),
+        UPSTREAM_SECRET,
+        selection("gpt-5.6-luna"),
+    )
+    .await
+    .unwrap();
+    let route = facade.route().clone();
+    let client = tokio::spawn(async move {
+        if let Ok(response) = reqwest::Client::new()
+            .post(format!("{}/responses", route.base_url()))
+            .bearer_auth(route.token())
+            .json(&json!({"model":"gpt-5.6-luna"}))
+            .send()
+            .await
+        {
+            let _ = response.bytes().await;
+        }
+    });
+    received.await.unwrap();
+    if drop_facade {
+        drop(facade);
+    } else {
+        tokio::time::timeout(Duration::from_secs(1), facade.shutdown())
+            .await
+            .expect("shutdown must abort in-flight upstream work")
+            .unwrap();
+    }
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(1), upstream)
+            .await
+            .expect("upstream connection must close on revocation")
+            .unwrap(),
+        0
+    );
+    tokio::time::timeout(Duration::from_secs(1), client)
+        .await
+        .unwrap()
+        .unwrap();
+}
+
+#[tokio::test]
+async fn shutdown_aborts_pending_upstream_response() {
+    assert_revocation_aborts_upstream(false, false).await;
+}
+#[tokio::test]
+async fn shutdown_aborts_upstream_stream() {
+    assert_revocation_aborts_upstream(true, false).await;
+}
+#[tokio::test]
+async fn drop_aborts_pending_upstream_response() {
+    assert_revocation_aborts_upstream(false, true).await;
+}
+#[tokio::test]
+async fn drop_aborts_upstream_stream() {
+    assert_revocation_aborts_upstream(true, true).await;
+}
+
+#[tokio::test]
+async fn facade_injects_bound_reasoning_when_child_omits_it() {
+    let upstream = UpstreamFixture::start().await;
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+        .await
+        .unwrap();
+    for path in ["responses", "chat/completions"] {
+        let response = reqwest::Client::new()
+            .post(format!("{}/{path}", facade.route().base_url()))
+            .bearer_auth(facade.route().token())
+            .json(&json!({"model":"gpt-5.6-luna"}))
+            .send()
+            .await
+            .unwrap();
+        assert!(response.status().is_success());
+    }
+    let bodies = upstream.bodies.lock().await;
+    assert_eq!(bodies[0]["reasoning"]["effort"], "max");
+    assert_eq!(bodies[1]["reasoning_effort"], "max");
+    drop(bodies);
     facade.shutdown().await.unwrap();
     upstream.shutdown().await;
 }

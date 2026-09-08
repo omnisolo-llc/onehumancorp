@@ -1,10 +1,8 @@
 use serde_json::{Value, json};
+use server_harness::middleware::local_services::{LocalServiceRegistry, LocalServiceScopeContext};
 use server_ohc::harness_middleware::harness_worker_service_client::HarnessWorkerServiceClient;
 use server_ohc::harness_middleware::{
     AttemptCommandEnvelope, EventDeliveryEnvelope, SessionOperationEnvelope,
-};
-use server_harness::middleware::local_services::{
-    LocalServiceRegistry, LocalServiceScopeContext,
 };
 use tokio::time::{Duration, sleep, timeout};
 use tokio_stream::StreamExt;
@@ -17,6 +15,7 @@ const MARKER: &str = "OMNISOLO_LIVE_HARNESS_OK";
 #[ignore = "requires OMNISOLO_LIVE_HARNESS_E2E=1 and a real configured worker"]
 async fn live_harness_worker_uses_the_real_provider() {
     if std::env::var("OMNISOLO_LIVE_HARNESS_E2E").as_deref() != Ok("1") {
+        eprintln!("live harness verification skipped: explicit live opt-in is absent");
         return;
     }
 
@@ -57,14 +56,7 @@ async fn run() {
 
     let attempt_id = Uuid::new_v4();
     let local_services = LocalServiceRegistry::with_defaults()
-        .resolve(LocalServiceScopeContext::for_attempt(
-            "tenant-live-harness-matrix",
-            None,
-            Some(&format!("workspace-live-{harness_id}")),
-            session_id,
-            Some(task_id),
-            Some(attempt_id),
-        ))
+        .resolve(live_service_scope(&harness_id, session_id, task_id, attempt_id))
         .expect("resolve shared live local services");
     let prompt =
         format!("Reply with exactly this marker and no markdown: {MARKER}. Do not call tools.");
@@ -170,8 +162,8 @@ fn validate_live_deliveries(
     let mut binding = None;
     let mut downgrade = None;
     let mut local_services = None;
-    let mut saw_usage = false;
-    let mut saw_final_marker = false;
+    let mut usages = Vec::new();
+    let mut assistant_text = String::new();
     let mut saw_terminal_success = false;
     let mut last_durable_sequence = 0_i64;
 
@@ -212,8 +204,41 @@ fn validate_live_deliveries(
             .ok_or_else(|| "canonical event did not contain event_type".to_owned())?;
         event_types.push(event_type.to_owned());
         let event_payload = payload.get("payload").cloned().unwrap_or(Value::Null);
-        saw_final_marker |= event_payload.to_string().contains(MARKER);
-        saw_usage |= event_type == "usage.recorded" || event_payload.get("usage").is_some();
+        if matches!(
+            event_type,
+            "turn.failed" | "turn.cancelled" | "attempt.failed" | "error"
+        ) || event_payload
+            .get("status")
+            .and_then(Value::as_str)
+            .is_some_and(|status| {
+                matches!(status, "failed" | "error" | "cancelled" | "interrupted")
+            })
+            || event_payload
+                .pointer("/turn/status")
+                .and_then(Value::as_str)
+                .is_some_and(|status| {
+                    matches!(status, "failed" | "error" | "cancelled" | "interrupted")
+                })
+        {
+            return Err("attempt emitted a failed or cancelled terminal event".to_owned());
+        }
+        if matches!(
+            event_type,
+            "assistant.final" | "assistant.text_chunk" | "assistant.message"
+        ) {
+            for field in ["/text", "/content", "/message/content", "/item/text"] {
+                if let Some(content) = event_payload.pointer(field) {
+                    append_assistant_text(content, &mut assistant_text);
+                    break;
+                }
+            }
+        }
+        let usage = event_payload
+            .get("usage")
+            .or_else(|| (event_type == "usage.recorded").then_some(&event_payload));
+        if let Some(usage) = usage.filter(|value| has_token_usage(value)) {
+            usages.push(usage.clone());
+        }
         saw_terminal_success |= matches!(event_type, "turn.completed" | "assistant.final");
         if event_type == "inference.model_binding" {
             if binding.is_some() {
@@ -238,9 +263,7 @@ fn validate_live_deliveries(
         "aider" | "goose" | "open-interpreter" | "plandex" => "openai_compatible",
         _ => "native",
     };
-    if binding.get("integration_mode").and_then(Value::as_str)
-        != Some(expected_integration_mode)
-    {
+    if binding.get("integration_mode").and_then(Value::as_str) != Some(expected_integration_mode) {
         return Err(format!(
             "model binding integration mode did not match {harness_id}: expected {expected_integration_mode}"
         ));
@@ -249,9 +272,7 @@ fn validate_live_deliveries(
         let event = local_services
             .as_ref()
             .ok_or_else(|| "attempt emitted no shared local service binding".to_owned())?;
-        if event.get("schema").and_then(Value::as_str)
-            != Some("omnisolo.local_service_bundle.v1")
-        {
+        if event.get("schema").and_then(Value::as_str) != Some("omnisolo.local_service_bundle.v1") {
             return Err("local service binding used an unexpected schema".to_owned());
         }
         let bindings = event
@@ -281,7 +302,9 @@ fn validate_live_deliveries(
         .into_iter()
         .collect::<std::collections::BTreeSet<_>>();
         if service_ids != expected {
-            return Err("shared local service binding did not cover the full service set".to_owned());
+            return Err(
+                "shared local service binding did not cover the full service set".to_owned(),
+            );
         }
         json!({
             "status": "bound",
@@ -298,23 +321,24 @@ fn validate_live_deliveries(
     if binding.get("reasoning_effort").and_then(Value::as_str) != Some(reasoning_effort) {
         return Err("model binding did not preserve OPENAI_REASONING_EFFORT".to_owned());
     }
-    if !saw_final_marker {
+    if !assistant_text.contains(MARKER) {
         return Err("provider marker was absent from the final transcript".to_owned());
     }
     if !saw_terminal_success {
         return Err("attempt emitted no canonical successful terminal event".to_owned());
     }
-    if !saw_usage {
+    if usages.is_empty() {
         return Err("attempt emitted no usage evidence".to_owned());
     }
 
     let reasoning_translation = downgrade.as_ref().map_or_else(
-        || json!({"kind":"native","requested":reasoning_effort,"effective":reasoning_effort}),
+        || json!({"kind":"native","requested":reasoning_effort,"effective":
+            if harness_id == "pi" && reasoning_effort == "max" { "xhigh" } else { reasoning_effort }}),
         |event| {
             json!({
                 "kind":"explicit_downgrade",
                 "requested":event.get("requested"),
-                "effective":event.get("effective"),
+                "effective":event.get("effective").or_else(|| event.get("applied")),
                 "reason":event.get("reason"),
             })
         },
@@ -328,11 +352,114 @@ fn validate_live_deliveries(
         "integration_mode": expected_integration_mode,
         "shared_local_services": shared_services,
         "reasoning_translation": reasoning_translation,
+        "assistant_text": assistant_text,
+        "usage": usages,
         "usage_observed": true,
         "terminal_success_observed": true,
         "provider_marker_observed": true,
         "credential_leak_observed": false,
     }))
+}
+
+fn append_assistant_text(content: &Value, text: &mut String) {
+    match content {
+        Value::String(value) => text.push_str(value),
+        Value::Array(parts) => {
+            for part in parts {
+                if matches!(
+                    part.get("type").and_then(Value::as_str),
+                    Some("text" | "output_text")
+                ) {
+                    if let Some(value) = part.get("text").and_then(Value::as_str) {
+                        text.push_str(value);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn live_service_scope(
+    harness_id: &str,
+    session_id: Uuid,
+    task_id: Uuid,
+    attempt_id: Uuid,
+) -> LocalServiceScopeContext {
+    LocalServiceScopeContext::for_attempt(
+        "tenant-live-harness-matrix",
+        Some("project-live-harness-matrix"),
+        Some(&format!("workspace-live-{harness_id}")),
+        session_id,
+        Some(task_id),
+        Some(attempt_id),
+    )
+}
+
+#[test]
+fn live_scope_resolves_every_required_service_before_provider_execution() {
+    let scope = live_service_scope("codex", Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+    let registry = LocalServiceRegistry::with_defaults();
+    let bundle = registry.resolve(scope.clone()).expect("live scope is complete");
+    assert_eq!(bundle.bindings.len(), 8);
+    registry.validate(&bundle, &scope).unwrap();
+}
+
+fn has_token_usage(value: &Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    object.iter().any(|(key, value)| {
+        matches!(
+            key.as_str(),
+            "input_tokens"
+                | "output_tokens"
+                | "total_tokens"
+                | "prompt_tokens"
+                | "completion_tokens"
+                | "inputTokens"
+                | "outputTokens"
+                | "totalTokens"
+                | "input"
+                | "output"
+                | "cacheRead"
+                | "cacheWrite"
+        ) && value.as_u64().is_some_and(|count| count > 0)
+    }) || ["total", "last", "token_usage", "tokens", "usage"]
+        .iter()
+        .any(|key| object.get(*key).is_some_and(has_token_usage))
+}
+
+#[test]
+fn live_evidence_extracts_native_text_and_requires_positive_token_counts() {
+    let mut text = String::new();
+    append_assistant_text(
+        &json!([
+            {"type":"text", "text":"OMNISOLO_"},
+            {"type":"thinking", "text":"not assistant output"},
+            {"type":"output_text", "text":"LIVE_HARNESS_OK"}
+        ]),
+        &mut text,
+    );
+    assert_eq!(text, MARKER);
+    for usage in [
+        json!({"total":{"inputTokens":4}}),
+        json!({"input":2}),
+        json!({"prompt_tokens":1}),
+        json!({"tokens":{"output":3}}),
+    ] {
+        assert!(has_token_usage(&usage));
+    }
+    for usage in [
+        Value::Null,
+        json!({}),
+        json!({"total_tokens":0}),
+        json!({"total_tokens":-1}),
+        json!({"total_tokens":"3"}),
+        json!({"unrelated_number":3}),
+    ] {
+        assert!(!has_token_usage(&usage));
+    }
 }
 
 #[test]
@@ -393,7 +520,36 @@ fn live_evidence_requires_ordered_model_usage_terminal_and_secret_safe_events() 
     )
     .unwrap();
     assert_eq!(evidence["usage_observed"], true);
-    assert_eq!(evidence["reasoning_translation"]["kind"], "native");
+    assert_eq!(evidence["assistant_text"], MARKER);
+    assert_eq!(evidence["usage"], json!([{"total_tokens":3}]));
+    assert_eq!(evidence["reasoning_translation"]["effective"], "xhigh");
+    let mut downgraded = valid.clone();
+    downgraded.push(event(
+        4,
+        4,
+        "capability.downgraded",
+        json!({
+            "capability":"reasoning_effort", "requested":"max", "applied":"high",
+            "reason":"SDK supports high"
+        }),
+    ));
+    let evidence = validate_live_deliveries(
+        "openhands",
+        "gpt-5.6-luna",
+        "max",
+        session_id,
+        task_id,
+        attempt_id,
+        &downgraded,
+        "secret-canary",
+        false,
+    )
+    .unwrap();
+    assert_eq!(evidence["reasoning_translation"]["effective"], "high");
+    assert_eq!(
+        evidence["reasoning_translation"]["kind"],
+        "explicit_downgrade"
+    );
 
     for (name, mutation) in [
         ("delivery order", 0_u8),
@@ -401,6 +557,9 @@ fn live_evidence_requires_ordered_model_usage_terminal_and_secret_safe_events() 
         ("missing usage", 2),
         ("missing terminal", 3),
         ("credential leak", 4),
+        ("prompt echo is not assistant output", 5),
+        ("null usage", 6),
+        ("failed terminal", 7),
     ] {
         let mut invalid = valid.clone();
         match mutation {
@@ -429,6 +588,31 @@ fn live_evidence_requires_ordered_model_usage_terminal_and_secret_safe_events() 
                 }))
                 .unwrap()
             }
+            5 => {
+                invalid[0].payload = serde_json::to_vec(&json!({
+                    "event_type":"inference.model_binding", "payload":{
+                        "model_id":"gpt-5.6-luna", "reasoning_effort":"max",
+                        "integration_mode":"native", "prompt":MARKER
+                    }
+                }))
+                .unwrap();
+                invalid[2].payload = serde_json::to_vec(&json!({
+                    "event_type":"assistant.final", "payload":{"text":"wrong answer"}
+                }))
+                .unwrap();
+            }
+            6 => {
+                invalid[1].payload = serde_json::to_vec(&json!({
+                    "event_type":"usage.recorded", "payload":{"usage":null}
+                }))
+                .unwrap()
+            }
+            7 => invalid.push(event(
+                4,
+                4,
+                "turn.failed",
+                json!({"error":"provider failed"}),
+            )),
             _ => unreachable!(),
         }
         assert!(

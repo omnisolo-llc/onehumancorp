@@ -172,20 +172,33 @@ pub enum LocalServiceError {
 impl std::fmt::Display for LocalServiceError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::InvalidSchema(schema) => write!(formatter, "invalid local service schema: {schema}"),
-            Self::InvalidIdentity(reason) => write!(formatter, "invalid local service identity: {reason}"),
-            Self::MissingScopeIdentity(identity) => {
-                write!(formatter, "missing local service scope identity: {identity}")
+            Self::InvalidSchema(schema) => {
+                write!(formatter, "invalid local service schema: {schema}")
             }
-            Self::DuplicateKind(kind) => write!(formatter, "duplicate local service kind: {kind:?}"),
+            Self::InvalidIdentity(reason) => {
+                write!(formatter, "invalid local service identity: {reason}")
+            }
+            Self::MissingScopeIdentity(identity) => {
+                write!(
+                    formatter,
+                    "missing local service scope identity: {identity}"
+                )
+            }
+            Self::DuplicateKind(kind) => {
+                write!(formatter, "duplicate local service kind: {kind:?}")
+            }
             Self::InvalidGeneration(generation) => {
                 write!(formatter, "invalid local service generation: {generation}")
             }
             Self::UnknownService(kind) => write!(formatter, "unknown local service: {kind:?}"),
-            Self::ServiceMismatch(kind) => write!(formatter, "local service descriptor mismatch: {kind:?}"),
+            Self::ServiceMismatch(kind) => {
+                write!(formatter, "local service descriptor mismatch: {kind:?}")
+            }
             Self::TenantMismatch => formatter.write_str("local service tenant mismatch"),
             Self::SessionMismatch => formatter.write_str("local service session mismatch"),
-            Self::ScopeMismatch(scope) => write!(formatter, "local service scope mismatch: {scope:?}"),
+            Self::ScopeMismatch(scope) => {
+                write!(formatter, "local service scope mismatch: {scope:?}")
+            }
             Self::CapabilityDenied(capability) => {
                 write!(formatter, "local service capability denied: {capability}")
             }
@@ -380,6 +393,12 @@ impl LocalServiceRegistry {
         binding: &LocalServiceBinding,
         context: &LocalServiceScopeContext,
     ) -> Result<(), LocalServiceError> {
+        context.validate_identity()?;
+        if binding.binding_id.is_nil() {
+            return Err(LocalServiceError::InvalidIdentity(
+                "binding_id must not be nil".to_owned(),
+            ));
+        }
         let descriptor = self
             .descriptors
             .get(&binding.kind)
@@ -401,6 +420,28 @@ impl LocalServiceRegistry {
         }
         if binding.session_id != context.session_id {
             return Err(LocalServiceError::SessionMismatch);
+        }
+
+        // The sharing scope chooses the durable namespace; it does not remove
+        // the binding's project, workspace, task or attempt association.
+        for (matches, scope) in [
+            (
+                binding.project_id == context.project_id,
+                LocalServiceScope::Project,
+            ),
+            (
+                binding.workspace_id == context.workspace_id,
+                LocalServiceScope::Workspace,
+            ),
+            (binding.task_id == context.task_id, LocalServiceScope::Task),
+            (
+                binding.attempt_id == context.attempt_id,
+                LocalServiceScope::Attempt,
+            ),
+        ] {
+            if !matches {
+                return Err(LocalServiceError::ScopeMismatch(scope));
+            }
         }
 
         let scope_matches = match binding.scope {
@@ -451,10 +492,7 @@ fn descriptor<const N: usize>(
         implementation_version: "v1".to_owned(),
         state_locality: state_locality.to_owned(),
         scope_model,
-        capabilities: capabilities
-            .into_iter()
-            .map(str::to_owned)
-            .collect(),
+        capabilities: capabilities.into_iter().map(str::to_owned).collect(),
         configuration_digest: format!("sha256:local-service-{service_id}"),
     }
 }

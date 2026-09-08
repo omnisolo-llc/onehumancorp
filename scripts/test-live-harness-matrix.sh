@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${OMNISOLO_RUN_LIVE_HARNESS_E2E:-${OMNISOLO_LIVE_HARNESS_E2E:-0}}" != "1" ]]; then
+  printf '%s\n' '{"schema":"omnisolo.live_harness_matrix.v1","status":"skipped","reason":"explicit live opt-in is absent","results":[]}'
+  exit 0
+fi
+
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
@@ -16,9 +21,6 @@ export OPENAI_REASONING_EFFORT="${OPENAI_REASONING_EFFORT:-max}"
 export OMNISOLO_LIVE_ATTEMPTS="${OMNISOLO_LIVE_ATTEMPTS:-2}"
 export OMNISOLO_LIVE_RETRY_DELAY_SECS="${OMNISOLO_LIVE_RETRY_DELAY_SECS:-20}"
 
-matrix_file="$(mktemp)"
-models_file="$(mktemp)"
-preflight_file="$(mktemp)"
 
 harnesses=(omnisolo codex opencode deepseek pi kimi openhands openharness aider goose open-interpreter plandex)
 native_harness_count=8
@@ -55,18 +57,45 @@ arguments=(
 protocols=("" codex_app_server opencode_http deepseek_json_rpc pi_rpc kimi_acp openhands_http openharness_sdk openai_compatible_shim openai_compatible_shim openai_compatible_shim openai_compatible_shim)
 integration_modes=(native native native native native native native native openai_compatible openai_compatible openai_compatible openai_compatible)
 
-selected_harnesses=",${OMNISOLO_LIVE_HARNESSES:-${harnesses[*]}},"
+selected_harnesses=",${OMNISOLO_LIVE_HARNESSES-${harnesses[*]}},"
 selected_harnesses="${selected_harnesses// /,}"
 
 is_selected() {
   [[ "$selected_harnesses" == *",$1,"* ]]
 }
 
+IFS=',' read -r -a requested_harnesses <<< "$selected_harnesses"
+selection_count=0
+for requested in "${requested_harnesses[@]}"; do
+  [[ -z "$requested" ]] && continue
+  if [[ " ${harnesses[*]} " != *" $requested "* ]]; then
+    printf 'unknown harness: %s\n' "$requested" >&2
+    exit 1
+  fi
+  selection_count=$((selection_count + 1))
+done
+if (( selection_count == 0 )); then
+  echo 'empty harness selection' >&2
+  exit 1
+fi
+native_gate_complete=1
+for harness in "${harnesses[@]:0:native_harness_count}"; do
+  if ! is_selected "$harness"; then
+    native_gate_complete=0
+  fi
+done
+
+matrix_file="$(mktemp)"
+models_file="$(mktemp)"
+preflight_file="$(mktemp)"
+attempt_file="$(mktemp)"
+result_file="$(mktemp)"
+
 cleanup() {
   for harness in "${harnesses[@]}"; do
     docker rm --force "omnisolo-live-$harness" >/dev/null 2>&1 || true
   done
-  rm -f "$matrix_file" "$models_file" "$preflight_file"
+  rm -f "$matrix_file" "$models_file" "$preflight_file" "$attempt_file" "$result_file"
 }
 trap cleanup EXIT
 
@@ -112,7 +141,7 @@ if [[ "${OMNISOLO_LIVE_BUILD_IMAGES:-1}" == "1" ]]; then
       --file deploy/docker/Dockerfile.harness-worker \
       --target "${harnesses[$index]}" \
       --tag "${images[$index]}" \
-      .
+      . >&2
   done
 fi
 
@@ -127,15 +156,18 @@ for index in "${!harnesses[@]}"; do
   if [[ -z "$native_protocol" ]]; then
     native_protocol="in_process"
   fi
-  if (( index >= native_harness_count && native_gate_failed != 0 )); then
+  if (( index >= native_harness_count && (native_gate_failed != 0 || native_gate_complete == 0) )); then
     failed_harnesses+=("$harness")
+    gate_failure="native_gate_failed"
+    if (( native_gate_complete == 0 )); then gate_failure="native_gate_incomplete"; fi
     jq -nc \
       --arg harness_id "$harness" \
+      --arg failure_class "$gate_failure" \
       --arg native_protocol "$native_protocol" \
       --arg integration_mode "${integration_modes[$index]}" \
       --arg model "$OPENAI_MODEL" \
       --arg reasoning_effort "$OPENAI_REASONING_EFFORT" \
-      '{harness_id:$harness_id,native_protocol:$native_protocol,integration_mode:$integration_mode,status:"failed",failure_class:"native_gate_failed",provider_turn:"not_run",shared_service_probe:"not_run",reasoning_translation:"not_run",cleanup:"not_run",model:$model,reasoning_effort:$reasoning_effort}' \
+      '{harness_id:$harness_id,native_protocol:$native_protocol,integration_mode:$integration_mode,status:"failed",failure_class:$failure_class,provider_turn:"not_run",shared_service_probe:"not_run",reasoning_translation:"not_run",cleanup:"not_run",model:$model,reasoning_effort:$reasoning_effort}' \
       >>"$matrix_file"
     continue
   fi
@@ -173,7 +205,7 @@ for index in "${!harnesses[@]}"; do
   fi
   start_worker() {
     docker rm --force "$container" >/dev/null 2>&1 || true
-    docker run "${run_args[@]}" "${images[$index]}"
+    docker run "${run_args[@]}" "${images[$index]}" >&2
   }
   start_worker
   succeeded=0
@@ -183,15 +215,27 @@ for index in "${!harnesses[@]}"; do
       echo "[$harness] worker exited; recreating it before retry $attempt" >&2
       start_worker
     fi
-    echo "[$harness] live verification attempt $attempt/$OMNISOLO_LIVE_ATTEMPTS"
+    echo "[$harness] live verification attempt $attempt/$OMNISOLO_LIVE_ATTEMPTS" >&2
     if OMNISOLO_LIVE_HARNESS_E2E=1 \
       OMNISOLO_LIVE_HARNESS_ID="$harness" \
       OMNISOLO_LIVE_HARNESS_ENDPOINT="http://127.0.0.1:${ports[$index]}" \
       cargo test -p omnisolo_harness_worker --test live_harness_matrix \
-        live_harness_worker_uses_the_real_provider -- --ignored --exact --nocapture; then
-      succeeded=1
-      break
+        live_harness_worker_uses_the_real_provider -- --ignored --exact --nocapture >"$attempt_file" 2>&1; then
+      if jq -Rsc --arg harness "$harness" --arg model "$OPENAI_MODEL" '
+        [split("\n")[] | select(startswith("OMNISOLO_LIVE_RESULT=")) |
+          ltrimstr("OMNISOLO_LIVE_RESULT=") | fromjson] |
+        select(length == 1) | .[0] |
+        select(.schema == "omnisolo.live_harness_result.v1" and
+          .status == "passed" and .harness_id == $harness and .model == $model and
+          .native_session_deleted == true and .evidence.usage_observed == true and
+          .evidence.terminal_success_observed == true and .evidence.provider_marker_observed == true)
+      ' "$attempt_file" >"$result_file" && [[ -s "$result_file" ]]; then
+        succeeded=1
+        break
+      fi
+      echo "[$harness] test exited successfully without valid live evidence" >&2
     fi
+    jq -Rr 'split(env.OPENAI_API_KEY) | join("[REDACTED]")' "$attempt_file" >&2
     docker logs --tail 200 "$container" >&2 || true
     docker inspect --format \
       'container={{.Name}} status={{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{.State.Error}}' \
@@ -208,16 +252,12 @@ for index in "${!harnesses[@]}"; do
   fi
   duration_seconds=$(($(date +%s) - started_at))
   if [[ "$succeeded" == "1" ]]; then
-    jq -nc \
-      --arg harness_id "$harness" \
+    jq -c \
       --arg native_protocol "$native_protocol" \
       --arg integration_mode "${integration_modes[$index]}" \
-      --arg model "$OPENAI_MODEL" \
-      --arg reasoning_effort "$OPENAI_REASONING_EFFORT" \
-      --arg reasoning_translation "$OPENAI_REASONING_EFFORT" \
       --argjson duration_seconds "$duration_seconds" \
-      '{harness_id:$harness_id,native_protocol:$native_protocol,integration_mode:$integration_mode,status:"passed",provider_turn:"passed",shared_service_probe:"passed",reasoning_translation:$reasoning_translation,cleanup:"passed",model:$model,reasoning_effort:$reasoning_effort,duration_seconds:$duration_seconds}' \
-      >>"$matrix_file"
+      '. + {native_protocol:$native_protocol,integration_mode:$integration_mode,duration_seconds:$duration_seconds}' \
+      "$result_file" >>"$matrix_file"
   else
     jq -nc \
       --arg harness_id "$harness" \
@@ -238,7 +278,7 @@ if [[ "${#failed_harnesses[@]}" -ne 0 ]]; then
 fi
 jq -s \
   --arg status "$matrix_status" \
-  --arg native_gate "$( (( native_gate_failed == 0 )) && printf passed || printf failed )" \
+  --arg native_gate "$(if (( native_gate_failed != 0 )); then printf failed; elif (( native_gate_complete == 0 )); then printf not_run; else printf passed; fi)" \
   --arg model "$OPENAI_MODEL" \
   --arg reasoning_effort "$OPENAI_REASONING_EFFORT" \
   '{schema:"omnisolo.live_harness_matrix.v1",status:$status,native_gate:$native_gate,model:$model,reasoning_effort:$reasoning_effort,results:.}' \

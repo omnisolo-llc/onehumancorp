@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 use reqwest::Url;
 use serde_json::Value;
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, watch};
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
@@ -24,6 +24,8 @@ struct ProviderFacadeState {
     upstream_base_url: Url,
     upstream_api_key: String,
     model_id: String,
+    reasoning_effort: Option<Value>,
+    revoked: watch::Receiver<bool>,
     token: String,
 }
 
@@ -59,7 +61,7 @@ impl std::fmt::Debug for ProviderFacadeConfig {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("ProviderFacadeConfig")
-            .field("upstream_url", &self.upstream_url)
+            .field("upstream_url", &"<configured>")
             .field("upstream_api_key", &"<configured>")
             .field("model_id", &self.selection.model_id)
             .field("request_timeout", &self.request_timeout)
@@ -104,7 +106,10 @@ impl std::fmt::Display for ProviderFacadeError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::InvalidConfiguration(message) => {
-                write!(formatter, "invalid provider facade configuration: {message}")
+                write!(
+                    formatter,
+                    "invalid provider facade configuration: {message}"
+                )
             }
             Self::Bind(message) => write!(formatter, "provider facade bind failed: {message}"),
             Self::Server(message) => write!(formatter, "provider facade server failed: {message}"),
@@ -116,6 +121,7 @@ impl std::error::Error for ProviderFacadeError {}
 
 pub struct ProviderFacade {
     route: ProviderFacadeRoute,
+    revoke: watch::Sender<bool>,
     shutdown: Option<oneshot::Sender<()>>,
     task: Option<JoinHandle<Result<(), std::io::Error>>>,
 }
@@ -169,6 +175,7 @@ impl ProviderFacade {
         }
         let client = reqwest::Client::builder()
             .timeout(config.request_timeout)
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|error| {
                 ProviderFacadeError::Server(redact(&error.to_string(), &config.upstream_api_key))
@@ -184,11 +191,16 @@ impl ProviderFacade {
             base_url: format!("http://{address}/v1"),
             token: token.clone(),
         };
+        let (revoke, revoked) = watch::channel(false);
         let state = ProviderFacadeState {
             client,
             upstream_base_url,
             upstream_api_key: config.upstream_api_key,
             model_id: config.selection.model_id,
+            reasoning_effort: config.selection.reasoning_effort.map(|effort| {
+                serde_json::to_value(effort).expect("reasoning effort serializes as a string")
+            }),
+            revoked,
             token,
         };
         let app = Router::new()
@@ -206,6 +218,7 @@ impl ProviderFacade {
         });
         Ok(Self {
             route,
+            revoke,
             shutdown: Some(shutdown),
             task: Some(task),
         })
@@ -216,6 +229,7 @@ impl ProviderFacade {
     }
 
     pub async fn shutdown(mut self) -> Result<(), ProviderFacadeError> {
+        self.revoke.send_replace(true);
         if let Some(shutdown) = self.shutdown.take() {
             let _ = shutdown.send(());
         }
@@ -231,6 +245,7 @@ impl ProviderFacade {
 
 impl Drop for ProviderFacade {
     fn drop(&mut self) {
+        self.revoke.send_replace(true);
         if let Some(task) = &self.task {
             task.abort();
         }
@@ -239,7 +254,10 @@ impl Drop for ProviderFacade {
 
 async fn models(State(state): State<ProviderFacadeState>, headers: HeaderMap) -> Response {
     if !authorized(&headers, &state.token) {
-        return error_response(StatusCode::UNAUTHORIZED, "provider facade authorization failed");
+        return error_response(
+            StatusCode::UNAUTHORIZED,
+            "provider facade authorization failed",
+        );
     }
     forward(&state, reqwest::Method::GET, "models", None).await
 }
@@ -267,9 +285,12 @@ async fn json_proxy(
     path: &str,
 ) -> Response {
     if !authorized(&headers, &state.token) {
-        return error_response(StatusCode::UNAUTHORIZED, "provider facade authorization failed");
+        return error_response(
+            StatusCode::UNAUTHORIZED,
+            "provider facade authorization failed",
+        );
     }
-    let payload: Value = match serde_json::from_slice(&body) {
+    let mut payload: Value = match serde_json::from_slice(&body) {
         Ok(payload) => payload,
         Err(_) => return error_response(StatusCode::BAD_REQUEST, "request body must be JSON"),
     };
@@ -279,6 +300,10 @@ async fn json_proxy(
     if model != state.model_id {
         return error_response(StatusCode::BAD_REQUEST, "request model is not admitted");
     }
+    if let Err(message) = bind_reasoning(&mut payload, path, state.reasoning_effort.as_ref()) {
+        return error_response(StatusCode::BAD_REQUEST, message);
+    }
+    let body = Bytes::from(serde_json::to_vec(&payload).expect("JSON value serializes"));
     forward(state, reqwest::Method::POST, path, Some(body)).await
 }
 
@@ -297,19 +322,22 @@ async fn forward(
     body: Option<Bytes>,
 ) -> Response {
     let url = upstream_url(&state.upstream_base_url, path);
-    let mut request = state
-        .client
-        .request(method, url)
-        .header(
-            reqwest::header::AUTHORIZATION,
-            format!("Bearer {}", state.upstream_api_key),
-        );
+    let mut request = state.client.request(method, url).header(
+        reqwest::header::AUTHORIZATION,
+        format!("Bearer {}", state.upstream_api_key),
+    );
     if let Some(body) = body {
         request = request
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .body(body);
     }
-    let response = match request.send().await {
+    let response = match tokio::select! {
+        biased;
+        _ = wait_for_revocation(state.revoked.clone()) => {
+            return error_response(StatusCode::SERVICE_UNAVAILABLE, "provider facade route revoked");
+        }
+        response = request.send() => response,
+    } {
         Ok(response) => response,
         Err(error) => {
             return error_response(
@@ -318,24 +346,38 @@ async fn forward(
             );
         }
     };
-    let status = StatusCode::from_u16(response.status().as_u16())
-        .unwrap_or(StatusCode::BAD_GATEWAY);
-    let content_type = response.headers().get(reqwest::header::CONTENT_TYPE).cloned();
+    let status =
+        StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .cloned();
     if !response.status().is_success() {
-        let body = response.bytes().await.unwrap_or_default();
+        let body = tokio::select! {
+            biased;
+            _ = wait_for_revocation(state.revoked.clone()) => {
+                return error_response(StatusCode::SERVICE_UNAVAILABLE, "provider facade route revoked");
+            }
+            body = response.bytes() => body.unwrap_or_default(),
+        };
         let body = redact(&String::from_utf8_lossy(&body), &state.upstream_api_key);
         return response_with_body(status, content_type.as_ref(), body.into_bytes());
     }
     let secret = state.upstream_api_key.clone();
-    let stream = response.bytes_stream().map(move |chunk| {
-        chunk.map_err(|error| std::io::Error::other(redact(&error.to_string(), &secret)))
-    });
+    let stream = response
+        .bytes_stream()
+        .take_until(wait_for_revocation(state.revoked.clone()))
+        .map(move |chunk| {
+            chunk.map_err(|error| std::io::Error::other(redact(&error.to_string(), &secret)))
+        });
     let mut output = Response::new(Body::from_stream(stream));
     *output.status_mut() = status;
     if let Some(content_type) = content_type
         && let Ok(content_type) = HeaderValue::from_bytes(content_type.as_bytes())
     {
-        output.headers_mut().insert(header::CONTENT_TYPE, content_type);
+        output
+            .headers_mut()
+            .insert(header::CONTENT_TYPE, content_type);
     }
     output
 }
@@ -393,4 +435,62 @@ fn upstream_url(base: &Url, path: &str) -> Url {
 
 fn redact(message: &str, secret: &str) -> String {
     message.replace(secret, "[REDACTED]")
+}
+
+// The receiver remains valid for every accepted request, including connections
+// spawned by axum after the listener task has stopped.
+async fn wait_for_revocation(mut revoked: watch::Receiver<bool>) {
+    loop {
+        if *revoked.borrow_and_update() {
+            return;
+        }
+        if revoked.changed().await.is_err() {
+            return;
+        }
+    }
+}
+
+fn bind_reasoning(
+    payload: &mut Value,
+    path: &str,
+    effort: Option<&Value>,
+) -> Result<(), &'static str> {
+    let object = payload
+        .as_object_mut()
+        .ok_or("request body must be an object")?;
+    let (field, other_field) = if path == "responses" {
+        ("reasoning", "reasoning_effort")
+    } else {
+        ("reasoning_effort", "reasoning")
+    };
+    if object.contains_key(other_field) {
+        return Err("reasoning field does not match request dialect");
+    }
+    if path == "responses" {
+        if let Some(reasoning) = object.get(field) {
+            let reasoning = reasoning.as_object().ok_or("reasoning must be an object")?;
+            if let Some(requested) = reasoning.get("effort") {
+                if Some(requested) != effort {
+                    return Err("request reasoning effort is not admitted");
+                }
+            }
+        }
+        if let Some(effort) = effort {
+            let reasoning = object.entry(field).or_insert_with(|| serde_json::json!({}));
+            reasoning
+                .as_object_mut()
+                .expect("validated reasoning object")
+                .insert("effort".to_owned(), effort.clone());
+        }
+    } else {
+        if let Some(requested) = object.get(field) {
+            if Some(requested) != effort {
+                return Err("request reasoning effort is not admitted");
+            }
+        }
+        if let Some(effort) = effort {
+            object.insert(field.to_owned(), effort.clone());
+        }
+    }
+    Ok(())
 }
