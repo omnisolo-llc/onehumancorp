@@ -73,27 +73,33 @@ pub mod sql_middleware;
 fn database_url_from_environment()
 -> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
     let canonical_direct = std::env::var_os("DATABASE_URL").is_some();
+    let canonical_file = std::env::var_os("DATABASE_URL_FILE").is_some();
     let omnisolo_direct = std::env::var_os("OMNISOLO_DATABASE_URL").is_some();
-    let legacy_direct = std::env::var_os("OMNISOLO_DATABASE_URL").is_some();
-    if [canonical_direct, omnisolo_direct, legacy_direct]
-        .into_iter()
-        .filter(|present| *present)
-        .count()
+    let omnisolo_file = std::env::var_os("OMNISOLO_DATABASE_URL_FILE").is_some();
+    let legacy_direct = std::env::var_os("OHC_DATABASE_URL").is_some();
+    if [
+        canonical_direct,
+        canonical_file,
+        omnisolo_direct,
+        omnisolo_file,
+        legacy_direct,
+    ]
+    .into_iter()
+    .filter(|present| *present)
+    .count()
         > 1
     {
         return Err(::server_common::secret_source::SecretSourceError);
     }
 
     let value_environment_variable = if legacy_direct {
-        "OMNISOLO_DATABASE_URL"
-    } else if omnisolo_direct {
+        "OHC_DATABASE_URL"
+    } else if omnisolo_direct || omnisolo_file {
         "OMNISOLO_DATABASE_URL"
     } else {
         "DATABASE_URL"
     };
-    let file_environment_variable = if legacy_direct {
-        "DATABASE_URL_FILE"
-    } else if omnisolo_direct {
+    let file_environment_variable = if omnisolo_direct || omnisolo_file {
         "OMNISOLO_DATABASE_URL_FILE"
     } else {
         "DATABASE_URL_FILE"
@@ -4294,7 +4300,9 @@ mod tests {
             [
                 ("DATABASE_URL", Some("postgres://direct.example/ohc")),
                 ("DATABASE_URL_FILE", None),
+                ("OHC_DATABASE_URL", None),
                 ("OMNISOLO_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL_FILE", None),
             ],
             || {
                 assert_eq!(
@@ -4312,7 +4320,9 @@ mod tests {
             [
                 ("DATABASE_URL", None),
                 ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
+                ("OHC_DATABASE_URL", None),
                 ("OMNISOLO_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL_FILE", None),
             ],
             || {
                 assert_eq!(
@@ -4330,7 +4340,9 @@ mod tests {
             [
                 ("DATABASE_URL", Some("postgres://direct.example/ohc")),
                 ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
+                ("OHC_DATABASE_URL", None),
                 ("OMNISOLO_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL_FILE", None),
             ],
             || {
                 let error = database_url_from_environment().unwrap_err();
@@ -4346,7 +4358,9 @@ mod tests {
             [
                 ("DATABASE_URL", None),
                 ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
-                ("OMNISOLO_DATABASE_URL", Some("postgres://legacy.example/ohc")),
+                ("OHC_DATABASE_URL", Some("postgres://legacy.example/ohc")),
+                ("OMNISOLO_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL_FILE", None),
             ],
             || {
                 let error = database_url_from_environment().unwrap_err();
@@ -4363,7 +4377,9 @@ mod tests {
             [
                 ("DATABASE_URL", None),
                 ("DATABASE_URL_FILE", Some(missing.to_str().unwrap())),
+                ("OHC_DATABASE_URL", None),
                 ("OMNISOLO_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL_FILE", None),
             ],
             || {
                 let error = database_url_from_environment().unwrap_err();
@@ -4380,7 +4396,9 @@ mod tests {
             [
                 ("DATABASE_URL", None),
                 ("DATABASE_URL_FILE", None),
-                ("OMNISOLO_DATABASE_URL", Some("postgres://legacy.example/ohc")),
+                ("OHC_DATABASE_URL", Some("postgres://legacy.example/ohc")),
+                ("OMNISOLO_DATABASE_URL", None),
+                ("OMNISOLO_DATABASE_URL_FILE", None),
             ],
             || {
                 assert_eq!(
@@ -4393,10 +4411,74 @@ mod tests {
             [
                 ("DATABASE_URL", None::<&str>),
                 ("DATABASE_URL_FILE", None::<&str>),
+                ("OHC_DATABASE_URL", None::<&str>),
                 ("OMNISOLO_DATABASE_URL", None::<&str>),
+                ("OMNISOLO_DATABASE_URL_FILE", None::<&str>),
             ],
             || assert_eq!(database_url_from_environment().unwrap(), None),
         );
+    }
+
+    const DATABASE_URL_SOURCES: [&str; 5] = [
+        "DATABASE_URL",
+        "DATABASE_URL_FILE",
+        "OHC_DATABASE_URL",
+        "OMNISOLO_DATABASE_URL",
+        "OMNISOLO_DATABASE_URL_FILE",
+    ];
+
+    #[test]
+    fn database_url_each_alias_loads_independently() {
+        let url = "postgres://alias.example/database";
+        let (_directory, path) = write_database_url(format!("{url}\n").as_bytes());
+        for source in DATABASE_URL_SOURCES {
+            let variables = DATABASE_URL_SOURCES.map(|name| {
+                let value = if name == source {
+                    Some(if name.ends_with("_FILE") {
+                        path.to_str().unwrap()
+                    } else {
+                        url
+                    })
+                } else {
+                    None
+                };
+                (name, value)
+            });
+            temp_env::with_vars(variables, || {
+                assert_eq!(
+                    database_url_from_environment().unwrap(),
+                    Some(url.to_string()),
+                    "{source} should load independently"
+                );
+            });
+        }
+    }
+
+    #[test]
+    fn database_url_every_pair_of_sources_is_ambiguous() {
+        let url = "postgres://alias.example/database";
+        let (_directory, path) = write_database_url(url.as_bytes());
+        for (index, first) in DATABASE_URL_SOURCES.iter().enumerate() {
+            for second in &DATABASE_URL_SOURCES[index + 1..] {
+                let variables = DATABASE_URL_SOURCES.map(|name| {
+                    let value = if name == *first || name == *second {
+                        Some(if name.ends_with("_FILE") {
+                            path.to_str().unwrap()
+                        } else {
+                            url
+                        })
+                    } else {
+                        None
+                    };
+                    (name, value)
+                });
+                temp_env::with_vars(variables, || {
+                    let error = database_url_from_environment()
+                        .expect_err(&format!("{first} and {second} must conflict"));
+                    assert_eq!(error.to_string(), "invalid secret configuration");
+                });
+            }
+        }
     }
 
     #[test]

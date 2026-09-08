@@ -14,7 +14,7 @@ use server_common::Claims;
 use std::{collections::HashMap, convert::Infallible, sync::Arc, time::Duration};
 
 #[derive(Clone, Default)]
-pub(crate) struct ExecutionMeasurements {
+pub struct ExecutionMeasurements {
     pub messages_processed: u64,
     elapsed_ms: f64,
     errors: u64,
@@ -27,10 +27,10 @@ impl ExecutionMeasurements {
         self.errors += u64::from(failed);
         self.last_active_at = Some(Utc::now());
     }
-    fn average_ms(&self) -> Option<f64> {
+    pub fn average_ms(&self) -> Option<f64> {
         (self.messages_processed > 0).then(|| self.elapsed_ms / self.messages_processed as f64)
     }
-    fn error_rate(&self) -> Option<f64> {
+    pub fn error_rate(&self) -> Option<f64> {
         (self.messages_processed > 0).then(|| self.errors as f64 / self.messages_processed as f64)
     }
 }

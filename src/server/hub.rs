@@ -484,7 +484,7 @@ impl Hub {
         arc
     }
 
-    pub(crate) async fn record_agent_execution(
+    pub async fn record_agent_execution(
         &self,
         id: &str,
         duration: std::time::Duration,
@@ -498,7 +498,7 @@ impl Hub {
             .record(duration, failed);
     }
 
-    pub(crate) async fn agent_measurements(
+    pub async fn agent_measurements(
         &self,
         id: &str,
     ) -> (crate::api::agent_metrics::ExecutionMeasurements, usize) {
@@ -518,7 +518,7 @@ impl Hub {
         (sample, connections)
     }
 
-    pub(crate) async fn remove_transient_agent(&self, id: &str) {
+    pub async fn remove_transient_agent(&self, id: &str) {
         self.agents.write().await.remove(id);
         self.inbox.write().await.remove(id);
         self.subs.write().await.remove(id);

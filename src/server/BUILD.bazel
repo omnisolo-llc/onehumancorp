@@ -16,6 +16,7 @@ SERVER_RS_SRCS = [
     "chaos_network_test.rs",
     "crypto.rs",
     "db.rs",
+    "//src/server/db:harness_middleware_schema.rs",
     "//src/server/db:sql_middleware.rs",
     "hub.rs",
     "lib.rs",
@@ -452,6 +453,7 @@ rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
     compile_data = [
+        "main.rs",
         "//:CHANGELOG.md",
         "//src/server/migrations",
         "//src/server/db:embedsrcs",

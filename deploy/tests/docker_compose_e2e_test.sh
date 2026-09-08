@@ -232,24 +232,34 @@ expect_status() {
 
 wait_for_server
 
-log "Verifying gRPC mutual TLS handshake ..."
-if ! authenticated_tls="$(timeout 10 openssl s_client \
-  -connect "127.0.0.1:${GRPC_PORT}" \
-  -servername localhost \
-  -verify_return_error \
-  -verify_hostname localhost \
-  -alpn h2 \
-  -CAfile "${COMPOSE_TLS_DIR}/ca.crt" \
-  -cert "${COMPOSE_SECRET_DIR}/client.crt" \
-  -key "${COMPOSE_SECRET_DIR}/client.key" </dev/null 2>&1)"; then
-  echo "error: gRPC TLS listener rejected or timed out for a CA-signed client certificate" >&2
-  exit 1
-fi
-if ! grep -Fq 'Verify return code: 0 (ok)' <<<"${authenticated_tls}" || \
-   ! grep -Fq 'ALPN protocol: h2' <<<"${authenticated_tls}"; then
-  echo "error: gRPC listener did not negotiate a verified HTTP/2 TLS session" >&2
-  exit 1
-fi
+# HTTP readiness does not guarantee that the independent gRPC listener has
+# finished starting. Require a verified HTTP/2 handshake before probing it.
+wait_for_grpc_tls() {
+  local authenticated_tls attempt
+  for attempt in 1 2 3; do
+    if authenticated_tls="$(timeout 10 openssl s_client \
+      -connect "127.0.0.1:${GRPC_PORT}" \
+      -servername localhost \
+      -verify_return_error \
+      -verify_hostname localhost \
+      -alpn h2 \
+      -CAfile "${COMPOSE_TLS_DIR}/ca.crt" \
+      -cert "${COMPOSE_SECRET_DIR}/client.crt" \
+      -key "${COMPOSE_SECRET_DIR}/client.key" </dev/null 2>&1)" &&
+      grep -Fq 'Verify return code: 0 (ok)' <<<"${authenticated_tls}" &&
+      grep -Fq 'ALPN protocol: h2' <<<"${authenticated_tls}"; then
+      return 0
+    fi
+    echo "gRPC TLS readiness attempt ${attempt} did not complete a verified HTTP/2 handshake" >&2
+    if (( attempt < 3 )); then sleep 1; fi
+  done
+  printf '%s\n' "${authenticated_tls}" >&2
+  echo "error: gRPC TLS listener did not become ready with a verified CA-signed client certificate" >&2
+  return 1
+}
+
+log "Waiting for verified gRPC mutual TLS readiness ..."
+wait_for_grpc_tls
 "${GRPC_PROBE}" "https://localhost:${GRPC_PORT}" \
   "${COMPOSE_TLS_DIR}/ca.crt" - - tls-rejected
 
