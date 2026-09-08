@@ -14,19 +14,21 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000',
     storageState,
     trace: 'on-first-retry',
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
       : undefined,
   },
-  webServer: {
-    command: 'npm run build && npm run start',
-    port: 3000,
-    timeout: 240 * 1000,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run build && npm run start',
+        port: 3000,
+        timeout: 240 * 1000,
+        reuseExistingServer: !process.env.CI,
+      },
   projects: [
     {
       name: 'chromium',

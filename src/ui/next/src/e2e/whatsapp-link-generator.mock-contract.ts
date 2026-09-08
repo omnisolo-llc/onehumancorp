@@ -12,8 +12,8 @@ test.describe('WhatsApp Link Generator Growth Loop', () => {
         // Verify the Builder UI loads
         await expect(page.locator('h1', { hasText: 'WhatsApp Link Generator' })).toBeVisible();
 
-        // Check the "Powered by OmniSolo" footer loop branding
-        const footerLink = page.locator('a', { hasText: '⚡ Powered by OmniSolo' });
+        // Check the "OmniSolo" footer loop branding
+        const footerLink = page.locator('a', { hasText: '⚡ OmniSolo' });
         await expect(footerLink).toBeVisible();
 
         // Verify it includes the dynamic tenant mapping

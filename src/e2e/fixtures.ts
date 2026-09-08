@@ -3,10 +3,10 @@ import { authenticateRequest } from './authenticate';
 import { E2E_SEED_DATA } from '../ui/next/src/lib/e2eSeedData';
 
 export const E2E_ADMIN_USER = {
-  email: 'test@example.com',
-  password: 'password123',
+  email: process.env.OMNISOLO_E2E_ADMIN_EMAIL ?? process.env.OMNISOLO_ADMIN_EMAIL ?? 'test@example.com',
+  password: process.env.OMNISOLO_E2E_ADMIN_PASSWORD ?? process.env.OMNISOLO_ADMIN_PASSWORD ?? 'password123',
   role: 'ADMIN',
-  organizationId: 'e2e-tenant',
+  organizationId: process.env.OMNISOLO_E2E_ADMIN_ORGANIZATION_ID ?? process.env.OMNISOLO_ADMIN_ORGANIZATION_ID ?? 'e2e-tenant',
 } as const;
 
 export const E2E_UNLIMITED_ADMIN_USER = {

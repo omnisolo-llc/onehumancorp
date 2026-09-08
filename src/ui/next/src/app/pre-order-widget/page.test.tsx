@@ -42,7 +42,7 @@ describe('PreOrderWidgetPage', () => {
     fireEvent.click(screen.getByText('Get Widget Embed Code'));
 
     // Check embed code in modal
-    let embedContainer = screen.getByText(/<script src="https:\/\/assets\.omnisolo\.co\/widgets\/pre-order\.js" async><\/script>/);
+    let embedContainer = screen.getByText(/<script src="https:\/\/cloud\.omnisolo\.co\/widgets\/pre-order\.js" async><\/script>/);
     expect(embedContainer.parentElement?.textContent).toContain('Powered by OmniSolo');
   });
 

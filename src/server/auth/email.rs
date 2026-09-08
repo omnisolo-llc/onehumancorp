@@ -77,8 +77,7 @@ impl SmtpVerificationMailer {
             _ => return Err("invalid SMTP credential configuration".to_string()),
         }
 
-        let from_name =
-            optional_env("SMTP_FROM_NAME")?.unwrap_or_else(|| "OmniSolo".to_string());
+        let from_name = optional_env("SMTP_FROM_NAME")?.unwrap_or_else(|| "OmniSolo".to_string());
         if from_name.len() > 128 || from_name.chars().any(char::is_control) {
             return Err("invalid SMTP configuration".to_string());
         }

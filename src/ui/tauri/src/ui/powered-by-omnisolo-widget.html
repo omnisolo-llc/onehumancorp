@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Powered by OmniSolo Widget Generator</title>
+  <title>OmniSolo Widget Generator</title>
   <style>
     body {
       font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -219,13 +219,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>Powered by OmniSolo</h1>
+    <h1>OmniSolo</h1>
     <p>Earn passive income by placing this badge in your website footer. You'll get recurring commission for anyone who signs up.</p>
 
     <div class="badge-preview">
       <a href="#" class="omnisolo-badge" onclick="event.preventDefault()">
         <svg viewBox="0 0 24 24"><path d="M13 2.05v3.03c5.05.5 9 4.76 9 9.92s-3.95 9.42-9 9.92v-3.03c3.39-.49 6-3.39 6-6.89s-2.61-6.4-6-6.89zm-2 0c-5.05.5-9 4.76-9 9.92s3.95 9.42 9 9.92v-3.03c-3.39-.49-6-3.39-6-6.89s2.61-6.4 6-6.89v-3.03z"/></svg>
-        Powered by OmniSolo
+        OmniSolo
       </a>
     </div>
 
@@ -274,7 +274,7 @@
         refUrl.searchParams.append('utm_medium', 'badge');
         refUrl.searchParams.append('utm_campaign', campaign);
 
-        const htmlSnippet = `<a href="${refUrl.toString()}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1d1d1f;color:white;text-decoration:none;border-radius:20px;font-size:13px;font-weight:600;font-family:-apple-system,sans-serif;"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;"><path d="M13 2.05v3.03c5.05.5 9 4.76 9 9.92s-3.95 9.42-9 9.92v-3.03c3.39-.49 6-3.39 6-6.89s-2.61-6.4-6-6.89zm-2 0c-5.05.5-9 4.76-9 9.92s3.95 9.42 9 9.92v-3.03c-3.39-.49-6-3.39-6-6.89s2.61-6.4 6-6.89v-3.03z"/></svg>Powered by OmniSolo</a>`;
+        const htmlSnippet = `<a href="${refUrl.toString()}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1d1d1f;color:white;text-decoration:none;border-radius:20px;font-size:13px;font-weight:600;font-family:-apple-system,sans-serif;"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;"><path d="M13 2.05v3.03c5.05.5 9 4.76 9 9.92s-3.95 9.42-9 9.92v-3.03c3.39-.49 6-3.39 6-6.89s-2.61-6.4-6-6.89zm-2 0c-5.05.5-9 4.76-9 9.92s3.95 9.42 9 9.92v-3.03c-3.39-.49-6-3.39-6-6.89s2.61-6.4 6-6.89v-3.03z"/></svg>OmniSolo</a>`;
 
         document.getElementById('embed-code').value = htmlSnippet;
 

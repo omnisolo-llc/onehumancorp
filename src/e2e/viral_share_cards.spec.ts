@@ -46,8 +46,8 @@ test.describe('Viral Share Cards Growth Loop', () => {
     await expect(page.locator('h3', { hasText: 'My Next.js Store' }).first()).toBeVisible();
     await expect(page.locator('p', { hasText: 'The best products on the web.' })).toBeVisible();
 
-    // 6. Verify the ⚡ Powered by OmniSolo branding in the card preview
-    const cardFooter = page.locator('div', { hasText: 'Powered by OmniSolo' });
+    // 6. Verify the ⚡ OmniSolo branding in the card preview
+    const cardFooter = page.locator('div', { hasText: 'OmniSolo' });
     await expect(cardFooter).toBeVisible();
 
     // 7. Test Theme toggle buttons

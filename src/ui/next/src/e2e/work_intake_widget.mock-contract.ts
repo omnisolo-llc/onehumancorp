@@ -31,7 +31,7 @@ test.describe('Embeddable Work-Intake Widget Growth Loop', () => {
         await expect(modalHeader).toBeVisible();
 
         // The textarea should contain the iframe snippet
-        const textarea = page.locator('textarea').filter({ hasText: '<iframe src="https://cloud.omnisolo.co/api/v1/growth/work-intake/embed' });
+        const textarea = page.locator('textarea').filter({ hasText: '<iframe src="https://omnisolo.co/api/v1/growth/work-intake/embed' });
         await expect(textarea).toBeVisible();
 
         // Verify the HTML snippet structure includes the custom title encoded

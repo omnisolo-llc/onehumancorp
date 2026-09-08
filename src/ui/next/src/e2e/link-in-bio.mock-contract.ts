@@ -26,8 +26,8 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         await expect(page.locator('h1', { hasText: 'Awesome E2E Bakery' })).toBeVisible();
         await expect(page.locator('p', { hasText: 'The best automated cakes in town.' })).toBeVisible();
 
-        // Check the "Powered by OmniSolo" footer in the live preview
-        const previewFooterLink = page.locator('a', { hasText: 'Powered by OmniSolo' });
+        // Check the "OmniSolo" footer in the live preview
+        const previewFooterLink = page.locator('a', { hasText: 'OmniSolo' });
         await expect(previewFooterLink).toBeVisible();
         await expect(previewFooterLink).toHaveAttribute('href', /^https:\/\/cloud.omnisolo.co\/join\?ref=e2e-bakery/);
 
@@ -42,7 +42,7 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         await expect(page.locator('p', { hasText: 'The best automated cakes in town.' })).toBeVisible();
 
         // Verify the viral footer exists on the public page
-        const publicFooterLink = page.locator('a', { hasText: 'Powered by OmniSolo' });
+        const publicFooterLink = page.locator('a', { hasText: 'OmniSolo' });
         await expect(publicFooterLink).toBeVisible();
         await expect(publicFooterLink).toHaveAttribute('href', 'https://cloud.omnisolo.co/join?ref=e2e-bakery');
 
@@ -54,7 +54,7 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         await removeBrandingCheckbox.check({ force: true }); // It's hidden visually by CSS, force click
 
         // Check that preview doesn't have it
-        const previewPoweredByHidden = page.locator('a', { hasText: 'Powered by OmniSolo' });
+        const previewPoweredByHidden = page.locator('a', { hasText: 'OmniSolo' });
         await expect(previewPoweredByHidden).toBeHidden();
 
         // Wait for publish save
@@ -62,7 +62,7 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
 
         // 7. Verify public page hides it
         await page.goto('/bio/e2e-bakery');
-        const publicPoweredByHidden = page.locator('a', { hasText: 'Powered by OmniSolo' });
+        const publicPoweredByHidden = page.locator('a', { hasText: 'OmniSolo' });
         await expect(publicPoweredByHidden).toBeHidden();
     });
 

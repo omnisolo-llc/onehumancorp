@@ -42,7 +42,7 @@ test.describe('Viral NPS Feedback Generator Loop E2E', () => {
         // Verify Powered by link exists and is visible in preview
         const previewPoweredBy = memberPage.locator('#previewBranding');
         await expect(previewPoweredBy).toBeVisible();
-        await expect(previewPoweredBy).toHaveText('⚡ Powered by OmniSolo');
+        await expect(previewPoweredBy).toHaveText('⚡ OmniSolo');
 
         // Ensure the referral parameter is present
         await expect(previewPoweredBy).toHaveAttribute('href', /\/api\/v1\/growth\/referrals\/click\?target=\/setup.html&ref=/);
@@ -51,7 +51,7 @@ test.describe('Viral NPS Feedback Generator Loop E2E', () => {
         const codeOutput = memberPage.locator('#codeOutput');
         let generatedHtml = await codeOutput.textContent();
         expect(generatedHtml).toContain('Awesome Playwright Tests');
-        expect(generatedHtml).toContain('⚡ Powered by OmniSolo');
+        expect(generatedHtml).toContain('⚡ OmniSolo');
 
         // Try to remove branding without pro
         // First ensure user is not pro
@@ -84,7 +84,7 @@ test.describe('Viral NPS Feedback Generator Loop E2E', () => {
 
         // Verify generated embed code no longer has the watermark
         generatedHtml = await codeOutput.textContent();
-        expect(generatedHtml).not.toContain('⚡ Powered by OmniSolo');
+        expect(generatedHtml).not.toContain('⚡ OmniSolo');
     });
 
     test('should allow owner to create an embeddable widget', async ({ page }) => {

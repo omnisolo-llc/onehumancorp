@@ -15,7 +15,7 @@ The journeys are designed to accommodate the distinct needs of our core personas
 ## 3. Journey Phases
 
 ### 3.1 Acquisition
-*   **Entry Points**: Organic search, targeted Instagram/TikTok ads, or referrals from existing OmniSolo users (e.g., "Powered by OmniSolo" badge on a link-in-bio).
+*   **Entry Points**: Organic search, targeted Instagram/TikTok ads, or referrals from existing OmniSolo users (e.g., "OmniSolo" badge on a link-in-bio).
 *   **Landing Page**: A clear, jargon-free CTA ("Launch your business in 10 minutes"). Emphasizes the "No Code, No Servers" promise and mobile accessibility.
 
 ### 3.2 Onboarding (Zero → Live in 10 Mins)
@@ -39,7 +39,7 @@ The onboarding flow is a guided conversational wizard powered by the AI Marketin
 *   **Upgrade Flow**: A seamless transition to the Starter ($9/mo) or Pro ($29/mo) tier, highlighting the unlocked value (e.g., unlimited products, custom domain, full AI agent access).
 
 ### 3.6 Referral
-*   **Viral Loop**: Existing users share their storefront link or link-in-bio. The "Powered by OmniSolo" badge serves as passive marketing.
+*   **Viral Loop**: Existing users share their storefront link or link-in-bio. The "OmniSolo" badge serves as passive marketing.
 *   **Incentive**: Referral rewards tracked by the Sales & Acquisition Agent.
 
 ## 4. Architecture Diagrams

@@ -287,7 +287,7 @@
 
       <div class="checkbox-group">
         <input type="checkbox" id="remove-branding">
-        <label for="remove-branding">Remove "Powered by OmniSolo" watermark (Pro)</label>
+        <label for="remove-branding">Remove "OmniSolo" watermark (Pro)</label>
       </div>
 
       <div style="margin-top: 24px;">
@@ -319,7 +319,7 @@
           <p id="preview-solution">We implemented our automated workflow system to streamline operations.</p>
         </div>
 
-        <a href="/setup.html?ref=viral-case-study" class="powered-by" id="preview-branding">⚡ Powered by OmniSolo</a>
+        <a href="/setup.html?ref=viral-case-study" class="powered-by" id="preview-branding">⚡ OmniSolo</a>
       </div>
 
       <div style="margin-top: 24px; display: flex; gap: 12px;">
@@ -335,7 +335,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="modal-icon">✨</div>
       <h2 class="modal-title">Upgrade to Pro</h2>
-      <p class="modal-desc">Removing the "Powered by OmniSolo" watermark is a Pro feature. Upgrade your account or share OmniSolo on social media to unlock a 7-day Pro trial.</p>
+      <p class="modal-desc">Removing the "OmniSolo" watermark is a Pro feature. Upgrade your account or share OmniSolo on social media to unlock a 7-day Pro trial.</p>
 
       <div class="modal-actions">
         <button class="primary" id="share-to-unlock-btn" style="background: #1DA1F2;">Share on X to Unlock 7 Days</button>
@@ -479,7 +479,7 @@
 
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
-          const message = `Check out this amazing Case Study generated with OmniSolo! 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${state.tenant}`;
+          const message = `Check out this amazing Case Study generated with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${state.tenant}`;
           window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`, '_blank');
 
           shareToUnlockBtn.style.display = 'none';

@@ -11,7 +11,7 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         });
     });
 
-    test('renders form, updates preview, and displays "Powered by OmniSolo"', async ({ page }) => {
+    test('renders form, updates preview, and displays "OmniSolo"', async ({ page }) => {
         // Go to the Project Showcase generator page
         await page.goto('/project-showcase');
 
@@ -24,8 +24,8 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         await expect(page.locator('h1', { hasText: 'A Beautiful New Kitchen' }).first()).toBeVisible();
         await expect(page.locator('p', { hasText: 'For The Smiths' }).first()).toBeVisible();
 
-        // 1. Verify "Powered by OmniSolo" watermark is visible in the preview area
-        const watermark = page.locator('a', { hasText: /Powered by OmniSolo/i }).first();
+        // 1. Verify "OmniSolo" watermark is visible in the preview area
+        const watermark = page.locator('a', { hasText: /OmniSolo/i }).first();
         await expect(watermark).toBeVisible();
 
         // The link should direct back to OmniSolo with the tenant as a reference source
@@ -66,7 +66,7 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         await expect(page.locator('p', { hasText: 'Replaced all the cabinets and installed new granite countertops.' })).toBeVisible();
 
         // The public showcase should also have the powered by watermark
-        const publicWatermark = page.locator('a', { hasText: /Powered by OmniSolo/i }).first();
+        const publicWatermark = page.locator('a', { hasText: /OmniSolo/i }).first();
         await expect(publicWatermark).toBeVisible();
     });
 
@@ -81,7 +81,7 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         await page.goto('/project-showcase');
 
         // Verify watermark is hidden by default for pro users (our component logic sets it to true if pro)
-        await expect(page.locator('a', { hasText: /Powered by OmniSolo/i }).first()).not.toBeVisible();
+        await expect(page.locator('a', { hasText: /OmniSolo/i }).first()).not.toBeVisible();
 
         // Verify the checkbox is checked
         const toggle = page.locator('input[type="checkbox"]');
@@ -91,7 +91,7 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         await toggle.evaluate((el: HTMLInputElement) => el.click());
 
         // Watermark should reappear
-        const watermark = page.locator('a', { hasText: /Powered by OmniSolo/i }).first();
+        const watermark = page.locator('a', { hasText: /OmniSolo/i }).first();
         await expect(watermark).toBeVisible();
         await expect(toggle).not.toBeChecked();
     });

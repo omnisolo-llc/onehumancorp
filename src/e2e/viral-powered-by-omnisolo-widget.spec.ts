@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe('Viral Powered by OmniSolo Widget', () => {
+test.describe('Viral OmniSolo Widget', () => {
   test('should load the widget and generate an embed code snippet', async ({ page }) => {
     await page.goto('/ui/viral-powered-by-omnisolo-widget.html');
 
@@ -43,7 +43,7 @@ test.describe('Viral Powered by OmniSolo Widget', () => {
         const clipboardText = await page.evaluate(async () => {
             return await navigator.clipboard.readText();
         });
-        expect(clipboardText).toContain('Powered by OmniSolo');
+        expect(clipboardText).toContain('OmniSolo');
     } catch (e) {
         console.warn('Clipboard read failed (expected in some headless environments): ', e);
     }

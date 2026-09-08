@@ -371,7 +371,7 @@
         }
 
         const baseUrl = window.location.origin.includes('localhost') || window.location.origin.includes('tauri')
-            ? 'https://cloud.omnisolo.co'
+            ? 'https://omnisolo.co'
             : window.location.origin;
 
         const iframeSrc = `${baseUrl}/api/v1/growth/scratch-off/embed?tenant=${encodeURIComponent(tenantId)}&prizes=${encodeURIComponent(prizes)}`;

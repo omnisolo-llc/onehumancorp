@@ -17,7 +17,7 @@ test.describe('Viral Post Generator Soft Paywall', () => {
         const checkbox = page.locator('input[type="checkbox"]');
         await expect(checkbox).not.toBeChecked();
 
-        // Check the "Remove 'Powered by OmniSolo' branding" box
+        // Check the "Remove 'OmniSolo' branding" box
         await checkbox.check();
 
         // Verify the soft paywall modal opens
@@ -58,7 +58,7 @@ test.describe('Viral Post Generator Soft Paywall', () => {
         await expect(page.locator('text=Super Nova')).toBeVisible();
         await expect(page.locator('text=instant social proof')).toBeVisible();
 
-        // Ensure "Powered by OmniSolo" is in the text
-        await expect(page.locator('text=Powered by OmniSolo')).toBeVisible();
+        // Ensure "OmniSolo" is in the text
+        await expect(page.locator('text=OmniSolo')).toBeVisible();
     });
 });

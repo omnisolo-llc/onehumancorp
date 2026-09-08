@@ -66,8 +66,8 @@ test.describe('Viral Quiz Generator', () => {
     await expect(publicPage.locator('h1', { hasText: 'What kind of startup founder are you?' })).toBeVisible({ timeout: 15000 });
     await expect(publicPage.getByText('Get a free business plan template!')).toBeVisible();
 
-    // Verify "Powered by OmniSolo" footer is NOT present since hideBranding=true
-    let footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OmniSolo' }).first();
+    // Verify "OmniSolo" footer is NOT present since hideBranding=true
+    let footerLink = publicPage.locator('a', { hasText: '⚡ OmniSolo' }).first();
     await expect(footerLink).not.toBeVisible();
 
     // 7. Take the quiz
@@ -125,8 +125,8 @@ test.describe('Viral Quiz Generator', () => {
     expect(shareValue).toContain('quiz.html');
     expect(shareValue).toContain('What%20kind%20of%20startup%20founder%20are%20you');
 
-    // Verify "Powered by OmniSolo" footer is NOT present since hideBranding=true
-    footerLink = publicPage.locator('a', { hasText: '⚡ Powered by OmniSolo' }).first();
+    // Verify "OmniSolo" footer is NOT present since hideBranding=true
+    footerLink = publicPage.locator('a', { hasText: '⚡ OmniSolo' }).first();
     await expect(footerLink).not.toBeVisible();
 
     await publicPage.close();

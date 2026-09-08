@@ -12,6 +12,7 @@ exports_files(
         "walkup.rs",
         "perplexity.rs",
         "assistant.rs",
+        "collective.rs",
         "autodream.rs",
         "terminal_api.rs",
         "payment_ledger.rs",

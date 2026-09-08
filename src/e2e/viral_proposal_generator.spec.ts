@@ -48,7 +48,7 @@ test.describe('Viral Proposal Generator Loop', () => {
     await expect(page.getByText('3 Months')).toBeVisible();
 
     // Verify the viral loop footer
-    const poweredByLink = page.getByRole('link', { name: /Powered by OmniSolo/i });
+    const poweredByLink = page.getByRole('link', { name: /OmniSolo/i });
     await expect(poweredByLink).toBeVisible();
 
     const ctaLink = page.getByRole('link', { name: /Create your own professional proposals/i });

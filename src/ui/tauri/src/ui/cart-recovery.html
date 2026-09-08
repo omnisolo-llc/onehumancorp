@@ -281,7 +281,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p class="modal-desc">Make the Cart Recovery Campaign 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p class="modal-desc">Make the Cart Recovery Campaign 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
       <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
         <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">Share on X to get 7 Days Free</button>
         <button class="primary-btn" id="upgrade-btn" style="background-color: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">Upgrade to Pro</button>
@@ -343,7 +343,7 @@
           message = "Failed to generate campaign draft.";
         }
 
-        document.getElementById('draft-preview').innerText = `${message}\n\n⚡ Powered by OmniSolo`;
+        document.getElementById('draft-preview').innerText = `${message}\n\n⚡ OmniSolo`;
         document.getElementById('send-btn').disabled = cartCount === 0;
       } catch (e) {
         document.getElementById('draft-preview').innerText = "Failed to generate campaign draft.";

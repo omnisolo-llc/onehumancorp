@@ -11,11 +11,11 @@ test.describe('Referral Widget Growth Loop', () => {
         // Verify page loads with the builder
         await expect(page.getByRole('heading', { name: 'Referral Widget Builder' })).toBeVisible();
 
-        // Verify "Powered by OmniSolo" watermark is present by default
-        await expect(page.getByRole('link', { name: /Powered by OmniSolo/i })).toBeVisible();
+        // Verify "OmniSolo" watermark is present by default
+        await expect(page.getByRole('link', { name: /OmniSolo/i })).toBeVisible();
 
         // Try to toggle "Remove Branding"
-        await page.getByLabel(/Remove "Powered by OmniSolo"/).click();
+        await page.getByLabel(/Remove "OmniSolo"/).click();
 
         // Verify soft paywall pops up
         await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
@@ -39,11 +39,11 @@ test.describe('Referral Widget Growth Loop', () => {
 
         // Verify modal closes and checkbox is now checked
         await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeHidden({ timeout: 5000 });
-        const checkbox = page.getByLabel(/Remove "Powered by OmniSolo"/);
+        const checkbox = page.getByLabel(/Remove "OmniSolo"/);
         await expect(checkbox).toBeChecked();
 
         // Verify branding is removed from preview
-        await expect(page.getByRole('link', { name: /Powered by OmniSolo/i })).toBeHidden();
+        await expect(page.getByRole('link', { name: /OmniSolo/i })).toBeHidden();
     });
 
     test('Smoke test: referral_widget', async ({ page, request }) => {

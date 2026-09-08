@@ -227,7 +227,7 @@
 
       <div class="form-group">
         <label for="badgeText">Badge Text</label>
-        <input type="text" id="badgeText" value="Powered by OmniSolo">
+        <input type="text" id="badgeText" value="OmniSolo">
       </div>
 
       <div class="form-group">
@@ -253,7 +253,7 @@
       <div class="preview-box">
         <div id="badgeElement" class="badge-preview light">
           <span class="icon">⚡</span>
-          <span id="badgeTextPreview">Powered by OmniSolo</span>
+          <span id="badgeTextPreview">OmniSolo</span>
         </div>
       </div>
 
@@ -277,13 +277,13 @@
       const copyBtn = document.getElementById('copyBtn');
       const linkPreview = document.getElementById('linkPreview');
 
-      const originUrl = window.location.origin.includes('file://') ? 'https://cloud.omnisolo.co' : window.location.origin;
+      const originUrl = window.location.origin.includes('file://') ? 'https://omnisolo.co' : window.location.origin;
       const targetUrl = `${originUrl}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(tenantId)}&source=affiliate_badge`;
 
       linkPreview.textContent = targetUrl;
 
       function updatePreview() {
-        const text = badgeText.value || 'Powered by OmniSolo';
+        const text = badgeText.value || 'OmniSolo';
         const theme = badgeTheme.value;
 
         badgeTextPreview.textContent = text;

@@ -37,7 +37,7 @@ test.describe('Email Signature Generator Viral Loop', () => {
 
   test('should show soft paywall when attempting to remove branding', async ({ page }) => {
     // Check the remove branding checkbox
-    const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OmniSolo" branding');
+    const removeBrandingCheckbox = page.getByLabel('Remove "OmniSolo" branding');
     await removeBrandingCheckbox.click();
 
     // Verify soft paywall appears

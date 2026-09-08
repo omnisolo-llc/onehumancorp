@@ -68,7 +68,7 @@ test.describe('Viral Loop Dashboard Widget', () => {
         const generateInviteBtn = page.locator('button:has-text("Get My Invite Link")');
 
         await page.route('/api/v1/growth/referrals/generate', async route => {
-            await route.fulfill({ json: { referral_link: 'https://cloud.omnisolo.co/ref/test' } });
+            await route.fulfill({ json: { referral_link: 'https://omnisolo.co/ref/test' } });
         });
 
         await expect(generateInviteBtn).toBeVisible();

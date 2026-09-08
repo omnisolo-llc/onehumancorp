@@ -41,7 +41,7 @@ test.describe('Viral Newsletter Generator', () => {
     await expect(page.locator('#previewTitle')).toHaveText('Join Our Awesome Newsletter');
     await expect(page.locator('#previewDesc')).toHaveText('Get the best deals every week.');
     await expect(page.locator('#previewBtn')).toHaveText('Sign Me Up!');
-    await expect(page.locator('#previewBranding')).toHaveText('⚡ Powered by OmniSolo');
+    await expect(page.locator('#previewBranding')).toHaveText('⚡ OmniSolo');
 
     // 6. Verify the embed code contains the viral link and correct text
     const codeOutput = page.locator('#codeOutput');
@@ -49,7 +49,7 @@ test.describe('Viral Newsletter Generator', () => {
     expect(embedHtml).toContain('Join Our Awesome Newsletter');
     expect(embedHtml).toContain('Get the best deals every week.');
     expect(embedHtml).toContain('Sign Me Up!');
-    expect(embedHtml).toContain('⚡ Powered by OmniSolo');
+    expect(embedHtml).toContain('⚡ OmniSolo');
 
     // 7. Test removing branding soft paywall
     // Ensure the user doesn't have pro
@@ -82,6 +82,6 @@ test.describe('Viral Newsletter Generator', () => {
 
     // Watermark should be gone in code output
     const newEmbedHtml = await codeOutput.textContent();
-    expect(newEmbedHtml).not.toContain('⚡ Powered by OmniSolo');
+    expect(newEmbedHtml).not.toContain('⚡ OmniSolo');
   });
 });

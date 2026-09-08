@@ -32,7 +32,7 @@ Based on these findings, we have mapped out the end-to-end journey across six ke
 3.  **Activation:** The instant generation of a functional storefront or booking page in under 60 seconds (The "Aha!" moment).
 4.  **Retention:** Proactive engagement via the *Business Advisory Agent* delivering plain-language daily briefings, and automated notifications for new orders/bookings.
 5.  **Revenue:** Seamless upgrade paths driven by value (e.g., hitting AI action limits) rather than feature-gating, supported by native Stripe/Mercado Pago integrations.
-6.  **Referral:** Built-in viral loops (e.g., referral discounts, "Powered by OmniSolo" footers).
+6.  **Referral:** Built-in viral loops (e.g., referral discounts, "OmniSolo" footers).
 
 ### 4.1 Friction Mitigation Strategies
 *   **Progressive Disclosure:** Advanced settings (custom domains, complex shipping rules) are hidden behind a "Simple Mode" toggle during onboarding.

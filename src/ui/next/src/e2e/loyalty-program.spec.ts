@@ -39,6 +39,6 @@ test.describe('Automated Loyalty Campaign Growth Loop', () => {
     expect(emailContent).toContain('VIP Loyalty Program');
     expect(emailContent).toContain('$15 in store credit');
     expect(emailContent).toContain('$20 in store credit');
-    expect(emailContent).toContain('⚡ Powered by OmniSolo');
+    expect(emailContent).toContain('⚡ OmniSolo');
   });
 });

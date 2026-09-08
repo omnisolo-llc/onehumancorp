@@ -151,7 +151,7 @@
 
     <div style="margin-bottom: 24px; display: flex; align-items: center; gap: 8px;">
       <input type="checkbox" id="branding-toggle" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
-      <label for="branding-toggle" style="margin: 0; font-weight: 500;">Include "Powered by OmniSolo" (Earn referral credits)</label>
+      <label for="branding-toggle" style="margin: 0; font-weight: 500;">Include "OmniSolo" (Earn referral credits)</label>
     </div>
 
     <button id="generate-btn" class="btn-primary">Generate Embed Code</button>
@@ -201,7 +201,7 @@
         document.getElementById('preview-container').style.display = 'block';
 
         // Generate embed code
-        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
+        const origin = window.location.origin.includes('localhost') ? 'https://omnisolo.co' : window.location.origin;
         const embedUrl = `${origin}/api/v1/growth/birthday-club/embed?tenant=${tenantId}&discount=${encodeURIComponent(discount)}&theme=${encodeURIComponent(theme)}&hide_branding=${!includeBranding}`;
 
         document.getElementById('preview-iframe').src = embedUrl;

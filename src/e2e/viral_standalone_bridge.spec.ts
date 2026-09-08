@@ -42,14 +42,14 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     await copyBtn.click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
-    // Verify the clipboard content includes the link and the "Powered by OmniSolo" branding
+    // Verify the clipboard content includes the link and the "OmniSolo" branding
     // Playwright evaluates clipboard via API in headed mode or context config but we can check visual drift here
     // since the original test skips clipboard API evaluation due to permissions in headless mode sometimes.
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
     if (clipboardText) {
       expect(clipboardText).toContain('Join my team on OmniSolo!');
       expect(clipboardText).toContain('https://cloud.omnisolo.co/invite/');
-      expect(clipboardText).toContain('⚡ Powered by OmniSolo');
+      expect(clipboardText).toContain('⚡ OmniSolo');
     }
 
     // Verify WhatsApp Share opens new tab with the correct URL

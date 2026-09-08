@@ -18,6 +18,6 @@ test.describe('Cloud Bridge Referral Workflow', () => {
     // Verify that the success message containing the generated link appears
     const successMessage = page.getByRole('status');
     await expect(successMessage).toBeVisible();
-    await expect(successMessage).toContainText('Cloud Invite generated: https://cloud.omnisolo.co/invite/');
+    await expect(successMessage).toContainText('Cloud Invite generated: https://omnisolo.co/invite/');
   });
 });

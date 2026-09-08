@@ -16,7 +16,7 @@ Welcome to the **OmniSolo-SIP Swarm Vitality Dashboard**. This document provides
 - **MCP Tool Status:** Active, seamlessly executing dynamic Capability Plugin meshes with SPIFFE-based mTLS identities.
 
 ---
-*Powered by OmniSolo-SIP (Swarm Intelligence Protocol)*
+*OmniSolo-SIP (Swarm Intelligence Protocol)*
 *Display settings: Premium Glassmorphism UI*
 *Font: `Outfit/Inter`*
 *Visual Style: `backdrop-filter: blur(20px) saturate(200%)`*

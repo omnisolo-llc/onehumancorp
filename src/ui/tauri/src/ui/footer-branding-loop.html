@@ -537,7 +537,7 @@
   <div class="container">
     <div class="header">
       <h1 class="font-outfit">Footer Branding Loop Builder</h1>
-      <p>Generate a "Powered by OmniSolo" snippet for your website. When visitors click it to create their own account, you earn affiliate credit.</p>
+      <p>Generate a "OmniSolo" snippet for your website. When visitors click it to create their own account, you earn affiliate credit.</p>
     </div>
 
     <div class="builder-grid">
@@ -555,7 +555,7 @@
         <div class="form-group">
           <label class="form-label" for="badge-text">Badge Text</label>
           <select id="badge-text" class="form-select">
-            <option value="powered">Powered by OmniSolo</option>
+            <option value="powered">OmniSolo</option>
             <option value="made">Made with OmniSolo</option>
             <option value="launch">Launch your own on OmniSolo</option>
           </select>
@@ -650,7 +650,7 @@
         tenant: (() => { try { return localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store'; } catch(e) { return 'my-store'; } })(),
         hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
         style: 'pill',
-        text: 'Powered by OmniSolo',
+        text: 'OmniSolo',
         theme: 'light',
         removeBranding: false
       };
@@ -753,7 +753,7 @@
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
           const tenantId = state.tenant;
-          const message = `Check out my new business built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenantId}`;
+          const message = `Check out my new business built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           // Open share dialog

@@ -60,6 +60,6 @@ test.describe('Viral Countdown Widget', () => {
 
     // Should have dark mode color and branding
     expect(text).toContain('#111827');
-    expect(text).toContain('Powered by OmniSolo');
+    expect(text).toContain('OmniSolo');
   });
 });

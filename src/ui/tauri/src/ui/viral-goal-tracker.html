@@ -432,7 +432,7 @@
 
               <button class="preview-btn">Share to reach goal</button>
 
-              <div class="preview-branding" id="preview-branding">⚡ Powered by OmniSolo</div>
+              <div class="preview-branding" id="preview-branding">⚡ OmniSolo</div>
             </div>
           </div>
         </div>
@@ -459,7 +459,7 @@
   <div class="modal" id="paywall-modal">
     <div class="modal-content">
       <h3 style="margin-top: 0;">Pro Feature Locked</h3>
-      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "Powered by OmniSolo" branding is a Pro feature. Upgrade your account or share OmniSolo on social media to unlock a 7-day Pro trial.</p>
+      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "OmniSolo" branding is a Pro feature. Upgrade your account or share OmniSolo on social media to unlock a 7-day Pro trial.</p>
 
       <div class="modal-actions" style="justify-content: space-between; align-items: center;">
         <button class="btn-secondary" id="close-paywall">Cancel</button>
@@ -579,7 +579,7 @@
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
           const tenantId = state.tenant;
-          const message = `Check out my new Goal Tracker built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenantId}`;
+          const message = `Check out my new Goal Tracker built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           window.open(shareUrl, '_blank');

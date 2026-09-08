@@ -533,7 +533,7 @@ async fn recovery_message_for(
         if let Ok(resp) = llm_client.chat(req).await {
             let generated = resp.message.content.trim();
             if !generated.is_empty() {
-                body = format!("{}\n\n⚡ Powered by OmniSolo", generated);
+                body = format!("{}\n\n⚡ OmniSolo", generated);
             }
         }
     }

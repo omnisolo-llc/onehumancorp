@@ -28,8 +28,8 @@ test.describe('Tip Jar Growth Loop', () => {
         await expect(page.locator('#preview-name', { hasText: 'Maya Bakery' })).toBeVisible();
         await expect(page.locator('#preview-msg', { hasText: 'Thanks for the tip!' })).toBeVisible();
 
-        // Verify "Powered by OmniSolo" branding is on the preview
-        const brandingLink = page.locator('#preview-powered-by', { hasText: '⚡ Powered by OmniSolo' });
+        // Verify "OmniSolo" branding is on the preview
+        const brandingLink = page.locator('#preview-powered-by', { hasText: '⚡ OmniSolo' });
         await expect(brandingLink).toBeVisible();
 
         // Generate the link
@@ -76,7 +76,7 @@ test.describe('Tip Jar Growth Loop', () => {
         await expect(paywallModal).not.toHaveClass(/active/);
 
         // Preview section should hide the branding
-        const brandingLink = page.locator('#preview-powered-by', { hasText: '⚡ Powered by OmniSolo' });
+        const brandingLink = page.locator('#preview-powered-by', { hasText: '⚡ OmniSolo' });
         await expect(brandingLink).not.toBeVisible();
 
         // Generate link without branding

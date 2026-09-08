@@ -36,8 +36,8 @@ test.describe('Growth Loop: Interactive Embed Widget Builder', () => {
             const apiHtml = await apiResponse.text();
             expect(apiHtml).toContain('Request a quote');
             expect(apiHtml).toContain('Workspace: test-merchant-xyz');
-            expect(apiHtml).toContain('https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=test-merchant-xyz');
-            expect(apiHtml).toContain('⚡ Powered by OmniSolo');
+            expect(apiHtml).toContain('https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=test-merchant-xyz');
+            expect(apiHtml).toContain('⚡ OmniSolo');
         }
     }
   });

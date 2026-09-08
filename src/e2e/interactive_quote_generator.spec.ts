@@ -37,6 +37,6 @@ test.describe('Interactive Quote Generator Growth Loop', () => {
         await expect(page.locator('text=$150')).toBeVisible();
 
         // Check the footer viral link
-        await expect(page.locator('a', { hasText: '⚡ Powered by OmniSolo' })).toBeVisible();
+        await expect(page.locator('a', { hasText: '⚡ OmniSolo' })).toBeVisible();
     });
 });

@@ -51,7 +51,7 @@ test.describe('Interactive Quote Widget Growth Loop', () => {
         await expect(page.locator('span', { hasText: '$400.00' })).toBeVisible();
 
         // 7. Verify the viral footer exists on the public page and has the exact expected referral URL structure
-        const publicFooterLink = page.locator('a', { hasText: '⚡ Powered by OmniSolo' });
+        const publicFooterLink = page.locator('a', { hasText: '⚡ OmniSolo' });
         await expect(publicFooterLink).toBeVisible();
         await expect(publicFooterLink).toHaveAttribute('href', /\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=e2e-service/);
 
@@ -69,8 +69,8 @@ test.describe('Interactive Quote Widget Growth Loop', () => {
 
         // Use regex for checking text since spaces/newlines might differ, ensuring the core viral link structure is there
         const embedCodeValue = await embedCodeTextarea.inputValue();
-        expect(embedCodeValue).toContain('https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=e2e-service');
-        expect(embedCodeValue).toContain('⚡ Powered by OmniSolo');
+        expect(embedCodeValue).toContain('https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=e2e-service');
+        expect(embedCodeValue).toContain('⚡ OmniSolo');
     });
 
     test('Dashboard contains link to Interactive Quote Generator', async ({ page }) => {

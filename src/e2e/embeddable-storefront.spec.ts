@@ -32,7 +32,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
 
         // Verify the HTML snippet structure
         const snippet = await textarea.inputValue();
-        expect(snippet).toContain('<iframe src="https://cloud.omnisolo.co/api/v1/growth/storefront/embed?tenant=');
+        expect(snippet).toContain('<iframe src="https://omnisolo.co/api/v1/growth/storefront/embed?tenant=');
         expect(snippet).toContain('theme=light');
         expect(snippet).toContain('width="320"');
         expect(snippet).toContain('height="400"');

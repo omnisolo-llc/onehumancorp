@@ -17,8 +17,8 @@ test.describe('Share & Save Widget Page', () => {
     // Verify preview card contents
     await expect(page.locator('h4', { hasText: 'Love our store?' })).toBeVisible();
 
-    // Verify "Powered by OmniSolo" watermark is visible
-    const watermark = page.locator('a', { hasText: '⚡ Powered by OmniSolo' });
+    // Verify "OmniSolo" watermark is visible
+    const watermark = page.locator('a', { hasText: '⚡ OmniSolo' });
     await expect(watermark).toBeVisible();
   });
 
@@ -43,7 +43,7 @@ test.describe('Share & Save Widget Page', () => {
     await page.reload();
 
     // Click the checkbox label to remove branding
-    const checkboxLabel = page.locator('text=Remove "Powered by OmniSolo" branding');
+    const checkboxLabel = page.locator('text=Remove "OmniSolo" branding');
     await checkboxLabel.click();
 
     // Verify the soft paywall modal appears
@@ -62,7 +62,7 @@ test.describe('Share & Save Widget Page', () => {
     const checkbox = page.locator('input[type="checkbox"]');
     await checkbox.check();
 
-    // Verify the "Powered by OmniSolo" watermark is no longer visible in the preview
-    await expect(page.locator('a', { hasText: '⚡ Powered by OmniSolo' })).not.toBeVisible();
+    // Verify the "OmniSolo" watermark is no longer visible in the preview
+    await expect(page.locator('a', { hasText: '⚡ OmniSolo' })).not.toBeVisible();
   });
 });

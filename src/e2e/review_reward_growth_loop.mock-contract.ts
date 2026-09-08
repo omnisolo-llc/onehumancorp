@@ -34,12 +34,12 @@ test.describe.serial('Review Reward Growth Loop', () => {
     // Ensure the powered by OmniSolo link is present
     const poweredByLink = page.locator('#previewBranding');
     await expect(poweredByLink).toBeVisible();
-    await expect(poweredByLink).toHaveText('⚡ Powered by OmniSolo');
+    await expect(poweredByLink).toHaveText('⚡ OmniSolo');
 
     // 5. Test generated HTML code includes the watermark
     const codeOutput = page.locator('#codeOutput');
     let generatedHtml = await codeOutput.textContent();
-    expect(generatedHtml).toContain('⚡ Powered by OmniSolo');
+    expect(generatedHtml).toContain('⚡ OmniSolo');
 
     // 6. Test interaction: modifying the inputs changes the code
     await page.fill('#widgetTitle', 'Leave a 5 star review!');
@@ -75,6 +75,6 @@ test.describe.serial('Review Reward Growth Loop', () => {
 
     // Watermark should be gone in code output
     generatedHtml = await codeOutput.textContent();
-    expect(generatedHtml).not.toContain('⚡ Powered by OmniSolo');
+    expect(generatedHtml).not.toContain('⚡ OmniSolo');
   });
 });

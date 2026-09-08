@@ -158,7 +158,7 @@
       </div>
 
       <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(0,0,0,0.02); border-radius: 8px;">
-        <label for="remove-branding" style="margin-bottom: 0;">Remove "Powered by OmniSolo" Badge (Pro)</label>
+        <label for="remove-branding" style="margin-bottom: 0;">Remove "OmniSolo" Badge (Pro)</label>
         <input type="checkbox" id="remove-branding" style="width: auto;" />
       </div>
 
@@ -174,7 +174,7 @@
             <p class="widget-preview-title" id="preview-location">Someone in London</p>
             <p class="widget-preview-desc">just bought <strong id="preview-product">Signature Coffee Blend</strong></p>
             <p class="widget-preview-time" id="preview-time">just now</p>
-            <a href="#" class="preview-branding" id="preview-branding">⚡ Powered by OmniSolo</a>
+            <a href="#" class="preview-branding" id="preview-branding">⚡ OmniSolo</a>
           </div>
         </div>
       </div>
@@ -200,7 +200,7 @@
   <div class="modal" id="paywall-modal">
     <div class="modal-content">
       <h3 style="margin-top: 0; font-size: 20px;">Upgrade to Pro</h3>
-      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "Powered by OmniSolo" watermark is a Pro feature. Upgrade your account or share OmniSolo on social media to unlock a 7-day Pro trial.</p>
+      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "OmniSolo" watermark is a Pro feature. Upgrade your account or share OmniSolo on social media to unlock a 7-day Pro trial.</p>
 
       <div class="modal-actions" style="justify-content: space-between; align-items: center; flex-wrap: wrap;">
         <button class="btn-secondary" id="close-paywall">Cancel</button>
@@ -349,7 +349,7 @@
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
           const tenantId = state.tenant;
-          const message = `I just added a Social Proof Nudge to my store with OmniSolo! 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenantId}`;
+          const message = `I just added a Social Proof Nudge to my store with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           window.open(shareUrl, '_blank');

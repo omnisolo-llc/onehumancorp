@@ -441,7 +441,7 @@
       if (navigator.share) {
         await navigator.share({
             title: "Join me on OmniSolo",
-            text: "Launch your business online instantly with OmniSolo! Use my invite link to get $50:\n\n⚡ Powered by OmniSolo",
+            text: "Launch your business online instantly with OmniSolo! Use my invite link to get $50:\n\n⚡ OmniSolo",
             url: link,
         });
       } else {
@@ -453,13 +453,13 @@
 
     document.getElementById('share-whatsapp-btn').addEventListener('click', () => {
       const link = document.getElementById('referral-link').value;
-      const text = `Launch your business online instantly with OmniSolo! Use my invite link:\n\n${link}\n\n⚡ Powered by OmniSolo`;
+      const text = `Launch your business online instantly with OmniSolo! Use my invite link:\n\n${link}\n\n⚡ OmniSolo`;
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     });
 
     document.getElementById('share-x-btn').addEventListener('click', () => {
       const link = document.getElementById('referral-link').value;
-      const text = `Launch your business online instantly with OmniSolo! Use my invite link:\n\n${link}\n\n⚡ Powered by OmniSolo`;
+      const text = `Launch your business online instantly with OmniSolo! Use my invite link:\n\n${link}\n\n⚡ OmniSolo`;
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
     });
 

@@ -11,8 +11,8 @@ test.describe('Gift Card Growth Loop', () => {
         await page.goto('/gift-cards');
         await expect(page.locator('h1', { hasText: 'Gift Card Generator' })).toBeVisible({ timeout: 15000 }).catch(() => {});
 
-        // 2. Verify the ⚡ Powered by OmniSolo branding in the card preview
-        const cardFooter = page.locator('span', { hasText: 'Powered by OmniSolo' });
+        // 2. Verify the ⚡ OmniSolo branding in the card preview
+        const cardFooter = page.locator('span', { hasText: 'OmniSolo' });
         await expect(cardFooter).toBeVisible({ timeout: 15000 }).catch(() => {});
 
         // 3. Set custom amount

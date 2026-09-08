@@ -36,7 +36,7 @@
 
     <label style="display: flex; align-items: center; margin-bottom: 20px;">
       <input type="checkbox" id="input-remove-branding" style="margin-right: 10px;">
-      Remove Powered by OmniSolo branding
+      Remove OmniSolo branding
     </label>
 
     <button id="btn-generate">Generate Shareable Link</button>
@@ -80,7 +80,7 @@
 
     document.getElementById('btn-share-to-unlock').addEventListener('click', () => {
       const shareText = "I just created my free Digital Business Card using OmniSolo! Build yours here:";
-      const shareUrl = "https://cloud.omnisolo.co";
+      const shareUrl = "https://omnisolo.co";
       const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
       window.open(intentUrl, '_blank');
 

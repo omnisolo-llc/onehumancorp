@@ -12,7 +12,7 @@ Maya (28, non-technical) needs a mobile-only storefront to sell custom cakes and
 - **Activation:** Maya shares her new OmniSolo storefront link on her Instagram bio. She receives her first custom order with a Stripe-powered deposit within the first day.
 - **Retention:** Maya comes back daily to check her "Orders" feed. Push notifications alert her when a new custom request comes in or when the "Customer Success" agent successfully answers a "do you do vegan cakes?" DM.
 - **Revenue:** Maya hits the 10-product limit on the Free tier. The app shows a friendly CTA: "Add unlimited cakes and unlock a custom domain (mayascakes.com) for $9/mo." She upgrades.
-- **Referral:** Maya adds a "Powered by OmniSolo - Get your own site" badge to her site footer. Another baker clicks it.
+- **Referral:** Maya adds a "OmniSolo - Get your own site" badge to her site footer. Another baker clicks it.
 
 #### Maya's Customer Journey
 ```mermaid

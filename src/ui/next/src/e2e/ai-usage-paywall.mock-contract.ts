@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('AI Usage Paywall Growth Loop', () => {
-  test('displays usage data, upgrade CTA, and Powered by OmniSolo viral branding', async ({ page }) => {
+  test('displays usage data, upgrade CTA, and OmniSolo viral branding', async ({ page }) => {
     // Navigate to the new AI Usage Paywall page
     await page.goto('/dashboard');
     await page.evaluate(() => {
@@ -28,8 +28,8 @@ test.describe('AI Usage Paywall Growth Loop', () => {
     const shareBtn = page.locator('button', { hasText: 'Share to get 10 free tasks' });
     await expect(shareBtn).toBeVisible();
 
-    // Check the "Powered by OmniSolo" footer loop branding
-    const footerLink = page.locator('a:has-text("⚡ Powered by OmniSolo")');
+    // Check the "OmniSolo" footer loop branding
+    const footerLink = page.locator('a:has-text("⚡ OmniSolo")');
     await expect(footerLink).toBeVisible();
     await expect(footerLink).toHaveAttribute('href', /.*\/api\/v1\/growth\/referrals\/click.*/);
 

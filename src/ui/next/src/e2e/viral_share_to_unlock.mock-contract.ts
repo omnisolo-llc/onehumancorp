@@ -12,7 +12,7 @@ test.describe('Viral Share to Unlock - Digital Business Card', () => {
     await expect(nameInput).toBeVisible();
     await nameInput.fill('Test User');
 
-    // Click the "Remove Powered by OmniSolo branding" checkbox
+    // Click the "Remove OmniSolo branding" checkbox
     const removeBrandingCheckbox = page.locator('#input-remove-branding');
     // Using evaluate since standard click on checkbox label can sometimes be tricky
     await removeBrandingCheckbox.evaluate((node: HTMLInputElement) => { node.click(); });

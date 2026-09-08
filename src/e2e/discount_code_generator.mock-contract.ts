@@ -31,8 +31,8 @@ test.describe('Discount Code Generator Growth Loop', () => {
 
         // Ensure the referral growth loop is intact in the generated iframe code
         const embedCode = await page.locator('pre').innerText();
-        expect(embedCode).toContain('<iframe src="https://cloud.omnisolo.co/api/v1/growth/discount-code/embed');
-        expect(embedCode).toContain('⚡ Powered by OmniSolo');
+        expect(embedCode).toContain('<iframe src="https://omnisolo.co/api/v1/growth/discount-code/embed');
+        expect(embedCode).toContain('⚡ OmniSolo');
 
         // Check the backend embed API endpoint directly to ensure it renders correctly
         const response = await request.get('/api/v1/growth/discount-code/embed?tenant=test-tenant&discount=50%25&code=HALFOFF');
@@ -41,7 +41,7 @@ test.describe('Discount Code Generator Growth Loop', () => {
         const html = await response.text();
         expect(html).toContain('50% OFF');
         expect(html).toContain('HALFOFF');
-        expect(html).toContain('⚡ Powered by OmniSolo');
+        expect(html).toContain('⚡ OmniSolo');
     });
 
     test('should show soft paywall when attempting to remove branding without pro', async ({ page }) => {
@@ -75,7 +75,7 @@ test.describe('Discount Code Generator Growth Loop', () => {
         await expect(page.locator('text=Pro Feature')).not.toBeVisible();
 
         // Preview section should hide the branding
-        await expect(page.locator('text=⚡ Powered by OmniSolo')).not.toBeVisible();
+        await expect(page.locator('text=⚡ OmniSolo')).not.toBeVisible();
 
         // Need to fill inputs first to enable button
         const discountInput = page.locator('input[placeholder="e.g. 20% or $10"]');
@@ -89,7 +89,7 @@ test.describe('Discount Code Generator Growth Loop', () => {
 
         // The textarea code should NOT include the branding
         const preCode = await page.locator('pre').innerText();
-        expect(preCode).not.toContain('>⚡ Powered by OmniSolo</a></div>`'); // The static html part
+        expect(preCode).not.toContain('>⚡ OmniSolo</a></div>`'); // The static html part
         expect(preCode).toContain('hideBranding=true');
     });
 });

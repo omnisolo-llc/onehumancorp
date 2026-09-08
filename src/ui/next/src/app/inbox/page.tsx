@@ -16,8 +16,8 @@ type Message = {
   status?: string;
   sender_id?: string;
   customer_id?: string;
-  checkout_link?: string;
-  proposed_product_id?: string;
+  checkout_link?: string | null;
+  proposed_product_id?: string | null;
   created_at?: string;
 };
 

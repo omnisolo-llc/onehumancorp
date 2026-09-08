@@ -337,14 +337,14 @@
           })
         });
 
-        let link = `https://cloud.omnisolo.co/promo/${tenant}?theme=${themeSelect.value}&discount=${discountInput.value}`;
+        let link = `https://omnisolo.co/promo/${tenant}?theme=${themeSelect.value}&discount=${discountInput.value}`;
 
         if (res.ok) {
           const data = await res.json();
           if (data.share_link) {
             link = data.share_link;
           } else if (data.content) {
-             link = `https://cloud.omnisolo.co/promo/${tenant}?theme=${themeSelect.value}&discount=${discountInput.value}`;
+             link = `https://omnisolo.co/promo/${tenant}?theme=${themeSelect.value}&discount=${discountInput.value}`;
           }
         } else {
            throw new Error('Backend API generation failed. Did not receive HTTP 200 OK.');

@@ -27,6 +27,6 @@ test.describe('Success Milestone Widget', () => {
 
     const clipboardText = await page.evaluate('navigator.clipboard.readText()');
     expect(clipboardText).toContain('I just hit my 100th order using OmniSolo');
-    expect(clipboardText).toContain('⚡ Powered by OmniSolo');
+    expect(clipboardText).toContain('⚡ OmniSolo');
   });
 });

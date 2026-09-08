@@ -30,7 +30,7 @@ test.describe('Viral Order Tracking Loop', () => {
     const previewId = page.locator('#preview-id');
     await expect(previewId).toHaveText('TRK-987654');
 
-    const poweredBy = resultArea.locator('text=Powered by OmniSolo');
+    const poweredBy = resultArea.locator('text=OmniSolo');
     await expect(poweredBy).toBeVisible();
 
     // 4. Verify the generated link has the tracking number and tenant reference

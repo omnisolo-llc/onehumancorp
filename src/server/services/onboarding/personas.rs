@@ -60,7 +60,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
                 JourneyStep {
                     id: "referral".to_string(),
                     question: "How does Maya bring in new users?".to_string(),
-                    ai_action: "Maya adds a 'Powered by OmniSolo - Get your own site' badge to her site footer. Another baker clicks it.".to_string(),
+                    ai_action: "Maya adds a 'OmniSolo - Get your own site' badge to her site footer. Another baker clicks it.".to_string(),
                     required_modules: vec!["referrals".to_string(), "storefront".to_string()],
                 },
             ];

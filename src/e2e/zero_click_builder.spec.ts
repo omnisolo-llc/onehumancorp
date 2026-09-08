@@ -16,7 +16,7 @@ test.describe('Zero Click Builder Viral Growth Loop', () => {
     // Verify title
     await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible({ timeout: 15000 });
 
-    // Verify "Powered by OmniSolo" branding is present (viral loop)
+    // Verify "OmniSolo" branding is present (viral loop)
     await expect(page.locator('#dashboard-footer-viral-link')).toBeVisible();
 
     // The generate button should be disabled initially

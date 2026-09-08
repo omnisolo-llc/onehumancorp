@@ -32,6 +32,6 @@ test.describe('AI Review Campaign Builder', () => {
     expect(emailContent).toContain('Maya');
     expect(emailContent).toContain('Vegan Chocolate Cake');
     expect(emailContent).toContain('ORD-12345');
-    expect(emailContent).toContain('⚡ Powered by OmniSolo');
+    expect(emailContent).toContain('⚡ OmniSolo');
   });
 });

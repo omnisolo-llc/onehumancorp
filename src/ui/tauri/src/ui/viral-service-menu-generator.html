@@ -255,7 +255,7 @@
   <div class="container">
     <div style="font-size: 40px; text-align: center; margin-bottom: 12px;">📋</div>
     <h1>Viral Service Menu Generator</h1>
-    <p class="subtitle">Create an embedded, live-syncing AI service menu for your website. When visitors click "Powered by OmniSolo", you earn referral credits.</p>
+    <p class="subtitle">Create an embedded, live-syncing AI service menu for your website. When visitors click "OmniSolo", you earn referral credits.</p>
 
     <div class="split-layout">
       <div class="config-panel">
@@ -274,7 +274,7 @@
 
         <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="remove-branding" style="width: auto;">
-          <label for="remove-branding" style="margin: 0;">Remove "Powered by OmniSolo" Badge (Pro)</label>
+          <label for="remove-branding" style="margin: 0;">Remove "OmniSolo" Badge (Pro)</label>
         </div>
 
         <button id="get-code-btn">Generate Embed Code</button>
@@ -293,7 +293,7 @@
               <strong>$199</strong>
             </div>
           </div>
-          <a href="#" class="preview-branding" id="preview-branding">⚡ Powered by OmniSolo</a>
+          <a href="#" class="preview-branding" id="preview-branding">⚡ OmniSolo</a>
         </div>
       </div>
     </div>
@@ -320,7 +320,7 @@
   <div class="modal" id="paywall-modal">
     <div class="modal-content">
       <h3 style="margin-top: 0; font-size: 20px;">Upgrade to Pro</h3>
-      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "Powered by OmniSolo" watermark is a Pro feature. Upgrade your account to unlock this feature.</p>
+      <p style="color: #666; margin-bottom: 24px; font-size: 14px;">Removing the "OmniSolo" watermark is a Pro feature. Upgrade your account to unlock this feature.</p>
 
       <div class="modal-actions">
         <button class="btn-secondary" id="close-paywall" style="margin-top: 0;">Cancel</button>
@@ -382,7 +382,7 @@
       };
 
       const generateEmbedCode = () => {
-        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
+        const origin = window.location.origin.includes('localhost') ? 'https://omnisolo.co' : window.location.origin;
         const scriptTag = `<script src="${origin}/widgets/service-menu.js" async><\/script>`;
         const divTag = `<div id="omnisolo-service-menu" data-tenant="${state.tenant}" data-title="${escapeHtml(state.businessName)}" data-theme="${state.theme}" data-branding="${!state.removeBranding}"></div>`;
         const branding = !state.removeBranding ? '\n<!-- ⚡ Powered by OmniSolo -->' : '';

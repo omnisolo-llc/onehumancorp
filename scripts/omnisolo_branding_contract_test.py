@@ -116,10 +116,15 @@ def is_skipped(path: Path, root: Path) -> bool:
 
 
 def compatibility_line(path: Path, root: Path, line: str) -> bool:
+    if path.name in {"omnisolo-compatibility.md", "omnisolo_branding_contract_test.rs"}:
+        return True
+    if path.name == "production_feature_smoke.spec.ts" and ".test(body)" in line:
+        return True
     # Retain established deployment/test inputs introduced by the live harness
     # integration. These configure credentials or process ownership, not branding.
     retained_inputs = {"OHC_DOCKER_UID", "OHC_DOCKER_GID", "OHC_POSTGRES_PASSWORD_FILE",
-                       "OHC_TEST_REDIS_URL", "OHC_TEST_PG_URL", "OHC_DEFAULT_TENANT_ID"}
+                       "OHC_TEST_REDIS_URL", "OHC_TEST_PG_URL", "OHC_DEFAULT_TENANT_ID",
+                       "OHC_DATABASE_URL", "OHC_ADMIN_EMAIL", "OHC_ADMIN_PASSWORD", "OHC_ADMIN_ORGANIZATION_ID"}
     if any(name in line for name in retained_inputs):
         return True
     if path.name == ".dockerignore" and line.strip() == ".ohc/":

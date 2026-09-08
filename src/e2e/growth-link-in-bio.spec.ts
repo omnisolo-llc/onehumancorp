@@ -35,7 +35,7 @@ test.describe('Link in Bio Generator', () => {
     await expect(customLink).toHaveAttribute('href', 'https://example.com/shop');
 
     // 5. Verify the viral loop footer
-    const poweredBy = page.getByRole('link', { name: '⚡ Powered by OmniSolo' });
+    const poweredBy = page.getByRole('link', { name: '⚡ OmniSolo' });
     await expect(poweredBy).toBeVisible();
     await expect(poweredBy).toHaveAttribute('href', /\/onboarding\?ref=linkinbio_e2e-tenant/);
   });

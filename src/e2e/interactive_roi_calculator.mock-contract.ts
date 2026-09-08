@@ -81,7 +81,7 @@ test.describe('Interactive ROI Calculator Generator', () => {
     // Check viral loop branding footer
     const brandingLink = page.locator('#branding-link');
     await expect(brandingLink).toBeVisible();
-    await expect(brandingLink).toHaveText('⚡ Powered by OmniSolo');
+    await expect(brandingLink).toHaveText('⚡ OmniSolo');
 
     // Check the link URL contains the correct referral parameters
     const href = await brandingLink.getAttribute('href');

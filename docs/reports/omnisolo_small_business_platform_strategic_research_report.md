@@ -69,7 +69,7 @@ pie title US SMB Market Breakdown (Non-Employer Firms)
 ### Strategic Recommendations
 - **Beachhead Persona:** Carlos (Handyman) & Maya (Baker). Focus on local service/order-ahead businesses that Shopify ignores.
 - **Geographic Expansion:** Optimize for mobile-first, WhatsApp-heavy markets (LATAM, India) after US proof-of-concept.
-- **Growth Loop:** Every OmniSolo receipt sent to a customer should include a subtle "Powered by OmniSolo - Start your business today" link.
+- **Growth Loop:** Every OmniSolo receipt sent to a customer should include a subtle "OmniSolo - Start your business today" link.
 
 ---
 

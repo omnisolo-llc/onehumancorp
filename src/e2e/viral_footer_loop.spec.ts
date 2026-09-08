@@ -1,14 +1,14 @@
 import { test, expect } from './fixtures';
 
 test.describe('Viral Footer Loop', () => {
-  test('Storefront footer contains a working "Powered by OmniSolo" referral link', async ({ page }) => {
+  test('Storefront footer contains a working "OmniSolo" referral link', async ({ page }) => {
     // Navigate to the dashboard page where the badge is immediately rendered
     await page.goto('/dashboard');
 
     // Wait for the badge to be visible
     await page.waitForSelector('text=⚡ Powered by', { timeout: 15000 });
 
-    // Verify the "Powered by OmniSolo" footer is visible
+    // Verify the "OmniSolo" footer is visible
     const poweredByLink = page.locator('a', { hasText: '⚡ Powered by' });
     await expect(poweredByLink).toBeVisible();
     await expect(poweredByLink).toContainText('OmniSolo');

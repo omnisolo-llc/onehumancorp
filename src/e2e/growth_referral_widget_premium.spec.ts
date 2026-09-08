@@ -26,6 +26,6 @@ test.describe('Growth Referral Widget Premium Layout', () => {
 
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
     expect(clipboardText).toContain('<iframe');
-    expect(clipboardText).toContain('⚡ Powered by OmniSolo');
+    expect(clipboardText).toContain('⚡ OmniSolo');
   });
 });

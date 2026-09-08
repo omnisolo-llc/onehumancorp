@@ -385,7 +385,7 @@
           </label>
           <div>
             <div style="font-weight: 600; font-size: 15px;">Remove Branding</div>
-            <div style="font-size: 13px; color: var(--text-secondary);">Remove the "Powered by OmniSolo" watermark (Pro)</div>
+            <div style="font-size: 13px; color: var(--text-secondary);">Remove the "OmniSolo" watermark (Pro)</div>
           </div>
         </div>
 
@@ -404,7 +404,7 @@
           <input type="text" class="widget-input" placeholder="Your Email Address" readonly>
           <button class="widget-btn" id="preview-btn-text">Generate Free Audit</button>
 
-          <a href="#" class="powered-by" id="preview-branding">⚡ Powered by OmniSolo</a>
+          <a href="#" class="powered-by" id="preview-branding">⚡ OmniSolo</a>
         </div>
       </div>
     </div>
@@ -430,7 +430,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p style="color: #666; margin-bottom: 24px;">Make the Lead Magnet 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p style="color: #666; margin-bottom: 24px;">Make the Lead Magnet 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
 
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <button id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
@@ -534,7 +534,7 @@
       if (shareToUnlockBtn) {
         shareToUnlockBtn.addEventListener('click', async () => {
           const tenantId = state.tenant;
-          const message = `Check out my new AI Lead Magnet built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenantId}`;
+          const message = `Check out my new AI Lead Magnet built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
           const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
           window.open(shareUrl, '_blank');

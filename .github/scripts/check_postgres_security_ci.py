@@ -19,6 +19,7 @@ class ContractError(AssertionError):
 
 EXPECTED_REQUIRED_RESULT_LINES = (
     "set -euo pipefail",
+    'echo "dependency-audit: ${DEPENDENCY_AUDIT_RESULT}"',
     'echo "check-changes: ${CHECK_CHANGES_RESULT}"',
     'echo "bazel-build: ${BAZEL_BUILD_RESULT}"',
     'echo "bazel-test: ${BAZEL_TEST_RESULT}"',
@@ -49,12 +50,14 @@ EXPECTED_REQUIRED_RESULT_LINES = (
     'allow_success_or_skipped "bazel-build" "$BAZEL_BUILD_RESULT"',
     "fi",
     'if [[ "$MARKDOWN_ONLY" == "true" ]]; then',
+    'allow_success_or_skipped "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"',
     'allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"',
     'allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"',
     'allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"',
     'allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"',
     'allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"',
     "else",
+    'require_success "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"',
     'require_success "bazel-test" "$BAZEL_TEST_RESULT"',
     'require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"',
     'require_success "kind-e2e" "$KIND_E2E_RESULT"',
@@ -103,6 +106,7 @@ EXPECTED_REQUIRED_ENV = (
     "        env:",
     "          EVENT_NAME: ${{ github.event_name }}",
     "          MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}",
+    "          DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}",
     "          CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}",
     "          BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}",
     "          BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}",
@@ -447,6 +451,7 @@ def check_workflow(path: Path) -> None:
     if suite_style != "scalar" or suite_run != quoted_suite:
         raise ContractError(f"exact multitenancy suite must be active quoted scalar `run: {quoted_suite}`")
 
+    require_active(required, "      - dependency-audit", "ci-required dependency audit")
     require_active(required, "      - postgres-security", "ci-required dependency")
     require_active(required, "    if: ${{ always() }}", "ci-required always-run policy")
     require_active(

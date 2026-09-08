@@ -1499,7 +1499,7 @@
         if (softPaywallShareBtn) {
           softPaywallShareBtn.addEventListener('click', async () => {
             const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
-            const message = `I just discovered Advanced AI Automations on OmniSolo! This is going to revolutionize how I work. 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenantId}`;
+            const message = `I just discovered Advanced AI Automations on OmniSolo! This is going to revolutionize how I work. 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
             const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
             // Open share dialog
@@ -1719,7 +1719,7 @@
 
               copyBtn.addEventListener('click', async () => {
                 const link = await getInviteLink();
-                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OmniSolo! Launch your own store today: ${link} ⚡ Powered by OmniSolo`;
+                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OmniSolo! Launch your own store today: ${link} ⚡ OmniSolo`;
                 const tempInput = document.createElement('textarea');
                 tempInput.value = textToCopy;
                 document.body.appendChild(tempInput);
@@ -1771,7 +1771,7 @@
 
               const inviteLink = window.__TAURI__ && window.__TAURI__.core
                 ? await window.__TAURI__.core.invoke("generate_cloud_invite")
-                : "https://cloud.omnisolo.co/join?ref=" + tenantId;
+                : "https://omnisolo.co/join?ref=" + tenantId;
 
               const inputEl = document.getElementById('referral-link-input');
               inputEl.value = inviteLink;
@@ -1783,7 +1783,7 @@
               });
 
               document.getElementById('referral-tier-share-x-btn').addEventListener('click', () => {
-                  const text = `I manage my business with OmniSolo! Join using my invite link and get 1 month free: ${inviteLink}\n\n⚡ Powered by OmniSolo`;
+                  const text = `I manage my business with OmniSolo! Join using my invite link and get 1 month free: ${inviteLink}\n\n⚡ OmniSolo`;
                   window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
               });
 
@@ -1850,7 +1850,7 @@
       if (chatEmbedBtn) {
         chatEmbedBtn.addEventListener('click', () => {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
-          const embedCode = `<iframe src="https://cloud.omnisolo.co/api/v1/ui/chat-embed.html?tenant=${tenantId}&name=Support&welcome=How%20can%20I%20help%3F" width="350" height="500" style="border:none; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:fixed; bottom:20px; right:20px; z-index:99999;"></iframe>`;
+          const embedCode = `<iframe src="https://omnisolo.co/api/v1/ui/chat-embed.html?tenant=${tenantId}&name=Support&welcome=How%20can%20I%20help%3F" width="350" height="500" style="border:none; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:fixed; bottom:20px; right:20px; z-index:99999;"></iframe>`;
           navigator.clipboard.writeText(embedCode).then(() => {
             const originalText = chatEmbedBtn.textContent;
             chatEmbedBtn.textContent = 'Copied!';
@@ -1904,7 +1904,7 @@
       }
       if (copyBtn) { copyBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ Powered by OmniSolo`;
+        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
 
         navigator.clipboard.writeText(text).then(() => {
           copyBtn.innerText = "Copied!";
@@ -1934,7 +1934,7 @@
       const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
       if (shareWhatsAppBtn) { shareWhatsAppBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ Powered by OmniSolo`;
+        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       });
 
@@ -1942,7 +1942,7 @@
       const shareXBtn = document.getElementById('share-x-btn');
       if (shareXBtn) { shareXBtn.addEventListener('click', () => {
         const link = referralLink.value;
-        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ Powered by OmniSolo`;
+        const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                 localStorage.setItem(dismissedKey, 'true');
                 document.getElementById('milestone-container').style.display = 'none';
@@ -3305,7 +3305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         shareXBtn.addEventListener('click', () => {
-            const text = `I manage my business with OmniSolo! Join using my invite link and get 1 month free: ${linkInput.value}\n\n⚡ Powered by OmniSolo`;
+            const text = `I manage my business with OmniSolo! Join using my invite link and get 1 month free: ${linkInput.value}\n\n⚡ OmniSolo`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                 localStorage.setItem(dismissedKey, 'true');
                 document.getElementById('milestone-container').style.display = 'none';

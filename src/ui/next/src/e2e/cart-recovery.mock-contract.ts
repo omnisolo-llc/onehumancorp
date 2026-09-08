@@ -1,7 +1,7 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Cart Recovery E2E', () => {
-  test('should display Powered by OmniSolo component when generating draft', async ({ page }) => {
+  test('should display OmniSolo component when generating draft', async ({ page }) => {
     // Navigate using relative URL
     await page.goto('/cart-recovery');
 
@@ -16,6 +16,6 @@ test.describe('Cart Recovery E2E', () => {
     // Using string matching to avoid locator issues
     await page.waitForTimeout(2000);
     const html = await page.innerHTML('body');
-    expect(html).toMatch(/Powered by OmniSolo/i);
+    expect(html).toMatch(/OmniSolo/i);
   });
 });

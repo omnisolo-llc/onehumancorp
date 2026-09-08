@@ -619,7 +619,7 @@ pub async fn regenerate_cache(
     html.push_str(
         r#"
         <div class="block" style="text-align: center; font-size: 12px; color: #888;">
-            ⚡ Powered by OmniSolo
+            ⚡ OmniSolo
         </div>
     </div>
     <script>

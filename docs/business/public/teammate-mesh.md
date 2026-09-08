@@ -65,7 +65,7 @@ sequenceDiagram
 ```
 
 ---
-*Powered by OmniSolo-SIP (Swarm Intelligence Protocol)*
+*OmniSolo-SIP (Swarm Intelligence Protocol)*
 *Display settings: Premium Glassmorphism UI*
 
 </div>

@@ -1241,9 +1241,9 @@ impl PromoterWorker {
                                     {
                                         if let Some(v) = obj.get_mut(*platform) {
                                             if let Some(s) = v.as_str() {
-                                                if !s.contains("Powered by OmniSolo") {
+                                                if !s.contains("OmniSolo") {
                                                     *v = serde_json::json!(format!(
-                                                        "{}\n\n⚡ Powered by OmniSolo",
+                                                        "{}\n\n⚡ OmniSolo",
                                                         s
                                                     ));
                                                 }

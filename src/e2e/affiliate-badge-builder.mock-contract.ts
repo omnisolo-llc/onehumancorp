@@ -39,7 +39,7 @@ test.describe('Affiliate Badge Builder', () => {
 
     // Verify default preview text
     const previewText = page.locator('#badgeTextPreview');
-    await expect(previewText).toHaveText('Powered by OmniSolo');
+    await expect(previewText).toHaveText('OmniSolo');
 
     // Change Badge Text
     const textInput = page.locator('#badgeText');

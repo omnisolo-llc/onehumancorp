@@ -40,8 +40,8 @@ test.describe('Invisible Offline-to-Online QR Commerce Bridge', () => {
         const saveButton = page.locator('button', { hasText: 'Save / Print' });
         await expect(saveButton).toBeVisible();
 
-        // Verify "Powered by OmniSolo" watermark
-        const poweredBy = page.locator('p', { hasText: 'Powered by OmniSolo' });
+        // Verify "OmniSolo" watermark
+        const poweredBy = page.locator('p', { hasText: 'OmniSolo' });
         await expect(poweredBy).toBeVisible();
 
         // Close the modal

@@ -20,7 +20,7 @@ test.describe.serial('Trial Extension', () => {
     await expect(page.locator('h1', { hasText: 'Interactive Trial Extension' }).first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Want 7 Extra Days of Pro?')).toBeVisible();
 
-    const poweredByLink = page.locator('a', { hasText: /Powered by OmniSolo/i }).first();
+    const poweredByLink = page.locator('a', { hasText: /OmniSolo/i }).first();
     await expect(poweredByLink).toBeVisible();
     await expect(poweredByLink).toHaveAttribute('href', /.*\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=trial_extension/);
   });

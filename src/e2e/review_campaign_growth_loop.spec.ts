@@ -26,7 +26,7 @@ test.describe('Automated Review Campaign Growth Loop', () => {
     await expect(draftContainer).toBeVisible({ timeout: 15000 });
     const draftText = await draftContainer.textContent();
     expect(draftText).toContain('Signature Coffee Blend');
-    expect(draftText).toContain('Powered by OmniSolo');
+    expect(draftText).toContain('OmniSolo');
 
     // 6. Click "Send to Audience"
     const sendBtn = page.getByRole('button', { name: /Send to Audience/i });

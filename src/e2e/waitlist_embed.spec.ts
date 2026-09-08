@@ -12,7 +12,7 @@ test.describe('Waitlist Embed Widget', () => {
         await expect(page.locator('p').first()).toContainText('Be the first to access our new launch. Refer 5 friends to jump to the front of the line!');
 
         // Check for OmniSolo branding
-        const brandingLink = page.locator('a:has-text("⚡ Powered by OmniSolo")');
+        const brandingLink = page.locator('a:has-text("⚡ OmniSolo")');
         await expect(brandingLink).toBeVisible();
         await expect(brandingLink).toHaveAttribute('href', /ref=test-tenant/);
 
