@@ -1,13 +1,14 @@
-use axum::{body::Body, http::Request, routing::get, Router};
+use axum::{Router, body::Body, http::Request, routing::get};
 use std::sync::Arc;
 use tower::ServiceExt;
 
-use crate::hub::Hub;
 use crate::api::health::health_handler;
+use crate::hub::Hub;
 
 #[tokio::test]
 async fn test_health_handler_success() {
-    let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let db_url =
+        std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
@@ -29,13 +30,20 @@ async fn test_health_handler_success() {
         .with_state(hub);
 
     let response = app
-        .oneshot(Request::builder().uri("/health").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .uri("/health")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 
     assert_eq!(response.status(), axum::http::StatusCode::OK);
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
     assert!(body.get("mode").is_some());
@@ -50,7 +58,8 @@ async fn test_health_handler_success() {
 async fn test_setup_health_check_endpoint() {
     use crate::services::onboarding::onboarding_agent::OnboardingAgent;
 
-    let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let db_url =
+        std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
@@ -79,35 +88,41 @@ async fn test_setup_health_check_endpoint() {
     };
     let agent = Arc::new(OnboardingAgent::new(Arc::new(db), hub));
     let auth_store = Arc::new(crate::auth::Store::new());
-    let now = chrono::Utc::now();
-    let token = auth_store
-        .issue_token(&crate::auth::User {
-            id: "health-user".to_string(),
-            username: "health-user".to_string(),
-            email: "health@example.com".to_string(),
-            password_hash: String::new(),
-            roles: vec![crate::auth::ROLE_ADMIN.to_string()],
-            active: true,
-            organization_id: Some("health-tenant".to_string()),
-            created_at: now,
-            updated_at: now,
-            oidc_subject: None,
-        })
+    let user = auth_store
+        .create_user(
+            "health-user".to_string(),
+            "health@example.com".to_string(),
+            "health-password".to_string(),
+            vec![crate::auth::ROLE_ADMIN.to_string()],
+            "health-tenant".to_string(),
+        )
+        .await
         .unwrap();
+    let token = auth_store.issue_token(&user).unwrap();
 
-    let transport: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> = Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
+    let transport: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
+        Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
 
     // We need to provide the MeshTransport state because the router expects it
     let app = crate::api::onboarding::router(agent, auth_store).with_state(transport);
 
     // Test standalone (should pass since we provisioned it)
-    let response = app.clone()
-        .oneshot(Request::builder().uri("/setup-health?mode=standalone").header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap())
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/setup-health?mode=standalone")
+                .header("authorization", format!("Bearer {token}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 
     assert_eq!(response.status(), axum::http::StatusCode::OK);
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(body.get("status").unwrap(), "ready");
 
@@ -117,13 +132,22 @@ async fn test_setup_health_check_endpoint() {
     std::fs::write(".omnisolo-cloud-data", "dummy file").unwrap();
 
     // Test cloud (should fail since it cannot write directories)
-    let response = app.clone()
-        .oneshot(Request::builder().uri("/setup-health?mode=cloud").header("authorization", format!("Bearer {token}")).body(Body::empty()).unwrap())
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/setup-health?mode=cloud")
+                .header("authorization", format!("Bearer {token}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
 
     assert_eq!(response.status(), axum::http::StatusCode::OK); // Handler returns 200 OK with error JSON
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(body.get("status").unwrap(), "error");
 

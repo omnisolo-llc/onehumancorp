@@ -1,0 +1,156 @@
+{
+  "evidence": {
+    "credential_leak_observed": false,
+    "delivery_count": 1524,
+    "harness_id": "deepseek",
+    "integration_mode": "native",
+    "last_durable_sequence": 25,
+    "model_binding": {
+      "api_dialect": "open_ai_responses",
+      "binding_digest": "sha256:runtime-unbound",
+      "binding_revision": "worker-env-v1",
+      "capabilities": [
+        "reasoning",
+        "tools"
+      ],
+      "context_window": null,
+      "harness_id": "deepseek",
+      "integration_mode": "native",
+      "max_output_tokens": null,
+      "model_id": "gpt-5.6-luna",
+      "provider_route": "openai-compatible",
+      "reasoning_effort": "max"
+    },
+    "provider_marker_observed": true,
+    "reasoning_translation": {
+      "effective": "max",
+      "kind": "native",
+      "requested": "max"
+    },
+    "shared_local_services": {
+      "cross_harness_read_verified": true,
+      "cross_session_read_verified": true,
+      "reader_operations": {
+        "attempt_id": "d82719e6-95bb-4f6d-8e43-e0e448a9fdf4",
+        "operations": [
+          "artifact.read",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.read",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.search",
+          "workspace.read"
+        ]
+      },
+      "reader_verified": true,
+      "status": "operations_verified",
+      "writer_evidence": {
+        "credential_leak_observed": false,
+        "delivery_count": 1099,
+        "harness_id": "deepseek",
+        "integration_mode": "native",
+        "last_durable_sequence": 25,
+        "model_binding": {
+          "api_dialect": "open_ai_responses",
+          "binding_digest": "sha256:runtime-unbound",
+          "binding_revision": "worker-env-v1",
+          "capabilities": [
+            "reasoning",
+            "tools"
+          ],
+          "context_window": null,
+          "harness_id": "deepseek",
+          "integration_mode": "native",
+          "max_output_tokens": null,
+          "model_id": "gpt-5.6-luna",
+          "provider_route": "openai-compatible",
+          "reasoning_effort": "max"
+        },
+        "provider_marker_observed": true,
+        "reasoning_translation": {
+          "effective": "max",
+          "kind": "native",
+          "requested": "max"
+        },
+        "shared_local_services": {
+          "binding_count": 8,
+          "memory_scope": "workspace",
+          "memory_service_id": "omnisolo.memory",
+          "status": "bound"
+        },
+        "terminal_success_observed": true,
+        "usage": [
+          {
+            "inputTokens": 6076,
+            "outputTokens": 1360
+          },
+          {
+            "inputTokens": 6076,
+            "outputTokens": 1360
+          },
+          {
+            "cacheReadTokens": 5632,
+            "inputTokens": 10621,
+            "outputTokens": 4250
+          },
+          {
+            "cacheReadTokens": 5632,
+            "inputTokens": 10621,
+            "outputTokens": 4250
+          }
+        ],
+        "usage_observed": true
+      },
+      "writer_key": "probeda70093b5e7c455892da78337228e691",
+      "writer_operations": {
+        "attempt_id": "a7de790c-388c-4668-9c4e-0625f5cfe750",
+        "operations": [
+          "artifact.write",
+          "browser.navigate",
+          "browser.snapshot",
+          "cache.write",
+          "integration.invoke",
+          "integration.read",
+          "mcp.catalog",
+          "mcp.invoke",
+          "memory.write",
+          "workspace.write"
+        ]
+      },
+      "writer_value": "valuea38a530a5cda4e90830fb8de2a463416",
+      "writer_verified": true
+    },
+    "terminal_success_observed": true,
+    "usage": [
+      {
+        "inputTokens": 5885,
+        "outputTokens": 3168
+      },
+      {
+        "inputTokens": 5885,
+        "outputTokens": 3168
+      },
+      {
+        "inputTokens": 9276,
+        "outputTokens": 364
+      },
+      {
+        "inputTokens": 9276,
+        "outputTokens": 364
+      }
+    ],
+    "usage_observed": true
+  },
+  "harness_id": "deepseek",
+  "model": "gpt-5.6-luna",
+  "native_session_deleted": true,
+  "reasoning_effort": "max",
+  "schema": "omnisolo.live_harness_result.v1",
+  "status": "passed",
+  "native_protocol": "deepseek_json_rpc",
+  "integration_mode": "native",
+  "duration_seconds": 225
+}

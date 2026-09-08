@@ -1,0 +1,97 @@
+{
+  "schema": "omnisolo.harness_image_pins.v1",
+  "date": "2026-09-08",
+  "images": [
+    {
+      "harness_id": "omnisolo",
+      "version": "0.1.0",
+      "image_tag": "omnisolo/harness-worker:0.1.0",
+      "image_id": "sha256:63f265d47c87f96e7b152f278bb50c3bb68c973ff37d38362ff328fa49d8d25b",
+      "integration_mode": "native"
+    },
+    {
+      "harness_id": "codex",
+      "version": "0.149.0",
+      "image_tag": "omnisolo/harness-worker-codex:0.149.0",
+      "image_id": "sha256:c1d379caa4f336ce7395f1dac663332b9d9823d140ef022cb6b96f994b5715d6",
+      "integration_mode": "native"
+    },
+    {
+      "harness_id": "opencode",
+      "version": "1.18.15",
+      "image_tag": "omnisolo/harness-worker-opencode:1.18.15",
+      "image_id": "sha256:40fe414a684cc007c20b2b50eb7f9e68b8e12bc72ad31c84cfe264262bdf13c5",
+      "integration_mode": "native"
+    },
+    {
+      "harness_id": "deepseek",
+      "version": "0.1.1-rc.2",
+      "image_tag": "omnisolo/harness-worker-deepseek:0.1.1-rc.2",
+      "image_id": "sha256:a5b126ea20372e6dc346353e61eb851c489efc79dfd3bb8364ab68747244f9de",
+      "integration_mode": "native"
+    },
+    {
+      "harness_id": "pi",
+      "version": "0.73.1",
+      "image_tag": "omnisolo/harness-worker-pi:0.73.1",
+      "image_id": "sha256:f649d072fae32ed0875124302e754ec04b0918608a2b6115fce09b6c2b7302ee",
+      "integration_mode": "native"
+    },
+    {
+      "harness_id": "kimi",
+      "version": "1.49.0",
+      "image_tag": "omnisolo/harness-worker-kimi:1.49.0",
+      "image_id": "sha256:729c99b244e934bd1b0cacc54e56aa7eab2687713f804d69fb507e07e433b00a",
+      "integration_mode": "native"
+    },
+    {
+      "harness_id": "openhands",
+      "version": "1.43.1",
+      "image_tag": "omnisolo/harness-worker-openhands:1.43.1",
+      "image_id": "sha256:82e6809364dbffc47ee3029df4ffddb087f6b9695febb57d146d95cc662d1367",
+      "integration_mode": "native"
+    },
+    {
+      "harness_id": "openharness",
+      "version": "0.6.0",
+      "image_tag": "omnisolo/harness-worker-openharness:0.6.0",
+      "image_id": "sha256:22e470942abd222384c5b21ec85dc2ab13d5b5c0b5cebf222b58c2b60bf4944b",
+      "integration_mode": "native"
+    },
+    {
+      "harness_id": "aider",
+      "version": "0.86.0",
+      "image_tag": "omnisolo/harness-worker-aider:0.86.0",
+      "image_id": "sha256:c2269d0f13bc8713c0802ad6baeeaabf518d7881a094c07a94e14d8b4328dbae",
+      "integration_mode": "openai_compatible"
+    },
+    {
+      "harness_id": "goose",
+      "version": "1.33.1",
+      "image_tag": "omnisolo/harness-worker-goose:1.33.1",
+      "image_id": "sha256:e279e64fee76b0daa1659edf2ed7047cd594da1a7e2b7544fa9093353586fa8f",
+      "integration_mode": "openai_compatible"
+    },
+    {
+      "harness_id": "open-interpreter",
+      "version": "0.4.2",
+      "image_tag": "omnisolo/harness-worker-open-interpreter:0.4.2",
+      "image_id": "sha256:8a06ab2b3dda6b761ed16f7a74fd012d487d624a9442028ac54f7b1998165e33",
+      "integration_mode": "openai_compatible"
+    },
+    {
+      "harness_id": "plandex",
+      "version": "2.2.1",
+      "image_tag": "omnisolo/harness-worker-plandex:2.2.1",
+      "image_id": "sha256:e48022868296adfe7e8cf5e4387499f52cb51e1447e8ba5fa052c81c418bde8d",
+      "integration_mode": "openai_compatible"
+    }
+  ],
+  "supporting_images": [
+    {
+      "image_tag": "omnisolo/plandex-server:2.2.1",
+      "image_id": "sha256:bab1cd0dc4879e284950e57192f3f797fbd142ef4efdfa0c1bb052e6a7f48409",
+      "role": "Native Plandex server used for the successful continuation"
+    }
+  ]
+}

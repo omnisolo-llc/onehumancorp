@@ -14,6 +14,17 @@ pub struct Anthropic3TierMemory {
 }
 
 impl Anthropic3TierMemory {
+    pub(crate) fn service_configuration_identity(&self) -> String {
+        self._base_dir.to_string_lossy().into_owned()
+    }
+
+    pub fn scoped(&self, namespace: &str) -> std::io::Result<Self> {
+        Self::new_sync(
+            self._base_dir
+                .join("scopes")
+                .join(crate::local_service_adapters::scope_key(namespace)),
+        )
+    }
     pub fn new_sync<P: AsRef<Path>>(base_dir: P) -> std::io::Result<Self> {
         let base_dir = base_dir.as_ref().to_path_buf();
         let index_file = base_dir.join("index.md");

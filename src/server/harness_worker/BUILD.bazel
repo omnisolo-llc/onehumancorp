@@ -1,0 +1,39 @@
+exports_files(["Cargo.toml"], visibility = ["//visibility:public"])
+
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+
+rust_library(
+    name = "omnisolo_harness_worker",
+    srcs = ["lib.rs", "local_services.rs", "protected_process.rs"],
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/harness:server_harness",
+        "//src/agents/builtin:omnisolo_builtin_agent_lib",
+        "@crates//:async-trait",
+        "@crates//:serde",
+        "@crates//:sha2",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:reqwest",
+        "//src/server/omnisolo:server_omnisolo",
+        "@crates//:axum",
+        "@crates//:tokio",
+        "@crates//:tonic",
+        "@crates//:serde_json",
+    ],
+)
+
+rust_binary(
+    name = "omnisolo-harness-worker",
+    srcs = ["main.rs"],
+    crate_root = "main.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":omnisolo_harness_worker",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:tracing-subscriber",
+    ],
+)

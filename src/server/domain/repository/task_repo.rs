@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use crate::db::{DB, DbStore};
 use super::models::{Task, TaskDependency};
+use crate::db::{DB, DbStore};
 use chrono::Utc;
+use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
@@ -27,7 +27,7 @@ impl TaskRepository {
                         id, organization_id, parent_task_id, title, description,
                         status, assigned_agent_role, created_at, updated_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                    "#
+                    "#,
                 )
                 .bind(&task.id)
                 .bind(&task.organization_id)
@@ -49,7 +49,7 @@ impl TaskRepository {
                         id, organization_id, parent_task_id, title, description,
                         status, assigned_agent_role, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    "#
+                    "#,
                 )
                 .bind(&task.id)
                 .bind(&task.organization_id)
@@ -70,39 +70,40 @@ impl TaskRepository {
 
     pub async fn get_tasks_by_org(&self, organization_id: &str) -> Result<Vec<Task>, String> {
         let tasks = match &self.db.store {
-            DbStore::Postgres => {
-                sqlx::query_as::<_, Task>(
-                    r#"
+            DbStore::Postgres => sqlx::query_as::<_, Task>(
+                r#"
                     SELECT id, organization_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
                     FROM tasks
                     WHERE organization_id = $1
-                    "#
-                )
-                .bind(organization_id)
-                .fetch_all(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?
-            }
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query_as::<_, Task>(
-                    r#"
+                    "#,
+            )
+            .bind(organization_id)
+            .fetch_all(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?,
+            DbStore::Sqlite(sqlite_pool) => sqlx::query_as::<_, Task>(
+                r#"
                     SELECT id, organization_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
                     FROM tasks
                     WHERE organization_id = ?
-                    "#
-                )
-                .bind(organization_id)
-                .fetch_all(sqlite_pool)
-                .await
-                .map_err(|e| e.to_string())?
-            }
+                    "#,
+            )
+            .bind(organization_id)
+            .fetch_all(sqlite_pool)
+            .await
+            .map_err(|e| e.to_string())?,
         };
         Ok(tasks)
     }
 
-    pub async fn update_task_status(&self, organization_id: &str, task_id: &str, new_status: &str) -> Result<(), String> {
+    pub async fn update_task_status(
+        &self,
+        organization_id: &str,
+        task_id: &str,
+        new_status: &str,
+    ) -> Result<(), String> {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -112,7 +113,7 @@ impl TaskRepository {
                     SET status = $1, updated_at = $2
                     WHERE id = $3 AND organization_id = $4
                     RETURNING id
-                    "#
+                    "#,
                 )
                 .bind(new_status)
                 .bind(now)
@@ -133,7 +134,7 @@ impl TaskRepository {
                     SET status = ?, updated_at = ?
                     WHERE id = ? AND organization_id = ?
                     RETURNING id
-                    "#
+                    "#,
                 )
                 .bind(new_status)
                 .bind(now)
@@ -159,7 +160,7 @@ impl TaskRepository {
                     INSERT INTO task_dependencies (task_id, depends_on_task_id)
                     VALUES ($1, $2)
                     ON CONFLICT DO NOTHING
-                    "#
+                    "#,
                 )
                 .bind(&dependency.task_id)
                 .bind(&dependency.depends_on_task_id)
@@ -173,7 +174,7 @@ impl TaskRepository {
                     INSERT INTO task_dependencies (task_id, depends_on_task_id)
                     VALUES (?, ?)
                     ON CONFLICT DO NOTHING
-                    "#
+                    "#,
                 )
                 .bind(&dependency.task_id)
                 .bind(&dependency.depends_on_task_id)
@@ -185,39 +186,42 @@ impl TaskRepository {
         Ok(())
     }
 
-    pub async fn get_task_dependencies(&self, task_id: &str) -> Result<Vec<TaskDependency>, String> {
+    pub async fn get_task_dependencies(
+        &self,
+        task_id: &str,
+    ) -> Result<Vec<TaskDependency>, String> {
         let deps = match &self.db.store {
-            DbStore::Postgres => {
-                sqlx::query_as::<_, TaskDependency>(
-                    r#"
+            DbStore::Postgres => sqlx::query_as::<_, TaskDependency>(
+                r#"
                     SELECT task_id, depends_on_task_id
                     FROM task_dependencies
                     WHERE task_id = $1
-                    "#
-                )
-                .bind(task_id)
-                .fetch_all(&self.db.pool)
-                .await
-                .map_err(|e| e.to_string())?
-            }
-            DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query_as::<_, TaskDependency>(
-                    r#"
+                    "#,
+            )
+            .bind(task_id)
+            .fetch_all(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?,
+            DbStore::Sqlite(sqlite_pool) => sqlx::query_as::<_, TaskDependency>(
+                r#"
                     SELECT task_id, depends_on_task_id
                     FROM task_dependencies
                     WHERE task_id = ?
-                    "#
-                )
-                .bind(task_id)
-                .fetch_all(sqlite_pool)
-                .await
-                .map_err(|e| e.to_string())?
-            }
+                    "#,
+            )
+            .bind(task_id)
+            .fetch_all(sqlite_pool)
+            .await
+            .map_err(|e| e.to_string())?,
         };
         Ok(deps)
     }
 
-    pub async fn claim_task(&self, organization_id: &str, assigned_agent_role: &str) -> Result<Option<Task>, String> {
+    pub async fn claim_task(
+        &self,
+        organization_id: &str,
+        assigned_agent_role: &str,
+    ) -> Result<Option<Task>, String> {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -272,7 +276,7 @@ impl TaskRepository {
                            status, assigned_agent_role, created_at, updated_at
                     FROM tasks
                     WHERE id = $1
-                    "#
+                    "#,
                 )
                 .bind(&id)
                 .fetch_one(&mut *tx)
@@ -335,7 +339,7 @@ impl TaskRepository {
                            status, assigned_agent_role, created_at, updated_at
                     FROM tasks
                     WHERE id = ?
-                    "#
+                    "#,
                 )
                 .bind(&id)
                 .fetch_one(&mut *tx)
@@ -375,7 +379,7 @@ mod tests {
                 updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
             );
-            "#
+            "#,
         )
         .execute(&pool)
         .await
@@ -388,7 +392,7 @@ mod tests {
                 depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 PRIMARY KEY (task_id, depends_on_task_id)
             );
-            "#
+            "#,
         )
         .execute(&pool)
         .await
@@ -406,7 +410,7 @@ mod tests {
                 depends_on_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE,
                 PRIMARY KEY (task_id, depends_on_task_id)
             );
-            "#
+            "#,
         )
         .execute(&pg_pool)
         .await;
@@ -468,12 +472,16 @@ mod tests {
 
         repo.create_task(task).await.unwrap();
 
-        repo.update_task_status(&org_id, "task_1", "IN_PROGRESS").await.unwrap();
+        repo.update_task_status(&org_id, "task_1", "IN_PROGRESS")
+            .await
+            .unwrap();
 
         let tasks = repo.get_tasks_by_org(&org_id).await.unwrap();
         assert_eq!(tasks[0].status, "IN_PROGRESS");
 
-        let result = repo.update_task_status("wrong_org", "task_1", "COMPLETED").await;
+        let result = repo
+            .update_task_status("wrong_org", "task_1", "COMPLETED")
+            .await;
         assert!(result.is_err());
 
         let tasks_after = repo.get_tasks_by_org(&org_id).await.unwrap();
@@ -516,7 +524,9 @@ mod tests {
         repo.create_task_dependency(TaskDependency {
             task_id: "task_2".to_string(),
             depends_on_task_id: "task_1".to_string(),
-        }).await.unwrap();
+        })
+        .await
+        .unwrap();
 
         let deps = repo.get_task_dependencies("task_2").await.unwrap();
         assert_eq!(deps.len(), 1);
@@ -559,7 +569,9 @@ mod tests {
         repo.create_task_dependency(TaskDependency {
             task_id: "task_2".to_string(),
             depends_on_task_id: "task_1".to_string(),
-        }).await.unwrap();
+        })
+        .await
+        .unwrap();
 
         // task_2 cannot be claimed because task_1 is not DONE
         let claimed_task_2 = repo.claim_task(&org_id, "agent_1").await.unwrap();
@@ -575,7 +587,9 @@ mod tests {
         assert!(claimed_none.is_none());
 
         // finish task 1
-        repo.update_task_status(&org_id, "task_1", "DONE").await.unwrap();
+        repo.update_task_status(&org_id, "task_1", "DONE")
+            .await
+            .unwrap();
 
         // now task 2 can be claimed
         let claimed_task_2_now = repo.claim_task(&org_id, "agent_2").await.unwrap();

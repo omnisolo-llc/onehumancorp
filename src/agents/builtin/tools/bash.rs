@@ -4,7 +4,10 @@ use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{
+    Tool,
+    pydantic::{PydanticAdapter, PydanticToolExecutor},
+};
 
 #[derive(Deserialize)]
 struct BashArgs {
@@ -30,11 +33,21 @@ impl PydanticToolExecutor<BashArgs> for BashExecutor {
         let timeout = Duration::from_secs_f64(timeout_secs.clamp(1.0, 600.0));
 
         let wd_ref = self.working_dir.as_deref();
-        let output_res = tokio::time::timeout(timeout, self.runner.run("bash", &["-c", &command], wd_ref, vec![])).await;
-        
+        let output_res = tokio::time::timeout(
+            timeout,
+            self.runner.run("bash", &["-c", &command], wd_ref, vec![]),
+        )
+        .await;
+
         let output = output_res
-            .map_err(|_| ToolError::LlmRecoverable(format!("bash: command timed out after {}s", timeout_secs)))?
-            .map_err(|e| format!("bash: failed to execute: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+            .map_err(|_| {
+                ToolError::LlmRecoverable(format!(
+                    "bash: command timed out after {}s",
+                    timeout_secs
+                ))
+            })?
+            .map_err(|e| format!("bash: failed to execute: {}", e))
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let mut stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let mut stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -80,7 +93,10 @@ impl PydanticToolExecutor<BashArgs> for BashExecutor {
 }
 
 // Tools: Sandboxed Execution
-pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
+pub fn bash_tool(
+    working_dir: Option<std::path::PathBuf>,
+    runner: Arc<dyn crate::runner::CommandRunner>,
+) -> Tool {
     Tool {
         name: "Bash".to_string(),
         description: "Execute a bash command and return its output. \
@@ -102,7 +118,10 @@ pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate:
             },
             "required": ["command"]
         }),
-        execute: Arc::new(PydanticAdapter::new(BashExecutor { working_dir, runner })),
+        execute: Arc::new(PydanticAdapter::new(BashExecutor {
+            working_dir,
+            runner,
+        })),
     }
 }
 
@@ -133,7 +152,11 @@ mod tests {
     #[tokio::test]
     async fn test_bash_executor_stderr() {
         let runner = Arc::new(MockCommandRunner::new());
-        runner.push_response(Ok(crate::runner::mock::mock_output(1, "output", "some error")));
+        runner.push_response(Ok(crate::runner::mock::mock_output(
+            1,
+            "output",
+            "some error",
+        )));
 
         let executor = BashExecutor {
             working_dir: None,
@@ -155,7 +178,13 @@ mod tests {
         struct HangingRunner;
         #[async_trait::async_trait]
         impl crate::runner::CommandRunner for HangingRunner {
-            async fn run(&self, _prog: &str, _args: &[&str], _cwd: Option<&std::path::Path>, _env: Vec<(String, String)>) -> std::io::Result<std::process::Output> {
+            async fn run(
+                &self,
+                _prog: &str,
+                _args: &[&str],
+                _cwd: Option<&std::path::Path>,
+                _env: Vec<(String, String)>,
+            ) -> std::io::Result<std::process::Output> {
                 tokio::time::sleep(Duration::from_secs(5)).await;
                 Ok(crate::runner::mock::mock_output(0, "", ""))
             }
@@ -186,7 +215,11 @@ mod tests {
         // generate a huge string, including multi-byte chars to cross boundaries
         let huge_stdout = "A".repeat(29999) + "🚀" + &"A".repeat(20000);
         let huge_stderr = "B".repeat(29999) + "🚀" + &"B".repeat(20000);
-        runner.push_response(Ok(crate::runner::mock::mock_output(0, &huge_stdout, &huge_stderr)));
+        runner.push_response(Ok(crate::runner::mock::mock_output(
+            0,
+            &huge_stdout,
+            &huge_stderr,
+        )));
 
         let executor = BashExecutor {
             working_dir: None,

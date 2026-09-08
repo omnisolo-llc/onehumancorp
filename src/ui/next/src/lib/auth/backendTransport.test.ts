@@ -550,3 +550,31 @@ describe("server-only authenticated backend transport", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
+
+it('forwards SSE incrementally and cancels upstream when the browser disconnects', async () => {
+  const cancel = vi.fn();
+  const upstream = new ReadableStream<Uint8Array>({
+    start(controller) { controller.enqueue(new TextEncoder().encode('event: metrics\ndata: []\n\n')); },
+    cancel,
+  });
+  const deps = await dependencies(vi.fn<typeof fetch>().mockResolvedValue(new Response(upstream, {
+    headers: { 'content-type': 'text/event-stream' },
+  })));
+  const response = await proxyAuthenticatedRequest(await request(deps), '/api/v1/agents/metrics/stream', deps, { streamResponse: true });
+  expect(response.status).toBe(200);
+  const reader = response.body!.getReader();
+  expect(new TextDecoder().decode((await reader.read()).value)).toContain('event: metrics');
+  await reader.cancel();
+  expect(cancel).toHaveBeenCalledOnce();
+});
+
+it('bounds SSE bytes and does not forward an oversized chunk', async () => {
+  const cancel = vi.fn();
+  const upstream = new ReadableStream<Uint8Array>({
+    start(controller) { controller.enqueue(new Uint8Array(65)); }, cancel,
+  });
+  const deps = await dependencies(vi.fn<typeof fetch>().mockResolvedValue(new Response(upstream, { headers: { 'content-type': 'text/event-stream' } })));
+  const response = await proxyAuthenticatedRequest(await request(deps), '/api/v1/agents/metrics/stream', deps, { streamResponse: true });
+  await expect(response.body!.getReader().read()).rejects.toThrow('limit exceeded');
+  expect(cancel).toHaveBeenCalledOnce();
+});

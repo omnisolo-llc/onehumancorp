@@ -7,6 +7,9 @@ ALTER TABLE orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE job_templates DISABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_plans DISABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE fulfillment_schedules DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier, has_claimed_trial_extension)
 VALUES
@@ -20,6 +23,16 @@ SET name = EXCLUDED.name,
     tier = EXCLUDED.tier,
     has_claimed_trial_extension = EXCLUDED.has_claimed_trial_extension,
     updated_at = CURRENT_TIMESTAMP;
+
+UPDATE tenants
+SET base_currency = 'USD',
+    enabled_currencies = '["USD", "EUR"]'::jsonb
+WHERE id IN (
+  'e2e-tenant',
+  'e2e-tenant-free',
+  'e2e-tenant-business',
+  'e2e-tenant-unlimited'
+);
 
 INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
 VALUES
@@ -246,6 +259,93 @@ SET tenant_id = EXCLUDED.tenant_id,
     lifecycle_state = 'PENDING_APPROVAL',
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO subscription_plans (
+  id,
+  tenant_id,
+  product_id,
+  name,
+  description,
+  price_cents,
+  currency,
+  frequency,
+  interval,
+  status
+)
+VALUES (
+  'e2e-plan-cake-club',
+  'e2e-tenant',
+  'e2e-product-cake',
+  'Celebration Cake Club',
+  'Monthly bakery subscription seeded for browser verification.',
+  3999,
+  'USD',
+  'month',
+  'month',
+  'active'
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    product_id = EXCLUDED.product_id,
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    price_cents = EXCLUDED.price_cents,
+    currency = EXCLUDED.currency,
+    frequency = EXCLUDED.frequency,
+    interval = EXCLUDED.interval,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO subscriptions (
+  id,
+  tenant_id,
+  customer_id,
+  plan_id,
+  status,
+  health_score,
+  current_period_end
+)
+VALUES (
+  'e2e-subscription-cake-club',
+  'e2e-tenant',
+  'e2e-customer-bakery',
+  'e2e-plan-cake-club',
+  'active',
+  98,
+  CURRENT_TIMESTAMP + INTERVAL '30 days'
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    customer_id = EXCLUDED.customer_id,
+    plan_id = EXCLUDED.plan_id,
+    status = EXCLUDED.status,
+    health_score = EXCLUDED.health_score,
+    current_period_end = EXCLUDED.current_period_end,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO fulfillment_schedules (
+  id,
+  tenant_id,
+  subscription_plan_id,
+  fulfillment_date,
+  subscriber_count,
+  status
+)
+VALUES (
+  'e2e-fulfillment-cake-club',
+  'e2e-tenant',
+  'e2e-plan-cake-club',
+  CURRENT_DATE + 7,
+  1,
+  'PENDING'
+)
+ON CONFLICT (id) DO UPDATE
+SET tenant_id = EXCLUDED.tenant_id,
+    subscription_plan_id = EXCLUDED.subscription_plan_id,
+    fulfillment_date = EXCLUDED.fulfillment_date,
+    subscriber_count = EXCLUDED.subscriber_count,
+    status = EXCLUDED.status,
+    updated_at = CURRENT_TIMESTAMP;
+
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
@@ -253,6 +353,9 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fulfillment_schedules ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE products FORCE ROW LEVEL SECURITY;
 ALTER TABLE users FORCE ROW LEVEL SECURITY;
@@ -261,5 +364,8 @@ ALTER TABLE orders FORCE ROW LEVEL SECURITY;
 ALTER TABLE agent_feed_items FORCE ROW LEVEL SECURITY;
 ALTER TABLE job_templates FORCE ROW LEVEL SECURITY;
 ALTER TABLE appointments FORCE ROW LEVEL SECURITY;
+ALTER TABLE subscription_plans FORCE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions FORCE ROW LEVEL SECURITY;
+ALTER TABLE fulfillment_schedules FORCE ROW LEVEL SECURITY;
 
 COMMIT;

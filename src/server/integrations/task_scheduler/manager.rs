@@ -1,6 +1,6 @@
-use std::time::Duration;
-use std::collections::HashMap;
 use async_trait::async_trait;
+use std::collections::HashMap;
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TaskStatus {
@@ -12,7 +12,12 @@ pub enum TaskStatus {
 
 #[async_trait]
 pub trait TaskQueue: Send + Sync {
-    async fn enqueue_task(&self, queue_name: &str, payload: Vec<u8>, delay: Duration) -> Result<String, String>;
+    async fn enqueue_task(
+        &self,
+        queue_name: &str,
+        payload: Vec<u8>,
+        delay: Duration,
+    ) -> Result<String, String>;
     async fn get_task_status(&self, task_id: &str) -> Result<TaskStatus, String>;
 }
 
@@ -23,10 +28,7 @@ pub struct TaskSchedulerManager {
 
 impl TaskSchedulerManager {
     pub fn new(queue: Box<dyn TaskQueue>, is_cloud: bool) -> Self {
-        Self {
-            queue,
-            is_cloud,
-        }
+        Self { queue, is_cloud }
     }
 
     pub fn from_env(queue: Box<dyn TaskQueue>) -> Self {
@@ -42,9 +44,17 @@ impl TaskSchedulerManager {
         }
     }
 
-    pub async fn enqueue_task(&self, tenant_id: &str, queue_name: &str, payload: Vec<u8>, delay: Duration) -> Result<String, String> {
+    pub async fn enqueue_task(
+        &self,
+        tenant_id: &str,
+        queue_name: &str,
+        payload: Vec<u8>,
+        delay: Duration,
+    ) -> Result<String, String> {
         let actual_queue_name = self.format_queue_name(tenant_id, queue_name);
-        self.queue.enqueue_task(&actual_queue_name, payload, delay).await
+        self.queue
+            .enqueue_task(&actual_queue_name, payload, delay)
+            .await
     }
 
     pub async fn get_task_status(&self, task_id: &str) -> Result<TaskStatus, String> {
@@ -72,7 +82,12 @@ impl MemoryTaskQueue {
 
 #[async_trait]
 impl TaskQueue for MemoryTaskQueue {
-    async fn enqueue_task(&self, queue_name: &str, _payload: Vec<u8>, _delay: Duration) -> Result<String, String> {
+    async fn enqueue_task(
+        &self,
+        queue_name: &str,
+        _payload: Vec<u8>,
+        _delay: Duration,
+    ) -> Result<String, String> {
         let task_id = format!("{}-{}", queue_name, uuid::Uuid::new_v4());
         let mut map = self.tasks.write().unwrap();
         map.insert(task_id.clone(), TaskStatus::Pending);
@@ -98,7 +113,15 @@ mod tests {
         let queue = MemoryTaskQueue::new();
         let manager = TaskSchedulerManager::new(Box::new(queue), true);
 
-        let task_id = manager.enqueue_task("tenant_123", "emails", b"send welcome".to_vec(), Duration::from_secs(1)).await.unwrap();
+        let task_id = manager
+            .enqueue_task(
+                "tenant_123",
+                "emails",
+                b"send welcome".to_vec(),
+                Duration::from_secs(1),
+            )
+            .await
+            .unwrap();
 
         // Ensure the queue name was prefixed
         assert!(task_id.starts_with("tenant_123:emails-"));
@@ -112,7 +135,15 @@ mod tests {
         let queue = MemoryTaskQueue::new();
         let manager = TaskSchedulerManager::new(Box::new(queue), false);
 
-        let task_id = manager.enqueue_task("tenant_123", "emails", b"send welcome".to_vec(), Duration::from_secs(1)).await.unwrap();
+        let task_id = manager
+            .enqueue_task(
+                "tenant_123",
+                "emails",
+                b"send welcome".to_vec(),
+                Duration::from_secs(1),
+            )
+            .await
+            .unwrap();
 
         // Ensure the queue name was NOT prefixed
         assert!(task_id.starts_with("emails-"));

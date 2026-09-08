@@ -16,6 +16,7 @@ SERVER_RS_SRCS = [
     "chaos_network_test.rs",
     "crypto.rs",
     "db.rs",
+    "//src/server/db:sql_middleware.rs",
     "hub.rs",
     "lib.rs",
     "offline/mod.rs",
@@ -80,7 +81,12 @@ SERVER_RS_SRCS = [
     "//src/server/api:recovery.rs",
     "//src/server/api:agent_feed.rs",
     "//src/server/api:agent_stream.rs",
+    "//src/server/api:agent_metrics.rs",
+    "//src/server/api:agent_orchestrate.rs",
     "//src/server/api:unified_ws.rs",
+    "//src/server/api:ws_compression.rs",
+    "//src/server/api:ws_batch.rs",
+    "//src/server/api:realtime.rs",
     "//src/server/api:incidents.rs",
     "//src/server/api:audio_command.rs",
     "//src/server/api:invoice.rs",
@@ -101,6 +107,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:catalog.rs",
     "//src/server/api:fulfillment.rs",
     "//src/server/api:shipping.rs",
+    "//src/server/api:settings/mod.rs",
+    "//src/server/api:settings/global_commerce.rs",
     "//src/server/api:setup.rs",
     "//src/server/api/booking:mod.rs",
 
@@ -201,13 +209,13 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration:dynamic_workflows.rs",
     "//src/server/orchestration:handoff.rs",
     "//src/server/orchestration:health.rs",
-    "//src/server/orchestration:hierarchical.rs",
     "//src/server/orchestration:hub.rs",
     "//src/server/orchestration:kairos.rs",
     "//src/server/orchestration:local_sandbox.rs",
     "//src/server/orchestration:locks.rs",
     "//src/server/orchestration:locks_test.rs",
     "//src/server/orchestration:mesh.rs",
+    "//src/server/orchestration:node_identity.rs",
     "//src/server/orchestration:minimax_swarm.rs",
     "//src/server/orchestration:identity_resolution.rs",
     "//src/server/orchestration:identity_resolution_test.rs",
@@ -408,6 +416,16 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "auth_contract_sources",
+    srcs = [
+        "lib.rs",
+        "//src/server/persistence:commands.rs",
+        "//src/server/persistence:migration.rs",
+    ],
+    visibility = ["//src/server/auth:__pkg__"],
+)
+
 # build_script removed as protos are now built with Bazel rules
 
 rust_library(
@@ -434,8 +452,9 @@ rust_library(
     compile_data = [
         "//:CHANGELOG.md",
         "//src/server/migrations",
+        "//src/server/db:embedsrcs",
     ],
-    data = ["//src/server/migrations"],
+    data = ["//src/server/migrations", "//src/server/db:embedsrcs"],
     edition = "2021",
     rustc_flags = ["--cfg=omnisolo_bazel"],
     proc_macro_deps = [
@@ -624,6 +643,7 @@ rust_test(
     deps = [
         "@crates//:sea-orm",
         "@crates//:serde",
+        "@crates//:tempfile",
         "@crates//:tokio",
     ],
 )
@@ -633,6 +653,7 @@ rust_test(
     size = "small",
     srcs = [
         "persistence_commands_test.rs",
+        "//src/server/auth:seaorm_store_source",
         "//src/server/persistence:capabilities.rs",
         "//src/server/persistence:commands.rs",
         "//src/server/persistence:connection.rs",
@@ -642,11 +663,14 @@ rust_test(
     edition = "2024",
     deps = [
         "//src/server/auth:server_auth",
+        "//src/server/common:server_common",
         "@crates//:bcrypt",
         "@crates//:chrono",
         "@crates//:sea-orm",
         "@crates//:serde",
         "@crates//:serde_json",
+        "@crates//:temp-env",
+        "@crates//:tempfile",
         "@crates//:tokio",
         "@crates//:uuid",
     ],
@@ -730,6 +754,7 @@ SERVER_LIB_TEST_GROUPS = {
         "test_fork_agent",
         "pipeline::tests::test_handle_spec_approved",
         "pipeline::tests::test_parse_spec_approved",
+        "production_router_inserts_the_shared_database_extension_without_double_wrapping",
         "test_publish_mesh_event",
         "rust_server_does_not_register_legacy_browser_application_routes",
         "test_sanitize_hub_event_redaction",

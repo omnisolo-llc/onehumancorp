@@ -1,12 +1,11 @@
 use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use tracing::Instrument;
 
-pub struct EdgeCachingMcpServer {
-}
+pub struct EdgeCachingMcpServer {}
 
 impl EdgeCachingMcpServer {
     pub fn new() -> Self {
-        Self { }
+        Self {}
     }
 
     pub fn get_tools(&self) -> Vec<McpToolProto> {
@@ -35,7 +34,10 @@ impl EdgeCachingMcpServer {
         ]
     }
 
-    pub async fn invoke_tool(&self, req: &McpInvokeRequest) -> Result<McpInvokeResponse, tonic::Status> {
+    pub async fn invoke_tool(
+        &self,
+        req: &McpInvokeRequest,
+    ) -> Result<McpInvokeResponse, tonic::Status> {
         let params: serde_json::Value = serde_json::from_str(&req.params)
             .map_err(|e| tonic::Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
 
@@ -63,7 +65,9 @@ impl EdgeCachingMcpServer {
                         "tenant_id": tenant_id,
                         "seo_metadata": seo_metadata
                     });
-                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
+                    Ok(McpInvokeResponse {
+                        payload: serde_json::to_string(&resp).unwrap(),
+                    })
                 }
                 .instrument(tracing::info_span!("mcp_seo_generator"))
                 .await
@@ -82,7 +86,9 @@ impl EdgeCachingMcpServer {
                         "synced_key": key,
                         "inventory_count": inventory_count
                     });
-                    Ok(McpInvokeResponse { payload: serde_json::to_string(&resp).unwrap() })
+                    Ok(McpInvokeResponse {
+                        payload: serde_json::to_string(&resp).unwrap(),
+                    })
                 }
                 .instrument(tracing::info_span!("mcp_edge_kv_sync"))
                 .await
@@ -113,7 +119,10 @@ impl EdgeCachingMcpServer {
                 .instrument(tracing::info_span!("mcp_edge_worker_simulation"))
                 .await
             }
-            _ => Err(tonic::Status::not_found(format!("tool {} not found", req.tool_id))),
+            _ => Err(tonic::Status::not_found(format!(
+                "tool {} not found",
+                req.tool_id
+            ))),
         }
     }
 }

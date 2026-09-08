@@ -1,6 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AgentMetrics } from './components/AgentMetrics';
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
 import { InteractiveWalkthrough, WalkthroughTarget } from '../../components/Walkthrough';
 import { WithTooltip } from '../../components/TooltipRegistry';
@@ -376,7 +377,7 @@ export default function AgentsPage() {
           {panel === 'explore' && <ExplorePanel summon={summon} />}
           {panel === 'remote' && <RemotePanel />}
           {panel === 'data' && <DataPanel />}
-          {panel === 'operations' && <OperationsPanel />}
+          {panel === 'operations' && <><OperationsPanel /><AgentMetrics /></>}
           {panel === 'workflows' && <WorkflowsPanel workflows={workflows} setWorkflows={setWorkflows} />}
           {panel === 'feed' && <FeedPanel feed={feed} />}
           {panel === 'approvals' && <ApprovalsPanel approvals={approvals} decideApproval={decideApproval} />}

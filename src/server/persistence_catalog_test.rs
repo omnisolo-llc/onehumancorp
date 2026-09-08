@@ -26,6 +26,7 @@ async fn catalog_repository_reads_only_real_tenant_rows() {
             item_type: Some("Product".to_owned()),
             price_cents: 1250,
             inventory_count: 3,
+            metadata: Some(serde_json::json!({"image_url": "/dashboard_with_charts.png"})),
         })
         .await
         .unwrap();
@@ -37,6 +38,7 @@ async fn catalog_repository_reads_only_real_tenant_rows() {
             item_type: Some("Service".to_owned()),
             price_cents: 9900,
             inventory_count: 1,
+            metadata: None,
         })
         .await
         .unwrap();
@@ -45,4 +47,8 @@ async fn catalog_repository_reads_only_real_tenant_rows() {
     assert_eq!(products.len(), 1);
     assert_eq!(products[0].title, "Database product");
     assert_eq!(products[0].price_cents, 1250);
+    assert_eq!(
+        products[0].metadata,
+        Some(serde_json::json!({"image_url": "/dashboard_with_charts.png"}))
+    );
 }

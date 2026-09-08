@@ -12,13 +12,21 @@ async fn test_qr_generate_success() {
         "label": "My Test QR"
     });
 
-    let result = tool.execute.execute(args).await.expect("Execution should succeed");
+    let result = tool
+        .execute
+        .execute(args)
+        .await
+        .expect("Execution should succeed");
 
-    let json_result: serde_json::Value = serde_json::from_str(&result).expect("Result should be JSON");
+    let json_result: serde_json::Value =
+        serde_json::from_str(&result).expect("Result should be JSON");
 
     assert_eq!(json_result["status"], "success");
     assert_eq!(json_result["label"], "My Test QR");
-    assert_eq!(json_result["message"], "QR code for 'https://example.com' has been generated.");
+    assert_eq!(
+        json_result["message"],
+        "QR code for 'https://example.com' has been generated."
+    );
     assert!(json_result["ascii_art"].as_str().unwrap().contains("██"));
 }
 

@@ -1,63 +1,65 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import InteractiveQuotePage from './page';
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import InteractiveQuotePage from "./page";
 
-const navigation = vi.hoisted(() => ({ id: 'visual-audit-id' }));
-
-vi.mock('next/navigation', () => ({
-  useParams: () => navigation,
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ id: "quote-7" }),
 }));
 
-describe('InteractiveQuotePage', () => {
+const quoteResponse = {
+  quote: {
+    id: "quote-7",
+    status: "SENT",
+    total_amount_cents: 12000,
+    required_deposit_cents: 4000,
+  },
+  line_items: [
+    { id: "line-1", description: "Site visit", unit_price_cents: 12000, quantity: 1 },
+  ],
+};
+
+describe("interactive quote", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.mocked(fetch).mockReset();
   });
 
-  it('rejects malformed quote IDs locally without a failing browser request', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 400 });
-    vi.stubGlobal('fetch', fetchMock);
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  it("loads and accepts the real quote through versioned endpoints", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(Response.json(quoteResponse))
+      .mockResolvedValueOnce(Response.json({ status: "ACCEPTED" }));
 
     render(<InteractiveQuotePage />);
+    const user = userEvent.setup();
 
-    await waitFor(() => expect(screen.getByText('Quote not found.')).toBeInTheDocument());
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(consoleError).not.toHaveBeenCalled();
+    expect(await screen.findByText(/Site visit/)).toBeVisible();
+    expect(fetch).toHaveBeenNthCalledWith(1, "/api/v1/quotes/quote-7", expect.objectContaining({
+      cache: "no-store",
+    }));
+    await user.click(screen.getByRole("button", { name: "Accept quote" }));
+
+    await waitFor(() => expect(fetch).toHaveBeenLastCalledWith(
+      "/api/v1/quotes/quote-7/accept",
+      expect.objectContaining({ method: "POST" }),
+    ));
+    expect(await screen.findByRole("status")).toHaveTextContent("Quote accepted");
   });
 
-  it('accepts a valid quote through the authenticated v1 action route', async () => {
-    navigation.id = '11111111-1111-4111-8111-111111111111';
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          quote: {
-            service_name: 'Sink repair',
-            total_amount_cents: 10000,
-            required_deposit_cents: 2500,
-          },
-          line_items: [],
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ stripe_payment_link: 'https://checkout.example.test/session' }),
-      });
-    vi.stubGlobal('fetch', fetchMock);
-
+  it("offers the returned secure deposit payment link after accepting", async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(Response.json(quoteResponse))
+      .mockResolvedValueOnce(Response.json({ stripe_payment_link: "https://checkout.example.test/session" }));
     render(<InteractiveQuotePage />);
-    await screen.findByText('Sink repair');
-    fireEvent.change(screen.getByTestId('quote-date-selector'), {
-      target: { value: '2026-08-10T10:00' },
-    });
-    fireEvent.click(screen.getByTestId('pay-deposit-button'));
+    await screen.findByText(/Site visit/);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Accept quote" }));
+    expect(await screen.findByRole("link", { name: "Continue to payment" })).toHaveAttribute("href", "https://checkout.example.test/session");
+  });
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      '/api/v1/quotes/11111111-1111-4111-8111-111111111111/accept',
-      { method: 'POST' },
-    );
+  it("does not fabricate quote data when the service is unavailable", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ error: "unavailable" }, { status: 503 }));
+    render(<InteractiveQuotePage />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This quote is unavailable.");
+    expect(screen.queryByText("Site visit")).toBeNull();
   });
 });

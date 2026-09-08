@@ -54,8 +54,15 @@ nav:
       - KAIROS Orchestration: walkthroughs/kairos_orchestration.md
       - AutoDream CLI: walkthroughs/autodream_cli_guide.md
       - Teammate Mesh: walkthroughs/teammate_mesh_walkthrough.md
+      - Day One Onboarding: technical/walkthroughs/day_one_onboarding.md
+      - Agent Harness: technical/walkthroughs/agent_harness_walkthrough.md
       - Hybrid FS MCP Architecture Walkthrough: technical/walkthroughs/hybrid_fs_mcp_architecture.md
-      - Scribe Proactive MCP Walkthrough: technical/walkthroughs/scribe_proactive_mcp_walkthrough.md
+  - Developer & Security:
+      - Developer Setup: technical/developer/setup.md
+      - Developer Guide: technical/developer/developer-guide.md
+      - Multi-Harness Compatibility: omnisolo-harness-compatibility-inventory.md
+      - OIDC Authority: technical/security/oidc-authority.md
+      - HTTP Auth Rate Limits: technical/security/http-auth-rate-limits.md
   - Operations:
       - Operations: technical/operations/index.md
   - Business:

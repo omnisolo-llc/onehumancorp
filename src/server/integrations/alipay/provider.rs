@@ -29,18 +29,31 @@ impl AlipayProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 }
 
 impl AlipayProvider {
-    pub async fn create_checkout_preference(&self, price_id: &str, tenant_id: &str) -> Result<String, String> {
-        self._client.create_checkout_preference(price_id, tenant_id).await
+    pub async fn create_checkout_preference(
+        &self,
+        price_id: &str,
+        tenant_id: &str,
+    ) -> Result<String, String> {
+        self._client
+            .create_checkout_preference(price_id, tenant_id)
+            .await
     }
 
-    pub async fn create_payment(&self, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        self._client.create_payment(amount, description, payer_email).await
+    pub async fn create_payment(
+        &self,
+        amount: f64,
+        description: &str,
+        payer_email: &str,
+    ) -> Result<String, String> {
+        self._client
+            .create_payment(amount, description, payer_email)
+            .await
     }
 
     pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {

@@ -1,13 +1,13 @@
 use axum::{
     extract::{Extension, State, Json},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
     Router,
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
 };
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
+use std::sync::Arc;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct WalkupPayload {
@@ -89,18 +89,36 @@ pub async fn handle_walkup(
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.trim().is_empty() {
-                crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                crate::minimax::LocalLLMClient::new()
+                    .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                    .await
+                    .unwrap_or_default()
             } else {
-                crate::minimax::MinimaxClient::new(api_key).reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default()
+                crate::minimax::MinimaxClient::new(api_key)
+                    .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+                    .await
+                    .unwrap_or_default()
             }
-        },
-        _ => crate::minimax::LocalLLMClient::new().reason(&crate::pricing::compression::reduce_tokens(&prompt)).await.unwrap_or_default(),
+        }
+        _ => crate::minimax::LocalLLMClient::new()
+            .reason(&crate::pricing::compression::reduce_tokens(&prompt))
+            .await
+            .unwrap_or_default(),
     };
 
-    let clean_res = raw_response.trim_matches('`').trim_start_matches("json\n").trim_end();
+    let clean_res = raw_response
+        .trim_matches('`')
+        .trim_start_matches("json\n")
+        .trim_end();
     if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {
-        let intent = translated_json.get("intent").and_then(|v| v.as_str()).unwrap_or("Query");
-        let translated_text = translated_json.get("translated_text").and_then(|v| v.as_str()).unwrap_or(message);
+        let intent = translated_json
+            .get("intent")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Query");
+        let translated_text = translated_json
+            .get("translated_text")
+            .and_then(|v| v.as_str())
+            .unwrap_or(message);
 
         if intent == "Order" {
             let item_id = uuid::Uuid::new_v4().to_string();
@@ -127,11 +145,25 @@ pub async fn handle_walkup(
                 }
             }
 
-            return (StatusCode::OK, Json(WalkupResponse { success: true, structured_order: Some(translated_text.to_string()) })).into_response();
+            return (
+                StatusCode::OK,
+                Json(WalkupResponse {
+                    success: true,
+                    structured_order: Some(translated_text.to_string()),
+                }),
+            )
+                .into_response();
         }
     }
 
-    (StatusCode::OK, Json(WalkupResponse { success: true, structured_order: None })).into_response()
+    (
+        StatusCode::OK,
+        Json(WalkupResponse {
+            success: true,
+            structured_order: None,
+        }),
+    )
+        .into_response()
 }
 
 #[cfg(test)]

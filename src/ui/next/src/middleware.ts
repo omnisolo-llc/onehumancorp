@@ -15,8 +15,19 @@ export function _resetLiveDependencies(): void {
 }
 
 async function dependenciesFromEnvironment(): Promise<MiddlewareDependencies> {
-  const config = parseAuthRuntimeConfig(process.env);
-  const ring = await parseSessionKeyRing(process.env);
+  // Edge bundles only expose environment variables that Next can identify as
+  // static reads. Keep this allowlist explicit instead of passing process.env.
+  const environment = {
+    OMNISOLO_WEB_LOCAL_DEV: process.env.OMNISOLO_WEB_LOCAL_DEV,
+    OMNISOLO_WEB_CANONICAL_ORIGIN: process.env.OMNISOLO_WEB_CANONICAL_ORIGIN,
+    BACKEND_URL: process.env.BACKEND_URL,
+    OMNISOLO_WEB_SESSION_KEY_ID: process.env.OMNISOLO_WEB_SESSION_KEY_ID,
+    OMNISOLO_WEB_SESSION_SECRET: process.env.OMNISOLO_WEB_SESSION_SECRET,
+    OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID: process.env.OMNISOLO_WEB_SESSION_PREVIOUS_KEY_ID,
+    OMNISOLO_WEB_SESSION_PREVIOUS_SECRET: process.env.OMNISOLO_WEB_SESSION_PREVIOUS_SECRET,
+  };
+  const config = parseAuthRuntimeConfig(environment);
+  const ring = await parseSessionKeyRing(environment);
   return { config, ring, now: () => Math.floor(Date.now() / 1_000) };
 }
 

@@ -389,8 +389,6 @@ struct ApiKeyMetadata {
     expires_at: Option<String>,
 }
 
-
-
 #[derive(Clone)]
 pub struct InMemoryApiKey {
     pub id: String,
@@ -654,7 +652,9 @@ async fn list_member_usage_analytics(
                 );
             }
         };
-        let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
+        let _ = sqlx::query("SET ROLE ohc_bypassrls")
+            .execute(&mut *tx)
+            .await;
         let _ = sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(&organization_id)
             .execute(&mut *tx)
@@ -1853,7 +1853,8 @@ mod tests {
             .await
             .unwrap();
 
-        let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+        let has_db =
+            std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
         if has_db {
             let _ = crate::postgres_test_support::postgres_security_pool(10).await;
             let pool = crate::db::get_pool();
@@ -1866,12 +1867,16 @@ mod tests {
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
             if let Some(mut tx) = tx_opt {
-                let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
-                let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING")
-                    .bind(&org_id)
-                    .bind("Test Tenant")
+                let _ = sqlx::query("SET ROLE ohc_bypassrls")
                     .execute(&mut *tx)
                     .await;
+                let _ = sqlx::query(
+                    "INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                )
+                .bind(&org_id)
+                .bind("Test Tenant")
+                .execute(&mut *tx)
+                .await;
                 let _ = sqlx::query(
                     "INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING"
                 )
@@ -3187,7 +3192,9 @@ mod tests {
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
             if let Some(mut tx) = tx_opt {
-                let _ = sqlx::query("SET ROLE ohc_bypassrls").execute(&mut *tx).await;
+                let _ = sqlx::query("SET ROLE ohc_bypassrls")
+                    .execute(&mut *tx)
+                    .await;
                 sqlx::query(
                     "INSERT INTO user_usage_logs (user_id, organization_id, feature, tokens_used, computed_cost) VALUES ($1, $2, $3, $4, $5)"
                 )

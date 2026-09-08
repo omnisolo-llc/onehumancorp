@@ -1,7 +1,7 @@
+use serde_json::json;
 use sqlx::{PgPool, Row};
 use std::sync::Arc;
 use uuid::Uuid;
-use serde_json::json;
 
 /// 💰 Miser Cost Analysis:
 /// Stripe charges a flat fee of $0.25 plus 0.25% for instant payouts,
@@ -28,7 +28,11 @@ impl PayoutBatcher {
         }
     }
 
-    async fn append_ledger_entry_tx(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, account_id: &str, amount_cents: i64) -> Result<(), String> {
+    async fn append_ledger_entry_tx(
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        account_id: &str,
+        amount_cents: i64,
+    ) -> Result<(), String> {
         let entry_id = Uuid::new_v4().to_string();
         let payload = json!({ "amount": amount_cents });
 
@@ -46,11 +50,14 @@ impl PayoutBatcher {
         Ok(())
     }
 
-    async fn get_pending_balance_tx(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, account_id: &str) -> Result<i64, String> {
+    async fn get_pending_balance_tx(
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        account_id: &str,
+    ) -> Result<i64, String> {
         let row = sqlx::query(
             "SELECT COALESCE(CAST(SUM((state_change->>'amount')::BIGINT) AS BIGINT), 0) as balance
              FROM ohc_universal_ledger
-             WHERE tenant_id = $1 AND action_type = 'PayoutBatchEvent'"
+             WHERE tenant_id = $1 AND action_type = 'PayoutBatchEvent'",
         )
         .bind(account_id)
         .fetch_one(&mut **tx)
@@ -64,7 +71,9 @@ impl PayoutBatcher {
     pub async fn get_pending_balance(&self, account_id: &str) -> Result<i64, String> {
         if let Some(pool) = &self.pool {
             let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, account_id).await.map_err(|e| e.to_string())?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, account_id)
+                .await
+                .map_err(|e| e.to_string())?;
 
             let balance = Self::get_pending_balance_tx(&mut tx, account_id).await?;
             tx.commit().await.map_err(|e| e.to_string())?;
@@ -85,10 +94,16 @@ impl PayoutBatcher {
 
     /// Records a pending payout for a connected account.
     /// Returns Some(amount_to_payout_in_cents) if the threshold is reached and we should execute the payout.
-    pub async fn record_payout(&self, account_id: &str, amount_cents: i64) -> Result<Option<i64>, String> {
+    pub async fn record_payout(
+        &self,
+        account_id: &str,
+        amount_cents: i64,
+    ) -> Result<Option<i64>, String> {
         if let Some(pool) = &self.pool {
             let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, account_id).await.map_err(|e| e.to_string())?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, account_id)
+                .await
+                .map_err(|e| e.to_string())?;
 
             let lock_id = Self::hash_account_id(account_id);
             sqlx::query("SELECT pg_advisory_xact_lock($1)")
@@ -118,7 +133,9 @@ impl PayoutBatcher {
     pub async fn force_payout(&self, account_id: &str) -> Result<Option<i64>, String> {
         if let Some(pool) = &self.pool {
             let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, account_id).await.map_err(|e| e.to_string())?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, account_id)
+                .await
+                .map_err(|e| e.to_string())?;
 
             let lock_id = Self::hash_account_id(account_id);
             sqlx::query("SELECT pg_advisory_xact_lock($1)")
@@ -161,7 +178,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_payout_with_pool() {
-        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = match sqlx::PgPool::connect(&db_url).await {
             Ok(pool) => pool,
             Err(_) => {
@@ -179,7 +197,10 @@ mod tests {
         assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 5000);
 
         // Reaches threshold
-        assert_eq!(batcher.record_payout("acct_2", 6000).await.unwrap(), Some(11000));
+        assert_eq!(
+            batcher.record_payout("acct_2", 6000).await.unwrap(),
+            Some(11000)
+        );
         assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 0);
     }
 }

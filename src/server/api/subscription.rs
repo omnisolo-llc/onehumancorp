@@ -157,7 +157,7 @@ async fn fetch_fulfillment_batches(
             fulfillment_date::TEXT AS fulfillment_date,
             status,
             subscriber_count::BIGINT AS subscriber_count
-         FROM fulfillment_batches
+         FROM fulfillment_schedules
          WHERE tenant_id = $1
          ORDER BY fulfillment_date ASC, created_at ASC, id ASC",
     )
@@ -571,7 +571,9 @@ async fn subscription_action(
 
     match update {
         Ok(_) => match transaction.commit().await {
-            Ok(()) => (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response(),
+            Ok(()) => {
+                (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response()
+            }
             Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "DB Error").into_response(),
         },
         Err(e) => {
@@ -660,7 +662,8 @@ pub fn router_with_orchestrator<S: Clone + Send + Sync + 'static>(
         orchestrator,
         SubscriptionTenantPolicy {
             multitenant: ::server_config::get().multitenant,
-            configured_default: ::server_common::auth_utils::get_default_tenant(),
+            configured_default: std::env::var("OHC_DEFAULT_TENANT_ID")
+                .unwrap_or_else(|_| ::server_common::auth_utils::get_default_tenant()),
         },
     )
 }

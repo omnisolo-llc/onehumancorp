@@ -21,6 +21,43 @@ impl InMemoryNamespaceStore {
 
 #[async_trait]
 impl LongTermMemory for InMemoryNamespaceStore {
+    fn supports_scoped_services(&self) -> bool {
+        true
+    }
+    async fn store_scoped(&self, namespace: &str, content: &str) -> Result<(), String> {
+        let mut namespaces = self
+            .namespaces
+            .write()
+            .map_err(|_| "memory lock unavailable".to_owned())?;
+        namespaces
+            .entry(crate::local_service_adapters::scope_key(namespace))
+            .or_default()
+            .push(JsonMemoryEntry {
+                content: content.to_owned(),
+                timestamp: chrono::Utc::now().timestamp(),
+            });
+        Ok(())
+    }
+    async fn retrieve_scoped(
+        &self,
+        namespace: &str,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<String>, String> {
+        let namespaces = self
+            .namespaces
+            .read()
+            .map_err(|_| "memory lock unavailable".to_owned())?;
+        Ok(namespaces
+            .get(&crate::local_service_adapters::scope_key(namespace))
+            .into_iter()
+            .flatten()
+            .rev()
+            .filter(|entry| entry.content.to_lowercase().contains(&query.to_lowercase()))
+            .take(limit.min(1000))
+            .map(|entry| entry.content.clone())
+            .collect())
+    }
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut all_entries = Vec::new();
 
@@ -31,7 +68,7 @@ impl LongTermMemory for InMemoryNamespaceStore {
         }
 
         // Basic naive search: sort by recency and filter by substring
-        all_entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        all_entries.sort_by_key(|entry| std::cmp::Reverse(entry.timestamp));
 
         let query_lower = query.to_lowercase();
         let mut results = Vec::new();

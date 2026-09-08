@@ -1,8 +1,12 @@
+use super::ws_compression::{encode_json, negotiate};
 use axum::{
-    extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, Query},
+    extract::{
+        Query,
+        ws::{Message as WsMessage, WebSocket, WebSocketUpgrade},
+    },
     response::IntoResponse,
 };
-use futures::{stream::StreamExt, sink::SinkExt};
+use futures::{sink::SinkExt, stream::StreamExt};
 use serde::Deserialize;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -14,7 +18,6 @@ pub struct SyncConnectQuery {
     pub tenant_id: String,
 }
 
-
 pub async fn ws_sync_handler(
     ws: WebSocketUpgrade,
     headers: axum::http::HeaderMap,
@@ -24,12 +27,16 @@ pub async fn ws_sync_handler(
     let tenant_id = match crate::api::mesh_handler::check_spiffe_auth(&headers) {
         Ok(_) => {
             // we trust the query string if the spiffe check passes, or better extract tenant from headers
-            headers.get("x-tenant-id").and_then(|val| val.to_str().ok()).unwrap_or(&query.tenant_id).to_string()
-        },
+            headers
+                .get("x-tenant-id")
+                .and_then(|val| val.to_str().ok())
+                .unwrap_or(&query.tenant_id)
+                .to_string()
+        }
         Err(err) => {
             // if we fail spiffe auth, we must reject the upgrade.
             // For tests to pass, we might allow a mock header.
-            if headers.get("x-mock-auth").is_some() {
+            if cfg!(test) && headers.get("x-mock-auth").is_some() {
                 query.tenant_id.clone()
             } else {
                 return err;
@@ -37,11 +44,11 @@ pub async fn ws_sync_handler(
         }
     };
 
-    ws.on_upgrade(move |socket| handle_sync_socket(socket, tenant_id))
+    let (ws, gzip) = negotiate(ws);
+    ws.on_upgrade(move |socket| handle_sync_socket(socket, tenant_id, gzip))
 }
 
-
-async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
+async fn handle_sync_socket(socket: WebSocket, tenant_id: String, gzip: bool) {
     let (mut sender, mut receiver) = socket.split();
 
     let inventory_topic = format!("inventory:{}", tenant_id);
@@ -59,13 +66,14 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
             let mut stream = pubsub_conn.into_on_message();
 
             // Bounded buffer with drop-oldest semantics (256 capacity)
-            let buffer: Arc<Mutex<VecDeque<String>>> = Arc::new(Mutex::new(VecDeque::with_capacity(256)));
+            let buffer: Arc<Mutex<VecDeque<String>>> =
+                Arc::new(Mutex::new(VecDeque::with_capacity(256)));
             let notify = Arc::new(Notify::new());
 
             // Task 1: Redis subscriber -> buffer (non-blocking, drops oldest on full)
             let buf_producer = buffer.clone();
             let notify_producer = notify.clone();
-            let pubsub_task = tokio::spawn(async move {
+            let mut pubsub_task = tokio::spawn(async move {
                 while let Some(msg) = stream.next().await {
                     if let Ok(payload) = msg.get_payload::<String>() {
                         {
@@ -92,13 +100,19 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
                     // Drain all available messages from buffer first
                     {
                         let mut q = buf_consumer.lock().await;
-                        while let Some(msg) = q.pop_front() {
+                        if batch.is_empty() && !q.is_empty() {
+                            tick.reset();
+                        }
+                        while batch.len() < 20 {
+                            let Some(msg) = q.pop_front() else { break };
                             batch.push(msg);
                         }
                     }
 
                     if batch.len() >= 20 {
-                        flush_batch(&mut sender, &mut batch).await;
+                        if flush_batch(&mut sender, &mut batch, gzip).await.is_err() {
+                            return;
+                        }
                         continue;
                     }
 
@@ -109,7 +123,7 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
                                 // More messages may be available - loop back to drain
                             }
                             _ = tick.tick() => {
-                                flush_batch(&mut sender, &mut batch).await;
+                                if flush_batch(&mut sender, &mut batch, gzip).await.is_err() { return; }
                             }
                         }
                     } else {
@@ -141,6 +155,10 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
                     send_task.abort();
                     pubsub_task.abort();
                 },
+                _ = (&mut pubsub_task) => {
+                    send_task.abort();
+                    recv_task.abort();
+                },
             };
         } else {
             // Can't connect to pubsub, close connection gracefully.
@@ -151,31 +169,83 @@ async fn handle_sync_socket(socket: WebSocket, tenant_id: String) {
     }
 }
 
-async fn flush_batch(sender: &mut futures::stream::SplitSink<WebSocket, WsMessage>, batch: &mut Vec<String>) {
-    if batch.len() == 1 {
-        // Single message - send directly for backwards compatibility
-        let msg = batch.remove(0);
-        let _ = sender.send(WsMessage::Text(msg.into())).await;
-    } else {
-        // Multiple messages - send as batch
-        let items: Vec<serde_json::Value> = batch.drain(..)
-            .map(|m| serde_json::Value::String(m))
-            .collect();
-        let batch_msg = serde_json::json!({
-            "type": "batch",
-            "items": items
-        });
-        let _ = sender.send(WsMessage::Text(batch_msg.to_string().into())).await;
+async fn flush_batch(
+    sender: &mut futures::stream::SplitSink<WebSocket, WsMessage>,
+    batch: &mut Vec<String>,
+    gzip: bool,
+) -> Result<(), axum::Error> {
+    if let Some(payload) = super::ws_batch::take_batch(batch) {
+        sender.send(encode_json(payload, gzip)).await?;
     }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{routing::get, Router};
+    use axum::{Router, routing::get};
     use std::net::SocketAddr;
     use tokio::net::TcpListener;
     use tokio_tungstenite::connect_async;
+
+    #[tokio::test]
+    #[ignore = "requires an isolated Redis instance via OHC_TEST_REDIS_URL and REDIS_URL"]
+    async fn redis_disconnect_closes_websocket_for_reconnection() {
+        let url = std::env::var("OHC_TEST_REDIS_URL").expect("isolated Redis URL required");
+        assert_eq!(std::env::var("REDIS_URL").unwrap(), url);
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, Router::new().route("/ws", get(ws_sync_handler)))
+                .await
+                .unwrap();
+        });
+        use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+        let mut request = format!("ws://{addr}/ws?tenant_id=disconnect-regression")
+            .into_client_request()
+            .unwrap();
+        request
+            .headers_mut()
+            .insert("x-mock-auth", "true".parse().unwrap());
+        let (mut socket, _) = connect_async(request).await.unwrap();
+        let client = redis::Client::open(url).unwrap();
+        let mut connection = client.get_multiplexed_async_connection().await.unwrap();
+        tokio::time::timeout(Duration::from_secs(3), async {
+            loop {
+                let counts: Vec<(String, i64)> = redis::cmd("PUBSUB")
+                    .arg("NUMSUB")
+                    .arg("inventory:disconnect-regression")
+                    .query_async(&mut connection)
+                    .await
+                    .unwrap();
+                if counts[0].1 > 0 {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("WebSocket subscribes to Redis");
+        let killed: i64 = redis::cmd("CLIENT")
+            .arg("KILL")
+            .arg("TYPE")
+            .arg("pubsub")
+            .query_async(&mut connection)
+            .await
+            .unwrap();
+        assert!(killed > 0);
+        let closed = tokio::time::timeout(Duration::from_secs(3), socket.next()).await;
+        server.abort();
+        assert!(
+            matches!(
+                closed,
+                Ok(None)
+                    | Ok(Some(Err(_)))
+                    | Ok(Some(Ok(tokio_tungstenite::tungstenite::Message::Close(_))))
+            ),
+            "Redis loss must close the client socket: {closed:?}"
+        );
+    }
 
     #[tokio::test]
     async fn test_ws_sync_handler() {
@@ -203,13 +273,20 @@ mod tests {
             .unwrap();
         });
 
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_url =
+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             if client.get_connection().is_ok() {
                 let ws_url = format!("ws://{}/ws?tenant_id=test_tenant", addr);
 
-                let mut request = tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(ws_url).unwrap();
-                request.headers_mut().insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
+                let mut request =
+                    tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(
+                        ws_url,
+                    )
+                    .unwrap();
+                request
+                    .headers_mut()
+                    .insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
                 let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
 
                 // Sleep briefly to ensure server has subscribed to the pubsub topic
@@ -219,7 +296,12 @@ mod tests {
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let topic = "inventory:test_tenant";
                 let payload = "{\"event\":\"inventory_updated\"}";
-                let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
+                let _: () = redis::cmd("PUBLISH")
+                    .arg(topic)
+                    .arg(payload)
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap();
 
                 let msg = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
                     .await
@@ -233,13 +315,19 @@ mod tests {
                 // Publish tenant event message
                 let topic2 = "tenant_events:test_tenant";
                 let payload2 = "{\"event\":\"notification\"}";
-                let _: () = redis::cmd("PUBLISH").arg(topic2).arg(payload2).query_async(&mut conn).await.unwrap();
-
-                let msg2 = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                let _: () = redis::cmd("PUBLISH")
+                    .arg(topic2)
+                    .arg(payload2)
+                    .query_async(&mut conn)
                     .await
-                    .expect("Timeout")
-                    .expect("Stream closed")
-                    .expect("Error receiving");
+                    .unwrap();
+
+                let msg2 =
+                    tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                        .await
+                        .expect("Timeout")
+                        .expect("Stream closed")
+                        .expect("Error receiving");
 
                 assert!(msg2.is_text());
                 assert_eq!(msg2.to_text().unwrap(), payload2);
@@ -273,13 +361,20 @@ mod tests {
             .unwrap();
         });
 
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_url =
+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         if let Ok(client) = redis::Client::open(redis_url) {
             if client.get_connection().is_ok() {
                 let ws_url = format!("ws://{}/ws?tenant_id=test_batch", addr);
 
-                let mut request = tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(ws_url).unwrap();
-                request.headers_mut().insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
+                let mut request =
+                    tokio_tungstenite::tungstenite::client::IntoClientRequest::into_client_request(
+                        ws_url,
+                    )
+                    .unwrap();
+                request
+                    .headers_mut()
+                    .insert("x-mock-auth", axum::http::HeaderValue::from_static("true"));
                 let (mut ws_stream, _) = connect_async(request).await.expect("Failed to connect");
 
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
@@ -290,7 +385,12 @@ mod tests {
                 // Publish 5 messages rapidly - they should be batched
                 for i in 0..5 {
                     let payload = format!("{{\"seq\":{}}}", i);
-                    let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
+                    let _: () = redis::cmd("PUBLISH")
+                        .arg(topic)
+                        .arg(payload)
+                        .query_async(&mut conn)
+                        .await
+                        .unwrap();
                 }
 
                 // Wait for batch to arrive (50ms window + buffer)
@@ -307,7 +407,7 @@ mod tests {
                 let items = parsed["items"].as_array().expect("items not an array");
                 assert_eq!(items.len(), 5);
                 for i in 0..5 {
-                    assert_eq!(items[i], format!("{{\"seq\":{}}}", i));
+                    assert_eq!(items[i], serde_json::json!({"seq": i}));
                 }
             }
         }

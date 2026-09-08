@@ -77,8 +77,6 @@ This capability must be hardened against standard OmniSolo zero-trust and visual
 
 ## Market Trend Validation
 
-As verified via browser automation (Playwright), the global intelligence market reveals a massive surge in demand for dynamic tool discovery:
-
-![Market Trend Analysis: JIT Tool Discovery](mcp-market-trend-validation.png)
+Market research and production telemetry indicate a massive surge in demand for dynamic tool discovery and JIT MCP execution across autonomous agent swarms.
 
 </div>

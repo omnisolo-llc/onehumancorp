@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "target_harness_id": "future-harness",
+  "records": ["session", "task", "turn", "message", "tool_result", "historical_data"],
+  "redaction_markers": ["api_key=", "token=", "password="],
+  "native_records_are_excluded": true,
+  "workspace_paths_require_digests": true
+}

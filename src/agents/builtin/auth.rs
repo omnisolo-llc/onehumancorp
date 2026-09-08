@@ -7,7 +7,7 @@ type HmacSha256 = Hmac<Sha256>;
 /// Authentication mode.
 #[derive(Clone)]
 pub enum AuthMode {
-    /// No authentication (dev/test only).
+    /// No authentication (unit-test binaries only).
     Disabled,
     /// Pre-shared HMAC-SHA256 token.
     Token {
@@ -33,26 +33,25 @@ impl std::fmt::Debug for AuthMode {
 
 /// Build an AuthMode from environment variables.
 ///
-///   OMNISOLO_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
+///   OMNISOLO_AGENT_AUTH_DISABLED=true   – skip auth in unit-test binaries only
 ///   OMNISOLO_AGENT_TOKEN                – enables token mode
 ///   OMNISOLO_AGENT_SPIFFE_ID            – validates the desired identity, then fails closed until
 ///                                    verified mTLS peer extraction is available
 pub fn auth_mode_from_env() -> Result<AuthMode, String> {
     let auth_disabled = env::var("OMNISOLO_AGENT_AUTH_DISABLED")
         .is_ok_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    let environment = env::var("OMNISOLO_ENV")
-        .unwrap_or_default()
-        .trim()
-        .to_ascii_lowercase();
-
     if auth_disabled {
-        if matches!(environment.as_str(), "development" | "test" | "standalone") {
-            return Ok(AuthMode::Disabled);
+        #[cfg(test)]
+        {
+            let environment = env::var("OMNISOLO_ENV").unwrap_or_default();
+            if matches!(
+                environment.trim().to_ascii_lowercase().as_str(),
+                "development" | "test"
+            ) {
+                return Ok(AuthMode::Disabled);
+            }
         }
-        return Err(
-            "OMNISOLO_AGENT_AUTH_DISABLED=true is allowed only when OMNISOLO_ENV is development, test, or standalone"
-                .to_string(),
-        );
+        return Err("OMNISOLO_AGENT_AUTH_DISABLED is not allowed in production binaries".to_string());
     }
 
     if let Ok(token) = env::var("OMNISOLO_AGENT_TOKEN")
@@ -71,19 +70,13 @@ pub fn auth_mode_from_env() -> Result<AuthMode, String> {
         });
     }
 
-    if let Ok(allowed_id) = env::var("OMNISOLO_AGENT_SPIFFE_ID") {
-        if allowed_id.trim().is_empty() {
-            return Err("OMNISOLO_AGENT_SPIFFE_ID must not be empty".to_string());
-        }
-        validate_spiffe_id(&allowed_id)?;
+    if let Ok(spiffe_id) = env::var("OMNISOLO_AGENT_SPIFFE_ID")
+        && !spiffe_id.trim().is_empty()
+    {
+        validate_spiffe_id(&spiffe_id)?;
         return Err(
-            "SPIFFE authentication requires verified mTLS peer identity extraction, which is not yet configured for the builtin agent; use token authentication"
-                .to_string(),
+            "SPIFFE agent authentication requires verified mTLS peer extraction".to_string(),
         );
-    }
-
-    if matches!(environment.as_str(), "development" | "test" | "standalone") {
-        return Ok(AuthMode::Disabled);
     }
 
     Err("configure OMNISOLO_AGENT_TOKEN or OMNISOLO_AGENT_SPIFFE_ID".to_string())

@@ -1,11 +1,8 @@
 export const HYDRATION_FAILURE_PATTERN = /Text content does not match server-rendered HTML|Text content did not match|Hydration failed|error occurred during hydration|server HTML (?:was )?replaced|initial UI does not match/i;
 
-const RESOURCE_FAILURE_PATTERN = /^Failed to load resource: the server responded with a status of (?:401|403|404|500|501|502)\b/i;
+export const PUBLIC_AUTH_ROUTES = new Set(['/login', '/register', '/verify-email']);
 
-export function expectedShellCounts(route) {
-  if (route === '/login') return { sidebar: 0, topbar: 0, main: 0 };
-  return { sidebar: 1, topbar: 1, main: 1 };
-}
+const RESOURCE_FAILURE_PATTERN = /^Failed to load resource: the server responded with a status of (?:401|403|404|500|501|502)\b/i;
 
 const EXPECTED_ISOLATED_RESOURCE_PATHS = new Set([
   '/api/v1/help',
@@ -183,9 +180,12 @@ export function failureReasons(result) {
   if (result.pageErrors?.length > 0) reasons.push('uncaught page error');
   if (result.hydrationErrors?.length > 0) reasons.push('hydration error');
   if (result.unexpectedConsoleErrors?.length > 0) reasons.push('unexpected console error');
-  for (const [shell, count] of Object.entries(expectedShellCounts(result.route))) {
-    const actualCount = result.shellCounts?.[shell] ?? 0;
-    if (actualCount !== count) reasons.push(`${shell} count ${actualCount}`);
+  const expectedLayoutCounts = PUBLIC_AUTH_ROUTES.has(result.route)
+    ? { auth: 1, sidebar: 0, topbar: 0, main: 0 }
+    : { auth: 0, sidebar: 1, topbar: 1, main: 1 };
+  for (const [shell, expected] of Object.entries(expectedLayoutCounts)) {
+    const count = result.shellCounts[shell] ?? 0;
+    if (count !== expected) reasons.push(`${shell} count ${count}, expected ${expected}`);
   }
   if (result.horizontalOverflow) {
     reasons.push(`horizontal overflow ${result.documentWidth - result.viewportWidth}px`);
@@ -210,4 +210,8 @@ export function shouldFailAudit({ results, expectedCases, fatalError, outputRead
     || !outputReady
     || !isCoverageComplete(results, expectedCases)
     || results.some((result) => failureReasons(result).length > 0);
+}
+
+export function expectedShellCounts(route) {
+  return PUBLIC_AUTH_ROUTES.has(route) ? { sidebar: 0, topbar: 0, main: 0 } : { sidebar: 1, topbar: 1, main: 1 };
 }

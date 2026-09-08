@@ -82,11 +82,7 @@ impl MailchimpClient {
             .map_err(|e| format!("Mailchimp response parse error: {}", e))
     }
 
-    pub async fn sync_customer(
-        &self,
-        email: &str,
-        _tag: &str,
-    ) -> Result<(), String> {
+    pub async fn sync_customer(&self, email: &str, _tag: &str) -> Result<(), String> {
         let payload = serde_json::json!({
             "email_address": email,
             "status": "subscribed",
@@ -95,11 +91,7 @@ impl MailchimpClient {
         Ok(())
     }
 
-    pub async fn send_campaign(
-        &self,
-        _audience: &str,
-        _body: &str,
-    ) -> Result<(), String> {
+    pub async fn send_campaign(&self, _audience: &str, _body: &str) -> Result<(), String> {
         let payload = serde_json::json!({
             "type": "regular",
             "recipients": { "list_id": _audience },
@@ -118,8 +110,11 @@ impl MailchimpClient {
             .as_str()
             .ok_or_else(|| "Missing campaign id in response".to_string())?;
 
-        self.post(&format!("/campaigns/{}/actions/send", campaign_id), serde_json::json!({}))
-            .await?;
+        self.post(
+            &format!("/campaigns/{}/actions/send", campaign_id),
+            serde_json::json!({}),
+        )
+        .await?;
 
         Ok(())
     }
@@ -156,13 +151,8 @@ impl MailchimpClient {
         Ok(())
     }
 
-    pub async fn get_campaigns(
-        &self,
-        limit: u32,
-    ) -> Result<Vec<MailchimpCampaign>, String> {
-        let res = self
-            .get(&format!("/campaigns?count={}", limit))
-            .await?;
+    pub async fn get_campaigns(&self, limit: u32) -> Result<Vec<MailchimpCampaign>, String> {
+        let res = self.get(&format!("/campaigns?count={}", limit)).await?;
         let campaigns = res["campaigns"]
             .as_array()
             .ok_or_else(|| "Missing campaigns array in response".to_string())?
@@ -170,10 +160,7 @@ impl MailchimpClient {
             .filter_map(|item| {
                 Some(MailchimpCampaign {
                     id: item["id"].as_str()?.to_string(),
-                    title: item["settings"]["title"]
-                        .as_str()
-                        .unwrap_or("")
-                        .to_string(),
+                    title: item["settings"]["title"].as_str().unwrap_or("").to_string(),
                     status: item["status"].as_str()?.to_string(),
                     send_time: item["send_time"].as_str().map(|s| s.to_string()),
                 })

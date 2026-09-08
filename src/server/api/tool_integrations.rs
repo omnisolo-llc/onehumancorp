@@ -204,18 +204,22 @@ pub async fn get_integrations_handler(
     };
 
     let rows = match &state.db.store {
-        crate::db::DbStore::Postgres => sqlx::query_as::<_, (String, String)>(
-            "SELECT id, status FROM tool_integrations WHERE tenant_id = $1",
-        )
-        .bind(&tenant_id)
-        .fetch_all(&state.db.pool)
-        .await,
-        crate::db::DbStore::Sqlite(pool) => sqlx::query_as::<_, (String, String)>(
-            "SELECT id, status FROM tool_integrations WHERE tenant_id = ?",
-        )
-        .bind(&tenant_id)
-        .fetch_all(pool)
-        .await,
+        crate::db::DbStore::Postgres => {
+            sqlx::query_as::<_, (String, String)>(
+                "SELECT id, status FROM tool_integrations WHERE tenant_id = $1",
+            )
+            .bind(&tenant_id)
+            .fetch_all(&state.db.pool)
+            .await
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query_as::<_, (String, String)>(
+                "SELECT id, status FROM tool_integrations WHERE tenant_id = ?",
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await
+        }
     };
     let rows = match rows {
         Ok(r) => r,

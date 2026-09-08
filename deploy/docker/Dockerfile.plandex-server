@@ -1,0 +1,32 @@
+# Native server paired with the cli/v2.2.1 Plandex worker. It shares only the
+# worker's network namespace; database credentials never enter the worker.
+FROM golang:1.23.3-bookworm AS build
+ARG PLANDEX_REVISION=df17a187974c3795c3f1d2ea47bbacbdb675dde5
+RUN git clone --filter=blob:none --no-checkout https://github.com/plandex-ai/plandex.git /source \
+    && cd /source && git checkout "$PLANDEX_REVISION" \
+    && test "$(git rev-parse HEAD)" = "$PLANDEX_REVISION"
+WORKDIR /source/app/server
+# Both native HTTP services are private to the worker/sidecar network namespace.
+RUN sed -i 's/Addr:              ":" + externalPort/Addr:              "127.0.0.1:" + externalPort/' setup/setup.go \
+    && sed -i 's/"--host", "0.0.0.0"/"--host", "127.0.0.1"/' model/litellm.go \
+    && go build -mod=readonly -o /plandex-server .
+
+FROM python:3.12-slim-bookworm
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ca-certificates git \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1000 plandex \
+    && useradd --uid 1000 --gid 1000 --create-home plandex \
+    && install --directory --owner=1000 --group=1000 --mode=0700 /var/lib/plandex
+COPY deploy/harness/plandex/requirements.lock /opt/plandex/requirements.lock
+RUN pip install --no-cache-dir --require-hashes -r /opt/plandex/requirements.lock
+COPY --from=build /plandex-server /usr/local/bin/plandex-server
+COPY --from=build /source/app/server/migrations /opt/plandex/migrations
+COPY --from=build /source/app/server/litellm_proxy.py /opt/plandex/litellm_proxy.py
+COPY deploy/harness/plandex/server-entrypoint.py /usr/local/bin/plandex-server-entrypoint
+ENV GOENV=development LOCAL_MODE=1 PORT=8099 \
+    PLANDEX_BASE_DIR=/var/lib/plandex MIGRATIONS_DIR=/opt/plandex/migrations \
+    LITELLM_PROXY_DIR=/opt/plandex PYTHONDONTWRITEBYTECODE=1
+WORKDIR /opt/plandex
+USER 1000:1000
+ENTRYPOINT ["python3", "/usr/local/bin/plandex-server-entrypoint"]
