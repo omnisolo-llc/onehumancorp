@@ -329,8 +329,12 @@ fn service_prompt(key: &str, value: Option<&str>) -> String {
             operations.push(json!({"operation":operation,"key":key}));
         }
     }
+    let shell_runtime = match std::env::var("OMNISOLO_LIVE_HARNESS_ID").as_deref() {
+        Ok("kimi" | "openhands" | "openharness") => "Python 3 urllib (python3 is installed)",
+        _ => "Node.js fetch (node is installed)",
+    };
     format!(
-        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use ONE native shell invocation with a sequential loop over this entire list to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use node fetch or Python urllib, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and every string in memory_search.items and the actual stored text values returned by artifact/workspace/cache reads (decode byte arrays as UTF-8). The memory_search response is an object with an items array of strings: include ALL of those strings in the final output, without shortening or replacing values.",
+        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use ONE native shell invocation with a sequential loop over this entire list to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use {shell_runtime}, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and every string in memory_search.items and the actual stored text values returned by artifact/workspace/cache reads (decode byte arrays as UTF-8). The memory_search response is an object with an items array of strings: include ALL of those strings in the final output, without shortening or replacing values.",
         serde_json::to_string(&operations).unwrap()
     )
 }
@@ -602,8 +606,9 @@ fn validate_live_deliveries(
             .iter()
             .filter_map(|delivery| {
                 let event: Value = serde_json::from_slice(&delivery.payload).ok()?;
-                event["payload"].get("usage").cloned().or_else(||
-                    (event["event_type"] == "usage.recorded").then(|| event["payload"].clone()))
+                event["payload"].get("usage").cloned().or_else(|| {
+                    (event["event_type"] == "usage.recorded").then(|| event["payload"].clone())
+                })
             })
             .collect();
         let detail: String = serde_json::to_string(&candidates)
