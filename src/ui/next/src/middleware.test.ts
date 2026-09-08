@@ -60,7 +60,7 @@ describe("Next authentication middleware adapter", () => {
     const { middleware } = await import("./middleware");
 
     const response = await middleware(
-      request("/orders?tab=open", "__Host-ohc_session=malformed"),
+      request("/orders?tab=open", "__Host-omnisolo_session=malformed"),
     );
 
     expect(response.status).toBe(307);
@@ -68,7 +68,7 @@ describe("Next authentication middleware adapter", () => {
       "https://app.example.com/login?next=%2Forders%3Ftab%3Dopen",
     );
     expect(response.headers.get("set-cookie")).toContain(
-      "__Host-ohc_session=; Path=/; Max-Age=0",
+      "__Host-omnisolo_session=; Path=/; Max-Age=0",
     );
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });

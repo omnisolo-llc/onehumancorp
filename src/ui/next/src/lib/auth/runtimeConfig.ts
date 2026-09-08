@@ -4,7 +4,7 @@ export type AuthRuntimeConfig = Readonly<{
   canonicalOrigin: string;
   backendOrigin: string;
   localDev: boolean;
-  cookieName: "__Host-ohc_session" | "ohc_session";
+  cookieName: "__Host-omnisolo_session" | "omnisolo_session";
   secureCookie: boolean;
   sessionAudience: string;
 }>;
@@ -94,7 +94,7 @@ export function parseAuthRuntimeConfig(env: Env): AuthRuntimeConfig {
     canonicalOrigin,
     backendOrigin: backend.origin,
     localDev,
-    cookieName: secureCookie ? "__Host-ohc_session" : "ohc_session",
+    cookieName: secureCookie ? "__Host-omnisolo_session" : "omnisolo_session",
     secureCookie,
     sessionAudience: canonicalOrigin,
   };

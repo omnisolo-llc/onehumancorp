@@ -66,7 +66,7 @@ export default function GrowthReferralWidget() {
   };
 
   return (
-    <div className="ohc-growth-card flex flex-col gap-8">
+    <div className="omnisolo-growth-card flex flex-col gap-8">
       <Card className="mb-6 border-white/20 dark:border-white/10 shadow-xl overflow-hidden backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-6 items-center">

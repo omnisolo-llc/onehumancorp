@@ -12,7 +12,7 @@ it("controls registration and only enables configured OIDC providers", async () 
       onRegistrationModeChange={changeMode}
       providers={[
         { key: "google", display_name: "Google", provider_kind: "google", issuer: "https://accounts.google.com", configured: true, enabled: false },
-        { key: "keycloak", display_name: "Keycloak", provider_kind: "oidc", issuer: "https://id.example.test/realms/ohc", configured: false, enabled: false },
+        { key: "keycloak", display_name: "Keycloak", provider_kind: "oidc", issuer: "https://id.example.test/realms/omnisolo", configured: false, enabled: false },
       ]}
       providerStatus="idle"
       registrationMode="closed"

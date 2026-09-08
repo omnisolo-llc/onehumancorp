@@ -6,7 +6,7 @@ While OmniSolo supports basic database and file state synchronization via emergi
 ## Architecture
 The Hybrid Config Sync MCP Tool operates as an interface for configuration propagation:
 1. **MCP Exposer:** Exposes `get_config` and `sync_config_to_cloud` operations via the MCP bundle.
-2. **Local Adapter:** Reads from standard local files (e.g., `.ohc/config.yaml`) in Standalone mode.
+2. **Local Adapter:** Reads from standard local files (e.g., `.omnisolo/config.yaml`) in Standalone mode.
 3. **Cloud Adapter:** Interacts with the shared tenant Config DB or Vault in Cloud mode.
 4. **Security/Resolution:** Configurations synced to the cloud MUST be verified with SPIFFE/SPIRE identity to prevent privilege escalation or cross-tenant contamination.
 

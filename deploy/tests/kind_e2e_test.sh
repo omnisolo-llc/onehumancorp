@@ -16,16 +16,16 @@
 set -euo pipefail
 umask 077
 
-CLUSTER_NAME="ohc-e2e-$$"
-NAMESPACE="ohc-e2e"
+CLUSTER_NAME="omnisolo-e2e-$$"
+NAMESPACE="omnisolo-e2e"
 CLOUD_RELEASE_NAME="ohc-cloud"
-STANDALONE_RELEASE_NAME="ohc-standalone"
-GRPC_TLS_SECRET_NAME="ohc-e2e-grpc-tls"
+STANDALONE_RELEASE_NAME="omnisolo-standalone"
+GRPC_TLS_SECRET_NAME="omnisolo-e2e-grpc-tls"
 GRPC_TLS_DIR="${TEST_TMPDIR:-/tmp}/ohc-grpc-tls-$$"
 GRPC_PROBE=""
-SETUP_SECRET_NAME="ohc-e2e-setup"
-AUTH_SECRET_NAME="ohc-e2e-auth"
-AGENT_AUTH_SECRET_NAME="ohc-e2e-agent-auth"
+SETUP_SECRET_NAME="omnisolo-e2e-setup"
+AUTH_SECRET_NAME="omnisolo-e2e-auth"
+AGENT_AUTH_SECRET_NAME="omnisolo-e2e-agent-auth"
 ADMIN_USERNAME="kind-e2e-admin"
 ADMIN_EMAIL="kind-e2e-admin@example.test"
 ADMIN_ORGANIZATION_ID="kind-e2e-org"
@@ -181,7 +181,7 @@ CLOUD_HELM_SMOKE_ARGS=(
 STANDALONE_HELM_SMOKE_ARGS=(
   "${COMMON_HELM_SMOKE_ARGS[@]}"
   --set multiTenant.enabled=false
-  --set-string backend.env.DATABASE_URL=sqlite:///tmp/ohc-standalone/standalone.db
+  --set-string backend.env.DATABASE_URL=sqlite:///tmp/omnisolo-standalone/standalone.db
   --set-string backend.env.OMNISOLO_SQLITE_KEY=kind-e2e-standalone-sqlite-key
   --set-string backend.env.OMNISOLO_STANDALONE_MODE=true
   --set-string backend.env.OMNISOLO_TELEMETRY_ENABLED=false

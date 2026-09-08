@@ -23,7 +23,7 @@ sequenceDiagram
 
     User (Maya)->>Marketing Agent: "I want to use mayascakes.com"
     Marketing Agent->>Postgres (Tenant Ledger): Register Domain Intent
-    Marketing Agent-->>User (Maya): "Great! Just point your nameservers to ns1.ohc.com"
+    Marketing Agent-->>User (Maya): "Great! Just point your nameservers to ns1.omnisolo.co"
     Note over OmniSolo Ingress Controller, Let's Encrypt: Automated ACME Challenge (HTTP-01/DNS-01)
     OmniSolo Ingress Controller->>Let's Encrypt: Request SSL Cert for mayascakes.com
     Let's Encrypt-->>OmniSolo Ingress Controller: Issue SSL Cert

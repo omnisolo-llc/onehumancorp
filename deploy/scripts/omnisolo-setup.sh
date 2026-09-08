@@ -31,9 +31,9 @@ PORT=8080
 OMNISOLO_MULTITENANT=false
 OMNISOLO_HEADLESS=false
 OMNISOLO_SOURCE_MODE=standalone
-OMNISOLO_RUNTIME_DIR=.ohc/runtime
-OMNISOLO_MEMORY_DIR=.ohc/runtime/memory
-OMNISOLO_STATUS_DIR=.ohc/runtime/status
+OMNISOLO_RUNTIME_DIR=.omnisolo/runtime
+OMNISOLO_MEMORY_DIR=.omnisolo/runtime/memory
+OMNISOLO_STATUS_DIR=.omnisolo/runtime/status
 ENV
   chmod 0600 .env
 fi
@@ -61,7 +61,7 @@ else
 fi
 
 echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
-RUNTIME_DIR="${OMNISOLO_RUNTIME_DIR:-.ohc/runtime}"
+RUNTIME_DIR="${OMNISOLO_RUNTIME_DIR:-.omnisolo/runtime}"
 MEMORY_DIR="${OMNISOLO_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
 STATUS_DIR="${OMNISOLO_STATUS_DIR:-${RUNTIME_DIR}/status}"
 mkdir -p "${MEMORY_DIR}" "${STATUS_DIR}"

@@ -13,7 +13,7 @@ describe("authentication runtime configuration", () => {
       canonicalOrigin: "https://app.example.com",
       backendOrigin: "https://api.example.com:8443",
       localDev: false,
-      cookieName: "__Host-ohc_session",
+      cookieName: "__Host-omnisolo_session",
       secureCookie: true,
       sessionAudience: "https://app.example.com",
     });
@@ -28,7 +28,7 @@ describe("authentication runtime configuration", () => {
       }),
     ).toMatchObject({
       canonicalOrigin: "https://192.168.1.40:8443",
-      cookieName: "__Host-ohc_session",
+      cookieName: "__Host-omnisolo_session",
       secureCookie: true,
     });
   });
@@ -38,7 +38,7 @@ describe("authentication runtime configuration", () => {
       canonicalOrigin: "http://127.0.0.1:3000",
       backendOrigin: "http://127.0.0.1:18789",
       localDev: true,
-      cookieName: "ohc_session",
+      cookieName: "omnisolo_session",
       secureCookie: false,
       sessionAudience: "http://127.0.0.1:3000",
     });

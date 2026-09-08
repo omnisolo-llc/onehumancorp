@@ -8,7 +8,7 @@ Small business owners (SMBs) consistently struggle with the administrative burde
 - **Problem**: Maya buys baking ingredients physically at wholesale markets and receives paper receipts or digital receipts via email. She forgets to log them, leading to inaccurate margin tracking.
 - **Journey**:
   1. Maya buys ingredients at a supplier.
-  2. She simply takes a photo of the receipt using her phone's native camera or OmniSolo mobile app, or forwards an email receipt to `receipts@maya-bakes.ohc.io`.
+  2. She simply takes a photo of the receipt using her phone's native camera or OmniSolo mobile app, or forwards an email receipt to `receipts@maya-bakes.omnisolo.co`.
   3. The **Zero-Touch Receipt Engine** immediately extracts the data (vendor, items, tax, total), categorizes the expense as "Cost of Goods Sold (COGS)", and associates it with her ingredient inventory if applicable.
   4. At the end of the week, the Finance agent provides a summary of COGS versus Sales without Maya doing any manual data entry.
 

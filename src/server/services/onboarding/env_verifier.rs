@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_verify_environment_auto_detect_thin_client() {
         let mut env = HashMap::new();
-        env.insert("OMNISOLO_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
+        env.insert("OMNISOLO_API_ENDPOINT".to_string(), "https://cloud.omnisolo.co".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
@@ -181,11 +181,11 @@ mod tests {
     fn test_verify_environment_thin_client() {
         let mut env = HashMap::new();
         env.insert("OMNISOLO_SOURCE_MODE".to_string(), "thin_client".to_string());
-        env.insert("OMNISOLO_API_ENDPOINT".to_string(), "https://api.ohc.io".to_string());
+        env.insert("OMNISOLO_API_ENDPOINT".to_string(), "https://cloud.omnisolo.co".to_string());
 
         let config = verify_environment(&env).unwrap();
         assert_eq!(config.mode, "thin_client");
-        assert_eq!(config.api_endpoint, "https://api.ohc.io");
+        assert_eq!(config.api_endpoint, "https://cloud.omnisolo.co");
         assert!(config.telemetry_enabled);
     }
 

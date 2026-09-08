@@ -6,9 +6,9 @@ Quick start
 2. Run run-omnisolo.cmd.
 3. Open http://127.0.0.1:18789/ in a browser.
 
-The launcher stores local standalone data in the .ohc directory next to these
-files. It creates .ohc\sqlite.key on first run and reuses it on later runs.
-Keep that file with .ohc\ohc-standalone.db; losing the key can make the local
+The launcher stores local standalone data in the .omnisolo directory next to these
+files. It creates .omnisolo\sqlite.key on first run and reuses it on later runs.
+Keep that file with .omnisolo\omnisolo-standalone.db; losing the key can make the local
 database unreadable.
 
 Executables
@@ -26,7 +26,7 @@ run-omnisolo.cmd sets these defaults when they are not already defined:
 
 OMNISOLO_STANDALONE=true
 STANDALONE_MODE=true
-DATABASE_URL=sqlite://.ohc/ohc-standalone.db
+DATABASE_URL=sqlite://.omnisolo/omnisolo-standalone.db
 OMNISOLO_PORT=18789
 OMNISOLO_GRPC_PORT=8081
 OMNISOLO_AGENT_ADDRESS=127.0.0.1:50051

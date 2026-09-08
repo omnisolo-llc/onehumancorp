@@ -12,9 +12,9 @@ type CommandResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
 pub fn database_url_from_environment() -> CommandResult<DatabaseUrl> {
     let direct = std::env::var("DATABASE_URL").ok();
-    let legacy = std::env::var("OHC_DATABASE_URL").ok();
+    let legacy = std::env::var("OMNISOLO_DATABASE_URL").ok();
     if direct.is_some() && legacy.is_some() {
-        return Err("DATABASE_URL and OHC_DATABASE_URL cannot both be set".into());
+        return Err("DATABASE_URL and OMNISOLO_DATABASE_URL cannot both be set".into());
     }
     direct
         .or(legacy)

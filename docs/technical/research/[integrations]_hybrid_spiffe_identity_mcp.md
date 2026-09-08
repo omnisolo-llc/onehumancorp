@@ -32,7 +32,7 @@ graph TD
 - Implement an `IdentityManager` MCP Tool.
 - Determine mode via `os.Getenv("OMNISOLO_MULTITENANT") == "true"`.
 - **Cloud Mode:** Integrate with `spiffe/go-spiffe/v2/workloadapi` to fetch identity documents.
-- **Standalone Mode:** Implement a lightweight, embedded Certificate Authority (CA) that issues compliant SPIFFE IDs (`spiffe://local.ohc.io/...`) and signs JWTs in-memory.
+- **Standalone Mode:** Implement a lightweight, embedded Certificate Authority (CA) that issues compliant SPIFFE IDs (`spiffe://local.omnisolo.co/...`) and signs JWTs in-memory.
 
 **API Contracts:**
 - `GetIdentityToken(ctx context.Context, audience string) (string, error)` (Returns JWT).

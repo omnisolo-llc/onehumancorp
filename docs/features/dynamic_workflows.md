@@ -28,7 +28,7 @@ Each workflow plan contains four phases:
 | `verification` | Assign adversarial or independent reviewers to check each shard. |
 | `synthesis` | Fold verified results into one coordinated final result. |
 
-Plans are saved to `.ohc/dynamic-workflows` by default. Set `OMNISOLO_DYNAMIC_WORKFLOW_STATE_DIR` to store them elsewhere. Queue jobs are written through the existing `TaskQueue` abstraction, using PostgreSQL in cloud mode and SQLite in standalone mode.
+Plans are saved to `.omnisolo/dynamic-workflows` by default. Set `OMNISOLO_DYNAMIC_WORKFLOW_STATE_DIR` to store them elsewhere. Queue jobs are written through the existing `TaskQueue` abstraction, using PostgreSQL in cloud mode and SQLite in standalone mode.
 
 ## API
 

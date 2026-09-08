@@ -99,7 +99,7 @@ export default function ZeroClickBuilderPage() {
             )}
           </p>
           <div className="flex justify-center mt-2">
-            <PoweredByOmniSolo tenantId="ohc" />
+            <PoweredByOmniSolo tenantId="omnisolo" />
           </div>
         </div>
       </div>

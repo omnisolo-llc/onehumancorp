@@ -6,7 +6,7 @@ This site is the canonical documentation root for the repository. It follows a m
 
 - All first-party source code now lives under `src/`.
 - GitHub issues are now the task source of truth.
-- Legacy design docs that lived outside `docs/` were moved into the archive.
+- Obsolete generated reports and superseded design drafts were removed.
 
 ## Start Here
 
@@ -20,4 +20,4 @@ This site is the canonical documentation root for the repository. It follows a m
 - Markdown is the source format for documentation.
 - Primary navigation lives in `mkdocs.yml`; legacy `_toc.yaml`, `_book.yaml`, and `_project.yaml` files remain for compatibility with older tooling.
 - The generated website is built with MkDocs from the markdown tree; no HTML output is committed to source.
-- Historical material that is not part of the primary narrative belongs in `docs/archive/`.
+- Superseded material is removed; source history remains available in Git.

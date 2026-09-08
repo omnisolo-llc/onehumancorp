@@ -384,7 +384,7 @@ mod tests {
             [
                 ("OMNISOLO_STANDALONE_MODE", Some("true")),
                 ("OMNISOLO_TELEMETRY_ENABLED", Some("false")),
-                ("OMNISOLO_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OMNISOLO_DATABASE_URL", Some("sqlite://omnisolo-standalone.db")),
                 ("OMNISOLO_SQLITE_KEY", Some("test-key")),
             ],
             || {
@@ -406,7 +406,7 @@ mod tests {
             [
                 ("OMNISOLO_STANDALONE_MODE", Some("true")),
                 ("OMNISOLO_TELEMETRY_ENABLED", Some("true")),
-                ("OMNISOLO_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OMNISOLO_DATABASE_URL", Some("sqlite://omnisolo-standalone.db")),
                 ("OMNISOLO_SQLITE_KEY", Some("test-key")),
             ],
             || {
@@ -764,7 +764,7 @@ fn test_record_error_signal() {
             [
                 ("OMNISOLO_STANDALONE_MODE", Some("true")),
                 ("OMNISOLO_TELEMETRY_ENABLED", None::<&str>), // No explicit opt-in
-                ("OMNISOLO_DATABASE_URL", Some("sqlite://ohc-standalone.db")),
+                ("OMNISOLO_DATABASE_URL", Some("sqlite://omnisolo-standalone.db")),
                 ("OMNISOLO_SQLITE_KEY", Some("test-key")),
             ],
             || {

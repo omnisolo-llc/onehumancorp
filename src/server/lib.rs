@@ -725,16 +725,16 @@ pub fn workflow_agent_binary() -> String {
             }
             if let Ok(exe_path) = std::env::current_exe() {
                 let agent_name = if cfg!(windows) {
-                    "ohc-builtin-agent.exe"
+                    "omnisolo-builtin-agent.exe"
                 } else {
-                    "ohc-builtin-agent"
+                    "omnisolo-builtin-agent"
                 };
                 let agent_path = exe_path.with_file_name(agent_name);
                 agent_path.to_string_lossy().to_string()
             } else if cfg!(windows) {
-                "ohc-builtin-agent.exe".to_string()
+                "omnisolo-builtin-agent.exe".to_string()
             } else {
-                "ohc-builtin-agent".to_string()
+                "omnisolo-builtin-agent".to_string()
             }
         })
 }
@@ -2301,7 +2301,7 @@ impl HubService for MyHubService {
         let url = if req.domain_choice == "custom" {
             "https://www.mybusiness.com".to_string()
         } else {
-            "https://mybusiness.ohc.app".to_string()
+            "https://mybusiness.cloud.omnisolo.co".to_string()
         };
 
         Ok(tonic::Response::new(PublishSiteResponse {
@@ -3395,7 +3395,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             omnisolo_builtin_agent::start_builtin_agent(builtin_transport, svc).await;
         });
     } else {
-        tracing::info!("Skipping in-process builtin agent; cluster mode expects a separate ohc-builtin-agent binary");
+        tracing::info!("Skipping in-process builtin agent; cluster mode expects a separate omnisolo-builtin-agent binary");
     }
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
@@ -6719,7 +6719,7 @@ async fn create_ui_bom_item_handler(
     };
     let dynamic_workflow_state_dir = std::env::var("OMNISOLO_DYNAMIC_WORKFLOW_STATE_DIR")
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| std::path::PathBuf::from(".ohc/dynamic-workflows"));
+        .unwrap_or_else(|_| std::path::PathBuf::from(".omnisolo/dynamic-workflows"));
     let dynamic_workflow_manager = std::sync::Arc::new(
         crate::orchestration::dynamic_workflows::DynamicWorkflowManager::with_state_dir(
             dynamic_workflow_queue,
@@ -6779,7 +6779,7 @@ async fn create_ui_bom_item_handler(
 
             let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
-            let body = format!("Your OHC verification code is {}", otp);
+            let body = format!("Your OmniSolo verification code is {}", otp);
             let phone_clone = phone.clone();
 
             // Fire and forget gracefully
@@ -7505,7 +7505,7 @@ async fn create_ui_bom_item_handler(
             "/api/v1/dashboard",
             axum::routing::get(|| async {
                 axum::Json(serde_json::json!({
-                    "organization": { "id": "e2e-org", "name": "OHC E2E" },
+                    "organization": { "id": "e2e-org", "name": "OmniSolo E2E" },
                     "agents": [],
                     "metrics": { "tasksCompleted": 0, "activeAgents": 0 }
                 }))
@@ -7788,7 +7788,7 @@ async fn create_ui_bom_item_handler(
                 ));
             }
             let query = message.to_lowercase();
-            let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
+            let mut reply = "I am your AI Help Agent! I specialize in answering questions about OmniSolo features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let mut link_title = "Read the full article →";
             let mut link_url = DEFAULT_HELP_CHAT_LINKS[0].to_string();
 
@@ -7869,7 +7869,7 @@ async fn create_ui_bom_item_handler(
 
             if !matched {
                 if query.contains("getting started") {
-                    reply = "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string();
+                    reply = "Welcome to OmniSolo! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string();
                     link_url = DEFAULT_HELP_CHAT_LINKS[0].to_string();
                 } else if query.contains("store") || query.contains("product") {
                     reply = "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.".to_string();
@@ -7983,13 +7983,13 @@ async fn create_ui_bom_item_handler(
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if legacy_sqlx_background_enabled && ::server_config::is_telemetry_enabled() {
-        let cloud_url = std::env::var("OMNISOLO_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let cloud_url = std::env::var("OMNISOLO_CLOUD_URL").unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
         let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(db.pool.clone(), cloud_url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Parallel);
         telemetry_daemon.start();
     }
 
     if is_cloud && legacy_sqlx_background_enabled {
-        let cloud_url = std::env::var("OMNISOLO_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let cloud_url = std::env::var("OMNISOLO_CLOUD_URL").unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
         let power_sync_orchestrator = Arc::new(crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(db.clone(), cloud_url.clone()));
         power_sync_orchestrator.start().await;
 
@@ -8087,10 +8087,10 @@ async fn create_ui_bom_item_handler(
                         ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stagnant missions");
                         tracing::trace!("failed to cleanup stagnant missions: {}", e);
                     }
-                    let job_queue = crate::orchestration::queue::omnisolo_job_queue::OHCJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
+                    let job_queue = crate::orchestration::queue::omnisolo_job_queue::OmniSoloJobQueue::new(std::sync::Arc::new(hub_for_sched.pool.clone()));
                     if let Err(e) = job_queue.cleanup_stale_jobs().await {
-                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale ohc jobs");
-                        tracing::trace!("failed to cleanup stale ohc jobs: {}", e);
+                        ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale OmniSolo jobs");
+                        tracing::trace!("failed to cleanup stale OmniSolo jobs: {}", e);
                     }
                     if let Err(e) = omnisolo_job_queue_prune.cleanup_stale_jobs().await {
                         ::server_telemetry::record_error_signal("[cleanup] failed to cleanup stale sub agent jobs");
@@ -8268,6 +8268,56 @@ mod tests {
             );
         }
         assert!(production_source.contains(".fallback(api_not_found_handler)"));
+    }
+
+    #[test]
+    fn documentation_routes_install_the_database_extension_at_the_handler_type() {
+        let production_source = include_str!("lib.rs")
+            .rsplit_once("\n#[cfg(test)]\nmod tests {")
+            .expect("server source must retain its final test-module boundary")
+            .0;
+
+        assert!(
+            !production_source.contains(
+                ".layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))"
+            ),
+            "docs handlers require Extension<Arc<DB>>, not Extension<Arc<Arc<DB>>>"
+        );
+        for path in [
+            "/api/v1/help",
+            "/api/v1/help/search",
+            "/api/v1/tooltips",
+            "/api/v1/walkthrough/{page}",
+            "/api/v1/videos",
+        ] {
+            let route = format!(".route({path:?}");
+            let start = production_source
+                .find(&route)
+                .unwrap_or_else(|| panic!("missing documentation route {path}"));
+            let route_source = &production_source[start..];
+            let end = route_source
+                .find(".route_layer(")
+                .unwrap_or_else(|| panic!("missing authentication layer for {path}"));
+            assert!(
+                route_source[..end].contains(".layer(axum::extract::Extension(db.clone()))"),
+                "documentation route {path} must install Extension<Arc<DB>>"
+            );
+        }
+    }
+
+    #[test]
+    fn first_party_agent_launch_contract_uses_omnisolo_binary_names() {
+        let source = include_str!("lib.rs");
+        let production_source = source
+            .rsplit_once("\n#[cfg(test)]\nmod tests {")
+            .expect("server source must retain its final test-module boundary")
+            .0;
+        let main_source = include_str!("main.rs");
+
+        assert!(production_source.contains("omnisolo-builtin-agent"));
+        assert!(!production_source.contains(concat!("oh", "c-builtin-agent")));
+        assert!(main_source.contains("omnisolo-builtin-agent"));
+        assert!(!main_source.contains(concat!("oh", "c-builtin-agent")));
     }
 
     #[test]

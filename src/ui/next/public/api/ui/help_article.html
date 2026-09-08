@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
     const style = document.createElement('style');
     style.textContent = `
-        .ohc-tooltip {
+        .omnisolo-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px) saturate(210%);
@@ -138,12 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
             transition: opacity 0.2s ease, transform 0.2s ease;
             text-align: center;
         }
-        .ohc-tooltip.visible {
+        .omnisolo-tooltip.visible {
             opacity: 1;
             transform: translateY(0);
         }
         @media (prefers-color-scheme: dark) {
-            .ohc-tooltip {
+            .omnisolo-tooltip {
                 background: rgba(22, 22, 26, 0.85);
                 border-color: rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </script>
 
 <style>
-.ohc-tooltip {
+.omnisolo-tooltip {
     position: fixed;
     background: #333;
     color: white;
@@ -557,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     max-width: 250px;
     line-height: 1.4;
 }
-.ohc-tooltip.visible {
+.omnisolo-tooltip.visible {
     opacity: 1;
 }
 </style>

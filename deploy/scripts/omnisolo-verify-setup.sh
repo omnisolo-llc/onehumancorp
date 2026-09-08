@@ -55,7 +55,7 @@ else
 fi
 
 # Generate telemetry-ready summary
-RUNTIME_DIR="${OMNISOLO_RUNTIME_DIR:-.ohc/runtime}"
+RUNTIME_DIR="${OMNISOLO_RUNTIME_DIR:-.omnisolo/runtime}"
 STATUS_DIR="${OMNISOLO_STATUS_DIR:-${RUNTIME_DIR}/status}"
 mkdir -p "${STATUS_DIR}"
 TIMESTAMP=$(date +%s)

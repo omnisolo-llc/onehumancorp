@@ -13,7 +13,7 @@ import { loginForVisualAudit } from './visual-audit-auth.mjs';
 import { discoverPageRoutes, shardAuditCases } from './visual-audit-routes.mjs';
 
 const baseUrl = process.env.VISUAL_AUDIT_BASE_URL || 'http://127.0.0.1:3000';
-const outputDir = process.env.VISUAL_AUDIT_OUTPUT_DIR || '/tmp/ohc-visual-audit';
+const outputDir = process.env.VISUAL_AUDIT_OUTPUT_DIR || '/tmp/omnisolo-visual-audit';
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 const captureBodyText = process.env.VISUAL_AUDIT_CAPTURE_BODY_TEXT === '1';
 const allowNoSandbox = process.env.VISUAL_AUDIT_ALLOW_NO_SANDBOX === '1';
@@ -58,14 +58,14 @@ async function createAuditSessionCookie() {
     organizationId: process.env.VISUAL_AUDIT_ORGANIZATION_ID,
   });
   const origin = new URL(baseUrl).origin;
-  const cookieName = new URL(origin).protocol === 'https:' ? '__Host-ohc_session' : 'ohc_session';
+  const cookieName = new URL(origin).protocol === 'https:' ? '__Host-omnisolo_session' : 'omnisolo_session';
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = Math.min(now + 3_600, auditSession.expiresAt);
   if (expiresAt <= now) throw new Error('visual audit login returned an already expired token');
   const protectedSegment = base64url(JSON.stringify({
     alg: 'dir',
     enc: 'A256GCM',
-    typ: 'ohc-session+jwe',
+    typ: 'omnisolo-session+jwe',
     kid: keyId,
   }));
   const payload = Buffer.from(JSON.stringify({

@@ -1,11 +1,11 @@
-# OmniSolo (formerly OmniSolo)
+# OmniSolo
 
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
 ## Built-in Agent Harness
 
-The OmniSolo platform features a highly advanced, built-in Agent Harness (`omnisolo-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code. Note: OmniSolo was the beta name of the beta software, now formally named and launched as OmniSolo Desktop/Mobile/Cloud.
+The OmniSolo platform features a highly advanced, built-in Agent Harness (`omnisolo-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code.
 
 ### Visual/Low-Code Orchestration
 
@@ -37,7 +37,7 @@ If you encounter Docker Hub rate limits (`You have reached your unauthenticated 
 ```bash
 bazel run //deploy:load_all_images
 ./deploy/scripts/prepare-compose-env.sh
-docker compose --env-file .ohc-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
+docker compose --env-file .omnisolo-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
 ```
 This flow utilizes local `server`, `agent`, and `omnisolo-core` images without requiring an external pull. It also leverages your local cache for base images like Postgres and Valkey.
 
@@ -51,7 +51,7 @@ The platform implements a hybrid identity model:
 
 ## Product Vision & Market Strategy
 
-OmniSolo (formerly OmniSolo / OmniSolo) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
+OmniSolo is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OmniSolo Market Strategy](docs/vision/market_strategy.md)**.
 
 ## Architecture
 
@@ -130,7 +130,7 @@ Because we use local images built from source instead of pulling from Docker Hub
 2.  Use Docker Compose to launch the stack with the locally built images:
     ```bash
     ./deploy/scripts/prepare-compose-env.sh
-    docker compose --env-file .ohc-compose/compose.env \
+    docker compose --env-file .omnisolo-compose/compose.env \
       -f deploy/docker-compose.yml \
       -f deploy/docker-compose.override.yml \
       up -d
@@ -144,7 +144,7 @@ bazelisk run //:deploy_dev
 > **Note:** If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing images for `omnisolo/server:latest` or `valkey/pgvector`, the local-first Bazel build flow via `npx @bazel/bazelisk run //deploy:load_all_images` is the required primary path. Additionally, ensure you include the override file when running compose manually:
 > ```bash
 > ./deploy/scripts/prepare-compose-env.sh
-> docker compose --env-file .ohc-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
+> docker compose --env-file .omnisolo-compose/compose.env -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
 > ```
 
 Services:
@@ -264,7 +264,7 @@ bazelisk run //src/server:server
 | `OMNISOLO_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
 | `OMNISOLO_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
 | `OMNISOLO_DEFAULT_TENANT_ID` | Default tenant used by local E2E login when the browser form does not submit an explicit organization ID; defaults to `e2e-tenant` in the test harness |
-| `OMNISOLO_LLM_CONFIG_PATH` | Optional Tauri/built-in agent provider config path. Defaults to `.ohc/ai-provider.json` |
+| `OMNISOLO_LLM_CONFIG_PATH` | Optional Tauri/built-in agent provider config path. Defaults to `.omnisolo/ai-provider.json` |
 
 Tauri packages static assets from `src/ui/tauri/next_out` via `src/ui/tauri/tauri.conf.json`. The `src/ui/next/out` tree is legacy/prototype output.
 

@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Viral Powered by OmniSolo Widget', () => {
   test('should load the widget and generate an embed code snippet', async ({ page }) => {
-    await page.goto('/ui/viral-powered-by-ohc-widget.html');
+    await page.goto('/ui/viral-powered-by-omnisolo-widget.html');
 
     // Wait for main elements
     await expect(page.locator('h1')).toHaveText('Embed Footer Badge');
@@ -19,12 +19,13 @@ test.describe('Viral Powered by OmniSolo Widget', () => {
     // Check embed code generated correctly
     const embedCode = page.locator('#embed-code');
     await expect(embedCode).toContainText('Powered by OmniSolo');
-    await expect(embedCode).toContainText('ohc.network/invite/');
+    await expect(embedCode).toContainText('https://cloud.omnisolo.co/invite/');
+    await expect(embedCode).not.toContainText('ohc.network');
   });
 
   test('should copy the share link to clipboard', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await page.goto('/ui/viral-powered-by-ohc-widget.html');
+    await page.goto('/ui/viral-powered-by-omnisolo-widget.html');
 
     const generateBtn = page.locator('#generate-btn');
     await generateBtn.click();
@@ -49,7 +50,7 @@ test.describe('Viral Powered by OmniSolo Widget', () => {
   });
 
   test('should navigate back to the dashboard', async ({ page }) => {
-    await page.goto('/ui/viral-powered-by-ohc-widget.html');
+    await page.goto('/ui/viral-powered-by-omnisolo-widget.html');
     const backLink = page.locator('.back-link');
     await expect(backLink).toBeVisible();
     await expect(backLink).toHaveAttribute('href', '/dashboard.html');

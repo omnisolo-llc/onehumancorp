@@ -99,7 +99,7 @@ Enforce the "Zero-WIP" protocol by clearing out old ephemeral contexts that have
 ```bash
 $ ohc-cli autodream prune --max-age 2h
 [INFO] Scanning for stale session files > 2h old...
-[INFO] Removed 14 processed session logs from .ohc/runtime/memory/
+[INFO] Removed 14 processed session logs from .omnisolo/runtime/memory/
 [SUCCESS] Local state cleaned.
 ```
 

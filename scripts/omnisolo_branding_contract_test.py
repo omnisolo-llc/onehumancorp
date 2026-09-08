@@ -33,12 +33,15 @@ SKIP_NAMES = {
 
 FORBIDDEN = (
     ("uppercase OHC brand", re.compile(r"\bOHC\b")),
-    ("legacy company name", re.compile(r"\bOne Human Corp\b|\bOneHumanCorp\b")),
+    (
+        "legacy company name",
+        re.compile(r"\bOne Human Corp\b|\bOneHumanCorp\b|\bONE HUMAN CORP\b"),
+    ),
     ("legacy environment prefix", re.compile(r"\bOHC_[A-Z0-9_]+")),
     (
         "legacy cloud origin",
         re.compile(
-            r"https?://(?:www\.)?(?:ohc\.app|ohc\.store|api\.onehumancorp\.com|"
+            r"https?://(?:www\.)?(?:ohc\.app|ohc\.store|ohc\.network|api\.onehumancorp\.com|"
             r"app\.onehumancorp\.com|onehumancorp\.com)"
         ),
     ),
@@ -46,7 +49,50 @@ FORBIDDEN = (
     ("legacy first-party path", re.compile(r"(?:apps/onehumancorp|helm/ohc|src/server/ohc)")),
     ("legacy Helm helper", re.compile(r'include\s+"ohc\.')),
     ("legacy release binary", re.compile(r"\b(?:ohc-builtin-agent|ohc-server|run-ohc)\b")),
+    ("legacy Rust type", re.compile(r"\bOHC[A-Z][A-Za-z0-9_]*\b")),
     ("legacy chart name", re.compile(r"^\s*name:\s*ohc\s*$")),
+    (
+        "legacy browser-owned identifier",
+        re.compile(
+            r"(?:__Host-)?ohc_(?:session|oidc_state|token(?![A-Za-z0-9_])|"
+            r"tenant_id|active_tenant_id|active_terminal_session_id|pos_[A-Za-z0-9_]+|"
+            r"offline_[A-Za-z0-9_]+|catalog_[A-Za-z0-9_${}-]+|builder_[A-Za-z0-9_]+|"
+            r"dbc_shared|user|wizard_state)|ohc-localization-storage|"
+            r"ohc-registration-(?:challenge|ticket)|"
+            r"ohc-session\+jwe|x-ohc-tenant-id|ohc://"
+        ),
+    ),
+    (
+        "legacy browser tenant default",
+        re.compile(
+            r"tenantId\s*(?:=|:)\s*[\"']ohc[\"']|"
+            r"searchParams\.[^;]+\|\|\s*[\"']ohc[\"']"
+        ),
+    ),
+    (
+        "legacy local application path",
+        re.compile(r"\.ohc(?=[/\\\s\"'-]|$)"),
+    ),
+    (
+        "legacy application artifact",
+        re.compile(
+            r"\bohc-(?:android|ios)-|com\.omnisolo\.ohc|ohc\.mobileprovision|"
+            r"(?:/tmp/|\$RUNNER_TEMP/)ohc-(?:base-images|kind-images|docker-compose-images|"
+            r"macos-signing|ios-signing|signing|bootstrap|e2e|visual-audit)|"
+            r"\bohc-(?:backend|standalone|prometheus-agent)\b|"
+            r"\bohc-blobs\b|"
+            r"disk-cache:\s*onehumancorp|refs/heads/[^\s\"']*onehumancorp"
+        ),
+    ),
+    (
+        "legacy local runtime identifier",
+        re.compile(
+            r"ohc-atomic-writes|/var/run/ohc_proxy\.sock|/tmp/ohc_(?:blobs|test_)|"
+            r"\.ohc_hibernation|\bohc_runtime_dir\b|agent@ohc\.local|"
+            r"\bohc_modal_stub\b|\bohc_(?:edit|write)_check\b|"
+            r"with_name\(\"ohc\"\)|\.openclaw/ohc"
+        ),
+    ),
 )
 
 
@@ -90,10 +136,31 @@ def compatibility_line(path: Path, root: Path, line: str) -> bool:
         or "spiffe://ohc.app/" in line
     ):
         return True
+    if root == MONO_ROOT and "ohc.global" in line and (
+        rel in {"src/agents/builtin/auth.rs", "src/server/auth/grpc.rs"}
+        or rel == "docs/technical/features/identity-security/federation.md"
+    ):
+        return True
+
+    # Standalone startup migrates the previous state directory and encrypted
+    # database/key filenames in place.  These literals are migration inputs,
+    # never new output names.
+    if root == MONO_ROOT and rel == "src/server/config/mod.rs" and (
+        '".ohc"' in line
+        or '"ohc-standalone.db' in line
+        or '".ohc_sqlite_key"' in line
+        or '".ohc_jwt_secret"' in line
+    ):
+        return True
 
     # The public queue endpoint is an existing API contract; its implementation
     # module and all new UI/product copy are OmniSolo-named.
     if root == MONO_ROOT and "/api/v1/ohc_job_queue" in line:
+        return True
+
+    # This source-policy test lists legacy browser credential keys solely to
+    # reject them from production browser code.
+    if root == MONO_ROOT and rel == "src/ui/next/src/lib/auth/browserAuthAuthority.source.test.ts":
         return True
 
     # The cluster repository contains a pre-existing live verification change

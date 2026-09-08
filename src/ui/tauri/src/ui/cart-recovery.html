@@ -295,7 +295,7 @@
 
     async function fetchCartCount() {
       try {
-        const token = localStorage.getItem('ohc_token');
+        const token = localStorage.getItem('omnisolo_token');
         const response = await fetch('/api/v1/growth/campaign/abandoned-carts-count', { headers: { 'Authorization': token ? `Bearer ${token}` : '' } });
         if (response.ok) {
           const data = await response.json();

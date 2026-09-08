@@ -23,11 +23,11 @@ export function NetworkStatusIndicator() {
       handleQueueUpdate();
       window.addEventListener('online', handleOnline);
       window.addEventListener('offline', handleOffline);
-      window.addEventListener('ohc_queue_updated', handleQueueUpdate);
+      window.addEventListener('omnisolo_queue_updated', handleQueueUpdate);
       return () => {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
-        window.removeEventListener('ohc_queue_updated', handleQueueUpdate);
+        window.removeEventListener('omnisolo_queue_updated', handleQueueUpdate);
       };
     }
   }, []);

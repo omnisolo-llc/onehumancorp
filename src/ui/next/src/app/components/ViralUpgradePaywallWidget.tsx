@@ -35,7 +35,7 @@ export function ViralUpgradePaywallWidget({ tenantId = "default" }: { tenantId?:
 
   if (isLoading) {
     return (
-      <div className="ohc-growth-card p-6 border border-indigo-100 bg-white/50 animate-pulse rounded-xl">
+      <div className="omnisolo-growth-card p-6 border border-indigo-100 bg-white/50 animate-pulse rounded-xl">
         <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
         <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
         <div className="h-10 bg-gray-200 rounded"></div>

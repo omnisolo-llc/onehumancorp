@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if server_lib::is_standalone_runtime() {
             omnisolo_builtin_agent::run_agent().await
         } else {
-            let message = "cluster mode uses the separate ohc-builtin-agent binary; run that binary for agent tasks";
+            let message = "cluster mode uses the separate omnisolo-builtin-agent binary; run that binary for agent tasks";
             Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, message).into())
         }
     } else {

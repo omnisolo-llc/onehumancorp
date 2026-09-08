@@ -76,10 +76,10 @@ Based on this research, we need to introduce the following missions for the Omni
 *   **Problem Statement**: OmniSolo Standalone Desktop Mode (SQLite) lacks a robust, file-based memory caching system that mimics the durability of our cloud vector database, leading to slow context retrieval on local machines.
 *   **Design Doc**:
     *   Introduce a local filesystem fallback for the `OmniSoloMemory` interface when running in Standalone Mode.
-    *   On project initialization, automatically create `.ohc/memory/auto/` and `.ohc/memory/team/`.
-    *   Inject a system prompt directive: "The directories `.ohc/memory/...` already exist. Write state to them directly."
+    *   On project initialization, automatically create `.omnisolo/memory/auto/` and `.omnisolo/memory/team/`.
+    *   Inject a system prompt directive: "The directories `.omnisolo/memory/...` already exist. Write state to them directly."
 *   **Implementation Prompt**:
-    1. Modify `src/app/standalone_linux_launcher.sh` or the local startup logic to ensure `.ohc/memory/` directories are created.
+    1. Modify `src/app/standalone_linux_launcher.sh` or the local startup logic to ensure `.omnisolo/memory/` directories are created.
     2. Update the agent's base system prompt generator to include the memory directory instructions.
     3. Add tests verifying that the directories are created successfully on startup and that the system prompt contains the correct paths.
 *   **Priority**: P2

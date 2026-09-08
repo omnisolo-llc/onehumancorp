@@ -19,11 +19,11 @@ The latest interrupted attempt provided strong but incomplete evidence:
 - Helm lint and template checks passed in cloud and standalone modes.
 - The entire cloud/web REST and mTLS/SPIFFE flow passed again.
 - The standalone release installed.
-- `kubectl get pods` showed `ohc-standalone-backend-6c7f54c499-plrmg` as `1/1 Running` and Ready.
+- `kubectl get pods` showed `omnisolo-standalone-backend-6c7f54c499-plrmg` as `1/1 Running` and Ready.
 - Previous standalone logs showed SQLite migrations, `Initialized InProcessTransport`, built-in-agent mesh subscriptions, `auth.config.ready` for `Standalone`, and both listeners starting.
 - This proves `OMNISOLO_AGENT_TOKEN` plus `OMNISOLO_AGENT_AUTH_KEY` are accepted and the original CrashLoopBackOff is fixed.
 - The interruption occurred before the standalone REST smoke printed its results and before Bazel emitted a terminal exit code, so `//deploy:kind_e2e_test` must still be rerun to completion.
-- The leaked disposable cluster `ohc-e2e-8875` was explicitly deleted. `kind get clusters` returned only `kind` at handoff.
+- The leaked disposable cluster `omnisolo-e2e-8875` was explicitly deleted. `kind get clusters` returned only `kind` at handoff.
 - No detached `bazel ... kind_e2e_test` or `kind_e2e_test.sh` process remained at handoff.
 
 First action for the next agent:
@@ -60,7 +60,7 @@ Run this in a stable terminal and allow it to finish without starting a competin
 - The user explicitly authorized committing all intended worktree changes.
 - The tree is very large and dirty: hundreds of modified/deleted/untracked paths. Before the final commit, review ignored/generated/sensitive files and exclude only transient build artifacts or credentials.
 - Never run `git reset --hard`, `git clean`, `git checkout --`, or `git restore` against this shared tree.
-- Expected persistent Kind cluster is named `kind`. Disposable test clusters use `ohc-e2e-*`; delete only disposable names.
+- Expected persistent Kind cluster is named `kind`. Disposable test clusters use `omnisolo-e2e-*`; delete only disposable names.
 
 ## Completed implementation that must not regress
 
@@ -238,7 +238,7 @@ git diff --name-status
 ```
 
 - [x] Search untracked and tracked content for generated artifacts, private keys, certificates, environment dumps, database files, logs, and literal credentials. Do not display secret values in terminal output.
-- [x] Confirm no `ohc-e2e-*` cluster or E2E-owned container remains.
+- [x] Confirm no `omnisolo-e2e-*` cluster or E2E-owned container remains.
 - [x] Stage all intended changes as authorized by the user:
 
 ```bash

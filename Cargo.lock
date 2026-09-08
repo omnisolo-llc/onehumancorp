@@ -5772,7 +5772,6 @@ dependencies = [
  "hmac",
  "image",
  "jsonwebtoken",
- "lettre",
  "libc",
  "libsqlite3-sys",
  "omnisolo_builtin_agent",

@@ -17,7 +17,7 @@ The Identity and Security framework ensures that all interactions across the Omn
 - Managing physical building access or generic human HR systems.
 
 ## 3. Implementation Details
-- **Architecture**: Leverages SPIFFE/SPIRE for universal workload identity. The `ohc-operator` injects SPIRE sidecars into every new AI agent pod natively.
+- **Architecture**: Leverages SPIFFE/SPIRE for universal workload identity. The `omnisolo-operator` injects SPIRE sidecars into every new AI agent pod natively.
 - **Human Identity**: Uses OIDC (OpenID Connect) for human CEO logins, mapped internally to the SPIFFE trust domain.
 - **Verification**: All inter-agent and agent-to-hub gRPC traffic requires mTLS authentication validated against the central `spire-server`.
 

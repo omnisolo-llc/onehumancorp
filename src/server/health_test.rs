@@ -63,11 +63,11 @@ async fn test_setup_health_check_endpoint() {
     let hub = Arc::new(Hub::new(tx, pg_pool.clone()));
 
     // Ensure clean state
-    if std::path::Path::new(".ohc-local-data").exists() {
-        std::fs::remove_dir_all(".ohc-local-data").unwrap();
+    if std::path::Path::new(".omnisolo-local-data").exists() {
+        std::fs::remove_dir_all(".omnisolo-local-data").unwrap();
     }
-    if std::path::Path::new(".ohc-cloud-data").exists() {
-        std::fs::remove_dir_all(".ohc-cloud-data").unwrap();
+    if std::path::Path::new(".omnisolo-cloud-data").exists() {
+        std::fs::remove_dir_all(".omnisolo-cloud-data").unwrap();
     }
 
     // Set up standalone
@@ -112,9 +112,9 @@ async fn test_setup_health_check_endpoint() {
     assert_eq!(body.get("status").unwrap(), "ready");
 
     // Create a dummy file to block directory creation, simulating provisioning failure for cloud mode
-    let _ = std::fs::remove_dir_all(".ohc-cloud-data");
-    let _ = std::fs::remove_file(".ohc-cloud-data");
-    std::fs::write(".ohc-cloud-data", "dummy file").unwrap();
+    let _ = std::fs::remove_dir_all(".omnisolo-cloud-data");
+    let _ = std::fs::remove_file(".omnisolo-cloud-data");
+    std::fs::write(".omnisolo-cloud-data", "dummy file").unwrap();
 
     // Test cloud (should fail since it cannot write directories)
     let response = app.clone()
@@ -128,6 +128,6 @@ async fn test_setup_health_check_endpoint() {
     assert_eq!(body.get("status").unwrap(), "error");
 
     // Clean up
-    let _ = std::fs::remove_file(".ohc-cloud-data");
-    std::fs::remove_dir_all(".ohc-local-data").unwrap();
+    let _ = std::fs::remove_file(".omnisolo-cloud-data");
+    std::fs::remove_dir_all(".omnisolo-local-data").unwrap();
 }

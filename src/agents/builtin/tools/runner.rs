@@ -120,7 +120,7 @@ impl SandboxedCommandRunner {
                 exec_args
             },
             "modal" => {
-                let mut exec_args = vec!["run".to_string(), "ohc_modal_stub".to_string(), "--".to_string()];
+                let mut exec_args = vec!["run".to_string(), "omnisolo_modal_stub".to_string(), "--".to_string()];
                 for (key, value) in envs {
                     exec_args.push("--env".to_string());
                     exec_args.push(format!("{}={}", key, value));
@@ -395,7 +395,7 @@ mod tests {
             "echo", &["hello"], None, None, &vec![("FOO".to_string(), "bar".to_string())], "modal"
         );
         assert_eq!(args[0], "run");
-        assert_eq!(args[1], "ohc_modal_stub");
+        assert_eq!(args[1], "omnisolo_modal_stub");
         assert_eq!(args[2], "--");
         assert_eq!(args[3], "--env");
         assert_eq!(args[4], "FOO=bar");

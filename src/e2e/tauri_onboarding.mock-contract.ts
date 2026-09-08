@@ -493,7 +493,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
         core: {
           invoke: async (cmd, args) => {
             if (cmd === 'generate_cloud_invite') {
-              return "https://cloud.ohc.network/invite/mock-test";
+              return "https://cloud.omnisolo.co/invite/mock-test";
             }
             if (cmd === "start_onboarding") {
               return { success: true, message: "OK", organization_id: "test-org" };

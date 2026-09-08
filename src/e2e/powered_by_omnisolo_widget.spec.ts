@@ -3,8 +3,8 @@ import { test, expect } from './fixtures';
 test.describe('Powered by OmniSolo Widget', () => {
   test('should navigate from dashboard to the widget and generate embed code', async ({ page }) => {
     await page.goto('/ui/dashboard.html');
-    await page.click('#powered-by-ohc-link');
-    await expect(page).toHaveURL(/.*powered-by-ohc-widget\.html/);
+    await page.click('#powered-by-omnisolo-link');
+    await expect(page).toHaveURL(/.*powered-by-omnisolo-widget\.html/);
 
     await expect(page.locator('h1')).toHaveText('Powered by OmniSolo');
     const generateBtn = page.locator('#generate-btn');
@@ -28,7 +28,7 @@ test.describe('Powered by OmniSolo Widget', () => {
 
   test('should copy the embed code to clipboard', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await page.goto('/ui/powered-by-ohc-widget.html');
+    await page.goto('/ui/powered-by-omnisolo-widget.html');
 
     const generateBtn = page.locator('#generate-btn');
     await generateBtn.click();
@@ -55,7 +55,7 @@ test.describe('Powered by OmniSolo Widget', () => {
 
   test('should show responsive layout on mobile viewport', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/ui/powered-by-ohc-widget.html');
+    await page.goto('/ui/powered-by-omnisolo-widget.html');
     await page.waitForTimeout(100);
 
     await expect(page.locator('h1')).toHaveText('Powered by OmniSolo');
@@ -66,7 +66,7 @@ test.describe('Powered by OmniSolo Widget', () => {
   });
 
   test('should navigate back to the dashboard', async ({ page }) => {
-    await page.goto('/ui/powered-by-ohc-widget.html');
+    await page.goto('/ui/powered-by-omnisolo-widget.html');
     const backLink = page.locator('.back-link');
     await expect(backLink).toBeVisible();
     await expect(backLink).toHaveAttribute('href', '/dashboard.html');

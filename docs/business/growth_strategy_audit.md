@@ -57,7 +57,7 @@ graph TD
 To adhere to the **Visual Excellence Mandate**, our growth landing pages and dashboards will utilize the following OmniSolo Glassmorphism tokens:
 
 ```css
-.ohc-growth-card {
+.omnisolo-growth-card {
     backdrop-filter: blur(20px) saturate(200%);
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);

@@ -67,7 +67,7 @@ Invalid, expired, undecryptable, or structurally incomplete sessions are identic
 
 Use a single host-only cookie with these properties:
 
-- Name: `__Host-ohc_session` in every production deployment. A development-only name may be used only in an explicit loopback-bound local mode when HTTP prevents the `__Host-` contract; forwarded headers or request host values cannot enable that downgrade.
+- Name: `__Host-omnisolo_session` in every production deployment. A development-only name may be used only in an explicit loopback-bound local mode when HTTP prevents the `__Host-` contract; forwarded headers or request host values cannot enable that downgrade.
 - `HttpOnly` so browser JavaScript cannot read the backend token.
 - `Secure` outside an explicit local-development environment.
 - `SameSite=Lax` to block ordinary cross-site form submission while preserving top-level return navigation.

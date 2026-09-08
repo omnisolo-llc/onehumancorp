@@ -336,7 +336,7 @@
         const after = encodeURIComponent(afterInput.value);
         const branding = !removeBrandingCheck.checked;
 
-        const embedUrl = `https://ohc.network/api/v1/growth/viral-before-after/embed?tenant=${tenant}&title=${title}&before=${before}&after=${after}&branding=${branding}`;
+        const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-before-after/embed?tenant=${tenant}&title=${title}&before=${before}&after=${after}&branding=${branding}`;
         const code = `<iframe src="${embedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
         document.getElementById('embed-code').textContent = code;

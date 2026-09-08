@@ -15,7 +15,7 @@ const config: AuthRuntimeConfig = {
   canonicalOrigin: "https://app.example.com",
   backendOrigin: "https://api.example.com",
   localDev: false,
-  cookieName: "__Host-ohc_session",
+  cookieName: "__Host-omnisolo_session",
   secureCookie: true,
   sessionAudience: "https://app.example.com",
 };
@@ -154,8 +154,8 @@ describe("protected-by-default auth middleware", () => {
   it("treats tampered, duplicate, and expired sessions as absent and deletes them", async () => {
     const deps = await dependencies();
     for (const cookieHeader of [
-      "__Host-ohc_session=not-a-jwe",
-      "__Host-ohc_session=one; __Host-ohc_session=two",
+      "__Host-omnisolo_session=not-a-jwe",
+      "__Host-omnisolo_session=one; __Host-omnisolo_session=two",
       await cookie(deps, { exp: NOW - 1, iat: NOW - 3_600 }),
     ]) {
       const outcome = await evaluateAuthMiddleware(request("/dashboard", {}, cookieHeader), deps);

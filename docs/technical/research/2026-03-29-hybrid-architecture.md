@@ -78,7 +78,7 @@ The Slint desktop shell acts as the supervisor for the embedded Rust backend.
 
 ### 4.2 SQLite/PostgreSQL Parity
 To guarantee parity, the Rust backend uses a unified `DataStore` trait.
-- Local: SQLite `file:///.ohc/runtime/swarm.db`.
+- Local: SQLite `file:///.omnisolo/runtime/swarm.db`.
 - Cloud: PostgreSQL DSN.
 The underlying schema must remain 100% compatible. Complex JSONB queries in Postgres are translated to SQLite JSON functions.
 

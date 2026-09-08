@@ -26,7 +26,7 @@ All endpoints are secured via SPIFFE/SPIRE zero-trust principles or an OIDC JWT.
 
 **Example Request:**
 ```bash
-curl -X GET https://api.ohc.local/api/v1/agents/status \
+curl -X GET https://api.omnisolo.local/api/v1/agents/status \
   -H "Authorization: Bearer <JWT_OR_SVID>" \
   -H "X-OmniSolo-Tenant-ID: org_acme_123"
 ```
@@ -462,7 +462,7 @@ Triggers an immediate AutoDream vector embedding workflow on newly generated age
 ```json
 {
   "target_memory_files": [
-    ".ohc/runtime/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.yml"
+    ".omnisolo/runtime/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.yml"
   ],
   "priority": "high"
 }

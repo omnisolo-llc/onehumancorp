@@ -17,7 +17,7 @@ The Compute Optimization engine maximizes throughput and Return on Investment (R
 - Managing underlying hardware lifecycle (e.g., racking physical servers).
 
 ## 3. Implementation Details
-- **Architecture**: A hardware-aware scheduling controller extending the `ohc-operator`. Uses node affinity to place `high-vram` labeled agent pods onto appropriate nodes.
+- **Architecture**: A hardware-aware scheduling controller extending the `omnisolo-operator`. Uses node affinity to place `high-vram` labeled agent pods onto appropriate nodes.
 - **Stack**: Rust, Kubernetes Scheduler, NVIDIA Device Plugin.
 - **VRAM Budgeting**: Departments are allocated a virtual "GPU Budget" to prevent runaway compute costs. If a department exceeds its quota, it must queue agent workloads or burst into CPU-based smaller models.
 

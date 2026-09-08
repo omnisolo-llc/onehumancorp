@@ -121,7 +121,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
     if (hasCodeBlock) {
         const codeText = await page.locator('#embed-code').innerText();
-        expect(codeText).toContain('<div id="ohc-leaderboard"></div>');
+        expect(codeText).toContain('<div id="omnisolo-leaderboard"></div>');
         expect(codeText).toContain('cloud.omnisolo.co/api/v1/growth/embed/widget?type=leaderboard');
     }
     await page.goto('/ui/viral-pwyw-generator.html');

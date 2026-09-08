@@ -61,7 +61,7 @@ export default function ViralProductWidgetPage() {
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Left Column: Configuration */}
                     <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                        <div className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl p-6">
+                        <div className="app-card omnisolo-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl p-6">
                             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6 flex items-center gap-2">
                                 <span className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">⚙️</span>
                                 Configuration
@@ -147,7 +147,7 @@ export default function ViralProductWidgetPage() {
                         </div>
 
                         {/* Embed Code Section */}
-                        <div className="app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl p-6">
+                        <div className="app-card omnisolo-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl p-6">
                             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Embed Code</h2>
                             <div className="relative group">
                                 <pre className="w-full h-32 p-4 bg-gray-900 border border-gray-700 rounded-xl font-mono text-xs text-gray-300 overflow-x-auto overflow-y-auto shadow-inner leading-relaxed">
@@ -165,7 +165,7 @@ export default function ViralProductWidgetPage() {
 
                     {/* Right Column: Live Preview */}
                     <div className="w-full lg:w-2/3 flex flex-col">
-                        <div className="flex-1 app-card ohc-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl overflow-hidden flex flex-col relative min-h-[600px]">
+                        <div className="flex-1 app-card omnisolo-growth-card glass-card backdrop-blur-xl bg-white/40 border border-white/20 shadow-xl rounded-2xl overflow-hidden flex flex-col relative min-h-[600px]">
                             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 z-10"></div>
                             <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center z-10 relative">
                                 <h3 className="text-sm font-bold text-gray-600 uppercase tracking-widest flex items-center gap-2">

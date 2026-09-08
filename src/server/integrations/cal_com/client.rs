@@ -81,7 +81,7 @@ impl CalComClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok(format!("https://cal.com/ohc-tenant/{}", event_type))
+                    Ok(format!("https://cal.com/omnisolo-tenant/{}", event_type))
                 } else {
                     Err(format!("Cal.com API error: {}", resp.status()))
                 }

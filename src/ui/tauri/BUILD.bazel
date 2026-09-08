@@ -230,7 +230,7 @@ TAURI_MOBILE_SRCS = glob([
 tauri_mobile_package(
     name = "tauri_android_apk",
     srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-android-aarch64.apk",
+    out = "omnisolo-android-aarch64.apk",
     android_sdk = "@tauri_android_sdk//:sdk",
     android_sdk_root = "@tauri_android_sdk//:.sdk_root",
     package_type = "apk",
@@ -244,7 +244,7 @@ tauri_mobile_package(
 tauri_mobile_package(
     name = "tauri_android_aab",
     srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-android-aarch64.aab",
+    out = "omnisolo-android-aarch64.aab",
     android_sdk = "@tauri_android_sdk//:sdk",
     android_sdk_root = "@tauri_android_sdk//:.sdk_root",
     package_type = "aab",
@@ -258,7 +258,7 @@ tauri_mobile_package(
 tauri_mobile_package(
     name = "tauri_ios_ipa",
     srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-ios-aarch64.ipa",
+    out = "omnisolo-ios-aarch64.ipa",
     ios_export_method = "app-store-connect",
     package_type = "ipa",
     target_compatible_with = select({

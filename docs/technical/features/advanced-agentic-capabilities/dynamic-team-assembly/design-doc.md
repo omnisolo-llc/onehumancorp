@@ -7,7 +7,7 @@
 **Scope:** Integration within the core Orchestration Hub and the MCP Gateway, adhering to the Zero-Lock paradigm.
 
 ## 2. Architecture & Components
-Extends the `ohc-operator` to allow agents with `Orchestrator` roles to mutate the `Subsidiary` CRD. The Hub intercepts these requests, validates the resulting token budget impact, and applies the YAML patch to the cluster.
+Extends the `omnisolo-operator` to allow agents with `Orchestrator` roles to mutate the `Subsidiary` CRD. The Hub intercepts these requests, validates the resulting token budget impact, and applies the YAML patch to the cluster.
 
 ## 3. Data Flow
 1. **Trigger:** The feature is invoked via Agent intent or a K8s event.

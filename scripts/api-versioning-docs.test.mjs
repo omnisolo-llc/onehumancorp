@@ -22,7 +22,7 @@ const currentApiDocs = [
   "docs/technical/walkthroughs/thin_client_integration.md",
 ];
 const unversionedOmniSoloApiPath = /(^|[^A-Za-z0-9_.])\/api\/(?!v1(?:\/|\b))/g;
-const versionedPathWithoutApiNamespace = /https?:\/\/(?:api\.ohc\.local|localhost(?::\d+)?|127\.0\.0\.1(?::\d+)?)\/v1(?:\/|\b)/g;
+const versionedPathWithoutApiNamespace = /https?:\/\/(?:api\.omnisolo\.local|localhost(?::\d+)?|127\.0\.0\.1(?::\d+)?)\/v1(?:\/|\b)/g;
 
 test("current OmniSolo API documentation uses the /api/v1 namespace", async () => {
   const failures = [];

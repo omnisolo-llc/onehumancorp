@@ -58,7 +58,7 @@ pub async fn handle_oauth_callback(
 
             // Redirect to the standalone instance via the tunnel proxy
             let tunnel_base_url = std::env::var("OMNISOLO_TUNNEL_BASE_URL")
-                .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
+                .unwrap_or_else(|_| "https://tunnel.omnisolo.co".to_string());
 
             if tunnel_base_url.starts_with("http://127.0.0.1:") || tunnel_base_url.starts_with("http://localhost:") {
                 // allowed for local dev
@@ -70,7 +70,7 @@ pub async fn handle_oauth_callback(
             } else {
                 let stripped = tunnel_base_url.strip_prefix("https://").unwrap_or(&tunnel_base_url);
                 let host = stripped.split('/').next().unwrap_or(stripped).split(':').next().unwrap_or(stripped);
-                if !host.ends_with(".ohc.network") && host != "ohc.network" && host != "localhost" && host != "127.0.0.1" {
+                if !host.ends_with(".omnisolo.co") && host != "omnisolo.co" && host != "localhost" && host != "127.0.0.1" {
                     return (axum::http::StatusCode::BAD_REQUEST, "Invalid tunnel_base_url host").into_response();
                 }
             }
@@ -147,7 +147,7 @@ mod tests {
         let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         // Assert that the redirect uses a fragment (#) instead of a query string (?)
-        assert!(body_str.contains("tunnel.ohc.network"));
+        assert!(body_str.contains("tunnel.omnisolo.co"));
         assert!(body_str.contains("code=test_code"));
         assert!(body_str.contains("state=actualState123"));
         assert!(body_str.contains("foo=bar"));

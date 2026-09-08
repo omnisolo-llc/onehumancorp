@@ -14,6 +14,13 @@ use sea_orm::{ActiveModelTrait, ConnectionTrait, EntityTrait, PaginatorTrait, Se
 
 use connection::AppDatabase;
 
+#[test]
+fn database_command_uses_only_the_omnisolo_environment_contract() {
+    let source = include_str!("persistence/commands.rs");
+    assert!(source.contains("OMNISOLO_DATABASE_URL"));
+    assert!(!source.contains(concat!("OH", "C_DATABASE_URL")));
+}
+
 async fn insert_user(database: &AppDatabase, id: &str, tenant_id: &str, email: &str) {
     let now = Utc::now();
     entities::user::ActiveModel {

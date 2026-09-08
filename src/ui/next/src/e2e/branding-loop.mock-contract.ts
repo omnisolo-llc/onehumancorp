@@ -3,7 +3,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 test.describe('Branding Growth Loop', () => {
     test('Powered by OmniSolo footer is present and links correctly', async ({ page }) => {
         await page.goto('/storefront-builder');
-        await page.evaluate(() => localStorage.setItem('ohc_builder_status', 'draft'));
+        await page.evaluate(() => localStorage.setItem('omnisolo_builder_status', 'draft'));
         await page.reload();
 
         const footerLink = page.locator('.powered-by-footer a').first();

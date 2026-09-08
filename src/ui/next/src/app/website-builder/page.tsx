@@ -166,7 +166,7 @@ export default function WebsiteBuilderPage() {
 
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
     setStatus(newStatus);
-    localStorage.setItem("ohc_builder_status", newStatus);
+    localStorage.setItem("omnisolo_builder_status", newStatus);
   };
 
   const handleGenerate = async () => {
@@ -188,7 +188,7 @@ export default function WebsiteBuilderPage() {
         props: b.content
       }));
       setBlocks(blocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(blocks));
       updateStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -243,7 +243,7 @@ export default function WebsiteBuilderPage() {
         setStatus("live");
         const url = `/bio/${data.domain || 'myshop'}`;
         setLiveUrl(url);
-        localStorage.setItem("ohc_builder_liveUrl", url);
+        localStorage.setItem("omnisolo_builder_liveUrl", url);
       } else {
         console.error('Failed to publish');
       }
@@ -326,7 +326,7 @@ export default function WebsiteBuilderPage() {
                     >
                       Instant Build
                     </button>
-                    <PoweredByOmniSolo tenantId="ohc" />
+                    <PoweredByOmniSolo tenantId="omnisolo" />
                   </div>
                 </>
               )}
@@ -786,7 +786,7 @@ export default function WebsiteBuilderPage() {
             </DraggableBlock>
           ))}
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
-          <SmartBlock type="PoweredBy" props={{ tenantId: "ohc", isPremium: false }} />
+          <SmartBlock type="PoweredBy" props={{ tenantId: "omnisolo", isPremium: false }} />
           <div className="text-center mt-4 mb-8">
             <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OmniSolo</a>
           </div>

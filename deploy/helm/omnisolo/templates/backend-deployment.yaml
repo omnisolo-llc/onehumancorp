@@ -73,7 +73,7 @@ spec:
               mountPath: /tmp
             {{- if $grpcTlsSecret }}
             - name: grpc-tls
-              mountPath: /etc/ohc/grpc-tls
+              mountPath: /etc/omnisolo/grpc-tls
               readOnly: true
             {{- end }}
           resources:
@@ -130,15 +130,15 @@ spec:
             {{- if $grpcTlsSecret }}
             {{- if not (hasKey $backendEnv "OMNISOLO_GRPC_TLS_CERT_PATH") }}
             - name: OMNISOLO_GRPC_TLS_CERT_PATH
-              value: /etc/ohc/grpc-tls/tls.crt
+              value: /etc/omnisolo/grpc-tls/tls.crt
             {{- end }}
             {{- if not (hasKey $backendEnv "OMNISOLO_GRPC_TLS_KEY_PATH") }}
             - name: OMNISOLO_GRPC_TLS_KEY_PATH
-              value: /etc/ohc/grpc-tls/tls.key
+              value: /etc/omnisolo/grpc-tls/tls.key
             {{- end }}
             {{- if not (hasKey $backendEnv "OMNISOLO_GRPC_CLIENT_CA_PATH") }}
             - name: OMNISOLO_GRPC_CLIENT_CA_PATH
-              value: /etc/ohc/grpc-tls/ca.crt
+              value: /etc/omnisolo/grpc-tls/ca.crt
             {{- end }}
             {{- end }}
             {{- range $name, $value := $backendEnv }}

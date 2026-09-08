@@ -43,7 +43,7 @@ impl EditExecutor {
                     "--emit=metadata",
                     "--edition=2021",
                     "--crate-name",
-                    "ohc_edit_check",
+                    "omnisolo_edit_check",
                     "-o",
                     &metadata_path_string,
                     &temp_path_string,

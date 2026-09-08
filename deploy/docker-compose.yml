@@ -45,14 +45,14 @@ services:
       OMNISOLO_STANDALONE_MODE: "false"
       OMNISOLO_MULTITENANT: "true"
       OMNISOLO_AUTH_RATE_LIMIT_DEPLOYMENT: single-instance
-      OMNISOLO_GRPC_TLS_CERT_PATH: /etc/ohc/grpc-tls/server.crt
-      OMNISOLO_GRPC_TLS_KEY_PATH: /etc/ohc/grpc-tls/server.key
-      OMNISOLO_GRPC_CLIENT_CA_PATH: /etc/ohc/grpc-tls/ca.crt
+      OMNISOLO_GRPC_TLS_CERT_PATH: /etc/omnisolo/grpc-tls/server.crt
+      OMNISOLO_GRPC_TLS_KEY_PATH: /etc/omnisolo/grpc-tls/server.key
+      OMNISOLO_GRPC_CLIENT_CA_PATH: /etc/omnisolo/grpc-tls/ca.crt
       REDIS_URL: redis://valkey:6379
     volumes:
-      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/server.crt:/etc/ohc/grpc-tls/server.crt:ro
-      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/server.key:/etc/ohc/grpc-tls/server.key:ro
-      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/ca.crt:/etc/ohc/grpc-tls/ca.crt:ro
+      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/server.crt:/etc/omnisolo/grpc-tls/server.crt:ro
+      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/server.key:/etc/omnisolo/grpc-tls/server.key:ro
+      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/ca.crt:/etc/omnisolo/grpc-tls/ca.crt:ro
       - ${JWT_SECRET_FILE:?JWT_SECRET_FILE is required}:/run/secrets/jwt-secret:ro
       - ${DATABASE_URL_FILE:?DATABASE_URL_FILE is required}:/run/secrets/database-url:ro
     depends_on:
@@ -104,18 +104,18 @@ services:
       OMNISOLO_BUILTIN_AGENT_BINARY: ${OMNISOLO_BUILTIN_AGENT_BINARY:-/usr/local/bin/omnisolo-builtin-agent}
       OMNISOLO_STANDALONE_MODE: "false"
       OMNISOLO_AUTH_RATE_LIMIT_DEPLOYMENT: single-instance
-      OMNISOLO_GRPC_TLS_CERT_PATH: /etc/ohc/grpc-tls/server.crt
-      OMNISOLO_GRPC_TLS_KEY_PATH: /etc/ohc/grpc-tls/server.key
-      OMNISOLO_GRPC_CLIENT_CA_PATH: /etc/ohc/grpc-tls/ca.crt
+      OMNISOLO_GRPC_TLS_CERT_PATH: /etc/omnisolo/grpc-tls/server.crt
+      OMNISOLO_GRPC_TLS_KEY_PATH: /etc/omnisolo/grpc-tls/server.key
+      OMNISOLO_GRPC_CLIENT_CA_PATH: /etc/omnisolo/grpc-tls/ca.crt
       JWT_SECRET_FILE: /run/secrets/jwt-secret
       OMNISOLO_SETUP_TOKEN_FILE: /run/secrets/setup-token
       OMNISOLO_MULTITENANT: "true"
       # Set to "true" for API-only / remote-client deployments.
       OMNISOLO_HEADLESS: ${OMNISOLO_HEADLESS:-false}
     volumes:
-      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/server.crt:/etc/ohc/grpc-tls/server.crt:ro
-      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/server.key:/etc/ohc/grpc-tls/server.key:ro
-      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/ca.crt:/etc/ohc/grpc-tls/ca.crt:ro
+      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/server.crt:/etc/omnisolo/grpc-tls/server.crt:ro
+      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/server.key:/etc/omnisolo/grpc-tls/server.key:ro
+      - ${OMNISOLO_DOCKER_GRPC_TLS_DIR:?OMNISOLO_DOCKER_GRPC_TLS_DIR is required}/ca.crt:/etc/omnisolo/grpc-tls/ca.crt:ro
       - ${JWT_SECRET_FILE:?JWT_SECRET_FILE is required}:/run/secrets/jwt-secret:ro
       - ${OMNISOLO_SETUP_TOKEN_FILE:?OMNISOLO_SETUP_TOKEN_FILE is required}:/run/secrets/setup-token:ro
       - ${DATABASE_URL_FILE:?DATABASE_URL_FILE is required}:/run/secrets/database-url:ro

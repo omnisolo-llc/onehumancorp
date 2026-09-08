@@ -40,7 +40,7 @@ fn generate_cloud_invite() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    format!("https://cloud.ohc.network/invite/ref-{}", ts)
+    format!("https://cloud.omnisolo.co/invite/ref-{}", ts)
 }
 
 #[tauri::command]
@@ -49,7 +49,7 @@ fn generate_cloud_bridge_invite() -> String {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    format!("https://cloud.ohc.network/invite/cb-{}", ts)
+    format!("https://cloud.omnisolo.co/invite/cb-{}", ts)
 }
 
 #[tauri::command]
@@ -172,7 +172,7 @@ fn ai_provider_config_path() -> std::path::PathBuf {
         .ok()
         .filter(|value| !value.trim().is_empty())
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::PathBuf::from(".ohc/ai-provider.json"))
+        .unwrap_or_else(|| std::path::PathBuf::from(".omnisolo/ai-provider.json"))
 }
 
 fn read_ai_provider_config() -> Result<AiProviderConfig, String> {

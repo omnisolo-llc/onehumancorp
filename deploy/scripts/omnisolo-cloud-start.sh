@@ -37,4 +37,4 @@ bash deploy/setup_k8s.sh || true
 echo -e "${GREEN}✓ Cloud environment configured and ready for deployment.${RESET}"
 echo -e "${BOLD}Next steps:${RESET}"
 echo -e "  To run the cloud-native stack locally via Docker Compose, use: ${CYAN}bazelisk run //:deploy_dev${RESET}"
-echo -e "  To deploy to your K8s cluster via Helm, run: ${CYAN}helm install ohc deploy/helm/omnisolo-core${RESET}"
+echo -e "  To deploy to your K8s cluster via Helm, run: ${CYAN}helm install omnisolo deploy/helm/omnisolo${RESET}"

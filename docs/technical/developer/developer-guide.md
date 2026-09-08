@@ -244,7 +244,7 @@ docker compose -f deploy/docker-compose.yml down -v
 
 ### Frontend assets
 
-The Tauri shell packages static assets from `src/ui/tauri/next_out` through `src/ui/tauri/tauri.conf.json`. The runtime AI provider settings are read from `OMNISOLO_LLM_CONFIG_PATH` when set, otherwise `.ohc/ai-provider.json`.
+The Tauri shell packages static assets from `src/ui/tauri/next_out` through `src/ui/tauri/tauri.conf.json`. The runtime AI provider settings are read from `OMNISOLO_LLM_CONFIG_PATH` when set, otherwise `.omnisolo/ai-provider.json`.
 
 ---
 

@@ -15,4 +15,4 @@ ENV
 deploy/scripts/omnisolo-verify-setup.sh
 ```
 
-Audit reports are securely stored in `.ohc/runtime/status/`.
+Audit reports are securely stored in `.omnisolo/runtime/status/`.

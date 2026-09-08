@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-test('viral_powered_by_ohc_widget_smoke', async ({ page, request, loginAs, adminUser }) => {
+test('viral_powered_by_omnisolo_widget_smoke', async ({ page, request, loginAs, adminUser }) => {
   await loginAs(page, adminUser);
-  await currentAppSmoke(page, request, 'viral_powered_by_ohc_widget_smoke');
+  await currentAppSmoke(page, request, 'viral_powered_by_omnisolo_widget_smoke');
 });
 
 test.describe('Viral Powered By OmniSolo Widget', () => {

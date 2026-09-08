@@ -1,4 +1,4 @@
-Name: ohc
+Name: omnisolo
 Version: 0
 Release: 1
 Summary: OmniSolo application bundle

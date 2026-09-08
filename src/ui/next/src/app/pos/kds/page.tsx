@@ -38,11 +38,11 @@ export default function KDSPage() {
         const normalizedOrders = Array.isArray(ordersData.orders) ? ordersData.orders : (Array.isArray(ordersData) ? ordersData : []);
         setOrders(normalizedOrders);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('ohc_pos_kds_orders', JSON.stringify(normalizedOrders));
+          localStorage.setItem('omnisolo_pos_kds_orders', JSON.stringify(normalizedOrders));
         }
       } catch {
         if (typeof window !== 'undefined') {
-          const cached = localStorage.getItem('ohc_pos_kds_orders');
+          const cached = localStorage.getItem('omnisolo_pos_kds_orders');
           if (cached) setOrders(JSON.parse(cached));
         }
       }
@@ -54,11 +54,11 @@ export default function KDSPage() {
         const normalizedInventory = Array.isArray(invData.inventory) ? invData.inventory : (Array.isArray(invData) ? invData : []);
         setInventory(normalizedInventory);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('ohc_pos_kds_inventory', JSON.stringify(normalizedInventory));
+          localStorage.setItem('omnisolo_pos_kds_inventory', JSON.stringify(normalizedInventory));
         }
       } catch {
         if (typeof window !== 'undefined') {
-          const cached = localStorage.getItem('ohc_pos_kds_inventory');
+          const cached = localStorage.getItem('omnisolo_pos_kds_inventory');
           if (cached) setInventory(JSON.parse(cached));
         }
       }
@@ -71,7 +71,7 @@ export default function KDSPage() {
     setOrders(prev => {
        const next = prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
        if (typeof window !== 'undefined') {
-          localStorage.setItem('ohc_pos_kds_orders', JSON.stringify(next));
+          localStorage.setItem('omnisolo_pos_kds_orders', JSON.stringify(next));
        }
        return next;
     });
@@ -90,7 +90,7 @@ export default function KDSPage() {
     setInventory(prev => {
        const next = prev.map(i => i.id === itemId ? { ...i, is_sold_out: isSoldOut } : i);
        if (typeof window !== 'undefined') {
-          localStorage.setItem('ohc_pos_kds_inventory', JSON.stringify(next));
+          localStorage.setItem('omnisolo_pos_kds_inventory', JSON.stringify(next));
        }
        return next;
     });

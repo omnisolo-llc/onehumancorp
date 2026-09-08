@@ -7,7 +7,7 @@ This directory is the source for the repository documentation site.
 - Source documentation lives under `docs/`.
 - Source code lives under `src/`.
 - GitHub issues are the task source of truth.
-- Historical or superseded material belongs in `docs/archive/`.
+- Superseded material is removed; source history remains available in Git.
 
 ## Start Here
 

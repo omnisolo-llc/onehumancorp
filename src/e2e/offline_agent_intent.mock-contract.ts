@@ -39,7 +39,7 @@ test.describe('Offline Agent Intent Sync', () => {
             req.onerror = () => resolve(true);
         });
         // Trigger queue update
-        window.dispatchEvent(new Event('ohc_queue_updated'));
+        window.dispatchEvent(new Event('omnisolo_queue_updated'));
     });
 
     // Verify queue indicator shows items pending

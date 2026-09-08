@@ -34,7 +34,7 @@ export default function SocialProofNudgePage() {
   };
 
   const getEmbedCode = () => {
-    return `<!-- Social Proof Nudge Widget -->\n<div id="ohc-social-proof" data-product="${escapeHtmlAttribute(productName || 'A product')}" data-location="${escapeHtmlAttribute(customerLocation || 'Someone')}" data-time="${escapeHtmlAttribute(timeAgo)}" data-theme="${escapeHtmlAttribute(theme)}" data-branding="${!hasPro}"></div>\n<script src="https://cloud.omnisolo.co/widgets/social-proof.js" async></script>\n${!hasPro ? '<!-- ⚡ Powered by OmniSolo -->' : ''}`;
+    return `<!-- Social Proof Nudge Widget -->\n<div id="omnisolo-social-proof" data-product="${escapeHtmlAttribute(productName || 'A product')}" data-location="${escapeHtmlAttribute(customerLocation || 'Someone')}" data-time="${escapeHtmlAttribute(timeAgo)}" data-theme="${escapeHtmlAttribute(theme)}" data-branding="${!hasPro}"></div>\n<script src="https://cloud.omnisolo.co/widgets/social-proof.js" async></script>\n${!hasPro ? '<!-- ⚡ Powered by OmniSolo -->' : ''}`;
   };
 
   const getThemeStyles = () => {

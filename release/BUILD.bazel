@@ -61,17 +61,17 @@ config_setting(
 )
 
 OMNISOLO_UNIX_ARCHIVE_NAME = select({
-    ":linux_arm64": "ohc-aarch64-unknown-linux-gnu.tar.gz",
-    ":linux_x86_64": "ohc-x86_64-unknown-linux-gnu.tar.gz",
-    ":macos_aarch64": "ohc-aarch64-apple-darwin.tar.gz",
-    ":macos_x86_64": "ohc-x86_64-apple-darwin.tar.gz",
-    "//conditions:default": "ohc-application.tar.gz",
+    ":linux_arm64": "omnisolo-aarch64-unknown-linux-gnu.tar.gz",
+    ":linux_x86_64": "omnisolo-x86_64-unknown-linux-gnu.tar.gz",
+    ":macos_aarch64": "omnisolo-aarch64-apple-darwin.tar.gz",
+    ":macos_x86_64": "omnisolo-x86_64-apple-darwin.tar.gz",
+    "//conditions:default": "omnisolo-application.tar.gz",
 })
 
 OMNISOLO_WINDOWS_ARCHIVE_NAME = select({
-    ":windows_arm64": "ohc-aarch64-pc-windows-msvc.zip",
-    ":windows_x86_64": "ohc-x86_64-pc-windows-gnu.zip",
-    "//conditions:default": "ohc-application.zip",
+    ":windows_arm64": "omnisolo-aarch64-pc-windows-msvc.zip",
+    ":windows_x86_64": "omnisolo-x86_64-pc-windows-gnu.zip",
+    "//conditions:default": "omnisolo-application.zip",
 })
 
 selects.config_setting_group(
@@ -117,7 +117,7 @@ pkg_files(
 )
 
 pkg_files(
-    name = "ohc_windows_files",
+    name = "omnisolo_windows_files",
     srcs = [
         "//src/server",
     ],
@@ -164,7 +164,7 @@ pkg_tar(
     name = "omnisolo_cluster_unix_archive",
     srcs = [":omnisolo_cluster_unix_files"],
     extension = "tar.gz",
-    package_file_name = "ohc-cluster.tar.gz",
+    package_file_name = "omnisolo-cluster.tar.gz",
     target_compatible_with = select({
         "//:linux": [],
         "//:macos": [],
@@ -173,8 +173,8 @@ pkg_tar(
 )
 
 pkg_zip(
-    name = "ohc_windows_archive",
-    srcs = [":ohc_windows_files"],
+    name = "omnisolo_windows_archive",
+    srcs = [":omnisolo_windows_files"],
     package_file_name = OMNISOLO_WINDOWS_ARCHIVE_NAME,
     target_compatible_with = select({
         "//:windows": [],
@@ -185,7 +185,7 @@ pkg_zip(
 pkg_zip(
     name = "omnisolo_cluster_windows_archive",
     srcs = [":omnisolo_cluster_windows_files"],
-    package_file_name = "ohc-cluster.zip",
+    package_file_name = "omnisolo-cluster.zip",
     target_compatible_with = select({
         "//:windows": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -198,7 +198,7 @@ pkg_deb(
     data = ":omnisolo_unix_archive",
     description = "OmniSolo application bundle",
     maintainer = "OmniSolo <support@omnisolo.co>",
-    package = "ohc",
+    package = "omnisolo",
     priority = "optional",
     section = "utils",
     target_compatible_with = select({
@@ -209,8 +209,8 @@ pkg_deb(
 )
 
 pkg_rpm(
-    name = "ohc_rpm",
-    package_name = "ohc",
+    name = "omnisolo_rpm",
+    package_name = "omnisolo",
     srcs = [":omnisolo_unix_files"],
     description = "OmniSolo application bundle",
     license = "Apache-2.0",
@@ -234,7 +234,7 @@ filegroup(
             ":omnisolo_unix_archive",
         ],
         "//:windows": [
-            ":ohc_windows_archive",
+            ":omnisolo_windows_archive",
         ],
         "//conditions:default": [],
     }),
@@ -270,7 +270,7 @@ filegroup(
         ],
         "//:windows": [
             ":omnisolo_cluster_windows_archive",
-            ":ohc_windows_archive",
+            ":omnisolo_windows_archive",
         ],
         "//conditions:default": [],
     }),

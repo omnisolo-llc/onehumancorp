@@ -77,7 +77,7 @@ pub enum RealtimeServerMessage {
 fn get_jwt_secret() -> Vec<u8> {
     std::env::var("JWT_SECRET")
         .ok()
-        .or_else(|| std::env::var("OHC_JWT_SECRET").ok())
+        .or_else(|| std::env::var("OMNISOLO_JWT_SECRET").ok())
         .unwrap_or_else(|| "test-secret-with-at-least-32-bytes".to_string())
         .into_bytes()
 }

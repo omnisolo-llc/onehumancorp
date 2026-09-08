@@ -41,7 +41,7 @@ test.describe('Documentation UI Components', () => {
         await sendBtn.click();
 
         // Wait for agent reply
-        const reply = page.locator('.ohc-chat-msg.agent').last();
+        const reply = page.locator('.omnisolo-chat-msg.agent').last();
         await expect(reply).toBeVisible();
         await expect(reply).toContainText('Welcome to OmniSolo');
     });

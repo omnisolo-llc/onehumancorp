@@ -69,7 +69,7 @@
       align-items: center;
     }
 
-    .ohc-badge {
+    .omnisolo-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -84,12 +84,12 @@
       cursor: pointer;
     }
 
-    .ohc-badge:hover {
+    .omnisolo-badge:hover {
       background: rgba(0, 0, 0, 0.08);
       color: var(--text-main);
     }
 
-    .ohc-badge svg {
+    .omnisolo-badge svg {
       width: 14px;
       height: 14px;
       fill: currentColor;
@@ -166,10 +166,10 @@
       .preview-box {
         background: #1c1c1e;
       }
-      .ohc-badge {
+      .omnisolo-badge {
         background: rgba(255, 255, 255, 0.1);
       }
-      .ohc-badge:hover {
+      .omnisolo-badge:hover {
         background: rgba(255, 255, 255, 0.15);
       }
       .code-block {
@@ -187,7 +187,7 @@
     <p class="subtitle">Add a "Powered by OmniSolo" badge to your website. If a visitor clicks it and signs up, you get a referral credit.</p>
 
     <div class="preview-box">
-      <div class="ohc-badge">
+      <div class="omnisolo-badge">
         <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         Powered by OmniSolo
       </div>
@@ -216,7 +216,7 @@
       try {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
 
-        let referralLink = `https://ohc.network/invite/${tenantId}`;
+        let referralLink = `https://cloud.omnisolo.co/invite/${tenantId}`;
 
         try {
           // Attempt to call the actual backend API to generate a referral link if it exists

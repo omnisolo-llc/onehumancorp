@@ -42,7 +42,7 @@ sequenceDiagram
 
 ### Data Model & Invariants
 - **Pass Entity**: `WalletPass { id, tenant_id, pass_type, template_id, status }`
-- **Multi-Tenant Isolation**: Apple Developer certificates for `.pkpass` signing can be unified under OmniSolo's umbrella cert, with pass identifiers (e.g., `pass.store.ohc.maya-cakes`) dynamically generated. The DB must strictly isolate pass records by `tenant_id`.
+- **Multi-Tenant Isolation**: Apple Developer certificates for `.pkpass` signing can be unified under OmniSolo's umbrella cert, with pass identifiers (e.g., `pass.store.omnisolo.maya-cakes`) dynamically generated. The DB must strictly isolate pass records by `tenant_id`.
 
 ### AI Department Coordination
 - **Marketing Agent**: Suggests the owner turn on Apple Wallet loyalty cards. Automatically designs the pass using the tenant's brand colors (Glassmorphism design tokens) and logo.

@@ -339,7 +339,7 @@ impl AgentServiceImpl {
             .ok()
             .filter(|v| !v.trim().is_empty())
             .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(".ohc/ai-provider.json"))
+            .unwrap_or_else(|| PathBuf::from(".omnisolo/ai-provider.json"))
     }
 
     fn ai_provider_config_string(key: &str) -> Option<String> {
@@ -1501,7 +1501,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_cascading_agents_md() {
-        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        let base_dir = std::path::PathBuf::from(format!("/tmp/omnisolo_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).unwrap();
 
         let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
@@ -1523,7 +1523,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_cascading_agents_md_truncation() {
-        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        let base_dir = std::path::PathBuf::from(format!("/tmp/omnisolo_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).unwrap();
 
         let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();

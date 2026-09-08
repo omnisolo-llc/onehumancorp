@@ -433,7 +433,7 @@ impl Store {
                     panic!("invalid authentication secret configuration");
                 }
 
-                let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
+                let secret_path = ::server_config::jwt_secret_path();
                 if secret_path.exists() {
                     #[cfg(unix)]
                     {
@@ -450,10 +450,10 @@ impl Store {
                             if let Ok(metadata) = file.metadata() {
                                 let mut perms = metadata.permissions();
                                 if perms.mode() & 0o777 != 0o600 {
-                                    tracing::warn!("Insecure permissions on .ohc_jwt_secret. Fixing it to prevent TOCTOU attacks.");
+                                    tracing::warn!("Insecure permissions on the OmniSolo JWT secret. Fixing them to prevent TOCTOU attacks.");
                                     perms.set_mode(0o600);
                                     if let Err(e) = file.set_permissions(perms) {
-                                        tracing::error!("Failed to securely update .ohc_jwt_secret file permissions: {}", e);
+                                        tracing::error!("Failed to securely update OmniSolo JWT secret permissions: {}", e);
                                         std::process::exit(1);
                                     }
                                 }
@@ -476,7 +476,7 @@ impl Store {
                 }
 
                 let sqlite_key_opt = std::env::var("OMNISOLO_SQLITE_KEY").ok().or_else(|| {
-                    let secret_path = ::server_config::get_safe_user_dir().join(".ohc_sqlite_key");
+                    let secret_path = ::server_config::sqlite_key_path();
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
@@ -493,10 +493,10 @@ impl Store {
                                 if let Ok(metadata) = file.metadata() {
                                     let mut perms = metadata.permissions();
                                     if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Fixing it to prevent TOCTOU attacks.");
+                                        tracing::warn!("Insecure permissions on the OmniSolo SQLite key. Fixing them to prevent TOCTOU attacks.");
                                         perms.set_mode(0o600);
                                         if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!("Failed to securely update .ohc_sqlite_key file permissions: {}", e);
+                                            tracing::error!("Failed to securely update OmniSolo SQLite key permissions: {}", e);
                                             std::process::exit(1);
                                         }
                                     }
@@ -521,12 +521,12 @@ impl Store {
                 });
 
                 let new_secret = if let Some(sqlite_key) = sqlite_key_opt {
-                    tracing::debug!("falling back to generated JWT secret; deriving from OMNISOLO_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence"); // pii-safe
+                    tracing::debug!("falling back to a generated JWT secret derived from OMNISOLO_SQLITE_KEY for persistent standalone authentication"); // pii-safe
                     let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
-                    tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence"); // pii-safe
+                    tracing::debug!("falling back to a generated persistent OmniSolo JWT secret"); // pii-safe
                     let mut key_bytes = [0u8; 32];
                     use rand::RngCore;
                     rand::thread_rng().fill_bytes(&mut key_bytes);

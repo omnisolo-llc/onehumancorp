@@ -31,7 +31,7 @@ function QuoteCalculatorContent() {
     const handleRequestClick = () => {
         // Send a message to the parent frame
         if (window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: 'ohc-quote-request', tenant }, '*');
+            window.parent.postMessage({ type: 'omnisolo-quote-request', tenant }, '*');
         } else {
             // Open the work intake or contact page as fallback
             window.open(`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`, '_blank');

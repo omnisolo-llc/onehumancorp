@@ -500,7 +500,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'authorization': `Bearer ${localStorage.getItem('ohc_token') || ''}`,
+                    'authorization': `Bearer ${localStorage.getItem('omnisolo_token') || ''}`,
                     'x-spiffe-id': 'spiffe://omnisolo.io/' + state.tenant + '/agent1'
                 },
                 body: JSON.stringify({

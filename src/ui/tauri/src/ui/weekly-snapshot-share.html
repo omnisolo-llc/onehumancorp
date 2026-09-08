@@ -221,7 +221,7 @@
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       const getAuthHeaders = () => {
-        const token = localStorage.getItem('ohc_token');
+        const token = localStorage.getItem('omnisolo_token');
         return token ? { 'authorization': `Bearer ${token}` } : {};
       };
 

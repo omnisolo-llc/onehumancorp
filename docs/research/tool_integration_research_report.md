@@ -122,9 +122,9 @@ To support the Standalone mode requirement for receiving webhooks without openin
 2. **WebSocket Gateway:** Utilizing Socket.io or direct WebSockets to maintain persistent connections with active Standalone clients.
 3. **Authentication:**
    - Standalone clients authenticate with the Relay using long-lived JWTs associated with their OmniSolo account.
-   - The Relay generates unique, opaque webhook URLs for each user/service combination (e.g., `https://relay.ohc.io/wh/uuid-1234`).
+   - The Relay generates unique, opaque webhook URLs for each user/service combination (e.g., `https://relay.omnisolo.io/wh/uuid-1234`).
 4. **Message Flow:**
-   - Third-party (e.g., Stripe) sends a POST to `https://relay.ohc.io/wh/uuid-1234`.
+   - Third-party (e.g., Stripe) sends a POST to `https://relay.omnisolo.io/wh/uuid-1234`.
    - The Relay identifies the active WebSocket connection associated with `uuid-1234`.
    - The Relay forwards the payload securely over the WebSocket.
    - The local Standalone instance processes the payload exactly as it would a direct HTTP request.

@@ -22,7 +22,7 @@ describe('GrowthReferralWidget', () => {
     expect(screen.getByText('Grow Your Team')).toBeInTheDocument();
     expect(screen.getByText('Invite to Cloud Team')).toBeInTheDocument();
     // Validate aesthetic token existence
-    expect(container.firstChild).toHaveClass('ohc-growth-card');
+    expect(container.firstChild).toHaveClass('omnisolo-growth-card');
   });
 
   it('generates a link successfully', async () => {

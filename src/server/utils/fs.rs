@@ -26,7 +26,7 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
         .collect();
     
     let mut tmp_name = std::env::temp_dir();
-    tmp_name.push("ohc-atomic-writes");
+    tmp_name.push("omnisolo-atomic-writes");
     let _ = fs::create_dir_all(&tmp_name);
     tmp_name.push(format!("{}.{}.tmp", base_name_str, random_suffix));
     
@@ -73,9 +73,9 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
 pub fn cleanup_stale_temp_files() {
     let tmp_dir = std::env::temp_dir();
 
-    // Clean up .tmp files created by ohc-atomic-writes
+    // Clean up .tmp files created by omnisolo-atomic-writes
     let mut atomic_tmp = tmp_dir.clone();
-    atomic_tmp.push("ohc-atomic-writes");
+    atomic_tmp.push("omnisolo-atomic-writes");
     if let Ok(entries) = std::fs::read_dir(&atomic_tmp) {
         let now = std::time::SystemTime::now();
         for entry in entries.flatten() {
@@ -123,8 +123,8 @@ pub fn cleanup_stale_temp_files() {
     }
 
     // Clean up .tmp files created by agents/builtin/json_store.rs
-    let ohc_runtime_dir = std::env::var("OMNISOLO_RUNTIME_DIR").unwrap_or_else(|_| ".ohc/runtime".to_string());
-    let memory_dir = std::path::PathBuf::from(ohc_runtime_dir).join("memory");
+    let omnisolo_runtime_dir = std::env::var("OMNISOLO_RUNTIME_DIR").unwrap_or_else(|_| ".omnisolo/runtime".to_string());
+    let memory_dir = std::path::PathBuf::from(omnisolo_runtime_dir).join("memory");
     if let Ok(entries) = std::fs::read_dir(&memory_dir) {
         let now = std::time::SystemTime::now();
         for entry in entries.flatten() {
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn test_cleanup_stale_temp_files() {
         let tmp_dir = std::env::temp_dir();
-        let atomic_tmp = tmp_dir.join("ohc-atomic-writes");
+        let atomic_tmp = tmp_dir.join("omnisolo-atomic-writes");
         let _ = std::fs::create_dir_all(&atomic_tmp);
 
         let fresh_atomic = atomic_tmp.join("fresh.tmp");

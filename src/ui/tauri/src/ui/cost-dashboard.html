@@ -82,7 +82,7 @@
         }
         h1, h2, h3 { color: #f5f5f7; }
         p { color: #a1a1aa; }
-        .ohc-growth-card {
+        .omnisolo-growth-card {
         background: rgba(22, 22, 26, 0.7);
         backdrop-filter: blur(40px) saturate(220%);
         -webkit-backdrop-filter: blur(40px) saturate(220%);
@@ -106,7 +106,7 @@
         .grid { grid-template-columns: 1fr; }
       }
 
-      .ohc-growth-card {
+      .omnisolo-growth-card {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(40px) saturate(220%);
         -webkit-backdrop-filter: blur(40px) saturate(220%);
@@ -243,7 +243,7 @@
         transform: scale(0.98);
       }
       @media (prefers-color-scheme: dark) {
-        .ohc-growth-card {
+        .omnisolo-growth-card {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(40px) saturate(220%);
           -webkit-backdrop-filter: blur(40px) saturate(220%);
@@ -269,7 +269,7 @@
       <div id="content" style="display: none;">
         <div class="grid">
           <!-- My Plan Widget -->
-          <div class="ohc-growth-card glassmorphism app-card app-panel" id="my-plan-widget">
+          <div class="omnisolo-growth-card glassmorphism app-card app-panel" id="my-plan-widget">
             <h1 style="margin-top: 0; font-size: 24px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">My Plan</h1>
             <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Plan: <span id="my-plan-name" style="color: #0066FF;"></span></h2>
 
@@ -306,7 +306,7 @@
           </div>
 
           <!-- Cost Dashboard Widget -->
-          <div class="ohc-growth-card glassmorphism" id="cost-dashboard-widget" style="display:none;">
+          <div class="omnisolo-growth-card glassmorphism" id="cost-dashboard-widget" style="display:none;">
             <h1 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h1><button id="back-to-my-plan" class="btn-outline" style="margin-bottom: 12px; display: inline-block; cursor: pointer;" onclick="document.getElementById('cost-dashboard-widget').style.display='none'; document.getElementById('my-plan-widget').style.display='block';">Back to My Plan</button>
 
 
@@ -417,7 +417,7 @@
       }
 
       document.addEventListener('DOMContentLoaded', async () => {
-        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const tenant = localStorage.getItem('omnisolo_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         const token = localStorage.getItem('token');
         const headers = {};
         if (tenant) {
@@ -659,7 +659,7 @@
 
 
 <style>
-.ohc-tooltip {
+.omnisolo-tooltip {
     position: fixed;
     background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(40px) saturate(220%);
@@ -678,7 +678,7 @@
     max-width: 250px;
     line-height: 1.4;
 }
-.ohc-tooltip.visible {
+.omnisolo-tooltip.visible {
     opacity: 1;
 }
 
@@ -718,7 +718,7 @@
         transform: scale(0.98);
       }
       @media (prefers-color-scheme: dark) {
-        .ohc-growth-card {
+        .omnisolo-growth-card {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(40px) saturate(220%);
           -webkit-backdrop-filter: blur(40px) saturate(220%);

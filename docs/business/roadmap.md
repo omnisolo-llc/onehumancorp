@@ -253,7 +253,7 @@ Defines how autonomous agents communicate, collaborate, and resolve conflicts.
 #### Phase 1: K8s Foundation & Identity (Months 1-2)
 - **Cluster Setup**: Provision a Kubernetes cluster (EKS, GKE, or self-hosted K3s).
 - **SPIRE Deployment**: Deploy a SPIRE server for automated identity issuance. Configure OIDC federation for human login.
-- **Operator Scaffold**: Build the `ohc-operator` using Kubebuilder. Define the Subsidiary CRD.
+- **Operator Scaffold**: Build the `omnisolo-operator` using Kubebuilder. Define the Subsidiary CRD.
 
 #### Phase 2: The MCP Gateway & State Fabric (Months 3-4)
 - **MCP Hub**: Deploy a central MCP Gateway pod. Register tool servers (e.g., `gitea-mcp`, `jira-mcp`).

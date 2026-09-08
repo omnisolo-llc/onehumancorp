@@ -13,7 +13,7 @@ The **B2B Agent Exchange** allows two independent OmniSolo organizations (e.g., 
 
 ### 2.1 Trust Domain Peering
 OmniSolo uses SPIFFE federation to establish trust.
-- **OIDC Discovery**: Each organization publishes its JWKS (JSON Web Key Set) at a public endpoint (e.g., `https://ohc.acme.corp/.well-known/jwks.json`).
+- **OIDC Discovery**: Each organization publishes its JWKS (JSON Web Key Set) at a public endpoint (e.g., `https://omnisolo.acme.corp/.well-known/jwks.json`).
 - **Mutual Trust**: Org-A imports Org-B's OIDC issuer, allowing Org-A's Hub to verify SVIDs presented by Org-B's agents.
 
 ### 2.2 The Inter-Org Gateway (`b2b-gateway`)

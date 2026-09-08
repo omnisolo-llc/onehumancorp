@@ -299,7 +299,7 @@ mod tests {
     async fn test_connect_google_business() {
         unsafe {
             std::env::set_var("GOOGLE_BUSINESS_CLIENT_ID", "client-123.apps.googleusercontent.com");
-            std::env::set_var("GOOGLE_BUSINESS_REDIRECT_URI", "https://ohc.example/oauth/google-business/callback");
+            std::env::set_var("GOOGLE_BUSINESS_REDIRECT_URI", "https://cloud.omnisolo.co/oauth/google-business/callback");
         }
 
         let claims = mock_claims();

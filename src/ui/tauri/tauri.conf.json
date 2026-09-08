@@ -2,7 +2,7 @@
   "$schema": "https://v2.tauri.app/schemas/2.0.0/config.schema.json",
   "productName": "OmniSolo",
   "version": "0.4.47+1",
-  "identifier": "com.omnisolo.ohc",
+  "identifier": "com.omnisolo.app",
   "build": {
     "frontendDist": "./next_out",
     "devUrl": "http://localhost:3000"

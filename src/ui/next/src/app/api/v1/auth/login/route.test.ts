@@ -10,7 +10,7 @@ const config: AuthRuntimeConfig = {
   canonicalOrigin: "https://app.example.com",
   backendOrigin: "https://api.example.com:8443",
   localDev: false,
-  cookieName: "__Host-ohc_session",
+  cookieName: "__Host-omnisolo_session",
   secureCookie: true,
   sessionAudience: "https://app.example.com",
 };
@@ -104,12 +104,12 @@ describe("POST /api/v1/auth/login", () => {
     expect(JSON.stringify(body)).not.toContain("backend.jwt.token");
 
     const setCookie = response.headers.get("set-cookie") ?? "";
-    expect(setCookie).toContain("__Host-ohc_session=");
+    expect(setCookie).toContain("__Host-omnisolo_session=");
     expect(setCookie).toContain("HttpOnly");
     expect(setCookie).toContain("Secure");
     expect(setCookie).toContain("SameSite=Lax");
     expect(setCookie).not.toContain("Domain=");
-    const compact = setCookie.match(/^__Host-ohc_session=([^;]+)/)?.[1] ?? "";
+    const compact = setCookie.match(/^__Host-omnisolo_session=([^;]+)/)?.[1] ?? "";
     await expect(openSession(compact, deps.ring, sessionCodecContext(config), NOW)).resolves.toEqual({
       version: 1,
       iat: NOW,

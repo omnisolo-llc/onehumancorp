@@ -39,7 +39,7 @@ done
 
 # Verify memory directory
 echo -e "\n${DIM}[Verifying Agent Memory Storage]${RESET}"
-RUNTIME_DIR="${OMNISOLO_RUNTIME_DIR:-.ohc/runtime}"
+RUNTIME_DIR="${OMNISOLO_RUNTIME_DIR:-.omnisolo/runtime}"
 MEMORY_DIR="${OMNISOLO_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
 STATUS_DIR="${OMNISOLO_STATUS_DIR:-${RUNTIME_DIR}/status}"
 if [ -d "${RUNTIME_DIR}" ]; then

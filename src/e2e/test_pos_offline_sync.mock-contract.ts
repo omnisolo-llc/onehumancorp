@@ -280,7 +280,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     // Navigate to local API directly to set up origin to allow localstorage modification
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
-      localStorage.setItem('ohc_offline_staff', JSON.stringify([{
+      localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{
         id: 'staff_1',
         name: 'Priya',
         role: 'Manager',

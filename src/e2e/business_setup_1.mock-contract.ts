@@ -6,7 +6,7 @@ test.describe('Business Setup Wizard', () => {
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('ohc_wizard_state');
+      localStorage.removeItem('omnisolo_wizard_state');
       localStorage.removeItem('onboardingState');
     }, id);
     await page.goto('/website-builder');

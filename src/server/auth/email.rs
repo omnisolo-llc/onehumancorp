@@ -78,7 +78,7 @@ impl SmtpVerificationMailer {
         }
 
         let from_name =
-            optional_env("SMTP_FROM_NAME")?.unwrap_or_else(|| "OneHumanCorp".to_string());
+            optional_env("SMTP_FROM_NAME")?.unwrap_or_else(|| "OmniSolo".to_string());
         if from_name.len() > 128 || from_name.chars().any(char::is_control) {
             return Err("invalid SMTP configuration".to_string());
         }
@@ -105,9 +105,9 @@ impl VerificationMailer for SmtpVerificationMailer {
         let message = Message::builder()
             .from(self.from.clone())
             .to(recipient)
-            .subject("Verify your OneHumanCorp email")
+            .subject("Verify your OmniSolo email")
             .body(format!(
-                "Your OneHumanCorp verification code is {code}. It expires in 15 minutes. If you did not request this, ignore this email."
+                "Your OmniSolo verification code is {code}. It expires in 15 minutes. If you did not request this, ignore this email."
             ))
             .map_err(|_| "email delivery unavailable".to_string())?;
         self.transport.send(message).await.map_err(|_error| {

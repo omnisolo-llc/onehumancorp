@@ -35,6 +35,6 @@
   <h2>Code Snippets & Testing</h2>
   <pre><code>
 # Testing the API
-curl -H "Authorization: Bearer $SVID" https://api.ohc.network/v1/orchestrate
+curl -H "Authorization: Bearer $SVID" https://cloud.omnisolo.co/v1/orchestrate
   </code></pre>
 </div>

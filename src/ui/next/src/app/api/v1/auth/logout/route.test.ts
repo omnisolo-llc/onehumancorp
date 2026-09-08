@@ -11,7 +11,7 @@ const config: AuthRuntimeConfig = {
   canonicalOrigin: "https://app.example.com",
   backendOrigin: "https://api.example.com:8443",
   localDev: false,
-  cookieName: "__Host-ohc_session",
+  cookieName: "__Host-omnisolo_session",
   secureCookie: true,
   sessionAudience: "https://app.example.com",
 };
@@ -79,14 +79,14 @@ describe("POST /api/v1/auth/logout", () => {
     expect(await response.json()).toEqual({ ok: true });
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("set-cookie")).toContain(
-      "__Host-ohc_session=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax",
+      "__Host-omnisolo_session=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax",
     );
   });
 
   it.each([
     [undefined, "missing"],
-    ["__Host-ohc_session=not-a-jwe", "invalid"],
-    ["__Host-ohc_session=one; __Host-ohc_session=two", "duplicate"],
+    ["__Host-omnisolo_session=not-a-jwe", "invalid"],
+    ["__Host-omnisolo_session=one; __Host-omnisolo_session=two", "duplicate"],
   ] as const)("is locally idempotent for %# sessions", async (cookie, _label) => {
     const fetchImpl = vi.fn(async () => Response.json({ ok: true })) as typeof fetch;
     const response = await handleLogout(request(cookie), await dependencies(fetchImpl));
@@ -119,7 +119,7 @@ describe("POST /api/v1/auth/logout", () => {
   it("rejects cross-origin mutation before reading the session", async () => {
     const fetchImpl = vi.fn(async () => Response.json({ ok: true })) as typeof fetch;
     const response = await handleLogout(
-      request("__Host-ohc_session=anything", {
+      request("__Host-omnisolo_session=anything", {
         headers: { origin: "https://evil.example", "sec-fetch-site": "cross-site" },
       }),
       await dependencies(fetchImpl),

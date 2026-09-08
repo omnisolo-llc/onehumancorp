@@ -272,7 +272,7 @@
       const generateEmbedCode = () => {
         const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
         const scriptTag = `<script src="${origin}/widgets/social-proof.js" async><\/script>`;
-        const divTag = `<div id="ohc-social-proof" data-product="${escapeHtml(state.productName)}" data-location="${escapeHtml(state.location)}" data-time="${escapeHtml(state.timeAgo)}" data-theme="${state.theme}" data-branding="${!state.removeBranding}"></div>`;
+        const divTag = `<div id="omnisolo-social-proof" data-product="${escapeHtml(state.productName)}" data-location="${escapeHtml(state.location)}" data-time="${escapeHtml(state.timeAgo)}" data-theme="${state.theme}" data-branding="${!state.removeBranding}"></div>`;
         const branding = !state.removeBranding ? '\n<!-- ⚡ Powered by OmniSolo -->' : '';
 
         const embedCode = `<!-- Social Proof Nudge Widget -->\n${divTag}\n${scriptTag}${branding}`;

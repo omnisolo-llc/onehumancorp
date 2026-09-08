@@ -27,7 +27,7 @@ case $MODE in
     export OMNISOLO_STANDALONE_MODE=true
     export TOKIO_WORKER_THREADS=2
     export RAYON_NUM_THREADS=2
-    mkdir -p .ohc/memory/auto/ .ohc/memory/team/
+    mkdir -p .omnisolo/memory/auto/ .omnisolo/memory/team/
     export LOG_FORMAT="json"
     export LOG_LEVEL="info"
     if [ "$OMNISOLO_TELEMETRY_ENABLED" != "true" ]; then

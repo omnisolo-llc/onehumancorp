@@ -15,7 +15,7 @@ A high-level view of how the human CEO manages the AI workforce from the "Missio
 |------|-------------|----------------|-----------------|--------------|
 | 1 | Login to OmniSolo Platform | OIDC Auth Flow | Dashboard loads | User info displayed |
 | 2 | Check "Active Mission" | API GET `/api/meetings` | Transcript loaded | Messages scroll |
-| 3 | Hire a new agent | CEO selects `SWE` in Org Chart | `ohc-operator` provisions pod | Pod shows "Running" |
+| 3 | Hire a new agent | CEO selects `SWE` in Org Chart | `omnisolo-operator` provisions pod | Pod shows "Running" |
 | 4 | Approve a PR merge | CEO clicks "Approve" | Agent receives `APPROVAL` event | Code merges |
 
 ## 3. Implementation Details

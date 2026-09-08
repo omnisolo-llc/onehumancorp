@@ -34,7 +34,8 @@ test.describe('Viral Portfolio Generator Widget', () => {
 
     // Verify "Powered by OmniSolo" branding is visible by default
     await expect(embedCode).toContainText('Powered by OmniSolo');
-    await expect(embedCode).toContainText('ohc.network/invite/');
+    await expect(embedCode).toContainText('https://cloud.omnisolo.co/invite/');
+    await expect(embedCode).not.toContainText('ohc.network');
 
     // Click "Copy Code"
     const copyBtn = page.locator('#copy-btn');

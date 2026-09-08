@@ -24,10 +24,10 @@ export default function ViralWaitlistGeneratorPage() {
 
   const handleGenerate = () => {
     let code = `<!-- OmniSolo Waitlist Widget -->
-<div id="ohc-waitlist-widget"></div>
+<div id="omnisolo-waitlist-widget"></div>
 <script>
   (function() {
-    const container = document.getElementById('ohc-waitlist-widget');
+    const container = document.getElementById('omnisolo-waitlist-widget');
     container.innerHTML = \`
       <div style="font-family: sans-serif; max-width: 400px; margin: 0 auto; text-align: center; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
         <h3 style="margin-top: 0; color: #111827; font-size: 20px; font-weight: bold;">${productName.replace(/"/g, '&quot;')}</h3>

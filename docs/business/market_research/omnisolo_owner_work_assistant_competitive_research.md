@@ -1,4 +1,4 @@
-# OHC Owner Work Assistant: Competitive Research & Agentic Missions
+# OmniSolo Owner Work Assistant: Competitive Research & Agentic Missions
 
 ## 1. Track 1: Market Mapping & Competitor Discovery
 
@@ -46,13 +46,13 @@ We conducted dynamic internet research to map the 2026 landscape of owner/operat
 
 ---
 
-## 3. Track 3: OHC Gap & Pain Point Identification
+## 3. Track 3: OmniSolo Gap & Pain Point Identification
 
-### OHC Feature Audit
-Based on the repository structure (`src/server/services/`), OHC has specialized services (`booking`, `quoting`, `pos`, `delivery`). However, it lacks the "Zero-to-One" autonomous onboarding experience found in competitors like Durable, and the deep, proactive "Invisible Automation" of HubSpot Breeze.
+### OmniSolo Feature Audit
+Based on the repository structure (`src/server/services/`), OmniSolo has specialized services (`booking`, `quoting`, `pos`, `delivery`). However, it lacks the "Zero-to-One" autonomous onboarding experience found in competitors like Durable, and the deep, proactive "Invisible Automation" of HubSpot Breeze.
 
 ### Gap Matrix
-| Feature | Shopify Sidekick | Durable AI | **OHC (Current)** | **OHC (Mission)** |
+| Feature | Shopify Sidekick | Durable AI | **OmniSolo (Current)** | **OmniSolo (Mission)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Setup Time** | Days | < 1 Minute | Hours (Manual) | **< 10 Minutes (Agentic)** |
 | **Daily Ops** | Dashboard-first | Simple List | Service-first | **Assistant-first (Feed)** |
@@ -70,7 +70,7 @@ Based on the repository structure (`src/server/services/`), OHC has specialized 
 ### Pain Point 1: Setup Paralysis (Maya - Home Baker)
 **Evidence:** 34% of small business owners abandon setup due to "technical complexity". Maya wants to sell cakes, not configure DNS or read Stripe API docs.
 **Agentic Solution:** **"Zero-Click Onboarding Agent"**.
-- **Outcome:** Maya chats with OHC. The agent provisions her domain, configures Stripe for custom deposits, and creates her first product from a photo she uploads.
+- **Outcome:** Maya chats with OmniSolo. The agent provisions her domain, configures Stripe for custom deposits, and creates her first product from a photo she uploads.
 
 ### Pain Point 2: Missed Leads (Carlos - Field Service)
 **Evidence:** Service businesses lose ~30% of leads because the owner is "on the job" and can't answer calls.
@@ -80,12 +80,12 @@ Based on the repository structure (`src/server/services/`), OHC has specialized 
 ### Structured Issue Brief (Mission Queue Protocol)
 **Title:** Implement "Agentic Negotiator & Booker" for Automated Lead Capture
 **Problem Statement:** Service owners (e.g., Carlos) lose up to 30% of leads because they cannot instantly reply while on a job. They need a system that captures demand, quotes, and books autonomously.
-**Research Report:** Competitors like 11x.ai (Alice) show high conversion rates using AI phone/chat handlers. However, traditional tools (Shopify) require manual intervention for custom quoting. OHC must bridge this gap by enabling agents to negotiate and book directly from the unified inbox.
+**Research Report:** Competitors like 11x.ai (Alice) show high conversion rates using AI phone/chat handlers. However, traditional tools (Shopify) require manual intervention for custom quoting. OmniSolo must bridge this gap by enabling agents to negotiate and book directly from the unified inbox.
 **Design Doc:**
 - **Entity Types:** `Lead`, `QuoteRequest`, `AgentInteractionLog`.
 - **Key Relationships:** `Lead` has many `AgentInteractionLog`. `QuoteRequest` is generated from `AgentInteractionLog`.
 - **UI Wireframes/Flow (Mobile 375px first):**
-  1. Customer DMs via Instagram (integrated into OHC Inbox).
+  1. Customer DMs via Instagram (integrated into OmniSolo Inbox).
   2. Owner UI: The conversation is visible, but marked "Handled by Agent".
   3. Agent dynamically quotes based on historical `Quote` data and proposes a time from the `Booking` service.
   4. Owner UI: A "Review & Approve Quote" translucent card appears in the Assistant-first feed.
@@ -100,8 +100,8 @@ Based on the repository structure (`src/server/services/`), OHC has specialized 
 ### Competitive Landscape
 ```mermaid
 graph TD;
-    OHC[OHC: Agentic Assistant] --> Traditional[Traditional Tools];
-    OHC --> AINative[AI-Native Rivals];
+    OmniSolo[OmniSolo: Agentic Assistant] --> Traditional[Traditional Tools];
+    OmniSolo --> AINative[AI-Native Rivals];
 
     Traditional --> Shopify[Shopify: Sidekick];
     Traditional --> Squarespace[Squarespace: Guided];
@@ -111,8 +111,8 @@ graph TD;
     AINative --> Lindy[Lindy: Executive EA];
     AINative --> 11x[11x: Alice Sales];
 
-    OHCGap((OHC Gap: Autonomous Onboarding & Proactive Ops));
-    OHC --> OHCGap;
+    OmniSoloGap((OmniSolo Gap: Autonomous Onboarding & Proactive Ops));
+    OmniSolo --> OmniSoloGap;
 ```
 
 ---

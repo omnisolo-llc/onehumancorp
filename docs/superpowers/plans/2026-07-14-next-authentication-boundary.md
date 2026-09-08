@@ -15,7 +15,7 @@
 - Create `src/ui/next/src/lib/auth/sessionCookie.ts`
 - Create `src/ui/next/src/lib/auth/sessionCookie.test.ts`
 
-Add failing tests first for canonical web origin, backend origin, embedded credentials, fragments, unsupported schemes, plaintext non-loopback backends, explicit loopback local mode, and LAN HTTPS. Require `OMNISOLO_WEB_CANONICAL_ORIGIN` and `BACKEND_URL` outside explicit `OMNISOLO_WEB_LOCAL_DEV=true`; never derive trust from Host or forwarded headers. LAN access uses an explicitly configured HTTPS origin and the production `__Host-ohc_session` cookie. Only explicit HTTP loopback local mode may use `ohc_session` without `Secure`.
+Add failing tests first for canonical web origin, backend origin, embedded credentials, fragments, unsupported schemes, plaintext non-loopback backends, explicit loopback local mode, and LAN HTTPS. Require `OMNISOLO_WEB_CANONICAL_ORIGIN` and `BACKEND_URL` outside explicit `OMNISOLO_WEB_LOCAL_DEV=true`; never derive trust from Host or forwarded headers. LAN access uses an explicitly configured HTTPS origin and the production `__Host-omnisolo_session` cookie. Only explicit HTTP loopback local mode may use `omnisolo_session` without `Secure`.
 
 Add exact Origin plus Fetch Metadata tests for same-origin unsafe requests, cross-site/same-site cross-origin/null/malformed/missing origins, and forged forwarding headers. Add cookie helpers for consistent set/delete attributes, bounded max-age, JWE context, and invalid-session clearing.
 

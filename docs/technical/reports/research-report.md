@@ -54,7 +54,7 @@ graph TD
 To adhere to the **Aesthetic Excellence Mandate**, the above visualization and the presentation layer of this report strictly utilize the following OmniSolo CSS tokens:
 
 ```css
-.ohc-card {
+.omnisolo-card {
     backdrop-filter: blur(20px) saturate(200%);
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.08);

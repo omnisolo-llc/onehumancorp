@@ -715,8 +715,8 @@ impl DashboardService for MyDashboardService {
                 title: "How to add your first product".to_string(),
                 description: "A quick 60-second guide to listing items in your store.".to_string(),
                 duration_sec: 60,
-                url: "https://ohc-video.example.com/tutorials/add_product.mp4".to_string(),
-                thumbnail_url: "https://ohc-video.example.com/thumbnails/add_product.jpg"
+                url: "https://omnisolo-video.example.com/tutorials/add_product.mp4".to_string(),
+                thumbnail_url: "https://omnisolo-video.example.com/thumbnails/add_product.jpg"
                     .to_string(),
             },
             VideoMetadata {
@@ -724,8 +724,8 @@ impl DashboardService for MyDashboardService {
                 description: "Learn how to let AI handle your customer emails and social media."
                     .to_string(),
                 duration_sec: 120,
-                url: "https://ohc-video.example.com/tutorials/ai_helpers.mp4".to_string(),
-                thumbnail_url: "https://ohc-video.example.com/thumbnails/ai_helpers.jpg"
+                url: "https://omnisolo-video.example.com/tutorials/ai_helpers.mp4".to_string(),
+                thumbnail_url: "https://omnisolo-video.example.com/thumbnails/ai_helpers.jpg"
                     .to_string(),
             },
         ];

@@ -8,8 +8,8 @@
 
 ## 2. Architecture & Components
 - **Manager Agent Node:** The LangGraph node representing the supervising agent. It utilizes a structured LLM output (e.g., JSON Schema) to decompose an epic into a list of `SubTask` objects.
-- **Delegation Service:** A gRPC service in the Orchestration Hub that receives `SubTask` requests and communicates with the `ohc-operator`.
-- **Kubernetes Operator (`ohc-operator`):** Reconciles the dynamically created `TeamMember` CRDs, spinning up new agent pods with specific roles (e.g., `SWE`, `QA`).
+- **Delegation Service:** A gRPC service in the Orchestration Hub that receives `SubTask` requests and communicates with the `omnisolo-operator`.
+- **Kubernetes Operator (`omnisolo-operator`):** Reconciles the dynamically created `TeamMember` CRDs, spinning up new agent pods with specific roles (e.g., `SWE`, `QA`).
 - **Asynchronous Event Bus:** Utilizes the existing Pub/Sub infrastructure for agents to report `TaskCompleted` or `TaskFailed` events back to the Manager Agent.
 
 ## 3. Data Flow

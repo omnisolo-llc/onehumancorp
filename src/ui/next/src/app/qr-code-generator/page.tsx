@@ -24,7 +24,7 @@ export default function QRCodeGeneratorPage() {
       const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `ohc-qr-code-${tenantId}.png`;
+      a.download = `omnisolo-qr-code-${tenantId}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

@@ -22,7 +22,7 @@ export default function ReferralsPage() {
     };
 
     const normalizeReferralLink = (rawLink: string) => {
-      if (!rawLink || rawLink.startsWith('ohc://')) return fallbackReferralLink();
+      if (!rawLink || rawLink.startsWith('omnisolo://')) return fallbackReferralLink();
       return rawLink;
     };
 

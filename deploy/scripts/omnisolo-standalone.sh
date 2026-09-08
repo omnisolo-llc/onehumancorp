@@ -29,7 +29,7 @@ export GOGC=50
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
 export RUST_LOG="info"
-export OMNISOLO_RUNTIME_DIR=".ohc/runtime"
+export OMNISOLO_RUNTIME_DIR=".omnisolo/runtime"
 export OMNISOLO_MEMORY_DIR="${OMNISOLO_RUNTIME_DIR}/memory"
 export OMNISOLO_STATUS_DIR="${OMNISOLO_RUNTIME_DIR}/status"
 
@@ -105,8 +105,8 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 # Launch the Prometheus agent
 if [ "$OMNISOLO_TELEMETRY_ENABLED" = "true" ]; then
   if command -v docker >/dev/null 2>&1; then
-    docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
-    docker run --name ohc-prometheus-agent \
+    docker rm -f omnisolo-prometheus-agent >/dev/null 2>&1 || true
+    docker run --name omnisolo-prometheus-agent \
       --memory="32m" --cpus="0.05" \
       --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
       --network host \
@@ -145,8 +145,8 @@ function cleanup {
   find "${OMNISOLO_RUNTIME_DIR}/downloads/" -type f -delete > /dev/null 2>&1 || true
 
   if command -v docker >/dev/null 2>&1; then
-    docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
-    docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
+    docker stop omnisolo-prometheus-agent > /dev/null 2>&1 || true
+    docker rm omnisolo-prometheus-agent > /dev/null 2>&1 || true
   fi
 
   # Wait for processes to exit

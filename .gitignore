@@ -56,7 +56,7 @@ go.work.sum
 
 # env file
 .env
-.ohc/
+.omnisolo/
 
 .claude-code/
 .kilo/
@@ -89,7 +89,7 @@ doc/api/
 
 # dotenv environment variables file
 .env*
-/.ohc-compose/
+/.omnisolo-compose/
 
 # Avoid committing generated Javascript files:
 *.dart.js

@@ -50,6 +50,6 @@ graph TD
 
 ## 4. MCP & Memory Directory (MemDir) Integration
 
-Agents maintain persistence through locally configured Memory Directories (`.ohc/memory/auto`), while interactions with external tools flow exclusively through the Model Context Protocol (MCP) bridge to ensure cloud-to-local hybrid synchrony.
+Agents maintain persistence through locally configured Memory Directories (`.omnisolo/memory/auto`), while interactions with external tools flow exclusively through the Model Context Protocol (MCP) bridge to ensure cloud-to-local hybrid synchrony.
 
 </div>

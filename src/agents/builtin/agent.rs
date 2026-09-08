@@ -3496,7 +3496,7 @@ impl Agent {
             && let Some(thread_id) = &final_cfg.thread_id
             && let Some(dir) = &final_cfg.workspace_path
         {
-            let hibernation_dir = format!("{}/.ohc_hibernation", dir);
+            let hibernation_dir = format!("{}/.omnisolo_hibernation", dir);
             let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
             if hm.is_hibernated(thread_id).await {
                 tracing::info!(
@@ -4717,7 +4717,7 @@ impl Agent {
                 && let Some(thread_id) = &final_cfg.thread_id
                 && let Some(dir) = &final_cfg.workspace_path
             {
-                let hibernation_dir = format!("{}/.ohc_hibernation", dir);
+                let hibernation_dir = format!("{}/.omnisolo_hibernation", dir);
                 let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
                 if let Ok(msgs_json) = serde_json::to_string(&messages) {
                     let state = crate::hibernation::HibernationState {

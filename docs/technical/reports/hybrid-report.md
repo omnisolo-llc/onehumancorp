@@ -53,7 +53,7 @@ graph TD
 To maintain **Aesthetic Excellence**, the OmniSolo presentation layers rendering this hybrid synchronization logic will strictly apply the following tokens:
 
 ```css
-.ohc-hybrid-panel {
+.omnisolo-hybrid-panel {
     backdrop-filter: blur(20px) saturate(1.213); /* Luminance-preserving saturation */
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.08);

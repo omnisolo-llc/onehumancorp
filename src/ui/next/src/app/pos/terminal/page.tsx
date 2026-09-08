@@ -80,24 +80,24 @@ export default function POSTerminal() {
 
 
     if (typeof window !== 'undefined') {
-        let storedDeviceId = localStorage.getItem('ohc_pos_device_id');
+        let storedDeviceId = localStorage.getItem('omnisolo_pos_device_id');
         if (!storedDeviceId) {
             storedDeviceId = 'device_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-            localStorage.setItem('ohc_pos_device_id', storedDeviceId);
+            localStorage.setItem('omnisolo_pos_device_id', storedDeviceId);
         }
         setDeviceId(storedDeviceId);
 
         setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
-        window.addEventListener('ohc_queue_updated', handleQueueUpdated);
+        window.addEventListener('omnisolo_queue_updated', handleQueueUpdated);
 
         checkQueue();
 
         return () => {
           window.removeEventListener('online', handleOnline);
           window.removeEventListener('offline', handleOffline);
-          window.removeEventListener('ohc_queue_updated', handleQueueUpdated);
+          window.removeEventListener('omnisolo_queue_updated', handleQueueUpdated);
         };
     }
   }, []);

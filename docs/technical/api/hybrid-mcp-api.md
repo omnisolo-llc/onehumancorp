@@ -95,12 +95,12 @@ Lists available observability resources for the current node.
 {
   "resources": [
     {
-      "uri": "ohc://telemetry/health",
+      "uri": "omnisolo://telemetry/health",
       "name": "Node Health Status",
       "mimeType": "application/json"
     },
     {
-      "uri": "ohc://telemetry/queue_status",
+      "uri": "omnisolo://telemetry/queue_status",
       "name": "Standalone Sync Queue Status",
       "mimeType": "application/json"
     }

@@ -22,7 +22,7 @@ Human managers can enable MFA via the settings dashboard for an extra layer of s
 - Ensure the SPIRE sidecar is running in the agent pod.
 
 ## Implementation Details
-- **Architecture**: Leverages SPIFFE/SPIRE for universal workload identity. The `ohc-operator` injects SPIRE sidecars into every new AI agent pod natively.
+- **Architecture**: Leverages SPIFFE/SPIRE for universal workload identity. The `omnisolo-operator` injects SPIRE sidecars into every new AI agent pod natively.
 - **Human Identity**: Uses OIDC (OpenID Connect) for human CEO logins, mapped internally to the SPIFFE trust domain.
 - **Verification**: All inter-agent and agent-to-hub gRPC traffic requires mTLS authentication validated against the central `spire-server`.
 

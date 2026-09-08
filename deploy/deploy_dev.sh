@@ -98,7 +98,7 @@ load_image "default_agent_load"
 
 cd "$PROJECT_ROOT"
 echo "--- Starting services from $PROJECT_ROOT ---"
-COMPOSE_ENV_FILE="${OMNISOLO_COMPOSE_STATE_DIR:-$PROJECT_ROOT/.ohc-compose}/compose.env"
+COMPOSE_ENV_FILE="${OMNISOLO_COMPOSE_STATE_DIR:-$PROJECT_ROOT/.omnisolo-compose}/compose.env"
 if [[ ! -f "$COMPOSE_ENV_FILE" ]]; then
   echo "--- Generating private local Compose credentials ---"
   bash "$PROJECT_ROOT/deploy/scripts/prepare-compose-env.sh"

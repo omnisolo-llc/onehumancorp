@@ -6,7 +6,7 @@ test.describe('Viral Powered By OmniSolo Widget', () => {
     await page.goto('/dashboard');
 
     // 2. Find and click the Viral Widget link in GrowBusinessCard
-    const widgetLink = page.locator('a[href="/viral-powered-by-ohc-widget"]');
+    const widgetLink = page.locator('a[href="/viral-powered-by-omnisolo-widget"]');
     await expect(widgetLink).toBeVisible();
     await widgetLink.click();
 

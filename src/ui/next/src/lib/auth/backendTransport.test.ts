@@ -86,7 +86,7 @@ describe("server-only authenticated backend transport", () => {
     const deps = await dependencies(fetchImpl);
     const missing = new Request("https://app.example.com/api/v1/orders");
     const malformed = new Request("https://app.example.com/api/v1/orders", {
-      headers: { cookie: "__Host-ohc_session=malformed" },
+      headers: { cookie: "__Host-omnisolo_session=malformed" },
     });
     const expired = new Request("https://app.example.com/api/v1/orders", {
       headers: {

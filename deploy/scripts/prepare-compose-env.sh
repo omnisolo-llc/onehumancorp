@@ -5,7 +5,7 @@ umask 077
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd -P)"
-STATE_DIR="${OMNISOLO_COMPOSE_STATE_DIR:-${REPO_ROOT}/.ohc-compose}"
+STATE_DIR="${OMNISOLO_COMPOSE_STATE_DIR:-${REPO_ROOT}/.omnisolo-compose}"
 ENV_FILE="${STATE_DIR}/compose.env"
 TLS_DIR="${STATE_DIR}/grpc-tls"
 

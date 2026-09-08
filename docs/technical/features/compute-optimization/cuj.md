@@ -14,7 +14,7 @@ The CEO utilizes the Compute Optimization layer to ensure their highest-priority
 | Step | User Action | System Trigger | Resulting State | Verification |
 |------|-------------|----------------|-----------------|--------------|
 | 1 | Tag project "High Priority" | Dashboard sends `PATCH /api/projects/1` | Project metadata updated | Priority visible |
-| 2 | Assign SWE Agent | Hub provisions new agent | `ohc-operator` reads priority | Node affinity set |
+| 2 | Assign SWE Agent | Hub provisions new agent | `omnisolo-operator` reads priority | Node affinity set |
 | 3 | Monitor GPU usage | CEO reviews Compute tab | Metrics scraped via OpenTelemetry | Heatmap visible |
 | 4 | Throttle department | CEO edits quota | Scheduler evicts pods | Agents restart on CPU nodes |
 

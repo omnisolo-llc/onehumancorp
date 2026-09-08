@@ -47,12 +47,12 @@ A high-level summary of the testing strategy for the Hybrid Identity Management 
 
 ## Implementation Details
 - **Architecture**: Tested via Tested via Rust table-driven tests that utilize standard library features. The integration suite mocks the SPIRE server using a localized dummy CA that signs ephemeral X.509 SVIDs to validate the mTLS handshake pathways.
-- **Execution**: All tests run hermetically under Bazel 9.0.0 remote execution (`bazelisk test //...`). The suite simulates Kubernetes pod admission webhook injections to ensure the `ohc-operator` correctly mutates pods with the SPIRE sidecar.
+- **Execution**: All tests run hermetically under Bazel 9.0.0 remote execution (`bazelisk test //...`). The suite simulates Kubernetes pod admission webhook injections to ensure the `omnisolo-operator` correctly mutates pods with the SPIRE sidecar.
 - **Validation**: Strict >95% test coverage is required for all AuthN/AuthZ interceptors. Tests validate OIDC token flows for the React UI and SVID flows for inter-agent gRPC calls.
 
 ## Edge Cases
 - **Expired SVIDs**: A test deliberately halts the `spire-agent` sidecar, allowing an agent's SVID to expire. It verifies that subsequent mTLS gRPC calls fail closed and the agent pod undergoes a controlled restart to re-attest.
-- **Revocation Race Conditions**: When an agent is "Fired", a test fires off concurrent API requests using the agent's SVID. It verifies that the `ohc-operator` updates the trust bundle within the maximum 5-second revocation window, blocking the unauthorized requests.
+- **Revocation Race Conditions**: When an agent is "Fired", a test fires off concurrent API requests using the agent's SVID. It verifies that the `omnisolo-operator` updates the trust bundle within the maximum 5-second revocation window, blocking the unauthorized requests.
 - **IDOR Prevention**: The integration suite tests cross-cluster B2B rooms by attempting to forge an `AgentID` payload inside a valid SVID from a different trust domain. The Hub must aggressively reject the mismatch.
 
 ### 3.4 B2B SPIFFE Federation Tests

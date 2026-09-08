@@ -236,7 +236,7 @@
     const copyBtn = document.getElementById('copy-btn');
 
     const getAuthHeaders = () => {
-      const token = localStorage.getItem('ohc_token');
+      const token = localStorage.getItem('omnisolo_token');
       return token ? { 'authorization': `Bearer ${token}` } : {};
     };
 
@@ -272,7 +272,7 @@
 
           // Generate embed code
           const embedCode = `<!-- OmniSolo Referral Leaderboard -->
-<div id="ohc-leaderboard"></div>
+<div id="omnisolo-leaderboard"></div>
 <script src="https://cloud.omnisolo.co/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenantId}"><\/script>`;
 
           embedCodeBlock.textContent = embedCode;

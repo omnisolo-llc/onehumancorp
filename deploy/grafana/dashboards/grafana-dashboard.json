@@ -155,7 +155,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "OmniSolo Infrastructure Dashboard",
-  "uid": "ohc-infra-dash",
+  "title": "OmniSolo Infrastructure Overview",
+  "uid": "ohc-infra-overview",
   "version": 1
 }

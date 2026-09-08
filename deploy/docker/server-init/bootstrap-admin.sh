@@ -100,11 +100,11 @@ json_escape() {
     printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
-REQUEST_FILE="$(mktemp /tmp/ohc-bootstrap-request.XXXXXX)"
-RESPONSE_FILE="$(mktemp /tmp/ohc-bootstrap-response.XXXXXX)"
-HEADER_FILE="$(mktemp /tmp/ohc-bootstrap-headers.XXXXXX)"
-LOGIN_REQUEST_FILE="$(mktemp /tmp/ohc-bootstrap-login-request.XXXXXX)"
-LOGIN_RESPONSE_FILE="$(mktemp /tmp/ohc-bootstrap-login-response.XXXXXX)"
+REQUEST_FILE="$(mktemp /tmp/omnisolo-bootstrap-request.XXXXXX)"
+RESPONSE_FILE="$(mktemp /tmp/omnisolo-bootstrap-response.XXXXXX)"
+HEADER_FILE="$(mktemp /tmp/omnisolo-bootstrap-headers.XXXXXX)"
+LOGIN_REQUEST_FILE="$(mktemp /tmp/omnisolo-bootstrap-login-request.XXXXXX)"
+LOGIN_RESPONSE_FILE="$(mktemp /tmp/omnisolo-bootstrap-login-response.XXXXXX)"
 cleanup_private_files() {
     rm -f "$REQUEST_FILE" "$RESPONSE_FILE" "$HEADER_FILE" \
         "$LOGIN_REQUEST_FILE" "$LOGIN_RESPONSE_FILE"

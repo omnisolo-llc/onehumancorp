@@ -21,7 +21,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
 
           INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
           VALUES
-            ('e2e-feed-test-3', 'e2e-tenant', 'instagram_dm', '{"customer_message": "Do you make custom vegan cakes?", "feature_type": "instagram_dm", "draft_reply": "Yes we do! Here is a booking link: https://ohc.page/book", "summary": "Do you make custom vegan cakes?"}'::jsonb, '{"description": "Do you make custom vegan cakes?", "title": "Do you make custom vegan cakes?"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ('e2e-feed-test-3', 'e2e-tenant', 'instagram_dm', '{"customer_message": "Do you make custom vegan cakes?", "feature_type": "instagram_dm", "draft_reply": "Yes we do! Here is a booking link: https://cloud.omnisolo.co/book", "summary": "Do you make custom vegan cakes?"}'::jsonb, '{"description": "Do you make custom vegan cakes?", "title": "Do you make custom vegan cakes?"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT (id) DO UPDATE SET lifecycle_state = 'PENDING_APPROVAL', updated_at = CURRENT_TIMESTAMP;
         `
       }

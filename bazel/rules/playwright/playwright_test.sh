@@ -481,7 +481,7 @@ export OMNISOLO_AGENT_AUTH_KEY="${OMNISOLO_AGENT_AUTH_KEY:-0123456789abcdef01234
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OMNISOLO_SERVER_PORT gRPC:$OMNISOLO_GRPC_SERVER_PORT) from $SERVER_BIN..."
   if [ "$USE_STANDALONE_MODE" = true ]; then
-    DB_URL="sqlite://$TEST_TMPDIR/ohc-e2e.db?mode=rwc"
+    DB_URL="sqlite://$TEST_TMPDIR/omnisolo-e2e.db?mode=rwc"
     RD_URL="redis://127.0.0.1:12345"
     OMNISOLO_STANDALONE="true"
     export REDIS_URL="redis://127.0.0.1:12345"

@@ -27,7 +27,7 @@ test.describe('Offline-First AI Sync Mesh', () => {
 
     // Ensure the offline mutation was written to local storage
     const offlineQueue = await page.evaluate(() => {
-        return JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+        return JSON.parse(localStorage.getItem('omnisolo_offline_pos_tx') || '[]');
     });
     expect(offlineQueue.length).toBeGreaterThan(0);
 

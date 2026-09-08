@@ -19,7 +19,7 @@ test.describe('Fulfillment Hub - Offline Sync', () => {
     await page.goto('/login');
     await page.evaluate((tenant) => {
         localStorage.setItem('tenant_id', tenant);
-        localStorage.setItem('ohc_offline_events', JSON.stringify([]));
+        localStorage.setItem('omnisolo_offline_events', JSON.stringify([]));
     }, tenantId);
 
     // 3. Navigate to fulfillment hub

@@ -122,7 +122,7 @@ function isFakeOmniSoloUrl(href: string) {
     const url = new URL(href, 'http://dummy.base');
     return url.protocol === 'ohc:' || url.hostname === 'cloud.omnisolo.co' || url.hostname.endsWith('.cloud.omnisolo.co');
   } catch {
-    return href.startsWith('ohc://') || href.includes('cloud.omnisolo.co');
+    return href.startsWith('omnisolo://') || href.includes('cloud.omnisolo.co');
   }
 }
 

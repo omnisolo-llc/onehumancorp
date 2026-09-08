@@ -326,7 +326,7 @@ impl AutoDreamWorker {
     }
 
     async fn process_fs_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
-        let memory_dir = std::env::var("OMNISOLO_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
+        let memory_dir = std::env::var("OMNISOLO_MEMORY_DIR").unwrap_or_else(|_| ".omnisolo/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
         
         if !path.exists() {

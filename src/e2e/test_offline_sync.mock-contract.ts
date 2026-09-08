@@ -26,7 +26,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
 
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
     });
 
     await memberPage.goto('/pos.html');
@@ -75,7 +75,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
 
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
     });
 
     await memberPage.goto('/pos.html');
@@ -165,7 +165,7 @@ test.describe('Offline-Tolerant Mobile-First Agentic POS & Order Sync', () => {
 
     await memberPage.goto('/api/v1/staff');
     await memberPage.evaluate(() => {
-        localStorage.setItem('ohc_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
+        localStorage.setItem('omnisolo_offline_staff', JSON.stringify([{ id: 'staff_1', name: 'User', role: 'Manager', pin_hash: '1234' }]));
     });
 
     await memberPage.goto('/pos.html');

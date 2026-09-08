@@ -9,6 +9,66 @@ test.describe("OmniSolo browser branding", () => {
     await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
   });
 
+  test("the public login document contains no legacy first-party branding", async ({ page }) => {
+    const response = await page.request.get("/login?next=/dashboard");
+    expect(response.ok()).toBe(true);
+    const document = await response.text();
+
+    expect(document).not.toMatch(/one human corp|onehumancorp|ohc\.app|ohc\.store|api\.onehumancorp/i);
+    expect(document).toContain("OmniSolo");
+  });
+
+  test("browser-owned state uses only OmniSolo storage namespaces", async ({ page }) => {
+    const affectedRoutes = [
+      "/verify-email",
+      "/pos/terminal",
+      "/pos/kds",
+      "/storefront-builder",
+      "/website-builder",
+      "/digital-business-card",
+      "/referrals",
+    ];
+    const violations: string[] = [];
+
+    await page.addInitScript(() => {
+      const observed: string[] = [];
+      const legacyKey = /^ohc(?:_|-)/i;
+      const storagePrototype = Storage.prototype as Storage & Record<string, unknown>;
+      for (const methodName of ["getItem", "setItem", "removeItem"] as const) {
+        const original = Storage.prototype[methodName];
+        Object.defineProperty(storagePrototype, methodName, {
+          configurable: true,
+          value(this: Storage, key: string, ...values: string[]) {
+            if (legacyKey.test(String(key))) observed.push(String(key));
+            return Reflect.apply(original, this, [key, ...values]);
+          },
+        });
+      }
+      Object.defineProperty(globalThis, "__omnisoloLegacyStorageKeys", {
+        configurable: true,
+        value: observed,
+      });
+    });
+
+    for (const route of affectedRoutes) {
+      await page.goto(route, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(250);
+      const routeViolations = await page.evaluate(() => {
+        const observed = (globalThis as typeof globalThis & {
+          __omnisoloLegacyStorageKeys?: string[];
+        }).__omnisoloLegacyStorageKeys ?? [];
+        const persisted = [localStorage, sessionStorage].flatMap((storage) =>
+          Array.from({ length: storage.length }, (_, index) => storage.key(index) ?? "")
+            .filter((key) => /^ohc(?:_|-)/i.test(key))
+        );
+        return [...new Set([...observed, ...persisted])];
+      });
+      violations.push(...routeViolations.map((key) => `${route}: ${key}`));
+    }
+
+    expect(violations).toEqual([]);
+  });
+
   test("login does not start authenticated optional-content requests", async ({ anonymousPage }) => {
     const optionalRequests: string[] = [];
     anonymousPage.on("request", (request) => {

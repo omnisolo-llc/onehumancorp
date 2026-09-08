@@ -11,10 +11,10 @@ Traditional API keys are static, easily leaked, and hard to rotate. The industry
 ## Design Doc
 
 ### Architecture Diagram (Mental Model)
-*   **SPIRE Server**: Deployed centrally in Kubernetes. Defines the trust domain (e.g., `trust.ohc.dev`).
+*   **SPIRE Server**: Deployed centrally in Kubernetes. Defines the trust domain (e.g., `trust.omnisolo.co`).
 *   **SPIRE Agents**: Run as DaemonSets on every node. Attest workloads (AI Agents, Rust Services).
 *   **Workload API**: AI Agents connect locally to the Workload API (Unix Domain Socket) to receive their X.509 SVIDs (SPIFFE Verifiable Identity Documents).
-*   **gRPC / MCP Interceptors**: All Rust gRPC servers and the MCP Hub implement mTLS using SVIDs. They parse the SPIFFE ID (e.g. `spiffe://trust.ohc.dev/tenant/123/agent/marketing`) to enforce fine-grained, tenant-isolated authorization.
+*   **gRPC / MCP Interceptors**: All Rust gRPC servers and the MCP Hub implement mTLS using SVIDs. They parse the SPIFFE ID (e.g. `spiffe://trust.omnisolo.co/tenant/123/agent/marketing`) to enforce fine-grained, tenant-isolated authorization.
 
 ### Mobile UX Flow
 This is a purely backend infrastructure change and is completely invisible to the user. The mobile app continues to use standard JWTs for user authentication, which the API gateway exchanges for a backend SVID context when making internal calls.

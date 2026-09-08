@@ -378,10 +378,10 @@ require_literal 'postgres-data:/var/lib/postgresql/data' "$compose_manifest" \
   "Compose database state must have the same lifecycle as the bootstrap marker."
 reject_literal 'restart: on-failure' "$compose_manifest" \
   "A permanently invalid bootstrap configuration must not restart forever."
-reject_literal ':/etc/ohc/grpc-tls:ro' "$compose_manifest" \
+reject_literal ':/etc/omnisolo/grpc-tls:ro' "$compose_manifest" \
   "Compose must not mount the TLS directory containing the CA private key."
 for key in server.crt server.key ca.crt; do
-  require_literal "/etc/ohc/grpc-tls/${key}:ro" "$compose_manifest" \
+  require_literal "/etc/omnisolo/grpc-tls/${key}:ro" "$compose_manifest" \
     "Compose must mount only the required ${key} TLS file."
 done
 reject_literal '/etc/docker/daemon.json' "$compose_script" \

@@ -42,7 +42,7 @@ impl WriteExecutor {
                     "--emit=metadata",
                     "--edition=2021",
                     "--crate-name",
-                    "ohc_write_check",
+                    "omnisolo_write_check",
                     "-o",
                     &metadata_path_string,
                     &temp_path_string,

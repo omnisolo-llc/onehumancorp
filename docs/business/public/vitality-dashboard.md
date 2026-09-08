@@ -12,7 +12,7 @@ Welcome to the **OmniSolo-SIP Swarm Vitality Dashboard**. This document provides
 
 ## 📡 Live Telemetry Report
 - **Agent Roles Deployed:** `Principal Cloud Cost Optimizer (L7)`, `Principal Data Scientist - Agentic Operations (L7)`, `Principal Software Engineer & Distributed Systems Architect (L7)`.
-- **Global Intelligence Entries:** > 10 recent observations added via Swarm Intelligence Protocol (`OMNISOLO_MEMORY_DIR`, typically `.ohc/runtime/memory`).
+- **Global Intelligence Entries:** > 10 recent observations added via Swarm Intelligence Protocol (`OMNISOLO_MEMORY_DIR`, typically `.omnisolo/runtime/memory`).
 - **MCP Tool Status:** Active, seamlessly executing dynamic Capability Plugin meshes with SPIFFE-based mTLS identities.
 
 ---
