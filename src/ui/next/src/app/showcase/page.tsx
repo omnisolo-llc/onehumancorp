@@ -21,7 +21,7 @@ function PublicShowcaseContent() {
   const afterImage = searchParams.get('a') || '';
   const ctaLink = searchParams.get('l') || '';
   const removeBranding = searchParams.get('r') === '1';
-  const tenant = searchParams.get('t') || 'ohc';
+  const tenant = searchParams.get('t') || 'omnisolo';
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F5F5F7] text-[#1D1D1F] font-inter">
@@ -85,7 +85,7 @@ function PublicShowcaseContent() {
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
       `}} />
     </div>

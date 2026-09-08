@@ -31,7 +31,7 @@ The CEO identifies a gap in the workforce (e.g., lack of security oversight) and
 ### 3.2 Scenario: Org Cap Reached
 - **Detection**: `len(hub.Agents()) >= org.Plan.MaxAgents`.
 - **System Action**: Backend returns `403 Forbidden` with `{"reason": "quota_exceeded"}`.
-- **Resolution**: UI redirects to the Billing page to upgrade the OHC tier.
+- **Resolution**: UI redirects to the Billing page to upgrade the OmniSolo tier.
 
 ## 4. UI/UX Details
 - **Component IDs**: `AgentRegistrationForm`, `StatusBadge-IDLE`.
@@ -44,7 +44,7 @@ The CEO identifies a gap in the workforce (e.g., lack of security oversight) and
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 </div>

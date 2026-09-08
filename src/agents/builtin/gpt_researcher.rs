@@ -1,5 +1,5 @@
 use futures::future::join_all;
-use ohc_builtin_agent_core::types::{ChatRequest, Message};
+use omnisolo_builtin_agent_core::types::{ChatRequest, Message};
 use std::sync::Arc;
 
 /// GPT Researcher Unique Harness Innovations: Planner + execution agent
@@ -11,7 +11,7 @@ pub trait ResearcherLlmClient: Send + Sync {
     async fn chat(
         &self,
         req: ChatRequest,
-    ) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<omnisolo_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 pub struct PlannerAgent {
@@ -152,7 +152,7 @@ impl GptResearcherManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatResponse, Usage};
     use std::sync::Mutex;
 
     struct MockResearcherLlm {

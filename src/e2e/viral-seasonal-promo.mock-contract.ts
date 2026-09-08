@@ -45,7 +45,7 @@ test.describe('Viral Seasonal Promo Generator UI', () => {
         await expect(shareLinkInput).toBeVisible();
 
         const shareLinkValue = await shareLinkInput.inputValue();
-        expect(shareLinkValue).toContain('ohc.app/promo');
+        expect(shareLinkValue).toContain('cloud.omnisolo.co/promo');
         expect(shareLinkValue).toContain('theme=christmas');
         expect(shareLinkValue).toContain('discount=25');
 

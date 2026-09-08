@@ -8,14 +8,14 @@ This creates immense friction and risk:
 *   **Accidental Actions:** A stray swipe by the customer could inadvertently delete an order, navigate away from the payment screen, or trigger a destructive action.
 *   **Hardware Costs:** Competitors (like Square or traditional POS systems) "solve" this by forcing the merchant to buy a separate, expensive, dedicated hardware screen (a Customer Facing Display).
 
-Our non-technical personas need a software-only, "Zero-Trust" solution. They need OHC to instantly, securely, and seamlessly transform their personal device into a locked-down Customer-Facing Display (Kiosk Mode) during checkout, suppressing all notifications and preventing navigation until the merchant re-authenticates.
+Our non-technical personas need a software-only, "Zero-Trust" solution. They need OmniSolo to instantly, securely, and seamlessly transform their personal device into a locked-down Customer-Facing Display (Kiosk Mode) during checkout, suppressing all notifications and preventing navigation until the merchant re-authenticates.
 
 ## Research Report
-*   **Current Architecture Limits:** The current OHC mobile app allows navigation throughout the app without a secondary auth boundary during the checkout flow. OS-level notifications (SMS, Instagram, email) still overlay on the screen during a transaction.
+*   **Current Architecture Limits:** The current OmniSolo mobile app allows navigation throughout the app without a secondary auth boundary during the checkout flow. OS-level notifications (SMS, Instagram, email) still overlay on the screen during a transaction.
 *   **Competitor Analysis:**
     *   *Square / Toast:* Rely heavily on secondary hardware screens (CFDs). Their mobile apps offer basic tipping screens but lack robust OS-level lockdown features, leaving notifications visible.
     *   *Apple Guided Access / Android App Pinning:* OS-level features exist, but they are incredibly difficult for a non-technical user like Fatima to configure and toggle on/off dynamically for a single 30-second transaction.
-*   **Discovery:** OHC must implement an application-level "Kiosk Mode" state machine. When a transaction reaches the customer-input phase (tipping/receipt), the UI transitions to Kiosk State. This state uses the OS's native "Focus/Do Not Disturb" APIs (if permitted) to suppress notifications, locks navigation (disabling back buttons/swipe gestures), and requires Biometric Authentication (FaceID/TouchID) to return to the Merchant State.
+*   **Discovery:** OmniSolo must implement an application-level "Kiosk Mode" state machine. When a transaction reaches the customer-input phase (tipping/receipt), the UI transitions to Kiosk State. This state uses the OS's native "Focus/Do Not Disturb" APIs (if permitted) to suppress notifications, locks navigation (disabling back buttons/swipe gestures), and requires Biometric Authentication (FaceID/TouchID) to return to the Merchant State.
 
 ## Design Doc
 

@@ -5,7 +5,7 @@ type Props = {
 }
 
 const defaultTargetUrl = '/onboarding';
-const trustedShareHosts = new Set(['omnisolo.co', 'omnisolo.co']);
+const trustedShareHosts = new Set(['cloud.omnisolo.co', 'omnisolo.co']);
 
 function normalizeShareTarget(rawUrl: string) {
   try {

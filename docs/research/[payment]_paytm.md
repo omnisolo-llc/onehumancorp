@@ -16,9 +16,9 @@ Small business owners in India need to cater to customers who use the Paytm ecos
 - **Compatibility**: Cloud & Standalone.
 
 ## Design Doc
-- **Integration with OHC**:
+- **Integration with OmniSolo**:
     - Merchant connects their Paytm for Business account.
-    - OHC checkout displays "Pay with Paytm" (Wallet + UPI).
+    - OmniSolo checkout displays "Pay with Paytm" (Wallet + UPI).
     - Supports dynamic QR code generation for "Scan & Pay" scenarios.
 - **User View**: Customers see the familiar Paytm branding at checkout, allowing for a 1-tap payment experience from their mobile device.
 

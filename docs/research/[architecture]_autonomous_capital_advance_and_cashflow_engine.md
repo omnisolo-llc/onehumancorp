@@ -15,7 +15,7 @@ For owners like Carlos (handyman) or Priya (boutique owner), cash flow is the di
 - **GoDaddy**: Basic payment processing, no native capital advance features.
 
 **OmniSolo Opportunity**
-By leveraging our deep knowledge of the merchant's unified ledger (invoices, bookings, catalog sales), we can accurately underwrite risk invisibly using an AI-driven background model. OHC can offer instant capital advances where repayment is automatically deducted as a small percentage of future incoming revenue, completely removing the stress of manual loan repayments.
+By leveraging our deep knowledge of the merchant's unified ledger (invoices, bookings, catalog sales), we can accurately underwrite risk invisibly using an AI-driven background model. OmniSolo can offer instant capital advances where repayment is automatically deducted as a small percentage of future incoming revenue, completely removing the stress of manual loan repayments.
 
 ## Design Doc
 
@@ -39,7 +39,7 @@ graph TD
    - **Amount**: Slider to choose between $500 and $1,500.
    - **Terms**: "We’ll automatically deduct 8% of your daily sales until $1,650 is repaid. No hidden fees."
    - **Action**: A prominent, single button: *"Get Funds Instantly"*.
-3. **Success State**: Confetti animation. Funds are instantly added to their OHC Virtual Wallet or pushed to their debit card.
+3. **Success State**: Confetti animation. Funds are instantly added to their OmniSolo Virtual Wallet or pushed to their debit card.
 
 ### AI Agent Integration Points
 - **AI Finance Agent (Background)**: Continuously scans the unified ledger (daily volume, refund rates, booking consistency) to update the merchant's risk score and advance eligibility.
@@ -47,7 +47,7 @@ graph TD
 
 ### Key Design Decisions and Why
 - **Proactive rather than Reactive**: Small business owners are busy. The system must do the underwriting invisibly and present the offer *before* the merchant realizes they need a loan, removing friction.
-- **Revenue-based Repayment**: Fixed monthly payments kill small businesses in slow months. A percentage-based daily deduction aligns OHC's success with the merchant's success.
+- **Revenue-based Repayment**: Fixed monthly payments kill small businesses in slow months. A percentage-based daily deduction aligns OmniSolo's success with the merchant's success.
 - **Mobile-first, One-Tap Execution**: Adhering to the "grandmother test", there are no forms to fill out. Identity and business health are already known. It must be a single button tap to accept.
 
 ## Implementation Prompt

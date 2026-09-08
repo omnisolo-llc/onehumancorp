@@ -39,7 +39,7 @@ The CEO logs into the OmniSolo platform. They expect a high-level view of their 
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 </div>

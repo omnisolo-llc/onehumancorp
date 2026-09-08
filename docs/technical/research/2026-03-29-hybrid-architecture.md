@@ -1,19 +1,19 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Design Doc: OHC Hybrid Agentic OS & Thin Client Architecture
+# Design Doc: OmniSolo Hybrid Agentic OS & Thin Client Architecture
 
 **Author(s):** Antigravity, Principal Product Architect & Visionary (L7)
 **Status:** Approved
 **Last Updated:** 2026-03-29
 
 ## 1. Overview
-The **OmniSolo (OHC) Hybrid Agentic OS** requires a fluid and consistent architecture across completely different operating models. This document solidifies the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OHC "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier.
+The **OmniSolo (OmniSolo) Hybrid Agentic OS** requires a fluid and consistent architecture across completely different operating models. This document solidifies the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OmniSolo "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
 - Define the Standalone Desktop Wrapper lifecycle, bridging local Rust server execution with the Slint application shell.
 - Specify the API contract for the Thin Client Mode, guaranteeing API stability and offline-resilience strategies.
-- Enforce OHC-SIP v2 (Swarm-as-Code) consistency across PostgreSQL (Cloud) and SQLite (Local).
+- Enforce OmniSolo-SIP v2 (Swarm-as-Code) consistency across PostgreSQL (Cloud) and SQLite (Local).
 - Mandate the Visual Excellence (Aesthetic) Standard across all Hybrid clients.
 
 ### 2.2 Non-Goals
@@ -63,7 +63,7 @@ graph TD
     class Hub,DesktopFat,LocalRust,LocalDB,Postgres,WebThin,DesktopThin,K8sAPI,Redis premium;
 ```
 
-### 3.2 OHC-HA Degradation Model
+### 3.2 OmniSolo-HA Degradation Model
 - **Cloud-Native**: High concurrency, strict tenant isolation, distributed caching (Redis).
 - **Standalone Mode**: SQLite fallback, single-user identity (bypassing strict JWT tenant requirements for local owner), gracefully disables distributed cache pathways.
 - **Thin Client**: Prioritizes UI responsiveness and API latency. Leverages local state caching before syncing with the Cloud via `/api/sync`.
@@ -72,13 +72,13 @@ graph TD
 
 ### 4.1 Lifecycle Management
 The Slint desktop shell acts as the supervisor for the embedded Rust backend.
-1.  **Boot**: App starts -> Checks for `OHC_STANDALONE=true` -> Spawns `ohc-server` child process -> Waits for `/healthz`.
+1.  **Boot**: App starts -> Checks for `OMNISOLO_STANDALONE=true` -> Spawns `omnisolo-server` child process -> Waits for `/healthz`.
 2.  **State**: App points internal HTTP clients to `http://localhost:<dynamic_port>`.
 3.  **Teardown**: App closed -> Sends graceful shutdown signal (SIGTERM) to Rust process.
 
 ### 4.2 SQLite/PostgreSQL Parity
 To guarantee parity, the Rust backend uses a unified `DataStore` trait.
-- Local: SQLite `file:///.ohc/runtime/swarm.db`.
+- Local: SQLite `file:///.omnisolo/runtime/swarm.db`.
 - Cloud: PostgreSQL DSN.
 The underlying schema must remain 100% compatible. Complex JSONB queries in Postgres are translated to SQLite JSON functions.
 
@@ -98,7 +98,7 @@ If the Thin Client loses connection, it buffers actions locally (e.g., in Hive/S
 
 ## 6. Aesthetic Excellence Mandate
 
-All UIs, regardless of Standalone or Thin Client mode, strictly adhere to the OHC Premium Feel:
+All UIs, regardless of Standalone or Thin Client mode, strictly adhere to the OmniSolo Premium Feel:
 
 *   **Glassmorphism Container**:
     ```css

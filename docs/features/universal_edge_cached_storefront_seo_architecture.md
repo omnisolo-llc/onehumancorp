@@ -1,12 +1,12 @@
 # Research Report: Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture
 
 ## Problem Statement
-Small business owners using OmniSolo (OHC) need their storefronts to load instantly for customers worldwide and rank highly on search engines (Google, Bing). However, because OHC storefronts are highly dynamic—displaying real-time inventory, booking availability, and personalized AI-driven content—traditional static site generation (SSG) is insufficient. Furthermore, search engine crawlers struggle with complex, client-side rendered JavaScript applications, leading to poor SEO performance for our users. We need an architecture that combines the speed of edge-cached static sites with the freshness of dynamic data, fully optimized for search engines via AI.
+Small business owners using OmniSolo (OmniSolo) need their storefronts to load instantly for customers worldwide and rank highly on search engines (Google, Bing). However, because OmniSolo storefronts are highly dynamic—displaying real-time inventory, booking availability, and personalized AI-driven content—traditional static site generation (SSG) is insufficient. Furthermore, search engine crawlers struggle with complex, client-side rendered JavaScript applications, leading to poor SEO performance for our users. We need an architecture that combines the speed of edge-cached static sites with the freshness of dynamic data, fully optimized for search engines via AI.
 
 ## Research Findings
 Our user personas rely heavily on organic discovery and immediate load times:
 - **Fatima (Food Cart):** Customers scanning a QR code or clicking a link in her bio need the menu to load in under 1 second on poor 3G connections. The "sold out" status must be real-time.
-- **Leo (Music Tutor):** Prospective students searching for "guitar lessons near me" on Google need to find his OHC-hosted profile page.
+- **Leo (Music Tutor):** Prospective students searching for "guitar lessons near me" on Google need to find his OmniSolo-hosted profile page.
 - **Priya (Boutique):** Needs her product pages to show up in Google Shopping results with accurate metadata and rich snippets.
 
 ### The Gap
@@ -16,7 +16,7 @@ Currently, there is a gap in our architecture. If we rely purely on client-side 
 - **Shopify:** Uses a mix of server-side rendering (SSR) and edge caching (Oxygen), but requires complex Liquid templates or Hydrogen (React) frameworks that are too complex for our zero-tech users.
 - **Wix/Squarespace:** Provide decent SSR and SEO tools, but require manual configuration of meta tags and structured data, which our users won't do.
 - **Vercel/Next.js (ISR):** Incremental Static Regeneration is powerful, but managing cache invalidation globally across a multi-tenant SaaS for millions of permutations is error-prone.
-- **OHC's Differentiation:** We will use **Agentic SEO Pre-rendering**. The "Marketing & Advertising" AI Agent will automatically generate optimized HTML snapshots and structured data (JSON-LD), cache them at the CDN edge, and intelligently invalidate them when the "Operations" Agent detects a relevant state change (e.g., inventory drops to zero).
+- **OmniSolo's Differentiation:** We will use **Agentic SEO Pre-rendering**. The "Marketing & Advertising" AI Agent will automatically generate optimized HTML snapshots and structured data (JSON-LD), cache them at the CDN edge, and intelligently invalidate them when the "Operations" Agent detects a relevant state change (e.g., inventory drops to zero).
 
 ## Architectural Design
 

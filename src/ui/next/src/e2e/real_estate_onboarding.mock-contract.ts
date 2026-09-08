@@ -56,7 +56,7 @@ test.describe('Real Estate Onboarding CUJ', () => {
         await page.waitForLoadState('networkidle');
 
         // Check if the chat interface loaded
-        await expect(page.getByText("Hi there! I'm your OHC setup assistant. What kind of business do you want to build or manage today?")).toBeVisible();
+        await expect(page.getByText("Hi there! I'm your OmniSolo setup assistant. What kind of business do you want to build or manage today?")).toBeVisible();
 
         // Check if our chip is there
         const chip = page.getByRole('button', { name: 'I manage 15 long-term apartment rentals' });

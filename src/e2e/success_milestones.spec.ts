@@ -9,7 +9,7 @@ test('success_milestones', async ({ page, request, loginAs, adminUser }) => {
   await page.goto('/dashboard');
 
   // Verify translucent glass CSS implementation on standard panels/widgets
-  // as per OHC requirements (SuccessMilestoneWidget might not render if no real milestone is reached,
+  // as per OmniSolo requirements (SuccessMilestoneWidget might not render if no real milestone is reached,
   // but if it is present or other panels are present, we check the style).
   // We are not allowed to mock API requests in E2E tests.
   const panels = page.locator('.app-panel');

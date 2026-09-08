@@ -51,7 +51,7 @@ export default function ReferralMilestonesWidget({
 
   if (isLoading) {
     return (
-      <div className="ohc-growth-card p-6 border border-indigo-100 bg-white/50 animate-pulse">
+      <div className="omnisolo-growth-card p-6 border border-indigo-100 bg-white/50 animate-pulse">
         <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
         <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
         <div className="space-y-3">
@@ -91,7 +91,7 @@ export default function ReferralMilestonesWidget({
   };
 
   return (
-    <div className="ohc-growth-card flex flex-col p-6 backdrop-blur-[30px] saturate-[210%] bg-white/40 dark:bg-black/30 border border-white/20 dark:border-white/10 shadow-lg rounded-2xl relative overflow-hidden group transition-all hover:shadow-xl">
+    <div className="omnisolo-growth-card flex flex-col p-6 backdrop-blur-[30px] saturate-[210%] bg-white/40 dark:bg-black/30 border border-white/20 dark:border-white/10 shadow-lg rounded-2xl relative overflow-hidden group transition-all hover:shadow-xl">
       <div className="absolute -top-24 -right-24 w-48 h-48 bg-pink-400/20 rounded-full blur-[60px] pointer-events-none group-hover:bg-pink-400/30 transition-colors"></div>
       <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-400/20 rounded-full blur-[60px] pointer-events-none group-hover:bg-indigo-400/30 transition-colors"></div>
 

@@ -3,7 +3,7 @@
 # KAIROS Hybrid Architecture Decomposition
 
 ## 1. Vision
-The OmniSolo (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction.
+The OmniSolo (OmniSolo) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction.
 
 ## 2. Phase 1: Shared Task List (Decomposition)
 ### Database Schema (PostgreSQL):

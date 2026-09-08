@@ -548,9 +548,9 @@ git commit -m "feat(harness): add pinned OpenAI-compatible shim runner"
 **Files:**
 - Modify: deploy/docker/Dockerfile.harness-worker
 - Modify: deploy/docker-compose.yml
-- Modify: deploy/helm/ohc/values.yaml
-- Modify: deploy/helm/ohc/templates/harness-workers.yaml
-- Modify: deploy/helm/ohc/templates/harness-workers-hpa.yaml
+- Modify: deploy/helm/omnisolo/values.yaml
+- Modify: deploy/helm/omnisolo/templates/harness-workers.yaml
+- Modify: deploy/helm/omnisolo/templates/harness-workers-hpa.yaml
 - Modify: deploy/tests/harness_worker_deployment_contract_test.sh
 - Modify: scripts/test-live-harness-matrix.sh
 - Modify: docs/omnisolo-harness-compatibility-inventory.md
@@ -596,7 +596,7 @@ variables. If image builds are unavailable, record that as a live prerequisite.
 - [ ] Step 5: Commit deployment and inventory changes.
 
 ~~~bash
-git add deploy/docker/Dockerfile.harness-worker deploy/docker-compose.yml deploy/helm/ohc/values.yaml deploy/helm/ohc/templates/harness-workers.yaml deploy/helm/ohc/templates/harness-workers-hpa.yaml deploy/tests/harness_worker_deployment_contract_test.sh scripts/test-live-harness-matrix.sh docs/omnisolo-harness-compatibility-inventory.md
+git add deploy/docker/Dockerfile.harness-worker deploy/docker-compose.yml deploy/helm/omnisolo/values.yaml deploy/helm/omnisolo/templates/harness-workers.yaml deploy/helm/omnisolo/templates/harness-workers-hpa.yaml deploy/tests/harness_worker_deployment_contract_test.sh scripts/test-live-harness-matrix.sh docs/omnisolo-harness-compatibility-inventory.md
 git commit -m "feat(harness): deploy twelve pinned compatibility workers"
 ~~~
 

@@ -402,8 +402,8 @@ mod tests {
         assert!(BookingService::prevent_double_booking(&existing, &overlapping_slot).is_err());
     }
 }
-use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
-use ::server_ohc::app::{
+use ::server_omnisolo::app::booking_engine_service_server::BookingEngineService;
+use ::server_omnisolo::app::{
     CheckAvailabilityRequest, CheckAvailabilityResponse, ConversationalCheckoutSession,
     CreateConversationalCheckoutRequest, ReserveTimeSlotRequest, ReserveTimeSlotResponse,
     SyncCalendarRequest, SyncCalendarResponse, TimeSlot,
@@ -849,8 +849,8 @@ impl NativeBookingService {
 impl BookingEngineService for NativeBookingService {
     async fn get_resources(
         &self,
-        request: tonic::Request<::server_ohc::app::GetResourcesRequest>,
-    ) -> Result<tonic::Response<::server_ohc::app::GetResourcesResponse>, tonic::Status> {
+        request: tonic::Request<::server_omnisolo::app::GetResourcesRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::app::GetResourcesResponse>, tonic::Status> {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -899,7 +899,7 @@ impl BookingEngineService for NativeBookingService {
 
         let resources = rows
             .into_iter()
-            .map(|row| ::server_ohc::app::BookingResource {
+            .map(|row| ::server_omnisolo::app::BookingResource {
                 id: row.get("id"),
                 name: row.get("name"),
                 resource_type: row.get("resource_type"),
@@ -910,14 +910,14 @@ impl BookingEngineService for NativeBookingService {
             .collect();
 
         Ok(tonic::Response::new(
-            ::server_ohc::app::GetResourcesResponse { resources },
+            ::server_omnisolo::app::GetResourcesResponse { resources },
         ))
     }
 
     async fn get_services(
         &self,
-        request: tonic::Request<::server_ohc::app::GetServicesRequest>,
-    ) -> Result<tonic::Response<::server_ohc::app::GetServicesResponse>, tonic::Status> {
+        request: tonic::Request<::server_omnisolo::app::GetServicesRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::app::GetServicesResponse>, tonic::Status> {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -985,11 +985,11 @@ impl BookingEngineService for NativeBookingService {
 
         let mut reqs_map: std::collections::HashMap<
             String,
-            Vec<::server_ohc::app::ServiceResourceRequirement>,
+            Vec<::server_omnisolo::app::ServiceResourceRequirement>,
         > = std::collections::HashMap::new();
         for r in all_reqs {
             let s_id: String = r.get("service_id");
-            let req = ::server_ohc::app::ServiceResourceRequirement {
+            let req = ::server_omnisolo::app::ServiceResourceRequirement {
                 resource_type: r.get("resource_type"),
                 quantity: r.get::<i32, _>("quantity") as i32,
             };
@@ -1001,7 +1001,7 @@ impl BookingEngineService for NativeBookingService {
             let service_id: String = row.get("id");
             let resource_requirements = reqs_map.remove(&service_id).unwrap_or_default();
 
-            service_definitions.push(::server_ohc::app::ServiceDefinition {
+            service_definitions.push(::server_omnisolo::app::ServiceDefinition {
                 id: service_id,
                 title: row.get("title"),
                 description: row.try_get("description").unwrap_or_default(),
@@ -1012,7 +1012,7 @@ impl BookingEngineService for NativeBookingService {
         }
 
         Ok(tonic::Response::new(
-            ::server_ohc::app::GetServicesResponse {
+            ::server_omnisolo::app::GetServicesResponse {
                 services: service_definitions,
             },
         ))
@@ -1020,8 +1020,8 @@ impl BookingEngineService for NativeBookingService {
 
     async fn create_unified_booking(
         &self,
-        request: tonic::Request<::server_ohc::app::CreateUnifiedBookingRequest>,
-    ) -> Result<tonic::Response<::server_ohc::app::CreateUnifiedBookingResponse>, tonic::Status>
+        request: tonic::Request<::server_omnisolo::app::CreateUnifiedBookingRequest>,
+    ) -> Result<tonic::Response<::server_omnisolo::app::CreateUnifiedBookingResponse>, tonic::Status>
     {
         let auth_info = request
             .extensions()
@@ -1094,7 +1094,7 @@ impl BookingEngineService for NativeBookingService {
             Err(e) => {
                 tracing::error!("Failed to fetch resource requirements: {}", e);
                 return Ok(tonic::Response::new(
-                    ::server_ohc::app::CreateUnifiedBookingResponse {
+                    ::server_omnisolo::app::CreateUnifiedBookingResponse {
                         success: false,
                         booking: None,
                         error: "Failed to fetch resource requirements".to_string(),
@@ -1142,7 +1142,7 @@ impl BookingEngineService for NativeBookingService {
                 Err(e) => {
                     tracing::error!("Failed to find available resources: {}", e);
                     return Ok(tonic::Response::new(
-                        ::server_ohc::app::CreateUnifiedBookingResponse {
+                        ::server_omnisolo::app::CreateUnifiedBookingResponse {
                             success: false,
                             booking: None,
                             error: "Failed to find available resources".to_string(),
@@ -1154,7 +1154,7 @@ impl BookingEngineService for NativeBookingService {
             if available_resources.len() < qty as usize {
                 // Not enough resources available
                 return Ok(tonic::Response::new(
-                    ::server_ohc::app::CreateUnifiedBookingResponse {
+                    ::server_omnisolo::app::CreateUnifiedBookingResponse {
                         success: false,
                         booking: None,
                         error: format!("Not enough resources available for type {}", r_type),
@@ -1213,7 +1213,7 @@ impl BookingEngineService for NativeBookingService {
         .execute(&mut *tx)
         .await {
             tracing::error!("Failed to create booking: {}", e);
-            return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
+            return Ok(tonic::Response::new(::server_omnisolo::app::CreateUnifiedBookingResponse {
                 success: false,
                 booking: None,
                 error: "Failed to create booking".to_string(),
@@ -1238,7 +1238,7 @@ impl BookingEngineService for NativeBookingService {
             {
                 tracing::error!("Failed to reserve resource: {}", e);
                 return Ok(tonic::Response::new(
-                    ::server_ohc::app::CreateUnifiedBookingResponse {
+                    ::server_omnisolo::app::CreateUnifiedBookingResponse {
                         success: false,
                         booking: None,
                         error: "Failed to reserve resource".to_string(),
@@ -1251,7 +1251,7 @@ impl BookingEngineService for NativeBookingService {
         if let Err(e) = tx.commit().await {
             tracing::error!("Failed to commit transaction: {}", e);
             return Ok(tonic::Response::new(
-                ::server_ohc::app::CreateUnifiedBookingResponse {
+                ::server_omnisolo::app::CreateUnifiedBookingResponse {
                     success: false,
                     booking: None,
                     error: "Failed to complete booking process".to_string(),
@@ -1259,7 +1259,7 @@ impl BookingEngineService for NativeBookingService {
             ));
         }
 
-        let booking = ::server_ohc::app::UnifiedBooking {
+        let booking = ::server_omnisolo::app::UnifiedBooking {
             id: booking_id,
             customer_id,
             service_id,
@@ -1270,7 +1270,7 @@ impl BookingEngineService for NativeBookingService {
         };
 
         Ok(tonic::Response::new(
-            ::server_ohc::app::CreateUnifiedBookingResponse {
+            ::server_omnisolo::app::CreateUnifiedBookingResponse {
                 success: true,
                 booking: Some(booking),
                 error: String::new(),
@@ -1746,8 +1746,8 @@ impl BookingEngineService for NativeBookingService {
 
     async fn create_quote(
         &self,
-        request: Request<::server_ohc::app::CreateQuoteRequest>,
-    ) -> Result<Response<::server_ohc::app::QuoteResponse>, Status> {
+        request: Request<::server_omnisolo::app::CreateQuoteRequest>,
+    ) -> Result<Response<::server_omnisolo::app::QuoteResponse>, Status> {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -1887,7 +1887,7 @@ impl BookingEngineService for NativeBookingService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        Ok(Response::new(::server_ohc::app::QuoteResponse {
+        Ok(Response::new(::server_omnisolo::app::QuoteResponse {
             quote_id,
             tenant_id,
             status: "DRAFT".to_string(),
@@ -1902,8 +1902,8 @@ impl BookingEngineService for NativeBookingService {
 
     async fn fetch_quote(
         &self,
-        request: Request<::server_ohc::app::FetchQuoteRequest>,
-    ) -> Result<Response<::server_ohc::app::QuoteResponse>, Status> {
+        request: Request<::server_omnisolo::app::FetchQuoteRequest>,
+    ) -> Result<Response<::server_omnisolo::app::QuoteResponse>, Status> {
         let auth_info = request
             .extensions()
             .get::<::server_auth::orchestration::AuthInfo>()
@@ -1956,7 +1956,7 @@ impl BookingEngineService for NativeBookingService {
                 .map_err(|e| Status::internal(e.to_string()))?;
 
             for r in items_rows {
-                line_items.push(::server_ohc::app::QuoteLineItem {
+                line_items.push(::server_omnisolo::app::QuoteLineItem {
                     description: r.try_get("description").unwrap_or_default(),
                     unit_price_cents: r.try_get("unit_price_cents").unwrap_or_default(),
                     quantity: r.try_get("quantity").unwrap_or_default(),
@@ -1965,7 +1965,7 @@ impl BookingEngineService for NativeBookingService {
                 });
             }
 
-            Ok(Response::new(::server_ohc::app::QuoteResponse {
+            Ok(Response::new(::server_omnisolo::app::QuoteResponse {
                 quote_id: req.quote_id,
                 tenant_id,
                 status: row.try_get("status").unwrap_or_default(),
@@ -1993,8 +1993,8 @@ impl BookingEngineService for NativeBookingService {
 #[cfg(test)]
 mod native_booking_tests {
     use super::*;
-    use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
-    use ::server_ohc::app::{CreateConversationalCheckoutRequest, ReserveTimeSlotRequest};
+    use ::server_omnisolo::app::booking_engine_service_server::BookingEngineService;
+    use ::server_omnisolo::app::{CreateConversationalCheckoutRequest, ReserveTimeSlotRequest};
     use tonic::Request;
 
     #[tokio::test]
@@ -2109,7 +2109,7 @@ mod native_booking_tests {
             requires_deposit: false,
             timezone: "UTC".to_string(),
         });
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
         req.extensions_mut()
@@ -2127,12 +2127,12 @@ mod native_booking_tests {
     #[tokio::test]
     async fn test_native_check_availability_invalid_date() {
         let svc = NativeBookingService { redis_client: None };
-        let mut req = Request::new(::server_ohc::app::CheckAvailabilityRequest {
+        let mut req = Request::new(::server_omnisolo::app::CheckAvailabilityRequest {
             tenant_id: "t1".to_string(),
             service_id: "p1".to_string(),
             date: "invalid-date".to_string(),
         });
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
         req.extensions_mut()
@@ -2156,7 +2156,7 @@ mod native_booking_tests {
             amount_cents: 1000,
             service_id: "p1".to_string(),
         });
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
         req.extensions_mut()
@@ -2192,7 +2192,7 @@ mod native_booking_tests {
             requires_deposit: true,
             timezone: "UTC".to_string(),
         });
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
         req.extensions_mut()

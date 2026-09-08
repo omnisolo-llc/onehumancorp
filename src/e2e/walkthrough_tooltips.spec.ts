@@ -11,15 +11,15 @@ test.describe('Walkthrough and Tooltips features', () => {
     await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
 
     // The walkthrough overlay should appear
-    const overlay = page.locator('.ohc-walkthrough-overlay');
+    const overlay = page.locator('.omnisolo-walkthrough-overlay');
     await expect(overlay).toBeVisible();
 
-    const bubble = page.locator('.ohc-walkthrough-bubble');
+    const bubble = page.locator('.omnisolo-walkthrough-bubble');
     await expect(bubble).toBeVisible();
     await expect(bubble).toContainText('Welcome');
 
     // Close the walkthrough
-    const closeBtn = page.locator('.ohc-walkthrough-close');
+    const closeBtn = page.locator('.omnisolo-walkthrough-close');
     await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
     await expect(overlay).not.toBeVisible();
   });
@@ -31,14 +31,14 @@ test.describe('Walkthrough and Tooltips features', () => {
     await expect(walkBtn).toBeVisible();
     await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
 
-    const overlay = page.locator('.ohc-walkthrough-overlay');
+    const overlay = page.locator('.omnisolo-walkthrough-overlay');
     await expect(overlay).toBeVisible();
 
-    const bubble = page.locator('.ohc-walkthrough-bubble');
+    const bubble = page.locator('.omnisolo-walkthrough-bubble');
     await expect(bubble).toBeVisible();
     await expect(bubble).toContainText('Storefront Builder');
 
-    const closeBtn = page.locator('.ohc-walkthrough-close');
+    const closeBtn = page.locator('.omnisolo-walkthrough-close');
     await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
     await expect(overlay).not.toBeVisible();
 
@@ -56,15 +56,15 @@ test.describe('Walkthrough and Tooltips features', () => {
     await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
 
     // The walkthrough overlay should appear
-    const overlay = page.locator('.ohc-walkthrough-overlay');
+    const overlay = page.locator('.omnisolo-walkthrough-overlay');
     await expect(overlay).toBeVisible();
 
-    const bubble = page.locator('.ohc-walkthrough-bubble');
+    const bubble = page.locator('.omnisolo-walkthrough-bubble');
     await expect(bubble).toBeVisible();
     await expect(bubble).toContainText('Accept Payment');
 
     // Close the walkthrough
-    const closeBtn = page.locator('.ohc-walkthrough-close');
+    const closeBtn = page.locator('.omnisolo-walkthrough-close');
     await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
     await expect(overlay).not.toBeVisible();
 
@@ -82,15 +82,15 @@ test.describe('Walkthrough and Tooltips features', () => {
     await walkBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
 
     // The walkthrough overlay should appear
-    const overlay = page.locator('.ohc-walkthrough-overlay');
+    const overlay = page.locator('.omnisolo-walkthrough-overlay');
     await expect(overlay).toBeVisible();
 
-    const bubble = page.locator('.ohc-walkthrough-bubble');
+    const bubble = page.locator('.omnisolo-walkthrough-bubble');
     await expect(bubble).toBeVisible();
     await expect(bubble).toContainText('Activate your AI Support Agent');
 
     // Close the walkthrough
-    const closeBtn = page.locator('.ohc-walkthrough-close');
+    const closeBtn = page.locator('.omnisolo-walkthrough-close');
     await closeBtn.evaluate((btn) => btn.click()); await page.waitForTimeout(500);
     await expect(overlay).not.toBeVisible();
 
@@ -103,7 +103,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     await page.goto('/api/v1/ui/dashboard.html');
 
     // Check tooltips registry is available
-    const tooltips = await page.evaluate(() => window['OHC_TOOLTIPS']);
+    const tooltips = await page.evaluate(() => window['OMNISOLO_TOOLTIPS']);
     expect(tooltips).toBeDefined();
     expect(tooltips['dashboard-walkthrough-btn']).toBe('Take a tour of the dashboard');
   });
@@ -132,7 +132,7 @@ test.describe('Walkthrough and Tooltips features', () => {
     await expect(chatWidget).toBeVisible();
 
     // Switch to Ask AI tab
-    const chatTab = page.locator('.ohc-help-tab[data-target="tab-chat"]');
+    const chatTab = page.locator('.omnisolo-help-tab[data-target="tab-chat"]');
     await chatTab.click();
 
     // Type in the input

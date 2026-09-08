@@ -1,5 +1,5 @@
 use crate::hub::Hub;
-use ::server_ohc::orchestration::Message;
+use ::server_omnisolo::orchestration::Message;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

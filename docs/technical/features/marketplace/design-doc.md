@@ -13,7 +13,7 @@ The "OmniSolo" Marketplace is a community-driven ecosystem where users can buy, 
 ### 2.1 Goals
 - Enable the discovery and import of specialized AI agents and organizational templates.
 - Provide a standardized format (Skill Pack/Blueprint) for packaging agents and MCP tool mappings.
-- Integrate securely with the OHC Hub Registry to instantiate imported blueprints into active workflows.
+- Integrate securely with the OmniSolo Hub Registry to instantiate imported blueprints into active workflows.
 
 ### 2.2 Non-Goals
 - Monetization and fiat payment processing in v1 (initially a free, community-driven exchange).

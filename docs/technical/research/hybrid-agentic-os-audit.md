@@ -1,21 +1,21 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Market Audit & OHC Competitive Positioning: The Hybrid Agentic OS
+# Market Audit & OmniSolo Competitive Positioning: The Hybrid Agentic OS
 
 **Author**: Principal Product Researcher & Oracle (L7)
 **Date**: 2024-06-14
 
 ## Executive Summary
 
-This definitive technical and product audit benchmarks the "Hybrid Agentic OS" capabilities of OmniSolo (OHC) against tier-1 market competitors: **Claude Code**, **OpenClaw**, and **Replit Agent**. Our analysis isolates high-disruption feature gaps where OHC's unique Hybrid Architecture (Cloud-Native + Standalone Desktop + Thin Client) provides an unmatchable strategic advantage.
+This definitive technical and product audit benchmarks the "Hybrid Agentic OS" capabilities of OmniSolo (OmniSolo) against tier-1 market competitors: **Claude Code**, **OpenClaw**, and **Replit Agent**. Our analysis isolates high-disruption feature gaps where OmniSolo's unique Hybrid Architecture (Cloud-Native + Standalone Desktop + Thin Client) provides an unmatchable strategic advantage.
 
 ## Competitive Audit: The Hybridity Gap
 
-Current market leaders focus primarily on pure-cloud or pure-local modalities. OHC's architecture enables a fluid transition across the multi-tenant cloud, local standalone execution, and headless API serving.
+Current market leaders focus primarily on pure-cloud or pure-local modalities. OmniSolo's architecture enables a fluid transition across the multi-tenant cloud, local standalone execution, and headless API serving.
 
 ### Feature Comparison Matrix
 
-| Capability | Replit Agent | Claude Code | OpenClaw | **OHC (The Hybrid Standard)** |
+| Capability | Replit Agent | Claude Code | OpenClaw | **OmniSolo (The Hybrid Standard)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Cloud-Native Mode** | Full (Containerized) | None | Full (K8s) | **Multi-tenant Postgres/Redis horizontal scale** |
 | **Standalone Desktop Mode** | None | Full (CLI) | None | **Local SQLite with native Slint Host shell** |
@@ -30,25 +30,25 @@ Competitors fail to provide a **seamless degradation path**.
 
 ## Feature Disruption: The "Blue Ocean"
 
-OHC’s hybridity unlocks features that competitors architecturally cannot support:
+OmniSolo’s hybridity unlocks features that competitors architecturally cannot support:
 
 ### 1. Zero-Latency Local-Private RAG with Cloud Sync
-In Standalone Mode, OHC agents can index and query highly sensitive local repositories using an embedded vector database (SQLite). When the user reconnects to the OHC Cloud, non-sensitive metadata (or aggregated intelligence) synchronizes to the multi-tenant Postgres database, empowering the global swarm without exposing proprietary local code.
+In Standalone Mode, OmniSolo agents can index and query highly sensitive local repositories using an embedded vector database (SQLite). When the user reconnects to the OmniSolo Cloud, non-sensitive metadata (or aggregated intelligence) synchronizes to the multi-tenant Postgres database, empowering the global swarm without exposing proprietary local code.
 
 ### 2. Elastic Swarm Bursting
-When local compute (e.g., M-series Apple Silicon) is saturated by an intensive agent task, the OHC orchestrator can seamlessly "burst" the task to the OHC Headless Cloud API, migrating the `agent_missions` payload over secure gRPC. Replit and Claude Code are constrained to their respective execution environments.
+When local compute (e.g., M-series Apple Silicon) is saturated by an intensive agent task, the OmniSolo orchestrator can seamlessly "burst" the task to the OmniSolo Headless Cloud API, migrating the `agent_missions` payload over secure gRPC. Replit and Claude Code are constrained to their respective execution environments.
 
 ## Roadmap Blueprinting
 
 Based on the audit, the following high-fidelity mission is prioritized for immediate execution:
 
 **Mission: `elastic-swarm-bursting`**
-*   **Objective:** Implement the protocol for Standalone OHC clients to securely hand off intensive `agent_missions` to the OHC Cloud-Native API when local resources are constrained.
+*   **Objective:** Implement the protocol for Standalone OmniSolo clients to securely hand off intensive `agent_missions` to the OmniSolo Cloud-Native API when local resources are constrained.
 *   **Action:** Extend the `SIPDB` to support a `status = 'BURSTING'` state and synchronize this payload to the configured remote endpoint.
 
 ## Emerging Trend Synthesis
 
-1. **Model Context Protocol (MCP):** OHC's Universal MCP Mesh must be extended to support local-to-cloud proxying, allowing a cloud agent to securely utilize an MCP tool running on the user's Standalone Desktop via reverse-tunnels.
+1. **Model Context Protocol (MCP):** OmniSolo's Universal MCP Mesh must be extended to support local-to-cloud proxying, allowing a cloud agent to securely utilize an MCP tool running on the user's Standalone Desktop via reverse-tunnels.
 2. **SPIFFE/SPIRE Agent Identity:** To support secure "Swarm Bursting," agents moving from the local SQLite environment to the Cloud Postgres environment must seamlessly exchange short-lived JWTs via a zero-trust SPIFFE/SPIRE integration.
 
 ## Architecture Visualization
@@ -58,7 +58,7 @@ graph TD
     A[User Trigger (Slint Desktop)] -->|Resource Check| B{Local Compute Available?}
     B -- Yes --> C[Execute via Local SQLite SIPDB]
     B -- No --> D[Initiate Swarm Bursting]
-    D -->|SPIFFE Auth| E[OHC Headless Cloud API]
+    D -->|SPIFFE Auth| E[OmniSolo Headless Cloud API]
     E --> F[Execute via Cloud Postgres SIPDB]
     C --> G[Result Synthesized]
     F -->|gRPC Stream| G
@@ -75,14 +75,14 @@ graph TD
 <div style="background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; color: #fff;">
 
 ## Disruption Opportunity (Blue Ocean)
-By building a `LocalStatefulExecutionProxy`, OHC will allow cloud-based swarm agents to delegate complex compilation or file-system-heavy tasks to the user's secure local machine (via the upcoming `sandbox` epic), syncing the results instantly back to global memory.
+By building a `LocalStatefulExecutionProxy`, OmniSolo will allow cloud-based swarm agents to delegate complex compilation or file-system-heavy tasks to the user's secure local machine (via the upcoming `sandbox` epic), syncing the results instantly back to global memory.
 
 ### Competitive Analysis
 
-| Feature | Claude Code | OpenClaw | Replit Agent | OHC Hybrid (Target) |
+| Feature | Claude Code | OpenClaw | Replit Agent | OmniSolo Hybrid (Target) |
 | :--- | :--- | :--- | :--- | :--- |
 | Local Filesystem Access | High | Low | Hosted Only | **High (Native)** |
-| Swarm Distributed Memory | None | Medium | Low | **High (OHC-SIP)** |
+| Swarm Distributed Memory | None | Medium | Low | **High (OmniSolo-SIP)** |
 | Stateful Sandboxed Execution | Advanced | None | Containerized | **Advanced (via Local Proxy)** |
 
 ### Architecture Comparison
@@ -94,11 +94,11 @@ graph TD
         A --> C[Local Sandbox]
     end
 
-    subgraph OHC Future State
-        D[OHC Cloud Orchestrator] <-->|gRPC/WebSocket| E[OHC Local Proxy]
+    subgraph OmniSolo Future State
+        D[OmniSolo Cloud Orchestrator] <-->|gRPC/WebSocket| E[OmniSolo Local Proxy]
         E --> F[Local Sandboxed Terminal]
         E --> G[Local SQLite Sync]
-        G <-->|PowerSync| H[OHC Cloud Postgres/VectorDB]
+        G <-->|PowerSync| H[OmniSolo Cloud Postgres/VectorDB]
     end
 ```
 </div>

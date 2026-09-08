@@ -22,7 +22,7 @@ test.describe('Exit-Intent Pop-up Builder', () => {
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
     // 6. Test Paywall logic
-    // Ensure "Remove OHC Branding" toggle is present and clickable
+    // Ensure "Remove OmniSolo Branding" toggle is present and clickable
     const brandingToggle = page.getByRole('switch');
     await expect(brandingToggle).toBeVisible();
     await brandingToggle.click();

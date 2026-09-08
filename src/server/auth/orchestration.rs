@@ -1,5 +1,5 @@
 use super::parse_spiffe_id;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::*;
 use tonic::{Request, Status};
 
 #[derive(Debug, Clone)]
@@ -116,7 +116,7 @@ mod tests {
         let auth = AuthInfo {
             org_id: "org-1".to_string(),
             agent_id: "agent-1".to_string(),
-            spiffe_id: "spiffe://onehumancorp.io/org-1/agent-1".to_string(),
+            spiffe_id: "spiffe://omnisolo.io/org-1/agent-1".to_string(),
         };
 
         let mut req = RegisterAgentRequest::default();

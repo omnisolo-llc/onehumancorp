@@ -3,7 +3,7 @@
 # KAIROS Orchestrator: Premium Design Document
 
 ## 1. Vision
-The OmniSolo (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**.
+The OmniSolo (OmniSolo) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OmniSolo "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**.
 
 ## 2. Shared Task List & Distributed State Machine
 - **Goal:** Robustly track the decomposition of human goals into tasks that can be claimed by Swarm Agents without race conditions.
@@ -33,7 +33,7 @@ sequenceDiagram
 - **Goal:** Sub-millisecond realtime communication and background queuing.
 - **Architecture:**
   - Realtime coordination via Redis Pub/Sub in Cloud-Native Mode.
-  - Mocked runtime-memory logging under `.ohc/runtime/memory/mesh_mock.log` for Standalone Mode.
+  - Mocked runtime-memory logging under `.omnisolo/runtime/memory/mesh_mock.log` for Standalone Mode.
   - Sub-Agent Queue to continuously monitor the Shared Task List DAG and distribute actionable tasks.
 
 ## 4. AutoDream Data Pipeline

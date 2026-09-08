@@ -11,7 +11,7 @@ For founders handling their own deliveries—like Maya dropping off custom cakes
 - **Shopify & Wix:** Focus heavily on shipping carriers (USPS, FedEx, UPS). Local delivery is often an afterthought, requiring expensive third-party plugins (e.g., Routific, Zippykind) which are complex to set up and too "enterprise-heavy" for a solo founder.
 - **The Gap:** Solo founders running field operations (handymen, bakers, local florists) need integrated, turn-by-turn optimized routing for their daily stops, plus a seamless, branded live-tracking link sent automatically to the customer.
 
-**Opportunity for OHC:**
+**Opportunity for OmniSolo:**
 By embedding an Invisible Hyperlocal Dispatch Engine into OmniSolo, we eliminate "Financial Fog" around delivery costs and operational friction. Our AI Operations Agent can automatically cluster orders by geographic zone, generate the optimal route sequence, and dispatch it to the founder's mobile app.
 
 ## Design Doc

@@ -1,6 +1,6 @@
 # Technical Documentation
 
-This section contains all technical documentation for the OmniSolo (OHC) platform.
+This section contains all technical documentation for the OmniSolo (OmniSolo) platform.
 
 ## Contents
 

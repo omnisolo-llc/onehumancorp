@@ -2,7 +2,7 @@
 
 # Hybrid Architecture: The Best of Both Worlds
 
-The OmniSolo (OHC) Agentic OS utilizes a unique **Hybrid Architecture (OHC-HA)**, seamlessly transitioning between high-scale cloud deployments and secure, localized execution.
+The OmniSolo (OmniSolo) Agentic OS utilizes a unique **Hybrid Architecture (OmniSolo-HA)**, seamlessly transitioning between high-scale cloud deployments and secure, localized execution.
 
 ## 1. Operating Modes
 
@@ -18,7 +18,7 @@ The OmniSolo (OHC) Agentic OS utilizes a unique **Hybrid Architecture (OHC-HA)**
 
 ## 2. Core Sync Mechanisms
 
-To bridge the gap between these modes, OHC implements two crucial technologies:
+To bridge the gap between these modes, OmniSolo implements two crucial technologies:
 
 ### AutoDream Sync Engine
 When operating locally, agents generate "memories" and insights. Upon reconnecting to the cloud, the `AutoDreamWorker` synchronizes these local insights (stored in SQLite) directly into the Cloud Postgres instance.

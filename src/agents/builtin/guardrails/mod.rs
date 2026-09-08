@@ -2,7 +2,7 @@ pub mod anthropic_hooks;
 /// Master Catalog B.9. Guardrails  Safety
 pub mod openai_hooks;
 
-use ohc_builtin_agent_core::types::ToolCall;
+use omnisolo_builtin_agent_core::types::ToolCall;
 use std::fmt::Debug;
 use std::sync::Arc;
 

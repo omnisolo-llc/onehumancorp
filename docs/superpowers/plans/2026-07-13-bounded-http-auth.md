@@ -2,7 +2,7 @@
 
 **Goal:** Replace the inline database-specific HTTP login with bounded, portable handlers backed exclusively by `auth::Store`, and add protected idempotent HTTP logout.
 
-**Architecture:** Keep transport code in `src/server/auth/http.rs` beside the authority. A small shared state owns the `Store`, bounded privacy-preserving dual-bucket limiter, and an explicit trusted-peer policy. Handlers manually enforce media type and byte limits before deserialization and map typed authority outcomes to generic HTTP responses. Cloud requires an explicit tenant; standalone may use only the explicitly configured `OHC_DEFAULT_TENANT_ID` or its empty local authority—never an implicit/demo/browser-derived tenant fallback. The root router only constructs the repository/store once, mounts the auth router, and serves with peer connection information.
+**Architecture:** Keep transport code in `src/server/auth/http.rs` beside the authority. A small shared state owns the `Store`, bounded privacy-preserving dual-bucket limiter, and an explicit trusted-peer policy. Handlers manually enforce media type and byte limits before deserialization and map typed authority outcomes to generic HTTP responses. Cloud requires an explicit tenant; standalone may use only the explicitly configured `OMNISOLO_DEFAULT_TENANT_ID` or its empty local authority—never an implicit/demo/browser-derived tenant fallback. The root router only constructs the repository/store once, mounts the auth router, and serves with peer connection information.
 
 ## Task 1: Bounded HTTP contract
 
@@ -25,7 +25,7 @@
 ## Task 4: Root wiring and removal
 
 - Mount the auth router at `/api/v1/auth/login` and `/api/v1/auth/logout` with one repository-backed Store.
-- Remove `HttpLogin*`, `http_login_handler`, `db_for_login`, raw login SQL, and the implicit `e2e-tenant` fallback. Treat `OHC_DEFAULT_TENANT_ID` as an optional standalone-only authority setting; ignore it in cloud mode.
+- Remove `HttpLogin*`, `http_login_handler`, `db_for_login`, raw login SQL, and the implicit `e2e-tenant` fallback. Treat `OMNISOLO_DEFAULT_TENANT_ID` as an optional standalone-only authority setting; ignore it in cloud mode.
 - Serve Axum with `SocketAddr` connect information and update Cargo/Bazel source/dependency declarations.
 
 ## Task 5: Verification and review

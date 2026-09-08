@@ -1,7 +1,7 @@
-# OHC AI Agent Memory Consolidation Architecture
+# OmniSolo AI Agent Memory Consolidation Architecture
 
 ## Overview
-OmniSolo's (OHC) AI Swarm acts as the continuous operating system for small businesses. To provide a seamless and deeply personalized experience, the AI agents must retain knowledge across sessions. This document outlines the architecture for the Persistent Memory Layer, designed to consolidate context, detect and resolve conflicting knowledge, and prune stale data automatically.
+OmniSolo's (OmniSolo) AI Swarm acts as the continuous operating system for small businesses. To provide a seamless and deeply personalized experience, the AI agents must retain knowledge across sessions. This document outlines the architecture for the Persistent Memory Layer, designed to consolidate context, detect and resolve conflicting knowledge, and prune stale data automatically.
 
 The system is designed to work in both **Cloud Mode** (PostgreSQL with `pgvector`) and **Standalone Mode** (SQLite with `sqlite-vec` or fallback local cosine distance calculations).
 
@@ -9,7 +9,7 @@ The system is designed to work in both **Cloud Mode** (PostgreSQL with `pgvector
 
 ```mermaid
 graph TD;
-    subgraph OHC Swarm Layer
+    subgraph OmniSolo Swarm Layer
         OpAgent[Operations Agent]
         MktAgent[Marketing Agent]
         CSAgent[Customer Success]
@@ -84,4 +84,4 @@ Memory is not siloed by department. Instead, all context is stored centrally in 
 *   **Reference Tracking**: Every time a memory is retrieved and utilized by any agent, its `reference_count` is incremented, and its `last_referenced_at` timestamp is updated. This signals to the consolidation engine that the context is valuable and should be preserved.
 
 ## Summary
-The memory consolidation architecture ensures that OHC AI agents possess a unified, consistent, and up-to-date understanding of every small business they manage. By seamlessly resolving conflicts and pruning noise, the agents can provide a deeply personalized, highly intelligent experience across all departments.
+The memory consolidation architecture ensures that OmniSolo AI agents possess a unified, consistent, and up-to-date understanding of every small business they manage. By seamlessly resolving conflicts and pruning noise, the agents can provide a deeply personalized, highly intelligent experience across all departments.

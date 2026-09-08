@@ -42,7 +42,7 @@ rust_library(
         "@crates//:temp-env",
         "//src/server/config:server_config",
         "//src/server/common:server_common",
-        "//src/server/ohc:server_ohc",
+        "//src/server/omnisolo:server_omnisolo",
         "//src/server/oidc:server_oidc",
         "@crates//:axum",
         "@crates//:bcrypt",

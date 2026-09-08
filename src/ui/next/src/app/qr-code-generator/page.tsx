@@ -24,7 +24,7 @@ export default function QRCodeGeneratorPage() {
       const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `ohc-qr-code-${tenantId}.png`;
+      a.download = `omnisolo-qr-code-${tenantId}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -136,7 +136,7 @@ export default function QRCodeGeneratorPage() {
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

@@ -1,5 +1,5 @@
-use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelService;
-use ::server_ohc::mcp_proxy::{ProxyToServer, ServerToProxy};
+use ::server_omnisolo::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelService;
+use ::server_omnisolo::mcp_proxy::{ProxyToServer, ServerToProxy};
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -27,14 +27,14 @@ impl ReverseTunnelServer {
             None => return Err(Status::not_found("Agent not connected")),
         };
 
-        let req = ::server_ohc::mcp_proxy::InvokeCommandRequest {
+        let req = ::server_omnisolo::mcp_proxy::InvokeCommandRequest {
             tool_id: "webhook_forward".to_string(),
             params: String::from_utf8_lossy(&payload).into_owned(),
         };
 
         let msg = ServerToProxy {
             request_id: uuid::Uuid::new_v4().to_string(),
-            payload: Some(::server_ohc::mcp_proxy::server_to_proxy::Payload::InvokeRequest(req)),
+            payload: Some(::server_omnisolo::mcp_proxy::server_to_proxy::Payload::InvokeRequest(req)),
         };
 
         match sender.send(Ok(msg)).await {
@@ -69,7 +69,7 @@ impl McpReverseTunnelService for ReverseTunnelServer {
             while let Ok(Some(msg)) = in_stream.message().await {
                 if let Some(payload) = msg.payload {
                     match payload {
-                        ::server_ohc::mcp_proxy::proxy_to_server::Payload::Register(reg) => {
+                        ::server_omnisolo::mcp_proxy::proxy_to_server::Payload::Register(reg) => {
                             info!("Registered local proxy with SPIFFE ID: {}", reg.spiffe_id);
 
                             // In a full implementation we would enforce SPIFFE identity here,
@@ -91,7 +91,7 @@ impl McpReverseTunnelService for ReverseTunnelServer {
                             )
                             .await;
                         }
-                        ::server_ohc::mcp_proxy::proxy_to_server::Payload::InvokeResponse(res) => {
+                        ::server_omnisolo::mcp_proxy::proxy_to_server::Payload::InvokeResponse(res) => {
                             info!(
                                 "Received response for {}: success={}",
                                 msg.request_id, res.success

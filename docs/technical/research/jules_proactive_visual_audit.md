@@ -1,7 +1,7 @@
 # Proactive Mission: Implement "Premium Glassmorphism" Aesthetic Across Frontend
 
 ## Problem Statement
-The OHC UI does not fully align with the "Visual Truth" mandate. Many screens still use flat Slint `Card` widgets instead of the required "Premium Glassmorphism" aesthetic (blur 20px, semi-transparent backgrounds).
+The OmniSolo UI does not fully align with the "Visual Truth" mandate. Many screens still use flat Slint `Card` widgets instead of the required "Premium Glassmorphism" aesthetic (blur 20px, semi-transparent backgrounds).
 
 ## Implementation Details
 1. Created `GlassCard` widget in `src/app/lib/widgets/glass_card.dart`.

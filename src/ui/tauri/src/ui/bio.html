@@ -144,7 +144,7 @@
         }
 
         /* Expandable Badge Styles */
-        .ohc-floating-badge {
+        .omnisolo-floating-badge {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -169,16 +169,16 @@
             max-width: 200px; /* Collapsed state max width */
         }
 
-        .ohc-floating-badge:hover {
+        .omnisolo-floating-badge:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
-        .ohc-floating-badge .badge-icon {
+        .omnisolo-floating-badge .badge-icon {
             font-size: 16px;
         }
 
-        .ohc-floating-badge .badge-content {
+        .omnisolo-floating-badge .badge-content {
             display: none;
             flex-direction: column;
             gap: 12px;
@@ -189,7 +189,7 @@
             text-align: left;
         }
 
-        .ohc-floating-badge .badge-content p {
+        .omnisolo-floating-badge .badge-content p {
             margin: 0;
             font-size: 14px;
             font-weight: 500;
@@ -197,7 +197,7 @@
             line-height: 1.4;
         }
 
-        .ohc-floating-badge .badge-cta {
+        .omnisolo-floating-badge .badge-cta {
             display: inline-block;
             background: #0066FF;
             color: white;
@@ -211,12 +211,12 @@
             width: 100%;
         }
 
-        .ohc-floating-badge .badge-cta:hover {
+        .omnisolo-floating-badge .badge-cta:hover {
             background: #005ce6;
         }
 
         /* Expanded State */
-        .ohc-floating-badge.expanded {
+        .omnisolo-floating-badge.expanded {
             border-radius: 20px;
             flex-direction: column;
             align-items: flex-start;
@@ -225,11 +225,11 @@
             cursor: default;
         }
 
-        .ohc-floating-badge.expanded:hover {
+        .omnisolo-floating-badge.expanded:hover {
             transform: none; /* Disable hover lift when expanded */
         }
 
-        .ohc-floating-badge.expanded .badge-header {
+        .omnisolo-floating-badge.expanded .badge-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -237,7 +237,7 @@
             cursor: pointer;
         }
 
-        .ohc-floating-badge.expanded .badge-content {
+        .omnisolo-floating-badge.expanded .badge-content {
             display: flex;
         }
 
@@ -259,8 +259,8 @@
     </div>
 
     <!-- Expandable Floating Badge -->
-    <div id="ohc-badge" class="ohc-floating-badge">
-        <div class="badge-header" id="ohc-badge-header">
+    <div id="omnisolo-badge" class="omnisolo-floating-badge">
+        <div class="badge-header" id="omnisolo-badge-header">
             <span class="badge-icon">⚡</span>
             <span>OmniSolo</span>
         </div>
@@ -306,8 +306,8 @@
         bioEl.textContent = data.bio;
 
         // Setup Badge Interactive Logic
-        const badge = document.getElementById('ohc-badge');
-        const badgeHeader = document.getElementById('ohc-badge-header');
+        const badge = document.getElementById('omnisolo-badge');
+        const badgeHeader = document.getElementById('omnisolo-badge-header');
         const ctaLink = document.getElementById('badge-cta-link');
 
         if (data.remove_branding) {

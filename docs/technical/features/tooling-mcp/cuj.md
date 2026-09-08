@@ -20,7 +20,7 @@ The CEO expands the capability of their AI workforce by linking an external tool
 
 ## 3. Implementation Details
 - **Architecture**: Integrated via Rust MCP Gateway acting as a reverse-proxy for standard MCP JSON-RPC messages.
-- **Stack**: OHC Kubernetes Operator for managing deployed MCP sidecars.
+- **Stack**: OmniSolo Kubernetes Operator for managing deployed MCP sidecars.
 - **Security Check**: Employs strictly fail-closed policies on network timeouts.
 
 ## 4. Edge Cases

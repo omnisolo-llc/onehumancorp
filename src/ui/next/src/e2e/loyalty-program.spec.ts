@@ -10,7 +10,7 @@ test.describe('Automated Loyalty Campaign Growth Loop', () => {
     await page.click('text=Customer Loyalty');
 
     // Verify we are on the right page
-    await expect(page.locator('h1')).toContainText('Customer Loyalty Program 🤝');
+    await expect(page.getByRole('heading', { name: 'Customer Loyalty Program 🤝', exact: true })).toBeVisible();
 
     // Verify the empty state is visible
     await expect(page.locator('text=Configure your rules and click Generate')).toBeVisible();

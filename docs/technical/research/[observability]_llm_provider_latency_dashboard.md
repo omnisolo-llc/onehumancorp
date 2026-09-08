@@ -4,7 +4,7 @@
 Create LLM Provider Latency & Error Rate Dashboard
 
 ## Problem Statement
-While OHC tracks token usage efficiently across providers (e.g., Minimax, GPT-4), we lack granular observability into API response latencies and provider-specific error rates in our Grafana dashboards. The absence of this visualization prevents operators from detecting sudden API degradation, timeout bottlenecks, or rate-limiting events from specific LLM providers.
+While OmniSolo tracks token usage efficiently across providers (e.g., Minimax, GPT-4), we lack granular observability into API response latencies and provider-specific error rates in our Grafana dashboards. The absence of this visualization prevents operators from detecting sudden API degradation, timeout bottlenecks, or rate-limiting events from specific LLM providers.
 
 ## Research Report
 - **Context**: The `src/server/telemetry/minimax_metrics.go` and `src/server/telemetry/telemetry.go` track token usage, but there is no dedicated dashboard for provider health.
@@ -17,7 +17,7 @@ While OHC tracks token usage efficiently across providers (e.g., Minimax, GPT-4)
    - **Row 1: Overview**: Total requests by provider, Global Error Rate.
    - **Row 2: Latency**: P50, P90, P99 API response latencies per provider.
    - **Row 3: Error Rate**: HTTP 4xx and 5xx error rates by provider.
-3. **Visual Excellence**: All panels must use OHC premium CSS tokens. For text panels, inject global `<style>` blocks to maintain the Glassmorphism visual identity.
+3. **Visual Excellence**: All panels must use OmniSolo premium CSS tokens. For text panels, inject global `<style>` blocks to maintain the Glassmorphism visual identity.
 4. **Data Source**: Prometheus.
 
 ## Implementation Prompt

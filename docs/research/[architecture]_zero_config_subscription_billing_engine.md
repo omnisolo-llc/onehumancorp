@@ -38,7 +38,7 @@ erDiagram
 sequenceDiagram
     autonumber
     actor Customer
-    participant Storefront as OHC Storefront Edge
+    participant Storefront as OmniSolo Storefront Edge
     participant SubEngine as Zero-Config Subscription Engine
     participant FinanceAgent as AI Finance Dept
     participant CRM_Agent as AI CRM Dept

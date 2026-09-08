@@ -1,12 +1,12 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# OHC Interactive API Playbook
+# OmniSolo Interactive API Playbook
 
 **Version:** 1.1.0
 **Target Audience:** Orchestration Engineers, Internal Integrators & Human CEOs
 
 ## 1. Introduction
-The OmniSolo (OHC) API Playbook provides an interactive reference for the core components of the Hybrid Agentic OS. It outlines key REST endpoints, integration strategies, and the Hybrid API architecture.
+The OmniSolo (OmniSolo) API Playbook provides an interactive reference for the core components of the Hybrid Agentic OS. It outlines key REST endpoints, integration strategies, and the Hybrid API architecture.
 
 ## 2. Authentication & AuthZ
 
@@ -17,7 +17,7 @@ For local development and testing, an ephemeral token can be used.
 **Headers:**
 ```http
 Authorization: Bearer <SPIFFE_TOKEN>
-X-OHC-Dev-Token: <OHC_DEV_TOKEN>  # (Optional, local development only)
+X-OmniSolo-Dev-Token: <OMNISOLO_DEV_TOKEN>  # (Optional, local development only)
 ```
 
 ## 3. Core Endpoints
@@ -67,11 +67,11 @@ Broadcasts a validated state machine event over structured Centrifuge channels.
 ### 3.3 Agents List
 
 **Endpoint:** `GET /api/v1/agents`
-Returns a list of all configured agents within the OHC swarm.
+Returns a list of all configured agents within the OmniSolo swarm.
 
 ## 4. Standalone vs. Cloud Routing
 
-The OHC API routes dynamically based on the active OHC Hybrid Architecture mode.
+The OmniSolo API routes dynamically based on the active OmniSolo Hybrid Architecture mode.
 
 ### Cloud-Native Mode
 - Queue requests are routed to Redis ZSETs backed by K8s pods.
@@ -90,12 +90,12 @@ The OHC API routes dynamically based on the active OHC Hybrid Architecture mode.
 ```bash
 # Get list of agents
 curl -X GET "http://localhost:8080/api/v1/agents" \
-  -H "X-OHC-Dev-Token: <your_dev_token>"
+  -H "X-OmniSolo-Dev-Token: <your_dev_token>"
 
 # Broadcast an event
 curl -X POST "http://localhost:8080/api/v1/mesh/v2/broadcast" \
   -H "Content-Type: application/json" \
-  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -H "X-OmniSolo-Dev-Token: <your_dev_token>" \
   -d '{
     "channel": "mesh:test",
     "event_type": "PING",
@@ -105,7 +105,7 @@ curl -X POST "http://localhost:8080/api/v1/mesh/v2/broadcast" \
 # Enqueue a new task
 curl -X POST "http://localhost:8080/api/v1/queue/subagent" \
   -H "Content-Type: application/json" \
-  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -H "X-OmniSolo-Dev-Token: <your_dev_token>" \
   -d '{
     "parent_task_id": "T-123",
     "action": "summarize"
@@ -114,7 +114,7 @@ curl -X POST "http://localhost:8080/api/v1/queue/subagent" \
 # Claim a PENDING task
 curl -X POST "http://localhost:8080/api/v1/tasks/claim" \
   -H "Content-Type: application/json" \
-  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -H "X-OmniSolo-Dev-Token: <your_dev_token>" \
   -d '{
     "agent_id": "agent_swe_007",
     "role": "swe"
@@ -123,7 +123,7 @@ curl -X POST "http://localhost:8080/api/v1/tasks/claim" \
 # Complete a task
 curl -X POST "http://localhost:8080/api/v1/tasks/123e4567-e89b-12d3-a456-426614174000/complete" \
   -H "Content-Type: application/json" \
-  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -H "X-OmniSolo-Dev-Token: <your_dev_token>" \
   -d '{
     "agent_id": "agent_swe_007",
     "outcome_summary": "Successfully implemented the memory consolidation logic."
@@ -404,13 +404,13 @@ graph TD
 
 ## 10. AutoDream Pipeline
 
-The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session_data` and the runtime memory directory (`OHC_MEMORY_DIR`, typically `.ohc/runtime/memory`) into long-term vector embeddings in `pgvector`. This process runs autonomously as part of the backend orchestration loop.
+The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session_data` and the runtime memory directory (`OMNISOLO_MEMORY_DIR`, typically `.omnisolo/runtime/memory`) into long-term vector embeddings in `pgvector`. This process runs autonomously as part of the backend orchestration loop.
 
 ### Endpoints
 
 *   **Trigger Manual AutoDream Sync**
     *   **Endpoint:** `POST /api/v1/autodream/sync`
-    *   **Description:** Forces the background worker to scan any `*.yml` files in `OHC_MEMORY_DIR`, generate Minimax embeddings, and upsert them into `autodream_memories`.
+    *   **Description:** Forces the background worker to scan any `*.yml` files in `OMNISOLO_MEMORY_DIR`, generate Minimax embeddings, and upsert them into `autodream_memories`.
     *   **Payload Example:**
         ```json
         {

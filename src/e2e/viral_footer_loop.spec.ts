@@ -11,7 +11,7 @@ test.describe('Viral Footer Loop', () => {
     // Verify the "OmniSolo" footer is visible
     const poweredByLink = page.locator('a', { hasText: '⚡ Powered by' });
     await expect(poweredByLink).toBeVisible();
-    await expect(poweredByLink).toContainText('OHC');
+    await expect(poweredByLink).toContainText('OmniSolo');
 
     // Verify the link has the correct referral structure
     const href = await poweredByLink.getAttribute('href');

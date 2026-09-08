@@ -29,20 +29,20 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
             let mut steps = vec![
                 JourneyStep {
                     id: "acquisition".to_string(),
-                    question: "How did Maya discover OHC?".to_string(),
+                    question: "How did Maya discover OmniSolo?".to_string(),
                     ai_action: "Maya sees a TikTok ad showing a baker taking a customized cake order with a single tap. She clicks the 'Launch in 3 minutes' link in bio.".to_string(),
                     required_modules: vec!["marketing".to_string()],
                 },
                 JourneyStep {
                     id: "onboarding".to_string(),
                     question: "How does Maya set up her business?".to_string(),
-                    ai_action: "Maya opens the OHC mobile app. The wizard asks: 'What do you sell?' (Cakes). 'What's your Instagram?' (@mayascakes). OHC imports 5 recent cake photos, creates a Glassmorphism-style catalog, and generates her site.".to_string(),
+                    ai_action: "Maya opens the OmniSolo mobile app. The wizard asks: 'What do you sell?' (Cakes). 'What's your Instagram?' (@mayascakes). OmniSolo imports 5 recent cake photos, creates a Glassmorphism-style catalog, and generates her site.".to_string(),
                     required_modules: vec!["onboarding".to_string(), "ai_promoter".to_string()],
                 },
                 JourneyStep {
                     id: "activation".to_string(),
                     question: "What is Maya's first success moment?".to_string(),
-                    ai_action: "Maya shares her new OHC storefront link on her Instagram bio. She receives her first custom order with a Stripe-powered deposit within the first day.".to_string(),
+                    ai_action: "Maya shares her new OmniSolo storefront link on her Instagram bio. She receives her first custom order with a Stripe-powered deposit within the first day.".to_string(),
                     required_modules: vec!["payments".to_string(), "storefront".to_string()],
                 },
                 JourneyStep {
@@ -80,19 +80,19 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
         name: "Carlos".to_string(),
         business_type: "Handyman".to_string(),
         initial_state: "Services & Bookings".to_string(),
-        friction_points: vec!["Calendar Sync: Syncing with personal Google/Outlook calendars can be confusing. If OHC double-books him with a personal event, trust is lost.".to_string(), "Pricing Estimation: Handyman jobs are often variable. Carlos might abandon onboarding if forced to set fixed prices. The system must support \"Starting at\" or \"Request Quote\" options.".to_string()],
+        friction_points: vec!["Calendar Sync: Syncing with personal Google/Outlook calendars can be confusing. If OmniSolo double-books him with a personal event, trust is lost.".to_string(), "Pricing Estimation: Handyman jobs are often variable. Carlos might abandon onboarding if forced to set fixed prices. The system must support \"Starting at\" or \"Request Quote\" options.".to_string()],
         steps: {
             let mut steps = vec![
                 JourneyStep {
                     id: "acquisition".to_string(),
-                    question: "How did Carlos discover OHC?".to_string(),
-                    ai_action: "Carlos hears about OHC from another tradesperson at Home Depot. He searches Google for 'easy booking app for handymen' and finds OHC.".to_string(),
+                    question: "How did Carlos discover OmniSolo?".to_string(),
+                    ai_action: "Carlos hears about OmniSolo from another tradesperson at Home Depot. He searches Google for 'easy booking app for handymen' and finds OmniSolo.".to_string(),
                     required_modules: vec!["search".to_string(), "word_of_mouth".to_string()],
                 },
                 JourneyStep {
                     id: "onboarding".to_string(),
                     question: "How does Carlos set up his business?".to_string(),
-                    ai_action: "Carlos enters 'Handyman Services'. The wizard asks for his base hourly rate and 3 common jobs (Plumbing, Painting, Repairs). OHC generates a service menu and calendar view.".to_string(),
+                    ai_action: "Carlos enters 'Handyman Services'. The wizard asks for his base hourly rate and 3 common jobs (Plumbing, Painting, Repairs). OmniSolo generates a service menu and calendar view.".to_string(),
                     required_modules: vec!["onboarding".to_string(), "booking".to_string()],
                 },
                 JourneyStep {
@@ -104,7 +104,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
                 JourneyStep {
                     id: "retention".to_string(),
                     question: "Why does Carlos keep coming back?".to_string(),
-                    ai_action: "Carlos uses the OHC calendar as his primary daily schedule. The AI 'Salesperson' agent drafts quotes based on customer problem descriptions, waiting in his inbox for approval.".to_string(),
+                    ai_action: "Carlos uses the OmniSolo calendar as his primary daily schedule. The AI 'Salesperson' agent drafts quotes based on customer problem descriptions, waiting in his inbox for approval.".to_string(),
                     required_modules: vec!["calendar".to_string(), "ai_salesperson".to_string()],
                 },
                 JourneyStep {
@@ -116,7 +116,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
                 JourneyStep {
                     id: "referral".to_string(),
                     question: "How does Carlos bring in new users?".to_string(),
-                    ai_action: "Carlos recommends OHC to his plumber friend when discussing how he eliminated no-shows.".to_string(),
+                    ai_action: "Carlos recommends OmniSolo to his plumber friend when discussing how he eliminated no-shows.".to_string(),
                     required_modules: vec!["referrals".to_string()],
                 },
             ];
@@ -141,8 +141,8 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
             let mut steps = vec![
                 JourneyStep {
                     id: "acquisition".to_string(),
-                    question: "How did Priya discover OHC?".to_string(),
-                    ai_action: "Priya is frustrated with Shopify's POS pricing. She reads a blog comparing Shopify vs OHC.".to_string(),
+                    question: "How did Priya discover OmniSolo?".to_string(),
+                    ai_action: "Priya is frustrated with Shopify's POS pricing. She reads a blog comparing Shopify vs OmniSolo.".to_string(),
                     required_modules: vec!["content_marketing".to_string()],
                 },
                 JourneyStep {
@@ -192,13 +192,13 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
         name: "Leo".to_string(),
         business_type: "Music Tutor".to_string(),
         initial_state: "Subscriptions".to_string(),
-        friction_points: vec!["Zoom/Meet Integration: Requiring complex OAuth for Zoom generation might block onboarding. OHC should offer built-in video links or a seamless Google Meet integration.".to_string(), "Subscription Setup: Explaining how recurring billing works (failed payments, cancellations) without confusing jargon is critical.".to_string()],
+        friction_points: vec!["Zoom/Meet Integration: Requiring complex OAuth for Zoom generation might block onboarding. OmniSolo should offer built-in video links or a seamless Google Meet integration.".to_string(), "Subscription Setup: Explaining how recurring billing works (failed payments, cancellations) without confusing jargon is critical.".to_string()],
         steps: {
             let mut steps = vec![
                 JourneyStep {
                     id: "acquisition".to_string(),
-                    question: "How did Leo discover OHC?".to_string(),
-                    ai_action: "Leo searches for 'how to sell guitar lessons online' and finds an OHC landing page targeted at educators.".to_string(),
+                    question: "How did Leo discover OmniSolo?".to_string(),
+                    ai_action: "Leo searches for 'how to sell guitar lessons online' and finds an OmniSolo landing page targeted at educators.".to_string(),
                     required_modules: vec!["seo".to_string(), "landing_pages".to_string()],
                 },
                 JourneyStep {
@@ -210,7 +210,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
                 JourneyStep {
                     id: "activation".to_string(),
                     question: "What is Leo's first success moment?".to_string(),
-                    ai_action: "Leo posts a guitar cover on TikTok with his OHC link. A student signs up for a trial lesson.".to_string(),
+                    ai_action: "Leo posts a guitar cover on TikTok with his OmniSolo link. A student signs up for a trial lesson.".to_string(),
                     required_modules: vec!["social_sharing".to_string(), "booking".to_string()],
                 },
                 JourneyStep {
@@ -253,7 +253,7 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
             let mut steps = vec![
                 JourneyStep {
                     id: "acquisition".to_string(),
-                    question: "How did Fatima discover OHC?".to_string(),
+                    question: "How did Fatima discover OmniSolo?".to_string(),
                     ai_action: "Fatima's daughter sets it up for her, looking for 'free restaurant menu maker app'.".to_string(),
                     required_modules: vec!["search".to_string()],
                 },

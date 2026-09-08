@@ -1,7 +1,7 @@
-# OHC Autonomous Client Intake Questionnaire Engine: End-to-End Architecture
+# OmniSolo Autonomous Client Intake Questionnaire Engine: End-to-End Architecture
 
 ## 1. Executive Summary
-This document details the architectural design for the **Autonomous Client Intake Questionnaire Engine**. For service-oriented small business owners (like Carlos the Handyman or Leo the Music Tutor), capturing client requirements accurately before generating a quote is a high-friction process. Currently, owners rely on external tools (Typeform, Google Forms) or disjointed back-and-forth messaging. This engine natively integrates AI-generated, mobile-first intake forms into the OHC booking and quoting journey, allowing the AI Sales Agent to autonomously parse responses and draft accurate quotes without manual data entry.
+This document details the architectural design for the **Autonomous Client Intake Questionnaire Engine**. For service-oriented small business owners (like Carlos the Handyman or Leo the Music Tutor), capturing client requirements accurately before generating a quote is a high-friction process. Currently, owners rely on external tools (Typeform, Google Forms) or disjointed back-and-forth messaging. This engine natively integrates AI-generated, mobile-first intake forms into the OmniSolo booking and quoting journey, allowing the AI Sales Agent to autonomously parse responses and draft accurate quotes without manual data entry.
 
 ## 2. Business Journey Mapping (End-to-End)
 
@@ -10,7 +10,7 @@ The integration of the Intake Engine spans across several stages of the merchant
 - **Acquisition / Onboarding:**
   When a merchant (e.g., Carlos) creates a new service (e.g., "Custom Flooring Install"), the *Operations Agent* detects the need for specific inputs (dimensions, material preferences) and suggests a generated intake form.
 - **Activation (Customer Booking Flow):**
-  A customer looking to book the service on the OHC Storefront is intercepted by the Intake Engine. They answer a set of progressive, mobile-optimized questions (including photo uploads) instead of a static contact form.
+  A customer looking to book the service on the OmniSolo Storefront is intercepted by the Intake Engine. They answer a set of progressive, mobile-optimized questions (including photo uploads) instead of a static contact form.
 - **Retention / Revenue:**
   The submitted intake data is not just stored; it is actively parsed by the *Sales Agent*. The agent cross-references the customer's answers with the merchant's historical pricing and catalog to generate a draft quote.
 - **Referral / CRM:**
@@ -67,7 +67,7 @@ erDiagram
 
 ## 4. Mobile-First UX Flow & Visual Excellence
 
-The engine must adhere strictly to the OHC Mobile Parity and Premium Token mandates.
+The engine must adhere strictly to the OmniSolo Mobile Parity and Premium Token mandates.
 
 - **Viewport:** Designed for 375px width (iPhone SE/Mini baseline).
 - **Styling:** Adopts macOS-style Translucent Glass materials (`backdrop-filter: blur(20px) saturate(200%)`), leveraging the Outfit and Inter fonts.

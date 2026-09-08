@@ -12,7 +12,7 @@ test.describe('Cart Recovery E2E', () => {
     await page.getByRole('button', { name: 'Generate AI Campaign' }).click();
 
     // The mock or actual logic might take a bit. Wait for draft.
-    // Once it loads, check that the PoweredByOHC footer is there
+    // Once it loads, check that the PoweredByOmniSolo footer is there
     // Using string matching to avoid locator issues
     await page.waitForTimeout(2000);
     const html = await page.innerHTML('body');

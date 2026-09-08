@@ -612,10 +612,10 @@ impl Provider for BuiltinProvider {
         transport: Option<Arc<dyn Transport>>,
     ) -> Result<(), String> {
         // Advanced GRPC Dispatch Support
-        let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_default();
+        let address = std::env::var("OMNISOLO_AGENT_ADDRESS").unwrap_or_default();
         if !address.is_empty() {
             tracing::debug!("Dispatching via gRPC to {}", address); // pii-safe
-            // This is handled by orchestrator at runtime via OHC_AGENT_ADDRESS
+            // This is handled by orchestrator at runtime via OMNISOLO_AGENT_ADDRESS
             // It overrides local builtin tools loop with a remote node.
         }
         execute_in_isolation(
@@ -652,7 +652,7 @@ impl Provider for ScoutProvider {
         ProviderType::Scout
     }
     fn description(&self) -> String {
-        "Scout — agent dedicated to finding external resources and integrating them into OHC capabilities".to_string()
+        "Scout — agent dedicated to finding external resources and integrating them into OmniSolo capabilities".to_string()
     }
     fn supported_roles(&self) -> Vec<String> {
         vec!["RESOURCE_SCOUT".to_string(), "TOOL_INTEGRATOR".to_string()]

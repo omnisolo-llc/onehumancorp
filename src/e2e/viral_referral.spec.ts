@@ -12,7 +12,7 @@ test.describe('Viral Referral Loop', () => {
 
     // Check header of the new widget
     await expect(page.getByRole('heading', { name: 'Invite & Earn' })).toBeVisible();
-    await expect(page.getByText('Invite a fellow business owner to OHC')).toBeVisible();
+    await expect(page.getByText('Invite a fellow business owner to OmniSolo')).toBeVisible();
 
     // Click to generate link
     const generateBtn = page.locator('#dashboard-invite-btn');

@@ -7,7 +7,7 @@ use sqlx::sqlite::SqlitePoolOptions;
 
 use crate::orchestration::mesh::TeammateMesh;
 use async_trait::async_trait;
-use ohc_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport, Message};
+use omnisolo_builtin_agent::mesh::transport::{InProcessTransport, MeshTransport, Message};
 
 struct MockMesh {
     transport: InProcessTransport,
@@ -440,7 +440,7 @@ impl TeammateMesh for SleepingMockMesh {
 #[tokio::test]
 async fn test_degradation_fallback_standalone() {
     unsafe {
-        std::env::set_var("OHC_STATE_MANAGER_TIMEOUT_MS", "50");
+        std::env::set_var("OMNISOLO_STATE_MANAGER_TIMEOUT_MS", "50");
     }
 
     let db = setup_db().await;
@@ -461,6 +461,6 @@ async fn test_degradation_fallback_standalone() {
     assert_eq!(tasks.len(), 0);
 
     unsafe {
-        std::env::remove_var("OHC_STATE_MANAGER_TIMEOUT_MS");
+        std::env::remove_var("OMNISOLO_STATE_MANAGER_TIMEOUT_MS");
     }
 }

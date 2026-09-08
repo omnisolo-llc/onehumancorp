@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-The Persistence & Snapshot Fabric provides OHC with high-fidelity "Point-in-Time Recovery" (PITR) for the entire organizational state. Unlike traditional database backups, the Snapshot Fabric captures the "Living Context" of AI agents—including ephemeral context windows, pending tool calls, and multi-agent meeting transcripts—enabling the CEO to "Undo" complex organizational decisions or fork the company state for experimentation.
+The Persistence & Snapshot Fabric provides OmniSolo with high-fidelity "Point-in-Time Recovery" (PITR) for the entire organizational state. Unlike traditional database backups, the Snapshot Fabric captures the "Living Context" of AI agents—including ephemeral context windows, pending tool calls, and multi-agent meeting transcripts—enabling the CEO to "Undo" complex organizational decisions or fork the company state for experimentation.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -58,7 +58,7 @@ Snapshots contain sensitive IP and credentials. They are encrypted at rest using
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

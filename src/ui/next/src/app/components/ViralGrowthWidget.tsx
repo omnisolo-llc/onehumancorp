@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 
 export default function ViralGrowthWidget({
-  tenantId = 'ohc',
+  tenantId = 'omnisolo',
 }: {
   tenantId?: string;
 }) {
@@ -17,7 +17,7 @@ export default function ViralGrowthWidget({
   };
 
   return (
-    <div className="ohc-growth-card flex flex-col items-center justify-center text-center">
+    <div className="omnisolo-growth-card flex flex-col items-center justify-center text-center">
       <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-indigo-200 dark:border-indigo-800">
         <svg className="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -46,7 +46,7 @@ export default function ViralGrowthWidget({
 
       <div className="grid grid-cols-2 w-full gap-3 max-w-md">
         <a
-          href={`https://twitter.com/intent/tweet?text=I%20run%20my%20business%20on%20OHC.%20Join%20me!&url=${encodeURIComponent(referralLink)}`}
+          href={`https://twitter.com/intent/tweet?text=I%20run%20my%20business%20on%20OmniSolo.%20Join%20me!&url=${encodeURIComponent(referralLink)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 py-3 bg-[#000000] hover:bg-gray-800 text-white rounded-xl text-sm font-bold transition-all shadow-sm"

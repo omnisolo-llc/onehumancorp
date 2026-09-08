@@ -68,7 +68,7 @@
       margin: 0 0 20px 0;
     }
 
-    .ohc-growth-card {
+    .omnisolo-growth-card {
       background: rgba(255, 255, 255, 0.65);
       backdrop-filter: blur(40px) saturate(220%);
       -webkit-backdrop-filter: blur(40px) saturate(220%);
@@ -80,14 +80,14 @@
       width: 100%;
     }
 
-    .ohc-growth-card h2 {
+    .omnisolo-growth-card h2 {
       font-family: "Outfit", sans-serif;
       font-size: 20px;
       margin-top: 0;
       margin-bottom: 12px;
     }
 
-    .ohc-growth-card p {
+    .omnisolo-growth-card p {
       font-size: 14px;
       color: #555;
       margin-bottom: 16px;
@@ -263,7 +263,7 @@
 
   <h1>Referral Dashboard</h1>
 
-  <div class="ohc-growth-card">
+  <div class="omnisolo-growth-card">
     <h2>Your Referral Link</h2>
     <p>Give $50, Get $50. Share this link with other business owners. When they sign up, you both earn rewards.</p>
 
@@ -285,7 +285,7 @@
     </div>
   </div>
 
-  <div class="ohc-growth-card" id="referral-tier-section" style="display: none;">
+  <div class="omnisolo-growth-card" id="referral-tier-section" style="display: none;">
     <h2>Your Tier: <span id="tier-name">Bronze</span></h2>
     <p id="referral-tier-subtext" style="margin-bottom: 4px;">Loading tier progress...</p>
 
@@ -294,7 +294,7 @@
     </div>
   </div>
 
-  <div class="ohc-growth-card">
+  <div class="omnisolo-growth-card">
     <h2>Performance Metrics</h2>
 
     <div class="metrics-grid">
@@ -324,7 +324,7 @@
 
     // Auth token handling
     const getAuthHeaders = () => {
-      const token = localStorage.getItem('ohc_token');
+      const token = localStorage.getItem('omnisolo_token');
       return token ? { 'authorization': `Bearer ${token}` } : {};
     };
 
@@ -343,7 +343,7 @@
         } else {
           // Fallback
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
-          link = `ohc://join?ref=${tenantId}`;
+          link = `omnisolo://join?ref=${tenantId}`;
         }
 
         document.getElementById('referral-link').value = link;
@@ -353,7 +353,7 @@
       } catch (e) {
         console.error("Failed to generate referral link", e);
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-tenant';
-        document.getElementById('referral-link').value = `ohc://join?ref=${tenantId}`;
+        document.getElementById('referral-link').value = `omnisolo://join?ref=${tenantId}`;
         document.getElementById('loading-state').style.display = 'none';
         document.getElementById('link-state').style.display = 'block';
       }

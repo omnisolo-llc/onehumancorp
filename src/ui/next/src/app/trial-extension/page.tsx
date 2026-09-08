@@ -104,7 +104,7 @@ export default function TrialExtensionPage() {
       <div className="mt-8 text-center pb-8"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=trial_extension" className="text-sm font-bold text-gray-500 hover:text-indigo-600 transition-colors uppercase tracking-widest font-outfit">⚡ Powered by OmniSolo</a></div>
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

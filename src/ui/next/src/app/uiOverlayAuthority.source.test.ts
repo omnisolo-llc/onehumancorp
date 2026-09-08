@@ -7,10 +7,16 @@ function source(relativePath: string): string {
 }
 
 describe("product-shell overlay authority", () => {
-  it("mounts one global help and chat launcher", () => {
+  it("mounts exactly one global help and chat launcher", () => {
     const layout = source("src/app/layout.tsx");
+    const widget = source("src/components/help.tsx");
     expect(layout.match(/<HelpWidget\b/g)).toHaveLength(1);
-    expect(layout.match(/<HelpChat\b/g)).toHaveLength(1);
+    expect(layout).not.toMatch(/<HelpChat\b/);
+    expect(layout).not.toMatch(/components\/HelpChat/);
+    expect(layout).not.toContain('id="omnisolo-floating-help-widget"');
+    expect(widget.match(/id="omnisolo-floating-help-widget"/g)).toHaveLength(1);
+    expect(widget).not.toMatch(/fixed bottom-6 right-6[^"']*\bhidden\b/);
+    expect(widget).toMatch(/omnisolo-floating-help-widget[^>]*backdrop-saturate-\[210%\]/);
   });
 
   it("does not load API documentation assets on every page", () => {

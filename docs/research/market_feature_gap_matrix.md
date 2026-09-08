@@ -1,6 +1,6 @@
 # Market Feature Gap Matrix (2026)
 
-| Feature | **Shopify** | **Wix** | **Durable** | **Brand DNA Tools** | **OHC (Goal)** |
+| Feature | **Shopify** | **Wix** | **Durable** | **Brand DNA Tools** | **OmniSolo (Goal)** |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Agent Autonomy** | Reactive (Sidekick) | None | Limited | Brand/content agent | **Autonomous Depts** |
 | **Onboarding** | 30m+ (High friction) | 20m+ (Moderate) | < 1m (Instant) | Website/material scan | **< 1m Brand + Business Build** |
@@ -21,7 +21,7 @@ quadrantChart
     title Small Business Platform Landscape
     x-axis Low Autonomy --> High Autonomy
     y-axis High Complexity --> Radical Simplicity
-    quadrant-1 "Leapfrog Zone (OHC)"
+    quadrant-1 "Leapfrog Zone (OmniSolo)"
     quadrant-2 "Legacy Leaders (Shopify, Wix)"
     quadrant-3 "Niche Builders"
     quadrant-4 "AI Toys (Durable)"
@@ -29,12 +29,12 @@ quadrantChart
     "Wix": [0.35, 0.4]
     "Squarespace": [0.2, 0.45]
     "Durable": [0.7, 0.8]
-    "OHC (Current)": [0.6, 0.7]
-    "OHC (Target)": [0.95, 0.95]
+    "OmniSolo (Current)": [0.6, 0.7]
+    "OmniSolo (Target)": [0.95, 0.95]
 ```
 
 ## Gap Insights:
-1.  **Durable vs. OHC:** Durable is winning on "Speed to Site." OHC must match the 30-second benchmark.
-2.  **Shopify vs. OHC:** Shopify has depth but massive technical debt in UX. OHC's "No Jargon" value is the primary wedge.
-3.  **Wix vs. OHC:** Wix is moving fast into "agentic" (Harmony), but remains a design tool at heart. OHC must win on **Business Operations**.
-4.  **Brand DNA tools vs. OHC:** Modern brand-generation tools set the baseline for brand-consistent creative generation. OHC must match Business DNA, brand books, Photoshoot, campaign assets, and generated websites, then exceed that baseline by wiring those outputs into checkout, booking, inventory, social inbox, approvals, and autonomous departments.
+1.  **Durable vs. OmniSolo:** Durable is winning on "Speed to Site." OmniSolo must match the 30-second benchmark.
+2.  **Shopify vs. OmniSolo:** Shopify has depth but massive technical debt in UX. OmniSolo's "No Jargon" value is the primary wedge.
+3.  **Wix vs. OmniSolo:** Wix is moving fast into "agentic" (Harmony), but remains a design tool at heart. OmniSolo must win on **Business Operations**.
+4.  **Brand DNA tools vs. OmniSolo:** Modern brand-generation tools set the baseline for brand-consistent creative generation. OmniSolo must match Business DNA, brand books, Photoshoot, campaign assets, and generated websites, then exceed that baseline by wiring those outputs into checkout, booking, inventory, social inbox, approvals, and autonomous departments.

@@ -7,14 +7,14 @@ Data Model Architecture: Entities, Relationships, and Multi-Tenancy Guarantees
 As OmniSolo scales to support diverse business types—from bakers and freelance handymen to boutique owners—the underlying data model must remain robust, scalable, and strictly isolated per tenant. A non-technical small business owner relies on the system to keep their customer data, orders, and AI agent memories perfectly secure and separate from others. We must define clear entity relationships, access patterns, and invariants that guarantee row-level multi-tenancy without adding complexity to the business owner's experience.
 
 ## Research Report
-- **Goal**: Review and evolve the OHC data model to ensure complete tenant isolation and optimized access patterns for both the mobile-first UI and the background AI agents.
+- **Goal**: Review and evolve the OmniSolo data model to ensure complete tenant isolation and optimized access patterns for both the mobile-first UI and the background AI agents.
 - **Findings**:
   - **Multi-Tenancy**: The current architecture mandates row-level isolation in PostgreSQL using a `tenant_id` column with `ENABLE ROW LEVEL SECURITY`. This is critical and must be strictly maintained.
   - **Entity Types**: Key entities include Business (Tenant), Product, Order, Customer, Agent, Page, Booking, and Memory.
   - **Access Patterns**:
     - AI agents need fast access to customer history and long-term memory (pgvector).
     - The mobile app requires low-latency queries for orders and analytics.
-- **Competitive Analysis**: Shopify and Wix handle multi-tenancy seamlessly but often struggle with deep AI integration at the data layer. By building pgvector memories directly into the tenant schema, OHC gains a significant advantage in personalized AI operations.
+- **Competitive Analysis**: Shopify and Wix handle multi-tenancy seamlessly but often struggle with deep AI integration at the data layer. By building pgvector memories directly into the tenant schema, OmniSolo gains a significant advantage in personalized AI operations.
 
 ## Design Doc
 
@@ -31,7 +31,7 @@ As OmniSolo scales to support diverse business types—from bakers and freelance
 - Ensure every new table includes a `tenant_id` column and the corresponding RLS policies are applied immediately upon creation.
 
 ## Implementation Prompt
-Implement the data model enhancements for the OHC platform. Ensure that all new tables include a `tenant_id` column and that Row Level Security (RLS) is enabled and configured correctly. Update the Rust backend repository layer to pass the `tenant_id` context in all queries. Implement E2E tests verifying that a user from one tenant cannot access data from another tenant, even via API manipulation.
+Implement the data model enhancements for the OmniSolo platform. Ensure that all new tables include a `tenant_id` column and that Row Level Security (RLS) is enabled and configured correctly. Update the Rust backend repository layer to pass the `tenant_id` context in all queries. Implement E2E tests verifying that a user from one tenant cannot access data from another tenant, even via API manipulation.
 
 ## Priority
 P0

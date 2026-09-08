@@ -43,7 +43,7 @@ test.describe('Hybrid Landing Page CUJ', () => {
     await expect(startLink).toHaveAttribute('href', '/dashboard');
   });
 
-  test('OHC Hybrid OS heading is rendered', async ({ page }) => {
-    await expect(page.getByText('OHC Hybrid OS', { exact: true })).toBeVisible();
+  test('OmniSolo Hybrid OS heading is rendered', async ({ page }) => {
+    await expect(page.getByText('OmniSolo Hybrid OS', { exact: true })).toBeVisible();
   });
 });

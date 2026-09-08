@@ -3,7 +3,7 @@
 # User Guide: B2B Collaboration
 
 ## 1. Introduction & Value Proposition
-B2B Collaboration features in OmniSolo enable seamless interaction between separate OHC environments or external human organizations. By utilizing federated identity and the "Warm Handoff" UI, it ensures secure, provable cross-organizational workflows and inter-agent negotiation. This empowers the CEO to establish true B2B operations efficiently.
+B2B Collaboration features in OmniSolo enable seamless interaction between separate OmniSolo environments or external human organizations. By utilizing federated identity and the "Warm Handoff" UI, it ensures secure, provable cross-organizational workflows and inter-agent negotiation. This empowers the CEO to establish true B2B operations efficiently.
 
 ## 2. Prerequisites & Requirements
 - **Hardware/Software**: Federated SPIFFE/SPIRE configured between clusters or OIDC for human external parties.
@@ -12,7 +12,7 @@ B2B Collaboration features in OmniSolo enable seamless interaction between separ
 
 ## 3. Getting Started (Step-by-Step)
 1. **Establish Trust Agreement**:
-   - In the CEO Dashboard, under "B2B Settings," define a Trust Agreement with an external OHC entity using their SPIFFE ID endpoint.
+   - In the CEO Dashboard, under "B2B Settings," define a Trust Agreement with an external OmniSolo entity using their SPIFFE ID endpoint.
 2. **Initiate Inter-Org Room**:
    - A Manager agent or human CEO can create a new Virtual Meeting Room and invite an external agent via its SPIFFE identity.
 3. **Warm Handoff Execution**:

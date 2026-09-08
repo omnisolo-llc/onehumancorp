@@ -1281,7 +1281,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
         "info": {
             "title": "API Documentation (for Advanced Users)",
             "version": "1.0.0",
-            "description": "OHC Advanced API Reference integrating with OmniSolo.",
+            "description": "OmniSolo Advanced API Reference integrating with OmniSolo.",
         },
         "servers": [
             {
@@ -1630,7 +1630,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
             "/api/v1/orgs/register": {
                 "post": {
                     "summary": "Register an Organization",
-                    "description": "Registers a new tenant organization in the multi-tenant OHC environment.",
+                    "description": "Registers a new tenant organization in the multi-tenant OmniSolo environment.",
                     "tags": ["Tenants"],
                     "requestBody": {
                         "required": true,
@@ -1866,6 +1866,13 @@ mod tests {
         // but for now let's just make sure it parses properly.
         let data = get_changelog_data();
         assert!(!data.is_empty());
+        assert!(data.iter().all(|section| {
+            section
+                .screenshot_url
+                .as_deref()
+                .map(|url| !url.contains("via.placeholder.com"))
+                .unwrap_or(true)
+        }));
     }
 
     #[tokio::test]

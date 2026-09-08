@@ -41,10 +41,10 @@ export function NotificationManager() {
       }, 5000);
     };
 
-    window.addEventListener('ohc_event_received', handleEventReceived);
+    window.addEventListener('omnisolo_event_received', handleEventReceived);
 
     return () => {
-      window.removeEventListener('ohc_event_received', handleEventReceived);
+      window.removeEventListener('omnisolo_event_received', handleEventReceived);
     };
   }, []);
 

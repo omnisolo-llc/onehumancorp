@@ -2,7 +2,7 @@
 
 # Teammate Mesh Demo Walkthrough
 
-This walkthrough demonstrates the real-time collaboration capabilities of the OHC Swarm using the Teammate Mesh.
+This walkthrough demonstrates the real-time collaboration capabilities of the OmniSolo Swarm using the Teammate Mesh.
 
 ## 1. Setup
 Ensure the `ohc-mesh-hub` service is running. In a local environment, this will fallback to an in-memory SQLite-backed event bus.

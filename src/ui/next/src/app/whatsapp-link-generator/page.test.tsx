@@ -70,4 +70,14 @@ describe('WhatsAppLinkGeneratorPage', () => {
     const footerLinks = screen.getAllByText(/Powered by OmniSolo/i);
     expect(footerLinks.length).toBeGreaterThan(0);
   });
+
+  it('does not depend on an external Google Fonts stylesheet', () => {
+    render(<WhatsAppLinkGeneratorPage />);
+
+    const styleText = [...document.querySelectorAll('style')]
+      .map((style) => style.textContent || '')
+      .join('\n');
+
+    expect(styleText).not.toMatch(/fonts\.(googleapis|gstatic)\.com/i);
+  });
 });

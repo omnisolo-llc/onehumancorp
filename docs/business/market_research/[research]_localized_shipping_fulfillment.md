@@ -1,7 +1,7 @@
 # Research Report: Localized Shipping & Fulfillment Optimization
 
 ## Executive Summary
-This report analyzes the challenges micro-SMEs face when managing localized shipping and fulfillment. Many platforms provide robust international shipping capabilities but lack intuitive, dynamic routing and delivery zone management for local operations (e.g., local delivery, food pickup, neighborhood drops). OmniSolo (OHC) can differentiate itself by integrating AI agents to autonomously coordinate local logistics, providing a frictionless experience for both the business owner and the end consumer.
+This report analyzes the challenges micro-SMEs face when managing localized shipping and fulfillment. Many platforms provide robust international shipping capabilities but lack intuitive, dynamic routing and delivery zone management for local operations (e.g., local delivery, food pickup, neighborhood drops). OmniSolo (OmniSolo) can differentiate itself by integrating AI agents to autonomously coordinate local logistics, providing a frictionless experience for both the business owner and the end consumer.
 
 ## 1. Market Mapping & Competitor Discovery (Track 1)
 - **Shopify:** Provides Local Delivery and Local Pickup options, but setting up granular delivery zones (e.g., specific zip codes or drawn polygons) is cumbersome. It often relies on third-party apps like Zapiet, adding to the "App Tax."
@@ -9,11 +9,11 @@ This report analyzes the challenges micro-SMEs face when managing localized ship
 - **Dedicated Platforms (DoorDash Storefront, Uber Eats):** Excellent at logistics but charge exorbitant commissions (up to 30%) and own the customer relationship, disintermediating the SMB.
 - **GoDaddy / Squarespace:** Rudimentary at best; primarily focused on flat-rate shipping or standard carrier integrations (USPS/FedEx).
 
-## 2. OHC Gap & Pain Point Identification (Track 3)
+## 2. OmniSolo Gap & Pain Point Identification (Track 3)
 - **Persona Focus:**
   - **Fatima (Food Cart Operator):** Needs to manage real-time pre-orders for pickup and potentially local office deliveries within a 1-mile radius.
   - **Maya (Home Baker):** Needs to manage weekend deliveries for fragile custom cakes across specific zip codes, requiring optimized routing to avoid melting/damage.
-- **The Gap:** OHC currently lacks a native, visual delivery zone configuration system and an AI-driven fulfillment orchestrator. Small business owners cannot easily define "I deliver here but not there" without complex settings, nor can they efficiently route 5 deliveries in an afternoon.
+- **The Gap:** OmniSolo currently lacks a native, visual delivery zone configuration system and an AI-driven fulfillment orchestrator. Small business owners cannot easily define "I deliver here but not there" without complex settings, nor can they efficiently route 5 deliveries in an afternoon.
 
 ## 3. Deep Dive Architecture Design (Track 2 & Track 3)
 
@@ -34,19 +34,19 @@ This report analyzes the challenges micro-SMEs face when managing localized ship
   - Accurately accounts for local delivery fees versus product revenue in weekly reporting.
 
 ### Mobile-First Implementation
-- **Driver Mode:** A simplified mobile view within the OHC app specifically for the delivery phase. Large buttons to mark "Delivered" (touch target ≥ 44x44px), take photo proof of delivery, and one-tap navigation to the next stop.
+- **Driver Mode:** A simplified mobile view within the OmniSolo app specifically for the delivery phase. Large buttons to mark "Delivered" (touch target ≥ 44x44px), take photo proof of delivery, and one-tap navigation to the next stop.
 - **Zone Drawing:** A mobile-friendly map interface allowing the owner to simply "draw a circle" or drop a pin with a radius slider to set their delivery area.
 
 ## 4. Proposed Implementation Steps & Issue Prompt
 
-**Feature Name:** OHC Autonomous Local Fulfillment & Routing
+**Feature Name:** OmniSolo Autonomous Local Fulfillment & Routing
 
 **Target Persona:** Maya the Baker
 
 **Outcome:** Maya can easily define a 5-mile delivery radius. On Saturday mornings, the Operations Agent provides her an optimized delivery route for her 5 custom cake orders, while the Ambassador Agent keeps customers updated on ETAs.
 
 **Critical User Journey (CUJ):**
-1. Maya logs into the OHC mobile app and sets her delivery zone to a 5-mile radius using a simple slider.
+1. Maya logs into the OmniSolo mobile app and sets her delivery zone to a 5-mile radius using a simple slider.
 2. 5 customers place orders throughout the week for Saturday delivery.
 3. The Operations Agent validates each address at checkout.
 4. On Saturday morning, the Operations Agent sends Maya a push notification: "Your delivery route is ready. Tap to view."

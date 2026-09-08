@@ -445,7 +445,7 @@ test.describe('Mobile global controls', () => {
         await navigateToSettledApplicationPage(page, route);
 
         const controlSelector = [
-          '#ohc-floating-help-btn',
+          '#omnisolo-floating-help-btn',
           '#ai-chat-trigger-btn',
           '[data-voice-assistant-surface="trigger"]',
         ].join(',');

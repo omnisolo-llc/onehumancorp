@@ -74,7 +74,7 @@ export default function ExitIntentBuilder() {
         Object.assign(action.style, { background: themeColor, color: "white", border: "none", padding: "0.75rem 1.5rem", borderRadius: "4px", fontWeight: "bold", cursor: "pointer", width: "100%" });
         popup.append(close, heading, copy, action);
         ${!removeBranding ? `const branding = document.createElement("a");
-        branding.href = "https://omnisolo.co";
+        branding.href = "https://cloud.omnisolo.co";
         branding.textContent = "⚡ Powered by OmniSolo";
         Object.assign(branding.style, { display: "block", marginTop: "1rem", fontSize: "0.75rem", color: "#9ca3af", textDecoration: "none" });
         popup.appendChild(branding);` : ""}

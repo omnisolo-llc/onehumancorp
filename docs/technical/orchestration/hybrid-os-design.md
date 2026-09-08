@@ -4,7 +4,7 @@
 **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 
 ## Overview
-The OHC Hybrid Agentic OS requires KAIROS Orchestration to manage Shared Task Lists, Teammate Mesh, and AutoDream pipelines.
+The OmniSolo Hybrid Agentic OS requires KAIROS Orchestration to manage Shared Task Lists, Teammate Mesh, and AutoDream pipelines.
 
 ## Architecture
 - **Phase 1: Shared Task List**

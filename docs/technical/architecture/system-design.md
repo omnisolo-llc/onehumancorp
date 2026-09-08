@@ -1,13 +1,13 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Design Doc: OmniSolo (OHC) Platform
+# Design Doc: OmniSolo (OmniSolo) Platform
 
 **Author(s):** Antigravity, Principal Product Architect & Visionary (L7)
 **Status:** Approved
 **Last Updated:** 2026-03-28
 
 ## 1. Overview
-OmniSolo (OHC) is an enterprise-grade AI-agent orchestration platform. It enables organisations to define a virtual workforce of AI agents, assign them hierarchical roles, coordinate complex multi-agent tasks through persistence-backed "Meeting Rooms", track granular cost and billing at the token level, and gate high-risk or high-cost actions behind human approval (Confidence Gating).
+OmniSolo (OmniSolo) is an enterprise-grade AI-agent orchestration platform. It enables organisations to define a virtual workforce of AI agents, assign them hierarchical roles, coordinate complex multi-agent tasks through persistence-backed "Meeting Rooms", track granular cost and billing at the token level, and gate high-risk or high-cost actions behind human approval (Confidence Gating).
 
 The platform is intentionally hybrid. The same backend can run as a multi-tenant cloud service, an API-only headless deployment for remote clients, or the local backend managed by a standalone desktop wrapper.
 
@@ -26,15 +26,15 @@ When the CEO defines a goal, the organisation works collaboratively. Agents ente
 - **Verifiable Identity**: Use SPIFFE SVIDs for mTLS-backed agent-to-agent and agent-to-tool communication.
 - **Zero Lock-in**: Abstract all external tools behind the Model Context Protocol (MCP).
 ### 2.2 Non-Goals
-- **Model Training**: OHC consumes existing LLMs via standardized providers.
-- **General Purpose ERP**: While OHC manages an "org chart", it is focused on AI workflow, not traditional HR/Payroll processing.
+- **Model Training**: OmniSolo consumes existing LLMs via standardized providers.
+- **General Purpose ERP**: While OmniSolo manages an "org chart", it is focused on AI workflow, not traditional HR/Payroll processing.
 
 ## 3. Detailed Architecture
 
 ```mermaid
 graph TD
     subgraph "Thin Client Mode (UI-Only)"
-        Desktop[Tauri Desktop Client] -->|API/OAuth| BE[OHC Backend Server]
+        Desktop[Tauri Desktop Client] -->|API/OAuth| BE[OmniSolo Backend Server]
         Web[Static Web Client] -->|API/OAuth| BE
     end
     
@@ -47,7 +47,7 @@ graph TD
     end
 
     subgraph "Standalone Desktop Mode (Local Single-User)"
-        DesktopShell[Desktop Wrapper] -->|Manages| LocalBE[Local OHC Backend]
+        DesktopShell[Desktop Wrapper] -->|Manages| LocalBE[Local OmniSolo Backend]
         LocalBE --> LocalHub[Local Orchestration Hub]
         LocalBE --> LocalDB[(SQLite: Persistence)]
     end
@@ -141,8 +141,8 @@ Audit logs and snapshots are stored in a managed Postgres cluster via the CNPG o
 
 ### 6.3 Multi-Tenant Routing and Headless Serving
 - Authenticated requests carry `organization_id` claims; service handlers and shared-database queries use those claims to scope tenant-visible data.
-- `OHC_MULTITENANT=true` enables cloud-mode tenant requirements in auth and related service paths.
-- `OHC_HEADLESS=true` selects API-only/headless integration behavior. The current Rust entrypoint still registers the Axum UI fallback route; static Tauri assets are packaged by the desktop app, not by a `FRONTEND_STATIC_DIR` server setting.
+- `OMNISOLO_MULTITENANT=true` enables cloud-mode tenant requirements in auth and related service paths.
+- `OMNISOLO_HEADLESS=true` selects API-only/headless integration behavior. The current Rust entrypoint still registers the Axum UI fallback route; static Tauri assets are packaged by the desktop app, not by a `FRONTEND_STATIC_DIR` server setting.
 - Current persistence hardening is focused on making every shared Postgres query org-aware end to end; the auth, dashboard, billing, onboarding, orchestration, and growth surfaces already carry org-scoped behavior.
 
 ## 7. Monitoring & Observability
@@ -164,7 +164,7 @@ An agent in "Delegate Mode" acts as a routing proxy: it inspects an incoming tas
 ## 9. Roadmap (Google Golden Standard Extensions)
 
 ### 9.1 Phase 3: Global Scale (Multi-Cluster Federation)
-Extend the OHC control plane to manage agent workloads across multiple geographic clusters.
+Extend the OmniSolo control plane to manage agent workloads across multiple geographic clusters.
 - **Federated SPIRE**: Cross-cluster SVID validation for mTLS.
 - **Global Hub Router**: Intelligent message routing based on agent locality and latency.
 
@@ -174,7 +174,7 @@ Incorporate self-healing capabilities into the core orchestration.
 - **Auto-Rollback Gating**: Integration with ArgoCD/Flux for automated canary rollouts and AI-driven rollbacks.
 
 ### 9.3 Phase 5: Ecosystem Interoperability (B2B Collaboration)
-Enable secure agent-to-agent negotiation between separate OHC organizations.
+Enable secure agent-to-agent negotiation between separate OmniSolo organizations.
 - **Trust Domain Peering**: Shared OIDC/SPIFFE trust between partner organizations.
 - **Inter-Org Meeting Rooms**: Securely bridged workspaces for B2B collaboration.
 
@@ -198,16 +198,16 @@ Optimize agent throughput by aligning LLM requirements with cluster hardware.
 
 ## 11. Modular Capability Expansion Flow
 
-The OHC platform supports dynamic expansion and industrial-strength team instantiation via the **Modular Capability Plugin Mesh**.
+The OmniSolo platform supports dynamic expansion and industrial-strength team instantiation via the **Modular Capability Plugin Mesh**.
 
 1. **Discovery**: Agents query the MCP Gateway for capabilities matching their intent. Capabilities are standalone K8s services exposing a `CapabilityManifest`.
 2. **Registration**: The Orchestration Hub dynamically registers new endpoints in the `capability_plugins` database table.
 3. **Hydration**: The Hub automatically injects the newly discovered capabilities into the agent's context and persists embeddings into `swarm_memory_embeddings` for future semantic retrieval.
 4. **Execution**: Agents immediately adopt their new roles or utilize newly bound tools to execute their directives autonomously.
 
-## 12. Aesthetics: Next-Generation OHC Design System
+## 12. Aesthetics: Next-Generation OmniSolo Design System
 
-To reflect the fluidity of the new Agentic OS, the OHC frontend adopts the Next-Generation "Premium Feel" Design System. The UI must hide infrastructure complexity (K8s, MCP) behind consumer-grade "Apple-level aesthetics".
+To reflect the fluidity of the new Agentic OS, the OmniSolo frontend adopts the Next-Generation "Premium Feel" Design System. The UI must hide infrastructure complexity (K8s, MCP) behind consumer-grade "Apple-level aesthetics".
 
 ### 12.1 Design System Tokens
 *   **Backdrop & Depth**: Glassmorphism is the core structural element.
@@ -226,7 +226,7 @@ To reflect the fluidity of the new Agentic OS, the OHC frontend adopts the Next-
 graph TD
     %% Core Infrastructure
     K8s[Kubernetes Cluster]
-    DB[(OHC SIP Database)]
+    DB[(OmniSolo SIP Database)]
     MCP[MCP Gateway]
 
     %% Plugin Mesh
@@ -237,7 +237,7 @@ graph TD
     Agent1[Autonomous Agent]
 
     %% UI Components
-    UI[Next-Gen OHC Dashboard]
+    UI[Next-Gen OmniSolo Dashboard]
 
     %% Relationships
     PluginA -- Registers Manifest --> MCP

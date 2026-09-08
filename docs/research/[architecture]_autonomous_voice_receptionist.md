@@ -10,12 +10,12 @@ do answer, they are often rushed, leading to poor customer experiences or
 misrecorded information. They need an invisible, highly resilient AI Voice
 Receptionist that can answer calls, answer FAQs (e.g., "Do you do vegan cakes?",
 "What are your hours?"), provide quotes, and take structured orders/bookings
-directly over the phone, feeding seamlessly into the OHC unified inbox and order
+directly over the phone, feeding seamlessly into the OmniSolo unified inbox and order
 management systems.
 
 ## Research Report
 
-- **Current Architecture Limits:** OHC currently handles text-based asynchronous
+- **Current Architecture Limits:** OmniSolo currently handles text-based asynchronous
   communication (Instagram DMs, SMS, Email) well through the Omnichannel Unified
   Inbox, but lacks a synchronous, real-time voice channel.
 - **Competitor Analysis:**
@@ -29,7 +29,7 @@ management systems.
   - _Bland AI / Vapi (API Providers):_ Powerful developer tools for voice AI,
     but too complex for a non-technical SMB owner to configure and integrate
     with their catalog and calendar.
-- **Discovery:** OHC requires an integrated Telephony Order Engine that
+- **Discovery:** OmniSolo requires an integrated Telephony Order Engine that
   provisions a local phone number (or ports an existing one) and deploys an
   ultra-low-latency voice AI agent. This agent must have real-time access to the
   merchant's Unified Capacity and Inventory Ledger to book appointments or take
@@ -44,11 +44,11 @@ erDiagram
     CUSTOMER ||--o{ PSTN : "Calls Business Number"
     PSTN ||--o{ TWILIO-GATEWAY : "Routes Call"
     TWILIO-GATEWAY ||--o{ VOICE-AI-EDGE : "Websocket Audio Stream"
-    VOICE-AI-EDGE ||--o{ OHC-API-GATEWAY : "Function Calling / Actions"
+    VOICE-AI-EDGE ||--o{ OmniSolo-API-GATEWAY : "Function Calling / Actions"
 
-    OHC-API-GATEWAY ||--o{ UNIFIED-INBOX : "Logs Call Transcript & Audio"
-    OHC-API-GATEWAY ||--o{ INVENTORY-LEDGER : "Checks Stock"
-    OHC-API-GATEWAY ||--o{ BOOKING-ENGINE : "Checks Availability"
+    OmniSolo-API-GATEWAY ||--o{ UNIFIED-INBOX : "Logs Call Transcript & Audio"
+    OmniSolo-API-GATEWAY ||--o{ INVENTORY-LEDGER : "Checks Stock"
+    OmniSolo-API-GATEWAY ||--o{ BOOKING-ENGINE : "Checks Availability"
 
     VOICE-AI-EDGE ||--o{ AI-CS-DEPARTMENT : "Escalates Complex Queries"
 ```
@@ -72,7 +72,7 @@ erDiagram
   voice. She's done in 15 seconds.
 - **Action:** A customer calls. Maya is baking and ignores her ringing phone.
   The AI picks up.
-- **Post-Action:** Maya checks her OHC app. She sees a new notification: "New
+- **Post-Action:** Maya checks her OmniSolo app. She sees a new notification: "New
   Call Handled." Tapping it reveals a summarized transcript, the audio
   recording, and a pre-drafted order card ready for 1-tap approval.
 
@@ -104,8 +104,8 @@ erDiagram
 Provision phone numbers dynamically via a telephony provider (e.g., Twilio). Set
 up a low-latency bidirectional audio websocket connection to a Voice AI provider
 (e.g., Vapi, or OpenAI Realtime API). The feature must appear as a simple toggle
-in the OHC mobile app settings. When enabled, it answers incoming calls, queries
-the OHC API for the specific tenant's knowledge base and inventory/calendar, and
+in the OmniSolo mobile app settings. When enabled, it answers incoming calls, queries
+the OmniSolo API for the specific tenant's knowledge base and inventory/calendar, and
 can execute specific function calls (e.g., `create_draft_order`,
 `book_appointment`, `send_sms_payment_link`). The resulting call transcript,
 summary, and any created entities must flow into the Omnichannel Unified Inbox.

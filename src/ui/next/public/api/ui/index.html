@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OHC Setup</title>
+    <title>OmniSolo Setup</title>
     <style>
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -87,7 +87,7 @@
   </head>
   <body>
     <div class="container">
-      <h1>Welcome to OHC</h1>
+      <h1>Welcome to OmniSolo</h1>
       <p>Let's get your workspace set up.</p>
       <button id="start-btn">Start Onboarding</button>
     </div>
@@ -101,7 +101,7 @@
     </script>
 
 <style>
-.ohc-tooltip {
+.omnisolo-tooltip {
     position: fixed;
     background: #333;
     color: white;
@@ -117,17 +117,17 @@
     max-width: 250px;
     line-height: 1.4;
 }
-.ohc-tooltip.visible {
+.omnisolo-tooltip.visible {
     opacity: 1;
 }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             // Fallback for playwright
-            window.OHC_TOOLTIPS = {
+            window.OMNISOLO_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
@@ -168,14 +168,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });

@@ -34,7 +34,7 @@ export default function SocialProofNudgePage() {
   };
 
   const getEmbedCode = () => {
-    return `<!-- Social Proof Nudge Widget -->\n<div id="ohc-social-proof" data-product="${escapeHtmlAttribute(productName || 'A product')}" data-location="${escapeHtmlAttribute(customerLocation || 'Someone')}" data-time="${escapeHtmlAttribute(timeAgo)}" data-theme="${escapeHtmlAttribute(theme)}" data-branding="${!hasPro}"></div>\n<script src="https://cloud.omnisolo.co/widgets/social-proof.js" async></script>\n${!hasPro ? '<!-- ⚡ Powered by OmniSolo -->' : ''}`;
+    return `<!-- Social Proof Nudge Widget -->\n<div id="omnisolo-social-proof" data-product="${escapeHtmlAttribute(productName || 'A product')}" data-location="${escapeHtmlAttribute(customerLocation || 'Someone')}" data-time="${escapeHtmlAttribute(timeAgo)}" data-theme="${escapeHtmlAttribute(theme)}" data-branding="${!hasPro}"></div>\n<script src="https://cloud.omnisolo.co/widgets/social-proof.js" async></script>\n${!hasPro ? '<!-- ⚡ Powered by OmniSolo -->' : ''}`;
   };
 
   const getThemeStyles = () => {
@@ -252,7 +252,7 @@ export default function SocialProofNudgePage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

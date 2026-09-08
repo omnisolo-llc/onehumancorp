@@ -66,7 +66,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         const html = await response.text();
         expect(html).toContain('<!DOCTYPE html>');
         expect(html).toContain('Powered by');
-        expect(html).toContain('OHC');
+        expect(html).toContain('OmniSolo');
         expect(html).toContain('--background: #ffffff;');
     });
 

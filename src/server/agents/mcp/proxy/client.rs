@@ -1,6 +1,6 @@
 use super::blob::{BlobProvider, create_blob_provider};
-use ::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
-use ::server_ohc::mcp_proxy::{ProxyToServer, RegisterProxyRequest, proxy_to_server};
+use ::server_omnisolo::mcp_proxy::mcp_reverse_tunnel_service_client::McpReverseTunnelServiceClient;
+use ::server_omnisolo::mcp_proxy::{ProxyToServer, RegisterProxyRequest, proxy_to_server};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -9,7 +9,7 @@ use tonic::transport::Channel;
 use tracing::{error, info};
 
 use crate::orchestration::local_sandbox::LocalSandbox;
-use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig};
+use crate::orchestration::sandbox::{OmniSoloSandboxManager, SandboxConfig};
 
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
@@ -75,7 +75,7 @@ impl LocalProxyClient {
             while let Ok(Some(msg)) = in_stream.message().await {
                 if let Some(payload) = msg.payload {
                     match payload {
-                        ::server_ohc::mcp_proxy::server_to_proxy::Payload::InvokeRequest(req) => {
+                        ::server_omnisolo::mcp_proxy::server_to_proxy::Payload::InvokeRequest(req) => {
                             info!("Received invoke request for tool: {}", req.tool_id);
 
                             let (success, result, error_details) = match req.tool_id.as_str() {
@@ -177,7 +177,7 @@ impl LocalProxyClient {
                                 .send(ProxyToServer {
                                     request_id: msg.request_id,
                                     payload: Some(proxy_to_server::Payload::InvokeResponse(
-                                        ::server_ohc::mcp_proxy::InvokeCommandResponse {
+                                        ::server_omnisolo::mcp_proxy::InvokeCommandResponse {
                                             success,
                                             result,
                                             error_details,

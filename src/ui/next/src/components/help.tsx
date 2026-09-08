@@ -1,8 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import React, { createContext, useContext, useMemo, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
 import { InteractiveWalkthrough, Step } from './Walkthrough';
 
@@ -12,6 +12,19 @@ type HelpArticle = { title: string; desc: string; link?: string; category?: stri
 type HelpVideo = { id: number; title: string; duration: string; video_url?: string; };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
+
+const mobileHelpCollisionRoutes = new Set([
+  "/website-builder",
+  "/login",
+  "/agent-marketplace",
+  "/integrations",
+  "/agents",
+  "/inbox",
+]);
+
+export function shouldShowMobileHelpLauncher(pathname: string | null) {
+  return !pathname || !mobileHelpCollisionRoutes.has(pathname);
+}
 
 const helpTabs = [
   { id: "center", label: "Help" },
@@ -36,7 +49,14 @@ function normalizeArticles(data: unknown): HelpArticle[] {
   if (!Array.isArray(data)) return [];
   return data.flatMap((item) => {
     if (!isRecord(item) || typeof item.title !== "string" || typeof item.desc !== "string") return [];
-    return [{ title: item.title, desc: item.desc, link: isSafeLink(item.link) ? item.link : undefined }];
+    return [{
+      title: item.title,
+      desc: item.desc,
+      link: isSafeLink(item.link) ? item.link : undefined,
+      category: typeof item.category === "string" && item.category.trim()
+        ? item.category
+        : undefined,
+    }];
   });
 }
 
@@ -44,7 +64,12 @@ function normalizeVideos(data: unknown): HelpVideo[] {
   if (!Array.isArray(data)) return [];
   return data.flatMap((item) => {
     if (!isRecord(item) || typeof item.id !== "number" || typeof item.title !== "string" || typeof item.duration !== "string") return [];
-    return [{ id: item.id, title: item.title, duration: item.duration }];
+    return [{
+      id: item.id,
+      title: item.title,
+      duration: item.duration,
+      video_url: isSafeLink(item.video_url) ? item.video_url : undefined,
+    }];
   });
 }
 
@@ -62,9 +87,14 @@ function normalizeChatReply(data: unknown): Omit<ChatMessage, "id" | "role"> {
 }
 
 type WalkthroughContextType = {
-  startWalkthrough: (steps: Step[]) => void;
+  startWalkthrough: (steps: Step[], options?: { route?: string }) => void;
   nextStep: () => void;
   endWalkthrough: () => void;
+};
+
+type PendingWalkthrough = {
+  steps: Step[];
+  route: string;
 };
 
 const WalkthroughContext = createContext<WalkthroughContextType | undefined>(undefined);
@@ -72,8 +102,18 @@ const WalkthroughContext = createContext<WalkthroughContextType | undefined>(und
 export function WalkthroughProvider({ children }: { children: ReactNode }) {
   const [steps, setSteps] = useState<Step[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+  const [pendingWalkthrough, setPendingWalkthrough] = useState<PendingWalkthrough | null>(null);
+  const pathname = usePathname();
 
-  const startWalkthrough = (newSteps: Step[]) => {
+  const startWalkthrough = (newSteps: Step[], options?: { route?: string }) => {
+    if (options?.route && pathname !== options.route) {
+      setPendingWalkthrough({ steps: newSteps, route: options.route });
+      setSteps([]);
+      setCurrentStepIndex(-1);
+      return;
+    }
+
+    setPendingWalkthrough(null);
     setSteps(newSteps);
     setCurrentStepIndex(0);
   };
@@ -87,9 +127,18 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
   };
 
   const endWalkthrough = () => {
+    setPendingWalkthrough(null);
     setSteps([]);
     setCurrentStepIndex(-1);
   };
+
+  useEffect(() => {
+    if (!pendingWalkthrough || pathname !== pendingWalkthrough.route) return;
+
+    setSteps(pendingWalkthrough.steps);
+    setCurrentStepIndex(0);
+    setPendingWalkthrough(null);
+  }, [pathname, pendingWalkthrough]);
 
   useEffect(() => {
     if (currentStepIndex >= 0 && currentStepIndex < steps.length) {
@@ -120,12 +169,17 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
     }
   }, [activeStep]);
 
+  const renderedSteps = useMemo(
+    () => steps.map(s => ({ targetId: s.targetId, title: s.title, content: s.content, position: "top" as const })),
+    [steps],
+  );
+
   return (
     <WalkthroughContext.Provider value={{ startWalkthrough, nextStep, endWalkthrough }}>
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: s.title, content: s.content, position: "top" }))}
+          steps={renderedSteps}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}
@@ -144,6 +198,7 @@ export function useWalkthrough() {
 // --- Help Widget System ---
 export function HelpWidget() {
   const router = useRouter();
+  const pathname = usePathname();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<HelpTab>("center");
@@ -166,6 +221,8 @@ export function HelpWidget() {
   const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
 
   useEffect(() => {
+    if (pathname === '/login') return;
+
     fetch("/api/v1/help")
       .then(res => {
         if (!res.ok) throw new Error("Failed to load help articles");
@@ -175,7 +232,7 @@ export function HelpWidget() {
         setHelpArticles(normalizeArticles(data));
       })
       .catch(() => {});
-  }, []);
+  }, [pathname]);
 
   const filteredArticles = helpArticles.filter(a =>
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -185,6 +242,8 @@ export function HelpWidget() {
   const [activeVideo, setActiveVideo] = useState<HelpVideo | null>(null);
 
   useEffect(() => {
+    if (pathname === '/login') return;
+
     fetch("/api/v1/videos")
       .then(res => {
         if (!res.ok) throw new Error("Failed to load videos");
@@ -194,7 +253,7 @@ export function HelpWidget() {
         setVideos(normalizeVideos(data));
       })
       .catch(() => {});
-  }, []);
+  }, [pathname]);
 
   const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -221,12 +280,32 @@ export function HelpWidget() {
     ]);
   };
 
+  const startStoreSetupTour = () => {
+    setOpen(false);
+    fetch("/api/v1/walkthrough/store-setup")
+      .then(res => res.json())
+      .then(data => {
+        const steps = data && data.length > 0
+          ? data
+          : [
+              { targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." },
+              { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" },
+            ];
+        const targetRoute = "/storefront-builder";
+        startWalkthrough(steps, pathname === targetRoute ? undefined : { route: targetRoute });
+        if (pathname !== targetRoute) router.push(targetRoute);
+      });
+  };
+
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-[90] hidden sm:block" data-ui-overlay="true">
+      <div
+        className={`fixed bottom-6 right-6 z-[90] ${shouldShowMobileHelpLauncher(pathname) ? "block" : "hidden sm:block"}`}
+        data-ui-overlay="true"
+      >
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
-            id="ohc-floating-help-btn"
+            id="omnisolo-floating-help-btn"
             onClick={() => setOpen(!open)}
             className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
             aria-label="Open help chat"
@@ -239,7 +318,7 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="ohc-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] saturate-[210%] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden z-[90] border border-[rgba(255,255,255,0.4)] transition-all font-inter">
+        <div id="omnisolo-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] backdrop-saturate-[210%] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden z-[90] border border-[rgba(255,255,255,0.4)] transition-all font-inter">
           <div className="flex border-b border-white/30 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button
@@ -254,7 +333,7 @@ export function HelpWidget() {
               </button>
             ))}
             <button
-              id="ohc-floating-help-close"
+              id="omnisolo-floating-help-close"
               onClick={() => setOpen(false)}
               className="absolute right-2 top-2 p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded-full transition-colors z-10 min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Close Help Widget"
@@ -298,14 +377,14 @@ export function HelpWidget() {
                                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-lg">Interactive Tours</h3>
                 <div className="space-y-3">
                   <WithTooltip id="walkthrough-btn-tooltip" defaultText="Start an interactive guide to learn how to use OmniSolo.">
-                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/store-setup").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." }, { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" }])); }} className="w-full text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={startStoreSetupTour} className="w-full text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Set up your store</span>
                   </button>
                   </WithTooltip>
                   <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/pos").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "pos-keypad", title: "Enter Amount", content: "Type in the total sale amount using the keypad." }, { targetId: "charge-btn", title: "Charge Customer", content: "Tap here to process the payment. It's that easy!" }])); }} className="w-full text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/assistant").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "ai-chat-trigger", title: "Open Assistant", content: "Click here to open your AI Support Agent." }, { targetId: "ohc-help-input-area", title: "Ask Anything", content: "Type your request here and the agent will handle it while you sleep." }])); }} className="w-full text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/assistant").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "ai-chat-trigger", title: "Open Assistant", content: "Click here to open your AI Support Agent." }, { targetId: "omnisolo-help-input-area", title: "Ask Anything", content: "Type your request here and the agent will handle it while you sleep." }])); }} className="w-full text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
                   </button>
                   <button onClick={() => { setOpen(false); fetch("/api/v1/walkthrough/meeting-room").then(res => res.json()).then(data => data && data.length > 0 ? startWalkthrough(data) : startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "UltraPlan Protocol", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])); }} className="w-full text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">

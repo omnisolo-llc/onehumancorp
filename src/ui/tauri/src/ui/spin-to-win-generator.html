@@ -197,7 +197,7 @@
       const origin = window.location.origin;
       const widgetUrl = `${origin}/api/v1/growth/spin-to-win/embed?tenant=${encodeURIComponent(tenantId)}&campaign=${encodeURIComponent(campaign)}&reward=${encodeURIComponent(reward)}`;
 
-      const code = `<div class="ohc-spin-to-win-widget">
+      const code = `<div class="omnisolo-spin-to-win-widget">
   <iframe src="${widgetUrl}" width="100%" height="400" style="border:none;border-radius:16px;overflow:hidden;" title="Spin To Win"></iframe>
   <div style="text-align: center; font-size: 12px; margin-top: 8px;">
     <a href="${origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a>

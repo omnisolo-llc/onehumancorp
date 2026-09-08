@@ -5,6 +5,7 @@ import { Header } from './Header.js';
 
 test('renders Header correctly', () => {
   const { lastFrame } = render(<Header />);
-  expect(lastFrame()).toMatch(/ONE HUMAN CORP/);
+  expect(lastFrame()).toMatch(/OMNISOLO/);
+  expect(lastFrame()).not.toMatch(/ONE HUMAN CORP/);
   expect(lastFrame()).toMatch(/- Standalone Agent Mode/);
 });

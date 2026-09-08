@@ -9,8 +9,8 @@ For small business owners like Carlos (a handyman) or Maya (a baker doing high-t
 - **Wix / Squarespace:** Similar to Shopify, they offer static form builders or require clunky integrations with third-party apps (e.g., DocuSign integrations) that incur extra monthly costs and break the native UX.
 - **Jobber / HoneyBook:** Built for service businesses and offer integrated contracts, but they are often desktop-first, highly rigid, and lack autonomous AI drafting. They still force the user to "build a template" manually.
 
-**OHC Advantage:**
-By introducing the "Invisible Contract & Liability Engine," OHC eliminates the concept of "drafting a contract." The Legal AI Agent autonomously drafts a localized, plain-language agreement based on the job details (e.g., line items, total cost, dates). The e-signature block is embedded directly into the 1-tap mobile checkout flow, unified with the deposit payment. This provides Zero Trust security, multi-tenant isolation, and complete mobile parity.
+**OmniSolo Advantage:**
+By introducing the "Invisible Contract & Liability Engine," OmniSolo eliminates the concept of "drafting a contract." The Legal AI Agent autonomously drafts a localized, plain-language agreement based on the job details (e.g., line items, total cost, dates). The e-signature block is embedded directly into the 1-tap mobile checkout flow, unified with the deposit payment. This provides Zero Trust security, multi-tenant isolation, and complete mobile parity.
 
 ## Design Doc
 
@@ -55,7 +55,7 @@ Implement the "Invisible Contract & Liability Engine" for OmniSolo. Your goal is
 
 You must create a seamless bottom-sheet UX for finger-drawn signatures that works flawlessly on low-end mobile devices and gracefully handles offline scenarios (optimistic UI updates). Implement the backend logic to accept, cryptographically hash, and immutably store the signature event linked to a specific Quote or Booking. Ensure the Legal AI Agent is integrated to dynamically generate the agreement text based on the job's context.
 
-Do not prescribe specific database schemas, column names, or function signatures. Focus on establishing the API contract between the frontend signature component and the backend ledger, ensuring strict Zero-Trust multi-tenant isolation. All UI components must adhere to OHC's premium, Translucent Glass materials design system. Include comprehensive E2E tests verifying the complete flow from Quote creation to successful signature and payment.
+Do not prescribe specific database schemas, column names, or function signatures. Focus on establishing the API contract between the frontend signature component and the backend ledger, ensuring strict Zero-Trust multi-tenant isolation. All UI components must adhere to OmniSolo's premium, Translucent Glass materials design system. Include comprehensive E2E tests verifying the complete flow from Quote creation to successful signature and payment.
 
 ## Priority
 P1

@@ -26,11 +26,11 @@ export default function ViralScratchOffGeneratorPage() {
     const prizeListStr = JSON.stringify(prizes);
 
     let code = `<!-- OmniSolo Scratch Off Widget -->
-<div id="ohc-scratch-off-widget"></div>
+<div id="omnisolo-scratch-off-widget"></div>
 <script>
   (function() {
     const prizes = ${prizeListStr};
-    const container = document.getElementById('ohc-scratch-off-widget');
+    const container = document.getElementById('omnisolo-scratch-off-widget');
     container.innerHTML = \`
       <div style="font-family: sans-serif; max-width: 300px; margin: 0 auto; text-align: center; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
         <h3 style="margin-top: 0; color: #111827; font-size: 18px; font-weight: bold;">scratch off!</h3>

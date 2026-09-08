@@ -4,7 +4,7 @@
     clippy::useless_vec
 )]
 /// Master Catalog B.2. Tools
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -60,7 +60,7 @@ pub mod toolsearch;
 pub mod workflow;
 
 #[async_trait::async_trait]
-impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
+impl ToolExecutor for omnisolo_builtin_agent_core::code_native::CodeNativeAdapter {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         self.execute_adapter(args).await
     }
@@ -108,10 +108,10 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 
 /// Build the default set of all tools.
 pub fn all_tools(
-    agent_llm: Option<std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>>,
-    llm: Option<std::sync::Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
+    agent_llm: Option<std::sync::Arc<dyn omnisolo_builtin_agent_llm::LlmClient>>,
+    llm: Option<std::sync::Arc<dyn omnisolo_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
     native_env: Option<
-        Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+        Arc<tokio::sync::RwLock<omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment>>,
     >,
 
     task_store: SharedTaskStore,

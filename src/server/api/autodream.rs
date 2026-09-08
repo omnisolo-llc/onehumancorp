@@ -1,6 +1,6 @@
-#[cfg(not(ohc_bazel_package))]
+#[cfg(not(omnisolo_bazel_package))]
 use crate::autodream::AutoDreamWorker;
-#[cfg(ohc_bazel_package)]
+#[cfg(omnisolo_bazel_package)]
 use ::server_lib::autodream::AutoDreamWorker;
 use axum::{
     Json, Router,
@@ -111,7 +111,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_autodream_sync_endpoint() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
+        if std::env::var("OMNISOLO_DATABASE_URL").is_err() {
             return;
         }
 

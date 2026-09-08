@@ -25,7 +25,7 @@ graph TD
         A_Dispute[Dispute Compiler Agent]
     end
 
-    subgraph OHC Core
+    subgraph OmniSolo Core
         T[(Universal Ledger)]
         M[Teammate Mesh]
         AD[AutoDream Memory / Vectors]

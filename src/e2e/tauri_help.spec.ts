@@ -58,7 +58,7 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
   test('Persona: Developer views the API documentation', async ({ page }) => {
     await page.goto('/api/v1/ui/api-docs.html');
     await expect(page.locator('text=Advanced:').first()).toBeVisible();
-    await expect(page.locator('text=OHC Advanced API Reference').first()).toBeVisible();
+    await expect(page.locator('text=OmniSolo Advanced API Reference').first()).toBeVisible();
   });
 
   test('Persona: Business Owner interacts with a Tooltip', async ({ page }) => {

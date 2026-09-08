@@ -3,9 +3,9 @@
 use std::sync::Arc;
 use tracing::{info, debug, error};
 use tokio::sync::Mutex;
-use ohc_builtin_agent::plane::Client as PlaneClient;
+use omnisolo_builtin_agent::plane::Client as PlaneClient;
 use crate::hub::Hub;
-use ohc_builtin_agent::plane::Issue;
+use omnisolo_builtin_agent::plane::Issue;
 
 pub struct TaskWorker {
     plane_client: Arc<PlaneClient>,
@@ -144,7 +144,7 @@ impl TaskWorker {
     }
 
     async fn dispatch_to_builtin_agent(payload: &str, description: &str, role: &str) -> Result<(), String> {
-        let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+        let address = std::env::var("OMNISOLO_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
         
         let mut attempt = 0;
         let max_attempts = 3;

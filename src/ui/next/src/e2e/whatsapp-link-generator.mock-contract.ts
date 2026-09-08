@@ -23,6 +23,6 @@ test.describe('WhatsApp Link Generator Growth Loop', () => {
         const phoneInput = page.locator('input[placeholder="e.g. 1234567890"]');
         await phoneInput.fill('1234567890');
         await page.click('button:has-text("Get Link")');
-        await expect(page.locator('textarea')).toHaveValue(/https:\/\/wa\.me\/1234567890\?text=.*?https:\/\/ohc\.app\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=test-tenant-123/);
+        await expect(page.locator('textarea')).toHaveValue(/https:\/\/wa\.me\/1234567890\?text=.*?https:\/\/cloud.omnisolo.co\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=test-tenant-123/);
     });
 });

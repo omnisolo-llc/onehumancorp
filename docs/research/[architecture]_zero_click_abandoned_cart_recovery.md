@@ -13,7 +13,7 @@ Small business owners (like Maya the baker and Carlos the handyman) know they lo
 - **Wix:** Basic recovery exists, but it's a static system. It lacks AI-driven personalization and proactive margin protection.
 - **Squarespace:** Requires users to manually activate the feature and write their own copy. No intelligent agent oversight.
 
-**OHC Advantage:**
+**OmniSolo Advantage:**
 OmniSolo will implement a "Zero-Click" approach. The system will autonomously detect abandoned checkouts and allow the AI "Promoter" agent to proactively generate personalized, context-aware follow-ups with dynamic, margin-safe discounts—presenting the owner with a simple "1-Tap Approve" notification on their mobile activity feed.
 
 ## Design Doc
@@ -23,10 +23,10 @@ OmniSolo will implement a "Zero-Click" approach. The system will autonomously de
 ```mermaid
 sequenceDiagram
     participant User as Customer
-    participant Checkout as OHC Edge Checkout
+    participant Checkout as OmniSolo Edge Checkout
     participant Manager as "The Manager" (Ops Agent)
     participant Promoter as "The Promoter" (Marketing Agent)
-    participant Feed as OHC Unified Activity Feed
+    participant Feed as OmniSolo Unified Activity Feed
     participant Owner as Business Owner (Mobile)
 
     User->>Checkout: Adds item to cart & enters contact info
@@ -89,7 +89,7 @@ erDiagram
 
 **The "Grandmother Test" Mobile Flow (375px viewport):**
 1. **The Notification:** The owner receives a push notification: *"✨ Maya, Sarah left a $45 custom cake in her cart. Tap to send her a 10% discount to finish checking out."*
-2. **The Activity Card:** Tapping opens the OHC Unified Activity Feed to a sleek glassmorphism card.
+2. **The Activity Card:** Tapping opens the OmniSolo Unified Activity Feed to a sleek glassmorphism card.
     - **Header:** "Abandoned Cart Detected"
     - **Body:** Shows Sarah's name, the cake image, and the AI's drafted message: *"Hi Sarah, noticed you left the Vegan Chocolate Cake in your cart! Here's 10% off to sweeten the deal if you finish your order today."*
     - **Actions:** A primary, glowing button: "Approve & Send" and a secondary, subtle button: "Edit Message".

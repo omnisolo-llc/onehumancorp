@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## Overview
-This document provides an overview of the Critical User Journeys (CUJs) for the OmniSolo (OHC) platform. Each CUJ is designed to meet the "Google Golden Standard," ensuring clarity, success metrics, and error recovery paths.
+This document provides an overview of the Critical User Journeys (CUJs) for the OmniSolo (OmniSolo) platform. Each CUJ is designed to meet the "Google Golden Standard," ensuring clarity, success metrics, and error recovery paths.
 
 ## List of CUJs
 
@@ -40,7 +40,7 @@ All CUJs are verified via automated Playwright tests and Kind e2e smoke tests.
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 ## Edge Cases

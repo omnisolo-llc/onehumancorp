@@ -164,7 +164,7 @@ Suggested direction:
 
 Acceptance checks:
 
-- Linux CI with `rpm` installed includes `:ohc_rpm`.
+- Linux CI with `rpm` installed includes `:omnisolo_rpm`.
 - Local Linux without `rpmbuild` can still analyze/build `//release:all_release_artifacts --nobuild`.
 - The release workflow either provides or documents the RPM toolchain.
 

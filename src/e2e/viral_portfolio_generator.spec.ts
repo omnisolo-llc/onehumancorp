@@ -32,9 +32,10 @@ test.describe('Viral Portfolio Generator Widget', () => {
     await expect(embedCode).toContainText('Graphic Designer');
     await expect(embedCode).toContainText('I design cool things.');
 
-    // Verify "OmniSolo" branding is visible by default
-    await expect(embedCode).toContainText('OmniSolo');
-    await expect(embedCode).toContainText('ohc.network/invite/');
+    // Verify "Powered by OmniSolo" branding is visible by default
+    await expect(embedCode).toContainText('Powered by OmniSolo');
+    await expect(embedCode).toContainText('https://cloud.omnisolo.co/invite/');
+    await expect(embedCode).not.toContainText('ohc.network');
 
     // Click "Copy Code"
     const copyBtn = page.locator('#copy-btn');

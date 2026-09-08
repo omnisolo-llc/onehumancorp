@@ -13,7 +13,7 @@ We investigated `src/server/orchestration/kairos/metrics.go` and found that whil
 2. Define Prometheus metrics: `MemoriesProcessedTotal` (Counter), `BatchProcessingDuration` (Histogram), and `ConsolidationErrorsTotal` (Counter), categorized by mode (Cloud vs Standalone).
 3. Instrument the relevant processing functions in `autodream_worker.go` and functions in `autodream.go` to increment these metrics.
 4. Register the new metrics with Prometheus.
-5. Update the `kairos_hybrid_metrics.json` Grafana dashboard to include panels for these new metrics, injecting the OHC Premium Feel CSS styles.
+5. Update the `kairos_hybrid_metrics.json` Grafana dashboard to include panels for these new metrics, injecting the OmniSolo Premium Feel CSS styles.
 
 ## Implementation Prompt
 You are an Implementer. Implement the design above:

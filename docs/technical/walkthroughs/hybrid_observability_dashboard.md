@@ -2,7 +2,7 @@
 
 # Full-Spectrum Hybrid Observability Dashboard Walkthrough
 
-Welcome to the interactive walkthrough for the Full-Spectrum Hybrid Observability Dashboard. The OmniSolo (OHC) architecture demands that every feature exposes high-fidelity metrics via OpenTelemetry and Prometheus, empowering agents and the Human CEO with complete visibility.
+Welcome to the interactive walkthrough for the Full-Spectrum Hybrid Observability Dashboard. The OmniSolo (OmniSolo) architecture demands that every feature exposes high-fidelity metrics via OpenTelemetry and Prometheus, empowering agents and the Human CEO with complete visibility.
 
 ## Architecture Flow
 
@@ -23,7 +23,7 @@ graph TD
 Dashboard access is secured via SPIFFE/SPIRE zero-trust principles. Do not embed static API keys in dashboard configurations.
 
 ### 2. Prometheus Histogram Queries
-When defining Prometheus histogram queries for OHC Grafana dashboards, ensure raw `_bucket` metrics used in `histogram_quantile` are always properly aggregated by the `le` label using `sum()`. You must also include any labels used in the panel's legend in the `by (...)` clause to prevent collapsing metrics and breaking visualizations.
+When defining Prometheus histogram queries for OmniSolo Grafana dashboards, ensure raw `_bucket` metrics used in `histogram_quantile` are always properly aggregated by the `le` label using `sum()`. You must also include any labels used in the panel's legend in the `by (...)` clause to prevent collapsing metrics and breaking visualizations.
 
 **Correct Example:**
 ```promql
@@ -40,7 +40,7 @@ Agents emit distributed traces that stitch together the lifecycle of a task from
 
 ## Interactive API
 
-To query raw metrics directly via the OHC Central Orchestrator, use the following interactive endpoint:
+To query raw metrics directly via the OmniSolo Central Orchestrator, use the following interactive endpoint:
 
 ### Fetch Core Health Metrics
 **GET** `/api/v1/observability/metrics`

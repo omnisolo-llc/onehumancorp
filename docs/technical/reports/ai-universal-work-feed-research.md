@@ -1,4 +1,4 @@
-# Research Report: OHC Universal Inbox and Agentic Assistant
+# Research Report: OmniSolo Universal Inbox and Agentic Assistant
 
 ## Problem Statement
 Owners and operators are overwhelmed by the multitude of channels where work enters (DMs, emails, WhatsApp, forms, etc.). They need a single, unified place to see everything and let AI draft actions based on context. Traditional SMB tools force the owner to act as a routing layer, manually sorting messages, extracting intents, copying data to CRM, and creating tasks. The proposed solution is an AI-first Work Feed where AI acts as the intake coordinator.
@@ -19,7 +19,7 @@ Owners and operators are overwhelmed by the multitude of channels where work ent
 
 ## Gap Matrix & Feature Heatmap
 
-| Feature | Shopify Magic | HubSpot AI | WeCom | OHC (Current) | OHC (Proposed) |
+| Feature | Shopify Magic | HubSpot AI | WeCom | OmniSolo (Current) | OmniSolo (Proposed) |
 |---------|---------------|------------|-------|---------------|----------------|
 | Unified Inbox | Yes | Yes | Yes | Partial | Yes |
 | AI Draft Replies | Yes | Yes | Yes | No | Yes |
@@ -41,7 +41,7 @@ quadrantChart
     "HubSpot AI": [0.5, 0.9]
     "Notion AI": [0.3, 0.3]
     "Lindy.ai": [0.8, 0.6]
-    "OHC (Proposed)": [0.9, 0.9]
+    "OmniSolo (Proposed)": [0.9, 0.9]
 \`\`\`
 
 ### Agentic Handoff Journey (Mermaid)
@@ -76,7 +76,7 @@ sequenceDiagram
 - **Integration Points**: Incoming webhooks from external channels -> PostgreSQL `messages` table -> RLS -> AI Job Queue (SKIP LOCKED) -> Gemini Pro API -> Updates UI via WebSockets.
 
 ## Implementation Prompt
-**User-Facing Outcome**: The owner opens the OHC app and sees a prioritized feed of actionable items, not a raw inbox. Each item has a pre-drafted response and proposed operational action (e.g., booking a date) ready for 1-tap approval.
+**User-Facing Outcome**: The owner opens the OmniSolo app and sees a prioritized feed of actionable items, not a raw inbox. Each item has a pre-drafted response and proposed operational action (e.g., booking a date) ready for 1-tap approval.
 **Critical User Journey (CUJ)**:
 1. Owner logs in.
 2. Owner navigates to "Work Feed".

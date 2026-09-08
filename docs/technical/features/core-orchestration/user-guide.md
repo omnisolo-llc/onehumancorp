@@ -6,7 +6,7 @@
 Core Orchestration serves as the foundational communication and execution framework within OmniSolo. It orchestrates the asynchronous and synchronous interactions (Virtual Meeting Rooms) between various specialized AI agents and the human CEO. Its value lies in breaking down complex epics into manageable, verifiable tasks while maintaining the rigid organizational hierarchy defined in your configuration.
 
 ## 2. Prerequisites & Requirements
-- **Hardware/Software**: The central OHC Orchestration Hub deployed on the Kubernetes cluster.
+- **Hardware/Software**: The central OmniSolo Orchestration Hub deployed on the Kubernetes cluster.
 - **Permissions**: CEO role for epic creation and overriding agent decisions.
 - **Dependencies**: The MCP Gateway for tool access and the Event Log (append-only) for state tracking.
 

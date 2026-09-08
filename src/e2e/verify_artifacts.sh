@@ -16,17 +16,17 @@ fi
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux expected artifacts
     EXPECTED_ARCHIVES=(
-        "ohc-cluster.tar.gz"
+        "omnisolo-cluster.tar.gz"
     )
 elif [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* ]]; then
     # Windows expected artifacts
     EXPECTED_ARCHIVES=(
-        "ohc-cluster.zip"
+        "omnisolo-cluster.zip"
     )
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS expected artifacts
     EXPECTED_ARCHIVES=(
-        "ohc-cluster.tar.gz"
+        "omnisolo-cluster.tar.gz"
     )
 else
     EXPECTED_ARCHIVES=()

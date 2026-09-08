@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Review Storefront</title>
     <style>
-        .ohc-walkthrough-overlay {
+        .omnisolo-walkthrough-overlay {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.4);
@@ -13,7 +13,7 @@
             z-index: 10000;
             pointer-events: auto;
         }
-        .ohc-walkthrough-highlight {
+        .omnisolo-walkthrough-highlight {
             position: absolute;
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
             border-radius: 8px;
@@ -21,7 +21,7 @@
             z-index: 10001;
             transition: all 0.3s ease;
         }
-        .ohc-walkthrough-bubble {
+        .omnisolo-walkthrough-bubble {
             position: absolute;
             background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%);
@@ -37,54 +37,54 @@
             opacity: 0;
             transform: translateY(10px);
         }
-        .ohc-walkthrough-bubble.visible {
+        .omnisolo-walkthrough-bubble.visible {
             opacity: 1;
             transform: translateY(0);
         }
-        .ohc-walkthrough-title {
+        .omnisolo-walkthrough-title {
             font-size: 16px;
             font-weight: 700;
             margin: 0 0 8px 0;
         }
-        .ohc-walkthrough-text {
+        .omnisolo-walkthrough-text {
             font-size: 14px;
             color: #64748b;
             margin: 0 0 16px 0;
             line-height: 1.4;
         }
-        .ohc-walkthrough-controls {
+        .omnisolo-walkthrough-controls {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-top: 16px;
         }
-        .ohc-walkthrough-btn {
+        .omnisolo-walkthrough-btn {
             background: #0066FF; color: white;
             border: none; border-radius: 8px;
             padding: 8px 16px;
             font-size: 14px; font-weight: 600;
             cursor: pointer; transition: background 0.2s;
         }
-        .ohc-walkthrough-btn:hover { background: #005ce6; }
-        .ohc-walkthrough-btn-secondary {
+        .omnisolo-walkthrough-btn:hover { background: #005ce6; }
+        .omnisolo-walkthrough-btn-secondary {
             background: rgba(0,0,0,0.05); border: none; border-radius: 8px;
             padding: 8px 16px; color: #1d1d1f;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
         }
-        .ohc-walkthrough-close {
+        .omnisolo-walkthrough-close {
             position: absolute;
             top: 12px; right: 12px;
             background: none; border: none; color: #86868b; cursor: pointer;
         }
         @media (prefers-color-scheme: dark) {
-            .ohc-walkthrough-bubble {
+            .omnisolo-walkthrough-bubble {
                 background: rgba(22, 22, 26, 0.95);
                 border-color: rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
             }
-            .ohc-walkthrough-btn-secondary {
+            .omnisolo-walkthrough-btn-secondary {
                 background: rgba(22, 22, 26, 0.7);
                 color: #f5f5f7;
             }

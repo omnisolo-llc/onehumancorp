@@ -8,7 +8,7 @@ This directory is the source for the repository documentation site.
 - Source code lives under `src/`.
 - Canonical desktop UI is under `src/ui/tauri/`.
 - GitHub issues are the task source of truth.
-- Historical or superseded material belongs in `docs/archive/`.
+- Superseded material is removed; source history remains available in Git.
 
 ## Start Here
 

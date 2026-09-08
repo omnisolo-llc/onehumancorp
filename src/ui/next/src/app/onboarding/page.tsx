@@ -8,12 +8,12 @@ import { IconLabel } from "./components/IconLabel";
 
 
 function generateSubdomain(name: string): string {
-  if (!name || name.trim() === "") return "my-business.omnisolo.co";
+  if (!name || name.trim() === "") return "my-business.cloud.omnisolo.co";
   const cleanName = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return cleanName ? `${cleanName}.omnisolo.co` : "my-business.omnisolo.co";
+  return cleanName ? `${cleanName}.cloud.omnisolo.co` : "my-business.cloud.omnisolo.co";
 }
 
 export default function OnboardingWizard() {
@@ -1877,7 +1877,7 @@ export default function OnboardingWizard() {
                         Free Subdomain
                       </span>
                       <span className="text-[10px] opacity-70">
-                        your-name.omnisolo.co
+                        your-name.cloud.omnisolo.co
                       </span>
                     </div>
                     <div

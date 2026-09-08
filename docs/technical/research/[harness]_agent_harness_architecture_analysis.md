@@ -1,4 +1,4 @@
-# OHC Oracle Research Report: Agent Harness & Sandbox Architecture
+# OmniSolo Oracle Research Report: Agent Harness & Sandbox Architecture
 
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;">
 
@@ -6,7 +6,7 @@
 Implement OS-Level Namespace Sandboxing via Bubblewrap (`bwrap`)
 
 ## Problem Statement
-OHC's current agent harness relies on unconstrained process execution, creating a massive security and stability vulnerability. Without robust OS-level isolation, agents can accidentally overwrite host system files, traverse outside their designated worktrees, and bind to arbitrary network ports. Competitors like Claude Code employ strict `bwrap` (Bubblewrap) namespaces to enforce read-only system mounts and restrict visibility purely to the workspace context. OHC needs this native isolation layer to achieve absolute autonomy safely.
+OmniSolo's current agent harness relies on unconstrained process execution, creating a massive security and stability vulnerability. Without robust OS-level isolation, agents can accidentally overwrite host system files, traverse outside their designated worktrees, and bind to arbitrary network ports. Competitors like Claude Code employ strict `bwrap` (Bubblewrap) namespaces to enforce read-only system mounts and restrict visibility purely to the workspace context. OmniSolo needs this native isolation layer to achieve absolute autonomy safely.
 
 ## Research Report
 ### Claude Code (v2.1.88)
@@ -21,8 +21,8 @@ OpenClaw implements a modular Multi-Tiered Execution Container architecture.
 *   **Isolation Strategy:** Uses Docker containers scoped per session to enforce isolation unless explicit host access is granted.
 *   **Harness Registry:** Features a dynamic `AgentHarness` registry allowing fallback mechanisms (e.g., `pi-embedded-runner`).
 
-### OHC vs Market Reality
-| Feature Capability | OHC Current State | Market Standard (Claude/Claw) | Priority Gap |
+### OmniSolo vs Market Reality
+| Feature Capability | OmniSolo Current State | Market Standard (Claude/Claw) | Priority Gap |
 | :--- | :--- | :--- | :--- |
 | **Execution Sandboxing** | Direct Host execution | `bwrap` OS sandboxes / Docker | 🚨 Critical (P0) |
 | **Network Control** | Full Host Network | Intercepting SOCKS/HTTP Proxies | 🟡 High (P1) |
@@ -32,7 +32,7 @@ OpenClaw implements a modular Multi-Tiered Execution Container architecture.
 ### Architecture
 ```mermaid
 graph TD
-    A[KAIROS Orchestrator] --> B(OHC Hybrid Harness Engine)
+    A[KAIROS Orchestrator] --> B(OmniSolo Hybrid Harness Engine)
 
     subgraph Secure Execution Sandbox
         B -->|Tool Exec| C{OS-Native Sandbox Manager}
@@ -43,7 +43,7 @@ graph TD
     subgraph Telemetry & Control
         D -.-> G[Local MITM Proxy]
         G -->|Allowed| H[Internet]
-        G -->|Denied| I[(OHC Central Database / pgvector)]
+        G -->|Denied| I[(OmniSolo Central Database / pgvector)]
         B -->|Semantic Check| J[AST Bash Policy Engine]
         J -->|Valid| C
     end
@@ -59,7 +59,7 @@ graph TD
 
 ## Implementation Prompt
 **Role:** Implementer Agent
-**Task:** Implement the `bwrap` backend for the OHC Agent Harness.
+**Task:** Implement the `bwrap` backend for the OmniSolo Agent Harness.
 1. Define the `AgentHarnessPolicy` struct in `src/server/agents/harness/policy.go`.
 2. Implement `bwrapHarness` in `src/server/agents/harness/bwrap.go`.
 3. The `Exec` method should construct a `bwrap` command. It MUST include: `--unshare-all`, `--share-net` (if network is enabled), `--ro-bind / /`, and `--bind <workspace> <workspace>`.

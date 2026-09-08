@@ -8,9 +8,9 @@
 ## Problem Statement
 Small business owners like Leo and Priya need a way to offer recurring subscriptions and memberships. However, existing platforms either don't support this natively, require expensive third-party apps, or involve complex configurations (webhooks, dunning setups). They need a zero-configuration, AI-powered system where they can just tap "Make this a monthly subscription" on their phone and the platform handles the rest. They don't know what "dunning" or "proration" means, and they shouldn't have to.
 
-## Proposed Solution: The OHC Zero-Configuration AI Subscription Engine
+## Proposed Solution: The OmniSolo Zero-Configuration AI Subscription Engine
 
-To provide a seamless, offline-capable, and AI-driven subscription experience, OHC will implement a multi-layered architecture:
+To provide a seamless, offline-capable, and AI-driven subscription experience, OmniSolo will implement a multi-layered architecture:
 
 1. **Offline-First Storage & CRDT Sync (IndexedDB/SQLite):**
    - **Mobile Clients (PWA/Flutter):** Store subscription states, active memberships, and redemption counts (e.g., Leo's lesson packages) locally using IndexedDB (Web) or SQLite (Mobile).
@@ -37,7 +37,7 @@ To provide a seamless, offline-capable, and AI-driven subscription experience, O
 sequenceDiagram
     autonumber
     actor Customer
-    participant MobileApp as OHC Mobile App (Offline/Online)
+    participant MobileApp as OmniSolo Mobile App (Offline/Online)
     participant SubEngine as Backend Sub Engine
     participant FinanceAgent as AI Finance Dept
     participant CS_Agent as AI Customer Success Dept

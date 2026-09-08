@@ -29,7 +29,7 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         // Check the "OmniSolo" footer in the live preview
         const previewFooterLink = page.locator('a', { hasText: 'OmniSolo' });
         await expect(previewFooterLink).toBeVisible();
-        await expect(previewFooterLink).toHaveAttribute('href', /^https:\/\/ohc\.store\/join\?ref=e2e-bakery/);
+        await expect(previewFooterLink).toHaveAttribute('href', /^https:\/\/cloud.omnisolo.co\/join\?ref=e2e-bakery/);
 
         // Wait a moment for the useEffect to save to localStorage
         await page.waitForTimeout(500);
@@ -44,7 +44,7 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         // Verify the viral footer exists on the public page
         const publicFooterLink = page.locator('a', { hasText: 'OmniSolo' });
         await expect(publicFooterLink).toBeVisible();
-        await expect(publicFooterLink).toHaveAttribute('href', 'https://ohc.store/join?ref=e2e-bakery');
+        await expect(publicFooterLink).toHaveAttribute('href', 'https://cloud.omnisolo.co/join?ref=e2e-bakery');
 
         // 6. Test toggling the "remove branding" checkbox
         await page.goto('/link-in-bio-generator');

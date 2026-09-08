@@ -2,15 +2,15 @@
 
 # KAIROS API Playbook Visual Walkthrough
 
-Welcome to the visual walkthrough of the OmniSolo API, the central nervous system of the Agentic OS. This guide provides interactive, diagram-driven insights into the Swarm Intelligence Protocol (OHC-SIP).
+Welcome to the visual walkthrough of the OmniSolo API, the central nervous system of the Agentic OS. This guide provides interactive, diagram-driven insights into the Swarm Intelligence Protocol (OmniSolo-SIP).
 
 ## 1. Zero Secrets Authentication Flow
 
-All endpoints in OHC are secured via SPIFFE/SPIRE zero-trust principles. We eliminate static API keys to ensure maximum security.
+All endpoints in OmniSolo are secured via SPIFFE/SPIRE zero-trust principles. We eliminate static API keys to ensure maximum security.
 
 ```mermaid
 graph TD
-    Client[Human CEO / External Tools] --> API[OHC Gateway]
+    Client[Human CEO / External Tools] --> API[OmniSolo Gateway]
     API --> Auth{SPIFFE / OIDC}
     Auth -->|Valid| Hub[Orchestration Hub]
     Auth -->|Invalid| 401[401 Unauthorized]

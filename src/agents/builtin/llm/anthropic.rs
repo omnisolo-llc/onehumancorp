@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use super::LlmClient;
 use super::circuit_breaker::CircuitBreaker;
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 use std::time::Duration;
 
 pub struct AnthropicClient {

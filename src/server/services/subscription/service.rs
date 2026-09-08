@@ -52,7 +52,7 @@ impl DunningMessageGenerator for LlmDunningMessageGenerator {
             "Write a concise, helpful SMS for subscription payment recovery. Business: {}. Subscriber id: {}. Mention the payment could not be processed and ask them to update their saved payment method. Avoid blame and keep it under 240 characters.",
             business_name, subscriber_id
         );
-        match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+        match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                 crate::minimax::MinimaxClient::new(api_key)

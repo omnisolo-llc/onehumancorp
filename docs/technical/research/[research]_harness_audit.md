@@ -3,7 +3,7 @@
 Parent: #1000
 
 ## Problem Statement
-OHC currently requires an advanced, robust Agent Harness. By inspecting the open source "OpenClaw", "Hermes Agent", and the leaked "Claude Code", we have identified critical features and gaps in OHC's execution architecture. The current harness lacks fine-grained sandbox control, AST-based permission systems, error recovery loops, and comprehensive execution telemetry, making it less secure and observable than state-of-the-art frameworks.
+OmniSolo currently requires an advanced, robust Agent Harness. By inspecting the open source "OpenClaw", "Hermes Agent", and the leaked "Claude Code", we have identified critical features and gaps in OmniSolo's execution architecture. The current harness lacks fine-grained sandbox control, AST-based permission systems, error recovery loops, and comprehensive execution telemetry, making it less secure and observable than state-of-the-art frameworks.
 
 ## Research Report
 **Targets**: OpenClaw (`/tmp/research/openclaw`), Hermes Agent (`/tmp/research/hermes-agent`), and Claude Code (`/tmp/claude-code/CC-Source`)
@@ -37,7 +37,7 @@ OHC currently requires an advanced, robust Agent Harness. By inspecting the open
 ### 4. OpenTelemetry Integration
 - **Claude Code Parity**: Incorporate OpenTelemetry metrics (`harness_sandbox_started`, `harness_tool_error_recovered`, `harness_tool_executed`, `harness_sandbox_bypass_attempted`) into Prometheus.
 
-| Feature Area | OHC Current | Target State (Claude Code/OpenClaw/Hermes) | Gap |
+| Feature Area | OmniSolo Current | Target State (Claude Code/OpenClaw/Hermes) | Gap |
 | --- | --- | --- | --- |
 | **Isolation** | Basic Go `exec.Command` | Dedicated Docker Sandboxes & Network/FS Restrictions | High |
 | **Security** | None | AST-based Bash Command Verification | High |
@@ -46,7 +46,7 @@ OHC currently requires an advanced, robust Agent Harness. By inspecting the open
 
 ```mermaid
 graph TD;
-    A[OHC Master Orchestrator] -->|gRPC Execute| B[Agent Harness Service];
+    A[OmniSolo Master Orchestrator] -->|gRPC Execute| B[Agent Harness Service];
     B --> F[AST Security Parser];
     F -->|Allowed| C[Sandbox Manager / Docker];
     F -->|Blocked| E[Prometheus / OpenTelemetry];

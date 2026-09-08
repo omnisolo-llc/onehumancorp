@@ -24,8 +24,8 @@ test.describe('Unified Agent Feed Mobile Test', () => {
     // Switch back
     await page.locator('button', { hasText: /Proposals/ }).first().click({ force: true });
 
-    // Verify one of the approval items is visible
-    await expect(page.locator('h3', { hasText: /Agent tentatively booked/ }).first()).toBeVisible();
+    // Verify the backend-backed feed produced at least one actionable proposal.
+    await expect(page.locator('[data-testid^="triage-card-"]').first()).toBeVisible();
   });
 
   test('should display Action Needed tag correctly', async ({ page }) => {
@@ -71,8 +71,9 @@ test.describe('Unified Agent Feed Mobile Test', () => {
     // Switch tabs
     await page.locator('button', { hasText: 'Activity Feed' }).click();
 
-    // Loading or empty state or populated activities
-    const activityFeedItems = page.locator('.glassmorphism', { hasText: /Activity Feed|No recent activity found|Action completed/ });
-    await expect(activityFeedItems.first()).toBeVisible();
+    // Loading, empty, or populated activity surfaces must all be rendered with the shared glass treatment.
+    const activityFeedSurface = page.locator('[data-testid^="activity-feed-"]').first();
+    await expect(activityFeedSurface).toBeVisible();
+    await expect(activityFeedSurface).toHaveClass(/glassmorphism/);
   });
 });

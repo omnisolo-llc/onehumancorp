@@ -10,7 +10,7 @@ Maya's pain points are clear:
 - **No Built-in AI Help:** Maya spends hours typing responses to the same questions ("Do you have vegan options?", "How much is shipping?"). Existing platforms don't intelligently handle these repetitive tasks.
 - **Mobile Friction:** Most legacy eCommerce dashboards are practically unusable on a mobile phone (Maya's primary device).
 
-The opportunity is to build an **Autonomous Social Commerce Agent** that lives inside OHC, natively syncing with her social channels, instantly converting conversational DMs into secure checkouts, and autonomously updating inventory without requiring Maya to ever log into a clunky desktop dashboard.
+The opportunity is to build an **Autonomous Social Commerce Agent** that lives inside OmniSolo, natively syncing with her social channels, instantly converting conversational DMs into secure checkouts, and autonomously updating inventory without requiring Maya to ever log into a clunky desktop dashboard.
 
 ---
 
@@ -58,14 +58,14 @@ Shopify offers an exhaustive suite: online store builder, POS, inventory, shippi
 - *Positive*: "It just works once you have it set up," "Shop Pay is amazing for conversions."
 - *Negative*: "Setup is a nightmare for someone who isn't tech-savvy." "I'm paying $39/mo plus app fees for things that should be built-in." "Managing my store from the app is clunky; I have to use a laptop." "I still have to manually reply to all my Instagram DMs and send links to the store."
 
-### Track 3: OHC Gap & Pain Point Identification
+### Track 3: OmniSolo Gap & Pain Point Identification
 
-**OHC Feature Audit vs. Shopify:**
-- OHC currently lacks a deep, invisible integration with social media DMs (Instagram/Meta Graph API) to facilitate conversational checkouts.
-- OHC's current capabilities require users to manually bridge the gap between social engagement and OHC checkout links.
+**OmniSolo Feature Audit vs. Shopify:**
+- OmniSolo currently lacks a deep, invisible integration with social media DMs (Instagram/Meta Graph API) to facilitate conversational checkouts.
+- OmniSolo's current capabilities require users to manually bridge the gap between social engagement and OmniSolo checkout links.
 
 **Gap Matrix:**
-| Feature | Shopify | Durable | OHC (Current) | OHC (Proposed) |
+| Feature | Shopify | Durable | OmniSolo (Current) | OmniSolo (Proposed) |
 | :--- | :--- | :--- | :--- | :--- |
 | **Instant Store Generation** | ❌ (Manual) | ✅ | ✅ | ✅ |
 | **Native Social Chat Checkout** | ❌ (Requires Apps) | ❌ | ❌ | ✅ |
@@ -82,9 +82,9 @@ Reddit (r/smallbusiness) is full of complaints: "I get 50 DMs a day asking 'is t
 
 **Agentic Solution Design:**
 We will implement an **Autonomous Social Commerce Agent**. When a customer DMs Maya on Instagram:
-1. The OHC Agent reads the DM.
+1. The OmniSolo Agent reads the DM.
 2. It understands intent (e.g., "I want 2 dozen vegan cupcakes for Friday").
-3. It checks OHC inventory.
+3. It checks OmniSolo inventory.
 4. It replies naturally, confirming availability, and instantly generates a seamless One-Click Checkout link *inside the chat*.
 5. Upon payment, the agent updates inventory, schedules the order, and sends Maya a simple mobile push notification: "You have a new order of cupcakes for Friday. $45 paid."
 
@@ -93,7 +93,7 @@ We will implement an **Autonomous Social Commerce Agent**. When a customer DMs M
 ## Design Doc
 
 ### High-Level Architecture
-- **Agent Integration Layer:** Connects OHC Orchestration Hub to Meta Graph API / WhatsApp Business API.
+- **Agent Integration Layer:** Connects OmniSolo Orchestration Hub to Meta Graph API / WhatsApp Business API.
 - **Conversational Engine:** Specialized AI prompt pipeline that reads intent, extracts product entities, and safely interacts with the `InventoryLedger` and `CheckoutEngine`.
 - **Checkout Link Generator:** Creates ephemeral, signed checkout sessions that render perfectly in mobile webviews (e.g., inside the Instagram app browser).
 
@@ -104,9 +104,9 @@ sequenceDiagram
     autonumber
     actor Customer as Customer (Instagram)
     participant IG as Meta/Instagram API
-    participant Agent as OHC Autonomous Agent
-    participant Inventory as OHC Inventory Ledger
-    participant Checkout as OHC Checkout Engine
+    participant Agent as OmniSolo Autonomous Agent
+    participant Inventory as OmniSolo Inventory Ledger
+    participant Checkout as OmniSolo Checkout Engine
     actor Maya as Maya (Mobile App)
 
     Customer->>IG: "Can I get 2 dozen vegan cupcakes for Friday?"
@@ -125,7 +125,7 @@ sequenceDiagram
 ```
 
 ### Mobile UX Flow (375px First)
-1. **Onboarding:** Maya opens OHC app -> Taps "Connect Instagram" -> Grants permissions.
+1. **Onboarding:** Maya opens OmniSolo app -> Taps "Connect Instagram" -> Grants permissions.
 2. **Agent Config:** Maya toggles "Auto-Reply & Sell" to ON. She provides 3 simple rules (e.g., "Always require 48h notice for cakes").
 3. **Passive Monitoring:** Maya goes about her day.
 4. **The Notification:** Maya receives a rich push notification: "💰 +$45.00: 2 Dozen Vegan Cupcakes (Friday)".
@@ -136,10 +136,10 @@ sequenceDiagram
 ## Implementation Prompt
 
 **User-Facing Outcome:**
-Users can connect their social media accounts to OHC and allow an AI agent to handle customer inquiries, negotiate simple sales, and finalize checkouts directly in DMs. The user only needs to fulfill the orders that appear in their unified mobile inbox as "Paid".
+Users can connect their social media accounts to OmniSolo and allow an AI agent to handle customer inquiries, negotiate simple sales, and finalize checkouts directly in DMs. The user only needs to fulfill the orders that appear in their unified mobile inbox as "Paid".
 
 **Critical User Journey (CUJ):**
-1. User authorizes social media integration in OHC.
+1. User authorizes social media integration in OmniSolo.
 2. User enables the Autonomous Social Commerce Agent.
 3. Customer messages the business social account.
 4. Agent interprets the message, verifies inventory, and replies with a direct checkout link.
@@ -156,7 +156,7 @@ Users can connect their social media accounts to OHC and allow an AI agent to ha
 ---
 
 ## Priority
-**P0** - Critical to differentiating OHC from legacy platforms like Shopify and moving into proactive agentic commerce.
+**P0** - Critical to differentiating OmniSolo from legacy platforms like Shopify and moving into proactive agentic commerce.
 
 ---
 

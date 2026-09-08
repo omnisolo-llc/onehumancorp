@@ -202,7 +202,7 @@ export default function PreOrderWidgetPage() {
                 Copy and paste this code into your website's HTML where you want the waitlist to appear.
               </p>
               <div className="bg-gray-100 dark:bg-black/50 p-4 rounded-xl font-mono text-sm text-gray-800 dark:text-gray-200 overflow-x-auto mb-6">
-                {`<div id="ohc-pre-order-widget" data-product="${productName}" data-offer="${offerText}" data-theme="${theme}" data-tenant="${tenant}"></div>`}
+                {`<div id="omnisolo-pre-order-widget" data-product="${productName}" data-offer="${offerText}" data-theme="${theme}" data-tenant="${tenant}"></div>`}
                 <br/>
                 {`<script src="https://cloud.omnisolo.co/widgets/pre-order.js" async></script>`}
                 {!removeBranding && (

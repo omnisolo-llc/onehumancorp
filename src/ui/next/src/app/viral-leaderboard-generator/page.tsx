@@ -32,7 +32,7 @@ export default function ViralLeaderboardGeneratorPage() {
   };
 
   const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-leaderboard/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}`;
-  const embedCode = `<div id="ohc-leaderboard"></div>\n<script src="https://cloud.omnisolo.co/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}"></script>`;
+  const embedCode = `<div id="omnisolo-leaderboard"></div>\n<script src="https://cloud.omnisolo.co/api/v1/growth/embed/widget?type=leaderboard&tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&metric=${metric}&branding=${!hasPro}"></script>`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -43,7 +43,7 @@ export default function ViralLeaderboardGeneratorPage() {
   if (!isClient) return null;
 
   return (
-    <div className="ohc-growth-card flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
+    <div className="omnisolo-growth-card flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 items-center justify-center py-10 px-4">
       <div className="w-full max-w-5xl bg-white/80 backdrop-blur-xl rounded-[24px] shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
         <div className="flex-1 min-w-0 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Viral Leaderboard Generator 🏆</h1>

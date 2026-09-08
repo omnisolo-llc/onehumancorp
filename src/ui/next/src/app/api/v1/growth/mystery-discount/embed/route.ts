@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
     const mainDesc = document.getElementById('main-desc');
     const doubleDiscountMsg = document.getElementById('double-discount');
 
-    const referralLink = "https://${tenant}.omnisolo.co?ref=mystery";
+    const referralLink = "https://${tenant}.cloud.omnisolo.co?ref=mystery";
     const shareText = "I just unlocked a mystery discount at ${tenant}! 🎁 Get yours here: " + referralLink;
 
     unlockBtn.addEventListener('click', () => {

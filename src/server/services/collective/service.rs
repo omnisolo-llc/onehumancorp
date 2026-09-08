@@ -1,4 +1,4 @@
-use ::server_ohc::collective::{
+use ::server_omnisolo::collective::{
     AcceptInviteRequest, AcceptInviteResponse, Collective, GetCollectivesRequest,
     GetCollectivesResponse, GetNearbyTenantsRequest, GetNearbyTenantsResponse, InviteTenantRequest,
     InviteTenantResponse, collective_service_server::CollectiveService,

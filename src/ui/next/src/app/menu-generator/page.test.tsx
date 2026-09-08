@@ -23,6 +23,16 @@ describe('MenuGeneratorPage', () => {
     expect(screen.getByText('⚡ Powered by OmniSolo')).toBeTruthy();
   });
 
+  it('does not depend on an external Google Fonts stylesheet', () => {
+    render(<MenuGeneratorPage />);
+
+    const styleText = [...document.querySelectorAll('style')]
+      .map((style) => style.textContent || '')
+      .join('\n');
+
+    expect(styleText).not.toMatch(/fonts\.(googleapis|gstatic)\.com/i);
+  });
+
   it('generates menu link on valid input', async () => {
     render(<MenuGeneratorPage />);
 

@@ -31,7 +31,7 @@ test.describe.serial('Review Reward Growth Loop', () => {
     const previewTitle = page.locator('#previewTitle');
     await expect(previewTitle).toHaveText('Leave a review, get 15% off!');
 
-    // Ensure the powered by OHC link is present
+    // Ensure the powered by OmniSolo link is present
     const poweredByLink = page.locator('#previewBranding');
     await expect(poweredByLink).toBeVisible();
     await expect(poweredByLink).toHaveText('⚡ OmniSolo');

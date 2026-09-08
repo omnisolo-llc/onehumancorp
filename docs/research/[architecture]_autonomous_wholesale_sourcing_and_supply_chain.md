@@ -4,9 +4,9 @@
 **Autonomous Wholesale Sourcing & Intelligent Supply Chain: The Zero-Touch Inventory Engine**
 
 ## 2. Problem Statement
-For OmniSolo (OHC) core personas selling physical goods—like **Priya (boutique owner)** and **Maya (baker)**—inventory replenishment is a reactive, manual, and stressful process. They must manually monitor stock levels, hunt for new wholesale products on fragmented platforms like Faire or Amazon Business, negotiate with suppliers via email, and manually create Purchase Orders.
+For OmniSolo (OmniSolo) core personas selling physical goods—like **Priya (boutique owner)** and **Maya (baker)**—inventory replenishment is a reactive, manual, and stressful process. They must manually monitor stock levels, hunt for new wholesale products on fragmented platforms like Faire or Amazon Business, negotiate with suppliers via email, and manually create Purchase Orders.
 
-Small business owners suffer from "Procurement Paralysis": they know they need to restock or diversify their catalog but are overwhelmed by the administrative burden. Current platforms (Shopify, Wix) treat inventory as a static database. They tell you when you are out of stock, but they don't help you find and buy the next batch. OHC needs an autonomous supply chain engine that not only predicts when to restock but actively sources products and negotiates wholesale terms, presenting the owner with a single "1-Tap Approve" button.
+Small business owners suffer from "Procurement Paralysis": they know they need to restock or diversify their catalog but are overwhelmed by the administrative burden. Current platforms (Shopify, Wix) treat inventory as a static database. They tell you when you are out of stock, but they don't help you find and buy the next batch. OmniSolo needs an autonomous supply chain engine that not only predicts when to restock but actively sources products and negotiates wholesale terms, presenting the owner with a single "1-Tap Approve" button.
 
 ## 3. Research Report
 ### Competitive Landscape
@@ -15,9 +15,9 @@ Small business owners suffer from "Procurement Paralysis": they know they need t
 *   **Amazon Business:** Robust logistics but lacks personalized, agentic sourcing for specialized boutiques or artisans.
 *   **Legacy ERPs (NetSuite, SAP):** Powerful supply chain tools but fail the "Grandmother Test" and are prohibitively expensive for solopreneurs.
 
-### OHC Market Advantage: The "Agentic" Supply Chain
-While competitors provide **Marketplaces**, OHC provides a **Procurement Department**.
-1. **Predictive Replenishment:** Instead of simple low-stock alerts, the OHC Operations Agent analyzes sales velocity to predict "Stock-Out Dates" weeks in advance.
+### OmniSolo Market Advantage: The "Agentic" Supply Chain
+While competitors provide **Marketplaces**, OmniSolo provides a **Procurement Department**.
+1. **Predictive Replenishment:** Instead of simple low-stock alerts, the OmniSolo Operations Agent analyzes sales velocity to predict "Stock-Out Dates" weeks in advance.
 2. **Autonomous Sourcing:** The Sourcing Agent proactively scans connected wholesale networks (via MCP or public APIs) to find products that match the merchant's "Vibe" and price points.
 3. **Automated Negotiation:** The AI can draft and send restock inquiries or wholesale applications to suppliers, handling the back-and-forth communication invisibly.
 

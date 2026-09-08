@@ -22,7 +22,7 @@ describe('ViralGrowthWidget', () => {
         render(<ViralGrowthWidget />);
 
         expect(screen.getByText('Invite Your Network')).toBeInTheDocument();
-        expect(screen.getByText('https://cloud.omnisolo.co/join/ohc')).toBeInTheDocument();
+        expect(screen.getByText('https://cloud.omnisolo.co/join/omnisolo')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Copy Link' })).toBeInTheDocument();
         expect(screen.getByRole('link', { name: /post/i })).toHaveAttribute('href', expect.stringContaining('https://twitter.com/intent/tweet'));
         expect(screen.getByRole('link', { name: /share/i })).toHaveAttribute('href', expect.stringContaining('https://wa.me/'));

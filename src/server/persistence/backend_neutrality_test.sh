@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source_root="${OHC_SERVER_SOURCE_ROOT:-${TEST_SRCDIR:-}/${TEST_WORKSPACE:-_main}/src/server}"
+source_root="${OMNISOLO_SERVER_SOURCE_ROOT:-${TEST_SRCDIR:-}/${TEST_WORKSPACE:-_main}/src/server}"
 if [[ ! -d "$source_root" ]]; then
   source_root="$(git rev-parse --show-toplevel)/src/server"
 fi

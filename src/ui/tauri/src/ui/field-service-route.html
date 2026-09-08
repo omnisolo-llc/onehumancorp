@@ -225,7 +225,7 @@
 
 
     // Offline Sync Logic (IndexedDB CRDT)
-    const DB_NAME = "OHC_Offline_Queue_FieldService";
+    const DB_NAME = "OMNISOLO_Offline_Queue_FieldService";
     const STORE_NAME = "actions";
     const DB_VERSION = 1;
 
@@ -278,7 +278,7 @@
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             });
-            window.dispatchEvent(new Event("ohc_queue_updated"));
+            window.dispatchEvent(new Event("omnisolo_queue_updated"));
         } catch (e) {
             console.error("Failed to enqueue offline mutation", e);
         }
@@ -359,7 +359,7 @@
         syncOfflineQueue();
     });
     window.addEventListener("offline", updateOfflineStatus);
-    window.addEventListener("ohc_queue_updated", updateOfflineStatus);
+    window.addEventListener("omnisolo_queue_updated", updateOfflineStatus);
 
     // Initial check
     updateOfflineStatus();

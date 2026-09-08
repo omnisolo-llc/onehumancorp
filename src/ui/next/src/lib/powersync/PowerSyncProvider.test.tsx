@@ -2,7 +2,11 @@ import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { getPowerSyncDB } from './db';
-import { isPowerSyncSupportedForLocation, PowerSyncProvider } from './PowerSyncProvider';
+import {
+  isPowerSyncSupportedForLocation,
+  normalizePowerSyncCredentials,
+  PowerSyncProvider,
+} from './PowerSyncProvider';
 
 vi.mock('./db', () => ({
   getPowerSyncDB: vi.fn(),
@@ -34,6 +38,24 @@ afterEach(() => {
 
 test('allows PowerSync on secure browser contexts', () => {
   expect(isPowerSyncSupportedForLocation(true, '172.17.197.51')).toBe(true);
+});
+
+test('normalizes backend Unix expiry into the Date expected by PowerSync', () => {
+  const credentials = normalizePowerSyncCredentials({
+    powersync_url: 'https://sync.example.com',
+    token: 'scoped-token',
+    expires_at: 1_700_000_000,
+  });
+
+  expect(credentials).toEqual({
+    endpoint: 'https://sync.example.com',
+    token: 'scoped-token',
+    expiresAt: new Date(1_700_000_000 * 1000),
+  });
+});
+
+test('returns null when PowerSync is disabled without an endpoint', () => {
+  expect(normalizePowerSyncCredentials({ token: 'scoped-token' })).toBeNull();
 });
 
 test('allows PowerSync on localhost even when served over http', () => {

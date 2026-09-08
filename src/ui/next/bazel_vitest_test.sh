@@ -35,10 +35,10 @@ mkdir -p "$work_dir"
 cp -RL src "$work_dir/src"
 
 for file in \
-  src/server/monitoring/dashboards/ohc-hybrid-telemetry.json \
-  deploy/helm/ohc/dashboards/ohc-hybrid-telemetry.json \
-  deploy/grafana/dashboards/ohc-hybrid-telemetry.json \
-  deploy/docker/grafana/provisioning/dashboards/ohc-hybrid-telemetry.json; do
+  src/server/monitoring/dashboards/omnisolo-hybrid-telemetry.json \
+  deploy/helm/omnisolo/dashboards/omnisolo-hybrid-telemetry.json \
+  deploy/grafana/dashboards/omnisolo-hybrid-telemetry.json \
+  deploy/docker/grafana/provisioning/dashboards/omnisolo-hybrid-telemetry.json; do
   if [[ -f "$runfiles_root/$file" ]]; then
     mkdir -p "$work_dir/$(dirname "$file")"
     cp -L "$runfiles_root/$file" "$work_dir/$file"

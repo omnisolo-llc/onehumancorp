@@ -62,7 +62,7 @@ test.describe('Viral Chat Embed Loop', () => {
 
               const aiMsg = document.createElement('div');
               aiMsg.className = 'msg msg-ai';
-              aiMsg.textContent = "I'm a demo agent embedded from OHC! In a real environment, I would connect to the backend API to answer your request.";
+              aiMsg.textContent = "I'm a demo agent embedded from OmniSolo! In a real environment, I would connect to the backend API to answer your request.";
               messages!.appendChild(aiMsg);
               messages!.scrollTop = messages!.scrollHeight;
           } catch(e) {}
@@ -74,6 +74,6 @@ test.describe('Viral Chat Embed Loop', () => {
     await page.locator('#chat-input').fill('Hello!');
     await page.locator('#send-btn').click();
 
-    await expect(page.getByText("I'm a demo agent embedded from OHC!")).toBeVisible();
+    await expect(page.getByText("I'm a demo agent embedded from OmniSolo!")).toBeVisible();
   });
 });

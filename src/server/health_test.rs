@@ -8,8 +8,8 @@ use crate::hub::Hub;
 #[tokio::test]
 async fn test_health_handler_success() {
     let db_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+        std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
@@ -59,8 +59,8 @@ async fn test_setup_health_check_endpoint() {
     use crate::services::onboarding::onboarding_agent::OnboardingAgent;
 
     let db_url =
-        std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    if !db_url.starts_with("sqlite") && std::env::var("OHC_DATABASE_URL").is_err() {
+        std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if !db_url.starts_with("sqlite") && std::env::var("OMNISOLO_DATABASE_URL").is_err() {
         return;
     }
 
@@ -72,11 +72,11 @@ async fn test_setup_health_check_endpoint() {
     let hub = Arc::new(Hub::new(tx, pg_pool.clone()));
 
     // Ensure clean state
-    if std::path::Path::new(".ohc-local-data").exists() {
-        std::fs::remove_dir_all(".ohc-local-data").unwrap();
+    if std::path::Path::new(".omnisolo-local-data").exists() {
+        std::fs::remove_dir_all(".omnisolo-local-data").unwrap();
     }
-    if std::path::Path::new(".ohc-cloud-data").exists() {
-        std::fs::remove_dir_all(".ohc-cloud-data").unwrap();
+    if std::path::Path::new(".omnisolo-cloud-data").exists() {
+        std::fs::remove_dir_all(".omnisolo-cloud-data").unwrap();
     }
 
     // Set up standalone
@@ -100,8 +100,8 @@ async fn test_setup_health_check_endpoint() {
         .unwrap();
     let token = auth_store.issue_token(&user).unwrap();
 
-    let transport: Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport> =
-        Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+    let transport: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
+        Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
 
     // We need to provide the MeshTransport state because the router expects it
     let app = crate::api::onboarding::router(agent, auth_store).with_state(transport);
@@ -127,9 +127,9 @@ async fn test_setup_health_check_endpoint() {
     assert_eq!(body.get("status").unwrap(), "ready");
 
     // Create a dummy file to block directory creation, simulating provisioning failure for cloud mode
-    let _ = std::fs::remove_dir_all(".ohc-cloud-data");
-    let _ = std::fs::remove_file(".ohc-cloud-data");
-    std::fs::write(".ohc-cloud-data", "dummy file").unwrap();
+    let _ = std::fs::remove_dir_all(".omnisolo-cloud-data");
+    let _ = std::fs::remove_file(".omnisolo-cloud-data");
+    std::fs::write(".omnisolo-cloud-data", "dummy file").unwrap();
 
     // Test cloud (should fail since it cannot write directories)
     let response = app
@@ -152,6 +152,6 @@ async fn test_setup_health_check_endpoint() {
     assert_eq!(body.get("status").unwrap(), "error");
 
     // Clean up
-    let _ = std::fs::remove_file(".ohc-cloud-data");
-    std::fs::remove_dir_all(".ohc-local-data").unwrap();
+    let _ = std::fs::remove_file(".omnisolo-cloud-data");
+    std::fs::remove_dir_all(".omnisolo-local-data").unwrap();
 }

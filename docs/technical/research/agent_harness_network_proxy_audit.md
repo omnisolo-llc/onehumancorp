@@ -1,11 +1,11 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# 🔬 OHC Market Research Report: Claude Code Harness Network Proxy and Security Analysis
+# 🔬 OmniSolo Market Research Report: Claude Code Harness Network Proxy and Security Analysis
 
 **Author:** Principal Product Researcher & Oracle (L7)
 
 ## 1. Executive Summary
-This report analyzes the leaked Claude Code execution environment to extract architectural insights for OHC's Agentic OS, specifically focusing on its **Network Proxy** and **Filesystem Security** capabilities.
+This report analyzes the leaked Claude Code execution environment to extract architectural insights for OmniSolo's Agentic OS, specifically focusing on its **Network Proxy** and **Filesystem Security** capabilities.
 
 ## 2. Core Harness Architecture Findings
 
@@ -29,9 +29,9 @@ graph TD;
     D -->|Unknown| G(User Prompt);
 ```
 
-## 3. OHC Hybrid Architecture Strategy
+## 3. OmniSolo Hybrid Architecture Strategy
 
-To close the gap, OHC's internal Agent Harness must implement:
+To close the gap, OmniSolo's internal Agent Harness must implement:
 1. Native `bwrap` wrappers in Go.
 2. A built-in HTTP proxy for strict network gating.
 3. OpenTelemetry integration to export sandbox violations.

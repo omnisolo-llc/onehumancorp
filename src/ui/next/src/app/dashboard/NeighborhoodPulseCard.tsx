@@ -9,11 +9,15 @@ type Neighbor = {
 export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
   const [neighbors, setNeighbors] = useState<Neighbor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inviteStatus, setInviteStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchNeighbors = async () => {
       try {
         const response = await fetch('/api/v1/mesh/v2/collective?action=getNearby');
+        if (!response.ok) {
+          throw new Error(`Neighborhood service returned ${response.status}`);
+        }
         const data = await response.json();
         if (data.neighbors) {
           setNeighbors(data.neighbors.map((id: string) => ({ id, name: id.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) })));
@@ -28,21 +32,25 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
   }, [tenant]);
 
   const handleInvite = async (targetId: string) => {
+    setInviteStatus(null);
     try {
       const response = await fetch('/api/v1/mesh/v2/collective', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'invite', target_tenant_id: targetId })
       });
+      if (!response.ok) {
+        throw new Error(`Invitation service returned ${response.status}`);
+      }
       const data = await response.json();
       if (data.success) {
-        alert('Invitation sent successfully!');
+        setInviteStatus('Invitation sent successfully!');
       } else {
-        alert('Failed to send invitation');
+        setInviteStatus('Failed to send invitation');
       }
     } catch (e) {
       console.error(e);
-      alert('Error occurred while inviting');
+      setInviteStatus('Error occurred while inviting');
     }
   };
 
@@ -61,6 +69,11 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
         <p className="text-sm text-gray-800 dark:text-gray-200 mb-6 font-inter">
           There are {neighbors.length} OmniSolo businesses in your area. Form a "Main Street Collective" to share customers?
         </p>
+        {inviteStatus && (
+          <p className="mb-4 text-sm font-medium" role="status" aria-live="polite">
+            {inviteStatus}
+          </p>
+        )}
 
         <div className="space-y-4">
           {neighbors.map(neighbor => (
@@ -73,6 +86,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
                 <p className="text-xs text-gray-600 dark:text-gray-400">Nearby business returned by the mesh service</p>
               </div>
               <button
+                type="button"
                 onClick={() => handleInvite(neighbor.id)}
                 className="px-4 py-2 bg-[#0066FF] text-white rounded-lg text-sm font-semibold hover:bg-[#0052CC] transition-colors shadow-sm"
               >

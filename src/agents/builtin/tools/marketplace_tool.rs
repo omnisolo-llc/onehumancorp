@@ -3,7 +3,7 @@ use super::{
     Tool,
     pydantic::{PydanticAdapter, PydanticToolExecutor},
 };
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;

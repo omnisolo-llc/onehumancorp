@@ -10,7 +10,7 @@ test.describe('Interactive ROI Calculator Generator', () => {
     await expect(page.locator('h1')).toHaveText('Interactive ROI Calculator');
 
     // Verify default preview values
-    await expect(page.locator('#preview-title')).toHaveText('OHC Pro Services ROI');
+    await expect(page.locator('#preview-title')).toHaveText('OmniSolo Pro Services ROI');
     await expect(page.locator('#preview-return')).toHaveText('$3,000');
 
     // Fill custom values

@@ -20,7 +20,7 @@ test.describe('Viral Referral Tier Widget', () => {
     await expect(page.locator('#referral-tier-progress')).toContainText('Just 5 more referrals needed for Silver!');
 
     const linkInput = page.locator('#referral-link-input');
-    await expect(linkInput).toHaveValue(/ohc\.app\/join\?ref=|ohc:\/\/join\?ref=/);
+    await expect(linkInput).toHaveValue(/cloud.omnisolo.co\/join\?ref=|ohc:\/\/join\?ref=/);
 
     const copyBtn = page.locator('#referral-tier-copy-btn');
     await expect(copyBtn).toHaveText('Copy Link');

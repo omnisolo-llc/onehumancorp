@@ -1,7 +1,7 @@
 # Hybrid Agentic OS Features Design Document
 
 ## 1. Introduction
-OmniSolo (OHC) is building a Hybrid Agentic OS to empower a single human to orchestrate a vast swarm of AI agents. This design document outlines the architectural blueprints for four core pillars of the Agentic OS: the Shared Task List, Realtime Teammate Mesh, Sub-Agent Orchestration, and the autoDream Data Pipeline.
+OmniSolo (OmniSolo) is building a Hybrid Agentic OS to empower a single human to orchestrate a vast swarm of AI agents. This design document outlines the architectural blueprints for four core pillars of the Agentic OS: the Shared Task List, Realtime Teammate Mesh, Sub-Agent Orchestration, and the autoDream Data Pipeline.
 
 ## 2. Core Pillars
 
@@ -45,7 +45,7 @@ OmniSolo (OHC) is building a Hybrid Agentic OS to empower a single human to orch
 All features are designed to gracefully degrade. When deployed in **Standalone Desktop Mode**, external dependencies like Redis are replaced with local SQLite alternatives, ensuring the OS remains fully functional without cloud connectivity.
 
 ## 4. Aesthetic Excellence
-All frontend representations of these features (e.g., Task List UI, Mesh Visualization) must adhere to the OHC Premium Feel: Glassmorphism (`backdrop-filter: blur(20px)`), translucent backgrounds, and the Outfit/Inter typography stack.
+All frontend representations of these features (e.g., Task List UI, Mesh Visualization) must adhere to the OmniSolo Premium Feel: Glassmorphism (`backdrop-filter: blur(20px)`), translucent backgrounds, and the Outfit/Inter typography stack.
 
 ## 5. Security & Identity
 All agent operations and mesh communications rely entirely on SPIFFE/SPIRE for identity authentication, adhering to the "Zero Secrets" constraint.

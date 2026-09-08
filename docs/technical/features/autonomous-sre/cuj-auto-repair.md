@@ -39,7 +39,7 @@ A sudden spike in 5xx errors occurs in the `billing-engine`. An SRE Agent detect
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 </div>

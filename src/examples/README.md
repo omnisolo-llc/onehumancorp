@@ -40,7 +40,7 @@ For local development, the `hello-world` uses the `builtin` model. For productio
 
 ```yaml
 # examples/hello-world-agent/hello_world_agent.yaml
-apiVersion: onehumancorp.com/v1alpha1
+apiVersion: omnisolo.co/v1alpha1
 kind: Agent
 metadata:
   name: hello-world

@@ -56,6 +56,6 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
 
         // Ensure the referral growth loop is intact in the footer
         expect(html).toContain('Powered by');
-        expect(html).toContain('OHC');
+        expect(html).toContain('OmniSolo');
     });
 });

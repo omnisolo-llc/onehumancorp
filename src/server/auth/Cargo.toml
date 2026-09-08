@@ -21,7 +21,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 server_common = { path = "../common" }
 server_config = { path = "../config" }
-server_ohc = { path = "../ohc" }
+server_omnisolo = { path = "../omnisolo" }
 server_oidc = { path = "../oidc" }
 sha2 = "0.10"
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "mysql", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }

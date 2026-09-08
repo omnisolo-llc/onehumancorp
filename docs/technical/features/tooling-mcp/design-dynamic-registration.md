@@ -31,7 +31,7 @@ The payload must include:
 - `spiffeId`: A valid SPIFFE identifier indicating the trust domain and source of the tool request.
 
 ### 3.3 Security & Validation
-Before any tool is accepted into the `dynamicMCPTools` slice, the `spiffeId` must be checked using `interop.ValidateSPIFFEID`. If the ID originates from an untrusted domain or does not meet OHC structure guidelines, the request will be rejected with HTTP 403 Forbidden.
+Before any tool is accepted into the `dynamicMCPTools` slice, the `spiffeId` must be checked using `interop.ValidateSPIFFEID`. If the ID originates from an untrusted domain or does not meet OmniSolo structure guidelines, the request will be rejected with HTTP 403 Forbidden.
 
 ## 4. Alternatives Considered
 - **File-based Configuration Watcher**: Monitoring `MCP_BUNDLE_DIR` for YAML changes. Rejected because it requires shared filesystem access across K8s pods, which breaks the API-first loosely-coupled design.

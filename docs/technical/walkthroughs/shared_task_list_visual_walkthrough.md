@@ -2,7 +2,7 @@
 
 # KAIROS Shared Task List: Visual Walkthrough
 
-This document provides a visual representation of the KAIROS Shared Task List state machine and lifecycle within the OHC Hybrid Architecture.
+This document provides a visual representation of the KAIROS Shared Task List state machine and lifecycle within the OmniSolo Hybrid Architecture.
 
 ## State Machine Overview
 

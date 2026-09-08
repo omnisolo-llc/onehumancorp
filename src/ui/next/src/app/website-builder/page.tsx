@@ -166,7 +166,7 @@ export default function WebsiteBuilderPage() {
 
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live") => {
     setStatus(newStatus);
-    localStorage.setItem("ohc_builder_status", newStatus);
+    localStorage.setItem("omnisolo_builder_status", newStatus);
   };
 
   const handleGenerate = async () => {
@@ -188,7 +188,7 @@ export default function WebsiteBuilderPage() {
         props: b.content
       }));
       setBlocks(blocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(blocks));
       updateStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -243,7 +243,7 @@ export default function WebsiteBuilderPage() {
         setStatus("live");
         const url = `/bio/${data.domain || 'myshop'}`;
         setLiveUrl(url);
-        localStorage.setItem("ohc_builder_liveUrl", url);
+        localStorage.setItem("omnisolo_builder_liveUrl", url);
       } else {
         console.error('Failed to publish');
       }
@@ -326,7 +326,7 @@ export default function WebsiteBuilderPage() {
                     >
                       Instant Build
                     </button>
-                    <PoweredByOmniSolo tenantId="ohc" />
+                    <PoweredByOmniSolo tenantId="omnisolo" />
                   </div>
                 </>
               )}
@@ -786,7 +786,7 @@ export default function WebsiteBuilderPage() {
             </DraggableBlock>
           ))}
           {/* Default to false for premium status here. In a full implementation, we'd fetch this from the user's profile. */}
-          <SmartBlock type="PoweredBy" props={{ tenantId: "ohc", isPremium: false }} />
+          <SmartBlock type="PoweredBy" props={{ tenantId: "omnisolo", isPremium: false }} />
           <div className="text-center mt-4 mb-8">
             <a href="/onboarding?ref=storefront" target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700">⚡ Powered by OmniSolo</a>
           </div>
@@ -813,7 +813,7 @@ export default function WebsiteBuilderPage() {
         .animate-slide-up { animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }

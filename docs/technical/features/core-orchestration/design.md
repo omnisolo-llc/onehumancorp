@@ -17,7 +17,7 @@ The Core Orchestration Engine is the central brain of OmniSolo. It manages agent
 
 ## Non-Goals
 - Directly implementing specific skill logic (this is handled by imported Domain Knowledge/Skill Packs).
-- Managing underlying infrastructure (handled by the OHC Kubernetes Operator).
+- Managing underlying infrastructure (handled by the OmniSolo Kubernetes Operator).
 
 ## Proposed Design
 The engine is built on an asynchronous, event-driven architecture. The `Hub` acts as the central coordinator, maintaining a registry of all active agents and meeting rooms.
@@ -54,7 +54,7 @@ graph TD
 
 ## 7. Implementation Details
 - **Stack:** Rust, Bazel 9.0.0, Postgres, Redis.
-- **Deployment:** Kubernetes via custom OHC Operator.
+- **Deployment:** Kubernetes via custom OmniSolo Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
 - **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 

@@ -11,7 +11,7 @@ describe("email verification", () => {
     replace.mockReset();
     sessionStorage.clear();
     sessionStorage.setItem(
-      "ohc-registration-challenge",
+      "omnisolo-registration-challenge",
       JSON.stringify({ challengeId: "challenge-7", email: "alice@example.test" }),
     );
     vi.mocked(fetch).mockReset();
@@ -38,7 +38,7 @@ describe("email verification", () => {
   });
 
   it("creates a sealed session only after submitting the verified ticket", async () => {
-    sessionStorage.setItem("ohc-registration-ticket", "ticket-7");
+    sessionStorage.setItem("omnisolo-registration-ticket", "ticket-7");
     vi.mocked(fetch)
       .mockResolvedValueOnce(Response.json({ registration_ticket: "ticket-7", expires_in_seconds: 1200 }))
       .mockResolvedValueOnce(Response.json({ user: { id: "user-7" }, next: "/onboarding" }, { status: 201 }));
@@ -61,6 +61,6 @@ describe("email verification", () => {
         password: "violet river cabin orbit",
       }),
     }));
-    expect(sessionStorage.getItem("ohc-registration-ticket")).toBeNull();
+    expect(sessionStorage.getItem("omnisolo-registration-ticket")).toBeNull();
   });
 });

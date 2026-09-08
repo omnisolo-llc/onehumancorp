@@ -13,8 +13,8 @@ Small business owners (like Maya the baker or Carlos the handyman) completely lo
 - **Wave Accounting**: Good OCR, but still requires the user to review, categorize, and approve every transaction.
 - **Shopify/Wix**: They only track COGS if manually entered. They don't handle general business expenses (gas, tools, software subscriptions).
 
-### The OHC Opportunity
-By combining OHC's Autonomous Treasury Wallet with an AI Finance Agent, we can achieve **Zero-Click Expense Tracking**. When a user snaps a photo of a receipt or forwards an email to their OHC inbox, the AI agent uses multimodal vision to extract the items, amount, and date. It then autonomously searches the connected bank feeds or OHC Wallet ledger, matches the transaction, categorizes it according to tax-friendly buckets, and recalculates the real-time P&L — entirely invisibly.
+### The OmniSolo Opportunity
+By combining OmniSolo's Autonomous Treasury Wallet with an AI Finance Agent, we can achieve **Zero-Click Expense Tracking**. When a user snaps a photo of a receipt or forwards an email to their OmniSolo inbox, the AI agent uses multimodal vision to extract the items, amount, and date. It then autonomously searches the connected bank feeds or OmniSolo Wallet ledger, matches the transaction, categorizes it according to tax-friendly buckets, and recalculates the real-time P&L — entirely invisibly.
 
 ## Design Doc
 
@@ -55,14 +55,14 @@ erDiagram
 ```mermaid
 sequenceDiagram
     actor Mobile User
-    participant OHC Mobile App
+    participant OmniSolo Mobile App
     participant Edge Gateway
     participant AI Vision Agent
     participant Finance Matching Agent
     participant Treasury Ledger
 
-    Mobile User->>OHC Mobile App: Takes photo of receipt
-    OHC Mobile App->>Edge Gateway: Uploads image (background sync)
+    Mobile User->>OmniSolo Mobile App: Takes photo of receipt
+    OmniSolo Mobile App->>Edge Gateway: Uploads image (background sync)
     Edge Gateway->>AI Vision Agent: Triggers vision parsing
     AI Vision Agent-->>AI Vision Agent: Extracts Vendor, Total, Date, Line Items, Tax
     AI Vision Agent->>Finance Matching Agent: Sends parsed receipt data
@@ -70,7 +70,7 @@ sequenceDiagram
     Treasury Ledger-->>Finance Matching Agent: Returns candidate transaction
     Finance Matching Agent-->>Finance Matching Agent: Confident Match > 98%
     Finance Matching Agent->>Treasury Ledger: Links Receipt + Transaction, Auto-Categorizes
-    Treasury Ledger->>OHC Mobile App: Push: "Matched Home Depot receipt ($45.20) to Tools & Supplies"
+    Treasury Ledger->>OmniSolo Mobile App: Push: "Matched Home Depot receipt ($45.20) to Tools & Supplies"
 ```
 
 ### Key Design Decisions

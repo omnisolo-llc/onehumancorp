@@ -24,6 +24,6 @@ As part of our continuous effort to make OmniSolo accessible to small businesses
 - **Before:** Business owners lacked granular insights into their backend costs.
 - **After:** The newly implemented "Cost Transparency Dashboard" (`src/server/lib.rs` and `src/ui/next/src/app/plan/page.tsx`) displays direct real-time tracking of LLM usage, storage usage, and payment fees in a single place.
 
-These changes collectively support a sustainable free entry tier and provide a clear, plain-language value proposition to all OHC tier subscribers.
+These changes collectively support a sustainable free entry tier and provide a clear, plain-language value proposition to all OmniSolo tier subscribers.
 
 All cost optimization features have been verified as implemented.

@@ -207,7 +207,7 @@ impl BookingReengagementWorker {
                             );
                             let ai_prompt_reduced =
                                 crate::pricing::compression::reduce_tokens(&ai_prompt);
-                            let drafted_message = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                            let drafted_message = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                                  Ok("gemini") => crate::minimax::LocalLLMClient::new().reason(&ai_prompt_reduced).await.unwrap_or_else(|_| "Hi! It's been a while, would you like to book a new session?".to_string()),
                                  Ok("minimax") => {
                                      let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();

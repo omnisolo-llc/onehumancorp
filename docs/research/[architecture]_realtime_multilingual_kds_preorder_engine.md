@@ -8,7 +8,7 @@ Fatima (Food Cart Operator, 50) operates a busy halal food cart and takes pre-or
     *   **Square KDS**: Robust but requires dedicated iPad hardware and constant internet. The UI is rigid and English-centric.
     *   **Shopify POS**: Not optimized for quick-service food pre-orders. Lacks native multi-language toggle for staff-facing UI vs customer-facing UI.
     *   **Wix Restaurants**: Heavy web-based interface that performs poorly on low-end Android devices and offline environments.
-*   **The OHC Differentiator**: OHC must provide a zero-hardware KDS that turns any low-end smartphone into a real-time, multilingual pre-order receiver with offline resilience and native-feeling performance.
+*   **The OmniSolo Differentiator**: OmniSolo must provide a zero-hardware KDS that turns any low-end smartphone into a real-time, multilingual pre-order receiver with offline resilience and native-feeling performance.
 
 ## Design Doc
 
@@ -21,7 +21,7 @@ graph TD;
     KAIROS --> EventMesh[Hybrid Event Mesh];
     EventMesh -->|Real-Time Push| SyncDaemon[Local Sync Daemon];
     SyncDaemon --> LocalDB[(SQLite Local DB)];
-    LocalDB --> KDS_UI[OHC App: KDS View];
+    LocalDB --> KDS_UI[OmniSolo App: KDS View];
     EventMesh --> OperationsAgent[AI Operations Agent];
     OperationsAgent -->|Low Stock Alert| MarketingAgent[AI Marketing Agent];
 ```

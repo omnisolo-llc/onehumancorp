@@ -13,12 +13,12 @@ Based on a synthesis of user feedback (e.g., from r/smallbusiness, Trustpilot, a
 
 **Competitor Analysis:**
 Competitors (Shopify, Wix, Squarespace) treat AI as reactive "tools" requiring prompts and manual editing.
-OHC differentiates by treating AI as proactive "teammates" driven by the KAIROS Orchestrator. Agents respond to business events (e.g., new order placed, inventory low) and prepare complete actions waiting for a simple "1-Tap Approve" on a mobile device.
+OmniSolo differentiates by treating AI as proactive "teammates" driven by the KAIROS Orchestrator. Agents respond to business events (e.g., new order placed, inventory low) and prepare complete actions waiting for a simple "1-Tap Approve" on a mobile device.
 
 ## Design Doc
 
 ### Core Departments
-The OHC Swarm consists of 7 functional departments:
+The OmniSolo Swarm consists of 7 functional departments:
 1.  **Operations ("The Manager"):** Order/booking processing, fulfillment, and inventory tracking.
 2.  **Marketing & Advertising ("The Promoter"):** SEO, social media calendar creation, email marketing.
 3.  **Sales & Acquisition ("The Salesperson"):** Lead follow-up, quote generation, and referral tracking.
@@ -34,7 +34,7 @@ sequenceDiagram
     participant Hub as Teammate Mesh (Hub)
     participant Op as The Manager (Operations)
     participant CS as The Ambassador (Customer Success)
-    participant DB as OHC-SIP DB (Memory)
+    participant DB as OmniSolo-SIP DB (Memory)
     participant User as Mobile Dashboard (Owner)
 
     O->>Hub: Event: Order Shipped
@@ -53,7 +53,7 @@ sequenceDiagram
 ### Execution Triggers & Coordination
 - **Event-Driven:** Uses the Teammate Mesh to broadcast intents and status updates. E.g., when "The Manager" fulfills an order, it publishes a `tenant.order.fulfillment_ready` event.
 - **Scheduled:** Cron jobs executed by KAIROS. E.g., "The Advisor" runs weekly to publish the health report.
-- **Draft-for-Review (1-Tap Approval):** High-risk actions (e.g., publishing external emails or social posts) are drafted and saved to the `OHC-SIP DB` pending approval queue, triggering a mobile push notification.
+- **Draft-for-Review (1-Tap Approval):** High-risk actions (e.g., publishing external emails or social posts) are drafted and saved to the `OmniSolo-SIP DB` pending approval queue, triggering a mobile push notification.
 
 ### Memory & Tier Integration
 - Agents leverage `autodream_memories` with `pgvector` for contextual recall (e.g., Maya's vegan cake trends).
@@ -61,7 +61,7 @@ sequenceDiagram
 - PostgreSQL RLS enforces complete data isolation between tenants.
 
 ### UI & UX Focus
-- Follows the OHC premium visual mandate: Glassmorphism (`backdrop-filter: blur(20px) saturate(200%)`), minimum touch targets of 44x44px.
+- Follows the OmniSolo premium visual mandate: Glassmorphism (`backdrop-filter: blur(20px) saturate(200%)`), minimum touch targets of 44x44px.
 - Designed strictly mobile-first (375px viewport baseline).
 
 ## Implementation Prompt
@@ -71,7 +71,7 @@ sequenceDiagram
 1.  Implement the backend service capability allowing agents to transition actions into a `PENDING_APPROVAL` state.
 2.  Implement the notification payload required to alert the owner's mobile app.
 3.  Implement the API endpoints to handle `APPROVE` or `REJECT` actions from the mobile app, triggering execution upon approval.
-4.  Ensure that the implementation adheres to OHC's strict multi-tenancy requirements and uses the established Teammate Mesh for asynchronous execution.
+4.  Ensure that the implementation adheres to OmniSolo's strict multi-tenancy requirements and uses the established Teammate Mesh for asynchronous execution.
 
 ## Priority
 P0

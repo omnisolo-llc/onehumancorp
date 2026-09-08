@@ -5,7 +5,7 @@ type: "research"
 tags: ["commerce", "pre-order", "waitlist", "omnichannel", "agents"]
 ---
 
-# OHC Issue Brief: Autonomous Omnichannel Pre-Order and Waitlist Engine
+# OmniSolo Issue Brief: Autonomous Omnichannel Pre-Order and Waitlist Engine
 
 ## Title
 **Autonomous Omnichannel Pre-Order and Waitlist Engine**
@@ -20,8 +20,8 @@ Our dynamic research and market analysis of existing platforms (e.g., Shopify, W
 - **Wix/Squarespace:** Offer basic out-of-stock notifications but lack the autonomous agentic capabilities to intelligently engage customers, manage capacity constraints, and handle partial deposits for pre-orders.
 - **The Gap:** There is no built-in, seamless transition between conversational commerce (social media DMs) and structured waitlist/pre-order systems. SMB owners must manually update waitlists and individually email customers when stock is replenished.
 
-**The OHC Opportunity**
-By introducing an "Autonomous Omnichannel Pre-Order and Waitlist Engine," OHC can empower businesses to capture every lead automatically. The AI Swarm can transition a customer from an Instagram DM directly into a secured waitlist, manage capacity constraints dynamically, and handle the final fulfillment process autonomously when stock becomes available.
+**The OmniSolo Opportunity**
+By introducing an "Autonomous Omnichannel Pre-Order and Waitlist Engine," OmniSolo can empower businesses to capture every lead automatically. The AI Swarm can transition a customer from an Instagram DM directly into a secured waitlist, manage capacity constraints dynamically, and handle the final fulfillment process autonomously when stock becomes available.
 
 ## Proposed Data Model
 
@@ -50,7 +50,7 @@ To enforce multi-tenant isolation and security, we propose adding the following 
 
 ## AI Agent Responsibilities
 
-To manage this complex workflow without human intervention, the OHC Swarm will handle different aspects of the waitlist lifecycle:
+To manage this complex workflow without human intervention, the OmniSolo Swarm will handle different aspects of the waitlist lifecycle:
 
 - **Department: Marketing & Advertising ("The Promoter")**
   - Monitors product inventory. When stock is low or sold out, autonomously updates the storefront UI to display "Join Waitlist" or "Pre-Order Now."

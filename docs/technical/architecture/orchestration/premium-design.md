@@ -1,9 +1,9 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# OHC KAIROS: Hybrid Agentic OS Orchestration Master Design
+# OmniSolo KAIROS: Hybrid Agentic OS Orchestration Master Design
 
 ## 1. Vision
-The OmniSolo (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation.
+The OmniSolo (OmniSolo) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation.
 
 ## 2. Phase 1: Shared Task List (Decomposition)
 The Shared Task List relies on database-backed state machines to prevent race conditions during task claiming.
@@ -72,7 +72,7 @@ Agents use this endpoint to announce task state transitions.
 ```
 
 ## 4. Phase 3: autoDream (Memory Consolidation Pipeline)
-To continuously evolve the AI OS bit by bit, the AutoDream system wakes up periodically to vectorize architectural decisions and agent memories into pgvector. Background workers consolidate `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `autodream_memories` table, granting the swarm exact semantic search capabilities.
+To continuously evolve the AI OS bit by bit, the AutoDream system wakes up periodically to vectorize architectural decisions and agent memories into pgvector. Background workers consolidate `agent_session_data` and optional `OMNISOLO_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `autodream_memories` table, granting the swarm exact semantic search capabilities.
 
 ### 4.1 pgvector Schema Definition
 ```sql

@@ -22,7 +22,7 @@ function POSTerminalMobileContent() {
 
     // Load from local cache or API
     const loadCatalog = async () => {
-      const cached = localStorage.getItem('ohc_catalog_cache');
+      const cached = localStorage.getItem('omnisolo_catalog_cache');
       if (cached) {
         setCatalog(JSON.parse(cached));
       }
@@ -32,7 +32,7 @@ function POSTerminalMobileContent() {
           const data = await res.json();
           if (data && Array.isArray(data)) {
             setCatalog(data);
-            localStorage.setItem('ohc_catalog_cache', JSON.stringify(data));
+            localStorage.setItem('omnisolo_catalog_cache', JSON.stringify(data));
           }
         } catch (e) {
           console.error("Failed to fetch catalog:", e);

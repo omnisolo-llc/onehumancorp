@@ -1,5 +1,5 @@
-use ::server_ohc::orchestration::b2b_service_server::B2bService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::b2b_service_server::B2bService;
+use ::server_omnisolo::orchestration::*;
 use chrono::Utc;
 use std::sync::RwLock;
 use tonic::{Request, Response, Status};

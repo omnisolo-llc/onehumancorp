@@ -10,7 +10,7 @@ Small business owners (like Leo the music tutor or Priya the boutique owner) str
 - **Competitive Audit**:
   - **Shopify/Wix**: Rely on third-party apps (e.g., Smile.io, Yotpo) which add "Cost Creep" and setup complexity.
   - **Klaviyo**: Powerful but requires technical knowledge of data flows and segmentation.
-  - **OHC Advantage**: By integrating the loyalty engine directly into the KAIROS Teammate Mesh, OHC can treat customer retention as an autonomous background process rather than a manual marketing task.
+  - **OmniSolo Advantage**: By integrating the loyalty engine directly into the KAIROS Teammate Mesh, OmniSolo can treat customer retention as an autonomous background process rather than a manual marketing task.
 - **Key Findings**:
   - 80% of revenue for stable SMBs comes from 20% of existing customers.
   - Manual follow-up is the first task dropped when an owner gets busy.
@@ -56,7 +56,7 @@ The lifecycle engine acts as a shared memory layer for proactive coordination.
 
 ```mermaid
 sequenceDiagram
-    participant Event as OHC Event Mesh
+    participant Event as OmniSolo Event Mesh
     participant Lifecycle as Customer Lifecycle Engine
     participant Sales as The Salesperson (Agent)
     participant User as Mobile Dashboard (Owner)
@@ -77,14 +77,14 @@ sequenceDiagram
 3. **Event-Driven Loyalty**: Points and rewards are not "calculated" on view; they are event-sourced and recorded in the `LOYALTY_LEDGER` to ensure real-time accuracy across mobile and web.
 
 ### Mobile-First UX & Wireframes (375px First)
-Every interaction follows the OHC Visual Mandate: Glassmorphism (`backdrop-filter: blur(20px)`), macOS-style Translucent materials, and 44x44px minimum touch targets.
+Every interaction follows the OmniSolo Visual Mandate: Glassmorphism (`backdrop-filter: blur(20px)`), macOS-style Translucent materials, and 44x44px minimum touch targets.
 
 1. **Dashboard: Customer Pulse Card**
    - **Visual**: A translucent glass card showing "3 VIPs" and "2 At-Risk" customers.
    - **Interaction**: Tapping the card opens the "Customer Interaction Timeline" with a smooth spring animation.
 2. **The "1-Tap Retention" Flow**
    - **Notification**: "Ambassador drafted a 'Miss You' reply for Leo 🎸"
-   - **Approval Screen**: A 375px wide bottom sheet with a blurred background. Shows the drafted message and a large "Approve & Send" button in OHC Primary Green.
+   - **Approval Screen**: A 375px wide bottom sheet with a blurred background. Shows the drafted message and a large "Approve & Send" button in OmniSolo Primary Green.
 3. **Customer Interaction Timeline**
    - **Layout**: A vertical, non-jargon timeline showing "Order Placed", "Inquiry Answered", "Sentiment: Happy 🌟".
    - **Zero Jargon**: Instead of "LTV: $540.23", the UI says "Top 5% Spender".

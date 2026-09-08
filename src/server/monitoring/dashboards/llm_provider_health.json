@@ -5,7 +5,7 @@
   "style": "dark",
   "tags": [
     "Cost",
-    "OHC",
+    "OmniSolo",
     "Observability",
     "Provider"
   ],
@@ -24,7 +24,7 @@
       "id": 19582,
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOmniSolo Premium Telemetry"
       },
       "title": "Aesthetic Mandate Injector",
       "transparent": true,
@@ -32,7 +32,7 @@
     },
     {
       "type": "text",
-      "title": "OHC Aesthetic Injector",
+      "title": "OmniSolo Aesthetic Injector",
       "gridPos": {
         "h": 2,
         "w": 24,

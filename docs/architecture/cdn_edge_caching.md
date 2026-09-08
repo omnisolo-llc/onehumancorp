@@ -1,6 +1,6 @@
 # CDN Edge Caching Integration & Strategy
 
-OmniSolo (OHC) employs an edge-caching layer to ensure sub-100ms storefront delivery globally, heavily relying on CDN features to merge static speeds with dynamic inventory updates.
+OmniSolo (OmniSolo) employs an edge-caching layer to ensure sub-100ms storefront delivery globally, heavily relying on CDN features to merge static speeds with dynamic inventory updates.
 
 ## Architecture
 
@@ -8,10 +8,10 @@ OmniSolo (OHC) employs an edge-caching layer to ensure sub-100ms storefront deli
    - Intercepts requests to the public storefront APIs (`/api/v1/storefront/`).
    - Serves pre-rendered, cached HTML shells enriched with SEO metadata directly from the edge.
 
-2. **Core Tier (`ohc-core`):**
+2. **Core Tier (`omnisolo-core`):**
    - The application core handles cache generation upon cache misses.
    - Core listens to events such as `inventory.updated` and product mutations.
-   - Upon detecting these mutations, `ohc-core` publishes specific cache invalidation events.
+   - Upon detecting these mutations, `omnisolo-core` publishes specific cache invalidation events.
 
 3. **Cache Invalidator Service:**
    - Subscribes to the `cache_invalidation_events` Redis pub/sub channel.
@@ -21,7 +21,7 @@ OmniSolo (OHC) employs an edge-caching layer to ensure sub-100ms storefront deli
 
 ## Cache Tags & Surrogate Keys
 
-Every pre-rendered storefront product HTML emitted by `ohc-core` includes tags to map the response to the underlying tenant and product.
+Every pre-rendered storefront product HTML emitted by `omnisolo-core` includes tags to map the response to the underlying tenant and product.
 - **Header format:** `Cache-Tag` or `Surrogate-Key`.
 - **Examples:** `tenant-id:33333333-3333-3333-3333-333333333333`, `entity:product:44444444-4444-4444-4444-444444444444`.
 
@@ -37,4 +37,4 @@ To prevent caching personalized or highly dynamic data (such as an individual us
 ## Testing Locally
 
 For local development and testing, the `deploy/docker-compose.yml` stack includes an `edge-cache` service utilizing NGINX.
-- It acts as a rudimentary CDN, proxying requests to `ohc-core` and caching responses for `/api/v1/storefront/`.
+- It acts as a rudimentary CDN, proxying requests to `omnisolo-core` and caching responses for `/api/v1/storefront/`.

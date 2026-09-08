@@ -13,7 +13,7 @@ Automated Implementation Pipelines turn agent-written code into a functioning pr
 
 ## Managing Deployments
 ### Staging Previews
-Every task generates a unique staging URL (e.g. `dark-mode-preview.ohc.io`). 
+Every task generates a unique staging URL (e.g. `dark-mode-preview.omnisolo.co`).
 
 ### Production Approval
 To push to production, you must manually approve the task in the "Mission Control" panel.

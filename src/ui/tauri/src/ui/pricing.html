@@ -91,7 +91,7 @@
         }
       }
 
-      .ohc-growth-card {
+      .omnisolo-growth-card {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(40px) saturate(220%);
         -webkit-backdrop-filter: blur(40px) saturate(220%);
@@ -105,7 +105,7 @@
         position: relative;
       }
 
-      .ohc-growth-card.recommended {
+      .omnisolo-growth-card.recommended {
         border: 2px solid #0066FF;
         background: rgba(255, 255, 255, 0.65);
         transform: scale(1.02);
@@ -235,13 +235,13 @@
         background-color: #16161a;
         color: #f5f5f7;
     }
-    .ohc-growth-card {
+    .omnisolo-growth-card {
         background: rgba(22, 22, 26, 0.7) !important;
         backdrop-filter: blur(40px) saturate(220%);
         -webkit-backdrop-filter: blur(40px) saturate(220%);
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
-    .ohc-growth-card.recommended {
+    .omnisolo-growth-card.recommended {
         background: rgba(32, 32, 36, 0.85) !important;
     }
     .price-text {
@@ -278,7 +278,7 @@
 
       <div class="pricing-grid">
         <!-- Free Plan -->
-        <div class="ohc-growth-card glassmorphism app-card">
+        <div class="omnisolo-growth-card glassmorphism app-card">
           <div class="plan-name">Free</div>
           <div class="plan-price" data-monthly="0">$0<span>/month</span></div>
           <ul class="features-list">
@@ -291,7 +291,7 @@
         </div>
 
         <!-- Starter Plan -->
-        <div class="ohc-growth-card recommended glassmorphism app-card">
+        <div class="omnisolo-growth-card recommended glassmorphism app-card">
           <div class="badge">Recommended</div>
           <div class="plan-name">Starter</div>
           <div class="plan-price" data-monthly="29">$29<span>/month</span></div>
@@ -306,7 +306,7 @@
         </div>
 
         <!-- Pro Plan -->
-        <div class="ohc-growth-card glassmorphism app-card">
+        <div class="omnisolo-growth-card glassmorphism app-card">
           <div class="plan-name">Pro</div>
           <div class="plan-price" data-monthly="79">$79<span>/month</span></div>
           <ul class="features-list">
@@ -319,7 +319,7 @@
         </div>
 
         <!-- Business Plan -->
-        <div class="ohc-growth-card glassmorphism app-card">
+        <div class="omnisolo-growth-card glassmorphism app-card">
           <div class="plan-name">Business</div>
           <div class="plan-price" data-monthly="299">$299<span>/month</span></div>
           <ul class="features-list">
@@ -377,7 +377,7 @@
           });
         }
 
-        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const tenant = localStorage.getItem('omnisolo_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         const token = localStorage.getItem('token');
         const headers = {};
         if (tenant) {
@@ -435,7 +435,7 @@
         const errorMsg = document.getElementById('error-message');
         errorMsg.innerText = '';
         try {
-          const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const tenant = localStorage.getItem('omnisolo_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
           const token = localStorage.getItem('token');
           const headers = { 'Content-Type': 'application/json' };
           if (tenant) { headers['x-tenant-id'] = tenant; }
@@ -466,7 +466,7 @@
         errorMsg.innerText = '';
 
         try {
-          const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const tenant = localStorage.getItem('omnisolo_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
           const token = localStorage.getItem('token');
           const headers = {
             'Content-Type': 'application/json'
@@ -515,7 +515,7 @@
 
 
 <style>
-.ohc-tooltip {
+.omnisolo-tooltip {
     position: fixed;
     background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(40px) saturate(220%);
@@ -534,15 +534,15 @@
     max-width: 250px;
     line-height: 1.4;
 }
-.ohc-tooltip.visible {
+.omnisolo-tooltip.visible {
     opacity: 1;
 }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+    if (!window.OMNISOLO_TOOLTIPS) {
+        window.OMNISOLO_TOOLTIPS = {};
+        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
             //
             //
             //
@@ -554,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
+    tooltipEl.className = 'omnisolo-tooltip';
     document.body.appendChild(tooltipEl);
 
     function showTooltip(e, text) {
@@ -586,14 +586,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseover', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
         }
     });
 
     document.addEventListener('mouseout', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -601,9 +601,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('touchstart', (e) => {
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             window.touchTimer = setTimeout(() => {
-                showTooltip(e.touches[0], window.OHC_TOOLTIPS[target.id]);
+                showTooltip(e.touches[0], window.OMNISOLO_TOOLTIPS[target.id]);
             }, 500); // 500ms long press
         }
     });
@@ -611,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchend', (e) => {
         clearTimeout(window.touchTimer);
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -619,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchcancel', (e) => {
         clearTimeout(window.touchTimer);
         const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
             hideTooltip();
         }
     });
@@ -636,14 +636,14 @@ function initWalkthrough() {
 
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay'; overlay.classList.add('ohc-walkthrough-overlay');
+        overlay.id = 'walkthrough-overlay'; overlay.classList.add('omnisolo-walkthrough-overlay');
         overlay.className = 'fixed z-[90]';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble'; bubble.classList.add('ohc-walkthrough-bubble');
+        bubble.id = 'walkthrough-bubble'; bubble.classList.add('omnisolo-walkthrough-bubble');
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -652,8 +652,8 @@ function initWalkthrough() {
             const step = steps[currentStep]; if (typeof bubbleEl !== "undefined" && bubbleEl) { bubbleEl.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); } else if (typeof bubble !== "undefined" && bubble) { bubble.setAttribute("aria-label", (step.title || "Tour") + " walkthrough step"); }
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .omnisolo-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'omnisolo-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -666,7 +666,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="ohc-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -710,8 +710,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .omnisolo-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'omnisolo-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';

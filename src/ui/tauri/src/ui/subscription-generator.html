@@ -264,7 +264,7 @@
       } catch (err) {
         console.error(err);
         // Fallback for UI testing if backend is offline
-        document.getElementById('preview-text').innerText = `Subject: Never run out of ${payload.product_name || 'your favorite items'} again!\n\nHi there,\n\nWe noticed you recently purchased ${payload.product_name || 'your favorite items'}. Did you know you can get it delivered automatically?\n\nSign up for our ${payload.frequency || 'monthly'} Subscribe & Save plan and get ${payload.discount_percentage || '10'}% off every order.\n\nReady to subscribe? Click here: https://ohc.store/subscribe\n\nBest,\nThe Your Store Team${payload.brand_link ? '\n\n⚡ OmniSolo' : ''}`;
+        document.getElementById('preview-text').innerText = `Subject: Never run out of ${payload.product_name || 'your favorite items'} again!\n\nHi there,\n\nWe noticed you recently purchased ${payload.product_name || 'your favorite items'}. Did you know you can get it delivered automatically?\n\nSign up for our ${payload.frequency || 'monthly'} Subscribe & Save plan and get ${payload.discount_percentage || '10'}% off every order.\n\nReady to subscribe? Click here: https://cloud.omnisolo.co/subscribe\n\nBest,\nThe Your Store Team${payload.brand_link ? '\n\n⚡ Powered by OmniSolo' : ''}`;
         document.getElementById('preview-box').style.display = 'block';
         document.getElementById('success-msg').style.display = 'none';
       } finally {

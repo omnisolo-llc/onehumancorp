@@ -250,8 +250,8 @@
     <div id="previewCard" class="preview-card">
         <h3 id="previewTitle">Your Store Name</h3>
         <p id="previewTagline">Your amazing tagline goes here.</p>
-        <div id="previewPoweredBy" class="powered-by">OmniSolo</div>
-        <div id="previewLink" class="link-preview">omnisolo.co/your-store</div>
+        <div id="previewPoweredBy" class="powered-by">Powered by OmniSolo</div>
+        <div id="previewLink" class="link-preview">cloud.omnisolo.co/your-store</div>
     </div>
 
     <div style="background: rgba(255, 255, 255, 0.65); padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;">
@@ -297,8 +297,8 @@
         const paywallModal = document.getElementById('paywallModal');
         const closePaywall = document.getElementById('closePaywall');
 
-        const baseStoreLink = `https://omnisolo.co/store/${tenant}`;
-        previewLink.textContent = `omnisolo.co/store/${tenant}`;
+        const baseStoreLink = `https://cloud.omnisolo.co/store/${tenant}`;
+        previewLink.textContent = `cloud.omnisolo.co/store/${tenant}`;
 
         function updatePreview() {
             previewTitle.textContent = storeNameInput.value || "Your Store Name";

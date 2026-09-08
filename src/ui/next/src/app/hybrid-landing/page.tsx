@@ -48,7 +48,7 @@ export default function HybridLandingPage() {
       {/* Main Cards Container */}
       <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         {/* Card 1: Standalone */}
-        <div className="ohc-growth-card glass-card p-8 md:p-10 rounded-[24px] border border-white/50 shadow-xl bg-white/40 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+        <div className="omnisolo-growth-card glass-card p-8 md:p-10 rounded-[24px] border border-white/50 shadow-xl bg-white/40 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
             <svg
               className="w-32 h-32 text-indigo-900"
@@ -171,7 +171,7 @@ export default function HybridLandingPage() {
         </div>
 
         {/* Card 2: Cloud */}
-        <div className="ohc-growth-card glass-card p-8 md:p-10 rounded-[24px] border border-white/50 shadow-xl bg-white/40 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+        <div className="omnisolo-growth-card glass-card p-8 md:p-10 rounded-[24px] border border-white/50 shadow-xl bg-white/40 backdrop-blur-[30px] saturate-[210%] relative overflow-hidden group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
             <svg
               className="w-32 h-32 text-purple-900"
@@ -294,7 +294,7 @@ export default function HybridLandingPage() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glass-card {

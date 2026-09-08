@@ -84,12 +84,12 @@ export default function TriagePage() {
     window.addEventListener("offline", handleOffline);
 
     const handleQueueUpdated = () => updateOfflineCount();
-    window.addEventListener('ohc_queue_updated', handleQueueUpdated);
+    window.addEventListener('omnisolo_queue_updated', handleQueueUpdated);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-      window.removeEventListener('ohc_queue_updated', handleQueueUpdated);
+      window.removeEventListener('omnisolo_queue_updated', handleQueueUpdated);
     };
   }, []);
 
@@ -225,7 +225,7 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
-                className="ohc-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
+                className="omnisolo-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
               >
                 {/* Header Context */}
                 <div

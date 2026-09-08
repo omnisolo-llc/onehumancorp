@@ -5,7 +5,7 @@ Small business owners like Priya (boutique owner) and Fatima (food cart) sell pr
 
 ## Research Report
 - **Competitor Analysis:** Shopify offers robust multi-channel syncing but relies heavily on expensive POS hardware and custom apps. Wix relies on third-party apps which break offline workflows.
-- **OHC Opportunity:** OHC can differentiate by natively unifying local tap-to-pay events with the global inventory cache, using background AI agents to resolve state conflicts.
+- **OmniSolo Opportunity:** OmniSolo can differentiate by natively unifying local tap-to-pay events with the global inventory cache, using background AI agents to resolve state conflicts.
 
 ## Design Doc
 ### Architecture Diagram (Mermaid)

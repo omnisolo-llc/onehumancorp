@@ -1,6 +1,6 @@
 # Architecture
 
-Technical architecture documentation for the OHC platform.
+Technical architecture documentation for the OmniSolo platform.
 
 ## KAIROS Architecture
 

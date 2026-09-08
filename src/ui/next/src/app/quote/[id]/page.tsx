@@ -49,6 +49,7 @@ export default function InteractiveQuotePage() {
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
+  const [paymentLink, setPaymentLink] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,6 +91,12 @@ export default function InteractiveQuotePage() {
         headers: { "content-type": "application/json" },
       });
       if (!response.ok) throw new Error("acceptance rejected");
+      const result = await response.json();
+      if (typeof result.stripe_payment_link === "string") {
+        const link = new URL(result.stripe_payment_link);
+        if (link.protocol !== "https:") throw new Error("invalid payment link");
+        setPaymentLink(link.href);
+      }
       setAccepted(true);
     } catch {
       setError("The quote could not be accepted. Try again.");
@@ -118,8 +125,9 @@ export default function InteractiveQuotePage() {
         <CheckCircle2 aria-hidden="true" className="mx-auto h-10 w-10 text-green-600" />
         <h2 className="mt-3 text-xl font-semibold">Quote accepted</h2>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-          The business has been notified and can continue scheduling the work.
+          {paymentLink ? "Continue to the secure payment page to complete your deposit." : "The business has been notified and can continue scheduling the work."}
         </p>
+        {paymentLink && <a className="app-button mt-4 inline-flex" href={paymentLink} target="_blank" rel="noopener noreferrer">Continue to payment</a>}
       </section>
     );
   }

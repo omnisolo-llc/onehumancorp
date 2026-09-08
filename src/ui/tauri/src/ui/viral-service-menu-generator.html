@@ -384,8 +384,8 @@
       const generateEmbedCode = () => {
         const origin = window.location.origin.includes('localhost') ? 'https://omnisolo.co' : window.location.origin;
         const scriptTag = `<script src="${origin}/widgets/service-menu.js" async><\/script>`;
-        const divTag = `<div id="ohc-service-menu" data-tenant="${state.tenant}" data-title="${escapeHtml(state.businessName)}" data-theme="${state.theme}" data-branding="${!state.removeBranding}"></div>`;
-        const branding = !state.removeBranding ? '\n<!-- ⚡ OmniSolo -->' : '';
+        const divTag = `<div id="omnisolo-service-menu" data-tenant="${state.tenant}" data-title="${escapeHtml(state.businessName)}" data-theme="${state.theme}" data-branding="${!state.removeBranding}"></div>`;
+        const branding = !state.removeBranding ? '\n<!-- ⚡ Powered by OmniSolo -->' : '';
 
         const embedCode = `<!-- Service Menu Widget -->\n${divTag}\n${scriptTag}${branding}`;
         embedCodeTextarea.value = embedCode;

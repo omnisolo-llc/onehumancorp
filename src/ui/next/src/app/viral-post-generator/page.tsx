@@ -33,7 +33,7 @@ export default function ViralPostGeneratorPage() {
 
   const handleGenerate = () => {
     if (!productName || !keyBenefit) return;
-    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.\n\nShop now: https://${tenantId}.omnisolo.co\n\n${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`;
+    const post = `Just dropped something special! 🚀 Introducing the new ${productName}. If you've been looking for ${keyBenefit}, this is for you.\n\nShop now: https://${tenantId}.cloud.omnisolo.co\n\n${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`;
     setGeneratedPost(post);
   };
 
@@ -199,7 +199,7 @@ export default function ViralPostGeneratorPage() {
       )}
 
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />

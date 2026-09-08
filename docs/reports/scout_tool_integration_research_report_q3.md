@@ -19,12 +19,12 @@ Small business owners like Maya (The Home Baker) and Priya (The Boutique Owner) 
 
 ## Design Doc
 - **Triggers**: A customer sends a message on a connected social platform.
-- **Actions**: The system receives the webhook, maps it to the corresponding customer profile, and displays it in the OHC unified inbox. The AI Customer Success agent can automatically draft or send replies based on business context.
+- **Actions**: The system receives the webhook, maps it to the corresponding customer profile, and displays it in the OmniSolo unified inbox. The AI Customer Success agent can automatically draft or send replies based on business context.
 - **User View**: A single "Inbox" screen on their phone where messages from all platforms appear seamlessly, with the platform logo indicating the source.
 
 ## Implementation Prompt
-Implement a unified inbox feature that allows users to connect their social media accounts. When a customer messages them on Instagram, Facebook, WhatsApp, or TikTok, the message should appear in a central OHC inbox. The business owner should be able to reply from OHC, and the response should be delivered back to the original platform. Ensure the setup process is a simple 1-click OAuth flow without requiring technical configuration.
-- **Acceptance Criteria**: User can connect Instagram, Facebook, WhatsApp, and TikTok accounts with a simple 1-click OAuth flow. Incoming messages from all platforms appear in a unified "Inbox" screen within OHC. The business owner can reply to messages directly from the OHC Inbox, and the response is successfully delivered to the customer on the original platform. The UI clearly indicates the source platform of each message using its logo.
+Implement a unified inbox feature that allows users to connect their social media accounts. When a customer messages them on Instagram, Facebook, WhatsApp, or TikTok, the message should appear in a central OmniSolo inbox. The business owner should be able to reply from OmniSolo, and the response should be delivered back to the original platform. Ensure the setup process is a simple 1-click OAuth flow without requiring technical configuration.
+- **Acceptance Criteria**: User can connect Instagram, Facebook, WhatsApp, and TikTok accounts with a simple 1-click OAuth flow. Incoming messages from all platforms appear in a unified "Inbox" screen within OmniSolo. The business owner can reply to messages directly from the OmniSolo Inbox, and the response is successfully delivered to the customer on the original platform. The UI clearly indicates the source platform of each message using its logo.
 
 ## Priority
 P1
@@ -55,7 +55,7 @@ Service providers like Carlos (Freelance Handyman) and Leo (Music Tutor) manage 
 - **User View**: A "Connect Calendar" button in the Operations settings. The booking page seamlessly reflects real-time availability.
 
 ## Implementation Prompt
-Build a two-way calendar sync feature supporting Google Calendar and Outlook. The business owner should be able to connect their calendar with a single click. The OHC booking page must only show available time slots by checking against the connected calendar's busy times. When a booking is made, it should automatically appear on the owner's personal calendar.
+Build a two-way calendar sync feature supporting Google Calendar and Outlook. The business owner should be able to connect their calendar with a single click. The OmniSolo booking page must only show available time slots by checking against the connected calendar's busy times. When a booking is made, it should automatically appear on the owner's personal calendar.
 - **Acceptance Criteria**: User can connect Google Calendar and Outlook with a single click. The public booking page only displays time slots that are free according to the connected calendar's availability and the business's working hours. New bookings automatically create an event on the connected calendar.
 
 ## Priority
@@ -75,9 +75,9 @@ Business owners like Priya (The Boutique Owner) want to notify their existing cu
 
 ## Research Report
 - **Evaluated Tools**: SendGrid, Amazon SES, Postmark, Resend.
-- **Ease of Use**: End-users will not interact with these tools directly. OHC will provide a simplified UI, and the backend will route via the chosen provider.
+- **Ease of Use**: End-users will not interact with these tools directly. OmniSolo will provide a simplified UI, and the backend will route via the chosen provider.
 - **Pricing**: Amazon SES is the cheapest ($0.10/1k emails). Resend offers a great developer experience but is pricier ($20/mo for 50k).
-- **Template Quality**: OHC must provide pre-built, premium glassmorphism-inspired HTML templates.
+- **Template Quality**: OmniSolo must provide pre-built, premium glassmorphism-inspired HTML templates.
 - **Spam Compliance**: Built-in handling of unsubscribe links and CAN-SPAM requirements is essential.
 - **Cloud vs Standalone**: Cloud handles delivery easily. Standalone may require the user to input an SMTP server or use a cloud relay to avoid being flagged as spam.
 
@@ -119,8 +119,8 @@ While Stripe is excellent, it is not supported or preferred in all regions. Busi
 - **User View**: In the Finance settings, owners can toggle specific regional payment methods. Customers see familiar local payment options at checkout.
 
 ## Implementation Prompt
-Integrate alternative payment providers to support global users, starting with Mercado Pago for LATAM and Razorpay for India. Allow the business owner to enable these options in their payment settings. Ensure the checkout flow seamlessly transitions to these providers when selected, and correctly records the payment success in the OHC Finance dashboard.
-- **Acceptance Criteria**: Business owner can enable Mercado Pago and/or Razorpay in their Finance settings. During checkout, customers are presented with the enabled payment methods alongside any existing ones. Selecting an alternative payment method seamlessly transitions the customer to the respective provider's secure checkout flow. Upon successful payment, the order status is automatically updated to "Paid" in the OHC dashboard.
+Integrate alternative payment providers to support global users, starting with Mercado Pago for LATAM and Razorpay for India. Allow the business owner to enable these options in their payment settings. Ensure the checkout flow seamlessly transitions to these providers when selected, and correctly records the payment success in the OmniSolo Finance dashboard.
+- **Acceptance Criteria**: Business owner can enable Mercado Pago and/or Razorpay in their Finance settings. During checkout, customers are presented with the enabled payment methods alongside any existing ones. Selecting an alternative payment method seamlessly transitions the customer to the respective provider's secure checkout flow. Upon successful payment, the order status is automatically updated to "Paid" in the OmniSolo dashboard.
 
 ## Priority
 P2

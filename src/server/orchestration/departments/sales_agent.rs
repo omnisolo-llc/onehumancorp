@@ -38,8 +38,8 @@ pub enum SalesIntentBackend {
 
 impl SalesIntentBackend {
     pub fn from_env() -> Self {
-        match std::env::var("OHC_SALES_LLM_PROVIDER")
-            .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+        match std::env::var("OMNISOLO_SALES_LLM_PROVIDER")
+            .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
             .as_deref()
         {
             Ok("minimax") => {
@@ -145,8 +145,8 @@ impl SalesAgent {
 
         loop {
             let ai_op = async {
-                match std::env::var("OHC_SALES_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                match std::env::var("OMNISOLO_SALES_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                     .as_deref()
                 {
                     Ok("minimax") => {
@@ -538,8 +538,8 @@ impl Department for SalesAgent {
                 source, contact_info, context, context_summary
             );
 
-            let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+            let raw_response = match std::env::var("OMNISOLO_SALES_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                 .as_deref()
             {
                 Ok("minimax") => {
@@ -633,8 +633,8 @@ impl Department for SalesAgent {
                     intent.original_message, service_name, price, context_summary
                 );
 
-                let raw_response = match std::env::var("OHC_SALES_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                let raw_response = match std::env::var("OMNISOLO_SALES_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OMNISOLO_LLM_PROVIDER"))
                     .as_deref()
                 {
                     Ok("minimax") => {

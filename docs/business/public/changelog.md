@@ -1,4 +1,4 @@
-# OHC Hybrid Agentic OS Changelog
+# OmniSolo Hybrid Agentic OS Changelog
 
 ## v0.4.41 (Cloud) / v0.4.41+1 (Standalone)
 

@@ -6,7 +6,7 @@ This section groups API-facing playbooks and reference material.
 
 ## Primary References
 
-- [OHC Interactive API Playbook](./playbook.md) - Core REST endpoints and integration patterns
+- [OmniSolo Interactive API Playbook](./playbook.md) - Core REST endpoints and integration patterns
 
 ## gRPC Services
 

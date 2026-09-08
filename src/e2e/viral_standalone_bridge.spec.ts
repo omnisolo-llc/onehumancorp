@@ -29,7 +29,7 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     // Check generated link input and action buttons
     const linkInput = page.locator('#referral-link');
     await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^https:\/\/cloud\.ohc\.network\/invite\//);
+    await expect(linkInput).toHaveValue(/^https:\/\/cloud\.omnisolo\.network\/invite\//);
 
     const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
     await expect(copyBtn).toBeVisible();
@@ -48,7 +48,7 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
     if (clipboardText) {
       expect(clipboardText).toContain('Join my team on OmniSolo!');
-      expect(clipboardText).toContain('https://cloud.ohc.network/invite/');
+      expect(clipboardText).toContain('https://cloud.omnisolo.co/invite/');
       expect(clipboardText).toContain('⚡ OmniSolo');
     }
 
@@ -63,7 +63,7 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     const popupUrl = popup.url();
     // wa.me gets expanded to api.whatsapp.com by the browser often
     expect(popupUrl).toMatch(/wa\.me|api\.whatsapp\.com/);
-    expect(popupUrl).toContain('Powered+by+OHC');
-    expect(popupUrl).toContain(encodeURIComponent('https://cloud.ohc.network/invite/'));
+    expect(popupUrl).toContain('Powered+by+OmniSolo');
+      expect(popupUrl).toContain(encodeURIComponent('https://cloud.omnisolo.co/invite/'));
   });
 });

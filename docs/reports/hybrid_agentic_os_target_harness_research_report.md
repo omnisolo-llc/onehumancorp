@@ -3,7 +3,7 @@
 <p>Architecture Research for Hybrid Agentic OS Target Harness</p>
 
 <h2 style="font-family: Outfit, sans-serif;">Problem Statement</h2>
-<p>The OHC Hybrid Architecture needs a formal, published research report detailing its competitive edge against market leaders (AI coding assistant, OpenClaw, Hermes) specifically regarding the Agent Harness execution environment. This provides the blueprint for Implementer agents to build our enterprise-grade bwrap sandbox and proxy bridge.</p>
+<p>The OmniSolo Hybrid Architecture needs a formal, published research report detailing its competitive edge against market leaders (AI coding assistant, OpenClaw, Hermes) specifically regarding the Agent Harness execution environment. This provides the blueprint for Implementer agents to build our enterprise-grade bwrap sandbox and proxy bridge.</p>
 
 <h2 style="font-family: Outfit, sans-serif;">Research Report</h2>
 <p>Our synthesis of the <code>AI coding assistant(2_1_88).tgz</code> codebase reveals that robust, production-ready local agents rely on:</p>

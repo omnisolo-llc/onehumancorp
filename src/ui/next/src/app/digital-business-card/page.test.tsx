@@ -17,7 +17,7 @@ describe('DigitalBusinessCardGeneratorPage', () => {
       getItem: vi.fn().mockImplementation((key) => {
         if (key === 'tenant') return 'mock-tenant';
         if (key === 'has_pro') return 'false';
-        if (key === 'ohc_dbc_shared') return 'false';
+        if (key === 'omnisolo_dbc_shared') return 'false';
         return null;
       }),
       setItem: vi.fn(),

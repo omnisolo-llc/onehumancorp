@@ -524,10 +524,10 @@ impl LocalBackend {
         }
 
         // Proxy socket for MCP/Inter-agent communication
-        if std::path::Path::new("/var/run/ohc_proxy.sock").exists() {
+        if std::path::Path::new("/var/run/omnisolo_proxy.sock").exists() {
             args.push("--bind".to_string());
-            args.push("/var/run/ohc_proxy.sock".to_string());
-            args.push("/var/run/ohc_proxy.sock".to_string());
+            args.push("/var/run/omnisolo_proxy.sock".to_string());
+            args.push("/var/run/omnisolo_proxy.sock".to_string());
         }
 
         if self.config.enable_seccomp

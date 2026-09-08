@@ -1,5 +1,5 @@
-use server_ohc::harness_middleware::harness_worker_service_client::HarnessWorkerServiceClient;
-use server_ohc::harness_middleware::{
+use server_omnisolo::harness_middleware::harness_worker_service_client::HarnessWorkerServiceClient;
+use server_omnisolo::harness_middleware::{
     AttemptCommandEnvelope, SessionOperationEnvelope, WorkerHealthRequest,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};

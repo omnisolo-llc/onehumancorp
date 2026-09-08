@@ -1,7 +1,7 @@
-# Universal Buyer Identity & One-Click Checkout Engine (OHC Pay)
+# Universal Buyer Identity & One-Click Checkout Engine (OmniSolo Pay)
 
 ## Title
-Architect and Implement Universal Buyer Identity & One-Click Checkout Engine (OHC Pay)
+Architect and Implement Universal Buyer Identity & One-Click Checkout Engine (OmniSolo Pay)
 
 ## Problem Statement
 When a customer buys a custom cake from Maya (baker), they enter their email, shipping address, and credit card details. When that same customer later books a repair service from Carlos (handyman), they have to re-enter all of that information. For non-technical small business owners, cart abandonment is a major issue, often caused by friction at checkout. They need a system that recognizes repeat buyers *across the entire OmniSolo network*, enabling one-click checkout, instant booking, and deposit payments without any manual configuration required by the business owner.
@@ -10,8 +10,8 @@ When a customer buys a custom cake from Maya (baker), they enter their email, sh
 **Findings & Competitive Analysis:**
 - **Shopify (Shop Pay):** Shop Pay accounts for over 100 million buyers and increases checkout conversion by up to 50% compared to standard guest checkout. It uses email/phone verification to instantly recall saved credentials.
 - **Stripe (Link):** Stripe Link auto-fills payment and shipping details for customers across any Stripe-enabled site, yielding a 7x faster checkout experience.
-- **The Gap in OHC:** Currently, OmniSolo business owners operate as completely isolated islands from the buyer's perspective. There is no shared identity layer for buyers across tenants, meaning the network effect of millions of OHC businesses is wasted.
-- **Architectural Requirement:** We need a strict multi-tenant backend that completely isolates merchant data (Maya cannot see Carlos's customers), but allows a *Buyer* to create a global identity (OHC Identity) that spans across merchants using Zero Trust and SPIFFE/SPIRE for secure identity assertion.
+- **The Gap in OmniSolo:** Currently, OmniSolo business owners operate as completely isolated islands from the buyer's perspective. There is no shared identity layer for buyers across tenants, meaning the network effect of millions of OmniSolo businesses is wasted.
+- **Architectural Requirement:** We need a strict multi-tenant backend that completely isolates merchant data (Maya cannot see Carlos's customers), but allows a *Buyer* to create a global identity (OmniSolo Identity) that spans across merchants using Zero Trust and SPIFFE/SPIRE for secure identity assertion.
 
 ## Design Doc
 ### Architecture Diagram
@@ -50,7 +50,7 @@ erDiagram
 ```mermaid
 sequenceDiagram
     actor Buyer
-    participant MobileUI as OHC Checkout (Mobile)
+    participant MobileUI as OmniSolo Checkout (Mobile)
     participant AuthEngine as Identity Engine (Edge)
     participant Vault as Token Vault
     participant MerchantTenant as Merchant Ledger
@@ -95,7 +95,7 @@ sequenceDiagram
 
 ### AI Agent Integration Points
 - **Operations Agent:** Monitors checkout abandonments. If a recognized buyer drops off, the agent triggers a soft WhatsApp/SMS follow-up 1 hour later: "Hey Sarah, Maya's Bakery here. Did you still want to reserve that cake?"
-- **Fraud & Security Agent:** Analyzes global velocity and IP patterns across the entire OHC network. If a buyer identity attempts 5 high-value transactions across 5 different OHC merchants in 10 minutes, the agent invisible flags the transactions for step-up verification.
+- **Fraud & Security Agent:** Analyzes global velocity and IP patterns across the entire OmniSolo network. If a buyer identity attempts 5 high-value transactions across 5 different OmniSolo merchants in 10 minutes, the agent invisible flags the transactions for step-up verification.
 
 ### Key Design Decisions
 - **Passwordless Auth:** We will rely 100% on OTP (Email/SMS) and Passkeys. Passwords introduce too much friction.
@@ -103,8 +103,8 @@ sequenceDiagram
 - **Edge Caching:** Buyer identity resolution must happen at the edge (sub 50ms) to ensure the checkout UI updates instantly without blocking.
 
 ## Implementation Prompt
-**Context:** You are an Implementer agent. Your task is to build the Universal Buyer Identity & One-Click Checkout Engine (OHC Pay).
-**User Journey (CUJ):** A buyer lands on a merchant's checkout link. They enter their phone number. The system recognizes them from a previous purchase on a *different* OHC merchant, sends an OTP, and instantly loads their saved shipping and payment token for a 1-click checkout.
+**Context:** You are an Implementer agent. Your task is to build the Universal Buyer Identity & One-Click Checkout Engine (OmniSolo Pay).
+**User Journey (CUJ):** A buyer lands on a merchant's checkout link. They enter their phone number. The system recognizes them from a previous purchase on a *different* OmniSolo merchant, sends an OTP, and instantly loads their saved shipping and payment token for a 1-click checkout.
 **Acceptance Criteria:**
 1. Implement the passwordless OTP flow for buyer identity verification.
 2. Build the Global Vault interaction that securely retrieves masked payment tokens and addresses.

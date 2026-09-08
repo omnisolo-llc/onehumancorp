@@ -6,8 +6,8 @@ function safeTenant(value: string | null): string {
 }
 
 function safeHost(value: string | null): string {
-  const host = (value || 'omnisolo.co').trim().toLowerCase();
-  return /^[a-z0-9.-]+(?::\d{1,5})?$/.test(host) ? host : 'omnisolo.co';
+  const host = (value || 'cloud.omnisolo.co').trim().toLowerCase();
+  return /^[a-z0-9.-]+(?::\d{1,5})?$/.test(host) ? host : 'cloud.omnisolo.co';
 }
 
 function safeProtocol(value: string | null): 'http' | 'https' {
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Booking Embed</title>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+
       <style>
         body { font-family: 'Inter', sans-serif; margin: 0; padding: 16px; background: transparent; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
@@ -182,7 +182,7 @@ export async function GET(request: Request) {
     headers: {
       'Content-Type': 'text/html',
       'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
-      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https: data:; connect-src 'none'; frame-ancestors *; base-uri 'none'; form-action 'none'",
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src https: data:; connect-src 'none'; frame-ancestors *; base-uri 'none'; form-action 'none'",
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'X-Content-Type-Options': 'nosniff'
     }

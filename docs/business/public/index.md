@@ -1,6 +1,6 @@
 # Product Overview
 
-OmniSolo (OHC) is the world's first **Hybrid Agentic Operating System** - a cloud-native and local-first agentic platform.
+OmniSolo (OmniSolo) is the world's first **Hybrid Agentic Operating System** - a cloud-native and local-first agentic platform.
 
 ## Core Capabilities
 

@@ -1,13 +1,13 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# OHC KAIROS Hybrid AI OS Implementation Design Doc
+# OmniSolo KAIROS Hybrid AI OS Implementation Design Doc
 
 **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 **Status:** Approved
 **Version:** 1.0.0
 
 ## 1. Overview
-The KAIROS Orchestrator serves as the core orchestration engine powering the OmniSolo (OHC) Swarm. This document outlines the implementation strategy for the structural and aesthetic vision of the OHC Hybrid Agentic OS, specifically covering Task Decomposition, UltraPlan Deliberation, State Machine Tracking, Sub-Agent Orchestration, Teammate Mesh Architecture, and AutoDream Data Pipelines.
+The KAIROS Orchestrator serves as the core orchestration engine powering the OmniSolo (OmniSolo) Swarm. This document outlines the implementation strategy for the structural and aesthetic vision of the OmniSolo Hybrid Agentic OS, specifically covering Task Decomposition, UltraPlan Deliberation, State Machine Tracking, Sub-Agent Orchestration, Teammate Mesh Architecture, and AutoDream Data Pipelines.
 
 ## 2. Phase 1: Shared Task List (Task Decomposition)
 A durable, distributed state machine and task queue designed for both Cloud-Native and Standalone Desktop environments.
@@ -75,7 +75,7 @@ A high-availability, low-latency pub/sub coordination layer.
 **Description:** Upgrades the connection to a WebSocket for real-time mesh events, authenticated via SPIFFE/SPIRE JWTs.
 
 ### 3.2 Transport Architecture
-- **Cloud Mode (`OHC_MULTITENANT=true`):** Utilizes `CentrifugeNode` backed by `redis` for horizontal scaling across K8s pods.
+- **Cloud Mode (`OMNISOLO_MULTITENANT=true`):** Utilizes `CentrifugeNode` backed by `redis` for horizontal scaling across K8s pods.
 - **Standalone Mode:** Uses an in-memory event bus (`MemoryMeshTransport`) to eliminate external dependencies while maintaining the same API interface.
 
 ## 4. Phase 3: AutoDream Data Pipelines (Consolidation)
@@ -122,7 +122,7 @@ stateDiagram-v2
 - **Delegation:** Primary agents enqueue sub-tasks via `EnqueueSubTask(payload)`. Background worker pools consume the queue, execute the logic, and trigger a `task.completed` mesh event, unlocking dependent tasks in the DAG.
 
 ## 6. Visual Excellence Guidelines
-All outputs and corresponding orchestration dashboards strictly conform to the OHC Premium Aesthetic:
+All outputs and corresponding orchestration dashboards strictly conform to the OmniSolo Premium Aesthetic:
 - **Glassmorphism Elements:** `backdrop-filter: blur(20px) saturate(200%)`
 - **Background Tints:** `background: rgba(255, 255, 255, 0.03)`
 - **Typography Guidelines:** Enforce the use of `'Outfit', 'Inter', sans-serif` for all UI text.

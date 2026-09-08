@@ -41,7 +41,7 @@ fn database_url_can_be_loaded_from_a_secret_file() {
     temp_env::with_vars(
         [
             ("DATABASE_URL", None),
-            ("OHC_DATABASE_URL", None),
+            ("OMNISOLO_DATABASE_URL", None),
             ("DATABASE_URL_FILE", Some(path.to_str().unwrap())),
         ],
         || {
@@ -91,9 +91,9 @@ async fn environment_connection_applies_the_sqlcipher_key_to_sqlite() {
     temp_env::async_with_vars(
         [
             ("DATABASE_URL", Some(url.as_str())),
-            ("OHC_DATABASE_URL", None),
+            ("OMNISOLO_DATABASE_URL", None),
             (
-                "OHC_SQLITE_KEY",
+                "OMNISOLO_SQLITE_KEY",
                 Some("environment-test-key-with-'quote-that-remains-outside-the-url"),
             ),
         ],

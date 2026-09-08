@@ -3,7 +3,7 @@
 # KAIROS AI OS: Hybrid Core Design
 
 ## Vision
-The OmniSolo (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation across Cloud-Native (PostgreSQL/Redis) and Standalone Desktop (SQLite) modes.
+The OmniSolo (OmniSolo) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation across Cloud-Native (PostgreSQL/Redis) and Standalone Desktop (SQLite) modes.
 
 ## Phase 1: Shared Task List (Decomposition)
 The Shared Task List tracks complex feature decomposition into actionable, sequenced tasks.
@@ -58,7 +58,7 @@ The Teammate Mesh provides low-latency communication across the swarm, serving a
     - **Cloud:** Powered by Redis Pub/Sub connected to Centrifuge hubs for WebSocket propagation to thin clients and sub-agents.
     - **Standalone:** Powered by local in-process transport for maximum host-machine efficiency.
 
-**Payload Contract (OHC-SIP Compliance):**
+**Payload Contract (OmniSolo-SIP Compliance):**
 ```json
 {
     "agent_id": "sub_agent_xyz123",
@@ -73,7 +73,7 @@ The Teammate Mesh provides low-latency communication across the swarm, serving a
 ```
 
 ## Phase 3: autoDream (Memory Consolidation Pipeline)
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads and completed task results be consolidated into long-term durable state. autoDream serves as the omni-context memory layer for continuous learning.
+The Swarm Intelligence Protocol (OmniSolo-SIP) dictates that temporary agent scratchpads and completed task results be consolidated into long-term durable state. autoDream serves as the omni-context memory layer for continuous learning.
 
 Worker agents process completed tasks via the background pipeline, generating LLM embeddings for semantic recall. The system relies heavily on PostgreSQL's `pgvector` extension.
 

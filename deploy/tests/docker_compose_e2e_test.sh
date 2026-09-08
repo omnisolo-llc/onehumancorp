@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Docker Compose smoke test for the OHC single-machine container stack.
+# Docker Compose smoke test for the OmniSolo single-machine container stack.
 #
 # This test:
 #   1. Loads the Bazel-built server image into Docker
@@ -87,33 +87,33 @@ COMPOSE_FILE="${REPO_ROOT}/deploy/docker-compose.yml"
 SERVER_LOADER="${REPO_ROOT}/deploy/load_all_images"
 TLS_GENERATOR="${REPO_ROOT}/bazel/rules/playwright/generate_test_tls.sh"
 GRPC_PROBE="${REPO_ROOT}/deploy/grpc_mtls_probe"
-export OHC_DOCKER_SERVER_PORT="${OHC_DOCKER_SERVER_PORT:-127.0.0.1:0}"
-export OHC_DOCKER_GRPC_PORT="${OHC_DOCKER_GRPC_PORT:-127.0.0.1:0}"
-export OHC_DOCKER_POSTGRES_PORT="${OHC_DOCKER_POSTGRES_PORT:-127.0.0.1:0}"
-export OHC_DOCKER_VALKEY_PORT="${OHC_DOCKER_VALKEY_PORT:-127.0.0.1:0}"
-export OHC_DOCKER_UID="$(id -u)"
-export OHC_DOCKER_GID="$(id -g)"
+export OMNISOLO_DOCKER_SERVER_PORT="${OMNISOLO_DOCKER_SERVER_PORT:-127.0.0.1:0}"
+export OMNISOLO_DOCKER_GRPC_PORT="${OMNISOLO_DOCKER_GRPC_PORT:-127.0.0.1:0}"
+export OMNISOLO_DOCKER_POSTGRES_PORT="${OMNISOLO_DOCKER_POSTGRES_PORT:-127.0.0.1:0}"
+export OMNISOLO_DOCKER_VALKEY_PORT="${OMNISOLO_DOCKER_VALKEY_PORT:-127.0.0.1:0}"
+export OMNISOLO_DOCKER_UID="$(id -u)"
+export OMNISOLO_DOCKER_GID="$(id -g)"
 export MINIMAX_API_KEY="${MINIMAX_API_KEY:-docker-compose-e2e-placeholder-key}"
-export OHC_DOCKER_GRPC_TLS_DIR="${COMPOSE_TLS_DIR}"
+export OMNISOLO_DOCKER_GRPC_TLS_DIR="${COMPOSE_TLS_DIR}"
 JWT_SECRET_VALUE="compose-e2e-jwt-secret-${PROJECT_NAME}-at-least-32-bytes"
-OHC_SETUP_TOKEN="$(openssl rand -hex 32)"
+OMNISOLO_SETUP_TOKEN="$(openssl rand -hex 32)"
 POSTGRES_PASSWORD_VALUE="$(openssl rand -hex 24)"
 export SETUP_ADMIN_INIT_USERNAME="compose-e2e-admin"
 export SETUP_ADMIN_INIT_EMAIL="compose-e2e-admin@example.test"
-SETUP_ADMIN_INIT_PASSWORD="OHC-E2E-Aa1-$(openssl rand -hex 24)"
+SETUP_ADMIN_INIT_PASSWORD="OmniSolo-E2E-Aa1-$(openssl rand -hex 24)"
 export SETUP_ADMIN_INIT_ORGANIZATION_ID="compose-e2e-org"
 export JWT_SECRET_FILE="${COMPOSE_SECRET_DIR}/jwt-secret"
-export OHC_SETUP_TOKEN_FILE="${COMPOSE_SECRET_DIR}/setup-token"
+export OMNISOLO_SETUP_TOKEN_FILE="${COMPOSE_SECRET_DIR}/setup-token"
 export SETUP_ADMIN_INIT_PASSWORD_FILE="${COMPOSE_SECRET_DIR}/admin-password"
-export OHC_POSTGRES_PASSWORD_FILE="${COMPOSE_SECRET_DIR}/postgres-password"
+export OMNISOLO_POSTGRES_PASSWORD_FILE="${COMPOSE_SECRET_DIR}/postgres-password"
 export DATABASE_URL_FILE="${COMPOSE_SECRET_DIR}/database-url"
 
 umask 077
 mkdir -p "${COMPOSE_SECRET_DIR}"
 printf '%s' "${JWT_SECRET_VALUE}" > "${JWT_SECRET_FILE}"
-printf '%s' "${OHC_SETUP_TOKEN}" > "${OHC_SETUP_TOKEN_FILE}"
+printf '%s' "${OMNISOLO_SETUP_TOKEN}" > "${OMNISOLO_SETUP_TOKEN_FILE}"
 printf '%s' "${SETUP_ADMIN_INIT_PASSWORD}" > "${SETUP_ADMIN_INIT_PASSWORD_FILE}"
-printf '%s' "${POSTGRES_PASSWORD_VALUE}" > "${OHC_POSTGRES_PASSWORD_FILE}"
+printf '%s' "${POSTGRES_PASSWORD_VALUE}" > "${OMNISOLO_POSTGRES_PASSWORD_FILE}"
 printf 'postgres://ohc:%s@postgres:5432/ohc?sslmode=disable' \
   "${POSTGRES_PASSWORD_VALUE}" > "${DATABASE_URL_FILE}"
 
@@ -294,7 +294,7 @@ expect_status 401 "setup with a wrong-setup-token must be denied" \
 setup_status="$(request_status \
   -X POST "${BASE_URL}/api/v1/setup/admin" \
   -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer ${OHC_SETUP_TOKEN}" \
+  -H "Authorization: Bearer ${OMNISOLO_SETUP_TOKEN}" \
   --data-binary "@${SETUP_REQUEST_FILE}")"
 if [[ "${setup_status}" != "409" ]]; then
   echo "error: repeated setup returned unexpected status ${setup_status}" >&2

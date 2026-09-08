@@ -130,7 +130,7 @@ Recheck the Tauri graph when upstream releases a compatible GTK3/glib security u
 
 1. `bazel test //...` initially traversed registered `.worktrees/*` directories and loaded stale worktree packages. `.worktrees` was added to `.bazelignore`; no worktree was deleted or modified.
 2. `//src/server/auth:server_auth_unit_test` could not read sibling persistence files inside its sandbox. A precise `auth_contract_sources` filegroup was added and attached as compile data.
-3. `//src/server:server_lib_core_unit_test` attempted to compile the dedicated persistence commands module in the aggregate harness. The module is now gated out under `ohc_bazel`; its dedicated Bazel target remains enabled and passed.
+3. `//src/server:server_lib_core_unit_test` attempted to compile the dedicated persistence commands module in the aggregate harness. The module is now gated out under `omnisolo_bazel`; its dedicated Bazel target remains enabled and passed.
 4. The API aggregate target exposed stale auth fixtures that issued tokens without persisting users. Fixtures now use `Store::create_user`, preserving strict production authentication.
 5. The agent stream router test constructed a Tokio-dependent lazy pool outside a runtime. The test now runs under `#[tokio::test]`.
 6. Realtime WebSocket auth previously allowed the upgrade extractor to return 400 before invalid tickets were checked. Ticket validation now precedes upgrade extraction, and replay is verified over a real loopback WebSocket handshake.
@@ -259,7 +259,7 @@ These are full audits including development dependencies, not production-only fi
 
 - Initial full gate: failed because Bazel traversed stale `.worktrees`; fixed with `.bazelignore`.
 - Next full attempt: auth test sandbox lacked sibling sources; fixed with explicit compile data.
-- Next full attempt: core aggregate harness included a dedicated persistence test module; fixed with `ohc_bazel` cfg gating.
+- Next full attempt: core aggregate harness included a dedicated persistence test module; fixed with `omnisolo_bazel` cfg gating.
 - Next full attempt: 122/124 Bazel targets passed; API/onboarding failures exposed non-persisted auth fixtures, non-Tokio router construction, and realtime extractor ordering.
 - Focused API rerun after first fix: 205/206 passed; the remaining replay test used an in-process request without Hyper upgrade state and returned 426.
 - Replay test was converted to a real loopback WebSocket handshake; focused replay, complete API, onboarding, and final full gates passed.
@@ -306,7 +306,7 @@ After GitHub Actions is green, start only real services and bind the UI to all i
 
 1. Determine the LAN address with `hostname -I`.
 2. Start the real backend/database stack using the repository-supported standalone or Compose flow.
-3. Start Next with host `0.0.0.0` on an available port and `OHC_WEB_LOCAL_DEV=true` plus a private-LAN canonical origin.
+3. Start Next with host `0.0.0.0` on an available port and `OMNISOLO_WEB_LOCAL_DEV=true` plus a private-LAN canonical origin.
 4. Verify the local health endpoint, login page, authenticated real-data page, and real product image.
 5. Leave the processes running and report `http://LAN_IP:PORT`.
 

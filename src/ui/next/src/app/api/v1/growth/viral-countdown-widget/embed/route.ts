@@ -50,7 +50,7 @@ export async function GET(request: Request) {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
           body {
             margin: 0;
             padding: 16px;
@@ -198,7 +198,7 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': 'text/html',
         'Cache-Control': 'public, max-age=60', // Cache for 1 minute
-        'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'nonce-${nonce}'; connect-src 'none'; frame-ancestors *; base-uri 'none'; form-action 'none'`,
+        'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; script-src 'nonce-${nonce}'; connect-src 'none'; frame-ancestors *; base-uri 'none'; form-action 'none'`,
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'no-referrer',
       },

@@ -3,7 +3,7 @@
 # KAIROS Orchestration: Shared Task List Decomposition Design
 
 ## 1. Vision
-As part of the OHC AI OS, KAIROS must orchestrate vast swarms of AI agents. A critical capability is decomposing high-level feature requests into a granular **Shared Task List**. This architecture enables hybrid scalability across standalone desktop environments (SQLite) and multi-tenant Cloud environments (PostgreSQL).
+As part of the OmniSolo AI OS, KAIROS must orchestrate vast swarms of AI agents. A critical capability is decomposing high-level feature requests into a granular **Shared Task List**. This architecture enables hybrid scalability across standalone desktop environments (SQLite) and multi-tenant Cloud environments (PostgreSQL).
 
 ## 2. Distributed State Machine (Shared Task List)
 The core component is the database-backed Shared Task state machine, which ensures safe, deadlock-free orchestration across agent teams.
@@ -75,7 +75,7 @@ Tasks often spawn background sub-agents. This design tightly integrates the `sha
 </div>
 
 ## 4. Phase 3: autoDream Memory Vector Architecture
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads and completed task results be consolidated into long-term durable state. KAIROS hooks into task completion events to pipeline this data into the memory architecture.
+The Swarm Intelligence Protocol (OmniSolo-SIP) dictates that temporary agent scratchpads and completed task results be consolidated into long-term durable state. KAIROS hooks into task completion events to pipeline this data into the memory architecture.
 
 ### 4.1 Data Pipeline for Consolidation
 ```mermaid

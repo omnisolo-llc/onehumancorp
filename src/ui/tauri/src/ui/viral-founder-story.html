@@ -316,7 +316,7 @@
 
     // Fetch tenant ID from local storage if logged in (for demo/standalone environments)
     try {
-        const userStr = localStorage.getItem('ohc_user');
+        const userStr = localStorage.getItem('omnisolo_user');
         if (userStr) {
             const user = JSON.parse(userStr);
             if (user && user.tenant_id) {

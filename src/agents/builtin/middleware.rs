@@ -212,7 +212,7 @@ pub fn record_agent_event(
 /// Projects the portable capsule's safe message and tool-result records into
 /// the existing OmniSolo context format. Native records and unsupported data
 /// never enter this projection.
-pub fn portable_messages(capsule: &SessionCapsule) -> Vec<ohc_builtin_agent_core::types::Message> {
+pub fn portable_messages(capsule: &SessionCapsule) -> Vec<omnisolo_builtin_agent_core::types::Message> {
     capsule
         .records
         .iter()
@@ -222,7 +222,7 @@ pub fn portable_messages(capsule: &SessionCapsule) -> Vec<ohc_builtin_agent_core
                 text_from_parts(&message.content),
             )),
             PortableRecord::ToolResult(result) => Some(core_message(
-                ohc_builtin_agent_core::types::Role::Tool,
+                omnisolo_builtin_agent_core::types::Role::Tool,
                 text_from_parts(&result.content),
             )),
             _ => None,
@@ -230,13 +230,13 @@ pub fn portable_messages(capsule: &SessionCapsule) -> Vec<ohc_builtin_agent_core
         .collect()
 }
 
-fn role_from_portable(role: &MessageRole) -> ohc_builtin_agent_core::types::Role {
+fn role_from_portable(role: &MessageRole) -> omnisolo_builtin_agent_core::types::Role {
     match role {
-        MessageRole::System | MessageRole::Developer => ohc_builtin_agent_core::types::Role::System,
-        MessageRole::User => ohc_builtin_agent_core::types::Role::User,
-        MessageRole::Assistant => ohc_builtin_agent_core::types::Role::Assistant,
-        MessageRole::Tool => ohc_builtin_agent_core::types::Role::Tool,
-        MessageRole::Other => ohc_builtin_agent_core::types::Role::Assistant,
+        MessageRole::System | MessageRole::Developer => omnisolo_builtin_agent_core::types::Role::System,
+        MessageRole::User => omnisolo_builtin_agent_core::types::Role::User,
+        MessageRole::Assistant => omnisolo_builtin_agent_core::types::Role::Assistant,
+        MessageRole::Tool => omnisolo_builtin_agent_core::types::Role::Tool,
+        MessageRole::Other => omnisolo_builtin_agent_core::types::Role::Assistant,
     }
 }
 
@@ -259,10 +259,10 @@ fn text_from_parts(parts: &[ContentPart]) -> String {
 }
 
 fn core_message(
-    role: ohc_builtin_agent_core::types::Role,
+    role: omnisolo_builtin_agent_core::types::Role,
     content: String,
-) -> ohc_builtin_agent_core::types::Message {
-    ohc_builtin_agent_core::types::Message {
+) -> omnisolo_builtin_agent_core::types::Message {
+    omnisolo_builtin_agent_core::types::Message {
         role,
         content,
         tool_calls: Vec::new(),
@@ -393,11 +393,11 @@ mod tests {
         let messages = portable_messages(&capsule);
 
         assert_eq!(messages.len(), 2);
-        assert_eq!(messages[0].role, ohc_builtin_agent_core::types::Role::Tool);
+        assert_eq!(messages[0].role, omnisolo_builtin_agent_core::types::Role::Tool);
         assert_eq!(messages[0].content, "tool output");
         assert_eq!(
             messages[1].role,
-            ohc_builtin_agent_core::types::Role::Assistant
+            omnisolo_builtin_agent_core::types::Role::Assistant
         );
         assert_eq!(messages[1].content, "assistant output");
     }
@@ -469,21 +469,21 @@ mod tests {
         assert_eq!(messages.len(), 7);
         assert_eq!(
             messages[0].role,
-            ohc_builtin_agent_core::types::Role::System
+            omnisolo_builtin_agent_core::types::Role::System
         );
         assert_eq!(
             messages[1].role,
-            ohc_builtin_agent_core::types::Role::System
+            omnisolo_builtin_agent_core::types::Role::System
         );
-        assert_eq!(messages[2].role, ohc_builtin_agent_core::types::Role::User);
+        assert_eq!(messages[2].role, omnisolo_builtin_agent_core::types::Role::User);
         assert_eq!(
             messages[3].role,
-            ohc_builtin_agent_core::types::Role::Assistant
+            omnisolo_builtin_agent_core::types::Role::Assistant
         );
-        assert_eq!(messages[4].role, ohc_builtin_agent_core::types::Role::Tool);
+        assert_eq!(messages[4].role, omnisolo_builtin_agent_core::types::Role::Tool);
         assert_eq!(
             messages[5].role,
-            ohc_builtin_agent_core::types::Role::Assistant
+            omnisolo_builtin_agent_core::types::Role::Assistant
         );
         assert_eq!(messages[0].content, "text\nsummary\n{\"key\":\"value\"}");
         assert_eq!(messages[6].content, "tool");

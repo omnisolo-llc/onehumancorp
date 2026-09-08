@@ -30,6 +30,7 @@ const pageOwnedExactRoutes = new Set([
   "/kairos",
   "/kitchen",
   "/lead-magnet-generator",
+  "/login",
   "/operations",
   "/orders",
   "/pipeline",

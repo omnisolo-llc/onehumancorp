@@ -3,7 +3,7 @@
 # KAIROS Orchestration: Master Architecture
 
 ## Executive Summary
-KAIROS is the orchestration engine that powers the OmniSolo (OHC) Swarm. It enables a single human to orchestrate a vast swarm of AI agents with zero friction and maximum visual delight. KAIROS bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments through a unified, hybrid architecture.
+KAIROS is the orchestration engine that powers the OmniSolo (OmniSolo) Swarm. It enables a single human to orchestrate a vast swarm of AI agents with zero friction and maximum visual delight. KAIROS bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments through a unified, hybrid architecture.
 
 ## Phase 1: Shared Task List (Decomposition & UltraPlan)
 - **Goal**: Decompose high-level feature requests into a Distributed Shared Task List to be consumed by the Sub-Agent Queue.
@@ -17,7 +17,7 @@ KAIROS is the orchestration engine that powers the OmniSolo (OHC) Swarm. It enab
 - **Hybrid Support**: In-memory local bus for Standalone Mode.
 
 ## Phase 3: AutoDream Pipeline
-- **Goal**: Architect data pipelines for OHC's long-term memory consolidation system.
+- **Goal**: Architect data pipelines for OmniSolo's long-term memory consolidation system.
 - **Implementation**: Background jobs periodically summarize raw task logs and commit the resulting embeddings to the vector DB (pgvector or local SQLite equivalent). Utilizes PostgreSQL with the `pgvector` extension for exact Nearest Neighbor search on 1536-dimensional embeddings (Cloud-Native Mode). Embeddings are stored as JSON text blobs in SQLite (Standalone Mode). Stored in `autodream_memories` table.
 
 ## Swarm Coordination Flow

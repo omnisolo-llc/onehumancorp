@@ -1,10 +1,10 @@
 # Title: [integrations] Hybrid Message Queue MCP
 
 ## Problem Statement
-OHC operates in both Cloud-native (Kubernetes) and Standalone (SQLite) environments. A core requirement for agent orchestration is asynchronous task processing and inter-agent communication. In Cloud mode, this requires a scalable message broker (e.g., RabbitMQ, Kafka, or Redis Pub/Sub). In Standalone mode, we need a lightweight local alternative (e.g., SQLite-backed queues or Go channels) to maintain a zero-dependency local footprint. Agents lack a unified MCP Tool for interacting with message queues seamlessly across these environments.
+OmniSolo operates in both Cloud-native (Kubernetes) and Standalone (SQLite) environments. A core requirement for agent orchestration is asynchronous task processing and inter-agent communication. In Cloud mode, this requires a scalable message broker (e.g., RabbitMQ, Kafka, or Redis Pub/Sub). In Standalone mode, we need a lightweight local alternative (e.g., SQLite-backed queues or Go channels) to maintain a zero-dependency local footprint. Agents lack a unified MCP Tool for interacting with message queues seamlessly across these environments.
 
 ## Research Report
-Current agentic architectures generally hardcode their message brokers. Tools like Celery or standard messaging queues tie the agent framework directly to specific infrastructure. OHC's Hybrid Architecture demands an abstraction layer. A Hybrid Message Queue MCP Tool will allow agents to publish and subscribe to tasks without knowing the underlying implementation. The system will dynamically route messages to a Cloud broker (like Redis or RabbitMQ) for multi-tenant environments, or to a local SQLite/in-memory queue for Standalone execution. This ensures true portability and scalability.
+Current agentic architectures generally hardcode their message brokers. Tools like Celery or standard messaging queues tie the agent framework directly to specific infrastructure. OmniSolo's Hybrid Architecture demands an abstraction layer. A Hybrid Message Queue MCP Tool will allow agents to publish and subscribe to tasks without knowing the underlying implementation. The system will dynamically route messages to a Cloud broker (like Redis or RabbitMQ) for multi-tenant environments, or to a local SQLite/in-memory queue for Standalone execution. This ensures true portability and scalability.
 
 ## Design Doc
 **Architecture:**

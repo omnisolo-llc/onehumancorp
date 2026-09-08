@@ -1,13 +1,13 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.05); color: #fff; padding: 24px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# 🔬 OHC Market Research: Deep Audit of Agent Harness Isolation
+# 🔬 OmniSolo Market Research: Deep Audit of Agent Harness Isolation
 
 **Target:** Leaked Claude Code (v2.1.88)
 **Analyst:** Principal Product Researcher & Oracle (L7)
 
 ## 1. Executive Summary
-This report analyzes the Agent Harness isolation strategies within the leaked Claude Code repository (v2.1.88) and compares them against OmniSolo's (OHC) current hybrid architecture (OHC-HA).
-The objective is to identify critical gaps in OHC's execution sandboxing and define an actionable implementation mission.
+This report analyzes the Agent Harness isolation strategies within the leaked Claude Code repository (v2.1.88) and compares them against OmniSolo's (OmniSolo) current hybrid architecture (OmniSolo-HA).
+The objective is to identify critical gaps in OmniSolo's execution sandboxing and define an actionable implementation mission.
 
 ## 2. Claude Code: Harness Isolation Deep Dive
 Claude Code’s `@anthropic-ai/sandbox-runtime` uses OS-level primitives to achieve robust isolation.
@@ -25,20 +25,20 @@ Claude Code’s `@anthropic-ai/sandbox-runtime` uses OS-level primitives to achi
 - **Mechanism:** Uses dynamically generated `seccomp` filters to block specific syscalls.
 - **Unix Sockets:** Crucially, it blocks Unix Domain Socket creation to prevent agents from establishing IPC channels to the host or bypassing network proxies.
 
-## 3. OHC vs. Market Reality (Gap Analysis)
+## 3. OmniSolo vs. Market Reality (Gap Analysis)
 
-| Feature | OHC Hybrid Architecture (Current) | Claude Code Harness | Gap / Opportunity |
+| Feature | OmniSolo Hybrid Architecture (Current) | Claude Code Harness | Gap / Opportunity |
 | :--- | :--- | :--- | :--- |
-| **FS Isolation** | Process isolation only (Go standard exec). | Strict `bwrap` namespace isolation. | 🚨 **Critical**: OHC agents risk overwriting host states. |
-| **Network Proxy** | Unrestricted container/host network access. | Strict proxy with runtime human-in-the-loop asks. | 🚨 **Critical**: OHC cannot intercept unauthorized data exfiltration. |
+| **FS Isolation** | Process isolation only (Go standard exec). | Strict `bwrap` namespace isolation. | 🚨 **Critical**: OmniSolo agents risk overwriting host states. |
+| **Network Proxy** | Unrestricted container/host network access. | Strict proxy with runtime human-in-the-loop asks. | 🚨 **Critical**: OmniSolo cannot intercept unauthorized data exfiltration. |
 | **Syscall Limits** | None / Default Docker profiles. | Dynamic `seccomp-bpf` Unix socket blocking. | 🟡 **High**: Defense-in-depth against escapes. |
 
 ## 4. Architectural Integration Plan
-OHC must implement a native Go wrapper (`harness_runner`) that interfaces with these primitive security tools to provide an iron-clad execution layer.
+OmniSolo must implement a native Go wrapper (`harness_runner`) that interfaces with these primitive security tools to provide an iron-clad execution layer.
 
 ```mermaid
 graph TD
-    subgraph OHC KAIROS Orchestrator
+    subgraph OmniSolo KAIROS Orchestrator
         Dispatcher[Agent Dispatcher] -->|Spawn Task| Harness[Go Harness Runner]
     end
 
@@ -53,7 +53,7 @@ graph TD
     end
 
     Proxy -->|Allowed| Internet((Internet))
-    Proxy -->|Denied/Log| SIP[(OHC Central DB)]
+    Proxy -->|Denied/Log| SIP[(OmniSolo Central DB)]
     Agent -->|Read/Write| VirtualFS(Isolated Binds)
 ```
 

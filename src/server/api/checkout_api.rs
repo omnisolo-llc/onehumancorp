@@ -207,7 +207,7 @@ pub async fn create_checkout_session_handler(
 
 pub fn router(
     hub: Arc<Hub>,
-) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+) -> axum::Router<Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route(
             "/session",

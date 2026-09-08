@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
 );
 ```
 
-## 3. Aesthetics: Next-Generation OHC Design System
+## 3. Aesthetics: Next-Generation OmniSolo Design System
 
-To reflect the fluidity of the new Agentic OS, the OHC frontend must adopt the Next-Generation "Premium Feel" Design System.
+To reflect the fluidity of the new Agentic OS, the OmniSolo frontend must adopt the Next-Generation "Premium Feel" Design System.
 
 ### 3.1 Design System Tokens
 The UI must hide infrastructure complexity (K8s, MCP) behind consumer-grade "Apple-level aesthetics".
@@ -68,7 +68,7 @@ The UI must hide infrastructure complexity (K8s, MCP) behind consumer-grade "App
 graph TD
     %% Core Infrastructure
     K8s[Kubernetes Cluster]
-    DB[(OHC SIP Database)]
+    DB[(OmniSolo SIP Database)]
     MCP[MCP Gateway]
 
     %% Plugin Mesh
@@ -79,7 +79,7 @@ graph TD
     Agent1[Autonomous Agent]
 
     %% UI Components
-    UI[Next-Gen OHC Dashboard]
+    UI[Next-Gen OmniSolo Dashboard]
 
     %% Relationships
     PluginA -- Registers Manifest --> MCP

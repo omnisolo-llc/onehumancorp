@@ -1,16 +1,16 @@
 # Title: [Architecture] Autonomous Churn Prediction and Recovery Engine
 
 ## Problem Statement
-Small business owners like Leo (music tutor) and Priya (boutique owner) struggle to keep track of their repeat customers. Leo often loses students who quietly stop booking lessons, while Priya has customers who haven't visited her online store in months. They lack the time and analytical skills to identify which customers are at risk of churning, let alone design and execute targeted recovery campaigns. Competitors offer complex CRM tools that require manual list segmentation and campaign building, which is overwhelming for non-technical users. OHC needs an invisible, proactive engine that automatically identifies at-risk customers based on their purchase/booking history and seamlessly deploys AI-crafted, personalized recovery messages (e.g., discounts, check-ins) across SMS, Email, or WhatsApp, effectively saving revenue without the merchant lifting a finger.
+Small business owners like Leo (music tutor) and Priya (boutique owner) struggle to keep track of their repeat customers. Leo often loses students who quietly stop booking lessons, while Priya has customers who haven't visited her online store in months. They lack the time and analytical skills to identify which customers are at risk of churning, let alone design and execute targeted recovery campaigns. Competitors offer complex CRM tools that require manual list segmentation and campaign building, which is overwhelming for non-technical users. OmniSolo needs an invisible, proactive engine that automatically identifies at-risk customers based on their purchase/booking history and seamlessly deploys AI-crafted, personalized recovery messages (e.g., discounts, check-ins) across SMS, Email, or WhatsApp, effectively saving revenue without the merchant lifting a finger.
 
 ## Research Report
 
-*   **Current Architecture Limits:** OHC currently records transactions and bookings but lacks a predictive analytics layer to monitor customer lifecycle health automatically. The CRM module is passive, requiring merchants to manually check customer profiles.
+*   **Current Architecture Limits:** OmniSolo currently records transactions and bookings but lacks a predictive analytics layer to monitor customer lifecycle health automatically. The CRM module is passive, requiring merchants to manually check customer profiles.
 *   **Competitor Analysis:**
     *   *Shopify:* Offers basic customer segmentation and automated emails, but requires the merchant to manually create the "At Risk" segment and design the recovery workflow.
     *   *Klaviyo / Mailchimp:* Powerful predictive analytics for churn, but are complex enterprise-grade tools that are far too complicated for our personas and require separate integrations.
     *   *Wix:* Has basic automated emails, but no intelligent churn prediction.
-*   **Discovery:** OHC must implement an "Autonomous Churn Prediction and Recovery Engine". This engine will use background jobs to analyze customer interaction frequency (Recency, Frequency, Monetary - RFM analysis) against the merchant's historical averages. When a customer slips past their predicted re-engagement window, the `Customer Success` AI agent automatically drafts and sends a personalized, multi-channel recovery message, logging the interaction in the unified inbox.
+*   **Discovery:** OmniSolo must implement an "Autonomous Churn Prediction and Recovery Engine". This engine will use background jobs to analyze customer interaction frequency (Recency, Frequency, Monetary - RFM analysis) against the merchant's historical averages. When a customer slips past their predicted re-engagement window, the `Customer Success` AI agent automatically drafts and sends a personalized, multi-channel recovery message, logging the interaction in the unified inbox.
 
 ## Design Doc
 
@@ -44,7 +44,7 @@ stateDiagram-v2
 *   **The "Invisible" Flow:**
     *   The primary experience is completely invisible to the merchant. The system works in the background.
 *   **The Daily Briefing Integration (375px):**
-    *   **Action:** Leo opens his daily OHC brief.
+    *   **Action:** Leo opens his daily OmniSolo brief.
     *   **UI:** A UniFi-style glassmorphism card appears: "We noticed 3 students haven't booked in a month. We sent them a 10% off welcome-back text. 1 already rebooked!"
     *   **Button:** "View details" (leads to the AI's activity log).
 *   **Advanced Settings (If accessed):**

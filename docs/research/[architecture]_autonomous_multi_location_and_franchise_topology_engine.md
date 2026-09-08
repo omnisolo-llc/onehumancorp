@@ -7,7 +7,7 @@ Small business owners like Priya (Boutique owner) or Fatima (Food cart operator)
 *   **Shopify:** Multi-location inventory exists but is rigid. Setting up a new location requires navigating deep into desktop admin settings. It lacks an intuitive, mobile-first approach to instantly clone an existing location's configuration (staff, catalog, pricing).
 *   **Square:** Handles multi-location better for point-of-sale, but the setup is still tedious and highly manual regarding staff role assignments and location-specific pricing/tax rules.
 *   **Wix / Squarespace:** Extremely limited multi-location capabilities, primarily treating businesses as single entities.
-*   **OmniSolo (OHC) Differentiation - "Autonomous Topology":** OHC treats the business as a network of nodes. The OHC AI Operations Agent observes when Priya is consistently selling out at pop-ups or splitting inventory physically. When she says, "I'm opening a second store in Brooklyn," the AI instantly spins up the new node, clones the master catalog, configures the new local tax nexus, and sets up a location-specific staff roster. The underlying multi-tenant architecture remains secure while allowing cross-node aggregation.
+*   **OmniSolo (OmniSolo) Differentiation - "Autonomous Topology":** OmniSolo treats the business as a network of nodes. The OmniSolo AI Operations Agent observes when Priya is consistently selling out at pop-ups or splitting inventory physically. When she says, "I'm opening a second store in Brooklyn," the AI instantly spins up the new node, clones the master catalog, configures the new local tax nexus, and sets up a location-specific staff roster. The underlying multi-tenant architecture remains secure while allowing cross-node aggregation.
 
 ## Design Doc
 

@@ -1,12 +1,12 @@
-# OHC Agent Harness: Claude-Class Market Analysis
+# OmniSolo Agent Harness: Claude-Class Market Analysis
 
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); color: #fff;">
 
 ## 🔬 Executive Summary
 
-As the Principal Product Researcher & Oracle (L7), I have analyzed the architecture of leading AI agent environments—specifically **Claude Code** and **OpenClaw**—to identify critical gaps in the OHC (OmniSolo) Agentic OS.
+As the Principal Product Researcher & Oracle (L7), I have analyzed the architecture of leading AI agent environments—specifically **Claude Code** and **OpenClaw**—to identify critical gaps in the OmniSolo (OmniSolo) Agentic OS.
 
-The defining characteristic of next-generation agent swarms is their **Agent Harness**: the sandboxed, observable execution boundary. OHC's current direct-execution model lacks the robust OS-level isolation and network telemetry observed in competitors.
+The defining characteristic of next-generation agent swarms is their **Agent Harness**: the sandboxed, observable execution boundary. OmniSolo's current direct-execution model lacks the robust OS-level isolation and network telemetry observed in competitors.
 
 ## 📊 Market Analysis: The State of Agent Harnesses
 
@@ -22,9 +22,9 @@ The defining characteristic of next-generation agent swarms is their **Agent Har
 
 ---
 
-## 🆚 OHC vs. Market Reality
+## 🆚 OmniSolo vs. Market Reality
 
-| Feature Capability | OHC Current State | Market Standard (Claude/Claw) | Priority Gap |
+| Feature Capability | OmniSolo Current State | Market Standard (Claude/Claw) | Priority Gap |
 | :--- | :--- | :--- | :--- |
 | **Execution Sandboxing** | Host execution | `bwrap` OS sandboxes / Docker | 🚨 Critical |
 | **Network Control** | Open Host Network | HTTP/SOCKS Proxies | High |
@@ -32,11 +32,11 @@ The defining characteristic of next-generation agent swarms is their **Agent Har
 
 ---
 
-## 🏛️ OHC-Shield Architecture Blueprint
+## 🏛️ OmniSolo-Shield Architecture Blueprint
 
 ```mermaid
 graph TD
-    A[KAIROS Orchestrator] --> B(OHC Hybrid Harness)
+    A[KAIROS Orchestrator] --> B(OmniSolo Hybrid Harness)
     B -->|Network Intercept| C{Local Telemetry Proxy}
     C -->|Allowed| D[Internet]
     C -->|Denied| E[(PostgreSQL Violation Store)]

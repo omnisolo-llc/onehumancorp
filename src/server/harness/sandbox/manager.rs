@@ -52,9 +52,9 @@ impl SandboxManager {
     pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
 
-        // In a real scenario, this would query OHC-SIP Redis configurations.
+        // In a real scenario, this would query OmniSolo-SIP Redis configurations.
         // For now, we allow dynamic toggling or default to true.
-        let sandbox_enabled = std::env::var("OHC_HARNESS_SANDBOX_ENABLED")
+        let sandbox_enabled = std::env::var("OMNISOLO_HARNESS_SANDBOX_ENABLED")
             .map(|v| v.to_lowercase() == "true" || v == "1")
             .unwrap_or(true);
 

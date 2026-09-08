@@ -1,4 +1,4 @@
-use ohc_builtin_agent::memory_store::{EmbeddingRecord, VectorRepository};
+use omnisolo_builtin_agent::memory_store::{EmbeddingRecord, VectorRepository};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::str::FromStr;
 use std::sync::Arc;

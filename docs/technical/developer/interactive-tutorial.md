@@ -2,7 +2,7 @@
 
 # Interactive Developer Tutorial: Building a New Agent Persona
 
-Welcome to the OmniSolo (OHC) interactive developer tutorial. This guide will walk you through the process of registering a new agent persona and wiring it into the Swarm Intelligence Protocol (OHC-SIP).
+Welcome to the OmniSolo (OmniSolo) interactive developer tutorial. This guide will walk you through the process of registering a new agent persona and wiring it into the Swarm Intelligence Protocol (OmniSolo-SIP).
 
 ## Step 1: Define the Persona Configuration
 
@@ -74,7 +74,7 @@ match &db.store {
 
 ## Step 4: Ensure Visual Excellence (Docs/UI)
 
-If your agent generates documentation or UI templates, it **must** inject the OHC Visual Excellence styles.
+If your agent generates documentation or UI templates, it **must** inject the OmniSolo Visual Excellence styles.
 
 ```html
 <!-- Inject this at the root of generated HTML/Markdown content -->

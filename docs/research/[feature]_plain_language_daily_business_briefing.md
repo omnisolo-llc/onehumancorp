@@ -6,7 +6,7 @@ Founders suffer from "Financial Fog" (35% pain point frequency) and are overwhel
 
 **Research Report:**
 - Competitors provide traditional analytics dashboards that require interpretation.
-- OHC's "Business Advisor" persona should translate data into simple English.
+- OmniSolo's "Business Advisor" persona should translate data into simple English.
 
 **Design Doc:**
 - **UI Flow:** A daily push notification leading to a single "Briefing" screen.

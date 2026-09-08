@@ -15,7 +15,7 @@ export const getPowerSyncDB = (() => {
 
     initPromise = (async () => {
       const _db = new PowerSyncDatabase({
-        database: { dbFilename: 'ohc-offline.db' },
+        database: { dbFilename: 'omnisolo-offline.db' },
         schema: AppSchema
       });
       await _db.init();

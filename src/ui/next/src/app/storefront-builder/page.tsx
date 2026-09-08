@@ -39,13 +39,13 @@ export default function StorefrontBuilderPage() {
     const savedTenantId = localStorage.getItem("business_display_name") || "storefront";
     setTenantId(savedTenantId);
 
-    const savedBio = localStorage.getItem("ohc_builder_bio");
+    const savedBio = localStorage.getItem("omnisolo_builder_bio");
     if (savedBio) setBio(savedBio);
 
-    const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
+    const savedStatus = localStorage.getItem("omnisolo_builder_status") as "idle" | "generating" | "draft" | "live";
     if (savedStatus) setStatus(savedStatus);
 
-    const savedBlocks = localStorage.getItem("ohc_builder_blocks");
+    const savedBlocks = localStorage.getItem("omnisolo_builder_blocks");
     if (savedBlocks) {
       try {
         setBlocks(JSON.parse(savedBlocks));
@@ -54,7 +54,7 @@ export default function StorefrontBuilderPage() {
       }
     }
 
-    const savedLiveUrl = localStorage.getItem("ohc_builder_liveUrl");
+    const savedLiveUrl = localStorage.getItem("omnisolo_builder_liveUrl");
     if (savedLiveUrl) setLiveUrl(savedLiveUrl);
   }, []);
 
@@ -104,12 +104,12 @@ export default function StorefrontBuilderPage() {
 
   const updateBio = (newBio: string) => {
     setBio(newBio);
-    localStorage.setItem("ohc_builder_bio", newBio);
+    localStorage.setItem("omnisolo_builder_bio", newBio);
   };
 
   const updateStatus = (newStatus: "idle" | "generating" | "draft" | "live" | "chat") => {
     setStatus(newStatus);
-    localStorage.setItem("ohc_builder_status", newStatus);
+    localStorage.setItem("omnisolo_builder_status", newStatus);
   };
 
   const handleSaveBlock = () => {
@@ -120,7 +120,7 @@ export default function StorefrontBuilderPage() {
         props: editingBlockContent
       };
       setBlocks(newBlocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
       setSelectedBlockIndex(null);
       setSaveMessage("Changes saved!");
       setTimeout(() => setSaveMessage(""), 3000);
@@ -137,7 +137,7 @@ export default function StorefrontBuilderPage() {
 
     const newBlocks = [...blocks, { type, props: defaultProps }];
     setBlocks(newBlocks);
-    localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+    localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
     setIsAddBlockOpen(false);
     setSelectedBlockIndex(newBlocks.length - 1);
   };
@@ -161,7 +161,7 @@ export default function StorefrontBuilderPage() {
         props: b.content
       }));
       setBlocks(blocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(blocks));
       updateStatus("draft");
     } catch (error) {
       console.error("Failed to generate storefront", error);
@@ -176,7 +176,7 @@ export default function StorefrontBuilderPage() {
       const newBlocks = [...prev];
       const [moved] = newBlocks.splice(fromIndex, 1);
       newBlocks.splice(toIndex, 0, moved);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
       return newBlocks;
     });
 
@@ -205,7 +205,7 @@ export default function StorefrontBuilderPage() {
         props: b.content
       }));
       setBlocks(newBlocks);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
       setChatMessage("");
       updateStatus("draft");
     } catch (error) {
@@ -252,7 +252,7 @@ export default function StorefrontBuilderPage() {
         updateStatus("live");
         const url = `/bio/${data.domain || 'myshop'}`;
         setLiveUrl(url);
-        localStorage.setItem("ohc_builder_liveUrl", url);
+        localStorage.setItem("omnisolo_builder_liveUrl", url);
       } else {
         console.error('Failed to publish');
       }
@@ -572,7 +572,7 @@ export default function StorefrontBuilderPage() {
                 onClick={() => {
                   const newBlocks = blocks.filter((_, i) => i !== selectedBlockIndex);
                   setBlocks(newBlocks);
-                  localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+                  localStorage.setItem("omnisolo_builder_blocks", JSON.stringify(newBlocks));
                   setSelectedBlockIndex(null);
                 }}
               >

@@ -13,8 +13,8 @@ Small business owners like Priya (Boutique Owner) and Leo (Music Tutor) struggle
 - **Squarespace**: Manual sales and discounts only.
 - **Airlines/Hotels**: Use sophisticated yield management, but this technology is entirely inaccessible to small businesses.
 
-### OHC Opportunity
-OHC can democratize yield management. By leveraging the "Finance & Payments" and "Business Advisory" AI agents, OHC can monitor inventory velocity and booking density. When stagnation is detected, the AI proposes (or automatically applies) optimized discounts to specific customer segments.
+### OmniSolo Opportunity
+OmniSolo can democratize yield management. By leveraging the "Finance & Payments" and "Business Advisory" AI agents, OmniSolo can monitor inventory velocity and booking density. When stagnation is detected, the AI proposes (or automatically applies) optimized discounts to specific customer segments.
 
 ## Design Doc
 
@@ -57,14 +57,14 @@ graph TD
 **Objective**: Build the user-facing flow and background worker structure for the Dynamic Pricing & Yield Management Engine.
 
 **Critical User Journey (CUJ)**:
-1. Priya logs into the OHC mobile app.
+1. Priya logs into the OmniSolo mobile app.
 2. She sees an AI Advisory Card suggesting a 20% discount on "Summer Hats" because they haven't sold in 30 days.
 3. She taps "Approve & Run Sale".
 4. The system updates the storefront price, and the Marketing Agent drafts an email to her past customers.
 
 **Acceptance Criteria**:
 - Ensure all screens are fully responsive down to 375px.
-- Use OHC's Glassmorphism tokens for the suggestion cards.
+- Use OmniSolo's Glassmorphism tokens for the suggestion cards.
 - Implement the "Approve" flow with optimistic UI updates.
 - Ensure the background pricing update adheres to tenant isolation boundaries.
 - No DB schema or specific APIs prescribed—design the necessary services to satisfy this CUJ.

@@ -104,7 +104,7 @@ function UnlockContent() {
         </div>
 
         <style dangerouslySetInnerHTML={{__html: `
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
             .font-inter { font-family: 'Inter', sans-serif; }
             .font-outfit { font-family: 'Outfit', sans-serif; }
             @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

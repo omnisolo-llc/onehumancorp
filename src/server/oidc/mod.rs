@@ -128,7 +128,7 @@ fn unknown_kid_refresh_allowed(issuer_url: &str, now: chrono::DateTime<Utc>) -> 
 }
 
 fn is_blocked_ip(ip: std::net::IpAddr) -> bool {
-    if std::env::var("OHC_ALLOW_LOCAL_IPS")
+    if std::env::var("OMNISOLO_ALLOW_LOCAL_IPS")
         .map(|v| v == "true")
         .unwrap_or(false)
     {
@@ -163,7 +163,7 @@ async fn validate_url_and_get_ip(url_str: &str) -> Result<(String, std::net::IpA
         return Err("invalid authority URL".to_string());
     }
     let url = reqwest::Url::parse(url_str).map_err(|e| e.to_string())?;
-    let allow_local_http = std::env::var("OHC_OIDC_ALLOW_HTTP").is_ok_and(|value| value == "true");
+    let allow_local_http = std::env::var("OMNISOLO_OIDC_ALLOW_HTTP").is_ok_and(|value| value == "true");
     if url.scheme() != "https" && !(url.scheme() == "http" && allow_local_http) {
         return Err("invalid scheme".to_string());
     }
@@ -585,13 +585,13 @@ mod tests {
 
     #[test]
     fn test_is_blocked_ip() {
-        temp_env::with_vars(vec![("OHC_ALLOW_LOCAL_IPS", None::<String>)], || {
+        temp_env::with_vars(vec![("OMNISOLO_ALLOW_LOCAL_IPS", None::<String>)], || {
             assert!(is_blocked_ip("127.0.0.1".parse().unwrap()));
             assert!(is_blocked_ip("0.0.0.0".parse().unwrap()));
             assert!(is_blocked_ip("169.254.169.254".parse().unwrap())); // Link local
             assert!(is_blocked_ip("224.0.0.1".parse().unwrap())); // Multicast
 
-            // Private IPs (assuming OHC_ALLOW_LOCAL_IPS is not set to true)
+            // Private IPs (assuming OMNISOLO_ALLOW_LOCAL_IPS is not set to true)
             assert!(is_blocked_ip("10.0.0.1".parse().unwrap()));
             assert!(is_blocked_ip("172.16.0.1".parse().unwrap()));
             assert!(is_blocked_ip("192.168.0.1".parse().unwrap()));
@@ -612,8 +612,8 @@ mod tests {
     fn test_validate_url_and_get_ip_valid() {
         temp_env::with_vars(
             vec![
-                ("OHC_ALLOW_LOCAL_IPS", Some("true")),
-                ("OHC_OIDC_ALLOW_HTTP", Some("true")),
+                ("OMNISOLO_ALLOW_LOCAL_IPS", Some("true")),
+                ("OMNISOLO_OIDC_ALLOW_HTTP", Some("true")),
             ],
             || {
                 tokio::runtime::Builder::new_current_thread()
@@ -639,7 +639,7 @@ mod tests {
 
     #[test]
     fn public_http_authorities_are_rejected_without_network_access() {
-        temp_env::with_vars(vec![("OHC_OIDC_ALLOW_HTTP", None::<String>)], || {
+        temp_env::with_vars(vec![("OMNISOLO_OIDC_ALLOW_HTTP", None::<String>)], || {
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
@@ -839,8 +839,8 @@ mod tests {
     fn test_validate_url_and_get_ip_blocked() {
         temp_env::with_vars(
             vec![
-                ("OHC_ALLOW_LOCAL_IPS", Some("false")),
-                ("OHC_OIDC_ALLOW_HTTP", Some("true")),
+                ("OMNISOLO_ALLOW_LOCAL_IPS", Some("false")),
+                ("OMNISOLO_OIDC_ALLOW_HTTP", Some("true")),
             ],
             || {
                 tokio::runtime::Builder::new_current_thread()

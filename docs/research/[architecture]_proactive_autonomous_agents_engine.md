@@ -10,7 +10,7 @@ Small business owners like Maya (the baker) and Carlos (the handyman) are overwh
 Our competitive analysis reveals a massive gap in the market:
 - **Shopify:** Relies heavily on third-party apps for automation, which are complex to set up and often require Zapier or similar tools.
 - **Wix/Squarespace:** Offer basic auto-responders but lack proactive intelligence (e.g., they won't automatically suggest a new marketing campaign based on low sales).
-- **OHC Differentiation:** OHC must transition from a reactive tool to a proactive partner. We need an engine that continuously monitors the business state (inventory, sales, customer interactions) and *pushes* actionable suggestions or automatically executes routine tasks (like drafting an Instagram post when inventory is low) on behalf of the user.
+- **OmniSolo Differentiation:** OmniSolo must transition from a reactive tool to a proactive partner. We need an engine that continuously monitors the business state (inventory, sales, customer interactions) and *pushes* actionable suggestions or automatically executes routine tasks (like drafting an Instagram post when inventory is low) on behalf of the user.
 
 ## Design Doc
 

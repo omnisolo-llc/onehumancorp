@@ -1,4 +1,4 @@
-# OHC Autonomous Unified Booking & Revenue Engine
+# OmniSolo Autonomous Unified Booking & Revenue Engine
 
 ## 1. Sequence Diagram
 
@@ -6,18 +6,18 @@
 sequenceDiagram
     participant Customer
     participant OwnerApp as Owner (Mobile App)
-    participant OHC as OHC Booking Engine
+    participant OmniSolo as OmniSolo Booking Engine
     participant OpsAgent as Operations Agent
     participant CSAgent as Customer Success Agent
 
-    Customer->>OHC: Books Service & Pays Deposit
-    OHC->>OpsAgent: Update Calendar & State
+    Customer->>OmniSolo: Books Service & Pays Deposit
+    OmniSolo->>OpsAgent: Update Calendar & State
     OpsAgent->>OpsAgent: Run Nightly Dormant Analysis
     OpsAgent->>CSAgent: Trigger: "Sarah missed regular slot"
-    CSAgent-->>OHC: Draft check-in message & magic link
-    OHC->>OwnerApp: Push Notification: "Approve check-in for Sarah?"
-    OwnerApp->>OHC: Tap "Approve"
-    OHC->>Customer: Send SMS/Email
+    CSAgent-->>OmniSolo: Draft check-in message & magic link
+    OmniSolo->>OwnerApp: Push Notification: "Approve check-in for Sarah?"
+    OwnerApp->>OmniSolo: Tap "Approve"
+    OmniSolo->>Customer: Send SMS/Email
 ```
 
 ## 2. Entity-Relationship (ER) Diagram
@@ -28,7 +28,7 @@ erDiagram
     TENANTS ||--o{ SERVICES : "offers"
     TENANTS ||--o{ AVAILABILITY_BLOCKS : "defines"
     TENANTS ||--o{ BOOKINGS : "manages"
-    TENANTS ||--o{ OHC_UNIVERSAL_LEDGER : "records"
+    TENANTS ||--o{ OMNISOLO_UNIVERSAL_LEDGER : "records"
 
     CUSTOMERS ||--o{ BOOKINGS : "makes"
     SERVICES ||--o{ AVAILABILITY_BLOCKS : "has"

@@ -178,7 +178,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_payout_with_pool() {
-        let db_url = std::env::var("OHC_DATABASE_URL")
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = match sqlx::PgPool::connect(&db_url).await {
             Ok(pool) => pool,
@@ -216,14 +216,8 @@ mod batching_cost_tests {
         let batcher = PayoutBatcher::new(pool, threshold);
 
         // Simulating the routing check directly as that's what prevents unbatched fees
-        assert_eq!(
-            super::super::routing::PaymentRouter::should_batch_payout(1000),
-            true
-        );
-        assert_eq!(
-            super::super::routing::PaymentRouter::should_batch_payout(10000),
-            false
-        ); // Threshold reached
+        assert!(super::super::routing::PaymentRouter::should_batch_payout(1000));
+        assert!(!super::super::routing::PaymentRouter::should_batch_payout(10000)); // Threshold reached
 
         // Verification that the batcher initializes correctly with the correct threshold.
         assert_eq!(batcher.batch_threshold_cents, 10000);

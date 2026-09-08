@@ -5,11 +5,11 @@
 #[cfg(test)]
 mod tests {
 
-    use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
-use ohc_builtin_agent::agent::AgentRunConfig;
-    use ohc_builtin_agent_core::types::{ToolCall, ToolError};
-    use ohc_builtin_agent_tools::Tool;
-    use ohc_builtin_agent_tools::ToolExecutor;
+    use omnisolo_builtin_agent::tool_executor_engine::ToolExecutionEngine;
+use omnisolo_builtin_agent::agent::AgentRunConfig;
+    use omnisolo_builtin_agent_core::types::{ToolCall, ToolError};
+    use omnisolo_builtin_agent_tools::Tool;
+    use omnisolo_builtin_agent_tools::ToolExecutor;
     use serde_json::json;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
@@ -171,7 +171,7 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
     #[tokio::test]
     async fn test_pydantic_to_engine_integration() {
-        use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
+        use omnisolo_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 
         #[derive(Deserialize)]
@@ -448,11 +448,11 @@ use ohc_builtin_agent::agent::AgentRunConfig;
 
 #[cfg(test)]
 mod additional_transient_tests {
-    use ohc_builtin_agent::tool_executor_engine::ToolExecutionEngine;
-use ohc_builtin_agent::agent::AgentRunConfig;
-    use ohc_builtin_agent_core::types::{ToolCall, ToolError};
-    use ohc_builtin_agent_tools::Tool;
-    use ohc_builtin_agent_tools::ToolExecutor;
+    use omnisolo_builtin_agent::tool_executor_engine::ToolExecutionEngine;
+use omnisolo_builtin_agent::agent::AgentRunConfig;
+    use omnisolo_builtin_agent_core::types::{ToolCall, ToolError};
+    use omnisolo_builtin_agent_tools::Tool;
+    use omnisolo_builtin_agent_tools::ToolExecutor;
     use serde_json::json;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;

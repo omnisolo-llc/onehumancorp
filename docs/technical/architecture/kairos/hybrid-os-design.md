@@ -1,9 +1,9 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# OHC AI OS Orchestration: KAIROS Hybrid Agentic OS Master Design
+# OmniSolo AI OS Orchestration: KAIROS Hybrid Agentic OS Master Design
 
 ## 1. Executive Summary
-The OmniSolo (OHC) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**. This architecture relies on three primary pillars: a distributed state machine for tasks, a low-latency Teammate Mesh for communication, and the autoDream pipeline for long-term vector memory consolidation.
+The OmniSolo (OmniSolo) Swarm requires the **KAIROS Orchestrator** to define the structural and aesthetic vision for the OmniSolo "Hybrid Agentic OS". KAIROS orchestrates the agent team by decomposing high-level feature requests into actionable tasks within a distributed **Shared Task List**. This architecture relies on three primary pillars: a distributed state machine for tasks, a low-latency Teammate Mesh for communication, and the autoDream pipeline for long-term vector memory consolidation.
 
 ## 2. Shared Task List & DAG Schema
 The Shared Task List relies on database-backed state machines to prevent race conditions during task claiming. Tasks are represented as nodes in a Directed Acyclic Graph (DAG) using a JSONB `dependencies` array.
@@ -64,7 +64,7 @@ The Teammate Mesh ensures agents coordinate without delays.
 ```
 
 ## 4. autoDream Memory Vector Architecture
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
+The Swarm Intelligence Protocol (OmniSolo-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
 
 ```sql
 CREATE TABLE IF NOT EXISTS consolidated_memory (
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
 
 ```mermaid
 graph TD
-    Agent[Agent Shared Memory] -->|Writes to OHC_MEMORY_DIR| FS[Runtime Memory Directory]
+    Agent[Agent Shared Memory] -->|Writes to OMNISOLO_MEMORY_DIR| FS[Runtime Memory Directory]
     FS -->|Watched by| AutoDream[AutoDream Pipeline Worker]
     AutoDream --> Chunk[Chunk & Tokenize]
     Chunk --> Embed[Minimax/Cohere Embedding API]
@@ -99,7 +99,7 @@ The system is designed to degrade gracefully based on environment context.
 | **Memory Vector Store** | pgvector / Pinecone | Local SQLite FTS/Vector extensions |
 
 ## 6. Visual Excellence Mandate
-All associated UI components must represent the OHC "Premium Feel". The application of these styles is mandatory for all KAIROS dashboards and visualization interfaces.
+All associated UI components must represent the OmniSolo "Premium Feel". The application of these styles is mandatory for all KAIROS dashboards and visualization interfaces.
 
 ```css
 <style>

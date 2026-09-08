@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Small business owners operating in challenging network conditions—such as Fatima managing her food cart in areas with patchy 4G, or Carlos repairing plumbing in a customer's basement with zero reception—face critical operational friction when their point-of-sale (POS), booking, or inventory management tools fail offline. Existing solutions either prevent actions completely without a connection or show generic error states, leading to lost sales and poor customer experiences. We need a robust, offline-first mobile architecture that allows the business to function seamlessly when disconnected, capturing orders, taking cash/offline payments, and securely syncing state back to the OHC backend once connectivity is restored.
+Small business owners operating in challenging network conditions—such as Fatima managing her food cart in areas with patchy 4G, or Carlos repairing plumbing in a customer's basement with zero reception—face critical operational friction when their point-of-sale (POS), booking, or inventory management tools fail offline. Existing solutions either prevent actions completely without a connection or show generic error states, leading to lost sales and poor customer experiences. We need a robust, offline-first mobile architecture that allows the business to function seamlessly when disconnected, capturing orders, taking cash/offline payments, and securely syncing state back to the OmniSolo backend once connectivity is restored.
 
 ## Research Report
 
@@ -13,7 +13,7 @@ Small business owners operating in challenging network conditions—such as Fati
 - **Wix/Squarespace:** Primarily online-dependent. While they offer mobile apps, robust offline-first POS and inventory management are not deeply integrated at the core edge layer, requiring a solid connection for most management tasks.
 
 **Our Opportunity:**
-OmniSolo can differentiate by treating offline resilience not as a bolt-on feature, but as a core architectural primitive. By employing an Optimistic Mutation Engine with Conflict-Free Replicated Data Types (CRDTs) or a robust local action queue (Local-First architecture), OHC will guarantee that a user (like Maya or Fatima) can manage inventory, process local cash/tap-to-pay offline operations, and rely on the AI Operations Department to resolve state conflicts gracefully in the background without overwhelming the user with technical "sync error" jargon.
+OmniSolo can differentiate by treating offline resilience not as a bolt-on feature, but as a core architectural primitive. By employing an Optimistic Mutation Engine with Conflict-Free Replicated Data Types (CRDTs) or a robust local action queue (Local-First architecture), OmniSolo will guarantee that a user (like Maya or Fatima) can manage inventory, process local cash/tap-to-pay offline operations, and rely on the AI Operations Department to resolve state conflicts gracefully in the background without overwhelming the user with technical "sync error" jargon.
 
 ## Design Doc
 
@@ -31,7 +31,7 @@ sequenceDiagram
     participant User (Flutter App)
     participant Local DB (Outbox)
     participant Sync Worker (Background)
-    participant OHC Backend (Go)
+    participant OmniSolo Backend (Go)
     participant AI Ops Agent (Gemini)
 
     User->>Local DB: Mark "Vegan Cake" as Sold Out (Offline)
@@ -41,15 +41,15 @@ sequenceDiagram
     Note over Sync Worker: Network restored
 
     Sync Worker->>Local DB: Read Outbox Intents
-    Sync Worker->>OHC Backend: Submit Intent (Idempotency Key: UUID)
+    Sync Worker->>OmniSolo Backend: Submit Intent (Idempotency Key: UUID)
 
     alt Success
-        OHC Backend-->>Sync Worker: 200 OK (State Synced)
+        OmniSolo Backend-->>Sync Worker: 200 OK (State Synced)
         Sync Worker->>Local DB: Mark Intent as Processed
     else Conflict Detected (e.g. Item modified online)
-        OHC Backend->>AI Ops Agent: Trigger Conflict Resolution
-        AI Ops Agent->>OHC Backend: Resolve conflict based on tenant policy
-        OHC Backend-->>Sync Worker: 200 OK (Resolved state)
+        OmniSolo Backend->>AI Ops Agent: Trigger Conflict Resolution
+        AI Ops Agent->>OmniSolo Backend: Resolve conflict based on tenant policy
+        OmniSolo Backend-->>Sync Worker: 200 OK (Resolved state)
         Sync Worker->>Local DB: Update local cache with resolved state
         AI Ops Agent->>User: Advisory Notification (Plain text summary)
     end

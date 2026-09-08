@@ -1,7 +1,7 @@
 # Teammate Mesh Interop Layer Architecture
 
 ## Overview
-The Interop Layer ensures that the OHC Swarm communicates with zero latency and perfect alignment across both Cloud and Standalone environments. The main server and builtin agent microservice stay in sync seamlessly, regardless of whether the system operates online via Redis Pub/Sub (Cloud) or offline via local IPC (Standalone).
+The Interop Layer ensures that the OmniSolo Swarm communicates with zero latency and perfect alignment across both Cloud and Standalone environments. The main server and builtin agent microservice stay in sync seamlessly, regardless of whether the system operates online via Redis Pub/Sub (Cloud) or offline via local IPC (Standalone).
 
 ## Transport Layer
 The interop architecture is heavily abstracted across different transport mechanisms to accommodate varying deployments without changing the application logic. All wire formats utilize Protobufs (`src/proto/interop.proto`).

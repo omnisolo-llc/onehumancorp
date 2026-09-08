@@ -35,10 +35,10 @@ pub fn database_url_from_environment() -> CommandResult<DatabaseUrl> {
 pub async fn connect_from_environment() -> CommandResult<AppDatabase> {
     let url = database_url_from_environment()?;
     if url.expose_for_connection().starts_with("sqlite:") {
-        let key = std::env::var("OHC_SQLITE_KEY")
-            .map_err(|_| "OHC_SQLITE_KEY is required for encrypted SQLite storage")?;
+        let key = std::env::var("OMNISOLO_SQLITE_KEY")
+            .map_err(|_| "OMNISOLO_SQLITE_KEY is required for encrypted SQLite storage")?;
         if key.trim().is_empty() {
-            return Err("OHC_SQLITE_KEY cannot be empty for encrypted SQLite storage".into());
+            return Err("OMNISOLO_SQLITE_KEY cannot be empty for encrypted SQLite storage".into());
         }
         return Ok(
             AppDatabase::connect_with_sqlcipher_key(url.expose_for_connection(), &key).await?,

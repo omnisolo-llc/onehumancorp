@@ -1,6 +1,6 @@
 #![allow(clippy::all)]
 pub use ::server_common as common;
-pub use ::server_ohc as ohc;
+pub use ::server_omnisolo as ohc;
 pub use ::server_oidc as oidc;
 
 pub mod email;
@@ -26,7 +26,7 @@ pub mod db {
             .get_or_init(|| {
                 let database_url = std::env::var("DATABASE_URL")
                     .ok()
-                    .or_else(|| std::env::var("OHC_DATABASE_URL").ok())
+                    .or_else(|| std::env::var("OMNISOLO_DATABASE_URL").ok())
                     .unwrap_or_else(|| {
                         "postgres://postgres:postgres@localhost:5432/test".to_string()
                     });
@@ -139,7 +139,7 @@ pub async fn api_key_auth_middleware(
     let mut matched_member_id = None;
     let mut matched_org_id = None;
 
-    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OHC_DATABASE_URL").is_ok();
+    let has_db = std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
     if has_db {
         let pool = crate::db::get_pool();
         if let Ok(Some(row)) =
@@ -196,11 +196,11 @@ pub enum AuthMode {
 
 /// Build an AuthMode from environment variables.
 ///
-///   OHC_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
-///   OHC_AGENT_SPIFFE_ID            – restricts SPIFFE ID (enables SPIFFE mode)
+///   OMNISOLO_AGENT_AUTH_DISABLED=true   – skip auth (dev only)
+///   OMNISOLO_AGENT_SPIFFE_ID            – restricts SPIFFE ID (enables SPIFFE mode)
 pub fn auth_mode_from_env() -> AuthMode {
     AuthMode::Spiffe {
-        allowed_id: env::var("OHC_AGENT_SPIFFE_ID").unwrap_or_default(),
+        allowed_id: env::var("OMNISOLO_AGENT_SPIFFE_ID").unwrap_or_default(),
     }
 }
 
@@ -318,8 +318,8 @@ where
 }
 
 use ::server_common::Claims;
-use ::server_ohc::orchestration::auth_service_server::AuthService;
-use ::server_ohc::orchestration::*;
+use ::server_omnisolo::orchestration::auth_service_server::AuthService;
+use ::server_omnisolo::orchestration::*;
 use base64::Engine as _;
 use chrono::{DateTime, Utc};
 use rand::RngCore;
@@ -434,7 +434,7 @@ impl Store {
                     panic!("invalid authentication secret configuration");
                 }
 
-                let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
+                let secret_path = ::server_config::jwt_secret_path();
                 if secret_path.exists() {
                     #[cfg(unix)]
                     {
@@ -451,10 +451,10 @@ impl Store {
                             if let Ok(metadata) = file.metadata() {
                                 let mut perms = metadata.permissions();
                                 if perms.mode() & 0o777 != 0o600 {
-                                    tracing::warn!("Insecure permissions on .ohc_jwt_secret. Fixing it to prevent TOCTOU attacks.");
+                                    tracing::warn!("Insecure permissions on the OmniSolo JWT secret. Fixing them to prevent TOCTOU attacks.");
                                     perms.set_mode(0o600);
                                     if let Err(e) = file.set_permissions(perms) {
-                                        tracing::error!("Failed to securely update .ohc_jwt_secret file permissions: {}", e);
+                                        tracing::error!("Failed to securely update OmniSolo JWT secret permissions: {}", e);
                                         std::process::exit(1);
                                     }
                                 }
@@ -476,8 +476,8 @@ impl Store {
                     }
                 }
 
-                let sqlite_key_opt = std::env::var("OHC_SQLITE_KEY").ok().or_else(|| {
-                    let secret_path = ::server_config::get_safe_user_dir().join(".ohc_sqlite_key");
+                let sqlite_key_opt = std::env::var("OMNISOLO_SQLITE_KEY").ok().or_else(|| {
+                    let secret_path = ::server_config::sqlite_key_path();
                     if secret_path.exists() {
                         #[cfg(unix)]
                         {
@@ -494,10 +494,10 @@ impl Store {
                                 if let Ok(metadata) = file.metadata() {
                                     let mut perms = metadata.permissions();
                                     if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on .ohc_sqlite_key. Fixing it to prevent TOCTOU attacks.");
+                                        tracing::warn!("Insecure permissions on the OmniSolo SQLite key. Fixing them to prevent TOCTOU attacks.");
                                         perms.set_mode(0o600);
                                         if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!("Failed to securely update .ohc_sqlite_key file permissions: {}", e);
+                                            tracing::error!("Failed to securely update OmniSolo SQLite key permissions: {}", e);
                                             std::process::exit(1);
                                         }
                                     }
@@ -522,12 +522,12 @@ impl Store {
                 });
 
                 let new_secret = if let Some(sqlite_key) = sqlite_key_opt {
-                    tracing::debug!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence"); // pii-safe
+                    tracing::debug!("falling back to a generated JWT secret derived from OMNISOLO_SQLITE_KEY for persistent standalone authentication"); // pii-safe
                     let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
-                    tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence"); // pii-safe
+                    tracing::debug!("falling back to a generated persistent OmniSolo JWT secret"); // pii-safe
                     let mut key_bytes = [0u8; 32];
                     use rand::RngCore;
                     rand::thread_rng().fill_bytes(&mut key_bytes);
@@ -591,7 +591,7 @@ impl Store {
         );
 
         let redis_configuration = if ::server_config::get().multitenant {
-            let setting = match std::env::var("OHC_REDIS_URL") {
+            let setting = match std::env::var("OMNISOLO_REDIS_URL") {
                 Ok(url) => RedisUrlSetting::Value(url),
                 Err(std::env::VarError::NotPresent) => RedisUrlSetting::Absent,
                 Err(std::env::VarError::NotUnicode(_)) => RedisUrlSetting::InvalidUnicode,
@@ -1912,7 +1912,7 @@ mod store_tests {
             let mut request = Request::new(());
             request.metadata_mut().insert(
                 "x-spiffe-id",
-                "spiffe://onehumancorp.io/org/acme/agent/forged"
+                "spiffe://omnisolo.io/org/acme/agent/forged"
                     .parse()
                     .unwrap(),
             );

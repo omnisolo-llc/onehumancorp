@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
+import { cloudUrl } from '../../lib/branding';
 
 export default function CustomerReferralProgramPage() {
   const router = useRouter();
@@ -23,10 +24,10 @@ export default function CustomerReferralProgramPage() {
     }
   }, []);
 
-  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/customer-referral/embed?tenant=${tenant}&give=${encodeURIComponent(giveAmount)}&get=${encodeURIComponent(getAmount)}&hideBranding=${removeBranding}`;
+  const embedUrl = cloudUrl(`/api/v1/growth/customer-referral/embed?tenant=${encodeURIComponent(tenant)}&give=${encodeURIComponent(giveAmount)}&get=${encodeURIComponent(getAmount)}&hideBranding=${removeBranding}`);
 
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="250" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `
-<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
+<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="${cloudUrl(`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleGenerate = () => {
     setShowModal(true);
@@ -151,7 +152,7 @@ export default function CustomerReferralProgramPage() {
 
                 <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
                   <span className="text-sm font-mono text-gray-500 dark:text-gray-400 flex-1 truncate select-all px-2">
-                    https://cloud.omnisolo.co/ref/{tenant.slice(0,6)}
+                    {cloudUrl(`/ref/${encodeURIComponent(tenant.slice(0, 6))}`)}
                   </span>
                   <button className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-md transition-colors">
                     Copy

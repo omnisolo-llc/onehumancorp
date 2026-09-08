@@ -4,7 +4,7 @@
 Invisible Custom Domain and SSL Provisioning Engine
 
 ## Problem Statement
-The transition from a default platform subdomain (e.g., `maya-bakery.onehumancorp.com`) to a professional custom domain (e.g., `mayasvegancakes.com`) is a critical milestone for any small business, signaling trust and permanence. However, the current process on many platforms requires non-technical owners to grapple with DNS registrars, A-records, CNAMEs, TXT records, and SSL certificate provisioning. For personas like Maya the Baker or Carlos the Handyman, who run their businesses entirely from a mobile phone, this technical friction often results in abandonment or reliance on expensive third-party technical help. OmniSolo (OHC) requires an invisible, zero-config domain engine that allows users to search, purchase, configure, and secure a custom domain with a single tap, entirely from a 375px mobile interface.
+The transition from a default platform subdomain (e.g., `maya-bakery.omnisolo.co`) to a professional custom domain (e.g., `mayasvegancakes.com`) is a critical milestone for any small business, signaling trust and permanence. However, the current process on many platforms requires non-technical owners to grapple with DNS registrars, A-records, CNAMEs, TXT records, and SSL certificate provisioning. For personas like Maya the Baker or Carlos the Handyman, who run their businesses entirely from a mobile phone, this technical friction often results in abandonment or reliance on expensive third-party technical help. OmniSolo (OmniSolo) requires an invisible, zero-config domain engine that allows users to search, purchase, configure, and secure a custom domain with a single tap, entirely from a 375px mobile interface.
 
 ## Research Report
 ### Context and Personas
@@ -19,13 +19,13 @@ This capability directly accelerates the "Revenue" and "Retention" stages of our
 -   **Shopify**: Offers native domain purchasing and automatic SSL provisioning via Let's Encrypt. However, connecting an existing domain still often requires manual DNS configuration unless the registrar supports Domain Connect. The mobile experience can be clunky when dealing with third-party connections.
 -   **Wix**: Provides domain purchasing but heavily upsells. SSL is automatic, but DNS management is exposed to the user, causing potential confusion.
 -   **Squarespace**: Seamless domain purchase integration, but transferring or connecting external domains still surfaces technical terminology (A, CNAME records).
--   **OHC Opportunity**: Completely abstract DNS and SSL. Provide 1-tap purchasing via Apple Pay/Google Pay on mobile. For external domains, utilize an AI Operations Agent to automatically detect the registrar and guide the user through an OAuth-style Domain Connect flow, or handle it completely in the background.
+-   **OmniSolo Opportunity**: Completely abstract DNS and SSL. Provide 1-tap purchasing via Apple Pay/Google Pay on mobile. For external domains, utilize an AI Operations Agent to automatically detect the registrar and guide the user through an OAuth-style Domain Connect flow, or handle it completely in the background.
 
 ## Design Doc
 ### Key Design Decisions
 -   **Zero-Config Philosophy**: Users never see DNS records (A, CNAME, TXT) unless they explicitly enable "Advanced Developer Mode".
 -   **1-Tap Mobile Purchasing**: Domain purchases are treated like in-app purchases or simple mobile checkouts (Apple Pay / Google Pay).
--   **Automated SSL (Zero Trust)**: Every domain, whether purchased via OHC or connected externally, receives an automatic, auto-renewing SSL certificate via an ACME client integration (e.g., Let's Encrypt).
+-   **Automated SSL (Zero Trust)**: Every domain, whether purchased via OmniSolo or connected externally, receives an automatic, auto-renewing SSL certificate via an ACME client integration (e.g., Let's Encrypt).
 -   **AI Department Coordination**:
     -   *Marketing Agent*: Suggests available, relevant domain names based on the user's business profile and location.
     -   *Operations Agent*: Handles the background polling for DNS propagation and SSL issuance, notifying the user only upon successful activation.
@@ -36,19 +36,19 @@ This capability directly accelerates the "Revenue" and "Retention" stages of our
 ```mermaid
 sequenceDiagram
     actor User
-    participant OHC_App as OHC Mobile App
+    participant OMNISOLO_App as OmniSolo Mobile App
     participant AI_Mark as Marketing Agent
     participant AI_Ops as Operations Agent
-    participant Core as OHC Core API
+    participant Core as OmniSolo Core API
     participant Registrar as Domain Registrar API (e.g., Namecheap/AWS)
     participant Edge as Edge Ingress (Cloudflare/Fastly)
     participant ACME as Let's Encrypt (SSL)
 
-    User->>OHC_App: Taps "Get a Custom Web Address"
-    OHC_App->>AI_Mark: Request domain suggestions
-    AI_Mark-->>OHC_App: Returns 3 tailored options (e.g., mayascakes.com)
-    User->>OHC_App: Selects domain & Pays via Apple Pay
-    OHC_App->>Core: Initiate Purchase & Provisioning
+    User->>OMNISOLO_App: Taps "Get a Custom Web Address"
+    OMNISOLO_App->>AI_Mark: Request domain suggestions
+    AI_Mark-->>OMNISOLO_App: Returns 3 tailored options (e.g., mayascakes.com)
+    User->>OMNISOLO_App: Selects domain & Pays via Apple Pay
+    OMNISOLO_App->>Core: Initiate Purchase & Provisioning
     Core->>Registrar: Purchase Domain & Set Nameservers
     Core->>Edge: Register Custom Hostname
     Core->>AI_Ops: Begin async monitoring
@@ -56,7 +56,7 @@ sequenceDiagram
     Edge->>ACME: Request SSL Certificate (HTTP-01/TLS-ALPN-01)
     ACME-->>Edge: Issue Certificate
     Edge-->>AI_Ops: DNS & SSL Active
-    AI_Ops->>OHC_App: Push Notification "Your new web address is live!"
+    AI_Ops->>OMNISOLO_App: Push Notification "Your new web address is live!"
 ```
 
 ### Data Model & Invariants

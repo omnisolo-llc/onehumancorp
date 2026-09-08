@@ -78,6 +78,6 @@ describe('SuccessMilestoneWidget', () => {
     const twitterLink = screen.getByRole('link', { name: /Share on X/i });
     expect(twitterLink.getAttribute('href')).toContain('https://twitter.com/intent/tweet?text=');
     expect(twitterLink.getAttribute('href')).toContain('test-tenant');
-    expect(twitterLink.getAttribute('href')).toContain('Powered%20by%20OHC');
+    expect(twitterLink.getAttribute('href')).toContain('Powered%20by%20OmniSolo');
   });
 });

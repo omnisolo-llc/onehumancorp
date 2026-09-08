@@ -10,8 +10,8 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::domain::repository::models::{Quote, QuoteLineItem};
-use ohc_builtin_agent::gpt_researcher::ResearcherLlmClient;
-use ohc_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
+use omnisolo_builtin_agent::gpt_researcher::ResearcherLlmClient;
+use omnisolo_builtin_agent::types::{ChatRequest, ChatResponse, Message, Usage};
 
 const QUOTE_COLUMNS: &str = "id::text AS id, tenant_id, customer_id::text AS customer_id, status, valid_until, total_amount_cents, required_deposit_cents, stripe_payment_link, proposed_slot_id, service_id, created_at, updated_at";
 const QUOTE_LINE_ITEM_COLUMNS: &str = "id::text AS id, quote_id::text AS quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at, service_item_id";
@@ -703,7 +703,7 @@ mod tests {
     use tower::ServiceExt;
 
     async fn isolated_quote_pool(label: &str) -> Option<(sqlx::PgPool, sqlx::PgPool, String)> {
-        let database_url = std::env::var("OHC_DATABASE_URL").ok()?;
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL").ok()?;
         let admin = sqlx::PgPool::connect(&database_url)
             .await
             .expect("connect quote integration database");
@@ -1172,7 +1172,7 @@ mod tests {
 
     #[tokio::test]
     async fn quote_handlers_enforce_tenant_boundaries_in_postgres() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
+        let database_url = match std::env::var("OMNISOLO_DATABASE_URL") {
             Ok(database_url) => database_url,
             Err(_) => return,
         };

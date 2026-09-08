@@ -1,9 +1,9 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# OHC KAIROS: Hybrid Agentic OS Comprehensive Master Blueprint
+# OmniSolo KAIROS: Hybrid Agentic OS Comprehensive Master Blueprint
 
 ## 1. Vision & Architecture Overview
-The OmniSolo (OHC) AI OS leverages the **KAIROS Orchestrator** to manage complex agent swarms. It ensures seamless execution across Cloud-Native (PostgreSQL/Redis) and Standalone (SQLite/In-memory) modes.
+The OmniSolo (OmniSolo) AI OS leverages the **KAIROS Orchestrator** to manage complex agent swarms. It ensures seamless execution across Cloud-Native (PostgreSQL/Redis) and Standalone (SQLite/In-memory) modes.
 
 ## 2. Phase 1: Shared Task List (Decomposition)
 ### Database Schema (Cloud & Standalone Compatible)

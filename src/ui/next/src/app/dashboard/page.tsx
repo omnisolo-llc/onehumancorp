@@ -23,7 +23,6 @@ import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { ReviewFeedCard } from './ReviewFeedCard';
 
-import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { GrowBusinessCard } from "./GrowBusinessCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
@@ -110,10 +109,6 @@ export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
-  const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
-  const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
-  const [ledgerLoading, setLedgerLoading] = useState(true);
-
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -123,7 +118,6 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<any[]>([]);
   const [initialTriage, setInitialTriage] = useState<any[]>([]);
   const [userName, setUserName] = useState("Human");
-  const [remainingActions, setRemainingActions] = useState<number | null>(null);
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
@@ -230,33 +224,10 @@ export default function Dashboard() {
           .then(res => res.ok ? res.json() : null)
           .catch(() => null);
 
-        const ledgerPromise = fetch("/api/v1/ledger/accounts")
-          .then(res => res.ok ? res.json() : null)
-          .catch(() => null);
-
-        const usagePromise = fetch('/api/v1/user/usage')
-          .then(res => res.ok ? res.json() : null)
-          .catch(() => null);
-
-        const [unifiedData, onboardingData, ledgerData, usageData] = await Promise.all([
+        const [unifiedData, onboardingData] = await Promise.all([
           unifiedPromise,
           onboardingPromise,
-          ledgerPromise,
-          usagePromise,
         ]);
-
-        if (usageData && usageData.remainingActions !== undefined) {
-           setRemainingActions(usageData.remainingActions);
-        }
-
-        if (ledgerData && ledgerData.accounts) {
-          const mainAccount = ledgerData.accounts.find((a: any) => a.name === "main");
-          if (mainAccount) {
-            setLedgerBalance(mainAccount.balance);
-            setLedgerCurrency(mainAccount.currency);
-          }
-        }
-        setLedgerLoading(false);
 
         const approvalsData = unifiedData?.pending_approvals || [];
         const agentFeedData = { items: unifiedData?.agent_feed || [] };
@@ -385,8 +356,6 @@ export default function Dashboard() {
       <AIUsageLimitWidget />
 
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
-      <NeighborhoodPulseCard tenant={tenantId()} />
-
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />
       <AIFeaturePaywallWidget />

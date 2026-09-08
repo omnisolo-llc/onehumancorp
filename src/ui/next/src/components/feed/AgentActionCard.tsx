@@ -2737,7 +2737,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({
                     approval.event_source,
                   )
                 }
-                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-200 flex items-center justify-center"
                 aria-label="Reject proposal"
                 data-testid="feed-dismiss-btn"
                 disabled={loadingAction !== null}

@@ -16,7 +16,7 @@ test.describe('Documentation Features', () => {
 
   test('Help Center and Chat opens', async ({ page }) => {
     await page.goto('/');
-    const helpButton = page.locator('#ohc-floating-help-btn');
+    const helpButton = page.locator('#omnisolo-floating-help-btn');
     await expect(helpButton).toBeVisible();
     await helpButton.click({ force: true });
 
@@ -26,14 +26,14 @@ test.describe('Documentation Features', () => {
     await askAnythingTab.click({ force: true });
 
     // Help chat widget
-    await expect(page.locator('#ohc-floating-help-widget')).toBeVisible();
+    await expect(page.locator('#omnisolo-floating-help-widget')).toBeVisible();
   });
 
 });
 
   test('Walkthroughs can be triggered', async ({ page }) => {
     await page.goto('/');
-    const helpButton = page.locator('#ohc-floating-help-btn');
+    const helpButton = page.locator('#omnisolo-floating-help-btn');
     await expect(helpButton).toBeVisible();
     await helpButton.click({ force: true });
 

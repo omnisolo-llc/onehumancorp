@@ -1,4 +1,4 @@
-# OHC End-to-End Tests
+# OmniSolo End-to-End Tests
 
 This directory contains the Playwright E2E suite for the OmniSolo application.
 

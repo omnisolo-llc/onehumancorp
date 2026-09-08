@@ -124,7 +124,7 @@ The core power of "OmniSolo" is its ability to learn any business domain. The sy
 - **Cross-Region Snapshot Mirroring**: Instant disaster recovery for the entire organization state.
 
 ### Phase 6: Ecosystem Interop (B2B Agent Exchange)
-*Goal: Standardize the way different OHC organizations cooperate.*
+*Goal: Standardize the way different OmniSolo organizations cooperate.*
 - **Inter-Org Collaboration Rooms**: Securely bridged workspaces for multi-company projects. See [b2b-collaboration/inter-org.md](../technical/features/b2b-collaboration/inter-org.md).
 - **Autonomous Procurement**: Buyer agents from one org negotiating and contracting with Sales agents from another.
 - **Shared Audit Logs**: Provable, immutable logs for B2B compliance.
@@ -137,49 +137,49 @@ The core power of "OmniSolo" is its ability to learn any business domain. The sy
 ### Phase 8: Advanced Agentic Capabilities (The "Top 50" Mandate)
 *Goal: [COMPLETED] Evolve OmniSolo into the definitive platform for AI Agent orchestration by integrating the Top 50 capabilities mapped from leading AI frameworks (OpenClaw, CrewAI, AutoGen, Claude Code).*
 
-This strategic push will directly tackle the top 5 urgent capability gaps with a distinct "OHC Advantage", guaranteeing our position as the market leader:
+This strategic push will directly tackle the top 5 urgent capability gaps with a distinct "OmniSolo Advantage", guaranteeing our position as the market leader:
 
 1. **Stateful Episodic Memory & Checkpointing**
    - **Gap**: AI frameworks lack long-term, token-efficient state tracking across disjointed sessions, causing "Agent Amnesia".
-   - **OHC Advantage**: OHC leverages **LangGraph Checkpointing** backed by our native Kubernetes CSI Snapshotting. This ensures robust cross-session context persistence without ballooning the LLM context window.
+   - **OmniSolo Advantage**: OmniSolo leverages **LangGraph Checkpointing** backed by our native Kubernetes CSI Snapshotting. This ensures robust cross-session context persistence without ballooning the LLM context window.
 
 2. **Dynamic Tool Registration via MCP**
    - **Gap**: Current frameworks tightly couple agents to hardcoded tool schemas.
-   - **OHC Advantage**: OHC utilizes our unified **MCP Gateway (Switchboard)**, allowing instant, secure, and dynamic tool synthesis across entire federated clusters.
+   - **OmniSolo Advantage**: OmniSolo utilizes our unified **MCP Gateway (Switchboard)**, allowing instant, secure, and dynamic tool synthesis across entire federated clusters.
 
 3. **Human-in-the-Loop (HITL) Handoff UI**
    - **Gap**: Orchestrators struggle to seamlessly hand off critical tasks to human operators without losing context.
-   - **OHC Advantage**: OHC implements a native K8s-backed "Warm Handoff" UI, directly integrating visual ground truth (screenshots) and SPIFFE-gated confidence approvals.
+   - **OmniSolo Advantage**: OmniSolo implements a native K8s-backed "Warm Handoff" UI, directly integrating visual ground truth (screenshots) and SPIFFE-gated confidence approvals.
 
 4. **B2B SPIFFE Federation for AI Collaboration**
    - **Gap**: Inter-agent collaboration is heavily restricted to single-organization silos.
-   - **OHC Advantage**: OHC establishes **Cross-Org Collaboration (B2B Agent Exchange)** utilizing federated SPIFFE/SPIRE Trust Agreements, enabling secure, real-time negotiation rooms between isolated subsidiary clusters.
+   - **OmniSolo Advantage**: OmniSolo establishes **Cross-Org Collaboration (B2B Agent Exchange)** utilizing federated SPIFFE/SPIRE Trust Agreements, enabling secure, real-time negotiation rooms between isolated subsidiary clusters.
 
 5. **Token Burn-Rate Forecasting & Resource Quotas**
    - **Gap**: Enterprise adoption is hindered by unpredictable LLM costs and runaway compute.
-   - **OHC Advantage**: OHC implements strict **VRAM Quota Management** and **Hardware-Aware Scheduling**, coupled with real-time billing metrics tracked precisely by the MCP Gateway intercept layer.
+   - **OmniSolo Advantage**: OmniSolo implements strict **VRAM Quota Management** and **Hardware-Aware Scheduling**, coupled with real-time billing metrics tracked precisely by the MCP Gateway intercept layer.
 
 For the full detailed breakdown of the 50 features, see our mapped research artifact: `docs/research/framework_ingestion_20260320.json`.
 
 #### Claude Code parity backlog from the public `nirholas/claude-code` release
 
-The newly public Claude Code repository surfaced several first-class product features that OHC still lacks or only covers partially today. These are tracked here as explicit roadmap items for the internal default agent:
+The newly public Claude Code repository surfaced several first-class product features that OmniSolo still lacks or only covers partially today. These are tracked here as explicit roadmap items for the internal default agent:
 
 - **Persistent session memory and `/resume`-style recovery UX**: preserve operator context across interrupted terminal sessions.
 - **Interactive command palette / slash-command UX**: expose review, diff, cost, config, memory, and task workflows as first-class agent commands instead of only API endpoints.
 - **Tool-permission profiles**: add explicit approval modes for shell, file, network, and MCP actions beyond the current server-side validation gates.
 - **IDE / desktop / mobile bridge handoff**: provide first-class bridge flows between terminal, editor, and remote device sessions.
 - **Plugin loader + reusable skill execution runtime**: move beyond static built-ins toward installable third-party plugins and reusable skills.
-- **Source-exploration MCP server**: ship an explorer-style MCP endpoint for browsing OHC internals from another MCP client.
+- **Source-exploration MCP server**: ship an explorer-style MCP endpoint for browsing OmniSolo internals from another MCP client.
 - **Git worktree isolation and richer git workflow helpers**: add dedicated worktree-safe execution paths for complex code tasks.
 - **Voice input/output and richer terminal interaction modes**: voice, vim-style controls, and configurable keybinding layers remain open.
 - **Proactive triggers and remote automation hooks**: cron-like and externally triggered autonomous agent execution should graduate from roadmap concepts into productized flows.
 
 #### Implemented now: internal default agent baseline
 
-- **Internal default agent bootstrap**: when OHC starts with an empty workforce, the dashboard server now auto-registers a built-in internal default agent.
+- **Internal default agent bootstrap**: when OmniSolo starts with an empty workforce, the dashboard server now auto-registers a built-in internal default agent.
 - **Docker/Bazel runtime target**: the internal default agent now has an explicit Bazel-managed OCI image target (`//deploy:default_agent_image`) for containerized execution.
-- **Configurable default-agent identity**: the bootstrapped agent can be named and role/region-tuned with `OHC_DEFAULT_AGENT_*` environment variables.
+- **Configurable default-agent identity**: the bootstrapped agent can be named and role/region-tuned with `OMNISOLO_DEFAULT_AGENT_*` environment variables.
 
 ---
 
@@ -191,7 +191,7 @@ This architecture defines the "Hybrid Agentic OS"—a framework where organizati
 
 This comparison illustrates the efficiency gains for a founder scaling from a manual solo operation to a hybrid virtual enterprise.
 
-| Daily Task | Manual Operation (Solo) | Hybrid Virtual Team (OHC) | Efficiency & ROI |
+| Daily Task | Manual Operation (Solo) | Hybrid Virtual Team (OmniSolo) | Efficiency & ROI |
 | :--- | :--- | :--- | :--- |
 | **Lead Generation** | Manual LinkedIn searching; spreadsheet tracking. | Growth Agent crawls leads; Human Sales Manager handles closing calls. | 7x conversion increase; 10+ hours saved/week. |
 | **Eng Oversight** | CEO reviews every PR from AI coding agents. | Human Eng Lead manages a team of SWE Agents. AI drafts, human reviews high-risk PRs. | 85% reduction in CEO oversight; 100% human accountability. |
@@ -213,7 +213,7 @@ Every component is tool-agnostic. The system uses Middleware Interfaces to allow
 
 ### 3. Modular System Architecture (Executable Modules)
 
-#### Module 1: The OHC Kubernetes Operator (Management Plane)
+#### Module 1: The OmniSolo Kubernetes Operator (Management Plane)
 Treats the "Corp" as a first-class Kubernetes resource.
 - **Custom Resource Definitions (CRDs)**: Defines `HoldingCompany`, `Subsidiary`, and `TeamMember` (type: Human or Agent).
 - **Reconciliation Loop**: Watches for changes in your YAML manifests. If you increase `swe_agent_count` from 2 to 5, the operator provisions new pods for the agents.
@@ -253,7 +253,7 @@ Defines how autonomous agents communicate, collaborate, and resolve conflicts.
 #### Phase 1: K8s Foundation & Identity (Months 1-2)
 - **Cluster Setup**: Provision a Kubernetes cluster (EKS, GKE, or self-hosted K3s).
 - **SPIRE Deployment**: Deploy a SPIRE server for automated identity issuance. Configure OIDC federation for human login.
-- **Operator Scaffold**: Build the `ohc-operator` using Kubebuilder. Define the Subsidiary CRD.
+- **Operator Scaffold**: Build the `omnisolo-operator` using Kubebuilder. Define the Subsidiary CRD.
 
 #### Phase 2: The MCP Gateway & State Fabric (Months 3-4)
 - **MCP Hub**: Deploy a central MCP Gateway pod. Register tool servers (e.g., `gitea-mcp`, `jira-mcp`).
@@ -282,7 +282,7 @@ Defines how autonomous agents communicate, collaborate, and resolve conflicts.
   * **Status:** Complete
 * **Task 3.2: Apply Design Tokens (Frontend)**
   * **Owner:** UI Developer Agent
-  * **Description:** Update the OHC Next.js dashboard with Glassmorphism tokens (`blur(15px)`, `rgba` backgrounds, smooth data transitions).
+  * **Description:** Update the OmniSolo Next.js dashboard with Glassmorphism tokens (`blur(15px)`, `rgba` backgrounds, smooth data transitions).
   * **Dependencies:** Task 3.1
   * **Status:** Ready
 * **Task 3.3: Visual Prototyping (Design)**

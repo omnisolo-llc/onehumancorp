@@ -6,7 +6,7 @@ test.describe('Interactive Insight Widget Growth Feature', () => {
     await page.goto('/interactive-insight-widget');
 
     // Verify title and page header
-    await expect(page).toHaveTitle('Insight Widget | OHC');
+    await expect(page).toHaveTitle('Insight Widget | OmniSolo');
     await expect(page.getByRole('heading', { name: 'Insight Widget Builder' })).toBeVisible();
 
     // Verify default metric label and value

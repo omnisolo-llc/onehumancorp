@@ -10,7 +10,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::db::DB;
 use crate::hub::Hub;
-use ::server_ohc::orchestration::TeammateMeshEvent;
+use ::server_omnisolo::orchestration::TeammateMeshEvent;
 use chrono::{DateTime, Utc, NaiveDate};
 use uuid::Uuid;
 

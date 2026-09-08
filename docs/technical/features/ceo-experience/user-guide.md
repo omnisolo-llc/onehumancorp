@@ -3,7 +3,7 @@
 # User Guide: OmniSolo Platform
 
 ## Introduction
-OmniSolo (OHC) is an enterprise-grade AI-agent orchestration platform. It gives your organisation a virtual workforce of AI agents that can collaborate, escalate high-risk actions, and manage entire product development life cycles autonomously under your guidance as CEO.
+OmniSolo (OmniSolo) is an enterprise-grade AI-agent orchestration platform. It gives your organisation a virtual workforce of AI agents that can collaborate, escalate high-risk actions, and manage entire product development life cycles autonomously under your guidance as CEO.
 
 ## Prerequisites
 - A modern web browser (Chrome, Firefox, Safari).
@@ -200,7 +200,7 @@ A: Integrations are registered at server startup via the `integrations.Registry`
 
 ## Implementation Details
 - **Architecture**: The Dashboard UI is built with React/Vite/Next.js aesthetics, fetching data from the Rust backend via REST and Server-Sent Events (SSE).
-- **Deployment**: Deployed via the OHC Kubernetes Operator. The dashboard acts as the primary control plane for the `HoldingCompany` CRD.
+- **Deployment**: Deployed via the OmniSolo Kubernetes Operator. The dashboard acts as the primary control plane for the `HoldingCompany` CRD.
 - **State Management**: The UI is fully real-time. Actions like "Hire Agent" or "Send Message" immediately update the append-only `events.jsonl` Postgres log, which the LangGraph checkpointers use to resume agent states.
 
 ## Edge Cases

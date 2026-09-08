@@ -215,12 +215,12 @@ mod tests {
     async fn test_agent_stream_returns_event_stream() {
         let app = Router::new()
             .route("/agents/{id}/stream", get(stream_agent));
-        
+
         let req = Request::builder()
             .uri("/agents/test-123/stream")
             .body(Body::empty())
             .unwrap();
-        
+
         let resp = app.oneshot(req).await.unwrap();
         assert_eq!(resp.status(), 200);
         assert_eq!(

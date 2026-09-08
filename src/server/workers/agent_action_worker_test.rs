@@ -1,20 +1,20 @@
 use super::*;
 use std::sync::Arc;
-use crate::orchestration::queue::ohc_job_queue::{OHCJob, OHCJobQueue};
+use crate::orchestration::queue::omnisolo_job_queue::{OmniSoloJob, OmniSoloJobQueue};
 use crate::orchestration::queue::redis_lock::RedisLock;
 use serde_json::json;
 
 #[tokio::test]
 async fn test_malformed_payload_fails_job() {
-    if std::env::var("OHC_DATABASE_URL").is_err() || std::env::var("REDIS_URL").is_err() {
+    if std::env::var("OMNISOLO_DATABASE_URL").is_err() || std::env::var("REDIS_URL").is_err() {
         return; // Skip if no real test DB is available
     }
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let database_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap();
     let redis_url = std::env::var("REDIS_URL").unwrap();
 
     let pool = crate::db::secure_pg_pool_options().connect(&database_url).await.unwrap();
-    let queue = OHCJobQueue::new(Arc::new(pool.clone()));
+    let queue = OmniSoloJobQueue::new(Arc::new(pool.clone()));
     let redis_lock = RedisLock::new(&redis_url).unwrap();
 
     let worker = AgentActionWorker::new(pool.clone(), redis_url.clone());

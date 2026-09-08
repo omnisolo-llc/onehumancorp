@@ -34,14 +34,14 @@ impl IdentityValidator for SpiffeValidator {
                 let cert_str = String::from_utf8_lossy(&certs[0]);
                 if cert_str.contains("spiffe://") {
                     // Extracting mock SVID for tests
-                    Ok("spiffe://onehumancorp.io/agent/mock-svid".to_string())
+                    Ok("spiffe://omnisolo.io/agent/mock-svid".to_string())
                 } else {
                     // Fallback mock SVID if running in environment where real mTLS is mocked via test
-                    Ok("spiffe://onehumancorp.io/agent/mock-svid".to_string())
+                    Ok("spiffe://omnisolo.io/agent/mock-svid".to_string())
                 }
             }
             None => {
-                Err(Status::unauthenticated("mTLS peer certificate is required for SVID validation when OHC_REQUIRE_SPIFFE is set"))
+                Err(Status::unauthenticated("mTLS peer certificate is required for SVID validation when OMNISOLO_REQUIRE_SPIFFE is set"))
             }
         }
     }
@@ -58,16 +58,16 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().message(),
-            "mTLS peer certificate is required for SVID validation when OHC_REQUIRE_SPIFFE is set"
+            "mTLS peer certificate is required for SVID validation when OMNISOLO_REQUIRE_SPIFFE is set"
         );
     }
 
     #[test]
     fn test_validate_svid_with_certs() {
         let validator = SpiffeValidator::new();
-        let certs = vec![b"spiffe://onehumancorp.io/agent/test-svid".to_vec()];
+        let certs = vec![b"spiffe://omnisolo.io/agent/test-svid".to_vec()];
         let result = validator.validate_svid(Some(certs));
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "spiffe://onehumancorp.io/agent/mock-svid");
+        assert_eq!(result.unwrap(), "spiffe://omnisolo.io/agent/mock-svid");
     }
 }

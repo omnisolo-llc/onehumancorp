@@ -92,11 +92,11 @@ export default function DiagnosticsPage() {
 </CardHeader>
 <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="p-4 rounded-xl app-card ohc-growth-card">
+            <div className="p-4 rounded-xl app-card omnisolo-growth-card">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</h4>
                 <div className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">{metricsData?.total_revenue ?? 'Unavailable'}</div>
             </div>
-            <div className="p-4 rounded-xl app-card ohc-growth-card">
+            <div className="p-4 rounded-xl app-card omnisolo-growth-card">
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Sales</h4>
                 <div className="text-2xl font-bold mt-1 text-gray-900 dark:text-white">{metricsData?.total_sales ?? 'Unavailable'}</div>
             </div>

@@ -26,7 +26,7 @@ A highly available, low-latency communication layer for realtime agent coordinat
 
 ### 1.3 The Memory: AutoDream Memory Consolidation
 A long-term state consolidation pipeline that vectors ephemeral session logs into durable semantic memory.
-- **Pipeline**: Asynchronously polls `OHC_MEMORY_DIR` and DB logs to generate embeddings via Minimax/OpenAI.
+- **Pipeline**: Asynchronously polls `OMNISOLO_MEMORY_DIR` and DB logs to generate embeddings via Minimax/OpenAI.
 - **Persistence**: Stores in `autodream_memories` (pgvector for Cloud, local file-backed or standard SQLite for Standalone).
 - **Consolidation**: "Dreams" about past sessions to create optimized, low-token context for future tasks.
 
@@ -57,7 +57,7 @@ KAIROS is designed to "degrade gracefully" without losing integrity.
 ---
 
 ## 4. Visual Excellence Mandate
-Any UI component interacting with KAIROS MUST adhere to the OHC Premium aesthetic:
+Any UI component interacting with KAIROS MUST adhere to the OmniSolo Premium aesthetic:
 - **Glassmorphism**: `backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03);`
 - **Typography**: `font-family: 'Outfit', 'Inter', sans-serif;`
 - **Animation**: Fluid, 60fps transitions (e.g., `PulseAnimation`) for state changes.

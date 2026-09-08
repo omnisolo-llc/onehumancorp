@@ -1,5 +1,16 @@
 use serde::Deserialize;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+
+const CURRENT_USER_DIR: &str = ".omnisolo";
+const LEGACY_USER_DIR: &str = ".ohc";
+const STATE_FILE_MIGRATIONS: [(&str, &str); 5] = [
+    ("ohc-standalone.db", "omnisolo-standalone.db"),
+    ("ohc-standalone.db-wal", "omnisolo-standalone.db-wal"),
+    ("ohc-standalone.db-shm", "omnisolo-standalone.db-shm"),
+    (".ohc_sqlite_key", ".omnisolo_sqlite_key"),
+    (".ohc_jwt_secret", ".omnisolo_jwt_secret"),
+];
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
@@ -66,7 +77,7 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
         .set_default("grpc_addr", ":9090")?
         .set_default("agent_address", "127.0.0.1:50051")?
         .set_default("max_tokens", 2048)?
-        .set_default("s3_bucket_blobs", "ohc-blobs")?
+        .set_default("s3_bucket_blobs", "omnisolo-blobs")?
         .set_default("bootstrap_org_id", "bootstrap")?
         .set_default("bootstrap_org_name", "Bootstrap Organization")?
         .set_default("bootstrap_ceo_name", "Platform Admin")?
@@ -77,10 +88,11 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
         .set_default("telemetry_enabled", false)?
         .set_default("registration_enabled", false)?
         // Optional file
-        .add_source(::config::File::with_name("ohc").required(false))
-        .add_source(::config::File::with_name("~/.openclaw/ohc").required(false))
-        // Env vars with OHC_ prefix
-        .add_source(::config::Environment::with_prefix("OHC"))
+        .add_source(::config::File::with_name("omnisolo").required(false))
+        .add_source(::config::File::with_name("~/.openclaw/omnisolo").required(false))
+
+        // Env vars with OMNISOLO_ prefix
+        .add_source(::config::Environment::with_prefix("OmniSolo"))
         // Env vars without prefix (for standard ones like DATABASE_URL)
         .add_source(::config::Environment::default())
         .build()?;
@@ -99,15 +111,13 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
     Ok(cfg)
 }
 
-pub fn get_safe_user_dir() -> std::path::PathBuf {
-    let dir = if let Ok(home) = std::env::var("USERPROFILE") {
-        std::path::PathBuf::from(home).join(".ohc")
-    } else if let Ok(home) = std::env::var("HOME") {
-        std::path::PathBuf::from(home).join(".ohc")
-    } else {
-        std::path::PathBuf::from(".ohc")
-    };
 
+fn is_real_directory(path: &Path) -> bool {
+    std::fs::symlink_metadata(path)
+        .is_ok_and(|metadata| metadata.is_dir() && !metadata.file_type().is_symlink())
+}
+
+fn create_private_directory(path: &Path) {
     #[cfg(unix)]
     {
         use std::os::unix::fs::DirBuilderExt;
@@ -115,14 +125,93 @@ pub fn get_safe_user_dir() -> std::path::PathBuf {
         let _ = std::fs::DirBuilder::new()
             .recursive(true)
             .mode(0o700)
-            .create(&dir);
+            .create(path);
     }
     #[cfg(not(unix))]
     {
-        let _ = std::fs::create_dir_all(&dir);
+        let _ = std::fs::create_dir_all(path);
     }
+}
 
-    dir
+fn migrate_state_files(source: &Path, destination: &Path) {
+    for (legacy_name, current_name) in STATE_FILE_MIGRATIONS {
+        let legacy = source.join(legacy_name);
+        let current = destination.join(current_name);
+        if !legacy.exists() || current.exists() {
+            continue;
+        }
+        if let Err(error) = std::fs::rename(&legacy, &current) {
+            tracing::warn!(
+                source = %legacy.display(),
+                destination = %current.display(),
+                %error,
+                "could not migrate legacy OmniSolo state file"
+            );
+        }
+    }
+}
+
+fn prepare_user_dir(base: &Path) -> PathBuf {
+    let current = base.join(CURRENT_USER_DIR);
+    let legacy = base.join(LEGACY_USER_DIR);
+    let selected = if current.exists() {
+        current.clone()
+    } else if is_real_directory(&legacy) {
+        match std::fs::rename(&legacy, &current) {
+            Ok(()) => current.clone(),
+            Err(error) => {
+                tracing::warn!(
+                    source = %legacy.display(),
+                    destination = %current.display(),
+                    %error,
+                    "could not rename legacy OmniSolo state directory"
+                );
+                legacy.clone()
+            }
+        }
+    } else {
+        current.clone()
+    };
+
+    create_private_directory(&selected);
+    migrate_state_files(&selected, &selected);
+    if selected == current && is_real_directory(&legacy) {
+        migrate_state_files(&legacy, &current);
+    }
+    selected
+}
+
+fn state_file_path(current_name: &str, legacy_name: &str) -> PathBuf {
+    let directory = get_safe_user_dir();
+    let current = directory.join(current_name);
+    let legacy = directory.join(legacy_name);
+    if current.exists() || !legacy.exists() {
+        current
+    } else {
+        legacy
+    }
+}
+
+pub fn standalone_database_path() -> PathBuf {
+    state_file_path("omnisolo-standalone.db", "ohc-standalone.db")
+}
+
+pub fn sqlite_key_path() -> PathBuf {
+    state_file_path(".omnisolo_sqlite_key", ".ohc_sqlite_key")
+}
+
+pub fn jwt_secret_path() -> PathBuf {
+    state_file_path(".omnisolo_jwt_secret", ".ohc_jwt_secret")
+}
+
+pub fn get_safe_user_dir() -> PathBuf {
+    if let Ok(home) = std::env::var("USERPROFILE") {
+        prepare_user_dir(&PathBuf::from(home))
+    } else if let Ok(home) = std::env::var("HOME") {
+        prepare_user_dir(&PathBuf::from(home))
+    } else {
+        prepare_user_dir(Path::new("."))
+    }
 }
 pub trait ModeEnforcer {
     fn enforce(&self, cfg: AppConfig) -> AppConfig;
@@ -135,7 +224,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         let is_test =
             std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("TEST_TMPDIR").is_ok();
         let env_standalone =
-            std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+            std::env::var("OMNISOLO_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
         let has_database_source =
             cfg.database_url.is_some() || std::env::var_os("DATABASE_URL_FILE").is_some();
         let is_standalone = env_standalone || cfg.standalone || (!is_test && !has_database_source);
@@ -144,7 +233,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
             return cfg;
         }
 
-        let default_sqlite_path = get_safe_user_dir().join("ohc-standalone.db");
+        let default_sqlite_path = standalone_database_path();
         let default_sqlite_url = format!("sqlite://{}", default_sqlite_path.to_string_lossy());
 
         let base_sqlite_url = if let Some(db_url) = &cfg.database_url {
@@ -152,7 +241,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 db_url.split('?').next().unwrap_or(db_url).to_string()
             } else {
                 tracing::info!(
-                    "standalone: non-SQLite OHC_DATABASE_URL is ignored in standalone desktop builds; using SQLite"
+                    "standalone: non-SQLite OMNISOLO_DATABASE_URL is ignored in standalone desktop builds; using SQLite"
                 );
                 default_sqlite_url
             }
@@ -171,12 +260,12 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
                 base_sqlite_url // Let db.rs handle pragma key via connection options
-            } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+            } else if let Ok(_fallback_key) = std::env::var("OMNISOLO_SQLITE_KEY") {
                 base_sqlite_url
             } else {
                 base_sqlite_url
             }
-        } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
+        } else if let Ok(_fallback_key) = std::env::var("OMNISOLO_SQLITE_KEY") {
             base_sqlite_url
         } else {
             base_sqlite_url
@@ -191,12 +280,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 use std::os::unix::fs::OpenOptionsExt;
                 use std::os::unix::fs::PermissionsExt;
 
-                let db_path = sqlite_url
-                    .strip_prefix("sqlite://")
-                    .unwrap_or(sqlite_url.as_str())
-                    .split('?')
-                    .next()
-                    .unwrap_or("ohc-standalone.db");
+                let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("omnisolo-standalone.db");
                 if let Some(parent) = std::path::Path::new(db_path).parent()
                     && !parent.as_os_str().is_empty()
                 {
@@ -279,7 +363,7 @@ impl ModeEnforcer for StandaloneModeEnforcer {
         cfg.multitenant = false;
 
         // Strict opt-in constraint for local sovereignty in standalone
-        let explicit_opt_in = std::env::var("OHC_TELEMETRY_ENABLED")
+        let explicit_opt_in = std::env::var("OMNISOLO_TELEMETRY_ENABLED")
             .map(|s| s.to_lowercase() == "true")
             .unwrap_or(false);
         if explicit_opt_in {
@@ -301,19 +385,89 @@ mod tests {
     static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
     #[test]
+    fn migrates_legacy_standalone_state_without_overwriting_omnisolo_files() {
+        let base = std::env::temp_dir().join(format!(
+            "omnisolo-user-state-migration-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let legacy = base.join(".ohc");
+        std::fs::create_dir_all(&legacy).unwrap();
+        for (name, value) in [
+            ("ohc-standalone.db", "database"),
+            ("ohc-standalone.db-wal", "wal"),
+            ("ohc-standalone.db-shm", "shm"),
+            (".ohc_sqlite_key", "sqlite-key"),
+            (".ohc_jwt_secret", "jwt-secret"),
+        ] {
+            std::fs::write(legacy.join(name), value).unwrap();
+        }
+
+        let migrated = prepare_user_dir(&base);
+
+        assert_eq!(migrated, base.join(".omnisolo"));
+        assert!(!legacy.exists());
+        for (name, value) in [
+            ("omnisolo-standalone.db", "database"),
+            ("omnisolo-standalone.db-wal", "wal"),
+            ("omnisolo-standalone.db-shm", "shm"),
+            (".omnisolo_sqlite_key", "sqlite-key"),
+            (".omnisolo_jwt_secret", "jwt-secret"),
+        ] {
+            assert_eq!(std::fs::read_to_string(migrated.join(name)).unwrap(), value);
+        }
+
+        std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn preserves_existing_omnisolo_state_when_legacy_state_is_also_present() {
+        let base = std::env::temp_dir().join(format!(
+            "omnisolo-user-state-collision-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let current = base.join(".omnisolo");
+        let legacy = base.join(".ohc");
+        std::fs::create_dir_all(&current).unwrap();
+        std::fs::create_dir_all(&legacy).unwrap();
+        std::fs::write(current.join("omnisolo-standalone.db"), "current").unwrap();
+        std::fs::write(legacy.join("ohc-standalone.db"), "legacy").unwrap();
+
+        let selected = prepare_user_dir(&base);
+
+        assert_eq!(selected, current);
+        assert_eq!(
+            std::fs::read_to_string(selected.join("omnisolo-standalone.db")).unwrap(),
+            "current"
+        );
+        assert_eq!(
+            std::fs::read_to_string(legacy.join("ohc-standalone.db")).unwrap(),
+            "legacy"
+        );
+        std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
     fn test_load_defaults() {
         let _lock = ENV_MUTEX.lock().unwrap();
         // Ensure environment doesn't interfere
         // SAFETY: Test-only code removing environment variables
         unsafe {
-            env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("OHC_DATABASE_URL");
+            env::remove_var("OMNISOLO_LISTEN_ADDR");
+            env::remove_var("OMNISOLO_DATABASE_URL");
         }
 
         let cfg = load().unwrap();
         assert_eq!(cfg.listen_addr, ":8080");
         assert_eq!(cfg.max_tokens, 2048);
-        assert_eq!(cfg.s3_bucket_blobs, "ohc-blobs");
+        assert_eq!(cfg.s3_bucket_blobs, "omnisolo-blobs");
     }
 
     #[test]
@@ -321,8 +475,8 @@ mod tests {
         let _lock = ENV_MUTEX.lock().unwrap();
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
-            env::set_var("OHC_LISTEN_ADDR", ":9999");
-            env::set_var("OHC_DATABASE_URL", "postgres://localhost/testdb");
+            env::set_var("OMNISOLO_LISTEN_ADDR", ":9999");
+            env::set_var("OMNISOLO_DATABASE_URL", "postgres://localhost/testdb");
         }
 
         let cfg = load().unwrap();
@@ -331,8 +485,8 @@ mod tests {
 
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
-            env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("OHC_DATABASE_URL");
+            env::remove_var("OMNISOLO_LISTEN_ADDR");
+            env::remove_var("OMNISOLO_DATABASE_URL");
         }
     }
 
@@ -345,8 +499,8 @@ mod tests {
                 ("TEST_TMPDIR", None::<&str>),
                 ("DATABASE_URL", None::<&str>),
                 ("DATABASE_URL_FILE", Some("/run/secrets/database-url")),
-                ("OHC_DATABASE_URL", None::<&str>),
-                ("OHC_STANDALONE_MODE", None::<&str>),
+                ("OMNISOLO_DATABASE_URL", None::<&str>),
+                ("OMNISOLO_STANDALONE_MODE", None::<&str>),
             ],
             || {
                 let cfg = load().unwrap();
@@ -360,7 +514,7 @@ mod tests {
         let _lock = ENV_MUTEX.lock().unwrap();
         // SAFETY: Test-only code setting environment variables
         unsafe {
-            env::set_var("OHC_TELEMETRY_ENABLED", "true");
+            env::set_var("OMNISOLO_TELEMETRY_ENABLED", "true");
         }
 
         let cfg = load().unwrap();
@@ -368,14 +522,14 @@ mod tests {
 
         // SAFETY: Test-only code setting/removing environment variables
         unsafe {
-            env::set_var("OHC_TELEMETRY_ENABLED", "false");
+            env::set_var("OMNISOLO_TELEMETRY_ENABLED", "false");
         }
 
         let cfg2 = load().unwrap();
         assert!(!(cfg2.telemetry_enabled));
 
         unsafe {
-            env::remove_var("OHC_TELEMETRY_ENABLED");
+            env::remove_var("OMNISOLO_TELEMETRY_ENABLED");
         }
     }
 
@@ -383,9 +537,9 @@ mod tests {
     fn test_standalone_mode_enforcer_default() {
         let _lock = ENV_MUTEX.lock().unwrap();
         unsafe {
-            env::set_var("OHC_STANDALONE_MODE", "true");
-            env::remove_var("OHC_DATABASE_URL");
-            env::remove_var("OHC_TELEMETRY_ENABLED");
+            env::set_var("OMNISOLO_STANDALONE_MODE", "true");
+            env::remove_var("OMNISOLO_DATABASE_URL");
+            env::remove_var("OMNISOLO_TELEMETRY_ENABLED");
         }
 
         let cfg = load().unwrap();
@@ -396,7 +550,7 @@ mod tests {
         assert!(cfg.database_url.unwrap().starts_with("sqlite://"));
 
         unsafe {
-            env::remove_var("OHC_STANDALONE_MODE");
+            env::remove_var("OMNISOLO_STANDALONE_MODE");
         }
     }
 
@@ -404,8 +558,8 @@ mod tests {
     fn test_standalone_mode_enforcer_with_telemetry_opt_in() {
         let _lock = ENV_MUTEX.lock().unwrap();
         unsafe {
-            env::set_var("OHC_STANDALONE_MODE", "true");
-            env::set_var("OHC_TELEMETRY_ENABLED", "true");
+            env::set_var("OMNISOLO_STANDALONE_MODE", "true");
+            env::set_var("OMNISOLO_TELEMETRY_ENABLED", "true");
         }
 
         let cfg = load().unwrap();
@@ -413,8 +567,8 @@ mod tests {
         assert!(cfg.telemetry_enabled); // Opted-in!
 
         unsafe {
-            env::remove_var("OHC_STANDALONE_MODE");
-            env::remove_var("OHC_TELEMETRY_ENABLED");
+            env::remove_var("OMNISOLO_STANDALONE_MODE");
+            env::remove_var("OMNISOLO_TELEMETRY_ENABLED");
         }
     }
 
@@ -422,7 +576,7 @@ mod tests {
     fn test_standalone_mode_enforcer_with_redis_ignored() {
         let _lock = ENV_MUTEX.lock().unwrap();
         unsafe {
-            env::set_var("OHC_STANDALONE_MODE", "true");
+            env::set_var("OMNISOLO_STANDALONE_MODE", "true");
             env::set_var("REDIS_URL", "redis://localhost:6379");
         }
 
@@ -432,7 +586,7 @@ mod tests {
         assert!(cfg.redis_url.is_none());
 
         unsafe {
-            env::remove_var("OHC_STANDALONE_MODE");
+            env::remove_var("OMNISOLO_STANDALONE_MODE");
             env::remove_var("REDIS_URL");
         }
     }

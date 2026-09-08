@@ -13,7 +13,7 @@ Small business owners (like Maya the baker and Carlos the handyman) despise acco
 - **SMB Reality:** 70% of new micro-businesses fail to correctly remit sales tax or track expenses in their first year, leading to painful audits or surprise tax bills.
 - **The Gap:** There is no platform that natively combines instant checkout tax calculation, automatic payout withholding (setting aside money for taxes into a separate virtual envelope), and receipt-scanning AI into a single, cohesive, mobile-first experience.
 
-**Competitive Edge for OHC:**
+**Competitive Edge for OmniSolo:**
 By embedding tax compliance and bookkeeping directly into the transactional path and relying on AI for categorization, we eliminate the need for third-party accounting software.
 
 ## Design Doc
@@ -22,7 +22,7 @@ By embedding tax compliance and bookkeeping directly into the transactional path
 
 ```mermaid
 graph TD
-    subgraph OHC Ecosystem
+    subgraph OmniSolo Ecosystem
         App[Mobile App / Web Checkout] --> |Transaction Data| Gateway[API Gateway & Rate Limiter]
         Gateway --> Ledger[Core Multi-Tenant Ledger]
 
@@ -85,7 +85,7 @@ Build the foundational Real-Time Tax and AI Bookkeeping Engine for OmniSolo. You
 5. Ensure all database accesses use the tenant ID for strict isolation.
 6. The entire flow must be testable via unit tests and a Playwright mobile-viewport end-to-end test.
 
-Do NOT prescribe the exact database schema or external API (e.g., Stripe Tax vs TaxJar). Focus on the OHC internal interfaces, event boundaries, and user experience.
+Do NOT prescribe the exact database schema or external API (e.g., Stripe Tax vs TaxJar). Focus on the OmniSolo internal interfaces, event boundaries, and user experience.
 
 ## Priority
 P1

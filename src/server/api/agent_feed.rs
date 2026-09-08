@@ -546,7 +546,7 @@ async fn update_feed_item_state(
                              "event_source": item.event_source
                         });
                         let pool_arc = std::sync::Arc::new(pool.clone());
-                        let job_queue = crate::orchestration::queue::OHCJobQueue::new(pool_arc);
+                        let job_queue = crate::orchestration::queue::OmniSoloJobQueue::new(pool_arc);
                         let _ = job_queue
                             .enqueue(&tenant_id, "agent_feed_action", &job_payload)
                             .await;
@@ -623,6 +623,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_websocket_feed() {
+        if crate::redis_pool::get_redis_client().is_none() {
+            return;
+        }
+
         // Set up test server with a fake Claims
         let mock_claims = Claims {
             sub: "user-123".to_string(),
@@ -690,6 +694,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_websocket_feed_batching() {
+        if crate::redis_pool::get_redis_client().is_none() {
+            return;
+        }
+
         let mock_claims = Claims {
             sub: "user-456".to_string(),
             organization_id: Some("test_batch_tenant".to_string()),

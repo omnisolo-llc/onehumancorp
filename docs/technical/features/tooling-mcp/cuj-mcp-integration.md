@@ -10,7 +10,7 @@
 **Success Metrics:** Handshake success < 2s, 100% tool discovery, Zero exposed secrets.
 
 ## 1. User Journey Overview
-The Admin needs to give the "Support Agent" access to Slack. They register a custom MCP Server. The OHC Gateway performs a dynamic handshake to discover tools (`send_message`, `list_channels`). Once approved, these tools are "mapped" to the Support Agent's capabilities.
+The Admin needs to give the "Support Agent" access to Slack. They register a custom MCP Server. The OmniSolo Gateway performs a dynamic handshake to discover tools (`send_message`, `list_channels`). Once approved, these tools are "mapped" to the Support Agent's capabilities.
 
 ## 2. Detailed Step-by-Step Breakdown
 
@@ -34,12 +34,12 @@ The Admin needs to give the "Support Agent" access to Slack. They register a cus
 - **Visual Cues**: Success adds a "Slack" icon to the registered integrations bar with a green "Live" badge.
 
 ## 5. Security & Privacy
-- **Token Masking**: API keys for Slack are stored exclusively in the MCP Server environment, never in the OHC Hub.
+- **Token Masking**: API keys for Slack are stored exclusively in the MCP Server environment, never in the OmniSolo Hub.
 - **Audit Log**: `Admin[kevin] ENABLED Tool[slack.post] for Role[SUPPORT]` logged.
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 </div>

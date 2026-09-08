@@ -1,6 +1,6 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# [AI Agent Department Architecture] OmniSolo (OHC)
+# [AI Agent Department Architecture] OmniSolo (OmniSolo)
 
 ## Problem Statement
 Small business owners—whether they are a baker like Maya or a handyman like Carlos—are often overwhelmed by the technical and operational overhead of running their business. They must manage inventory, create websites, handle customer support, track finances, and ensure compliance without a dedicated staff. Existing tools either offer isolated chatbots or force owners to learn complex systems. There is a critical need for an invisible, continuous, and integrated "digital staff" that operates like functional business departments, proactively handling complexity and communicating in plain language, empowering non-technical owners to focus entirely on their craft.
@@ -9,7 +9,7 @@ Small business owners—whether they are a baker like Maya or a handyman like Ca
 Our competitive analysis shows a significant gap in the market for AI integration:
 - **Shopify & Wix:** Introduce AI as bolt-on features like Sidekick or simple text/image generators. These remain isolated tools rather than integrated autonomous systems.
 - **Squarespace & GoDaddy:** Offer basic AI website building and promotional generation but lack deep workflow automation (e.g., finance and operations).
-- **OHC Opportunity:** By treating AI as the core infrastructure and organizing it into "Departments" that mirror real-world business roles (Operations, Marketing, Sales, Customer Success, Finance, Legal, Advisory), we provide a full, invisible staff. This ensures the "zero technical knowledge required" mandate is met while providing robust, interconnected automation.
+- **OmniSolo Opportunity:** By treating AI as the core infrastructure and organizing it into "Departments" that mirror real-world business roles (Operations, Marketing, Sales, Customer Success, Finance, Legal, Advisory), we provide a full, invisible staff. This ensures the "zero technical knowledge required" mandate is met while providing robust, interconnected automation.
 
 ## Design Doc
 
@@ -22,7 +22,7 @@ flowchart TD
         Demand[User Demand / UI]
     end
 
-    subgraph OHC Departments
+    subgraph OmniSolo Departments
         Ops["Operations (The Manager)"]
         Mkt["Marketing (The Promoter)"]
         Sales["Sales (The Salesperson)"]

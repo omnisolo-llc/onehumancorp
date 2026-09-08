@@ -4,13 +4,13 @@
 **Priority**: P1
 **Estimated Scope**: Large
 
-*Design Note: This document must be rendered using OHC's Premium Aesthetic standards, including glassmorphism tokens, a 20px blur, and Outfit/Inter typography.*
+*Design Note: This document must be rendered using OmniSolo's Premium Aesthetic standards, including glassmorphism tokens, a 20px blur, and Outfit/Inter typography.*
 
 ## Problem Statement
-OHC Standalone Desktop Mode (SQLite) allows users to run agents locally for data privacy and resource efficiency. However, a major limitation of this local-first architecture is the inability to directly receive external webhooks (e.g., from Stripe, GitHub, or Jira) because the local instance is not exposed to the public internet. Without a reliable way to receive these asynchronous events, local agents cannot react to critical external state changes, breaking the "Full-Spectrum Observability" and "Absolute Autonomy" values of the Hybrid OS.
+OmniSolo Standalone Desktop Mode (SQLite) allows users to run agents locally for data privacy and resource efficiency. However, a major limitation of this local-first architecture is the inability to directly receive external webhooks (e.g., from Stripe, GitHub, or Jira) because the local instance is not exposed to the public internet. Without a reliable way to receive these asynchronous events, local agents cannot react to critical external state changes, breaking the "Full-Spectrum Observability" and "Absolute Autonomy" values of the Hybrid OS.
 
 ## Research Report
-Competitors like Claude Code and Replit Agent do not natively solve the local-webhook routing problem in a unified, multi-tenant capable architecture. Our audit of hybrid OS capabilities indicates that OHC can extend its existing reverse-tunnel infrastructure (used for MCP proxying) to solve this. By introducing a Hybrid Webhook Relay, the OHC Cloud Orchestrator can ingest incoming webhooks and securely forward them to the appropriate Standalone Desktop instance. This provides an "Unfair Advantage" by granting local agents cloud-level connectivity without exposing the local machine to the internet.
+Competitors like Claude Code and Replit Agent do not natively solve the local-webhook routing problem in a unified, multi-tenant capable architecture. Our audit of hybrid OS capabilities indicates that OmniSolo can extend its existing reverse-tunnel infrastructure (used for MCP proxying) to solve this. By introducing a Hybrid Webhook Relay, the OmniSolo Cloud Orchestrator can ingest incoming webhooks and securely forward them to the appropriate Standalone Desktop instance. This provides an "Unfair Advantage" by granting local agents cloud-level connectivity without exposing the local machine to the internet.
 
 ## Design Doc
 **Architecture:**

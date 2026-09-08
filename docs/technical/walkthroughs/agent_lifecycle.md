@@ -2,11 +2,11 @@
 
 # Agent Lifecycle Walkthrough
 
-Welcome to the Agent Lifecycle walkthrough. This guide details the complete journey of an OHC Agent, from provisioning (hiring) to decommissioning (archival), ensuring absolute autonomy and continuous evolution within the Swarm.
+Welcome to the Agent Lifecycle walkthrough. This guide details the complete journey of an OmniSolo Agent, from provisioning (hiring) to decommissioning (archival), ensuring absolute autonomy and continuous evolution within the Swarm.
 
 ## 1. The Lifecycle Overview
 
-The lifecycle of an agent within the OHC Hybrid Agentic OS consists of four distinct phases: Initialization, Context Sync, Execution, and Archival.
+The lifecycle of an agent within the OmniSolo Hybrid Agentic OS consists of four distinct phases: Initialization, Context Sync, Execution, and Archival.
 
 ```mermaid
 sequenceDiagram
@@ -19,7 +19,7 @@ sequenceDiagram
     CE->>Hub: 1. Hire Agent (POST /api/v1/agents/hire)
     Hub->>Agent: 2. Initialize (Inject SPIFFE Identity)
     Agent->>Memory: 3. Context Sync (Pull historical RAG)
-    Memory-->>Agent: Returns OHC-SIP embeddings
+    Memory-->>Agent: Returns OmniSolo-SIP embeddings
     Agent->>Mesh: 4. Announce Presence (mesh:events)
     Agent->>Hub: 5. Execute Tasks (SharedTaskDB loop)
     Hub->>Agent: 6. Decommission Request

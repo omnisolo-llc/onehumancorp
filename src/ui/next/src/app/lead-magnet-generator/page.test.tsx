@@ -33,7 +33,7 @@ describe('LeadMagnetGeneratorPage', () => {
     expect(headlineInput).toBeInTheDocument();
 
     // Check embed code generated
-    expect(screen.getByText(/<iframe src="https:\/\/omnisolo.co\/api\/v1\/growth\/lead-magnet\/embed/)).toBeInTheDocument();
+    expect(screen.getByText(/<iframe src="https:\/\/cloud.omnisolo.co\/api\/v1\/growth\/lead-magnet\/embed/)).toBeInTheDocument();
   });
 
   it('updates embed code when inputs change', async () => {

@@ -1,12 +1,12 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); color: #fff;">
 
-# OHC KAIROS: Execution Playbook Final Design Doc
+# OmniSolo KAIROS: Execution Playbook Final Design Doc
 
 **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 **Status:** Approved
 
 ## Executive Summary
-This document outlines the final orchestration phases for the OmniSolo (OHC) Swarm under the KAIROS architecture.
+This document outlines the final orchestration phases for the OmniSolo (OmniSolo) Swarm under the KAIROS architecture.
 
 ## Phase 1: Shared Task List (The Brain)
 - **Architecture**: Distributed state machine tracking DAG task dependencies.

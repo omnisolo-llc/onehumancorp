@@ -11,7 +11,7 @@ test.describe('Referrals Growth Flow', () => {
     // After loading, it should display the dynamically fetched link
     const referralLink = page.locator('#referral-link');
     await expect(referralLink).toBeVisible();
-    await expect(referralLink).toHaveText(/^https:\/\/ohc\.app\/ref\/.+/);
+    await expect(referralLink).toHaveText(/^https:\/\/cloud.omnisolo.co\/ref\/.+/);
 
     // The copy button should be available
     const copyButton = page.locator('button', { hasText: 'Copy' }).first();

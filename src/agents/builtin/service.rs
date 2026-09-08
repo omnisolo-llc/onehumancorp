@@ -6,7 +6,7 @@ use tonic::{Request, Response, Status};
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
 use chrono::{DateTime, Utc};
-use ohc_builtin_agent_llm::{
+use omnisolo_builtin_agent_llm::{
     LlmClient,
     anthropic::AnthropicClient,
     ollama::OllamaClient,
@@ -211,8 +211,8 @@ impl AgentServiceImpl {
     }
 
     pub async fn init_memory(&mut self) {
-        if std::env::var("OHC_ENABLE_ANTHROPIC_MEMORY").unwrap_or_default() == "true" {
-            let base_dir = std::env::var("OHC_ANTHROPIC_MEMORY_DIR")
+        if std::env::var("OMNISOLO_ENABLE_ANTHROPIC_MEMORY").unwrap_or_default() == "true" {
+            let base_dir = std::env::var("OMNISOLO_ANTHROPIC_MEMORY_DIR")
                 .unwrap_or_else(|_| ".agent-memory".to_string());
             if let Ok(store) = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir) {
                 self.anthropic_memory = Some(Arc::new(store));
@@ -221,10 +221,10 @@ impl AgentServiceImpl {
             }
         }
 
-        if std::env::var("OHC_ENABLE_REDIS_MEMORY").unwrap_or_default() == "true" {
-            let db_url = std::env::var("OHC_REDIS_MEMORY_URL")
+        if std::env::var("OMNISOLO_ENABLE_REDIS_MEMORY").unwrap_or_default() == "true" {
+            let db_url = std::env::var("OMNISOLO_REDIS_MEMORY_URL")
                 .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-            let namespace = std::env::var("OHC_REDIS_MEMORY_NAMESPACE")
+            let namespace = std::env::var("OMNISOLO_REDIS_MEMORY_NAMESPACE")
                 .unwrap_or_else(|_| "ohc_agent".to_string());
             if let Ok(store) = crate::memory_store::RedisMemoryStore::new(&db_url, &namespace) {
                 self.redis_memory = Some(Arc::new(store));
@@ -233,7 +233,7 @@ impl AgentServiceImpl {
             }
         }
 
-        let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_default();
+        let db_url = std::env::var("OMNISOLO_DATABASE_URL").unwrap_or_default();
         if !db_url.is_empty() {
             if db_url.starts_with("sqlite") {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
@@ -353,11 +353,11 @@ impl AgentServiceImpl {
     }
 
     fn ai_provider_config_path() -> PathBuf {
-        std::env::var("OHC_LLM_CONFIG_PATH")
+        std::env::var("OMNISOLO_LLM_CONFIG_PATH")
             .ok()
             .filter(|v| !v.trim().is_empty())
             .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(".ohc/ai-provider.json"))
+            .unwrap_or_else(|| PathBuf::from(".omnisolo/ai-provider.json"))
     }
 
     fn ai_provider_config_string(key: &str) -> Option<String> {
@@ -415,7 +415,7 @@ impl AgentServiceImpl {
                 std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string())
             }
             "openai" | "openai-compatible" | "openai_compatible" => {
-                Self::first_non_empty_env(&["OPENAI_MODEL", "OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
+                Self::first_non_empty_env(&["OPENAI_MODEL", "OMNISOLO_OPENAI_MODEL", "OMNISOLO_LLM_MODEL"])
                     .unwrap_or_else(|| "gpt-4.1-mini".to_string())
             }
             _ => String::new(),
@@ -453,14 +453,14 @@ impl AgentServiceImpl {
                 Arc::new(AnthropicClient::new(key))
             }
             "openai" => {
-                let key = self.configured_api_key(&["OPENAI_API_KEY", "OHC_LLM_API_KEY"]);
+                let key = self.configured_api_key(&["OPENAI_API_KEY", "OMNISOLO_LLM_API_KEY"]);
                 let endpoint = self.effective_endpoint(
                     req_endpoint,
                     &[
                         "OPENAI_BASE_URL",
-                        "OHC_OPENAI_BASE_URL",
-                        "OHC_LLM_BASE_URL",
-                        "OHC_LLM_ENDPOINT",
+                        "OMNISOLO_OPENAI_BASE_URL",
+                        "OMNISOLO_LLM_BASE_URL",
+                        "OMNISOLO_LLM_ENDPOINT",
                     ],
                 );
                 let mut config = if let Some(endpoint) = endpoint {
@@ -472,15 +472,15 @@ impl AgentServiceImpl {
                 Arc::new(OpenAIClient::from_config(config))
             }
             "openai-compatible" | "openai_compatible" => {
-                let key = self.configured_api_key(&["OHC_LLM_API_KEY", "OPENAI_API_KEY"]);
+                let key = self.configured_api_key(&["OMNISOLO_LLM_API_KEY", "OPENAI_API_KEY"]);
                 let endpoint = self
                     .effective_endpoint(
                         req_endpoint,
                         &[
-                            "OHC_LLM_BASE_URL",
-                            "OHC_LLM_ENDPOINT",
+                            "OMNISOLO_LLM_BASE_URL",
+                            "OMNISOLO_LLM_ENDPOINT",
                             "OPENAI_BASE_URL",
-                            "OHC_OPENAI_BASE_URL",
+                            "OMNISOLO_OPENAI_BASE_URL",
                         ],
                     )
                     .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
@@ -489,14 +489,14 @@ impl AgentServiceImpl {
                 ))
             }
             "minimax" => {
-                let key = self.configured_api_key(&["MINIMAX_API_KEY", "OHC_LLM_API_KEY"]);
+                let key = self.configured_api_key(&["MINIMAX_API_KEY", "OMNISOLO_LLM_API_KEY"]);
                 let endpoint = self.effective_endpoint(
                     req_endpoint,
                     &[
                         "MINIMAX_BASE_URL",
                         "MINIMAX_API_BASE_URL",
-                        "OHC_LLM_BASE_URL",
-                        "OHC_LLM_ENDPOINT",
+                        "OMNISOLO_LLM_BASE_URL",
+                        "OMNISOLO_LLM_ENDPOINT",
                     ],
                 );
                 Arc::new(OpenAIClient::minimax(key, endpoint))
@@ -536,7 +536,7 @@ impl AgentServiceImpl {
                 }
                 // Fallback: Ollama
                 Arc::new(OllamaClient::new(
-                    std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
+                    std::env::var("OMNISOLO_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
                 ))
             }
         }
@@ -597,8 +597,8 @@ impl AgentServiceImpl {
 
         // Inject SqliteMemoryStore if configured
         let mut sqlite_memory = None;
-        if std::env::var("OHC_ENABLE_SQLITE_MEMORY").unwrap_or_default() == "true" {
-            let db_url = std::env::var("OHC_SQLITE_MEMORY_URL")
+        if std::env::var("OMNISOLO_ENABLE_SQLITE_MEMORY").unwrap_or_default() == "true" {
+            let db_url = std::env::var("OMNISOLO_SQLITE_MEMORY_URL")
                 .unwrap_or_else(|_| "sqlite::memory:".to_string());
             if let Ok(store) =
                 crate::sqlite_memory::SqliteMemoryStore::new(&db_url, llm.clone()).await
@@ -617,8 +617,8 @@ impl AgentServiceImpl {
                 sqlite_memory
             } else if let Some(anthropic_store) = self.anthropic_memory.clone() {
                 Some(anthropic_store as std::sync::Arc<dyn crate::memory_store::LongTermMemory>)
-            } else if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
-                let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR")
+            } else if std::env::var("OMNISOLO_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
+                let base_dir = std::env::var("OMNISOLO_JSON_MEMORY_STORE_DIR")
                     .unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
                 Some(Arc::new(crate::json_store::NamespaceJsonStore::new(
                     &base_dir,
@@ -776,7 +776,7 @@ impl AgentServiceImpl {
     }
 
     fn workspace_path() -> PathBuf {
-        std::env::var("OHC_AGENT_WORKSPACE")
+        std::env::var("OMNISOLO_AGENT_WORKSPACE")
             .ok()
             .filter(|v| !v.trim().is_empty())
             .map(PathBuf::from)
@@ -832,7 +832,7 @@ impl AgentServiceImpl {
         memory_accessor: Option<Arc<dyn crate::tools::anthropic_memory::MemoryAccessor>>,
         observation_store: Arc<dashmap::DashMap<String, String>>,
     ) -> Vec<Tool> {
-        if std::env::var("OHC_AGENT_DISABLE_TOOLS")
+        if std::env::var("OMNISOLO_AGENT_DISABLE_TOOLS")
             .map(|value| {
                 matches!(
                     value.trim().to_ascii_lowercase().as_str(),
@@ -1173,7 +1173,7 @@ impl AgentService for AgentServiceImpl {
             let registry = LocalServiceRegistry::with_defaults();
             let blobs = run_cfg.workspace_path.as_ref().map(|root| {
                 Arc::new(crate::memory_store::FileBasedMemory::new(root))
-                    as Arc<dyn crate::memory_store::OHCMemory>
+                    as Arc<dyn crate::memory_store::OmniSoloMemory>
             });
             let mut gateway =
                 crate::local_service_adapters::gateway_for_agent_run(&run_cfg, registry, blobs);
@@ -1664,7 +1664,7 @@ mod tests {
             "test",
             AgentConfig::default(),
             AuthMode::Spiffe {
-                allowed_id: "spiffe://onehumancorp.io/org/org-1/agent/agent-1".to_string(),
+                allowed_id: "spiffe://omnisolo.io/org/org-1/agent/agent-1".to_string(),
             },
         );
 
@@ -1730,7 +1730,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_cascading_agents_md() {
-        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        let base_dir = std::path::PathBuf::from(format!("/tmp/omnisolo_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).unwrap();
 
         let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
@@ -1752,7 +1752,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_cascading_agents_md_truncation() {
-        let base_dir = std::path::PathBuf::from(format!("/tmp/ohc_test_{}", uuid::Uuid::new_v4()));
+        let base_dir = std::path::PathBuf::from(format!("/tmp/omnisolo_test_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).unwrap();
 
         let mut root_file = std::fs::File::create(base_dir.join("AGENTS.md")).unwrap();
@@ -2036,9 +2036,9 @@ mod memory_tests {
     #[tokio::test]
     async fn test_redis_memory_initialization() {
         unsafe {
-            std::env::set_var("OHC_ENABLE_REDIS_MEMORY", "true");
-            std::env::set_var("OHC_REDIS_MEMORY_URL", "redis://127.0.0.1:6379");
-            std::env::set_var("OHC_REDIS_MEMORY_NAMESPACE", "test_namespace");
+            std::env::set_var("OMNISOLO_ENABLE_REDIS_MEMORY", "true");
+            std::env::set_var("OMNISOLO_REDIS_MEMORY_URL", "redis://127.0.0.1:6379");
+            std::env::set_var("OMNISOLO_REDIS_MEMORY_NAMESPACE", "test_namespace");
         }
 
         let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
@@ -2050,19 +2050,19 @@ mod memory_tests {
         );
 
         unsafe {
-            std::env::remove_var("OHC_ENABLE_REDIS_MEMORY");
-            std::env::remove_var("OHC_REDIS_MEMORY_URL");
-            std::env::remove_var("OHC_REDIS_MEMORY_NAMESPACE");
+            std::env::remove_var("OMNISOLO_ENABLE_REDIS_MEMORY");
+            std::env::remove_var("OMNISOLO_REDIS_MEMORY_URL");
+            std::env::remove_var("OMNISOLO_REDIS_MEMORY_NAMESPACE");
         }
     }
 
     #[tokio::test]
     async fn test_anthropic_memory_initialization_and_accessor() {
         unsafe {
-            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
-            std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
+            std::env::set_var("OMNISOLO_ENABLE_ANTHROPIC_MEMORY", "true");
+            std::env::set_var("OMNISOLO_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
             std::fs::create_dir_all(".test-agent-memory").unwrap();
-            std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
+            std::env::set_var("OMNISOLO_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
         }
 
         let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
@@ -2082,8 +2082,8 @@ mod memory_tests {
         );
 
         unsafe {
-            std::env::remove_var("OHC_ENABLE_ANTHROPIC_MEMORY");
-            std::env::remove_var("OHC_ANTHROPIC_MEMORY_DIR");
+            std::env::remove_var("OMNISOLO_ENABLE_ANTHROPIC_MEMORY");
+            std::env::remove_var("OMNISOLO_ANTHROPIC_MEMORY_DIR");
         }
         let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
     }

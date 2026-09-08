@@ -1,7 +1,7 @@
 # [Architecture] In-Person POS & Tap-to-Pay (Stripe Terminal) Integration
 
 ## Problem Statement
-For omni-channel retail personas like **Priya (The Boutique Owner)**, the ability to take in-person payments seamlessly is a hard requirement. Currently, OmniSolo (OHC) handles online orders but lacks the infrastructure for physical, in-store Point-of-Sale (POS) transactions. If Priya cannot accept a customer's credit card via Tap-to-Pay on her iPhone or via a physical Stripe Terminal card reader, she cannot use OHC to run her boutique. She needs an integration that bridges her online inventory with her offline sales instantly.
+For omni-channel retail personas like **Priya (The Boutique Owner)**, the ability to take in-person payments seamlessly is a hard requirement. Currently, OmniSolo (OmniSolo) handles online orders but lacks the infrastructure for physical, in-store Point-of-Sale (POS) transactions. If Priya cannot accept a customer's credit card via Tap-to-Pay on her iPhone or via a physical Stripe Terminal card reader, she cannot use OmniSolo to run her boutique. She needs an integration that bridges her online inventory with her offline sales instantly.
 
 ## Research Report
 ### Competitor Analysis
@@ -9,15 +9,15 @@ For omni-channel retail personas like **Priya (The Boutique Owner)**, the abilit
 - **Square:** The pioneer in mobile POS. Extremely easy to set up with physical readers and Apple/Android Tap-to-Pay. However, their online store offering is weaker than their POS.
 - **Wix/Squarespace:** Offer POS integrations, but they often feel bolted-on or require third-party apps, causing friction for non-technical users.
 
-### Opportunity for OHC
-OHC can leverage **Stripe Terminal** to offer a completely invisible, zero-config POS experience. By using Stripe's native Tap-to-Pay SDKs within the Tauri mobile app, users like Priya won't even need to buy physical hardware initially—they can just use their existing iPhone/Android to accept contactless payments. For larger volumes, we will support pairing physical Stripe Terminal readers over Bluetooth or local network, managed invisibly by the AI Operations department.
+### Opportunity for OmniSolo
+OmniSolo can leverage **Stripe Terminal** to offer a completely invisible, zero-config POS experience. By using Stripe's native Tap-to-Pay SDKs within the Tauri mobile app, users like Priya won't even need to buy physical hardware initially—they can just use their existing iPhone/Android to accept contactless payments. For larger volumes, we will support pairing physical Stripe Terminal readers over Bluetooth or local network, managed invisibly by the AI Operations department.
 
 ## Design Doc
 
 ### Architecture Diagram
 ```mermaid
 graph TD;
-    MobileApp[OHC Tauri Mobile App\nTap-to-Pay SDK / Bluetooth] -->|Creates ConnectionToken| Backend[OHC Rust Backend];
+    MobileApp[OmniSolo Tauri Mobile App\nTap-to-Pay SDK / Bluetooth] -->|Creates ConnectionToken| Backend[OmniSolo Rust Backend];
     Backend -->|Requests Token| StripeAPI[Stripe API];
     StripeAPI -->|Returns Token| Backend;
     Backend -->|ConnectionToken| MobileApp;
@@ -30,7 +30,7 @@ graph TD;
 ```
 
 ### Mobile UX Flow
-1. **Checkout Screen:** Priya adds items to the cart in the OHC mobile app. She taps "Charge $45.00".
+1. **Checkout Screen:** Priya adds items to the cart in the OmniSolo mobile app. She taps "Charge $45.00".
 2. **Payment Method Selection:** The app presents options: "Tap to Pay on iPhone", "Card Reader", "Cash".
 3. **Tap to Pay (No Hardware):** If selected, the native iOS/Android Tap-to-Pay UI slides up. The customer taps their card or phone to Priya's device.
 4. **Processing & Success:** A smooth glassmorphic loading spinner appears, transitioning to a success checkmark.
@@ -42,7 +42,7 @@ graph TD;
 
 ### Key Design Decisions
 - **Zero-Config Hardware:** Prioritize Tap-to-Pay on iPhone/Android first. It requires zero hardware investment, lowering the barrier to entry for users like Maya (baker) who might take an occasional in-person deposit.
-- **Unified Inventory:** A single source of truth in PostgreSQL for both online and in-store inventory. The Stripe Terminal payment intent will include metadata linking it to the OHC order ID.
+- **Unified Inventory:** A single source of truth in PostgreSQL for both online and in-store inventory. The Stripe Terminal payment intent will include metadata linking it to the OmniSolo order ID.
 
 ## Implementation Prompt
 **For the Implementer Agent:**

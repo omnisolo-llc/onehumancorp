@@ -530,7 +530,7 @@
       getEmbedBtn.addEventListener('click', () => {
         const origin = window.location.origin.includes('localhost') || window.location.protocol === 'file:' ? 'https://cloud.omnisolo.co' : window.location.origin;
 
-        const code = `<div class="ohc-case-study-embed" data-tenant="${escapeHtml(state.tenant)}" data-customer="${escapeHtml(state.customerName)}" data-metric="${escapeHtml(state.metricValue)}" data-label="${escapeHtml(state.metricLabel)}" data-theme="${escapeHtml(state.theme)}" data-branding="${!state.removeBranding}"></div>\n<script src="${origin}/widgets/case-study.js" async><\/script>`;
+        const code = `<div class="omnisolo-case-study-embed" data-tenant="${escapeHtml(state.tenant)}" data-customer="${escapeHtml(state.customerName)}" data-metric="${escapeHtml(state.metricValue)}" data-label="${escapeHtml(state.metricLabel)}" data-theme="${escapeHtml(state.theme)}" data-branding="${!state.removeBranding}"></div>\n<script src="${origin}/widgets/case-study.js" async><\/script>`;
 
         embedCodeTextarea.value = code;
         embedModal.classList.add('active');

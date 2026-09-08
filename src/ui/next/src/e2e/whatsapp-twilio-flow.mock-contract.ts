@@ -45,7 +45,7 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
       await expect(page.locator('.app-status-item', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
     }
 
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
     const response = await request.post(`${apiBase}/api/v1/webhooks/twilio`, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -73,7 +73,7 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
       await expect(page.locator('.app-status-item', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
     }
 
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
     const response = await request.post(`${apiBase}/api/v1/webhooks/twilio`, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -88,7 +88,7 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
   });
 
   test('Webhook processes message gracefully and falls back to test_tenant for unknown number', async ({ request }) => {
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
     // This number is completely unknown to any integration or setting
     const response = await request.post(`${apiBase}/api/v1/webhooks/twilio`, {
       headers: {
@@ -101,7 +101,7 @@ test.describe('Twilio WhatsApp Flow CUJ', () => {
   });
 
   test('Owner can see AI drafted reply in inbox for a WhatsApp message', async ({ page, request }) => {
-    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
+    const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || 'http://localhost:18789';
     const response = await request.post(`${apiBase}/api/v1/webhooks/twilio`, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',

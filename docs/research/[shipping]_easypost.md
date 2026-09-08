@@ -5,7 +5,7 @@
 - EasyPost provides a single, unified API for 100+ carriers (USPS, FedEx, UPS, DHL).
 - Competitive pricing (free tier for low volume, pennies per label after).
 - Abstracts away complex carrier-specific APIs and handles tracking webhooks.
-- Great fit for OHC physical product merchants.
+- Great fit for OmniSolo physical product merchants.
 **Design Doc**:
 - Upon order placement, "Operations" calculates the shipping rate via EasyPost and charges the customer.
 - In the Order details view, the business owner clicks "Print Label."

@@ -1,7 +1,7 @@
 use crate::agent::{Agent, AgentRunConfig};
 use crate::llm::LlmClient;
 use futures::future::join_all;
-use ohc_builtin_agent_core::types::{ChatRequest, Message};
+use omnisolo_builtin_agent_core::types::{ChatRequest, Message};
 use std::sync::Arc;
 
 /// DeerFlow Unique Harness Innovations: Sub-agent orchestration:
@@ -134,7 +134,7 @@ impl DeerFlowOrchestrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatResponse, Usage};
     use tokio::sync::Mutex;
 
     struct MockLlm {

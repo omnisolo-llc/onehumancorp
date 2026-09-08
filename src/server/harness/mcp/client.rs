@@ -238,7 +238,7 @@ pub struct ServeMcpRequest {
     pub params: Option<Value>,
 }
 
-/// Expose the OHC Agent Harness itself as an MCP Server
+/// Expose the OmniSolo Agent Harness itself as an MCP Server
 pub struct HarnessMcpServer {
     // The agent harness MCP Server could hold configuration here
 }

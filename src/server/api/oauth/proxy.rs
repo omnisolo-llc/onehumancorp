@@ -49,8 +49,8 @@ pub async fn handle_oauth_callback(Query(query): Query<OAuthCallbackQuery>) -> i
             let actual_state = parts[2];
 
             // Redirect to the standalone instance via the tunnel proxy
-            let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
-                .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
+            let tunnel_base_url = std::env::var("OMNISOLO_TUNNEL_BASE_URL")
+                .unwrap_or_else(|_| "https://tunnel.omnisolo.co".to_string());
 
             if tunnel_base_url.starts_with("http://127.0.0.1:")
                 || tunnel_base_url.starts_with("http://localhost:")
@@ -73,8 +73,8 @@ pub async fn handle_oauth_callback(Query(query): Query<OAuthCallbackQuery>) -> i
                     .split(':')
                     .next()
                     .unwrap_or(stripped);
-                if !host.ends_with(".ohc.network")
-                    && host != "ohc.network"
+                if !host.ends_with(".omnisolo.co")
+                    && host != "omnisolo.co"
                     && host != "localhost"
                     && host != "127.0.0.1"
                 {
@@ -128,7 +128,7 @@ pub async fn handle_oauth_callback(Query(query): Query<OAuthCallbackQuery>) -> i
     "OAuth callback received. You can close this window.".into_response()
 }
 
-pub fn router() -> Router<std::sync::Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router() -> Router<std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>> {
     Router::new().route("/callback", get(handle_oauth_callback))
 }
 
@@ -158,7 +158,7 @@ mod tests {
         let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
 
         // Assert that the redirect uses a fragment (#) instead of a query string (?)
-        assert!(body_str.contains("tunnel.ohc.network"));
+        assert!(body_str.contains("tunnel.omnisolo.co"));
         assert!(body_str.contains("code=test_code"));
         assert!(body_str.contains("state=actualState123"));
         assert!(body_str.contains("foo=bar"));

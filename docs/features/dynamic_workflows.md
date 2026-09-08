@@ -1,6 +1,6 @@
 # Dynamic Workflows
 
-Dynamic workflows let OHC turn a large prompt into a coordinated, resumable set of sub-agent jobs. The implementation follows the Claude Code dynamic workflow pattern: plan first, fan out across specialized workers, verify shard results independently, and synthesize only checked work into the final result.
+Dynamic workflows let OmniSolo turn a large prompt into a coordinated, resumable set of sub-agent jobs. The implementation follows the Claude Code dynamic workflow pattern: plan first, fan out across specialized workers, verify shard results independently, and synthesize only checked work into the final result.
 
 ## When a Workflow Starts
 
@@ -28,7 +28,7 @@ Each workflow plan contains four phases:
 | `verification` | Assign adversarial or independent reviewers to check each shard. |
 | `synthesis` | Fold verified results into one coordinated final result. |
 
-Plans are saved to `.ohc/dynamic-workflows` by default. Set `OHC_DYNAMIC_WORKFLOW_STATE_DIR` to store them elsewhere. Queue jobs are written through the existing `TaskQueue` abstraction, using PostgreSQL in cloud mode and SQLite in standalone mode.
+Plans are saved to `.omnisolo/dynamic-workflows` by default. Set `OMNISOLO_DYNAMIC_WORKFLOW_STATE_DIR` to store them elsewhere. Queue jobs are written through the existing `TaskQueue` abstraction, using PostgreSQL in cloud mode and SQLite in standalone mode.
 
 ## API
 

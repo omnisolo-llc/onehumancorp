@@ -6,7 +6,7 @@ test.describe('Zero-Click Onboarding Flow', () => {
   test('should complete the zero-click onboarding flow on mobile', async ({ page }) => {
     // Navigate to the real local server
     await page.goto('http://127.0.0.1:18789/setup.html');
-    await expect(page).toHaveTitle(/OmniSolo|OHC/);
+    await expect(page).toHaveTitle(/OmniSolo|OmniSolo/);
 
     // Initial Screen
     await expect(page.locator('h1', { hasText: 'Tell us about your business' })).toBeVisible({ timeout: 15000 });

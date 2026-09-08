@@ -6,7 +6,7 @@ mod tests {
     fn test_chromadb_provider_standalone_mode() {
         temp_env::with_vars(
             vec![
-                ("OHC_EXECUTION_MODE", Some("standalone")),
+                ("OMNISOLO_EXECUTION_MODE", Some("standalone")),
                 ("CHROMADB_HOST", Some("127.0.0.1")),
                 ("CHROMADB_PORT", Some("9000")),
             ],
@@ -27,8 +27,8 @@ mod tests {
     fn test_chromadb_provider_cloud_mode() {
         temp_env::with_vars(
             vec![
-                ("OHC_EXECUTION_MODE", Some("cloud")),
-                ("OHC_HEADLESS", Some("false")),
+                ("OMNISOLO_EXECUTION_MODE", Some("cloud")),
+                ("OMNISOLO_HEADLESS", Some("false")),
             ],
             || {
                 let provider = ChromaDbProvider::new();
@@ -45,8 +45,8 @@ mod tests {
     fn test_chromadb_provider_cloud_mode_headless() {
         temp_env::with_vars(
             vec![
-                ("OHC_EXECUTION_MODE", Some("cloud")),
-                ("OHC_HEADLESS", Some("true")),
+                ("OMNISOLO_EXECUTION_MODE", Some("cloud")),
+                ("OMNISOLO_HEADLESS", Some("true")),
                 ("CHROMADB_HOST", Some("localhost")),
                 ("CHROMADB_PORT", Some("8000")),
             ],

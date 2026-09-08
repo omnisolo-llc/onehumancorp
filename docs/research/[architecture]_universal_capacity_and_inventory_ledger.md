@@ -8,7 +8,7 @@ Small business owners frequently operate hybrid business models that blur the li
   - **Shopify**: Excellent for physical inventory but struggles with time-based bookings or daily production limits without heavy third-party app reliance, which introduces data sync issues and "Cost Creep."
   - **Wix**: Offers both store and booking modules, but they operate as separate database entities, preventing complex hybrid models (e.g., booking a room *and* reserving a specific piece of equipment).
   - **Stripe**: Handles the payment flow seamlessly but relies on the platform to manage the state of inventory/capacity.
-- **OHC Advantage**: By architecting a `Universal Capacity Ledger` that treats physical items, time slots, and daily production constraints as mathematically identical consumable units, OHC can eliminate the artificial barrier between e-commerce and services. This enables real-time, cross-channel availability syncing (e.g., across Instagram DMs and the web storefront) without fear of overselling.
+- **OmniSolo Advantage**: By architecting a `Universal Capacity Ledger` that treats physical items, time slots, and daily production constraints as mathematically identical consumable units, OmniSolo can eliminate the artificial barrier between e-commerce and services. This enables real-time, cross-channel availability syncing (e.g., across Instagram DMs and the web storefront) without fear of overselling.
 
 ## Design Doc
 

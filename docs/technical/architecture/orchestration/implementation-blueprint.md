@@ -3,7 +3,7 @@
 # KAIROS Orchestration Implementation Blueprint
 
 **Author:** Principal Product Architect & KAIROS Orchestrator (L7)
-**Mission:** Define the structural and aesthetic vision for the OHC "Hybrid Agentic OS". Act as the central "KAIROS" orchestrator, decomposing complex feature requests into a shared task list for the agent team.
+**Mission:** Define the structural and aesthetic vision for the OmniSolo "Hybrid Agentic OS". Act as the central "KAIROS" orchestrator, decomposing complex feature requests into a shared task list for the agent team.
 
 ---
 
@@ -69,7 +69,7 @@ The Teammate Mesh ensures agents coordinate without delays.
 ```
 
 ## 3. Phase 3: autoDream Memory Vector Architecture
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
+The Swarm Intelligence Protocol (OmniSolo-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
 
 ```sql
 CREATE TABLE IF NOT EXISTS autodream_memories (

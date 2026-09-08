@@ -2,7 +2,7 @@
 
 # KAIROS UltraPlan Deliberation Architecture: Visual Walkthrough
 
-This document outlines the multi-phase UltraPlan state machine utilized by the OHC Swarm to deliberate on and execute complex architectural changes.
+This document outlines the multi-phase UltraPlan state machine utilized by the OmniSolo Swarm to deliberate on and execute complex architectural changes.
 
 ## State Machine Overview
 

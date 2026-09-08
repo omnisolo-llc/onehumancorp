@@ -43,8 +43,8 @@ test.describe('Affiliate Badge Builder', () => {
 
     // Change Badge Text
     const textInput = page.locator('#badgeText');
-    await textInput.fill('Built with OHC');
-    await expect(previewText).toHaveText('Built with OHC');
+    await textInput.fill('Built with OmniSolo');
+    await expect(previewText).toHaveText('Built with OmniSolo');
 
     // Change Theme to Dark
     const themeSelect = page.locator('#badgeTheme');
@@ -58,7 +58,7 @@ test.describe('Affiliate Badge Builder', () => {
     const embedCode = page.locator('#embedCode');
     const embedValue = await embedCode.inputValue();
 
-    expect(embedValue).toContain('Built with OHC');
+    expect(embedValue).toContain('Built with OmniSolo');
     expect(embedValue).toContain('background-color: #111827'); // Dark theme background
     expect(embedValue).toContain('api/v1/growth/referrals/click?target=/onboarding&ref=e2e-tenant&source=affiliate_badge');
 

@@ -92,7 +92,7 @@ pub async fn start_invoice_followup_worker(
                         target_channel, comms_context
                     );
 
-                    let llm_res = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+                    let llm_res = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
                         Ok("minimax") => {
                             if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
                                 crate::minimax::MinimaxClient::new(api_key)

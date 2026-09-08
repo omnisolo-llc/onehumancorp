@@ -65,7 +65,7 @@ The Teammate Mesh ensures agents coordinate without delays.
 ```
 
 ## 3. Phase 3: autoDream Memory Vector Architecture
-The Swarm Intelligence Protocol (OHC-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
+The Swarm Intelligence Protocol (OmniSolo-SIP) dictates that temporary agent scratchpads be consolidated into long-term durable state.
 
 ```sql
 CREATE TABLE IF NOT EXISTS autodream_memories (

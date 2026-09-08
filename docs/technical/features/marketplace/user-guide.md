@@ -8,7 +8,7 @@ The OmniSolo Marketplace is an ecosystem where the CEO can discover, acquire, an
 ## 2. Prerequisites & Requirements
 - **Hardware/Software**: The OmniSolo backend with MCP Gateway access.
 - **Permissions**: CEO or System Admin role for purchasing and deploying new agents.
-- **Dependencies**: An active internet connection to browse the central OHC Marketplace registry.
+- **Dependencies**: An active internet connection to browse the central OmniSolo Marketplace registry.
 
 ## 3. Getting Started (Step-by-Step)
 1. **Browse the Marketplace**:
@@ -33,7 +33,7 @@ The OmniSolo Marketplace is an ecosystem where the CEO can discover, acquire, an
 ### Common Issues Table
 | Symptom | Probable Cause | Resolution |
 |---------|----------------|------------|
-| Import fails | Network issue or incompatible OHC version | Verify your internet connection and ensure your OHC instance is up to date. |
+| Import fails | Network issue or incompatible OmniSolo version | Verify your internet connection and ensure your OmniSolo instance is up to date. |
 | Agent lacks tools | The imported blueprint requires external MCP endpoints not configured | Check the blueprint requirements and register the necessary MCP endpoints. |
 
 ### FAQ
@@ -41,6 +41,6 @@ The OmniSolo Marketplace is an ecosystem where the CEO can discover, acquire, an
   - A: Yes. All imported agents are sandboxed by the MCP Gateway and strictly adhere to your cluster's RBAC and security policies. They cannot perform actions without explicit authorization.
 
 ## 7. Support & Feedback
-If you encounter an issue with a specific marketplace item, contact the creator directly or report it via the OHC Marketplace support channel.
+If you encounter an issue with a specific marketplace item, contact the creator directly or report it via the OmniSolo Marketplace support channel.
 
 </div>

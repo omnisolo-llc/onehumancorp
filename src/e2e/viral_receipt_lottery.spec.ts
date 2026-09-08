@@ -12,7 +12,7 @@ test.describe('Viral Receipt Lottery', () => {
       await expect(page.locator('.receipt-mockup')).toBeVisible();
 
       // Wait for loadTenantLink to populate the true URL natively
-      await expect(page.locator('#preview-url')).toHaveText(/ohc\.app\/win\//, { timeout: 5000 });
+      await expect(page.locator('#preview-url')).toHaveText(/cloud.omnisolo.co\/win\//, { timeout: 5000 });
 
       const generateBtn = page.locator('#generate-btn');
       await expect(generateBtn).toBeVisible();
@@ -30,7 +30,7 @@ test.describe('Viral Receipt Lottery', () => {
       const generatedUrl = await shareLinkInput.inputValue();
       expect(generatedUrl).toContain('/win/');
 
-      await expect(page.locator('#preview-url')).toHaveText(/ohc\.app\/win\//);
+      await expect(page.locator('#preview-url')).toHaveText(/cloud.omnisolo.co\/win\//);
     });
   });
 

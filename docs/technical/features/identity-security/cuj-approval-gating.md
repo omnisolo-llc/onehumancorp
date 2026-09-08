@@ -40,7 +40,7 @@ An agent wants to perform a high-risk action (e.g., spending >$500 or production
 
 ## Implementation Details
 - Relies on event-driven state transitions.
-- Orchestration managed by OHC Hub and K8s Operator.
+- Orchestration managed by OmniSolo Hub and K8s Operator.
 - Audited via append-only Postgres log.
 
 ## Edge Cases

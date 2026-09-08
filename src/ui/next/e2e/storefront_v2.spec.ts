@@ -43,5 +43,5 @@ test('Maya the baker journey storefront v2', async ({ page }) => {
 
   // Success Screen
   await expect(page.getByText("You're Live!")).toBeVisible();
-  await expect(page.getByText('https://mayacakes.ohc.store')).toBeVisible();
+  await expect(page.getByText('https://mayacakes.cloud.omnisolo.co')).toBeVisible();
 });

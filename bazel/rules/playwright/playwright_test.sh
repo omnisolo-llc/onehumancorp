@@ -179,7 +179,7 @@ done
 
 # Resolve built-in agent binary path for workflow-spawned agents.
 AGENT_BIN=""
-for candidate in "src/agents/builtin/ohc-builtin-agent" "../_main/src/agents/builtin/ohc-builtin-agent"; do
+for candidate in "src/agents/builtin/omnisolo-builtin-agent" "../_main/src/agents/builtin/omnisolo-builtin-agent"; do
   if [[ -x "$candidate" ]]; then
     AGENT_BIN="$(realpath "$candidate")"
     break
@@ -437,7 +437,7 @@ if [[ -z "$SERVER_BIN" ]]; then
 fi
 
 if [[ -z "$AGENT_BIN" ]]; then
-  for candidate in "$workspace_root/bazel-bin/src/agents/builtin/ohc-builtin-agent" "$workspace_root/src/agents/builtin/ohc-builtin-agent"; do
+  for candidate in "$workspace_root/bazel-bin/src/agents/builtin/omnisolo-builtin-agent" "$workspace_root/src/agents/builtin/omnisolo-builtin-agent"; do
     if [[ -x "$candidate" ]]; then
       AGENT_BIN="$candidate"
       break
@@ -446,15 +446,15 @@ if [[ -z "$AGENT_BIN" ]]; then
 fi
 
 if [[ -n "${MINIMAX_API_KEY:-}" ]]; then
-  export OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-minimax}"
-  export OHC_LLM_MODEL="${OHC_LLM_MODEL:-MiniMax-M3}"
+  export OMNISOLO_LLM_PROVIDER="${OMNISOLO_LLM_PROVIDER:-minimax}"
+  export OMNISOLO_LLM_MODEL="${OMNISOLO_LLM_MODEL:-MiniMax-M3}"
   export MINIMAX_MODEL="${MINIMAX_MODEL:-MiniMax-M3}"
 fi
-export OHC_AGENT_TASK_TIMEOUT_SECS="${OHC_AGENT_TASK_TIMEOUT_SECS:-240}"
-export OHC_LLM_TIMEOUT_SECS="${OHC_LLM_TIMEOUT_SECS:-180}"
+export OMNISOLO_AGENT_TASK_TIMEOUT_SECS="${OMNISOLO_AGENT_TASK_TIMEOUT_SECS:-240}"
+export OMNISOLO_LLM_TIMEOUT_SECS="${OMNISOLO_LLM_TIMEOUT_SECS:-180}"
 if [[ -n "$AGENT_BIN" ]]; then
-  if [[ -z "${OHC_BUILTIN_AGENT_BINARY:-}" || ! -x "${OHC_BUILTIN_AGENT_BINARY:-}" ]]; then
-    export OHC_BUILTIN_AGENT_BINARY="$AGENT_BIN"
+  if [[ -z "${OMNISOLO_BUILTIN_AGENT_BINARY:-}" || ! -x "${OMNISOLO_BUILTIN_AGENT_BINARY:-}" ]]; then
+    export OMNISOLO_BUILTIN_AGENT_BINARY="$AGENT_BIN"
   fi
 fi
 
@@ -462,33 +462,33 @@ fi
 # later start the server" is racy when CI runs all Playwright shard targets in
 # parallel.
 PORT_WINDOW_START="$(playwright_port_window_start)"
-OHC_SERVER_PORT="$(pick_window_port "$PORT_WINDOW_START" 0)"
-OHC_GRPC_SERVER_PORT="$(pick_window_port "$PORT_WINDOW_START" 10)"
-export OHC_PORT="$OHC_SERVER_PORT"
-export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
-export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
+OMNISOLO_SERVER_PORT="$(pick_window_port "$PORT_WINDOW_START" 0)"
+OMNISOLO_GRPC_SERVER_PORT="$(pick_window_port "$PORT_WINDOW_START" 10)"
+export OMNISOLO_PORT="$OMNISOLO_SERVER_PORT"
+export OMNISOLO_GRPC_PORT="$OMNISOLO_GRPC_SERVER_PORT"
+export OMNISOLO_DEFAULT_TENANT_ID="${OMNISOLO_DEFAULT_TENANT_ID:-e2e-tenant}"
 export E2E_POSTGRES_CONTAINER="$POSTGRES_NAME"
-export API_BASE_URL="http://127.0.0.1:$OHC_SERVER_PORT"
+export API_BASE_URL="http://127.0.0.1:$OMNISOLO_SERVER_PORT"
 export BACKEND_URL="$API_BASE_URL"
-export OHC_BACKEND_URL="$API_BASE_URL"
-export OHC_API_URL="$API_BASE_URL"
-export OHC_STANDALONE_MODE="${OHC_STANDALONE_MODE:-false}"
+export OMNISOLO_BACKEND_URL="$API_BASE_URL"
+export OMNISOLO_API_URL="$API_BASE_URL"
+export OMNISOLO_STANDALONE_MODE="${OMNISOLO_STANDALONE_MODE:-false}"
 
 
-export OHC_AGENT_TOKEN="${OHC_AGENT_TOKEN:-dummy_token}"
-export OHC_AGENT_AUTH_KEY="${OHC_AGENT_AUTH_KEY:-0123456789abcdef0123456789abcdef}"
+export OMNISOLO_AGENT_TOKEN="${OMNISOLO_AGENT_TOKEN:-dummy_token}"
+export OMNISOLO_AGENT_AUTH_KEY="${OMNISOLO_AGENT_AUTH_KEY:-0123456789abcdef0123456789abcdef}"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
-  echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
+  echo "[playwright] Starting server on ports (API:$OMNISOLO_SERVER_PORT gRPC:$OMNISOLO_GRPC_SERVER_PORT) from $SERVER_BIN..."
   if [ "$USE_STANDALONE_MODE" = true ]; then
-    DB_URL="sqlite://$TEST_TMPDIR/ohc-e2e.db?mode=rwc"
+    DB_URL="sqlite://$TEST_TMPDIR/omnisolo-e2e.db?mode=rwc"
     RD_URL="redis://127.0.0.1:12345"
-    OHC_STANDALONE="true"
+    OMNISOLO_STANDALONE="true"
     export REDIS_URL="redis://127.0.0.1:12345"
   else
     DB_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc"
     RD_URL="redis://127.0.0.1:$VK_PORT"
-    OHC_STANDALONE="false"
+    OMNISOLO_STANDALONE="false"
     export REDIS_URL="$RD_URL"
     
     echo "[playwright] Generating self-signed TLS certificates for cloud mode..."
@@ -498,9 +498,9 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
       exit 1
     fi
     "$TLS_GENERATOR" "$TEST_TMPDIR"
-    export OHC_GRPC_TLS_CERT_PATH="$TEST_TMPDIR/server.crt"
-    export OHC_GRPC_TLS_KEY_PATH="$TEST_TMPDIR/server.key"
-    export OHC_GRPC_CLIENT_CA_PATH="$TEST_TMPDIR/ca.crt"
+    export OMNISOLO_GRPC_TLS_CERT_PATH="$TEST_TMPDIR/server.crt"
+    export OMNISOLO_GRPC_TLS_KEY_PATH="$TEST_TMPDIR/server.key"
+    export OMNISOLO_GRPC_CLIENT_CA_PATH="$TEST_TMPDIR/ca.crt"
   fi
   export DATABASE_URL="$DB_URL"
 
@@ -511,40 +511,40 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
 
   DATABASE_URL="$DB_URL" \
   REDIS_URL="$RD_URL" \
-  OHC_STANDALONE_MODE="$OHC_STANDALONE" \
-  OHC_AGENT_TOKEN="dummy_token_at_least_32_chars_long" \
-  OHC_AGENT_AUTH_KEY="dummy_key_at_least_32_chars_long_12345" \
+  OMNISOLO_STANDALONE_MODE="$OMNISOLO_STANDALONE" \
+  OMNISOLO_AGENT_TOKEN="dummy_token_at_least_32_chars_long" \
+  OMNISOLO_AGENT_AUTH_KEY="dummy_key_at_least_32_chars_long_12345" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
-  OHC_AGENT_AUTH_KEY="test_key_must_be_at_least_32_bytes_long_12" \
-  OHC_AGENT_TOKEN="test_agent_token" \
-  OHC_SQLITE_KEY="test_sqlite_key" \
-  OHC_AGENT_AUTH_DISABLED="true" \
-  OHC_ENV="test" \
+  OMNISOLO_AGENT_AUTH_KEY="test_key_must_be_at_least_32_bytes_long_12" \
+  OMNISOLO_AGENT_TOKEN="test_agent_token" \
+  OMNISOLO_SQLITE_KEY="test_sqlite_key" \
+  OMNISOLO_AGENT_AUTH_DISABLED="true" \
+  OMNISOLO_ENV="test" \
   MINIMAX_API_KEY="${MINIMAX_API_KEY:-}" \
-  OHC_LLM_PROVIDER="${OHC_LLM_PROVIDER:-}" \
-  OHC_LLM_MODEL="${OHC_LLM_MODEL:-}" \
-  OHC_AGENT_TOKEN="test_token" \
-  OHC_AGENT_AUTH_KEY="0123456789abcdef0123456789abcdef" \
+  OMNISOLO_LLM_PROVIDER="${OMNISOLO_LLM_PROVIDER:-}" \
+  OMNISOLO_LLM_MODEL="${OMNISOLO_LLM_MODEL:-}" \
+  OMNISOLO_AGENT_TOKEN="test_token" \
+  OMNISOLO_AGENT_AUTH_KEY="0123456789abcdef0123456789abcdef" \
   MINIMAX_MODEL="${MINIMAX_MODEL:-}" \
-  OHC_STANDALONE_MODE="$OHC_STANDALONE_MODE" \
-  OHC_AGENT_TASK_TIMEOUT_SECS="$OHC_AGENT_TASK_TIMEOUT_SECS" \
-  OHC_LLM_TIMEOUT_SECS="$OHC_LLM_TIMEOUT_SECS" \
-  OHC_BUILTIN_AGENT_BINARY="${OHC_BUILTIN_AGENT_BINARY:-}" \
-  OHC_AGENT_TOKEN="test_agent_token" \
-  OHC_AGENT_AUTH_KEY="test_agent_auth_key_must_be_at_least_32_bytes_long_right_so_here_it_is" \
-  OHC_PORT="$OHC_SERVER_PORT" \
-  OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT" \
-  OHC_DEFAULT_TENANT_ID="$OHC_DEFAULT_TENANT_ID" \
-  OHC_AGENT_TOKEN="e2e-token" \
-  OHC_AGENT_AUTH_KEY="0123456789abcdef0123456789abcdef" \
-  OHC_AGENT_AUTH_DISABLED="true" \
-  OHC_ENV="development" \
+  OMNISOLO_STANDALONE_MODE="$OMNISOLO_STANDALONE_MODE" \
+  OMNISOLO_AGENT_TASK_TIMEOUT_SECS="$OMNISOLO_AGENT_TASK_TIMEOUT_SECS" \
+  OMNISOLO_LLM_TIMEOUT_SECS="$OMNISOLO_LLM_TIMEOUT_SECS" \
+  OMNISOLO_BUILTIN_AGENT_BINARY="${OMNISOLO_BUILTIN_AGENT_BINARY:-}" \
+  OMNISOLO_AGENT_TOKEN="test_agent_token" \
+  OMNISOLO_AGENT_AUTH_KEY="test_agent_auth_key_must_be_at_least_32_bytes_long_right_so_here_it_is" \
+  OMNISOLO_PORT="$OMNISOLO_SERVER_PORT" \
+  OMNISOLO_GRPC_PORT="$OMNISOLO_GRPC_SERVER_PORT" \
+  OMNISOLO_DEFAULT_TENANT_ID="$OMNISOLO_DEFAULT_TENANT_ID" \
+  OMNISOLO_AGENT_TOKEN="e2e-token" \
+  OMNISOLO_AGENT_AUTH_KEY="0123456789abcdef0123456789abcdef" \
+  OMNISOLO_AGENT_AUTH_DISABLED="true" \
+  OMNISOLO_ENV="development" \
     "$SERVER_BIN" >"$TEST_TMPDIR/server.log" 2>&1 &
   SERVER_PID=$!
 
-  echo "[playwright] Waiting for server on port $OHC_SERVER_PORT..."
+  echo "[playwright] Waiting for server on port $OMNISOLO_SERVER_PORT..."
   for i in $(seq 1 120); do
-    if curl -s "http://127.0.0.1:$OHC_SERVER_PORT/api/v1/health" >/dev/null; then
+    if curl -s "http://127.0.0.1:$OMNISOLO_SERVER_PORT/api/v1/health" >/dev/null; then
       echo "[playwright] Server is ready and healthy."
       break
     fi
@@ -671,19 +671,19 @@ NEXT_PORT="$(pick_free_port)"
 export BASE_URL="http://127.0.0.1:$NEXT_PORT"
 export CI=false
 export NODE_DISABLE_COMPILE_CACHE=1
-OHC_WEB_SESSION_SECRET="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')"
+OMNISOLO_WEB_SESSION_SECRET="$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')"
 echo "[playwright] Starting Next UI on port $NEXT_PORT from $NEXT_WORK_DIR..."
 (
   cd "$NEXT_WORK_DIR"
   export BACKEND_URL="$API_BASE_URL"
-  export OHC_BACKEND_URL="$API_BASE_URL"
-  export OHC_API_URL="$API_BASE_URL"
-  export OHC_WEB_CANONICAL_ORIGIN="$BASE_URL"
-  export OHC_WEB_LOCAL_DEV=true
-  export OHC_WEB_SESSION_KEY_ID=e2e-v1
-  export OHC_WEB_SESSION_SECRET
+  export OMNISOLO_BACKEND_URL="$API_BASE_URL"
+  export OMNISOLO_API_URL="$API_BASE_URL"
+  export OMNISOLO_WEB_CANONICAL_ORIGIN="$BASE_URL"
+  export OMNISOLO_WEB_LOCAL_DEV=true
+  export OMNISOLO_WEB_SESSION_KEY_ID=e2e-v1
+  export OMNISOLO_WEB_SESSION_SECRET
   export NEXT_PUBLIC_E2E=true
-  for required_name in BACKEND_URL OHC_WEB_CANONICAL_ORIGIN OHC_WEB_SESSION_KEY_ID OHC_WEB_SESSION_SECRET; do
+  for required_name in BACKEND_URL OMNISOLO_WEB_CANONICAL_ORIGIN OMNISOLO_WEB_SESSION_KEY_ID OMNISOLO_WEB_SESSION_SECRET; do
     if [[ -z "${!required_name:-}" ]]; then
       echo "[playwright] Error: required Next environment variable is missing: $required_name" >&2
       exit 1
@@ -694,7 +694,7 @@ echo "[playwright] Starting Next UI on port $NEXT_PORT from $NEXT_WORK_DIR..."
   exec node ./node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port "$NEXT_PORT" --webpack
 ) >"$TEST_TMPDIR/next.log" 2>&1 &
 NEXT_PID=$!
-unset OHC_WEB_SESSION_SECRET
+unset OMNISOLO_WEB_SESSION_SECRET
 
 echo "[playwright] Waiting for Next UI on port $NEXT_PORT..."
 for i in $(seq 1 120); do

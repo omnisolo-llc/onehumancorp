@@ -46,6 +46,6 @@ test.describe('Weekly Snapshot Share Growth Loop', () => {
     expect(lastOpenedUrl).toContain('twitter.com/intent/tweet');
     expect(lastOpenedUrl).toContain('124%20hours');
     expect(lastOpenedUrl).toContain('%24124%2C500');
-    expect(lastOpenedUrl).toContain('Powered%20by%20OHC');
+    expect(lastOpenedUrl).toContain('Powered%20by%20OmniSolo');
   });
 });

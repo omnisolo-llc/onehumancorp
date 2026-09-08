@@ -2,11 +2,11 @@
 
 # Interactive CLI Guide for AutoDream
 
-Welcome to the **AutoDream CLI Walkthrough**. This guide provides interactive, command-line instructions for operating the AutoDream pipeline—OHC's long-term memory consolidation engine.
+Welcome to the **AutoDream CLI Walkthrough**. This guide provides interactive, command-line instructions for operating the AutoDream pipeline—OmniSolo's long-term memory consolidation engine.
 
 ## 1. Initiating the AutoDream Daemon
 
-To manually invoke the AutoDream process from the OHC CLI, use the `start` command. This will trigger a sweep of recent `agent_session_data` and memory files.
+To manually invoke the AutoDream process from the OmniSolo CLI, use the `start` command. This will trigger a sweep of recent `agent_session_data` and memory files.
 
 ```bash
 ohc-cli autodream start --mode cloud
@@ -27,7 +27,7 @@ ohc-cli autodream status --watch
 ```mermaid
 graph TD
     CLI[ohc-cli autodream start] -->|Triggers| Daemon(AutoDream Daemon)
-    Daemon -->|Scans| TaskFiles(OHC_MEMORY_DIR/*.yml)
+    Daemon -->|Scans| TaskFiles(OMNISOLO_MEMORY_DIR/*.yml)
     Daemon -->|Scans| SessionData(agent_session_data)
 
     subgraph Processing Pipeline

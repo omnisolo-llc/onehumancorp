@@ -9,7 +9,7 @@ Small business owners leave significant revenue on the table because they lack t
 ## Research Report
 - **Competitor Landscape**: Shopify requires 3rd-party apps (e.g., ReCharge, frequently bought together apps) which cost extra monthly fees and require technical setup. Wix has rudimentary manual related-products. No platform dynamically generates and presents hyper-contextual upsells based on real-time inventory and conversational AI analysis.
 - **User Needs**: Solopreneurs need an invisible system that analyzes their catalog, understands natural pairings, checks real-time inventory, and automatically presents compelling upsells to the customer during checkout or booking, without the owner lifting a finger.
-- **AI Differentiation**: Instead of static "Related Products" widgets, OHC’s Sales AI analyzes past transaction patterns and product semantics to dynamically assemble bundles. The Marketing AI drafts the micro-copy for the upsell (e.g., "Add matching shoes to complete the look!"), and the Operations AI ensures stock availability before showing the offer.
+- **AI Differentiation**: Instead of static "Related Products" widgets, OmniSolo’s Sales AI analyzes past transaction patterns and product semantics to dynamically assemble bundles. The Marketing AI drafts the micro-copy for the upsell (e.g., "Add matching shoes to complete the look!"), and the Operations AI ensures stock availability before showing the offer.
 
 ## Design Doc
 ### High-Level Architecture

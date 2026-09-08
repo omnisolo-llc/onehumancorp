@@ -10,7 +10,7 @@ Small business owners, like Leo the music tutor or Maya the baker, lose signific
 - **Competitive Landscape**:
   - **Shopify/Wix**: Offer basic automated email flows (e.g., "We miss you" emails triggered by time delays). These are often generic, require manual setup of rules, and end up in promotions folders.
   - **Mindbody/Boulevard**: Have retention features, but they are highly verticalized and often require the business owner to configure complex "smart marketing" campaigns.
-- **OHC Ecosystem Gap**: Currently, OHC handles booking, purchasing, and initial onboarding beautifully. However, we lack a continuous, stateful relationship engine that works post-purchase. The CRM exists but acts passively as a record.
+- **OmniSolo Ecosystem Gap**: Currently, OmniSolo handles booking, purchasing, and initial onboarding beautifully. However, we lack a continuous, stateful relationship engine that works post-purchase. The CRM exists but acts passively as a record.
 - **The Opportunity**: Build an "AI Customer Success" department for the small business. This engine continuously monitors the `Universal Capacity & Inventory Ledger` and the `Customer Identity Resolution Engine`. When a high-value customer deviates from their normal booking/buying frequency, the AI agent proactively engages them via their preferred channel (SMS/WhatsApp/Instagram) with context-aware messaging.
 
 ## Design Doc

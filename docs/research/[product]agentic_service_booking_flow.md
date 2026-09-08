@@ -14,16 +14,16 @@ Service-based small business owners (e.g., Carlos the Handyman, Maya the Baker) 
 ## Design Doc
 
 ### High-Level Flow (Mobile-First 375px)
-1. **Customer View**: A seamless "Request a Service" form on the OHC storefront. Supports photo uploads (e.g., "picture of the broken pipe") and natural language descriptions.
+1. **Customer View**: A seamless "Request a Service" form on the OmniSolo storefront. Supports photo uploads (e.g., "picture of the broken pipe") and natural language descriptions.
 2. **AI Agent Processing ("The Salesperson")**:
-   - The OHC backend intercepts the inquiry.
+   - The OmniSolo backend intercepts the inquiry.
    - The Gemini Pro LLM analyzes the text/image context against the Business Profile.
    - The Agent drafts a proposed Quote (Price + Scope) and extracts available times from the "Operations" Agent's calendar.
 3. **Owner View (The 1-Tap Approval)**:
-   - Carlos receives a push notification on his OHC mobile app.
+   - Carlos receives a push notification on his OmniSolo mobile app.
    - UI shows a Glassmorphism card: "New Inquiry: Leaky Faucet. Suggested Quote: $150. Suggested Time: Tue 2 PM."
    - Action buttons: [Approve & Send] / [Edit] / [Decline].
-4. **Customer Conversion**: Customer receives a unified OHC link to view the proposal, pick the time, and pay the deposit via Stripe.
+4. **Customer Conversion**: Customer receives a unified OmniSolo link to view the proposal, pick the time, and pay the deposit via Stripe.
 
 ### Architecture/Integration Points
 - **Entities needed**: `Inquiry`, `Quote`, `Booking`.
@@ -39,7 +39,7 @@ Service-based small business owners (e.g., Carlos the Handyman, Maya the Baker) 
 4. As a Customer, I receive the approved quote and can pay the deposit.
 
 **Acceptance Criteria**:
-- Must include the UI components for the customer inquiry form and the owner approval card (must look perfect at 375px width, utilizing OHC Premium Tokens).
+- Must include the UI components for the customer inquiry form and the owner approval card (must look perfect at 375px width, utilizing OmniSolo Premium Tokens).
 - Must implement the backend logic to route the inquiry to the AI agent queue.
 - Must include full E2E Playwright tests covering this exact CUJ, starting from login to the owner dashboard through to the customer payment screen, mocking the AI generation step to ensure test stability.
 - Do not prescribe the exact DB schema; focus on the data models required to satisfy the UI and Agent state transitions.

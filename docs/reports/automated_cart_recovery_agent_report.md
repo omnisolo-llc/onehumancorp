@@ -1,12 +1,12 @@
 # Automated Cart Recovery via Agents Research Report
 
 ## Executive Summary
-This report outlines the architectural gap and proposed solution for an "Automated Cart Recovery Agent" for the OmniSolo (OHC) platform. Cart recovery is a vital business need for micro-SMEs, and currently requires expensive third-party applications on competing platforms like Shopify.
+This report outlines the architectural gap and proposed solution for an "Automated Cart Recovery Agent" for the OmniSolo (OmniSolo) platform. Cart recovery is a vital business need for micro-SMEs, and currently requires expensive third-party applications on competing platforms like Shopify.
 
 ## Key Findings
 1.  **High Drop-off Rates**: A significant percentage of users abandon their carts during checkout.
 2.  **App Tax Fatigue**: Existing solutions on platforms like Shopify require users to piece together separate apps for email marketing and abandoned cart recovery.
-3.  **OHC Opportunity**: OHC can differentiate by offering this functionality natively, leveraging AI to construct personalized recovery strategies without user configuration.
+3.  **OmniSolo Opportunity**: OmniSolo can differentiate by offering this functionality natively, leveraging AI to construct personalized recovery strategies without user configuration.
 
 ## Proposed Agentic Solution
 
@@ -20,7 +20,7 @@ This agent will monitor checkout sessions, detect when a user has abandoned a ca
 4.  **Send/Approve**: Depending on user settings, either auto-send the message or push a notification to the business owner for 1-tap approval on mobile.
 
 ### Architecture Integration
--   **Event Source**: The OHC backend must emit events when a cart is created, updated, or abandoned.
+-   **Event Source**: The OmniSolo backend must emit events when a cart is created, updated, or abandoned.
 -   **Job Queue**: Use the existing Job Queue mechanism to schedule the recovery task with a delay.
 -   **Teammate Mesh**: Ensure the agent can be dispatched via the `TeammateMesh` (Redis in Cloud, IPC in Standalone).
 -   **Mobile-First UX**: The configuration and approval process must fit perfectly on a 375px mobile screen.

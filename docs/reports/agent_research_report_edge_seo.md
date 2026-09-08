@@ -2,7 +2,7 @@
 
 # Agent Research Report: Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering Architecture
 
-**Focus:** Identifying the gap in high-performance, SEO-optimized delivery for non-technical small business owners on the OmniSolo (OHC) platform.
+**Focus:** Identifying the gap in high-performance, SEO-optimized delivery for non-technical small business owners on the OmniSolo (OmniSolo) platform.
 
 ## 1. The Gap Identified
 Through market research and technical architecture reviews, a significant gap was identified in how current platforms handle traffic spikes and search engine discoverability for non-technical users.
@@ -15,7 +15,7 @@ The proposed solution, detailed in `docs/technical/research/[architecture]_unive
 1.  **Universal Edge Caching:** A globally distributed edge network (CDN) that automatically caches storefront reads and static assets, utilizing surrogate keys for fine-grained control.
 2.  **Agentic SEO Pre-rendering & Cache Invalidation:** Autonomous AI agents (Operations/Marketing) that, upon content or inventory changes, instantly trigger edge cache invalidations and initiate a pre-rendering service to generate and push SEO-optimized static HTML to the edge.
 
-## 3. Impact on OHC Users
+## 3. Impact on OmniSolo Users
 This architecture ensures:
 -   **Instant Load Times:** Storefronts load in <100ms globally, preventing lost sales during traffic spikes.
 -   **Automated Discoverability:** Search engines consistently receive fast, highly-relevant, static HTML, passively improving organic ranking.

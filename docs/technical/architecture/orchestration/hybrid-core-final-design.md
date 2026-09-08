@@ -7,7 +7,7 @@
 Utilizes PostgreSQL `FOR UPDATE SKIP LOCKED` for task claiming. Tasks form a Directed Acyclic Graph.
 
 ## 2. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication using Redis Pub/Sub channels `mesh:tasks` and `mesh:coordination`, fully OHC-SIP compliant.
+Realtime communication using Redis Pub/Sub channels `mesh:tasks` and `mesh:coordination`, fully OmniSolo-SIP compliant.
 
 ## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
 Background workers consolidate agent scratchpads into `autodream_memories` using `pgvector` for omni-context memory consolidation.

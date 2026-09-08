@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::orchestration::queue::OHCJobQueue;
+use crate::orchestration::queue::OmniSoloJobQueue;
 use crate::orchestration::queue::redis_lock::RedisLock;
 use serde_json::Value;
 use sqlx::PgPool;
@@ -24,8 +24,8 @@ impl AgentActionWorker {
 
     pub async fn process_job(
         &self,
-        job: crate::orchestration::queue::ohc_job_queue::OHCJob,
-        queue: &OHCJobQueue,
+        job: crate::orchestration::queue::omnisolo_job_queue::OmniSoloJob,
+        queue: &OmniSoloJobQueue,
         redis_lock: &RedisLock,
     ) {
         let parsed: Result<Value, _> = serde_json::from_str(&job.payload);
@@ -148,7 +148,7 @@ impl AgentActionWorker {
 
     async fn run(&self) {
         let pool_arc = Arc::new(self.pool.clone());
-        let queue = OHCJobQueue::new(pool_arc.clone());
+        let queue = OmniSoloJobQueue::new(pool_arc.clone());
         let redis_lock = match RedisLock::new(&self.redis_url) {
             Ok(l) => l,
             Err(e) => {

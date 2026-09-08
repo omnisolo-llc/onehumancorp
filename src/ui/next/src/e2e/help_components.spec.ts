@@ -34,16 +34,16 @@ test.describe('Help Components', () => {
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
     await chatButton.click();
-    await expect(page.locator('text=Ask anything').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Ask anything' }).click();
 
     // Fill message and send
     const input = page.locator('input[placeholder="Ask anything..."]');
-    await input.fill('How do I accept credit cards?');
+    await input.fill('How do I accept payments?');
     await page.locator('button[aria-label="Send message"]').click();
 
     // Verify response
-    await expect(page.locator('text=How do I accept credit cards?').first()).toBeVisible();
-    await expect(page.locator('text=Sorry, I\'m having trouble connecting right now.').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('How do I accept payments?', { exact: true })).toBeVisible();
+    await expect(page.getByText(/money goes straight to your account/)).toBeVisible({ timeout: 15000 });
   });
 
   test('Help Chat clears messages', async ({ page }) => {
@@ -53,6 +53,7 @@ test.describe('Help Components', () => {
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
     await chatButton.click();
+    await page.getByRole('button', { name: 'Ask anything' }).click();
 
     // Fill message and send
     const input = page.locator('input[placeholder="Ask anything..."]');
@@ -69,7 +70,7 @@ test.describe('Help Components', () => {
 
     // Verify messages are gone
     await expect(page.locator('text=How do I clear this chat?')).not.toBeVisible();
-    await expect(page.locator('text=Hi! I\'m your AI Help Agent. Need help setting up your store or understanding payments?').first()).toBeVisible();
+    await expect(page.getByText("Hi! I'm your AI Support Agent. How can I help you grow your business today?")).toBeVisible();
     await expect(clearButton).not.toBeVisible();
   });
 

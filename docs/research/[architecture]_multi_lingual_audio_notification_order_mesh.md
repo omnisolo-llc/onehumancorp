@@ -9,7 +9,7 @@ Current SMB platforms (Shopify, Wix, Squarespace) rely on standard push notifica
 **Competitive Gap:**
 - **Shopify/Wix:** Rely on standard OS push notifications. Easily missed in a pocket or noisy setting.
 - **Dedicated POS (Square/Toast):** Requires expensive hardware or complex app usage.
-- **OHC Opportunity:** Utilize the existing mobile device to create an "unmissable," offline-resilient, multi-lingual auditory and visual alert system driven by a lightweight event mesh, requiring zero configuration.
+- **OmniSolo Opportunity:** Utilize the existing mobile device to create an "unmissable," offline-resilient, multi-lingual auditory and visual alert system driven by a lightweight event mesh, requiring zero configuration.
 
 ## Design Doc
 We propose the **Multi-Lingual Audio & Visual Order Notification Mesh**. This system guarantees order delivery to the device, bypasses standard notification silencing (where legally/technically permissible and user-approved for critical alerts), and provides high-visibility, localized auditory and visual cues.

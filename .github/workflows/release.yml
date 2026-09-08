@@ -35,32 +35,32 @@ jobs:
           - name: linux-x86_64
             runner: ubuntu-latest
             bazel_config: linux_x86_64
-            artifact_name: ohc-x86_64-unknown-linux-gnu.tar.gz
+            artifact_name: omnisolo-x86_64-unknown-linux-gnu.tar.gz
             install_linux_deps: true
           - name: windows-x86_64
             runner: ubuntu-latest
             bazel_config: windows_x86_64
-            artifact_name: ohc-x86_64-pc-windows-gnu.zip
+            artifact_name: omnisolo-x86_64-pc-windows-gnu.zip
             install_linux_deps: true
           - name: macos-aarch64
             runner: macos-15
             bazel_config: macos_aarch64
-            artifact_name: ohc-aarch64-apple-darwin.tar.gz
+            artifact_name: omnisolo-aarch64-apple-darwin.tar.gz
             install_linux_deps: false
           - name: linux-arm64
             runner: ubuntu-22.04-arm
             bazel_config: linux_arm64
-            artifact_name: ohc-aarch64-unknown-linux-gnu.tar.gz
+            artifact_name: omnisolo-aarch64-unknown-linux-gnu.tar.gz
             install_linux_deps: true
           - name: windows-arm64
             runner: windows-11-arm
             bazel_config: windows_arm64
-            artifact_name: ohc-aarch64-pc-windows-msvc.zip
+            artifact_name: omnisolo-aarch64-pc-windows-msvc.zip
             install_linux_deps: false
           - name: macos-x86_64
             runner: macos-15-intel
             bazel_config: macos_x86_64
-            artifact_name: ohc-x86_64-apple-darwin.tar.gz
+            artifact_name: omnisolo-x86_64-apple-darwin.tar.gz
             install_linux_deps: false
     steps:
       - uses: actions/checkout@v6
@@ -287,8 +287,8 @@ jobs:
           if [[ -n "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET:-}" ]]; then
             echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
           fi
-          echo "OHC_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "OHC_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
+          echo "OMNISOLO_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "OMNISOLO_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
 
       - name: Install macOS signing assets
         if: matrix.os_name == 'macos' && env.MACOS_SIGNING_ENABLED == 'true'
@@ -309,8 +309,8 @@ jobs:
             fi
           done
 
-          certificate_path="$RUNNER_TEMP/ohc-macos-signing.p12"
-          keychain_path="$RUNNER_TEMP/ohc-macos-signing.keychain-db"
+          certificate_path="$RUNNER_TEMP/omnisolo-macos-signing.p12"
+          keychain_path="$RUNNER_TEMP/omnisolo-macos-signing.keychain-db"
 
           ORIGINAL_DEFAULT_KEYCHAIN="$(security default-keychain -d user | tr -d '"' | xargs)"
           echo "ORIGINAL_DEFAULT_KEYCHAIN=$ORIGINAL_DEFAULT_KEYCHAIN" >> "$GITHUB_ENV"
@@ -370,15 +370,15 @@ jobs:
             exit 1
           fi
 
-          cp "$DMG_PATH" "dist/OHC-${VERSION_TAG}-macOS.dmg"
-          cp "$TAR_PATH" "dist/OHC-${VERSION_TAG}-macOS.tar.gz"
+          cp "$DMG_PATH" "dist/OmniSolo-${VERSION_TAG}-macOS.dmg"
+          cp "$TAR_PATH" "dist/OmniSolo-${VERSION_TAG}-macOS.tar.gz"
           if [[ -f "$TAR_PATH.sig" ]]; then
-            cp "$TAR_PATH.sig" "dist/OHC-${VERSION_TAG}-macOS.tar.gz.sig"
+            cp "$TAR_PATH.sig" "dist/OmniSolo-${VERSION_TAG}-macOS.tar.gz.sig"
           else
             echo "Missing macOS updater signature: $TAR_PATH.sig" >&2
             exit 1
           fi
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/OHC-${VERSION_TAG}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/OmniSolo-${VERSION_TAG}-macOS.zip"
           ls -lh dist/
 
       - name: Verify macOS signing and notarization
@@ -424,7 +424,7 @@ jobs:
           if ($null -eq $msi) {
             throw 'No Windows MSI installer found'
           }
-          $msiDest = "OHC-$versionTag-Windows.msi"
+          $msiDest = "OmniSolo-$versionTag-Windows.msi"
           Copy-Item $msi.FullName (Join-Path dist $msiDest)
           if (Test-Path "$($msi.FullName).sig") {
             Copy-Item "$($msi.FullName).sig" (Join-Path dist "$msiDest.sig")
@@ -440,11 +440,11 @@ jobs:
           if ($null -eq $exe) {
             throw 'No Windows executable found for portable package'
           }
-          $portableDir = 'dist/OHC-Portable'
+          $portableDir = 'dist/OmniSolo-Portable'
           New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
-          Copy-Item $exe (Join-Path $portableDir 'OHC.exe')
-          @('# OHC portable build marker', 'portable=true') | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
-          Compress-Archive -Path "$portableDir/*" -DestinationPath "dist/OHC-$versionTag-Windows-Portable.zip" -Force
+          Copy-Item $exe (Join-Path $portableDir 'OmniSolo.exe')
+          @('# OmniSolo portable build marker', 'portable=true') | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "dist/OmniSolo-$versionTag-Windows-Portable.zip" -Force
           Remove-Item -Recurse -Force $portableDir
           Get-ChildItem dist | Format-Table Name, Length
 
@@ -466,15 +466,15 @@ jobs:
             exit 1
           fi
 
-          cp "$APPIMAGE" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.AppImage"
+          cp "$APPIMAGE" "dist/OmniSolo-${VERSION_TAG}-Linux-${ARCH}.AppImage"
           if [[ -f "$APPIMAGE.sig" ]]; then
-            cp "$APPIMAGE.sig" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.AppImage.sig"
+            cp "$APPIMAGE.sig" "dist/OmniSolo-${VERSION_TAG}-Linux-${ARCH}.AppImage.sig"
           else
             echo "Missing Linux AppImage updater signature: $APPIMAGE.sig" >&2
             exit 1
           fi
-          cp "$DEB" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.deb"
-          cp "$RPM" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.rpm"
+          cp "$DEB" "dist/OmniSolo-${VERSION_TAG}-Linux-${ARCH}.deb"
+          cp "$RPM" "dist/OmniSolo-${VERSION_TAG}-Linux-${ARCH}.rpm"
           ls -lh dist/
 
       - name: Generate desktop installer checksums
@@ -500,8 +500,8 @@ jobs:
           if [[ -n "${ORIGINAL_DEFAULT_KEYCHAIN:-}" ]]; then
             security default-keychain -s "$ORIGINAL_DEFAULT_KEYCHAIN" || true
           fi
-          if [[ -f "$RUNNER_TEMP/ohc-macos-signing.keychain-db" ]]; then
-            security delete-keychain "$RUNNER_TEMP/ohc-macos-signing.keychain-db" || true
+          if [[ -f "$RUNNER_TEMP/omnisolo-macos-signing.keychain-db" ]]; then
+            security delete-keychain "$RUNNER_TEMP/omnisolo-macos-signing.keychain-db" || true
           fi
 
   build-mobile-artifacts:
@@ -545,9 +545,9 @@ jobs:
             fi
           done
 
-          certificate_path="$RUNNER_TEMP/ohc-ios-signing.p12"
-          profile_path="$RUNNER_TEMP/ohc.mobileprovision"
-          keychain_path="$RUNNER_TEMP/ohc-signing.keychain-db"
+          certificate_path="$RUNNER_TEMP/omnisolo-ios-signing.p12"
+          profile_path="$RUNNER_TEMP/omnisolo.mobileprovision"
+          keychain_path="$RUNNER_TEMP/omnisolo-signing.keychain-db"
 
           echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
           echo "$APPLE_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
@@ -560,7 +560,7 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
 
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/ohc.mobileprovision"
+          cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/omnisolo.mobileprovision"
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -661,7 +661,7 @@ jobs:
             cat image-files.txt >&2
             exit 1
           fi
-          cp "$image_tar" dist/ohc-server-web-image-linux-amd64.tar
+          cp "$image_tar" dist/omnisolo-server-web-image-linux-amd64.tar
           ls -lh dist/
 
       - name: Generate server web image checksums
@@ -730,14 +730,14 @@ jobs:
             dist/checksums.txt
           generate_release_notes: true
           body: |
-            ## OmniSolo (formerly OHC) ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Nightly Build' }}
+            ## OmniSolo (formerly OmniSolo) ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'Nightly Build' }}
 
             ### Download & Installation
 
-            - **Windows**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows.msi` or `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows-Portable.zip`
-            - **macOS**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.dmg`, `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.zip`, or updater/Homebrew artifact `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.tar.gz`
-            - **Linux x86_64**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-x86_64.AppImage`, `.deb`, or `.rpm`
-            - **Linux ARM64**: `OHC-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-arm64.AppImage`, `.deb`, or `.rpm`
+            - **Windows**: `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows.msi` or `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Windows-Portable.zip`
+            - **macOS**: `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.dmg`, `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.zip`, or updater/Homebrew artifact `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-macOS.tar.gz`
+            - **Linux x86_64**: `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-x86_64.AppImage`, `.deb`, or `.rpm`
+            - **Linux ARM64**: `OmniSolo-${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}-Linux-arm64.AppImage`, `.deb`, or `.rpm`
 
             `latest.json` is uploaded after artifact publication for the Tauri desktop updater.
           draft: false
@@ -840,7 +840,7 @@ jobs:
 
   arm64-cloud-images:
     name: Publish immutable ARM64 cloud images
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/onehumancorp-seaorm'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/omnisolo-seaorm'
     runs-on: ubuntu-22.04-arm
     timeout-minutes: 90
     steps:
@@ -863,7 +863,7 @@ jobs:
           file: src/ui/next/Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ghcr.io/onehumancorp/server-web:${{ github.sha }}
+          tags: ghcr.io/omnisolo/server-web:${{ github.sha }}
 
       - name: Install backend build dependencies
         run: |
@@ -874,7 +874,7 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: onehumancorp-cloud-arm64
+          disk-cache: omnisolo-cloud-arm64
           repository-cache: true
           external-cache: true
 
@@ -885,14 +885,14 @@ jobs:
         run: |
           set -euo pipefail
           for image in server server-web; do
-            reference="ghcr.io/onehumancorp/${image}:${GITHUB_SHA}"
+            reference="ghcr.io/omnisolo/${image}:${GITHUB_SHA}"
             docker pull --platform linux/arm64 "$reference"
             test "$(docker image inspect --format '{{.Os}}/{{.Architecture}}' "$reference")" = "linux/arm64"
             digest="$(docker buildx imagetools inspect "$reference" --format '{{json .Manifest.Digest}}' | tr -d '"')"
-            printf '%s=ghcr.io/onehumancorp/%s@%s\n' "$image" "$image" "$digest" >> "$GITHUB_STEP_SUMMARY"
+            printf '%s=ghcr.io/omnisolo/%s@%s\n' "$image" "$image" "$digest" >> "$GITHUB_STEP_SUMMARY"
           done
           docker run --rm --platform linux/arm64 --entrypoint /usr/bin/test \
-            "ghcr.io/onehumancorp/server:${GITHUB_SHA}" \
+            "ghcr.io/omnisolo/server:${GITHUB_SHA}" \
             -e /usr/lib/aarch64-linux-gnu/libcrypto.so.3 \
             -a -e /usr/lib/aarch64-linux-gnu/libssl.so.3
 

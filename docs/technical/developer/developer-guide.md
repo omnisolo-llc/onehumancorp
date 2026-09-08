@@ -3,16 +3,16 @@
 # Developer Guide: OmniSolo
 
 ## Introduction
-This guide is intended for engineers who want to contribute to the OmniSolo (OHC) platform. It covers everything from local setup to adding new features and deploying to Kubernetes.
+This guide is intended for engineers who want to contribute to the OmniSolo (OmniSolo) platform. It covers everything from local setup to adding new features and deploying to Kubernetes.
 
 ## Operating Modes
 
 The repo is intentionally built as a hybrid cloud-native and desktop product:
 
-1. Cloud-native shared service: a horizontally scalable Rust API tier backed by Postgres, with `OHC_MULTITENANT=true` enabling org-aware routing.
-2. Headless API deployment: the same backend with `OHC_HEADLESS=true`, used by remote mobile or desktop clients that should not receive a hosted web UI.
+1. Cloud-native shared service: a horizontally scalable Rust API tier backed by Postgres, with `OMNISOLO_MULTITENANT=true` enabling org-aware routing.
+2. Headless API deployment: the same backend with `OMNISOLO_HEADLESS=true`, used by remote mobile or desktop clients that should not receive a hosted web UI.
 3. Desktop standalone mode: the Tauri desktop app manages a local backend lifecycle and local SQLite-backed state.
-4. Remote client mode: the Tauri app acts mainly as a UI, connects to a configured backend URL, and authenticates against a remote OHC deployment.
+4. Remote client mode: the Tauri app acts mainly as a UI, connects to a configured backend URL, and authenticates against a remote OmniSolo deployment.
 
 ## Prerequisites
 | Tool | Minimum Version | Install |
@@ -28,7 +28,7 @@ The repo is intentionally built as a hybrid cloud-native and desktop product:
 ## Setup
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/onehumancorp/mono.git
+git clone https://github.com/omnisolo-llc/omnisolo.git
 cd mono
 ```
 
@@ -37,22 +37,22 @@ cd mono
 We provide a setup script that checks prerequisites, writes a default `.env` file, and prepares the local workspace.
 
 ```bash
-./deploy/scripts/ohc-setup.sh
+./deploy/scripts/omnisolo-setup.sh
 ```
 
 ### 3. Mode Switching CLI
 The backend uses environment variables to dictate its operating mode. To quickly switch between `cloud`, `standalone`, and `headless` configurations in your shell, source the mode-switcher script:
 
 ```bash
-source deploy/scripts/ohc-mode.sh standalone
+source deploy/scripts/omnisolo-mode.sh standalone
 # Configured for Standalone Desktop Mode.
 
-source deploy/scripts/ohc-mode.sh cloud
+source deploy/scripts/omnisolo-mode.sh cloud
 # Configured for Cloud-Native Multi-Tenant Mode.
 ```
 
 ### 4. Local Development with Docker Compose
-If you encounter Docker Hub unauthenticated pull rate limits or missing `onehumancorp/server:latest` images, use the **Local Build & Launch** flow instead:
+If you encounter Docker Hub unauthenticated pull rate limits or missing `omnisolo/server:latest` images, use the **Local Build & Launch** flow instead:
 
 ```bash
 # Build and load local OCI images
@@ -61,7 +61,7 @@ npx @bazel/bazelisk run //deploy:load_all_images
 # Start the stack using the local images
 docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d --build
 ```
-Navigate to `http://localhost:8080` to use the integrated API and UI stack. Set `OHC_HEADLESS=true` if you want the backend to run without serving the web client.
+Navigate to `http://localhost:8080` to use the integrated API and UI stack. Set `OMNISOLO_HEADLESS=true` if you want the backend to run without serving the web client.
 
 > All build and test commands below are issued as `bazel …` (via Bazelisk).
 
@@ -77,7 +77,7 @@ mono/
 ├── deploy/
 │   ├── docker/              Dockerfiles (backend + frontend)
 │   ├── docker-compose.yml   Local dev compose stack
-│   ├── helm/ohc/            Helm chart (server, Redis, CNPG)
+│   ├── helm/omnisolo/            Helm chart (server, Redis, CNPG)
 │   └── scripts/             Setup and deployment scripts
 ├── docs/                    Architecture and feature documentation
 └── src/
@@ -174,7 +174,7 @@ This test:
 1. Creates a temporary Kind cluster
 2. Builds and loads Docker images into Kind
 3. Installs Redis (Bitnami) and CloudNative PG via Helm
-4. Installs the OHC application chart
+4. Installs the OmniSolo application chart
 5. Waits for all pods to become `Ready`
 6. Runs REST API smoke tests against the deployed service
 7. Deletes the Kind cluster (cleanup on exit)
@@ -230,27 +230,27 @@ docker compose -f deploy/docker-compose.yml down -v
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OHC_PORT` | `18789` | HTTP/Axum listen port for the Rust server; Docker Compose exposes the packaged server on `8080` |
-| `OHC_GRPC_PORT` | `8081` | gRPC/tonic listen port |
+| `OMNISOLO_PORT` | `18789` | HTTP/Axum listen port for the Rust server; Docker Compose exposes the packaged server on `8080` |
+| `OMNISOLO_GRPC_PORT` | `8081` | gRPC/tonic listen port |
 | `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/ohc` | PostgreSQL DSN by default; use a `sqlite://...` URL in standalone mode |
 | `REDIS_URL` | `redis://127.0.0.1/` | Redis address used by rate limiting and cloud mesh paths |
-| `OHC_STANDALONE` | `false` | Enables standalone-mode config enforcement |
-| `OHC_SQLITE_KEY` | *(required for SQLite)* | Required encryption key when using SQLite-backed standalone state |
-| `OHC_MULTITENANT` | `false` | Enables org-aware multi-tenant routing for shared-service deployments |
-| `OHC_HEADLESS` | `false` | Selects API-only/headless integration behavior |
+| `OMNISOLO_STANDALONE` | `false` | Enables standalone-mode config enforcement |
+| `OMNISOLO_SQLITE_KEY` | *(required for SQLite)* | Required encryption key when using SQLite-backed standalone state |
+| `OMNISOLO_MULTITENANT` | `false` | Enables org-aware multi-tenant routing for shared-service deployments |
+| `OMNISOLO_HEADLESS` | `false` | Selects API-only/headless integration behavior |
 | `GEMINI_API_KEY` | *(empty)* | Google Gemini API key for AI model calls |
 | `LOG_FORMAT` | *(empty)* | Set to `json` for JSON logs |
 | `RUST_LOG` | `info` through tracing defaults | Optional tracing filter (`debug`, `info`, `warn`, `error`) |
 
 ### Frontend assets
 
-The Tauri shell packages static assets from `src/ui/tauri/next_out` through `src/ui/tauri/tauri.conf.json`. The runtime AI provider settings are read from `OHC_LLM_CONFIG_PATH` when set, otherwise `.ohc/ai-provider.json`.
+The Tauri shell packages static assets from `src/ui/tauri/next_out` through `src/ui/tauri/tauri.conf.json`. The runtime AI provider settings are read from `OMNISOLO_LLM_CONFIG_PATH` when set, otherwise `.omnisolo/ai-provider.json`.
 
 ---
 
 ## Adding a New API Endpoint
 
-OHC HTTP APIs are versioned from their first release. Mount every application
+OmniSolo HTTP APIs are versioned from their first release. Mount every application
 endpoint under `/api/v1/...`; do not add routes in the unversioned API
 namespace. Health and infrastructure probes are the only explicit exceptions
 and should be documented alongside their router registration.

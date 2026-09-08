@@ -46,6 +46,11 @@ pub async fn dispatch_action(
                 .await
                 .map_err(|e| e.to_string())?;
         }
+        "booking_approval" => {
+            crate::domain::booking::handle_booking_approval(tenant_id, payload, pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
 
         "autonomous_quote" => {
             crate::domain::booking::handle_autonomous_quote_action(tenant_id, payload, pool)

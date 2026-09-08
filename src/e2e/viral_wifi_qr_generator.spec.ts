@@ -38,7 +38,7 @@ test.describe('Viral WiFi QR Generator', () => {
     const embedCode = page.locator('#embed-code');
     await expect(embedCode).toBeVisible();
     const embedText = await embedCode.innerText();
-    expect(embedText).toContain('https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fohc.app%2Fcheckout%3Fproduct%3DCoffeeShop%25205G');
+    expect(embedText).toContain('https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fcloud.omnisolo.co%2Fcheckout%3Fproduct%3DCoffeeShop%25205G');
 
     // Attempt to remove branding without Pro
     const removeBrandingCheckbox = page.locator('#remove-branding');

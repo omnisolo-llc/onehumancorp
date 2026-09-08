@@ -62,12 +62,12 @@ export default function ActionCenterPage() {
     window.addEventListener("offline", handleOffline);
 
     const handleQueueUpdated = () => updateOfflineCount();
-    window.addEventListener('ohc_queue_updated', handleQueueUpdated);
+    window.addEventListener('omnisolo_queue_updated', handleQueueUpdated);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-      window.removeEventListener('ohc_queue_updated', handleQueueUpdated);
+      window.removeEventListener('omnisolo_queue_updated', handleQueueUpdated);
     };
   }, []);
 

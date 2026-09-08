@@ -61,7 +61,7 @@ describe('PostPurchaseShareWidget', () => {
     const urlArg = (window.open as any).mock.calls[0][0];
     expect(urlArg).toContain('twitter.com');
     expect(urlArg).toContain('Cool%20Store');
-    expect(urlArg).toContain('Powered%20by%20OHC'); // Verifying loop branding
+    expect(urlArg).toContain('Powered%20by%20OmniSolo'); // Verifying loop branding
   });
 
   it('records sharing without showing an unverified unlock', () => {

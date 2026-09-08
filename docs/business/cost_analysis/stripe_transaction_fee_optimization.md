@@ -48,4 +48,4 @@ Stripe charges connected accounts for Instant Payouts (often a flat fee + percen
   - $25.00 - $0.25 = **$24.75 saved per 100 transactions.**
 
 ## Conclusion
-By engineering these cost features natively into the OHC platform, we implicitly improve the unit economics for every owner on the platform without requiring them to understand complex billing structures.
+By engineering these cost features natively into the OmniSolo platform, we implicitly improve the unit economics for every owner on the platform without requiring them to understand complex billing structures.

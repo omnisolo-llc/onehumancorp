@@ -2,7 +2,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Project Showcase Generator (Growth Loop)', () => {
     test.beforeEach(async ({ page }) => {
-        // Clear local storage and set tenant so we get a consistent PoweredByOHC link
+        // Clear local storage and set tenant so we get a consistent PoweredByOmniSolo link
         await page.goto('/dashboard');
         await page.evaluate(() => {
             window.localStorage.clear();
@@ -28,7 +28,7 @@ test.describe('Project Showcase Generator (Growth Loop)', () => {
         const watermark = page.locator('a', { hasText: /OmniSolo/i }).first();
         await expect(watermark).toBeVisible();
 
-        // The link should direct back to OHC with the tenant as a reference source
+        // The link should direct back to OmniSolo with the tenant as a reference source
         await expect(watermark).toHaveAttribute('href', /.*\/onboarding\?ref=demo-tenant.*/);
 
         // 2. Click the "Remove Branding" toggle (simulating free user)

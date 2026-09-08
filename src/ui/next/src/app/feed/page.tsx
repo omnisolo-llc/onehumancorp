@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
-import { useAgentWebSocket } from '../../hooks/useAgentWebSocket';
+import { useAuthenticatedPolling } from '../../hooks/useAuthenticatedPolling';
 
 import { AmbassadorReplyCard } from '../dashboard/AmbassadorReplyCard';
 
@@ -27,7 +27,7 @@ export default function FeedPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
-  const fetchFeed = async () => {
+  const fetchFeed = useCallback(async () => {
     try {
       const res = await fetch('/api/v1/agent-feed');
       if (!res.ok) {
@@ -41,40 +41,13 @@ export default function FeedPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchFeed();
   }, []);
 
-  const feedWsUrl = (() => {
-    if (typeof window === 'undefined') return '';
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    return isLocalhost ? `ws://127.0.0.1:18789/api/v1/feed/ws` : `${protocol}//${window.location.host}/api/v1/feed/ws`;
-  })();
+  useEffect(() => {
+    void fetchFeed();
+  }, [fetchFeed]);
 
-  useAgentWebSocket({
-    url: feedWsUrl,
-    onMessage: (item: any) => {
-      if (item.error) {
-        console.error('Agent feed WS error:', item.error);
-        return;
-      }
-
-      if (!item?.id) return;
-
-      if (String(item.lifecycle_state || '').toUpperCase() === 'PENDING_APPROVAL') {
-        setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-      } else if (String(item.lifecycle_state || '').toUpperCase() === 'APPROVED' || String(item.lifecycle_state || '').toUpperCase() === 'DISMISSED') {
-        setItems((current) => current.filter((existing) => existing.id !== item.id));
-      } else if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-        setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-      } else if (item.status) {
-        setItems((current) => current.filter((existing) => existing.id !== item.id));
-      }
-    },
-  });
+  useAuthenticatedPolling({ onPoll: fetchFeed });
 
   const startEditing = (item: FeedItem) => {
     setEditingId(item.id);
@@ -83,7 +56,13 @@ export default function FeedPage() {
             const promoterPayload = isPromoter ? (item.proposed_action || item.context_payload) : null;
     const textToEdit = isAmbassador ?
         (item.proposed_action || item.context_payload)?.generated_response || (item.proposed_action || item.context_payload)?.draft_reply :
-        (item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.');
+        (item.context_payload?.summary
+          || item.context_payload?.description
+          || item.context_payload?.reason
+          || item.proposed_action?.description
+          || item.proposed_action?.message
+          || item.proposed_action?.generated_response
+          || 'A new update requires your attention.');
     setEditValue(textToEdit || "");
   };
 
@@ -208,6 +187,12 @@ export default function FeedPage() {
             const invoicePayload = isInvoiceDraft ? (item.proposed_action || item.context_payload) : null;
             const isInvoiceFollowup = item.proposed_action?.feature_type === 'invoice_followup' || item.context_payload?.feature_type === 'invoice_followup';
             const invoiceFollowupPayload = isInvoiceFollowup ? (item.proposed_action || item.context_payload) : null;
+            const contextText = item.context_payload?.summary
+              || item.context_payload?.description
+              || item.context_payload?.reason;
+            const proposedText = item.proposed_action?.description
+              || item.proposed_action?.message
+              || item.proposed_action?.generated_response;
 
             return (
               <div
@@ -258,6 +243,37 @@ export default function FeedPage() {
                     onDismiss={() => handleAction(item.id, 'DISMISSED')}
                    />
                 ) : editingId === item.id ? (
+                  <div className="space-y-3">
+                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider" htmlFor={`feed-edit-${item.id}`}>
+                      Edit proposed action
+                    </label>
+                    <textarea
+                      id={`feed-edit-${item.id}`}
+                      aria-label="Edit proposed action"
+                      value={editValue}
+                      onChange={(event) => setEditValue(event.target.value)}
+                      className="w-full min-h-28 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-[13px] text-gray-900 dark:text-white"
+                    />
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={() => saveEdit(item.id)}
+                        disabled={isProcessing || !editValue.trim()}
+                        className="flex-1 min-h-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] disabled:opacity-50"
+                      >
+                        Save changes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        disabled={isProcessing}
+                        className="flex-1 min-h-[44px] px-4 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                   <>
                     <div className="mb-5">
                       {isDisputeResolution ? (
@@ -343,7 +359,21 @@ export default function FeedPage() {
                             </div>
                           </div>
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="space-y-3">
+                          {contextText && (
+                            <p className="text-[13px] text-gray-700 dark:text-gray-300 leading-relaxed">
+                              {contextText}
+                            </p>
+                          )}
+                          {proposedText && proposedText !== contextText && (
+                            <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
+                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Proposed action</p>
+                              <p className="text-[13px] text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{proposedText}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {isPromoter ? (
@@ -405,7 +435,7 @@ export default function FeedPage() {
                       </div>
                     )}
                   </>
-                ) : null}
+                )}
               </div>
             );
           })}

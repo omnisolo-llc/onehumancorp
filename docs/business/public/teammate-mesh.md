@@ -6,7 +6,7 @@
 **Target Audience:** Orchestration Engineers, AI Agents, & Human CEOs
 
 ## 1. Introduction
-The OmniSolo (OHC) Swarm relies on the **Teammate Mesh** and **Shared Task List** to enable real-time communication and collaborative task management. This documentation details the architectural concepts and API integrations for the Teammate Mesh and Shared Task List.
+The OmniSolo (OmniSolo) Swarm relies on the **Teammate Mesh** and **Shared Task List** to enable real-time communication and collaborative task management. This documentation details the architectural concepts and API integrations for the Teammate Mesh and Shared Task List.
 
 ## 2. Shared Task List Architecture
 The Shared Task List is the backbone of autonomous task execution, utilizing distributed state machines.

@@ -1030,12 +1030,12 @@ async fn handle_promoter_generate(
 
     let desc = req.description.unwrap_or_else(|| "".to_string());
 
-    let provider_name = std::env::var("OHC_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
+    let provider_name = std::env::var("OMNISOLO_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
     let api_key = match provider_name.as_str() {
         "openai" => std::env::var("OPENAI_API_KEY").unwrap_or_default(),
         "minimax" => std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
         "anthropic" => std::env::var("ANTHROPIC_API_KEY").unwrap_or_default(),
-        _ => std::env::var("OHC_LLM_API_KEY").unwrap_or_default(),
+        _ => std::env::var("OMNISOLO_LLM_API_KEY").unwrap_or_default(),
     };
 
     if !api_key.is_empty() {
@@ -1046,7 +1046,7 @@ async fn handle_promoter_generate(
             req.name, desc
         );
 
-        let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
+        let model = std::env::var("OMNISOLO_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
 
         let client = reqwest::Client::new();
         let body = serde_json::json!({
@@ -1067,7 +1067,7 @@ async fn handle_promoter_generate(
             std::env::var("OPENAI_BASE_URL")
                 .unwrap_or_else(|_| "https://api.openai.com/v1".to_string())
         } else {
-            std::env::var("OHC_LLM_BASE_URL").unwrap_or_default()
+            std::env::var("OMNISOLO_LLM_BASE_URL").unwrap_or_default()
         };
 
         let mut url = format!("{}/chat/completions", base_url);
@@ -1166,7 +1166,7 @@ async fn handle_generate_customer_referral(
 ) -> impl IntoResponse {
     let store = req.store_name.unwrap_or_else(|| "our store".to_string());
     let generated = format!(
-        "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://ohc.store/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ OmniSolo",
+        "Hi there!\n\nWe love having you as a top customer at {}. As a special thank you, we're inviting you to our VIP Referral Program!\n\nGive your friends 15% off their first order using your unique link. When they make a purchase, you'll get $10 in store credit!\n\nShare your link now: https://cloud.omnisolo.co/vip-invite\n\nThanks for your support,\nThe {} Team\n\n⚡ Powered by OmniSolo",
         store, store
     );
     Json(GenerateCustomerReferralResponse { message: generated })
@@ -1194,7 +1194,7 @@ async fn handle_generate_cart(
     };
 
     let generated = format!(
-        "Subject: We saved your cart!\n\nHi {},\n\nWe noticed you left some great items in your cart{} at {}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to securely finish your checkout: https://ohc.store/checkout/recover\n\nUse code COMEBACK{} for {}% off your entire order!\n\nBest,\nThe {} Team{}",
+        "Subject: We saved your cart!\n\nHi {},\n\nWe noticed you left some great items in your cart{} at {}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to securely finish your checkout: https://cloud.omnisolo.co/checkout/recover\n\nUse code COMEBACK{} for {}% off your entire order!\n\nBest,\nThe {} Team{}",
         name, cart_worth, store_name, discount_offer, discount_offer, store_name, branding
     );
 
@@ -1259,7 +1259,7 @@ async fn handle_generate_subscription_offer(
     };
 
     let generated = format!(
-        "Subject: Never run out of {} again!\n\nHi there,\n\nWe noticed you recently purchased {}. Did you know you can get it delivered automatically?\n\nSign up for our {} Subscribe & Save plan and get {}% off every order.\n\nReady to subscribe? Click here: https://ohc.store/subscribe\n\nBest,\nThe {} Team{}",
+        "Subject: Never run out of {} again!\n\nHi there,\n\nWe noticed you recently purchased {}. Did you know you can get it delivered automatically?\n\nSign up for our {} Subscribe & Save plan and get {}% off every order.\n\nReady to subscribe? Click here: https://cloud.omnisolo.co/subscribe\n\nBest,\nThe {} Team{}",
         product_name, product_name, freq, discount, store_name, branding
     );
 
@@ -1332,7 +1332,7 @@ async fn handle_send_receipt(
     let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
 
     let generated = format!(
-        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ OmniSolo -->\n<a href=\"https://ohc.store/join?ref={}\">OmniSolo - Start your business today</a>",
+        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OmniSolo -->\n<a href=\"https://cloud.omnisolo.co/join?ref={}\">Powered by OmniSolo - Start your business today</a>",
         email, amount, order_id, tenant_id
     );
 
@@ -1454,7 +1454,7 @@ async fn handle_affiliate_generate_link(
         .await
     {
         Ok(_) => {
-            let affiliate_link = format!("https://ohc.store/ref/{}", affiliate_code);
+            let affiliate_link = format!("https://cloud.omnisolo.co/ref/{}", affiliate_code);
             Ok(Json(GenerateAffiliateLinkResponse { affiliate_link, affiliate_code }))
         }
         Err(e) => {
@@ -2350,7 +2350,7 @@ async fn handle_wrapped(
             top_product: "Vegan Celebration Cake".to_string(),
             ai_hours_saved: 124,
         },
-        share_text: "My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OHC Year in Review:".to_string(),
+        share_text: "My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OmniSolo Year in Review:".to_string(),
     })
 }
 
@@ -2600,7 +2600,7 @@ async fn handle_check_milestones(
         Milestone {
             id: "10th_order".to_string(),
             title: "🎉 Milestone: 10th Order!".to_string(),
-            description: "You've successfully processed your 10th order on OHC.".to_string(),
+            description: "You've successfully processed your 10th order on OmniSolo.".to_string(),
             reached: reached_types.contains(&"10th_order".to_string()),
         },
         Milestone {
@@ -2612,7 +2612,7 @@ async fn handle_check_milestones(
         Milestone {
             id: "5_referrals".to_string(),
             title: "High Connector!".to_string(),
-            description: "You've successfully referred 5 other businesses to OHC.".to_string(),
+            description: "You've successfully referred 5 other businesses to OmniSolo.".to_string(),
             reached: reached_types.contains(&"5_referrals".to_string()),
         },
         Milestone {
@@ -2624,7 +2624,7 @@ async fn handle_check_milestones(
         Milestone {
             id: "50th_order".to_string(),
             title: "🔥 50th Order!".to_string(),
-            description: "You've successfully processed your 50th order on OHC.".to_string(),
+            description: "You've successfully processed your 50th order on OmniSolo.".to_string(),
             reached: reached_types.contains(&"50th_order".to_string()),
         },
         Milestone {
@@ -2736,7 +2736,7 @@ async fn handle_get_milestone(
         "1000_orders" => (
             "1,000th Order Delivered! 👑",
             "An incredible milestone! Share your success to unlock $100 in credits.",
-            "I just hit my 1,000th order using OHC to run my business! 🚀",
+            "I just hit my 1,000th order using OmniSolo to run my business! 🚀",
             "$100 Credit",
         ),
         "revenue_10k" => (
@@ -2747,14 +2747,14 @@ async fn handle_get_milestone(
         ),
         "100_orders" => (
             "100th Order Delivered! 🎉",
-            "You're growing fast. Share your success to unlock $50 in OHC credits.",
-            "I just hit my 100th order using OHC to run my business! 🚀 Check them out and get $50 off your first month:",
+            "You're growing fast. Share your success to unlock $50 in OmniSolo credits.",
+            "I just hit my 100th order using OmniSolo to run my business! 🚀 Check them out and get $50 off your first month:",
             "$50 Credit",
         ),
         "50th_order" => (
             "50th Order! 🔥",
-            "You're halfway to 100! Share your success to unlock $30 in OHC credits.",
-            "I just hit my 50th order using OHC! 🚀",
+            "You're halfway to 100! Share your success to unlock $30 in OmniSolo credits.",
+            "I just hit my 50th order using OmniSolo! 🚀",
             "$30 Credit",
         ),
         "revenue_1k" => (
@@ -2766,7 +2766,7 @@ async fn handle_get_milestone(
         "10th_order" => (
             "10th Order! 📈",
             "Business is booming. Share your success to unlock $10 in credits.",
-            "I just hit my 10th order using OHC! 🚀 Get $50 off your first month:",
+            "I just hit my 10th order using OmniSolo! 🚀 Get $50 off your first month:",
             "$10 Credit",
         ),
         "5_referrals" => (
@@ -2778,13 +2778,13 @@ async fn handle_get_milestone(
         "100_visitors" => (
             "100 Visitors! 🚀",
             "Traffic is soaring. Share to unlock $5 in credits.",
-            "I just had 100 visitors to my new OHC storefront! 🚀 Check it out and get $50 off your first month:",
+            "I just had 100 visitors to my new OmniSolo storefront! 🚀 Check it out and get $50 off your first month:",
             "$5 Credit",
         ),
         _ => (
             "First Sale! 💸",
             "You got your first sale! Share your success to unlock $5 in credits.",
-            "I just got my first sale using OHC to run my business! 🚀 Start your business and get $50 off your first month:",
+            "I just got my first sale using OmniSolo to run my business! 🚀 Start your business and get $50 off your first month:",
             "$5 Credit",
         ),
     };
@@ -2847,7 +2847,7 @@ pub async fn handle_get_referral_milestones(
         }),
         serde_json::json!({
             "target": 25,
-            "title": "OHC Ambassador",
+            "title": "OmniSolo Ambassador",
             "reward": "$500 Cash Bonus",
             "reached": total_referrals >= 25
         }),
@@ -2897,7 +2897,7 @@ pub async fn handle_get_milestone_card(
     let safe_business_name = escape_xml(&business_name);
 
     let (title, sub, icon, grad_start, grad_end) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰", "#667eea", "#764ba2"),
+        "first_sale" => ("First Sale!", "Unlocked on OmniSolo", "💰", "#667eea", "#764ba2"),
         "10th_order" => (
             "10th Order!",
             "Business is booming",
@@ -2950,7 +2950,7 @@ pub async fn handle_get_milestone_card(
         ),
         _ => (
             "Success Milestone!",
-            "Built with OHC",
+            "Built with OmniSolo",
             "✨",
             "#667eea",
             "#764ba2",
@@ -2961,7 +2961,7 @@ pub async fn handle_get_milestone_card(
         format!(
             r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
     <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ OmniSolo</text>
-    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OHC & get 14 days of Pro free</text>
+    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OmniSolo & get 14 days of Pro free</text>
   </a>"##,
             tenant_id
         )
@@ -3096,7 +3096,7 @@ async fn handle_generate_discount_share(
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
     let uuid = uuid::Uuid::new_v4().to_string();
-    let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
+    let share_url = format!("https://cloud.omnisolo.co/discount/{}?tenant={}", uuid, tenant_id);
 
     // Track generation metrics
     // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,
@@ -3529,7 +3529,7 @@ mod tests {
     use sqlx::PgPool;
 
     pub(crate) async fn setup_db() -> PgPool {
-        let database_url = std::env::var("OHC_DATABASE_URL")
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = crate::db::secure_pg_pool_options()
             .acquire_timeout(std::time::Duration::from_millis(500))
@@ -3591,7 +3591,7 @@ mod tests {
             .unwrap();
         let review_body: GenerateReviewResponse = serde_json::from_slice(&review_body).unwrap();
         assert!(review_body.message.contains("unavailable"));
-        assert!(!review_body.message.contains("ohc.store/review"));
+        assert!(!review_body.message.contains("cloud.omnisolo.co/review"));
 
         let campaign = handle_send_campaign(
             Extension(state),

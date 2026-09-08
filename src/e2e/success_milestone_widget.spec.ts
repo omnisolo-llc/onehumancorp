@@ -26,7 +26,7 @@ test.describe('Success Milestone Widget', () => {
     await expect(page.locator('text=Copied to Clipboard!')).toBeVisible();
 
     const clipboardText = await page.evaluate('navigator.clipboard.readText()');
-    expect(clipboardText).toContain('I just hit my 100th order using OHC');
+    expect(clipboardText).toContain('I just hit my 100th order using OmniSolo');
     expect(clipboardText).toContain('⚡ OmniSolo');
   });
 });

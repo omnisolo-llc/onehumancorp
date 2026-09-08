@@ -1,6 +1,6 @@
 # Flutter Stripe Terminal Integration Outline
 
-This document outlines the high-level architecture and necessary steps to integrate Stripe Terminal (Tap to Pay) into the OHC Flutter app, fulfilling the final acceptance criteria for the In-Person Tap-to-Pay Integration.
+This document outlines the high-level architecture and necessary steps to integrate Stripe Terminal (Tap to Pay) into the OmniSolo Flutter app, fulfilling the final acceptance criteria for the In-Person Tap-to-Pay Integration.
 
 ## 1. Add Dependencies
 
@@ -17,7 +17,7 @@ dependencies:
 
 ## 2. Initialize the SDK
 
-During the app initialization phase (e.g., in `main.dart` or an auth-guarded initialization sequence), initialize the Stripe Terminal SDK. This requires providing a function to fetch the connection token from our OHC backend.
+During the app initialization phase (e.g., in `main.dart` or an auth-guarded initialization sequence), initialize the Stripe Terminal SDK. This requires providing a function to fetch the connection token from our OmniSolo backend.
 
 ```dart
 import 'package:stripe_terminal/stripe_terminal.dart';
@@ -25,7 +25,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 Future<String> fetchConnectionToken() async {
-  // Use the OHC HTTP client which automatically handles Auth (SPIFFE/JWT headers)
+  // Use the OmniSolo HTTP client which automatically handles Auth (SPIFFE/JWT headers)
   final response = await http.post(
     Uri.parse('https://cloud.omnisolo.co/api/v1/pos/terminal/connection_token'),
     headers: {
@@ -79,14 +79,14 @@ Future<void> connectTapToPay() async {
 
 ## 4. Process a Payment
 
-When the owner initiates a checkout, request a Payment Intent from the OHC Backend, collect the payment method via NFC, and process the payment.
+When the owner initiates a checkout, request a Payment Intent from the OmniSolo Backend, collect the payment method via NFC, and process the payment.
 
 ```dart
 Future<void> processCheckout(int amountCents, String currency) async {
   try {
     final terminal = StripeTerminal.getInstance();
 
-    // 1. Request Payment Intent from OHC Backend
+    // 1. Request Payment Intent from OmniSolo Backend
     final response = await http.post(
       Uri.parse('https://cloud.omnisolo.co/api/v1/pos/terminal/create_intent'),
       headers: {

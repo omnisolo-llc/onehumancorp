@@ -3,7 +3,7 @@
 # User Guide: OmniSolo Platform
 
 ## Introduction
-Welcome to OmniSolo (formerly One Human Corp / OHC)! OmniSolo is the simplest platform that empowers anyone—with zero technical knowledge—to launch, run, and grow a small business entirely on their own. We put the power of a full business stack (website, storefront, customer management, AI agents, analytics, marketing) into your hands, accessible from desktop or mobile in minutes.
+Welcome to OmniSolo (formerly OmniSolo / OmniSolo)! OmniSolo is the simplest platform that empowers anyone—with zero technical knowledge—to launch, run, and grow a small business entirely on their own. We put the power of a full business stack (website, storefront, customer management, AI agents, analytics, marketing) into your hands, accessible from desktop or mobile in minutes.
 
 Our mission is radical simplicity: No code. No servers. No jargon.
 

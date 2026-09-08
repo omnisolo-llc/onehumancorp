@@ -39,7 +39,7 @@ test.describe('Cloud-Bridge Referral Loop', () => {
 
     // Check generated link input and action buttons
     const linkInput = page.locator('#cloud-bridge-invite-link');
-    await expect(linkInput).toHaveValue(/^https:\/\/ohc\.app\/invite\//);
+    await expect(linkInput).toHaveValue(/^https:\/\/cloud.omnisolo.co\/invite\//);
 
     const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
     await expect(copyBtn).toBeVisible();

@@ -9,7 +9,7 @@ Small business owners like Leo (music tutor) and Priya (boutique owner) leave mo
     - *Shopify:* Requires paid apps (e.g., "Dynamic Pricing") which are often complex and require manual rule creation.
     - *Wix/Squarespace:* No native dynamic pricing features.
     - *Acuity/Calendly:* Booking slots have fixed prices; no ability to charge more for peak times automatically.
-- **OHC AI Advantage:** OHC's Financial and Advisory AI agents can monitor real-time signals (booking velocity, inventory levels, competitor pricing, seasonality) and autonomously adjust prices within pre-approved boundaries set by the business owner.
+- **OmniSolo AI Advantage:** OmniSolo's Financial and Advisory AI agents can monitor real-time signals (booking velocity, inventory levels, competitor pricing, seasonality) and autonomously adjust prices within pre-approved boundaries set by the business owner.
 
 ## Design Doc
 ### Architecture Diagram

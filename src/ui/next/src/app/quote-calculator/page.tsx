@@ -31,7 +31,7 @@ function QuoteCalculatorContent() {
     const handleRequestClick = () => {
         // Send a message to the parent frame
         if (window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: 'ohc-quote-request', tenant }, '*');
+            window.parent.postMessage({ type: 'omnisolo-quote-request', tenant }, '*');
         } else {
             // Open the work intake or contact page as fallback
             window.open(`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`, '_blank');
@@ -102,7 +102,7 @@ function QuoteCalculatorContent() {
                 </div>
             </div>
             <style dangerouslySetInnerHTML={{__html: `
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
                 .font-inter { font-family: 'Inter', sans-serif; }
                 .font-outfit { font-family: 'Outfit', sans-serif; }
                 html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }

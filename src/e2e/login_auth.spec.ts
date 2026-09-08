@@ -14,7 +14,7 @@ test('the Next.js login form creates a real authenticated session', async ({ con
     page.getByRole('button', { name: 'Log in' }).click(),
   ]);
 
-  const sessionCookie = (await context.cookies()).find((cookie) => cookie.name === 'ohc_session');
+  const sessionCookie = (await context.cookies()).find((cookie) => cookie.name === 'omnisolo_session');
   expect(sessionCookie?.httpOnly).toBe(true);
   expect(sessionCookie?.value.length).toBeGreaterThan(0);
 

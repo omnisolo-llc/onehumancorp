@@ -1,7 +1,7 @@
 #![allow(clippy::all)]
 /// Master Catalog B.1. The Orchestration Loop
 use crate::actor_model::Actor;
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use opentelemetry::{KeyValue, global};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -10,13 +10,13 @@ use tracing::{Instrument, info_span};
 use crate::budget::{BudgetAction, BudgetTracker, check_token_budget};
 use crate::guardrails::GuardrailRegistry;
 use crate::tools::Tool;
-use ohc_builtin_agent_core::types::{
+use omnisolo_builtin_agent_core::types::{
     ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult,
 };
-use ohc_builtin_agent_llm::LlmClient;
+use omnisolo_builtin_agent_llm::LlmClient;
 
 pub fn agent_task_timeout() -> std::time::Duration {
-    let secs = std::env::var("OHC_AGENT_TASK_TIMEOUT_SECS")
+    let secs = std::env::var("OMNISOLO_AGENT_TASK_TIMEOUT_SECS")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
         .filter(|value| *value > 0)
@@ -136,7 +136,7 @@ pub struct AgentRunConfig {
     pub workspace_path: Option<String>,
     pub max_workflow_cycles: Option<usize>,
     pub project_trusted: bool,
-    pub injected_context: Option<Vec<ohc_builtin_agent_core::types::Message>>,
+    pub injected_context: Option<Vec<omnisolo_builtin_agent_core::types::Message>>,
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
@@ -352,7 +352,7 @@ pub struct Agent {
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub event_stream: Option<Arc<crate::openhands::EventStream>>,
     pub native_env:
-        Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+        Arc<tokio::sync::RwLock<omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment>>,
     pub sona_matcher: Option<Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>>,
     pub skill_trace: Arc<tokio::sync::Mutex<crate::expert_team::SkillTrace>>,
     // SOTA Harness Patterns (2025-2026): 2. Code-native execution -> preserving execution state
@@ -406,7 +406,7 @@ impl Agent {
             observation_store: Arc::new(dashmap::DashMap::new()),
             event_stream: None,
             native_env: Arc::new(tokio::sync::RwLock::new(
-                ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new(),
+                omnisolo_builtin_agent_core::code_native::RichExecutionEnvironment::new(),
             )),
             durable_engine: Some(Arc::new(
                 crate::durable_execution::DurableExecutionEngine::new(),
@@ -665,7 +665,7 @@ impl Agent {
                     }
                     Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                         let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                            omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                 tc.id.clone(),
                                 &tc.name,
                                 &err_msg,
@@ -775,7 +775,7 @@ impl Agent {
                     }
                     Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                         let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                            omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                 tc.id.clone(),
                                 &tc.name,
                                 &err_msg,
@@ -1428,7 +1428,7 @@ impl Agent {
                                     }
                                 }
                                 let self_correct_msg =
-                                    ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                                    omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                         tc.id.clone(),
                                         &tc.name,
                                         &err_msg,
@@ -1550,7 +1550,7 @@ impl Agent {
                                             let _ = checkpointer.restore_checkpoint(cp_id).await;
                                         }
                                     }
-                                    let self_correct_msg = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &err_msg).error;
+                                    let self_correct_msg = omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &err_msg).error;
                                     on_event(AgentEvent::ToolCall {
                                         name: tc.name.clone(),
                                         args_json: tc.arguments.to_string(),
@@ -1952,7 +1952,7 @@ impl Agent {
                                 ));
                             }
                             tool_results[idx] =
-                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                                omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                     id.clone(),
                                     &tool_name,
                                     &err_msg,
@@ -2016,7 +2016,7 @@ impl Agent {
                                     }
                                 }
                                 tool_results[idx] =
-                                    ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                                    omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                         id.clone(),
                                         &tc.name,
                                         &err_msg,
@@ -2118,7 +2118,7 @@ impl Agent {
                                     ));
                                 }
                                 tool_results[idx] =
-                                    ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                                    omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                         id.clone(),
                                         &tc.name,
                                         &err_msg,
@@ -2682,7 +2682,7 @@ impl Agent {
                             llm_recoverable_count += 1;
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
                             // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            let error_result = ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(current_tc.id.clone(), &current_tc.name, &err_msg);
+                            let error_result = omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(current_tc.id.clone(), &current_tc.name, &err_msg);
                             let msg_to_push = crate::types::Message {
                                 role: crate::types::Role::Tool,
                                 content: String::new(),
@@ -2829,7 +2829,7 @@ impl Agent {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         let error_result =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                            omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                 current_tc.id.clone(),
                                 &current_tc.name,
                                 &err_msg,
@@ -3580,7 +3580,7 @@ impl Agent {
             && let Some(thread_id) = &final_cfg.thread_id
             && let Some(dir) = &final_cfg.workspace_path
         {
-            let hibernation_dir = format!("{}/.ohc_hibernation", dir);
+            let hibernation_dir = format!("{}/.omnisolo_hibernation", dir);
             let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
             if hm.is_hibernated(thread_id).await {
                 tracing::info!(
@@ -3839,7 +3839,7 @@ impl Agent {
             }
 
             // Intelligent Context Truncation to save tokens
-            let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
+            let req = omnisolo_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
 
             let llm_span = info_span!(
                 "llm_interaction",
@@ -4407,7 +4407,7 @@ impl Agent {
 
                         // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         let self_correct_msg =
-                            ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                            omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                 tc.id.clone(),
                                 &tc.name,
                                 &err_msg,
@@ -4673,7 +4673,7 @@ impl Agent {
 
                             // Error Handling (Compounding Error Prevention): LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
                             let self_correct_msg =
-                                ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(
+                                omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(
                                     tc.id.clone(),
                                     &tc.name,
                                     &err_msg,
@@ -4801,7 +4801,7 @@ impl Agent {
                 && let Some(thread_id) = &final_cfg.thread_id
                 && let Some(dir) = &final_cfg.workspace_path
             {
-                let hibernation_dir = format!("{}/.ohc_hibernation", dir);
+                let hibernation_dir = format!("{}/.omnisolo_hibernation", dir);
                 let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
                 if let Ok(msgs_json) = serde_json::to_string(&messages) {
                     let state = crate::hibernation::HibernationState {
@@ -5493,7 +5493,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_to_end_pydantic_self_correction_loop() {
         use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolError, Usage};
-        use ohc_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
+        use omnisolo_builtin_agent_tools::pydantic::{PydanticAdapter, PydanticToolExecutor};
         use serde::Deserialize;
 
         #[derive(Deserialize)]
@@ -6291,7 +6291,7 @@ mod tests {
     #[tokio::test(flavor = "current_thread")]
     async fn test_tao_termination_guardrail_user_fixable() {
         unsafe {
-            std::env::set_var("OHC_MOCK_USER_INPUT", "abort");
+            std::env::set_var("OMNISOLO_MOCK_USER_INPUT", "abort");
         }
         let llm = Arc::new(crate::agent::tests::MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
@@ -6343,7 +6343,7 @@ mod tests {
             .run_tao_orchestration_loop(&cfg, "Hello", &agent.tools, &mut |_| {})
             .await;
         unsafe {
-            std::env::remove_var("OHC_MOCK_USER_INPUT");
+            std::env::remove_var("OMNISOLO_MOCK_USER_INPUT");
         }
         assert!(res.is_err());
         let err_str = res.unwrap_err().to_string();
@@ -6887,7 +6887,7 @@ mod tests {
     }
 
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
+    use omnisolo_builtin_agent_core::types::{ChatResponse, Message, Role, ToolCall, Usage};
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -7189,13 +7189,13 @@ mod tests {
                         response_id: None,
                         previous_response_id: None,
                     },
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    usage: omnisolo_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Final answer"),
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    usage: omnisolo_builtin_agent_core::types::Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
                 },
@@ -7261,7 +7261,7 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: ohc_builtin_agent_core::types::Usage::default(),
+                usage: omnisolo_builtin_agent_core::types::Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -7312,7 +7312,7 @@ mod tests {
                     response_id: None,
                     previous_response_id: None,
                 },
-                usage: ohc_builtin_agent_core::types::Usage::default(),
+                usage: omnisolo_builtin_agent_core::types::Usage::default(),
                 stop_reason: "tool_calls".to_string(),
                 response_id: Some("mock-id".to_string()),
             }]),
@@ -7346,7 +7346,7 @@ mod tests {
         assert!(err_str.contains("requires explicit user confirmation"));
     }
 
-    use ohc_builtin_agent_core::types::ChatRequest;
+    use omnisolo_builtin_agent_core::types::ChatRequest;
 
     use serde_json::Value;
 
@@ -7933,7 +7933,7 @@ mod tests {
 
         // 3. User Fixable
         unsafe {
-            std::env::set_var("OHC_MOCK_USER_INPUT", "abort");
+            std::env::set_var("OMNISOLO_MOCK_USER_INPUT", "abort");
         }
         let client_user = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
@@ -7961,7 +7961,7 @@ mod tests {
         };
         let res3 = agent3.run(&cfg, "Run user fixable", &mut on_event3).await;
         unsafe {
-            std::env::remove_var("OHC_MOCK_USER_INPUT");
+            std::env::remove_var("OMNISOLO_MOCK_USER_INPUT");
         }
         assert!(res3.is_err());
         let user_fixable_handled = events3.iter().any(|e| {
@@ -10241,7 +10241,7 @@ async fn test_tools_read_only_concurrent_mutating_serial() {
             } else {
                 Ok(crate::types::ChatResponse {
                     message: crate::types::Message::assistant("done"),
-                    usage: ohc_builtin_agent_core::types::Usage::default(),
+                    usage: omnisolo_builtin_agent_core::types::Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("id2".to_string()),
                 })
@@ -10280,7 +10280,7 @@ async fn test_tools_read_only_concurrent_mutating_serial() {
                 response_id: Some("id1".to_string()),
                 previous_response_id: None,
             },
-            usage: ohc_builtin_agent_core::types::Usage::default(),
+            usage: omnisolo_builtin_agent_core::types::Usage::default(),
             stop_reason: "tool_calls".to_string(),
             response_id: Some("id1".to_string()),
         }]),
@@ -10574,10 +10574,10 @@ async fn test_stripe_retry_limit() {
 
 #[tokio::test]
 async fn test_code_native_agent_integration() {
-    use ohc_builtin_agent_core::code_native::{
+    use omnisolo_builtin_agent_core::code_native::{
         CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment,
     };
-    use ohc_builtin_agent_core::types::{
+    use omnisolo_builtin_agent_core::types::{
         ChatRequest, ChatResponse, Message, Role, ToolCall, Usage,
     };
 
@@ -11363,7 +11363,7 @@ mod e2e_verification_tests {
 
         struct DummyToolExecutor;
         #[async_trait::async_trait]
-        impl ohc_builtin_agent_tools::ToolExecutor for DummyToolExecutor {
+        impl omnisolo_builtin_agent_tools::ToolExecutor for DummyToolExecutor {
             async fn execute(
                 &self,
                 _args: serde_json::Value,
@@ -11404,7 +11404,7 @@ mod e2e_verification_tests {
 mod fail_fast_tests {
     use super::*;
     use crate::tools::{Tool, ToolExecutor};
-    use ohc_builtin_agent_core::types::{
+    use omnisolo_builtin_agent_core::types::{
         ChatRequest, ChatResponse, Message, Role, ToolCall, ToolError, Usage,
     };
     use std::sync::Arc;
@@ -11591,7 +11591,7 @@ mod fail_fast_tests {
 
         struct MockReadOnlyExecutor;
         #[async_trait::async_trait]
-        impl ohc_builtin_agent_tools::ToolExecutor for MockReadOnlyExecutor {
+        impl omnisolo_builtin_agent_tools::ToolExecutor for MockReadOnlyExecutor {
             async fn execute(
                 &self,
                 _args: serde_json::Value,
@@ -11664,7 +11664,7 @@ async fn test_agent_loop_llm_recoverable() {
     use crate::tools::Tool;
     use crate::types::{ChatRequest, ChatResponse, Message, ToolCall, Usage};
     use async_trait::async_trait;
-    use ohc_builtin_agent_core::types::ToolError;
+    use omnisolo_builtin_agent_core::types::ToolError;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -11723,7 +11723,7 @@ async fn test_agent_loop_llm_recoverable() {
 
     struct DummyFailExecutor;
     #[async_trait]
-    impl ohc_builtin_agent_tools::ToolExecutor for DummyFailExecutor {
+    impl omnisolo_builtin_agent_tools::ToolExecutor for DummyFailExecutor {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
             Err(ToolError::LlmRecoverable(
                 "Validation Error (Pydantic-first tool schema): missing fixed field".to_string(),
@@ -11733,7 +11733,7 @@ async fn test_agent_loop_llm_recoverable() {
 
     struct DummySuccessExecutor;
     #[async_trait]
-    impl ohc_builtin_agent_tools::ToolExecutor for DummySuccessExecutor {
+    impl omnisolo_builtin_agent_tools::ToolExecutor for DummySuccessExecutor {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
             Ok("Success".to_string())
         }
@@ -11824,7 +11824,7 @@ mod additional_tests {
     #[test]
     fn test_agent_task_timeout_default() {
         unsafe {
-            std::env::set_var("OHC_AGENT_TASK_TIMEOUT_SECS", "60");
+            std::env::set_var("OMNISOLO_AGENT_TASK_TIMEOUT_SECS", "60");
         }
         assert_eq!(agent_task_timeout().as_secs(), 60);
     }

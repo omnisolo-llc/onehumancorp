@@ -392,7 +392,7 @@ mod tests {
             );
             std::env::set_var(
                 "GOOGLE_BUSINESS_REDIRECT_URI",
-                "https://ohc.example/oauth/google-business/callback",
+                "https://cloud.omnisolo.co/oauth/google-business/callback",
             );
         }
 

@@ -1,5 +1,5 @@
 use super::{Tool, ToolExecutor};
-use ohc_builtin_agent_core::types::ToolError;
+use omnisolo_builtin_agent_core::types::ToolError;
 use serde_json::{Value, json};
 use std::path::Path;
 use std::sync::Arc;

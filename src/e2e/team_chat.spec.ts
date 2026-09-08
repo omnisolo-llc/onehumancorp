@@ -6,7 +6,7 @@ test('current app smoke test', async ({ page, request }) => {
 });
 
 test.describe('Team Chat E2E', () => {
-  test('should load team chat page and display initial greeting from OHC', async ({ page }) => {
+  test('should load team chat page and display initial greeting from OmniSolo', async ({ page }) => {
     await page.goto('/team/chat');
     await expect(page.locator('h1', { hasText: 'Team Chat' })).toBeVisible();
     await expect(page.locator('text=I\'m your central team interface')).toBeVisible();

@@ -9,8 +9,8 @@ pub struct ChromaDbProvider {
 
 impl ChromaDbProvider {
     pub fn new() -> Self {
-        let mode = env::var("OHC_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
-        let headless = env::var("OHC_HEADLESS").unwrap_or_else(|_| "false".to_string());
+        let mode = env::var("OMNISOLO_EXECUTION_MODE").unwrap_or_else(|_| "standalone".to_string());
+        let headless = env::var("OMNISOLO_HEADLESS").unwrap_or_else(|_| "false".to_string());
 
         let is_mock = mode == "cloud" && headless != "true";
 

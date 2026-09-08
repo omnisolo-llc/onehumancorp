@@ -26,7 +26,7 @@ The implementation is intentionally split by invariant boundary:
 - `src/server/harness/Cargo.toml`: add only dependencies required by the contracts.
 - `src/server/harness/BUILD.bazel`: keep Bazel source/dependency coverage aligned with Cargo.
 - `src/proto/harness_middleware.proto`: versioned worker and inference protocol definitions.
-- `src/proto/BUILD.bazel` and `src/server/ohc/{build.rs,mod.rs,BUILD.bazel}`: generate and expose the new protobuf types.
+- `src/proto/BUILD.bazel` and `src/server/omnisolo/{build.rs,mod.rs,BUILD.bazel}`: generate and expose the new protobuf types.
 - `src/server/migrations/`: add canonical tables and fence-safe constraints after pure storage semantics are fixed.
 - `src/server/harness/middleware_tests.rs`: cross-module integration tests that exercise handoff, replay, stale workers, capsules, and inference recovery.
 
@@ -273,9 +273,9 @@ git commit -m "feat: add fenced model runtime admission"
 **Files:**
 - Create: `src/proto/harness_middleware.proto`
 - Modify: `src/proto/BUILD.bazel`
-- Modify: `src/server/ohc/build.rs`
-- Modify: `src/server/ohc/mod.rs`
-- Modify: `src/server/ohc/BUILD.bazel`
+- Modify: `src/server/omnisolo/build.rs`
+- Modify: `src/server/omnisolo/mod.rs`
+- Modify: `src/server/omnisolo/BUILD.bazel`
 - Create: `src/server/harness/middleware/worker.rs`
 - Modify: `src/server/harness/middleware/mod.rs`
 - Test: Rust envelope tests and protobuf encode/decode tests
@@ -296,19 +296,19 @@ Use separate messages for worker control, session operations, attempt commands, 
 
 - [x] **Step 4: Add generated bindings to both Cargo and Bazel paths**
 
-Follow the existing `server_ohc` `tonic::include_proto!` and Bazel re-export patterns. Preserve current generated modules and add a separate `harness_middleware` namespace.
+Follow the existing `server_omnisolo` `tonic::include_proto!` and Bazel re-export patterns. Preserve current generated modules and add a separate `harness_middleware` namespace.
 
 - [x] **Step 5: Run focused wire tests and compile checks**
 
 ```bash
 cargo test -p server_harness middleware::worker -- --nocapture
-cargo check -p server_ohc -p server_harness -p ohc_builtin_agent
+cargo check -p server_omnisolo -p server_harness -p omnisolo_builtin_agent
 ```
 
 - [x] **Step 6: Commit the wire contract**
 
 ```bash
-git add src/proto/harness_middleware.proto src/proto/BUILD.bazel src/server/ohc src/server/harness/middleware/worker.rs src/server/harness/middleware/mod.rs
+git add src/proto/harness_middleware.proto src/proto/BUILD.bazel src/server/omnisolo src/server/harness/middleware/worker.rs src/server/harness/middleware/mod.rs
 git commit -m "feat: add harness worker protocol"
 ```
 
@@ -368,7 +368,7 @@ Use a deterministic fake OmniSolo provider and tool executor to prove one run em
 - [x] **Step 2: Run RED integration tests**
 
 ```bash
-cargo test -p ohc_builtin_agent middleware_integration -- --nocapture
+cargo test -p omnisolo_builtin_agent middleware_integration -- --nocapture
 ```
 
 - [x] **Step 3: Add the OmniSolo adapter boundary**
@@ -382,7 +382,7 @@ Expose explicit create/resume/handoff commands through the existing service laye
 - [x] **Step 5: Run targeted and regression tests**
 
 ```bash
-cargo test -p ohc_builtin_agent middleware_integration -- --nocapture
+cargo test -p omnisolo_builtin_agent middleware_integration -- --nocapture
 cargo test -p server_harness
 ```
 
@@ -414,7 +414,7 @@ Exercise stale worker writes, lease reassignment, checkpoint crash windows, hand
 ```bash
 cargo fmt --all -- --check
 cargo test -p server_harness
-cargo test -p ohc_builtin_agent --lib
+cargo test -p omnisolo_builtin_agent --lib
 cargo test -p ohc-mono --lib
 cargo test --workspace
 ```
@@ -425,7 +425,7 @@ The existing baseline currently has unrelated failures in Stripe test imports an
 
 ```bash
 command -v bazel
-bazel test //src/server/harness:server_harness_test //src/agents/builtin:ohc_builtin_agent_lib
+bazel test //src/server/harness:server_harness_test //src/agents/builtin:omnisolo_builtin_agent_lib
 ```
 
 If `command -v bazel` exits non-zero, record that Bazel verification was unavailable and retain the Cargo verification output.
@@ -448,8 +448,8 @@ The implementation is complete on the `feat/omnisolo-harness-middleware` worktre
 Final verification evidence:
 
 - `cargo test -p server_harness -- --nocapture` via the final coverage run: 98 unit tests, 5 conformance tests, and 2 schema-contract tests passed.
-- `cargo test -p ohc_builtin_agent middleware --lib -- --nocapture`: 7 bridge/integration tests passed.
-- `cargo test -p server_ohc -- --nocapture`: 2 protobuf round-trip tests passed.
+- `cargo test -p omnisolo_builtin_agent middleware --lib -- --nocapture`: 7 bridge/integration tests passed.
+- `cargo test -p server_omnisolo -- --nocapture`: 2 protobuf round-trip tests passed.
 - `cargo test -p ohc-mono --test harness_middleware_interop -- --nocapture`: 2 typed capsule transport tests passed.
 - `cargo check -p ohc-mono --lib`, `git diff --check`, targeted `rustfmt --check`, and `bazel query //src/proto:harness_middleware_prost` passed.
 - `cargo fmt --all -- --check` remains red because the repository has extensive unrelated pre-existing formatting drift; targeted rustfmt checks for every changed standalone middleware file pass.
