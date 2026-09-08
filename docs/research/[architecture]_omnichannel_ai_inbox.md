@@ -10,7 +10,7 @@ Small business owners like Maya (the baker taking custom orders via Instagram) a
 *   **Shopify Inbox:** Highly manual. It aggregates Shopify chat and Instagram/Facebook DMs but requires the merchant to type out replies or click pre-saved "quick replies." The "Sidekick" AI features are geared toward merchant analytics, not proactive customer conversation resolution.
 *   **Wix Inbox:** Offers basic auto-responders (e.g., "We received your message") but lacks any semantic understanding or capability to negotiate quotes, check inventory, or book calendar slots.
 *   **Squarespace / GoDaddy:** Focused on generic web contact forms. No real-time omnichannel integration or intelligent autonomy.
-*   **OneHumanCorp (OHC) Differentiation - "Invisible Autonomy":** Instead of a static "chatbot," OHC deploys the **Ambassador Agent**—an invisible, always-on AI representative that hooks into the merchant's unified inbox. It understands the business context (menu, calendar, pricing), engages customers naturally across any channel, and escalates to the human only when necessary (e.g., a highly custom complex order).
+*   **OmniSolo (OHC) Differentiation - "Invisible Autonomy":** Instead of a static "chatbot," OHC deploys the **Ambassador Agent**—an invisible, always-on AI representative that hooks into the merchant's unified inbox. It understands the business context (menu, calendar, pricing), engages customers naturally across any channel, and escalates to the human only when necessary (e.g., a highly custom complex order).
 
 ## Design Doc
 

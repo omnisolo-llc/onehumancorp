@@ -7,7 +7,7 @@
 **Last Updated:** $(date +"%Y-%m-%d")
 
 ## 1. Overview
-The "Dynamic Tool Registration via MCP" feature enables One Human Corp's Multi-Agent Orchestrator to dynamically discover, validate, and bind to external Model Context Protocol (MCP) tools at runtime. This avoids the limitations of hardcoding OpenAPI schemas and allows the "Agentic OS" to extend its capabilities dynamically on a per-need basis across multiple agents.
+The "Dynamic Tool Registration via MCP" feature enables OmniSolo's Multi-Agent Orchestrator to dynamically discover, validate, and bind to external Model Context Protocol (MCP) tools at runtime. This avoids the limitations of hardcoding OpenAPI schemas and allows the "Agentic OS" to extend its capabilities dynamically on a per-need basis across multiple agents.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

@@ -30,7 +30,7 @@ test.describe('Viral Seasonal Promo Generator UI', () => {
             route.fulfill({
                 status: 200,
                 contentType: 'application/json',
-                body: JSON.stringify({ share_link: 'https://ohc.app/promo/e2e-tenant?theme=christmas&discount=25' })
+                body: JSON.stringify({ share_link: 'https://omnisolo.co/promo/e2e-tenant?theme=christmas&discount=25' })
             });
         });
 

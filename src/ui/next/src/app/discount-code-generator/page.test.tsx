@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DiscountCodeGeneratorPage from './page';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock('../components/PoweredByOHC', () => ({ PoweredByOHC: () => null }));
+vi.mock('../components/PoweredByOmniSolo', () => ({ PoweredByOmniSolo: () => null }));
 vi.mock('../components/useProPlan', () => ({
   useProPlan: () => ({ hasPro: false, claimTrial: vi.fn(), claimError: null }),
 }));

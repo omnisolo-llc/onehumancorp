@@ -197,7 +197,7 @@ export async function GET(request: Request) {
 
     ${branding ? `
     <div class="branding">
-      <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_roi_calculator" target="_blank">⚡ Powered by OHC</a>
+      <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_roi_calculator" target="_blank">⚡ Powered by OmniSolo</a>
     </div>
     ` : ''}
   </div>

@@ -1,7 +1,7 @@
 # OHC Market Gap Analysis & AI Builder Deep Dive
 
 ## Executive Summary
-This report investigates the current landscape of small business website platforms and AI builders, mapping the capabilities of major competitors against OneHumanCorp's (OHC) mission. We dive deep into Wix's AI capabilities and uncover unresolved SMB pain points to drive OHC's product development.
+This report investigates the current landscape of small business website platforms and AI builders, mapping the capabilities of major competitors against OmniSolo's (OHC) mission. We dive deep into Wix's AI capabilities and uncover unresolved SMB pain points to drive OHC's product development.
 
 ## Track 1: Market Mapping & Competitor Discovery
 

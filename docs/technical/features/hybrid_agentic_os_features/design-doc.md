@@ -1,7 +1,7 @@
 # Hybrid Agentic OS Features Design Document
 
 ## 1. Introduction
-One Human Corp (OHC) is building a Hybrid Agentic OS to empower a single human to orchestrate a vast swarm of AI agents. This design document outlines the architectural blueprints for four core pillars of the Agentic OS: the Shared Task List, Realtime Teammate Mesh, Sub-Agent Orchestration, and the autoDream Data Pipeline.
+OmniSolo (OHC) is building a Hybrid Agentic OS to empower a single human to orchestrate a vast swarm of AI agents. This design document outlines the architectural blueprints for four core pillars of the Agentic OS: the Shared Task List, Realtime Teammate Mesh, Sub-Agent Orchestration, and the autoDream Data Pipeline.
 
 ## 2. Core Pillars
 

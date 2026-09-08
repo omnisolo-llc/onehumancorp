@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const label = escapeHtml(searchParams.get('label') || 'Metric');
   const value = escapeHtml(searchParams.get('value') || '0');
   const branding = searchParams.get('branding') !== 'false';
-  const origin = request.nextUrl.origin || 'https://ohc.app';
+  const origin = request.nextUrl.origin || 'https://cloud.omnisolo.co';
 
   const bgColor = theme === 'dark' ? '#1f2937' : '#ffffff';
   const textColor = theme === 'dark' ? '#f3f4f6' : '#111827';
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
           ${branding ? `
           <div class="powered-by">
             <a href="${origin}/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" rel="noreferrer">
-              ⚡ Powered by OHC
+              ⚡ Powered by OmniSolo
             </a>
           </div>
           ` : ''}

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Viral Discount Link Generator | OHC</title>
+  <title>Viral Discount Link Generator | OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -363,7 +363,7 @@
           <div class="form-group">
             <label class="checkbox-label">
               <input type="checkbox" id="remove-branding" />
-              Remove "Powered by OHC" Badge (Pro)
+              Remove "OmniSolo" Badge (Pro)
             </label>
           </div>
 
@@ -400,7 +400,7 @@
                 </div>
             </div>
             <div class="preview-storefront-footer" id="preview-branding">
-              <a href="#">⚡ Powered by OHC</a>
+              <a href="#">⚡ OmniSolo</a>
             </div>
           </div>
         </div>
@@ -430,7 +430,7 @@
       <button class="modal-close" id="close-paywall">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title font-outfit">Upgrade to Pro</h2>
-      <p style="color: #86868b; margin-bottom: 24px; line-height: 1.5;">Make the Discount Link 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark from the landing page.</p>
+      <p style="color: #86868b; margin-bottom: 24px; line-height: 1.5;">Make the Discount Link 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark from the landing page.</p>
       <button class="primary-btn" id="upgrade-btn">Upgrade to Pro</button>
     </div>
   </div>
@@ -552,7 +552,7 @@
       }
 
       function generateLink() {
-        const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
+        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
 
         const code = `${origin}/ui/discount/apply/index.html?tenant=${state.tenant}&code=${encodeURIComponent(state.discountCode)}&amount=${encodeURIComponent(state.discountAmount)}&hideBranding=${state.removeBranding}`;
 

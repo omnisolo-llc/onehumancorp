@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Viral PWYW Generator - OHC</title>
+  <title>Viral PWYW Generator - OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -246,7 +246,7 @@
 
     <div class="generator-card">
       <h1>Viral PWYW Drop Generator</h1>
-      <p class="subtitle">Create an embeddable "Pay What You Want" widget. Let customers decide the price and drive viral shares. The "Powered by OHC" watermark helps you earn referral credits.</p>
+      <p class="subtitle">Create an embeddable "Pay What You Want" widget. Let customers decide the price and drive viral shares. The "OmniSolo" watermark helps you earn referral credits.</p>
 
       <div class="form-group">
         <label for="product-name">Product / Drop Name</label>
@@ -271,7 +271,7 @@
 
       <div class="toggle-container">
         <input type="checkbox" id="remove-branding">
-        <label for="remove-branding">Remove "Powered by OHC" Badge (Pro)</label>
+        <label for="remove-branding">Remove "OmniSolo" Badge (Pro)</label>
       </div>
 
       <button class="primary" id="generate-btn">Generate Embed Code</button>
@@ -312,14 +312,14 @@
         generateBtn.disabled = true;
 
         setTimeout(() => {
-          const baseUrl = "https://ohc.app";
+          const baseUrl = "https://omnisolo.co";
           const widgetId = 'pwyw-' + Math.random().toString(36).substring(2, 9);
 
           let brandingHtml = '';
           if (!removeBranding) {
             brandingHtml = `
   <div style="text-align: center; margin-top: 16px;">
-    <a href="${baseUrl}/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=viral_pwyw" target="_blank" style="color: #888; text-decoration: none; font-size: 12px; font-weight: 600; font-family: sans-serif;">⚡ Powered by OHC</a>
+    <a href="${baseUrl}/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=viral_pwyw" target="_blank" style="color: #888; text-decoration: none; font-size: 12px; font-weight: 600; font-family: sans-serif;">⚡ OmniSolo</a>
   </div>`;
           }
 

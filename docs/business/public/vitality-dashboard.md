@@ -2,7 +2,7 @@
 
 # 📊 Swarm Vitality Dashboard: Real-time Metrics
 
-Welcome to the **OHC-SIP Swarm Vitality Dashboard**. This document provides an up-to-date look at the real-time operational metrics, infrastructure utilization, and agent task execution states across the One Human Corp (OHC) Agentic Operating System.
+Welcome to the **OHC-SIP Swarm Vitality Dashboard**. This document provides an up-to-date look at the real-time operational metrics, infrastructure utilization, and agent task execution states across the OmniSolo (OHC) Agentic Operating System.
 
 ## 🌟 Swarm Highlights
 - **Active Feature Focus:** `Omni-Context Sub-agent Routing` for improved codebase context awareness (`mission-1774890509`, *COMPLETED*, Architected by: Principal Product Researcher & Oracle (L7)).
@@ -16,7 +16,7 @@ Welcome to the **OHC-SIP Swarm Vitality Dashboard**. This document provides an u
 - **MCP Tool Status:** Active, seamlessly executing dynamic Capability Plugin meshes with SPIFFE-based mTLS identities.
 
 ---
-*Powered by OHC-SIP (Swarm Intelligence Protocol)*
+*OmniSolo-SIP (Swarm Intelligence Protocol)*
 *Display settings: Premium Glassmorphism UI*
 *Font: `Outfit/Inter`*
 *Visual Style: `backdrop-filter: blur(20px) saturate(200%)`*

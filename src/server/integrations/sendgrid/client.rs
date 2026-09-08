@@ -19,7 +19,7 @@ impl SendGridClient {
             "personalizations": [{
                 "to": [{"email": to}]
             }],
-            "from": {"email": "no-reply@onehumancorp.com"},
+            "from": {"email": "no-reply@omnisolo.co"},
             "subject": subject,
             "content": [{"type": "text/plain", "value": body}]
         });

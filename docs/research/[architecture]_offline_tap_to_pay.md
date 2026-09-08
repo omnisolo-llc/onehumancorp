@@ -1,7 +1,7 @@
 # Research Report: Offline Tap-to-Pay Architecture
 
 **Problem Statement:**
-Non-technical business owners (like Carlos the handyman and Fatima the food cart operator) often operate in areas with poor or zero internet connectivity (basements, crowded street corners). Currently, OneHumanCorp (OHC) requires an active internet connection to process payments. If the connection drops, they cannot accept payments, directly causing lost revenue and customer frustration.
+Non-technical business owners (like Carlos the handyman and Fatima the food cart operator) often operate in areas with poor or zero internet connectivity (basements, crowded street corners). Currently, OmniSolo (OHC) requires an active internet connection to process payments. If the connection drops, they cannot accept payments, directly causing lost revenue and customer frustration.
 
 **Research Findings:**
 - Competitors like Square POS offer robust offline mode capabilities where transactions are queued locally and synced when connectivity is restored.

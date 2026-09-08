@@ -49,7 +49,7 @@ export function ViralUpgradePaywallWidget({ tenantId = "default" }: { tenantId?:
   const target = data.target;
   const progressPercent = Math.min(100, Math.max(0, (currentReferrals / target) * 100));
 
-  const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${tenantId}&source=upgrade_paywall` : `https://ohc.app/onboarding?ref=${tenantId}&source=upgrade_paywall`;
+  const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/onboarding?ref=${tenantId}&source=upgrade_paywall` : `https://cloud.omnisolo.co/onboarding?ref=${tenantId}&source=upgrade_paywall`;
 
   const handleCopy = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {

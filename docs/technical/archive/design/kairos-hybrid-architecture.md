@@ -3,7 +3,7 @@
 # KAIROS Orchestration: Master Design Document
 
 ## 1. Vision
-The One Human Corp (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation.
+The OmniSolo (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation.
 
 ## 2. Architectural Pillars
 
@@ -80,6 +80,6 @@ sequenceDiagram
 
 ---
 *Authored by: Principal Product Architect & KAIROS Orchestrator (L7)*
-*Identity: One Human Corp*
+*Identity: OmniSolo*
 
 </div>

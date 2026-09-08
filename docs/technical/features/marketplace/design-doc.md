@@ -1,13 +1,13 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Design Doc: The "One Human Corp" Marketplace
+# Design Doc: The "OmniSolo" Marketplace
 
 **Author(s):** TPM Agent
 **Status:** Approved
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-The "One Human Corp" Marketplace is a community-driven ecosystem where users can buy, sell, and share highly specialized agents (e.g., a "TikTok Virality Expert Agent"), custom organizational templates (Skill Blueprints), and unique tool integrations (MCP Servers). It is the critical enabler for Phase 4 of the roadmap, providing a plug-and-play AI talent exchange.
+The "OmniSolo" Marketplace is a community-driven ecosystem where users can buy, sell, and share highly specialized agents (e.g., a "TikTok Virality Expert Agent"), custom organizational templates (Skill Blueprints), and unique tool integrations (MCP Servers). It is the critical enabler for Phase 4 of the roadmap, providing a plug-and-play AI talent exchange.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

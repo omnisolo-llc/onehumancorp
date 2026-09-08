@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-The Persistence and DR framework ("Snapshot Fabric") enables One Human Corp to save its entire organizational state at any point in time and restore it deterministically within 5 seconds.
+The Persistence and DR framework ("Snapshot Fabric") enables OmniSolo to save its entire organizational state at any point in time and restore it deterministically within 5 seconds.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

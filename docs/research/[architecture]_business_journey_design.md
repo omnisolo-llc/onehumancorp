@@ -1,7 +1,7 @@
 # Business Journey Architecture
 
 ## 1. Overview
-The Business Journey Architecture maps the complete lifecycle of a non-technical user (persona) on the OneHumanCorp (OHC) platform. It covers everything from initial discovery and onboarding to activation, retention, revenue scaling, and referral. The architecture ensures that a user can go from zero to a fully operational business in under 10 minutes from a mobile device (375px baseline width), with AI agents invisibly handling the underlying complexity.
+The Business Journey Architecture maps the complete lifecycle of a non-technical user (persona) on the OmniSolo (OHC) platform. It covers everything from initial discovery and onboarding to activation, retention, revenue scaling, and referral. The architecture ensures that a user can go from zero to a fully operational business in under 10 minutes from a mobile device (375px baseline width), with AI agents invisibly handling the underlying complexity.
 
 ## 2. Core Personas & Journeys
 
@@ -15,7 +15,7 @@ The journeys are designed to accommodate the distinct needs of our core personas
 ## 3. Journey Phases
 
 ### 3.1 Acquisition
-*   **Entry Points**: Organic search, targeted Instagram/TikTok ads, or referrals from existing OHC users (e.g., "Powered by OHC" badge on a link-in-bio).
+*   **Entry Points**: Organic search, targeted Instagram/TikTok ads, or referrals from existing OHC users (e.g., "OmniSolo" badge on a link-in-bio).
 *   **Landing Page**: A clear, jargon-free CTA ("Launch your business in 10 minutes"). Emphasizes the "No Code, No Servers" promise and mobile accessibility.
 
 ### 3.2 Onboarding (Zero → Live in 10 Mins)
@@ -39,7 +39,7 @@ The onboarding flow is a guided conversational wizard powered by the AI Marketin
 *   **Upgrade Flow**: A seamless transition to the Starter ($9/mo) or Pro ($29/mo) tier, highlighting the unlocked value (e.g., unlimited products, custom domain, full AI agent access).
 
 ### 3.6 Referral
-*   **Viral Loop**: Existing users share their storefront link or link-in-bio. The "Powered by OHC" badge serves as passive marketing.
+*   **Viral Loop**: Existing users share their storefront link or link-in-bio. The "OmniSolo" badge serves as passive marketing.
 *   **Incentive**: Referral rewards tracked by the Sales & Acquisition Agent.
 
 ## 4. Architecture Diagrams

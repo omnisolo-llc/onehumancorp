@@ -40,7 +40,7 @@ Every storefront is a vertical stack of mobile-optimized blocks:
 2.  **Product/Menu Block**: Intelligent grid that handles variants (size/color) or "Sold Out" toggles with 1-tap.
 3.  **Booking/Calendar Block**: Real-time availability sync for services (Carlos/Leo).
 4.  **Contact/Lead Block**: Integrated "The Ambassador" draft-and-approve inbox.
-5.  **Viral Footer**: "Built with OneHumanCorp — Launch Your Shop" referral loop.
+5.  **Viral Footer**: "Built with OmniSolo — Launch Your Shop" referral loop.
 
 ### visual Excellence & Vibe Coding
 - **Design Tokens**: Every site uses OHC Premium tokens (Outfit/Inter fonts, Glassmorphism).
@@ -49,7 +49,7 @@ Every storefront is a vertical stack of mobile-optimized blocks:
 
 ## Implementation Prompt
 **To Implementer Agent:**
-Implement the "Smart Builder" engine. Create a registry of `SmartBlocks` (Hero, Catalog, Booking) that are 100% responsive and usable at 375px. Build the "Vibe Coding" logic where "The Promoter" agent receives business metadata and outputs a JSON configuration for the storefront layout. Implement the publishing lifecycle: when a user clicks "Launch," the system must provision a subdomain (e.g., `maya.ohc.app`) and move the site from `DRAFT` to `LIVE`. Ensure the UI transition from "Bio Input" to "Live Preview" is seamless, with background agents handling the "heavy lifting" (image generation, copy drafting).
+Implement the "Smart Builder" engine. Create a registry of `SmartBlocks` (Hero, Catalog, Booking) that are 100% responsive and usable at 375px. Build the "Vibe Coding" logic where "The Promoter" agent receives business metadata and outputs a JSON configuration for the storefront layout. Implement the publishing lifecycle: when a user clicks "Launch," the system must provision a subdomain (e.g., `maya.omnisolo.co`) and move the site from `DRAFT` to `LIVE`. Ensure the UI transition from "Bio Input" to "Live Preview" is seamless, with background agents handling the "heavy lifting" (image generation, copy drafting).
 
 ## Priority
 P0

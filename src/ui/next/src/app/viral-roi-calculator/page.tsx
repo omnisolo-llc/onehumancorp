@@ -1,5 +1,5 @@
 "use client";
-import { PoweredByOHC } from "../components/PoweredByOHC";
+import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
@@ -34,9 +34,9 @@ export default function ViralROICalculatorPage() {
   };
 
   const embedUrl = `/api/v1/growth/viral-roi-calculator/embed?tenant=${encodeURIComponent(tenantId)}&serviceName=${encodeURIComponent(serviceName)}&currency=${encodeURIComponent(currency)}&theme=${theme}&branding=${!removeBranding}`;
-  const absoluteEmbedUrl = `https://ohc.app/api/v1/growth/viral-roi-calculator/embed?tenant=${encodeURIComponent(tenantId)}&serviceName=${encodeURIComponent(serviceName)}&currency=${encodeURIComponent(currency)}&theme=${theme}&branding=${!removeBranding}`;
+  const absoluteEmbedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-roi-calculator/embed?tenant=${encodeURIComponent(tenantId)}&serviceName=${encodeURIComponent(serviceName)}&currency=${encodeURIComponent(currency)}&theme=${theme}&branding=${!removeBranding}`;
 
-  const embedCode = `<iframe src="${absoluteEmbedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}&source=viral_roi_calculator" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+  const embedCode = `<iframe src="${absoluteEmbedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}&source=viral_roi_calculator" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
   const handleCopy = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -111,7 +111,7 @@ export default function ViralROICalculatorPage() {
 
             <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-gray-100">
                <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2 cursor-pointer">
-                  Remove "Powered by OHC" Badge
+                  Remove "Powered by OmniSolo" Badge
                   {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                </label>
                <div className="relative flex items-center">
@@ -155,7 +155,7 @@ export default function ViralROICalculatorPage() {
             </div>
             {!removeBranding && (
                <div className="text-center mt-4">
-                  <PoweredByOHC tenantId={tenantId} />
+                  <PoweredByOmniSolo tenantId={tenantId} />
                </div>
             )}
         </section>
@@ -181,7 +181,7 @@ export default function ViralROICalculatorPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the ROI Calculator 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the ROI Calculator 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

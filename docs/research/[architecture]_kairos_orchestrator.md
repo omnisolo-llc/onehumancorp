@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This report documents the architectural design and integration plan for the core KAIROS Orchestrator within the OneHumanCorp (OHC) platform. It evaluates the system from the perspective of our core personas (e.g., Maya, Carlos, Priya) to ensure the AI swarm operates seamlessly without race conditions, and that any orchestration complexity is abstracted behind a simple "1-Tap" mobile interface.
+This report documents the architectural design and integration plan for the core KAIROS Orchestrator within the OmniSolo (OHC) platform. It evaluates the system from the perspective of our core personas (e.g., Maya, Carlos, Priya) to ensure the AI swarm operates seamlessly without race conditions, and that any orchestration complexity is abstracted behind a simple "1-Tap" mobile interface.
 
 ## 2. Findings
 

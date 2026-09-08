@@ -2,10 +2,10 @@ import { test as base, expect, type Browser, type BrowserContext, type Page } fr
 import { authenticateRequest } from './authenticate';
 
 export const E2E_ADMIN_USER = {
-  email: 'test@example.com',
-  password: 'password123',
+  email: process.env.OMNISOLO_E2E_ADMIN_EMAIL ?? process.env.OHC_ADMIN_EMAIL ?? 'test@example.com',
+  password: process.env.OMNISOLO_E2E_ADMIN_PASSWORD ?? process.env.OHC_ADMIN_PASSWORD ?? 'password123',
   role: 'ADMIN',
-  organizationId: 'e2e-tenant',
+  organizationId: process.env.OMNISOLO_E2E_ADMIN_ORGANIZATION_ID ?? process.env.OHC_ADMIN_ORGANIZATION_ID ?? 'e2e-tenant',
 } as const;
 
 export const E2E_UNLIMITED_ADMIN_USER = {
@@ -25,7 +25,7 @@ export const E2E_MEMBER_USER = {
 type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_UNLIMITED_ADMIN_USER | typeof E2E_MEMBER_USER;
 
 async function loginAs(page: Page, user: E2EUser) {
-  const baseURL = process.env.BASE_URL ?? 'http://127.0.0.1:18789';
+  const baseURL = process.env.BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:18789';
   await authenticateRequest(page.request, {
     username: user.email,
     password: user.password,

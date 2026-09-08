@@ -56,14 +56,14 @@ We explored the small business platform market and mapped two distinct landscape
 ## 3. Track 3: OHC Gap & Pain Point Identification
 
 ### OHC Feature Audit
-Currently, OneHumanCorp aims to let users run a business from their phone in 10 minutes with AI agents. However, OHC currently lacks:
+Currently, OmniSolo aims to let users run a business from their phone in 10 minutes with AI agents. However, OHC currently lacks:
 - Invisible, autonomous agentic onboarding (Zero-click setup).
 - Proactive inventory management (AI ordering).
 - Unified, multi-modal mobile booking management.
 
 ### Gap Matrix (Shopify vs OHC)
 
-| Feature | Shopify | OneHumanCorp (Current) | OneHumanCorp (Vision) |
+| Feature | Shopify | OmniSolo (Current) | OmniSolo (Vision) |
 | :--- | :--- | :--- | :--- |
 | Setup Time | Days / Weeks | Hours | **< 10 Minutes** |
 | Mobile Management | Complex / Limited | Basic | **Primary / Agentic** |
@@ -104,7 +104,7 @@ journey
     Pick Theme: 2: Maya
     Configure Taxes/Shipping: 1: Maya
     Add Products Manually: 1: Maya
-  section OneHumanCorp
+  section OmniSolo
     Chat with AI Agent: 5: Maya
     Agent builds store invisibly: 5: AI Agent
     Review & Launch: 5: Maya

@@ -4,7 +4,7 @@
 **Invisible Magic Catalog: Autonomous Zero-Click Catalog Generation via AI Agents**
 
 ## 2. Problem Statement
-For OneHumanCorp (OHC)'s core personas—especially **Maya (baker, 28)** and **Priya (boutique owner, 35)**—adding new inventory to an online store is historically one of the most agonizing, high-friction points of running a business. They must take photos, crop them, write compelling product descriptions, decide on pricing, configure variants (size/color), and manage SEO metadata. This creates a massive "Content Creation Block" (identified in our top 10 SMB pain points).
+For OmniSolo (OHC)'s core personas—especially **Maya (baker, 28)** and **Priya (boutique owner, 35)**—adding new inventory to an online store is historically one of the most agonizing, high-friction points of running a business. They must take photos, crop them, write compelling product descriptions, decide on pricing, configure variants (size/color), and manage SEO metadata. This creates a massive "Content Creation Block" (identified in our top 10 SMB pain points).
 Currently, competitors like Shopify offer "AI writing assistants" that require prompting and editing. We need a solution that feels like magic: an invisible "Teammate" that takes a raw photo sent from a phone and completely creates the live product listing autonomously, reducing the setup time from hours to seconds.
 
 ## 3. Research Report

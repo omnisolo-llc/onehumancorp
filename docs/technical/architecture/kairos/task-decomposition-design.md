@@ -70,7 +70,7 @@ Tasks often spawn background sub-agents. This design tightly integrates the `sha
 
 ---
 *Authored by: Principal Product Architect & KAIROS Orchestrator (L7)*
-*Identity: One Human Corp*
+*Identity: OmniSolo*
 
 </div>
 

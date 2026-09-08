@@ -4,7 +4,7 @@
 
 Are you still asking agents for permission?
 
-One Human Corp (OHC) just unleashed the biggest evolution of our Agentic OS. Say goodbye to manual orchestrations and hello to **Absolute Autonomy**.
+OmniSolo (OHC) just unleashed the biggest evolution of our Agentic OS. Say goodbye to manual orchestrations and hello to **Absolute Autonomy**.
 
 **Here's what just shipped to the Swarm:**
 
@@ -19,6 +19,6 @@ Our agents don't ask for permission. They propose and execute based on your Visi
 
 Are you ready to build the future? Check out the new OHC Swarm.
 
-#OneHumanCorp #AI #AgenticOS #Bazel #Kubernetes #Rust #MachineLearning #AIAgents
+#OmniSolo #AI #AgenticOS #Bazel #Kubernetes #Rust #MachineLearning #AIAgents
 
 </div>

@@ -10,7 +10,7 @@ interface PostPurchaseShareWidgetProps {
 
 export function PostPurchaseShareWidget({ tenantId, orderId, storeName = 'Our Store' }: PostPurchaseShareWidgetProps) {
   const [copied, setCopied] = useState(false);
-  const referralLink = `https://ohc.app/shop/${tenantId}?ref=post_purchase_${orderId || 'default'}`;
+  const referralLink = `https://cloud.omnisolo.co/shop/${tenantId}?ref=post_purchase_${orderId || 'default'}`;
 
   const recordShare = () => {
     fetch(`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=post_purchase_share`, {
@@ -62,7 +62,7 @@ export function PostPurchaseShareWidget({ tenantId, orderId, storeName = 'Our St
             Share on WhatsApp
           </button>
           <button
-            onClick={() => openShare(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareText}\n\n⚡ Powered by OHC`)}`)}
+            onClick={() => openShare(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareText}\n\n⚡ Powered by OmniSolo`)}`)}
             className="w-full min-h-[44px] bg-black text-white py-2 px-4 rounded-md text-sm font-semibold"
           >
             Share on X

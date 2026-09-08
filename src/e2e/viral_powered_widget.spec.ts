@@ -24,7 +24,7 @@ test.describe('Viral Powered By OHC Widget', () => {
     await themeSelect.selectOption('dark');
 
     // 4. Try to remove branding, expect paywall
-    const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "Powered by OHC" Badge/i });
+    const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "OmniSolo" Badge/i });
     await removeBrandingCheckbox.click();
 
     await expect(page.getByRole('heading', { name: 'Upgrade to Remove Branding' })).toBeVisible();

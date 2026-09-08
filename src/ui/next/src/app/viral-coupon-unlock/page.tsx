@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import '../globals.css';
 
-import { PoweredByOHC } from "../components/PoweredByOHC";
+import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
 
 export default function ViralCouponUnlockPage() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function ViralCouponUnlockPage() {
   const [sharesRequired, setSharesRequired] = useState(3);
   const [copied, setCopied] = useState(false);
 
-  const generatedLink = `https://ohc.app/unlock/${tenant.toLowerCase().replace(/\s+/g, '-')}`;
+  const generatedLink = `https://cloud.omnisolo.co/unlock/${tenant.toLowerCase().replace(/\s+/g, '-')}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedLink);
@@ -161,7 +161,7 @@ export default function ViralCouponUnlockPage() {
                 </div>
 
                 <div className="mt-8 pt-6 border-t w-full text-center border-gray-100">
-                  <PoweredByOHC tenantId="growth" />
+                  <PoweredByOmniSolo tenantId="growth" />
                 </div>
               </div>
             </div>

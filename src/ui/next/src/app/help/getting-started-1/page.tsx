@@ -14,7 +14,7 @@ export default function GettingStartedArticle() {
             Getting Started with Your Store
           </h1>
           <p className="text-gray-700 text-lg leading-relaxed mb-8">
-            Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.
+            Welcome to OmniSolo! Let's get your business online in under 10 minutes.
           </p>
 
           <div className="space-y-6 mb-10">

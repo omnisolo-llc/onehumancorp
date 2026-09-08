@@ -1,7 +1,7 @@
 # OHC Market Research Report: Empowering the Small Business Owner
 
 ## 1. Executive Summary
-This report analyzes the competitive landscape and identifies key opportunities for OneHumanCorp (OHC) to dominate the small business platform space. Our core thesis: The market is underserved by existing "simple" builders (like Shopify and Wix) which still require significant technical and design cognitive load. OHC will win by abstracting this complexity through invisible AI agents, focusing on a mobile-first, 10-minute time-to-live experience.
+This report analyzes the competitive landscape and identifies key opportunities for OmniSolo (OHC) to dominate the small business platform space. Our core thesis: The market is underserved by existing "simple" builders (like Shopify and Wix) which still require significant technical and design cognitive load. OHC will win by abstracting this complexity through invisible AI agents, focusing on a mobile-first, 10-minute time-to-live experience.
 
 ## 2. Competitive Landscape
 
@@ -23,7 +23,7 @@ graph TD;
     C --> E[DNS Settings]
     C --> F[Inventory Management]
 
-    G[OneHumanCorp] -->|Provides| H(Invisible Agents)
+    G[OmniSolo] -->|Provides| H(Invisible Agents)
     H --> I{User only does:}
     I --> J[Answers Questions]
     I --> K[Approves AI Actions]

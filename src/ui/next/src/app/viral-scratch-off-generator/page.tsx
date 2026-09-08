@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 
 export default function ViralScratchOffGeneratorPage() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function ViralScratchOffGeneratorPage() {
     const prizes = discounts.split(',').map(d => d.trim()).filter(d => d);
     const prizeListStr = JSON.stringify(prizes);
 
-    let code = `<!-- OHC Scratch Off Widget -->
+    let code = `<!-- OmniSolo Scratch Off Widget -->
 <div id="ohc-scratch-off-widget"></div>
 <script>
   (function() {
@@ -42,7 +42,7 @@ export default function ViralScratchOffGeneratorPage() {
       code += `
     container.innerHTML += \`
         <div style="margin-top: 16px; font-size: 12px;">
-          <a href="${window.location.origin}/onboarding?ref=${tenant}&source=scratch_widget" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OHC</a>
+          <a href="${window.location.origin}/onboarding?ref=${tenant}&source=scratch_widget" target="_blank" style="color: #9ca3af; text-decoration: none;">⚡ Powered by OmniSolo</a>
         </div>\`;`;
     }
 
@@ -74,7 +74,7 @@ export default function ViralScratchOffGeneratorPage() {
   };
 
   const claimTrialExtension = () => {
-    const text = `I'm using an OHC Scratch Off widget. Learn more: ${window.location.origin}/onboarding?ref=${tenant}\n\n⚡ Powered by OHC`;
+    const text = `I'm using an OmniSolo Scratch Off widget. Learn more: ${window.location.origin}/onboarding?ref=${tenant}\n\n⚡ Powered by OmniSolo`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
     setShowSoftPaywall(false);
   };
@@ -109,7 +109,7 @@ export default function ViralScratchOffGeneratorPage() {
 
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 mt-4">
                         <div>
-                            <p className="text-sm font-semibold text-gray-900">Remove OHC Branding</p>
+                            <p className="text-sm font-semibold text-gray-900">Remove OmniSolo Branding</p>
                             <p className="text-xs text-gray-500">Requires Pro subscription</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
@@ -143,7 +143,7 @@ export default function ViralScratchOffGeneratorPage() {
 
                 {!hasPro && (
                     <div className="mt-6 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <PoweredByOHC tenantId={tenant} />
+                        <PoweredByOmniSolo tenantId={tenant} />
                     </div>
                 )}
             </div>
@@ -211,7 +211,7 @@ export default function ViralScratchOffGeneratorPage() {
             <div className="text-5xl mb-4">✨</div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Removing OHC branding is a Pro feature. Upgrade to our Pro plan to customize your widgets.
+              Removing OmniSolo branding is a Pro feature. Upgrade to our Pro plan to customize your widgets.
             </p>
 
             <button

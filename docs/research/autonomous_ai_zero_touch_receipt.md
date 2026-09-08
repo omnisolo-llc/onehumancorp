@@ -1,7 +1,7 @@
 # Architecture Design: Autonomous AI Zero-Touch Receipt and Expense Intelligence Engine
 
 ## 1. Executive Summary
-Small business owners (SMBs) consistently struggle with the administrative burden of tracking receipts, logging expenses, and maintaining financial records. The "Automation Expectation" trend highlights that anything that can be automated, must be. This document designs the "Autonomous AI Zero-Touch Receipt and Expense Intelligence Engine" for OneHumanCorp (OHC), addressing this critical gap by automatically ingesting, processing, and categorizing receipts through omnichannel inputs without requiring manual intervention from the business owner.
+Small business owners (SMBs) consistently struggle with the administrative burden of tracking receipts, logging expenses, and maintaining financial records. The "Automation Expectation" trend highlights that anything that can be automated, must be. This document designs the "Autonomous AI Zero-Touch Receipt and Expense Intelligence Engine" for OmniSolo (OHC), addressing this critical gap by automatically ingesting, processing, and categorizing receipts through omnichannel inputs without requiring manual intervention from the business owner.
 
 ## 2. Business Persona Journeys
 ### Maya (The Home Baker)

@@ -59,13 +59,13 @@ async fn simulate_promoter_draft(
     let parsed = serde_json::json!({
         "tiktok": "Check out our new product!
 
-⚡ Powered by OHC",
+⚡ OmniSolo",
         "instagram": "New arrival! Link in bio.
 
-⚡ Powered by OHC",
+⚡ OmniSolo",
         "facebook": "We just added a new product to our store.
 
-⚡ Powered by OHC",
+⚡ OmniSolo",
         "feature_type": "social_post_draft",
         "product_name": product_name
     });

@@ -1,6 +1,6 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# [AI Agent Department Architecture] OneHumanCorp (OHC)
+# [AI Agent Department Architecture] OmniSolo (OHC)
 
 ## Problem Statement
 Small business owners—whether they are a baker like Maya or a handyman like Carlos—are often overwhelmed by the technical and operational overhead of running their business. They must manage inventory, create websites, handle customer support, track finances, and ensure compliance without a dedicated staff. Existing tools either offer isolated chatbots or force owners to learn complex systems. There is a critical need for an invisible, continuous, and integrated "digital staff" that operates like functional business departments, proactively handling complexity and communicating in plain language, empowering non-technical owners to focus entirely on their craft.

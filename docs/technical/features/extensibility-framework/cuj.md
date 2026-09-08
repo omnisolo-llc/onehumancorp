@@ -2,7 +2,7 @@
 
 # CUJ: Extensible Skill Import Framework
 
-**Persona:** Human CEO | **Context:** Evolving "One Human Corp" from a Software Company into a Digital Marketing Agency by importing a custom Skill Blueprint.
+**Persona:** Human CEO | **Context:** Evolving "OmniSolo" from a Software Company into a Digital Marketing Agency by importing a custom Skill Blueprint.
 **Success Metrics:** Sub-minute ingestion of the YAML blueprint, automated generation of an org chart, successful tool binding, and dynamic scaling of the new department.
 
 ## 1. User Journey Overview

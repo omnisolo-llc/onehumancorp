@@ -39,7 +39,7 @@ test.describe('Viral Widget Builder E2E', () => {
     // Reload to apply localStorage
     await page.goto('/viral-powered-by-ohc-widget');
 
-    const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "Powered by OHC"/i });
+    const removeBrandingCheckbox = page.getByRole('checkbox', { name: /Remove "OmniSolo"/i });
 
     // As a non-pro user, checking should show the paywall modal
     await removeBrandingCheckbox.check();

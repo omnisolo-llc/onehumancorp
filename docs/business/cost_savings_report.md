@@ -1,7 +1,7 @@
 # Cost Optimization Analysis
 
 ## Executive Summary
-As part of our continuous effort to make OneHumanCorp accessible to small businesses, we've implemented multiple cost optimization features. These updates guarantee economic sustainability while delivering a user-friendly and transparent billing experience.
+As part of our continuous effort to make OmniSolo accessible to small businesses, we've implemented multiple cost optimization features. These updates guarantee economic sustainability while delivering a user-friendly and transparent billing experience.
 
 ## Key Optimizations Implemented
 

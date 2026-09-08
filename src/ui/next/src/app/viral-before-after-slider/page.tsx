@@ -22,7 +22,7 @@ export default function ViralBeforeAfterSliderPage() {
       const storedTenant = localStorage.getItem('business_display_name') || 'my-business';
       setTenant(storedTenant);
     }
-    document.title = "Before & After Slider | OHC";
+    document.title = "Before & After Slider | OmniSolo";
   }, []);
 
   const handleRemoveBranding = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,7 +32,7 @@ export default function ViralBeforeAfterSliderPage() {
     }
   };
 
-  const embedUrl = `https://ohc.app/api/v1/growth/viral-before-after/embed?tenant=${tenant}&title=${encodeURIComponent(title)}&before=${encodeURIComponent(beforeUrl)}&after=${encodeURIComponent(afterUrl)}&branding=${!hasPro}`;
+  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-before-after/embed?tenant=${tenant}&title=${encodeURIComponent(title)}&before=${encodeURIComponent(beforeUrl)}&after=${encodeURIComponent(afterUrl)}&branding=${!hasPro}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
   const handleCopy = () => {
@@ -96,7 +96,7 @@ export default function ViralBeforeAfterSliderPage() {
                             />
                         </div>
                         <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors flex items-center gap-2">
-                            Remove "Powered by OHC" Badge
+                            Remove "Powered by OmniSolo" Badge
                             {!hasPro && <span className="bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">PRO</span>}
                         </span>
                     </label>
@@ -176,7 +176,7 @@ export default function ViralBeforeAfterSliderPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Before & After Slider 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Before & After Slider 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

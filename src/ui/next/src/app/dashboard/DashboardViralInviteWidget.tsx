@@ -55,7 +55,7 @@ export function DashboardViralInviteWidget() {
 
   const handleShareX = (e: React.MouseEvent) => {
     e.preventDefault();
-    const text = `Start your business on OHC using my referral link: ${referralLink}`;
+    const text = `Start your business on OmniSolo using my referral link: ${referralLink}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -65,7 +65,7 @@ export function DashboardViralInviteWidget() {
         <div>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite a Business Owner</h2>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Generate a referral link through the OHC referral service and share it.
+            Generate a referral link through the OmniSolo referral service and share it.
           </p>
         </div>
         {!referralLink ? (

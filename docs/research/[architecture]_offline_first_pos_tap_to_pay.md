@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Small business owners need reliable payment processing regardless of internet connectivity. Maya (baker) often sells at farmer's markets with spotty cell reception. Carlos (handyman) takes payments in clients' basements where Wi-Fi doesn't reach. Fatima (food cart) operates in crowded festival environments where cellular networks are overloaded. Currently, OneHumanCorp (OHC) relies entirely on cloud connectivity for payment processing and inventory syncing. If the network drops, businesses halt. Competitors like Square and Shopify have robust "Offline Mode" capabilities, allowing merchants to swipe or tap cards, queue the transactions locally, and sync them automatically when connectivity is restored. OHC lacks an edge-caching, local-first synchronization architecture to enable uninterrupted Tap-to-Pay and Point-of-Sale (POS) operations.
+Small business owners need reliable payment processing regardless of internet connectivity. Maya (baker) often sells at farmer's markets with spotty cell reception. Carlos (handyman) takes payments in clients' basements where Wi-Fi doesn't reach. Fatima (food cart) operates in crowded festival environments where cellular networks are overloaded. Currently, OmniSolo (OHC) relies entirely on cloud connectivity for payment processing and inventory syncing. If the network drops, businesses halt. Competitors like Square and Shopify have robust "Offline Mode" capabilities, allowing merchants to swipe or tap cards, queue the transactions locally, and sync them automatically when connectivity is restored. OHC lacks an edge-caching, local-first synchronization architecture to enable uninterrupted Tap-to-Pay and Point-of-Sale (POS) operations.
 
 ## Research Report
 

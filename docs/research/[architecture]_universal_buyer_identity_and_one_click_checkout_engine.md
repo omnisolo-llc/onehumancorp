@@ -4,13 +4,13 @@
 Architect and Implement Universal Buyer Identity & One-Click Checkout Engine (OHC Pay)
 
 ## Problem Statement
-When a customer buys a custom cake from Maya (baker), they enter their email, shipping address, and credit card details. When that same customer later books a repair service from Carlos (handyman), they have to re-enter all of that information. For non-technical small business owners, cart abandonment is a major issue, often caused by friction at checkout. They need a system that recognizes repeat buyers *across the entire OneHumanCorp network*, enabling one-click checkout, instant booking, and deposit payments without any manual configuration required by the business owner.
+When a customer buys a custom cake from Maya (baker), they enter their email, shipping address, and credit card details. When that same customer later books a repair service from Carlos (handyman), they have to re-enter all of that information. For non-technical small business owners, cart abandonment is a major issue, often caused by friction at checkout. They need a system that recognizes repeat buyers *across the entire OmniSolo network*, enabling one-click checkout, instant booking, and deposit payments without any manual configuration required by the business owner.
 
 ## Research Report
 **Findings & Competitive Analysis:**
 - **Shopify (Shop Pay):** Shop Pay accounts for over 100 million buyers and increases checkout conversion by up to 50% compared to standard guest checkout. It uses email/phone verification to instantly recall saved credentials.
 - **Stripe (Link):** Stripe Link auto-fills payment and shipping details for customers across any Stripe-enabled site, yielding a 7x faster checkout experience.
-- **The Gap in OHC:** Currently, OneHumanCorp business owners operate as completely isolated islands from the buyer's perspective. There is no shared identity layer for buyers across tenants, meaning the network effect of millions of OHC businesses is wasted.
+- **The Gap in OHC:** Currently, OmniSolo business owners operate as completely isolated islands from the buyer's perspective. There is no shared identity layer for buyers across tenants, meaning the network effect of millions of OHC businesses is wasted.
 - **Architectural Requirement:** We need a strict multi-tenant backend that completely isolates merchant data (Maya cannot see Carlos's customers), but allows a *Buyer* to create a global identity (OHC Identity) that spans across merchants using Zero Trust and SPIFFE/SPIRE for secure identity assertion.
 
 ## Design Doc

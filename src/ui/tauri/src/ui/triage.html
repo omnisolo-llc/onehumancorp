@@ -574,7 +574,7 @@
           renderUI();
         } catch (e) {
           console.error(e);
-          // OHC Glassmorphism: Light/Dark mode glass styling for failure reports
+          // OmniSolo Glassmorphism: Light/Dark mode glass styling for failure reports
           const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           const bg = isDarkMode ? 'rgba(22, 22, 26, 0.7)' : 'rgba(255, 255, 255, 0.65)';
           const border = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.4)';
@@ -769,7 +769,7 @@
                 </div>
              `;
           } else if (featureType !== 'create_product' && featureType !== 'product_creation' && reviewingId === item.id) {
-             // OHC Premium Token library's translucent materials for Agent Draft section
+             // OmniSolo Premium Token library's translucent materials for Agent Draft section
              buttonsHtml = `
                  <div class="proposed-action glassmorphism" style="padding: 16px; margin-top: 12px; background: rgba(0, 102, 255, 0.05); backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.3); border-radius: 12px;">
                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">

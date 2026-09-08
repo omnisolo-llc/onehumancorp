@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import '../globals.css';
 
-import { PoweredByOHC } from "../components/PoweredByOHC";
+import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
 
 export default function ViralJobBoardGeneratorPage() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function ViralJobBoardGeneratorPage() {
     return { backgroundColor: '#fff', color: '#111827', borderColor: '#e5e7eb' };
   };
 
-  const generatedLink = `https://ohc.app/jobs/${boardTitle.toLowerCase().replace(/\s+/g, '-')}`;
+  const generatedLink = `https://cloud.omnisolo.co/jobs/${boardTitle.toLowerCase().replace(/\s+/g, '-')}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedLink);
@@ -157,7 +157,7 @@ export default function ViralJobBoardGeneratorPage() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                  <PoweredByOHC tenantId="growth" />
+                  <PoweredByOmniSolo tenantId="growth" />
                 </div>
               </div>
             </div>

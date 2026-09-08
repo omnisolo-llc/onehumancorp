@@ -16,7 +16,7 @@ export default function GiftCardsPage() {
   useEffect(() => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('business_display_name') || 'my-store' : 'my-store';
     setTenantId(tenant);
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co';
     setShareLink(`${origin}/gift-card?amount=${value}&ref=${tenant}`);
   }, [value]);
 
@@ -73,7 +73,7 @@ export default function GiftCardsPage() {
                           onChange={() => setRemoveBranding(!removeBranding)}
                           className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       />
-                      <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Badge (Pro)</span>
+                      <span className="text-sm font-medium text-gray-700">Remove "Powered by OmniSolo" Badge (Pro)</span>
                   </label>
                   {removeBranding && (
                       <p className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
@@ -117,7 +117,7 @@ export default function GiftCardsPage() {
                {!removeBranding && (
                   <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
                      <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}&source=gift_card`} target="_blank" className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 bg-white/10 rounded-full backdrop-blur-[30px] saturate-[210%] text-white hover:text-white" style={{ textDecoration: "none" }}>
-                         ⚡ Powered by OHC
+                         ⚡ Powered by OmniSolo
                      </a>
                   </div>
                )}
@@ -147,14 +147,14 @@ export default function GiftCardsPage() {
 
                 <div className="flex gap-2 mt-2">
                    <a
-                      href={`https://wa.me/?text=${encodeURIComponent(`Here is your $${value} gift card! Claim it here: ${shareLink} ${!removeBranding ? '⚡ Powered by OHC' : ''}`)}`}
+                      href={`https://wa.me/?text=${encodeURIComponent(`Here is your $${value} gift card! Claim it here: ${shareLink} ${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`)}`}
                       target="_blank" rel="noreferrer"
                       className="flex-1 py-2 bg-[#25D366] text-white rounded-lg text-center font-semibold text-sm shadow-sm hover:opacity-90"
                    >
                      WhatsApp
                    </a>
                    <a
-                      href={`mailto:?subject=Your $${value} Gift Card&body=${encodeURIComponent(`Here is your $${value} gift card! Claim it here: \n\n${shareLink}\n\n${!removeBranding ? '⚡ Powered by OHC' : ''}`)}`}
+                      href={`mailto:?subject=Your $${value} Gift Card&body=${encodeURIComponent(`Here is your $${value} gift card! Claim it here: \n\n${shareLink}\n\n${!removeBranding ? '⚡ Powered by OmniSolo' : ''}`)}`}
                       className="flex-1 py-2 bg-gray-800 text-white rounded-lg text-center font-semibold text-sm shadow-sm hover:opacity-90"
                    >
                      Email

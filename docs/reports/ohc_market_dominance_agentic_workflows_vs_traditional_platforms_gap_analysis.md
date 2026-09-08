@@ -2,7 +2,7 @@
 
 ## 1. Context & Motivation
 
-OneHumanCorp (OHC) has a unique competitive advantage: we do not merely provide software tools; we provide **Agentic Workflows**. A primary feature of these workflows is ensuring high availability and state preservation, whether a user operates in Cloud mode or transitions to Standalone.
+OmniSolo (OHC) has a unique competitive advantage: we do not merely provide software tools; we provide **Agentic Workflows**. A primary feature of these workflows is ensuring high availability and state preservation, whether a user operates in Cloud mode or transitions to Standalone.
 
 Recent analysis identified that the Interop Layer responsible for mode-switch synchronizations suffered from potential deadlocks during mission handoffs.
 

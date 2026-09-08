@@ -39,7 +39,7 @@ test.describe('Regression Audit: Verify Fake Data Removed and Features Rewired',
     // Verify the generated promo text from the real API (or an adapter returning the correct structure)
     await expect(resultContainer).toContainText('Spring Cleaning Special!', { timeout: 15000 });
     await expect(resultContainer).toContainText('30% OFF');
-    await expect(resultContainer).toContainText('⚡ Powered by OHC');
+    await expect(resultContainer).toContainText('⚡ OmniSolo');
   });
 
 });

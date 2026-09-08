@@ -1,5 +1,5 @@
 "use client";
-import { PoweredByOHC } from "../components/PoweredByOHC";
+import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -195,7 +195,7 @@ export default function ShareToUnlockGeneratorPage() {
                         </div>
 
                         <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
-                            <PoweredByOHC tenantId="growth" />
+                            <PoweredByOmniSolo tenantId="growth" />
                         </div>
                     </div>
                 </div>

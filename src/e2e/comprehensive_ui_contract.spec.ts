@@ -173,7 +173,7 @@ async function gotoReady(page: Page, route: string) {
       if (control.disabled || control.readOnly || control.value) continue;
       if (control instanceof HTMLInputElement) {
         if (['button', 'checkbox', 'file', 'hidden', 'image', 'radio', 'range', 'reset', 'submit'].includes(control.type)) continue;
-        control.value = control.type === 'url' ? 'https://ohc.app' : control.type === 'number' ? '1' : 'Audit value';
+        control.value = control.type === 'url' ? 'https://omnisolo.co' : control.type === 'number' ? '1' : 'Audit value';
       } else {
         control.value = 'Audit value';
       }

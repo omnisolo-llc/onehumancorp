@@ -3,7 +3,7 @@
 # OHC Product Vision & Market Strategy
 
 ## 1. Mission: The Hybrid Agentic OS
-One Human Corp (OHC) is building the world's first **Hybrid Agentic Operating System**. Unlike competitors that force a binary choice between local privacy and cloud scalability, OHC-HA (Hybrid Architecture) provides a seamless bridge between the two.
+OmniSolo (OHC) is building the world's first **Hybrid Agentic Operating System**. Unlike competitors that force a binary choice between local privacy and cloud scalability, OHC-HA (Hybrid Architecture) provides a seamless bridge between the two.
 
 ### The OHC Mandate
 1. **Absolute Autonomy**: Agents execute based on Market Reality.

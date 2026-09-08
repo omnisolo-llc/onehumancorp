@@ -1,7 +1,7 @@
 # Title: KAIROS AI OS Premium Design Blueprint
 
 ## Problem Statement
-The One Human Corp (OHC) Hybrid Agentic OS requires a fluid and consistent architecture across completely different operating models. We need to formalize the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OHC "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier. Currently, we lack a single, unified premium design document that covers the master implementation loop (Think -> Act -> Observe -> Decide).
+The OmniSolo (OHC) Hybrid Agentic OS requires a fluid and consistent architecture across completely different operating models. We need to formalize the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OHC "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier. Currently, we lack a single, unified premium design document that covers the master implementation loop (Think -> Act -> Observe -> Decide).
 
 ## Research Report
 The KAIROS orchestrator must handle:

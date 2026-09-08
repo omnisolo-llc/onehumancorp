@@ -1,16 +1,16 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# One Human Corp: Strategic Roadmap
+# OmniSolo: Strategic Roadmap
 
 ## Vision
-"One Human Corp" is an innovative application that aggregates tools and orchestrates highly specialized AI agents, empowering a single individual to run an entire enterprise. The ultimate goal is to provide everything a customer needs to work on *any* given area. We provide a flexible, extensible framework so that users can continuously import new skills, business areas, and domain knowledge to tackle any market.
+"OmniSolo" is an innovative application that aggregates tools and orchestrates highly specialized AI agents, empowering a single individual to run an entire enterprise. The ultimate goal is to provide everything a customer needs to work on *any* given area. We provide a flexible, extensible framework so that users can continuously import new skills, business areas, and domain knowledge to tackle any market.
 
 ## Market Research: Pain Points of Real Online Small Businesses
-Small businesses face immense challenges navigating today's competitive online landscape. Based on market research, here are the core pain points that real small business owners experience, and how "One Human Corp" directly solves them:
+Small businesses face immense challenges navigating today's competitive online landscape. Based on market research, here are the core pain points that real small business owners experience, and how "OmniSolo" directly solves them:
 
 1. **Wearing Too Many Hats (Time & Context Overload)**
    - *Pain Point*: Small business owners are exhausted by juggling too many roles—acting as the CEO, accountant, marketer, customer support, and IT department simultaneously.
-   - *Solution*: One Human Corp delegates these operations to specialized AI agents. The human user simply acts as the CEO, guiding high-level strategy while the AI workforce executes the day-to-day operations.
+   - *Solution*: OmniSolo delegates these operations to specialized AI agents. The human user simply acts as the CEO, guiding high-level strategy while the AI workforce executes the day-to-day operations.
 
 2. **Rising Costs, Shrinking Margins & Cash Flow Headaches**
    - *Pain Point*: Inflation, late payments, and the high cost of human talent squeeze margins. Managing cash flow, monitoring profitability, and handling invoicing efficiently is difficult without a dedicated finance team.
@@ -33,7 +33,7 @@ Small businesses face immense challenges navigating today's competitive online l
    - *Solution*: On-demand AI employees across various domains provide immediate access to top-tier "talent." The CEO can instantly spin up an entire product development or operations team without recruitment costs, interviews, or delays.
 
 ## Market Research Supplemental: Detailed Pain Points of Small Businesses Online
-To ensure "One Human Corp" is tackling the most critical online small business pain points, we have incorporated direct market research highlighting the top challenges:
+To ensure "OmniSolo" is tackling the most critical online small business pain points, we have incorporated direct market research highlighting the top challenges:
 
 1. **Cash Flow Management**:
    - *Pain Point*: Maintaining cash flow is tricky. Getting money from sales into bank accounts quickly without high fees is a struggle, and it is the most pressing issue for many small businesses.
@@ -43,10 +43,10 @@ To ensure "One Human Corp" is tackling the most critical online small business p
    - *Solution*: Orchestrating AI agents significantly reduces overhead costs associated with traditional operations, ensuring that margins remain healthy.
 3. **Hiring and/or Retaining Quality Staff**:
    - *Pain Point*: To be successful, businesses must hire great people and keep them. However, turnover and the cost of quality staff remain severe pain points.
-   - *Solution*: "One Human Corp" entirely mitigates this by allowing the CEO to provision an unlimited number of highly-skilled, specialized AI Agents (SWEs, PMs, Marketers) on-demand, who never churn.
+   - *Solution*: "OmniSolo" entirely mitigates this by allowing the CEO to provision an unlimited number of highly-skilled, specialized AI Agents (SWEs, PMs, Marketers) on-demand, who never churn.
 
 ## Core Concepts & Framework
-To structure this vast capability, One Human Corp is built on multiple layers of concepts. Let's start by modeling our initial rollout: **The Software Company**.
+To structure this vast capability, OmniSolo is built on multiple layers of concepts. Let's start by modeling our initial rollout: **The Software Company**.
 
 1. **Domain Knowledge**: The specific area the corporation is about. The system is an extensible framework designed so users can import new skills and domains. In this foundational case, the domain is a *Software Company*.
 
@@ -99,7 +99,7 @@ When the CEO defines an issue or sets a goal, the entire company is mobilized co
 - **Hybrid Identity Management**: Integrate unified identity issuance (SPIFFE/SPIRE) to provide secure, verifiable identities for both humans and AI agents.
 
 ### The Extensibility Framework: Importing New Skills and Domain Knowledge
-The core power of "One Human Corp" is its ability to learn any business domain. The system implements a robust framework for users to continuously import new skills and domains:
+The core power of "OmniSolo" is its ability to learn any business domain. The system implements a robust framework for users to continuously import new skills and domains:
 - **Skill Blueprints (JSON/Protobuf)**: Users can upload domain-specific blueprints. These define the new roles, their specific contexts, and the standard operating procedures (SOPs) for that industry.
 - **Dynamic Org Chart Generation**: When a new domain is imported (e.g., Legal Consulting), the Orchestrator autonomously generates the required hierarchy (e.g., Senior Partner Agent manages Associate Agents).
 - **Plug-and-Play MCP Tools**: If the new domain requires specific external software (e.g., specialized CAD software for architecture), the user simply registers an MCP (Model Context Protocol) endpoint. The agents immediately understand how to interact with the new tool via the Switchboard.
@@ -114,7 +114,7 @@ The core power of "One Human Corp" is its ability to learn any business domain. 
 ### Phase 4: Scaling, Marketplace, and Enterprise Operations (Q1-Q2 2027)
 *Goal: Create a thriving ecosystem of plug-and-play AI talent and tools, fully resolving all small business pain points at a massive scale.*
 - **Advanced Autonomous Execution**: Agents become capable of self-healing workflows, analyzing long-term market trends, proactively identifying issues, and suggesting strategic pivots without waiting for a daily prompt from the CEO.
-- **The "One Human Corp" Marketplace**: Launch a community-driven marketplace. Users can buy, sell, and share highly specialized agents (e.g., a "TikTok Virality Expert Agent"), custom organizational templates, and unique tool integrations.
+- **The "OmniSolo" Marketplace**: Launch a community-driven marketplace. Users can buy, sell, and share highly specialized agents (e.g., a "TikTok Virality Expert Agent"), custom organizational templates, and unique tool integrations.
 - **Deep Analytics & Real-Time Auditing**: Provide the CEO with real-time financial tracking, token burn-rate forecasting, and deep actionable insights, completely eliminating the "Lack of Insights" pain point.
 
 ### Phase 5: World-Scale Workforce (Multi-Cluster Federation)
@@ -135,7 +135,7 @@ The core power of "One Human Corp" is its ability to learn any business domain. 
 - **VRAM Quota Management**: Department-level GPU budgets to prevent runaway compute costs.
 
 ### Phase 8: Advanced Agentic Capabilities (The "Top 50" Mandate)
-*Goal: [COMPLETED] Evolve One Human Corp into the definitive platform for AI Agent orchestration by integrating the Top 50 capabilities mapped from leading AI frameworks (OpenClaw, CrewAI, AutoGen, Claude Code).*
+*Goal: [COMPLETED] Evolve OmniSolo into the definitive platform for AI Agent orchestration by integrating the Top 50 capabilities mapped from leading AI frameworks (OpenClaw, CrewAI, AutoGen, Claude Code).*
 
 This strategic push will directly tackle the top 5 urgent capability gaps with a distinct "OHC Advantage", guaranteeing our position as the market leader:
 
@@ -183,7 +183,7 @@ The newly public Claude Code repository surfaced several first-class product fea
 
 ---
 
-## One Human Corp: Cloud-Native Hybrid Architecture as Code
+## OmniSolo: Cloud-Native Hybrid Architecture as Code
 
 This architecture defines the "Hybrid Agentic OS"—a framework where organizational structures, roles, and tool integrations are managed as Infrastructure as Code (IaC). The system is designed to run on a Kubernetes (K8s) cluster, allowing a human CEO to manage an "Alphabet-style" conglomerate. It supports Human-Agent Hybrid Teams, where any role can be filled by a human or an AI agent, and every tool integration follows a standardized interface to ensure zero vendor lock-in.
 

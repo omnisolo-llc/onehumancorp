@@ -6,7 +6,7 @@
 **Analyst:** Principal Product Researcher & Oracle (L7)
 
 ## 1. Executive Summary
-This report analyzes the Agent Harness isolation strategies within the leaked Claude Code repository (v2.1.88) and compares them against One Human Corp's (OHC) current hybrid architecture (OHC-HA).
+This report analyzes the Agent Harness isolation strategies within the leaked Claude Code repository (v2.1.88) and compares them against OmniSolo's (OHC) current hybrid architecture (OHC-HA).
 The objective is to identify critical gaps in OHC's execution sandboxing and define an actionable implementation mission.
 
 ## 2. Claude Code: Harness Isolation Deep Dive

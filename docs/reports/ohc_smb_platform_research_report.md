@@ -4,7 +4,7 @@
 **Focus:** Driving OHC's market dominance in the small business platform space.
 
 ## Executive Summary
-This report analyzes the global SMB platform market to identify how OneHumanCorp (OHC) can capture non-technical users who are currently underserved by complex tools like Shopify and overly simplistic tools like GoDaddy. The core strategy is **invisible AI automation**—making complex tasks like marketing and customer communication happen automatically while the user simply approves the actions from their mobile device.
+This report analyzes the global SMB platform market to identify how OmniSolo (OHC) can capture non-technical users who are currently underserved by complex tools like Shopify and overly simplistic tools like GoDaddy. The core strategy is **invisible AI automation**—making complex tasks like marketing and customer communication happen automatically while the user simply approves the actions from their mobile device.
 
 ---
 

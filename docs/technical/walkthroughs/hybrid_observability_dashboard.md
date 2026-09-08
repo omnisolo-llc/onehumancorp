@@ -2,7 +2,7 @@
 
 # Full-Spectrum Hybrid Observability Dashboard Walkthrough
 
-Welcome to the interactive walkthrough for the Full-Spectrum Hybrid Observability Dashboard. The One Human Corp (OHC) architecture demands that every feature exposes high-fidelity metrics via OpenTelemetry and Prometheus, empowering agents and the Human CEO with complete visibility.
+Welcome to the interactive walkthrough for the Full-Spectrum Hybrid Observability Dashboard. The OmniSolo (OHC) architecture demands that every feature exposes high-fidelity metrics via OpenTelemetry and Prometheus, empowering agents and the Human CEO with complete visibility.
 
 ## Architecture Flow
 

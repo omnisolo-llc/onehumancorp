@@ -138,7 +138,7 @@ describe('WebsiteBuilderPage', () => {
     fireEvent.click(screen.getByText('Next'));
 
     // Step 8
-    fireEvent.click(screen.getByText('Free OHC Domain'));
+    fireEvent.click(screen.getByText('Free OmniSolo Domain'));
 
     // Step 8.5
     fireEvent.click(screen.getByText('Next'));
@@ -260,7 +260,7 @@ describe('WebsiteBuilderPage', () => {
       // 3 + 1 PoweredBy (the powered by component isn't wrapped in draggable-block anymore based on actual implementation)
       // Wait for it to not be empty
       expect(screen.getAllByTestId('draggable-block').length).toBe(3);
-      expect(screen.getByText('⚡ Powered by OHC')).toBeInTheDocument();
+      expect(screen.getByText('⚡ Powered by OmniSolo')).toBeInTheDocument();
     });
 
     const blocks = screen.getAllByTestId('draggable-block');

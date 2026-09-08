@@ -4,7 +4,7 @@
 Instant Localized Payouts and Virtual Card Issuing Engine
 
 ## Problem Statement
-Small business owners—like Maya the baker or Fatima the food cart operator—often rely on deposits or daily sales to buy the very supplies they need to fulfill orders. Traditional payment processors (and leading platform competitors) hold funds for 2-5 business days before paying out to an external bank account. This artificial delay creates a cash flow choke point that stifles business growth and limits daily operations for micro-merchants. OneHumanCorp needs to bypass this latency entirely by issuing a platform-native Virtual Wallet and Business Debit Card, providing true instant liquidity the second a transaction clears.
+Small business owners—like Maya the baker or Fatima the food cart operator—often rely on deposits or daily sales to buy the very supplies they need to fulfill orders. Traditional payment processors (and leading platform competitors) hold funds for 2-5 business days before paying out to an external bank account. This artificial delay creates a cash flow choke point that stifles business growth and limits daily operations for micro-merchants. OmniSolo needs to bypass this latency entirely by issuing a platform-native Virtual Wallet and Business Debit Card, providing true instant liquidity the second a transaction clears.
 
 ## Research Report
 ### Competitive Analysis
@@ -14,7 +14,7 @@ Small business owners—like Maya the baker or Fatima the food cart operator—o
 - **GoDaddy:** Basic POS integration with external banks. Instant payouts usually carry a 1-2% extra penalty fee.
 
 ### Findings
-If OneHumanCorp (OHC) acts as the ledger of record (in partnership with an embedded finance provider like Stripe Issuing or Unit), we can instantly clear funds to an internal OHC Wallet balance. Users get an immediate virtual card (Apple Pay / Google Pay ready) to spend those funds on supplies with zero delay and zero transfer fees, establishing immense platform stickiness.
+If OmniSolo (OHC) acts as the ledger of record (in partnership with an embedded finance provider like Stripe Issuing or Unit), we can instantly clear funds to an internal OHC Wallet balance. Users get an immediate virtual card (Apple Pay / Google Pay ready) to spend those funds on supplies with zero delay and zero transfer fees, establishing immense platform stickiness.
 
 ## Design Doc
 

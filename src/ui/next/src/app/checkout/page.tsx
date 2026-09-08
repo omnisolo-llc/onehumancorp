@@ -166,7 +166,7 @@ function CheckoutContent() {
           <section className="app-card rounded-3xl border border-gray-200 bg-white/70 p-6 shadow-lg md:p-8">
             <div className="flex items-center justify-between border-b border-gray-200 pb-5">
               <div>
-                <h2 className="font-outfit text-xl font-bold">{tier ? `OHC ${tier} Plan` : product?.title}</h2>
+                <h2 className="font-outfit text-xl font-bold">{tier ? `OmniSolo ${tier} Plan` : product?.title}</h2>
                 <p className="mt-1 text-sm text-gray-600">{tier ? "Final pricing and eligibility are confirmed by billing." : `Quantity: ${quantity}`}</p>
               </div>
               {total !== null && <span className="font-outfit text-xl font-bold">${(total / 100).toFixed(2)}</span>}

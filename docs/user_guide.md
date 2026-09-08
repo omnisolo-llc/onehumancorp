@@ -88,7 +88,7 @@ Manage your monthly plan, view your past bills, and invite people to help run yo
 You can check what plan you are on by going to the Billing page. If your business is growing and you need more features, you can upgrade your plan at any time.
 
 ### Viewing Your Bills
-You can see a history of all the payments you have made to OneHumanCorp. This makes it easy to keep track of your expenses for your own records.
+You can see a history of all the payments you have made to OmniSolo. This makes it easy to keep track of your expenses for your own records.
 
 ### Inviting Team Members
 If you have business partners or staff who need to access your store settings, you can invite them to your team. Just enter their email address and they will get an invite to join.

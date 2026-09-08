@@ -22,8 +22,8 @@ export default function ShareAndSaveWidgetPage() {
   }, []);
 
   const handleShareOnTwitter = () => {
-    const text = "I'm checking out this amazing store on OHC! Discover more at:";
-    const url = `https://ohc.app/store/${tenantId}`;
+    const text = "I'm checking out this amazing store on OmniSolo! Discover more at:";
+    const url = `https://cloud.omnisolo.co/store/${tenantId}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
 
     setShareOpened(true);
@@ -96,14 +96,14 @@ export default function ShareAndSaveWidgetPage() {
               onChange={handleBrandingToggle}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
             />
-            Remove "Powered by OHC" Badge
+            Remove "Powered by OmniSolo" Badge
             {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ml-1">PRO</span>}
           </label>
 
           {!removeBranding && (
             <div className="text-center">
               <a href={`/onboarding?ref=${tenantId}`} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                ⚡ Powered by OHC
+                ⚡ Powered by OmniSolo
               </a>
             </div>
           )}
@@ -129,7 +129,7 @@ export default function ShareAndSaveWidgetPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Share and Save Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Share and Save Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

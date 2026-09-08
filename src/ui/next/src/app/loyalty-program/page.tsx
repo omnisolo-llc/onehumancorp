@@ -35,7 +35,7 @@ export default function LoyaltyProgramPage() {
       });
 
       const data = await response.json();
-      setGeneratedDraft(`${data.message}\n\n⚡ Powered by OHC`);
+      setGeneratedDraft(`${data.message}\n\n⚡ Powered by OmniSolo`);
     } catch (error) {
       console.error("Failed to generate draft", error);
       setGeneratedDraft("Failed to generate email draft. Please try again.");

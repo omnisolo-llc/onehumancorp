@@ -4,7 +4,7 @@
 
 ## 🔬 Executive Summary
 
-As the Principal Product Researcher & Oracle (L7), I have analyzed the architecture of leading AI agent environments—specifically **Claude Code** and **OpenClaw**—to identify critical gaps in the OHC (One Human Corp) Agentic OS.
+As the Principal Product Researcher & Oracle (L7), I have analyzed the architecture of leading AI agent environments—specifically **Claude Code** and **OpenClaw**—to identify critical gaps in the OHC (OmniSolo) Agentic OS.
 
 The defining characteristic of next-generation agent swarms is their **Agent Harness**: the sandboxed, observable execution boundary. OHC's current direct-execution model lacks the robust OS-level isolation and network telemetry observed in competitors.
 

@@ -43,7 +43,7 @@ Business owners are losing track of customer inquiries because they receive mess
 *   **Reputation:** Meta's APIs are reliable but have strict 24-hour reply window policies.
 
 **Design Doc:**
-*   **Integration Flow:** The user visits the OHC settings page and clicks "Connect Social Media". They authenticate via Meta/TikTok.
+*   **Integration Flow:** The user visits the OmniSolo settings page and clicks "Connect Social Media". They authenticate via Meta/TikTok.
 *   **User Experience (375px Mobile):** A new "Unified Inbox" tab appears on the mobile app. All messages are aggregated into a single feed. Each message clearly displays the source icon (e.g., Instagram).
 *   **AI Points:** OHC's AI can automatically draft suggested replies based on previous customer interactions and the business's FAQ.
 *   **Cloud vs. Standalone:** Cloud mode will utilize OHC webhooks to receive real-time messages. Standalone mode can poll APIs directly from the local device to maintain privacy.

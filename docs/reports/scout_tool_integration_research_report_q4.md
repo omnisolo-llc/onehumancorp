@@ -1,6 +1,6 @@
 # Scout: Tool Integration Research Q4
 
-This report evaluates seven critical integrations aimed at solving real-world pain points for small business owners using One Human Corp (OHC) in both Cloud and Standalone environments.
+This report evaluates seven critical integrations aimed at solving real-world pain points for small business owners using OmniSolo (OHC) in both Cloud and Standalone environments.
 
 ## 1. Social Media: Meta Graph API (Unified Inbox)
 Small business owners often miss messages scattered across Instagram, Facebook, and WhatsApp. Integrating the Meta Graph API allows OHC to consolidate these channels into a single unified inbox. Users can reply to all messages from one place, ensuring no lead is missed. This requires a standard OAuth flow and webhook processing, which is fully viable in both Cloud and Standalone modes.

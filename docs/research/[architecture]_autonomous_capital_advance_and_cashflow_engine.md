@@ -14,7 +14,7 @@ For owners like Carlos (handyman) or Priya (boutique owner), cash flow is the di
 - **Wix & Squarespace**: Limited native financial services; heavily reliant on third-party app stores which breaks the seamless user experience.
 - **GoDaddy**: Basic payment processing, no native capital advance features.
 
-**OneHumanCorp Opportunity**
+**OmniSolo Opportunity**
 By leveraging our deep knowledge of the merchant's unified ledger (invoices, bookings, catalog sales), we can accurately underwrite risk invisibly using an AI-driven background model. OHC can offer instant capital advances where repayment is automatically deducted as a small percentage of future incoming revenue, completely removing the stress of manual loan repayments.
 
 ## Design Doc

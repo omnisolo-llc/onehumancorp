@@ -31,7 +31,7 @@ pub struct LlmVoiceTurnPlanner;
 impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
     async fn plan_turn(&self, session_id: &str, user_text: &str) -> Result<VoiceTurnPlan, String> {
         let prompt = format!(
-            "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, GENERAL_HELP, ORDER_FOOD, or GENERAL_INQUIRY. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or if the caller wants to place an order (ORDER_FOOD), immediately offer to send them a secure ordering link via SMS and include the link (e.g., https://pay.ohc.com/store/voice) in the sms_body. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
+            "You are the OmniSolo voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, GENERAL_HELP, ORDER_FOOD, or GENERAL_INQUIRY. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent, or if the caller wants to place an order (ORDER_FOOD), immediately offer to send them a secure ordering link via SMS and include the link (e.g., https://pay.ohc.com/store/voice) in the sms_body. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
         );
 
         let provider = std::env::var("OHC_VOICE_LLM_PROVIDER")

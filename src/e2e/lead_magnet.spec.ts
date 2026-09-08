@@ -13,7 +13,7 @@ test.describe('Lead Magnet Viral Loop', () => {
     await expect(page.locator('h3').filter({ hasText: 'Unlock the Ultimate Business Checklist' })).toBeVisible();
 
     // Viral loop footer should exist in the live preview
-    const loopLink = page.locator('a', { hasText: '⚡ Powered by OHC' }).first();
+    const loopLink = page.locator('a', { hasText: '⚡ OmniSolo' }).first();
     await expect(loopLink).toBeVisible();
 
     const href = await loopLink.getAttribute('href');

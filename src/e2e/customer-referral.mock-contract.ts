@@ -36,8 +36,8 @@ test.describe('Customer Referral Program Growth Loop', () => {
 
         // Ensure the referral growth loop is intact in the generated iframe code
         const embedCode = await page.locator('pre').innerText();
-        expect(embedCode).toContain('<iframe src="https://ohc.app/api/v1/growth/customer-referral/embed');
-        expect(embedCode).toContain('⚡ Powered by OHC');
+        expect(embedCode).toContain('<iframe src="https://omnisolo.co/api/v1/growth/customer-referral/embed');
+        expect(embedCode).toContain('⚡ OmniSolo');
 
         // Check the backend embed API endpoint directly to ensure it renders correctly
         const response = await request.get('/api/v1/growth/customer-referral/embed?tenant=maya-cakes&give=20&get=25');
@@ -45,7 +45,7 @@ test.describe('Customer Referral Program Growth Loop', () => {
 
         const html = await response.text();
         expect(html).toContain('Give $20, Get $25');
-        expect(html).toContain('⚡ Powered by OHC');
+        expect(html).toContain('⚡ OmniSolo');
 
         // Check the backend embed API endpoint directly when branding is hidden
         const responseNoBranding = await request.get('/api/v1/growth/customer-referral/embed?tenant=maya-cakes&give=20&get=25&hideBranding=true');
@@ -53,7 +53,7 @@ test.describe('Customer Referral Program Growth Loop', () => {
 
         const htmlNoBranding = await responseNoBranding.text();
         expect(htmlNoBranding).toContain('Give $20, Get $25');
-        expect(htmlNoBranding).not.toContain('⚡ Powered by OHC');
+        expect(htmlNoBranding).not.toContain('⚡ OmniSolo');
     });
 
     test('should show soft paywall when attempting to remove branding without pro', async ({ page }) => {
@@ -87,7 +87,7 @@ test.describe('Customer Referral Program Growth Loop', () => {
         await expect(page.locator('text=Pro Feature')).not.toBeVisible();
 
         // Preview section should hide the branding
-        await expect(page.locator('text=⚡ Powered by OHC')).not.toBeVisible();
+        await expect(page.locator('text=⚡ OmniSolo')).not.toBeVisible();
 
         await page.locator('button', { hasText: 'Generate Widget Embed' }).click();
         const modal = page.locator('.fixed.inset-0').first();
@@ -95,7 +95,7 @@ test.describe('Customer Referral Program Growth Loop', () => {
 
         // The textarea code should NOT include the branding
         const preCode = await page.locator('pre').innerText();
-        expect(preCode).not.toContain('>⚡ Powered by OHC</a></div>`'); // The static html part
+        expect(preCode).not.toContain('>⚡ OmniSolo</a></div>`'); // The static html part
         expect(preCode).toContain('hideBranding=true');
     });
 });

@@ -1,7 +1,7 @@
 # Integrations Research Report: Q2
 
 **Executive Summary:**
-As the Principal Integrations Engineer, I have evaluated seven key third-party integrations to enhance the OneHumanCorp (OHC) platform. These integrations focus on solving critical pain points for our core SMB personas (e.g., Maya the Baker, Leo the Music Tutor) while adhering to our "Radical Simplicity" core value.
+As the Principal Integrations Engineer, I have evaluated seven key third-party integrations to enhance the OmniSolo (OHC) platform. These integrations focus on solving critical pain points for our core SMB personas (e.g., Maya the Baker, Leo the Music Tutor) while adhering to our "Radical Simplicity" core value.
 
 All evaluations consider the user experience first (requiring zero technical knowledge) and are designed to seamlessly empower our internal AI departments.
 
@@ -20,7 +20,7 @@ SMBs like Maya the Baker receive orders and inquiries across multiple platforms 
 *   **Cloud/Standalone:** Cloud mode is straightforward (OHC acts as the centralized webhook receiver). Standalone mode might be challenging due to Meta's app verification requirements for custom webhook endpoints, but OHC could act as a proxy.
 
 **Design Doc:**
-*   **Integration Point:** The user connects their Facebook/Instagram account via an OAuth popup in the OHC settings ("Connect Social Media").
+*   **Integration Point:** The user connects their Facebook/Instagram account via an OAuth popup in the OmniSolo settings ("Connect Social Media").
 *   **Trigger:** Incoming message webhook from Meta.
 *   **Action:** OHC normalizes the message into a generic `InboundMessage` format. If it matches a known customer profile, it updates the conversation history. The "Ambassador" AI is triggered to evaluate if an auto-reply or action (like generating a quote) is needed.
 *   **User View:** The business owner sees a unified "Inbox" screen showing the message, the platform icon (Instagram/WhatsApp), and a draft AI response ready to approve or edit.
@@ -144,7 +144,7 @@ SMBs like Fatima the Food Cart Operator may have poor mobile data connectivity o
 
 **Research Report:**
 *   **Tool:** Twilio API
-*   **Ease of Use (for SMB):** Completely transparent. They just provide their phone number in OHC settings.
+*   **Ease of Use (for SMB):** Completely transparent. They just provide their phone number in OmniSolo settings.
 *   **Pricing:** Pay-per-message. OHC needs to manage A2P 10DLC compliance in the US.
 *   **Reputation/Reliability:** The industry leader in programmable SMS.
 *   **Cloud/Standalone:** Cloud mode uses OHC Twilio pool. Standalone can accept custom credentials.

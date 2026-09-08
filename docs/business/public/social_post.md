@@ -2,7 +2,7 @@
 
 # 🚀 Unleashing the Swarm: Omni-Context Routing & Swarm Intelligence in OHC OS 🌐
 
-We are thrilled to unveil the largest core upgrade to the **OHC Agentic Operating System** since its inception! At One Human Corp (OHC), our mission is simple: to empower *one* human to orchestrate a vast, intelligent swarm of AI agents with *zero friction* and absolute *visual delight*.
+We are thrilled to unveil the largest core upgrade to the **OHC Agentic Operating System** since its inception! At OmniSolo (OHC), our mission is simple: to empower *one* human to orchestrate a vast, intelligent swarm of AI agents with *zero friction* and absolute *visual delight*.
 
 Our latest release pushes the boundaries of **Absolute Autonomy** and **Continuous Evolution**.
 

@@ -2,7 +2,7 @@
 
 # Remote API Endpoints Configuration Walkthrough
 
-Welcome to the One Human Corp (OHC) interactive walkthrough for configuring Remote API Endpoints in **Thin Client Mode**.
+Welcome to the OmniSolo (OHC) interactive walkthrough for configuring Remote API Endpoints in **Thin Client Mode**.
 
 ## Architecture & Flow
 

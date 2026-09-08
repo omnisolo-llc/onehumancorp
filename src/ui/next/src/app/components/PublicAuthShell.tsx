@@ -9,14 +9,14 @@ export function PublicAuthShell({ children }: { children: ReactNode }) {
     >
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center gap-5">
         <Link
-          aria-label="OHC Network sign in"
+          aria-label="OmniSolo Network sign in"
           className="mx-auto flex items-center gap-3 text-sm font-semibold text-gray-700 no-underline dark:text-gray-200"
           href="/login"
         >
           <span className="grid h-10 w-10 place-items-center rounded-lg bg-[#0066FF] text-base font-bold text-white shadow-sm">
             O
           </span>
-          <span>OHC Network</span>
+          <span>OmniSolo Network</span>
         </Link>
         <section className="auth-panel w-full rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-8">
           {children}

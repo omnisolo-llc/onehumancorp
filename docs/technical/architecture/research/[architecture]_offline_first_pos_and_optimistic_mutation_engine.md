@@ -13,7 +13,7 @@ Small business owners operating in challenging network conditions—such as Fati
 - **Wix/Squarespace:** Primarily online-dependent. While they offer mobile apps, robust offline-first POS and inventory management are not deeply integrated at the core edge layer, requiring a solid connection for most management tasks.
 
 **Our Opportunity:**
-OneHumanCorp can differentiate by treating offline resilience not as a bolt-on feature, but as a core architectural primitive. By employing an Optimistic Mutation Engine with Conflict-Free Replicated Data Types (CRDTs) or a robust local action queue (Local-First architecture), OHC will guarantee that a user (like Maya or Fatima) can manage inventory, process local cash/tap-to-pay offline operations, and rely on the AI Operations Department to resolve state conflicts gracefully in the background without overwhelming the user with technical "sync error" jargon.
+OmniSolo can differentiate by treating offline resilience not as a bolt-on feature, but as a core architectural primitive. By employing an Optimistic Mutation Engine with Conflict-Free Replicated Data Types (CRDTs) or a robust local action queue (Local-First architecture), OHC will guarantee that a user (like Maya or Fatima) can manage inventory, process local cash/tap-to-pay offline operations, and rely on the AI Operations Department to resolve state conflicts gracefully in the background without overwhelming the user with technical "sync error" jargon.
 
 ## Design Doc
 

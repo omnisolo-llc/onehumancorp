@@ -6,7 +6,7 @@
 **Target Audience:** Orchestration Engineers, Internal Integrators & Human CEOs
 
 ## 1. Introduction
-The One Human Corp (OHC) API Playbook provides an interactive reference for the core components of the Hybrid Agentic OS. It outlines key REST endpoints, integration strategies, and the Hybrid API architecture.
+The OmniSolo (OHC) API Playbook provides an interactive reference for the core components of the Hybrid Agentic OS. It outlines key REST endpoints, integration strategies, and the Hybrid API architecture.
 
 ## 2. Authentication & AuthZ
 

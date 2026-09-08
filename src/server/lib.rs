@@ -163,6 +163,17 @@ async fn protected_bearer_auth_middleware(
     ::server_auth::strict_bearer_auth_middleware(axum::extract::State(store), req, next).await
 }
 
+/// Supply the legacy SQLx database handle to handlers that still use that
+/// interface while the rest of the service migrates to the portable SeaORM
+/// connection. `db` is already an `Arc<DB>`; keeping this helper centralized
+/// prevents accidentally creating an `Arc<Arc<DB>>` extension that Axum cannot
+/// extract at runtime.
+fn legacy_db_compatibility_layer(
+    db: std::sync::Arc<crate::db::DB>,
+) -> axum::extract::Extension<std::sync::Arc<crate::db::DB>> {
+    axum::extract::Extension(db)
+}
+
 fn protect_internal_ingress<S>(
     router: axum::Router<S>,
     store: std::sync::Arc<::server_auth::Store>,
@@ -2654,7 +2665,7 @@ impl HubService for MyHubService {
         let url = if req.domain_choice == "custom" {
             "https://www.mybusiness.com".to_string()
         } else {
-            "https://mybusiness.ohc.app".to_string()
+            "https://mybusiness.omnisolo.co".to_string()
         };
 
         Ok(tonic::Response::new(PublishSiteResponse {
@@ -8587,6 +8598,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
         .route("/api/v1/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
         .route("/api/v1/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
+        .route(
+            "/api/v1/ui/inventory",
+            axum::routing::get(api::pos::get_inventory_handler)
+                .post(api::pos::post_inventory_handler)
+                .with_state(hub.clone()),
+        )
         .route("/api/v1/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
                 .route("/api/v1/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
@@ -9148,6 +9165,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/api/v1/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
         .route("/api/v1/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
+        .route(
+            "/api/v1/mesh/v2/collective",
+            axum::routing::get(api::collective::get_nearby_tenants_handler)
+                .post(api::collective::invite_tenant_handler)
+                .with_state(db.clone()),
+        )
         .route("/api/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
         .route("/api/v1/orchestration/tasks/stream", axum::routing::get(api::mesh_handler::orchestration_tasks_stream_handler).with_state(mesh_transport.clone()))
         .route(
@@ -9231,17 +9254,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .merge(api::realtime::router())
         .nest("/api/v1/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
-        .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(axum::extract::Extension(db.clone())))
+        .nest("/api/v1/ohc_job_queue", api::ohc_job_queue::handler::router().layer(legacy_db_compatibility_layer(db.clone())))
         .nest("/api/v1/sync", api::sync_gateway::router_with_pool::<axum::extract::State<sqlx::PgPool>>().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/v1/proposals", api::proposals::router().with_state(db.pool.clone()))
-        .nest(
-            "/api/v1/settings/global-commerce",
-            api::settings::global_commerce::router().with_state(db.pool.clone()),
-        )
         .nest(
             "/api/v1/booking/request",
             api::booking::request::router(dept_orchestrator.clone(), db.pool.clone()).route_layer(
@@ -9309,28 +9328,83 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             protected_bearer_auth_middleware,
         ))
         .with_state(mesh_transport)
+        .nest(
+            "/api/v1/local_seo",
+            api::local_seo::router()
+                .layer(legacy_db_compatibility_layer(db.clone()))
+                .route_layer(axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                )),
+        )
+        .route(
+            "/api/v1/ledger/accounts",
+            axum::routing::get(api::payment_ledger::get_accounts).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .route(
+            "/api/v1/ledger/entries",
+            axum::routing::get(api::payment_ledger::get_entries).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .route(
+            "/api/v1/ledger/record",
+            axum::routing::post(api::payment_ledger::record_ledger_entry).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .route(
+            "/api/v1/user/usage",
+            axum::routing::get(api::payment_ledger::get_user_usage).route_layer(
+                axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                ),
+            ),
+        )
+        .route(
+            "/api/v1/settings/global-commerce",
+            axum::routing::get(api::settings::global_commerce::get_settings)
+                .put(api::settings::global_commerce::update_settings)
+                .layer(legacy_db_compatibility_layer(db.clone()))
+                .route_layer(axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                )),
+        )
         .route("/api/v1/help", axum::routing::get(crate::api::docs::list_articles)
-            .layer(axum::extract::Extension(db.clone()))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/help/search", axum::routing::get(crate::api::docs::search_articles)
-            .layer(axum::extract::Extension(db.clone()))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips", axum::routing::get(crate::api::docs::get_tooltips)
-            .layer(axum::extract::Extension(db.clone()))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips", axum::routing::post(crate::api::docs::update_tooltip)
-            .layer(axum::extract::Extension(db.clone()))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/tooltips/{id}", axum::routing::delete(crate::api::docs::delete_tooltip)
-            .layer(axum::extract::Extension(db.clone()))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough)
-            .layer(axum::extract::Extension(db.clone()))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/videos", axum::routing::get(crate::api::docs::list_videos)
-            .layer(axum::extract::Extension(db.clone()))
+            .layer(legacy_db_compatibility_layer(db.clone()))
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
         .route("/api/v1/changelog", axum::routing::get(crate::api::docs::get_changelog)
             .route_layer(axum::middleware::from_fn_with_state(http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware)))
@@ -9435,7 +9509,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
             if !matched {
                 if query.contains("getting started") {
-                    reply = "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string();
+                    reply = "Welcome to OmniSolo! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.".to_string();
                     link_url = DEFAULT_HELP_CHAT_LINKS[0].to_string();
                 } else if query.contains("store") || query.contains("product") {
                     reply = "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.".to_string();
@@ -9556,7 +9630,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if legacy_sqlx_background_enabled && ::server_config::is_telemetry_enabled() {
         let cloud_url = std::env::var("OHC_CLOUD_URL")
-            .unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+            .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
         let telemetry_daemon =
             crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(
                 db.pool.clone(),
@@ -9568,7 +9642,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     if is_cloud && legacy_sqlx_background_enabled {
         let cloud_url = std::env::var("OHC_CLOUD_URL")
-            .unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+            .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
         let power_sync_orchestrator = Arc::new(
             crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(
                 db.clone(),

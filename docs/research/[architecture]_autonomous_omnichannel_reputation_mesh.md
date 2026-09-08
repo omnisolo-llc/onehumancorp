@@ -4,7 +4,7 @@
 **Autonomous Omnichannel Reputation Mesh: Zero-Effort Review Generation and Management**
 
 ## 2. Problem Statement
-For OneHumanCorp (OHC)’s core personas—like **Carlos (handyman, 42)** and **Leo (music tutor, 22)**—reputation is everything. Their businesses run on word-of-mouth, but actively soliciting, monitoring, and replying to reviews across Google Maps, Yelp, Facebook, and specialized directories is an exhausting, fragmented process.
+For OmniSolo (OHC)’s core personas—like **Carlos (handyman, 42)** and **Leo (music tutor, 22)**—reputation is everything. Their businesses run on word-of-mouth, but actively soliciting, monitoring, and replying to reviews across Google Maps, Yelp, Facebook, and specialized directories is an exhausting, fragmented process.
 Small business owners often feel they are at the mercy of the occasional unhappy customer because they lack the time and automated tooling to consistently capture positive reviews from happy customers. They do not have the technical knowledge to integrate multi-platform API webhooks or set up email-based "review funnels". The lack of a unified reputation system causes an "Invisible Discovery" gap, suppressing their local search ranking (SEO) and hurting revenue.
 
 ## 3. Research Report

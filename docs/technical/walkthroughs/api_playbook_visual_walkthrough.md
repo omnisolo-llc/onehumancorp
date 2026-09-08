@@ -2,7 +2,7 @@
 
 # KAIROS API Playbook Visual Walkthrough
 
-Welcome to the visual walkthrough of the One Human Corp API, the central nervous system of the Agentic OS. This guide provides interactive, diagram-driven insights into the Swarm Intelligence Protocol (OHC-SIP).
+Welcome to the visual walkthrough of the OmniSolo API, the central nervous system of the Agentic OS. This guide provides interactive, diagram-driven insights into the Swarm Intelligence Protocol (OHC-SIP).
 
 ## 1. Zero Secrets Authentication Flow
 

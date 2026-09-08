@@ -51,7 +51,7 @@ erDiagram
 
 ## Implementation Prompt
 **Prompt for Implementer:**
-Implement the "Invisible Contract & Liability Engine" for OneHumanCorp. Your goal is to build a frictionless, mobile-first (375px) e-signature and contract agreement flow integrated directly into the deposit checkout sequence.
+Implement the "Invisible Contract & Liability Engine" for OmniSolo. Your goal is to build a frictionless, mobile-first (375px) e-signature and contract agreement flow integrated directly into the deposit checkout sequence.
 
 You must create a seamless bottom-sheet UX for finger-drawn signatures that works flawlessly on low-end mobile devices and gracefully handles offline scenarios (optimistic UI updates). Implement the backend logic to accept, cryptographically hash, and immutably store the signature event linked to a specific Quote or Booking. Ensure the Legal AI Agent is integrated to dynamically generate the agreement text based on the job's context.
 

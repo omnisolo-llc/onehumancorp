@@ -49,7 +49,7 @@ function LeaveReviewContent() {
                       <h3 className="font-bold text-indigo-900 font-outfit">Get 15% Off Your Next Order</h3>
                     </div>
                     <p className="text-indigo-800 text-sm mb-4">
-                      Share this link with friends. They get 15% off, and you get 15% off when they buy! ⚡ Powered by OHC
+                      Share this link with friends. They get 15% off, and you get 15% off when they buy! ⚡ Powered by OmniSolo
                     </p>
 
                     <div className="flex gap-2">
@@ -133,7 +133,7 @@ function LeaveReviewContent() {
            </button>
 
            <div className="mt-6 text-center">
-             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ Powered by OHC</span>
+             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ Powered by OmniSolo</span>
            </div>
        </div>
     </div>

@@ -28,7 +28,7 @@ Competitors fundamentally rely on massive cloud infrastructures or pure local CL
 - **Strengths**: Instant zero-setup environment, seamless web deployment.
 - **Weaknesses**: Completely locks users into the Replit ecosystem. No local resource utilization. Extremely high cost at scale for compute-heavy agent swarms.
 
-### 2.4 One Human Corp (OHC) - Hybrid Architecture
+### 2.4 OmniSolo (OHC) - Hybrid Architecture
 - **Model**: Triple-Mode (Cloud-Native, Standalone Desktop, Thin Client).
 - **Strengths**: Unmatched flexibility. Degrades gracefully to SQLite. Utilizes local compute for privacy-sensitive tasks, scales to K8s/Redis for heavy orchestration. Zero-trust SPIFFE/SPIRE identity mesh across all modes.
 

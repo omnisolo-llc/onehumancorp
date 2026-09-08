@@ -8,7 +8,7 @@ Small business owners like Maya (baker) and Fatima (food cart) increasingly need
 1. Build their own delivery fleet, which means tracking drivers via disjointed apps, manually calculating delivery zones, and guessing ETA.
 2. Sign up for 3rd-party platforms (Uber Eats, DoorDash), which take a massive 30% margin and own the customer relationship.
 
-Maya needs to offer local delivery for her custom cakes. Sometimes she can have her assistant deliver (when not busy), but other times she needs a reliable on-demand courier, all without leaving the OneHumanCorp app or manually dispatching drivers. She needs an autonomous system that calculates costs, quotes the customer at checkout, and routes the delivery seamlessly to the cheapest/fastest available mode (in-house staff or 3rd-party API) without technical setup.
+Maya needs to offer local delivery for her custom cakes. Sometimes she can have her assistant deliver (when not busy), but other times she needs a reliable on-demand courier, all without leaving the OmniSolo app or manually dispatching drivers. She needs an autonomous system that calculates costs, quotes the customer at checkout, and routes the delivery seamlessly to the cheapest/fastest available mode (in-house staff or 3rd-party API) without technical setup.
 
 ## Research Report
 ### Competitive Analysis

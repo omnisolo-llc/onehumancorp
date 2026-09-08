@@ -2,7 +2,7 @@ issue_title: "Native Rust Omnichannel Messaging System Replication"
 issue_description: |
   # Problem Statement
 
-  OneHumanCorp (OHC) currently relies on an external integration for omnichannel customer support and inbox functionality. This violates our core tenet of a unified, self-contained, native platform, and limits our ability to seamlessly inject our AI agents (like "The Ambassador") directly into the core event stream.
+  OmniSolo (OHC) currently relies on an external integration for omnichannel customer support and inbox functionality. This violates our core tenet of a unified, self-contained, native platform, and limits our ability to seamlessly inject our AI agents (like "The Ambassador") directly into the core event stream.
 
   We need to replace the external dependency entirely by replicating its core omnichannel data models, real-time WebSocket messaging, and inbox architecture natively in Rust inside `onehumancorp/mono`. This will enable true, invisible AI agent coordination for SMB owners, meeting our core value of "Radical Simplicity" where the system just works without complex third-party configurations.
 

@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This report proposes the architecture and design of an Autonomous Multi-Tenant Loyalty and Rewards Engine for OneHumanCorp (OHC). This engine will empower small business owners (like Maya, Carlos, Priya, Leo, and Fatima) to easily create, manage, and automate customer loyalty programs with zero technical setup. By integrating deeply with OHC's existing multi-tenant architecture and AI agents, the engine will drive repeat business and improve customer retention automatically.
+This report proposes the architecture and design of an Autonomous Multi-Tenant Loyalty and Rewards Engine for OmniSolo (OHC). This engine will empower small business owners (like Maya, Carlos, Priya, Leo, and Fatima) to easily create, manage, and automate customer loyalty programs with zero technical setup. By integrating deeply with OHC's existing multi-tenant architecture and AI agents, the engine will drive repeat business and improve customer retention automatically.
 
 ## 2. Core Personas and Use Cases
 

@@ -5,7 +5,7 @@
 This epic synthesizes the architectural decisions and GitHub issues generated to fulfill the "Shared Task List Decomposition", "Realtime Teammate Mesh APIs", and "AutoDream Data Pipelines" feature requirements for the KAIROS OS.
 
 ## Overview
-The **One Human Corp (OHC) Hybrid Agentic OS** requires a fluid and consistent architecture across completely different operating models. This document solidifies the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OHC "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier.
+The **OmniSolo (OHC) Hybrid Agentic OS** requires a fluid and consistent architecture across completely different operating models. This document solidifies the technical spec for the "Standalone" wrapper (Local First) and "Thin Client" API definitions, ensuring that the OHC "Premium Feel" and robust multi-agent orchestration are indistinguishable regardless of deployment tier.
 
 ## 1. Shared Task List Decomposition
 

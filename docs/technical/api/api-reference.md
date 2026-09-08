@@ -18,7 +18,7 @@
 **Target Audience:** Orchestration Engineers & Human CEOs
 
 ## 1. Introduction
-The One Human Corp (OHC) API is the central nervous system of the Agentic OS. It bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments via the **Swarm Intelligence Protocol (OHC-SIP)**.
+The OmniSolo (OHC) API is the central nervous system of the Agentic OS. It bridges the gap between Cloud-Native Kubernetes clusters and Standalone Desktop deployments via the **Swarm Intelligence Protocol (OHC-SIP)**.
 
 ## 2. Authentication (Zero Secrets)
 

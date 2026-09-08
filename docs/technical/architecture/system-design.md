@@ -1,13 +1,13 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# Design Doc: One Human Corp (OHC) Platform
+# Design Doc: OmniSolo (OHC) Platform
 
 **Author(s):** Antigravity, Principal Product Architect & Visionary (L7)
 **Status:** Approved
 **Last Updated:** 2026-03-28
 
 ## 1. Overview
-One Human Corp (OHC) is an enterprise-grade AI-agent orchestration platform. It enables organisations to define a virtual workforce of AI agents, assign them hierarchical roles, coordinate complex multi-agent tasks through persistence-backed "Meeting Rooms", track granular cost and billing at the token level, and gate high-risk or high-cost actions behind human approval (Confidence Gating).
+OmniSolo (OHC) is an enterprise-grade AI-agent orchestration platform. It enables organisations to define a virtual workforce of AI agents, assign them hierarchical roles, coordinate complex multi-agent tasks through persistence-backed "Meeting Rooms", track granular cost and billing at the token level, and gate high-risk or high-cost actions behind human approval (Confidence Gating).
 
 The platform is intentionally hybrid. The same backend can run as a multi-tenant cloud service, an API-only headless deployment for remote clients, or the local backend managed by a standalone desktop wrapper.
 

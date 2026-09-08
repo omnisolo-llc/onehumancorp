@@ -1,6 +1,6 @@
 # OHC Market Dominance: AI-Native Agentic Workflows vs Traditional Platforms
 
-**Mission:** This comprehensive research report analyzes the strategic gap between traditional SMB platforms (Shopify, Wix) and rising AI-native point solutions (Durable). It maps out how OneHumanCorp (OHC) will capture the underserved market by eliminating configuration overhead for zero-technical-knowledge users through the power of Agentic Departments.
+**Mission:** This comprehensive research report analyzes the strategic gap between traditional SMB platforms (Shopify, Wix) and rising AI-native point solutions (Durable). It maps out how OmniSolo (OHC) will capture the underserved market by eliminating configuration overhead for zero-technical-knowledge users through the power of Agentic Departments.
 
 ---
 

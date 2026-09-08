@@ -14,7 +14,7 @@ Leading platforms (Shopify, Wix, Stripe) offer dispute management dashboards, bu
 **Competitive Landscape:**
 *   **Stripe / Shopify:** Reactive. Provides the UI to upload evidence and alerts the merchant via email. High friction, high cognitive load.
 *   **Chargehound / Midigator (Enterprise):** Automated chargeback resolution, but aimed at enterprise businesses with massive transaction volumes. Too complex and expensive for a sole proprietor.
-*   **OneHumanCorp (Our Target):** Proactive & Autonomous. The AI Legal/Finance department detects the webhook, compiles the evidence automatically by searching the platform's multi-tenant ledger and communication history, and drafts the response. The merchant is merely notified of the victory.
+*   **OmniSolo (Our Target):** Proactive & Autonomous. The AI Legal/Finance department detects the webhook, compiles the evidence automatically by searching the platform's multi-tenant ledger and communication history, and drafts the response. The merchant is merely notified of the victory.
 
 **Key Findings:**
 1.  **Time Sensitivity:** Disputes have strict deadlines (e.g., 7-21 days). Missing the deadline is an automatic loss.

@@ -12,7 +12,7 @@ For founders handling their own deliveries—like Maya dropping off custom cakes
 - **The Gap:** Solo founders running field operations (handymen, bakers, local florists) need integrated, turn-by-turn optimized routing for their daily stops, plus a seamless, branded live-tracking link sent automatically to the customer.
 
 **Opportunity for OHC:**
-By embedding an Invisible Hyperlocal Dispatch Engine into OneHumanCorp, we eliminate "Financial Fog" around delivery costs and operational friction. Our AI Operations Agent can automatically cluster orders by geographic zone, generate the optimal route sequence, and dispatch it to the founder's mobile app.
+By embedding an Invisible Hyperlocal Dispatch Engine into OmniSolo, we eliminate "Financial Fog" around delivery costs and operational friction. Our AI Operations Agent can automatically cluster orders by geographic zone, generate the optimal route sequence, and dispatch it to the founder's mobile app.
 
 ## Design Doc
 

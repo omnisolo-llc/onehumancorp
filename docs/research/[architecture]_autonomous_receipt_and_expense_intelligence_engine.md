@@ -4,7 +4,7 @@
 Autonomous Receipt Scanning & Zero-Click Expense Intelligence Engine
 
 ## Problem Statement
-Small business owners (like Maya the baker or Carlos the handyman) completely lose track of their expenses. While OneHumanCorp perfectly captures their revenue, their costs are scattered across lost paper receipts, email invoices, and mixed bank statements. Come tax time, it's a nightmare. They operate totally blind to their actual real-time profit margins. They don't want to become accountants, configure charts of accounts, or swipe left/right to categorize expenses. They just want to take a picture of a crumpled receipt and forget about it.
+Small business owners (like Maya the baker or Carlos the handyman) completely lose track of their expenses. While OmniSolo perfectly captures their revenue, their costs are scattered across lost paper receipts, email invoices, and mixed bank statements. Come tax time, it's a nightmare. They operate totally blind to their actual real-time profit margins. They don't want to become accountants, configure charts of accounts, or swipe left/right to categorize expenses. They just want to take a picture of a crumpled receipt and forget about it.
 
 ## Research Report
 ### Market Landscape & Competitors

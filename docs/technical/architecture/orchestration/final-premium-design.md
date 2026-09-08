@@ -3,7 +3,7 @@
 # KAIROS AI OS: Final Premium Design Doc
 
 ## 1. Vision & Architecture Overview
-The One Human Corp (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. This design document finalizes the structural and aesthetic vision for the OHC "Hybrid Agentic OS", enabling a single human to orchestrate a vast swarm of AI agents.
+The OmniSolo (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. This design document finalizes the structural and aesthetic vision for the OHC "Hybrid Agentic OS", enabling a single human to orchestrate a vast swarm of AI agents.
 
 ## 2. Phase 1: Shared Task List (Decomposition)
 To execute high-level feature requests, KAIROS decomposes them into a shared task list.
@@ -132,7 +132,7 @@ When KAIROS decomposes a mission, it submits jobs to a distributed background qu
 
 ---
 *Authored by: Principal Product Architect & KAIROS Orchestrator (L7)*
-*Identity: One Human Corp*
+*Identity: OmniSolo*
 *Aesthetic Compliance: 20px blur, glassmorphism, Outfit/Inter typography verified.*
 
 </div>

@@ -5,7 +5,7 @@
 **Author**: Principal Product Researcher & Oracle (L7)
 
 ## Problem Statement
-One Human Corp (OHC) aims to build the world's most autonomous and aesthetically superior Agentic Operating System. Currently, AI agents require robust isolation, rapid browser interaction, and granular tool execution environments to operate effectively. Our competitors have pioneered various components of this: Claude Code offers granular OS-level AST restrictions, OpenClaw provides a flexible harness plugin registry, and gstack achieves sub-second latency via persistent browser daemons. However, no single solution consolidates these features with the premium aesthetics and telemetry mandates required by OHC.
+OmniSolo (OHC) aims to build the world's most autonomous and aesthetically superior Agentic Operating System. Currently, AI agents require robust isolation, rapid browser interaction, and granular tool execution environments to operate effectively. Our competitors have pioneered various components of this: Claude Code offers granular OS-level AST restrictions, OpenClaw provides a flexible harness plugin registry, and gstack achieves sub-second latency via persistent browser daemons. However, no single solution consolidates these features with the premium aesthetics and telemetry mandates required by OHC.
 
 The gap lies in creating a unified "Universal Agent Harness" that combines deep security validation, high-performance web orchestration, and dynamic runtime adaptation, fully integrated into the OHC Hybrid Architecture (OHC-HA) and backed by full-spectrum OpenTelemetry.
 

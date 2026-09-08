@@ -23,7 +23,7 @@ export default function ViralProductWidgetPage() {
             const storedTenant = localStorage.getItem('business_display_name') || 'my-store';
             setTenant(storedTenant);
         }
-        document.title = "Viral Product Widget | OHC";
+        document.title = "Viral Product Widget | OmniSolo";
     }, []);
 
     const handleBrandingToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,7 +38,7 @@ export default function ViralProductWidgetPage() {
     const embedUrl = `/api/v1/growth/viral-product-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&price=${encodeURIComponent(price)}&description=${encodeURIComponent(description)}&imageUrl=${encodeURIComponent(imageUrl)}&theme=${theme}&branding=${!hideBranding}`;
 
     // Construct the HTML code block for the user to copy
-    const absoluteEmbedUrl = `https://ohc.app/api/v1/growth/viral-product-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&price=${encodeURIComponent(price)}&description=${encodeURIComponent(description)}&imageUrl=${encodeURIComponent(imageUrl)}&theme=${theme}&branding=${!hideBranding}`;
+    const absoluteEmbedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-product-widget/embed?tenant=${encodeURIComponent(tenant)}&productName=${encodeURIComponent(productName)}&price=${encodeURIComponent(price)}&description=${encodeURIComponent(description)}&imageUrl=${encodeURIComponent(imageUrl)}&theme=${theme}&branding=${!hideBranding}`;
     const embedCode = `<iframe src="${absoluteEmbedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
     const handleCopy = () => {
@@ -139,7 +139,7 @@ export default function ViralProductWidgetPage() {
                                                 Remove Branding
                                                 {!hasPro && <span className="bg-gradient-to-r from-amber-200 to-yellow-400 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">PRO</span>}
                                             </span>
-                                            <span className="text-xs text-gray-500">Hide the "Powered by OHC" footer.</span>
+                                            <span className="text-xs text-gray-500">Hide the "Powered by OmniSolo" footer.</span>
                                         </div>
                                     </label>
                                 </div>
@@ -214,7 +214,7 @@ export default function ViralProductWidgetPage() {
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-3 font-outfit">Upgrade to Pro</h2>
                             <p className="text-gray-600 mb-8 text-base">
-                                White-label your embedded product widgets. Upgrade to Pro to remove the <span className="font-semibold text-gray-900">"Powered by OHC"</span> branding completely.
+                                White-label your embedded product widgets. Upgrade to Pro to remove the <span className="font-semibold text-gray-900">"Powered by OmniSolo"</span> branding completely.
                             </p>
 
                             <div className="space-y-3">

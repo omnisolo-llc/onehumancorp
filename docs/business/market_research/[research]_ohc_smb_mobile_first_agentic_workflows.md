@@ -1,7 +1,7 @@
 # OHC Small Business Platform Research Report: Mobile First Workflows
 
 ## Executive Summary
-This report investigates the current landscape of small business website builders and e-commerce platforms. Our primary objective is to pinpoint unresolved pain points in the SMB segment and demonstrate how OneHumanCorp (OHC) can leverage autonomous AI agents to capture non-technical users currently struggling with either overly complex legacy systems (like Shopify) or simplistic builders (like GoDaddy) that fail to drive real business outcomes.
+This report investigates the current landscape of small business website builders and e-commerce platforms. Our primary objective is to pinpoint unresolved pain points in the SMB segment and demonstrate how OmniSolo (OHC) can leverage autonomous AI agents to capture non-technical users currently struggling with either overly complex legacy systems (like Shopify) or simplistic builders (like GoDaddy) that fail to drive real business outcomes.
 
 The core thesis is that **Invisible AI Automation** is the key differentiator. Users do not want a better dashboard; they want the platform to do the work while they simply approve the results.
 

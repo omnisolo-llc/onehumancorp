@@ -43,7 +43,7 @@ describe('FlashSaleGeneratorPage', () => {
 
     const textareas = screen.getAllByRole('textbox');
     const textarea = textareas.find(ta => (ta as HTMLTextAreaElement).value.includes('<iframe')) as HTMLTextAreaElement;
-    expect(textarea.value).toContain('https://ohc.app/api/v1/growth/flash-sale/embed?tenant=my-store');
+    expect(textarea.value).toContain('https://cloud.omnisolo.co/api/v1/growth/flash-sale/embed?tenant=my-store');
     expect(textarea.value).toContain('theme=light');
   });
 

@@ -6,6 +6,8 @@ use axum::{
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
+use sqlx::Row;
+use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LocalReview {
@@ -269,15 +271,60 @@ pub struct DiscoveryReport {
 }
 
 pub async fn get_discovery_report(
-    Extension(pool): Extension<sqlx::PgPool>,
+    Extension(db): Extension<Arc<crate::db::DB>>,
     Extension(claims): Extension<Claims>,
 ) -> Json<Vec<DiscoveryReport>> {
     let tenant_id = tenant_id(&claims);
+
+    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        let rows = sqlx::query(
+            "SELECT id, month, plain_language_summary, metrics
+             FROM seo_discovery_reports
+             WHERE tenant_id = ?
+             ORDER BY created_at DESC",
+        )
+        .bind(&tenant_id)
+        .fetch_all(&pool)
+        .await;
+
+        let reports = match rows {
+            Ok(rows) => rows
+                .into_iter()
+                .filter_map(|row| {
+                    let id = row.try_get::<String, _>("id").ok()?;
+                    let id = uuid::Uuid::parse_str(&id).ok()?;
+                    let metrics = row
+                        .try_get::<Option<serde_json::Value>, _>("metrics")
+                        .ok()
+                        .flatten()
+                        .or_else(|| {
+                            row.try_get::<Option<String>, _>("metrics")
+                                .ok()
+                                .flatten()
+                                .and_then(|value| serde_json::from_str(&value).ok())
+                        })
+                        .unwrap_or_else(|| serde_json::json!({}));
+                    Some(DiscoveryReport {
+                        id,
+                        month: row.try_get("month").ok()?,
+                        plain_language_summary: row.try_get("plain_language_summary").ok()?,
+                        metrics,
+                    })
+                })
+                .collect(),
+            Err(error) => {
+                tracing::error!("Failed to read MySQL SEO discovery reports: {error}");
+                Vec::new()
+            }
+        };
+        return Json(reports);
+    }
+
     let Ok(uuid) = uuid::Uuid::parse_str(&tenant_id) else {
         return Json(vec![]);
     };
 
-    let mut conn = match pool.acquire().await {
+    let mut conn = match db.pool.acquire().await {
         Ok(c) => c,
         Err(_) => return Json(vec![]),
     };
@@ -292,19 +339,18 @@ pub async fn get_discovery_report(
     .await
     .unwrap_or_default();
 
-    let reports = rows
-        .into_iter()
-        .map(
-            |(id, month, plain_language_summary, metrics)| DiscoveryReport {
-                id,
-                month,
-                plain_language_summary,
-                metrics: metrics.unwrap_or_else(|| serde_json::json!({})),
-            },
-        )
-        .collect();
-
-    Json(reports)
+    Json(
+        rows.into_iter()
+            .map(
+                |(id, month, plain_language_summary, metrics)| DiscoveryReport {
+                    id,
+                    month,
+                    plain_language_summary,
+                    metrics: metrics.unwrap_or_else(|| serde_json::json!({})),
+                },
+            )
+            .collect(),
+    )
 }
 
 pub fn router() -> Router {

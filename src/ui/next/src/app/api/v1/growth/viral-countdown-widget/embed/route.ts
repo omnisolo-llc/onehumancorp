@@ -159,7 +159,7 @@ export async function GET(request: Request) {
           <div class="expired-message" id="expired">Event has started!</div>
           ${showBranding ? `
             <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}&source=viral_countdown_widget" target="_blank" class="branding">
-              ⚡ Powered by OHC
+              ⚡ Powered by OmniSolo
             </a>
           ` : ''}
         </div>

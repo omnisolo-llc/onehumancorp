@@ -1,4 +1,5 @@
 pub mod autodream;
+pub mod collective;
 pub mod mesh_handler;
 pub mod oauth;
 pub mod offline_sync;

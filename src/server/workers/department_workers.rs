@@ -597,7 +597,7 @@ impl OperationsWorker {
                         } else if order_count == 10 {
                             "You've reached 10 orders! Your business is gaining serious momentum."
                         } else {
-                            "You've successfully fulfilled 100 orders on OHC!"
+                            "You've successfully fulfilled 100 orders on OmniSolo!"
                         };
                         let milestone_id = Uuid::new_v4().to_string();
 
@@ -674,7 +674,7 @@ impl OperationsWorker {
                         } else if order_count == 10 {
                             "You've reached 10 orders! Your business is gaining serious momentum."
                         } else {
-                            "You've successfully fulfilled 100 orders on OHC!"
+                            "You've successfully fulfilled 100 orders on OmniSolo!"
                         };
                         let milestone_id = Uuid::new_v4().to_string();
 
@@ -1241,9 +1241,9 @@ impl PromoterWorker {
                                     {
                                         if let Some(v) = obj.get_mut(*platform) {
                                             if let Some(s) = v.as_str() {
-                                                if !s.contains("Powered by OHC") {
+                                                if !s.contains("OmniSolo") {
                                                     *v = serde_json::json!(format!(
-                                                        "{}\n\n⚡ Powered by OHC",
+                                                        "{}\n\n⚡ OmniSolo",
                                                         s
                                                     ));
                                                 }

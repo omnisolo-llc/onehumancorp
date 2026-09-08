@@ -1,6 +1,6 @@
 # OHC Stripe Transaction Fee Optimization
 
-As part of the initiative to ensure OneHumanCorp is economically sustainable, we have implemented an intelligent payment routing system designed to minimize Stripe transaction fees.
+As part of the initiative to ensure OmniSolo is economically sustainable, we have implemented an intelligent payment routing system designed to minimize Stripe transaction fees.
 
 ## Strategy
 

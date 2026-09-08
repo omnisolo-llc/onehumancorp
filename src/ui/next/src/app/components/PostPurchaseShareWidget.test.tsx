@@ -28,7 +28,7 @@ describe('PostPurchaseShareWidget', () => {
   it('generates the correct referral link', () => {
     render(<PostPurchaseShareWidget tenantId="test-tenant" orderId="123" />);
     const input = screen.getByRole('textbox') as HTMLInputElement;
-    expect(input.value).toBe('https://ohc.app/shop/test-tenant?ref=post_purchase_123');
+    expect(input.value).toBe('https://cloud.omnisolo.co/shop/test-tenant?ref=post_purchase_123');
   });
 
   it('copies link to clipboard without granting an entitlement', () => {
@@ -37,7 +37,7 @@ describe('PostPurchaseShareWidget', () => {
 
     fireEvent.click(copyButton);
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/shop/test-tenant?ref=post_purchase_default');
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://cloud.omnisolo.co/shop/test-tenant?ref=post_purchase_default');
     expect(screen.queryByText('VIP Concierge Unlocked!')).not.toBeInTheDocument();
   });
 
@@ -52,7 +52,7 @@ describe('PostPurchaseShareWidget', () => {
     expect(urlArg).toContain('Cool%20Store');
   });
 
-  it('shares to Twitter/X with Powered by OHC branding', () => {
+  it('shares to Twitter/X with Powered by OmniSolo branding', () => {
     render(<PostPurchaseShareWidget tenantId="test-tenant" storeName="Cool Store" />);
     const twitterButton = screen.getByText('Share on X');
     fireEvent.click(twitterButton);

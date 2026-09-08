@@ -27,7 +27,7 @@ import 'dart:convert';
 Future<String> fetchConnectionToken() async {
   // Use the OHC HTTP client which automatically handles Auth (SPIFFE/JWT headers)
   final response = await http.post(
-    Uri.parse('https://api.onehumancorp.com/api/v1/pos/terminal/connection_token'),
+    Uri.parse('https://cloud.omnisolo.co/api/v1/pos/terminal/connection_token'),
     headers: {
       'Authorization': 'Bearer $authToken',
       'x-tenant-id': tenantId,
@@ -88,7 +88,7 @@ Future<void> processCheckout(int amountCents, String currency) async {
 
     // 1. Request Payment Intent from OHC Backend
     final response = await http.post(
-      Uri.parse('https://api.onehumancorp.com/api/v1/pos/terminal/create_intent'),
+      Uri.parse('https://cloud.omnisolo.co/api/v1/pos/terminal/create_intent'),
       headers: {
         'Authorization': 'Bearer $authToken',
         'x-tenant-id': tenantId,

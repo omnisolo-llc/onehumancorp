@@ -10,7 +10,7 @@
 **Success Metrics:** Full render < 2s, Active agent count accurate, Latest messages displayed.
 
 ## 1. User Journey Overview
-The CEO logs into the One Human Corp platform. They expect a high-level view of their organisation modeled on the 4 conceptual layers: **Domain Knowledge, Roles, Organization Hierarchy, and themselves as the CEO**. They can view the org chart, active virtual meeting rooms (where roles collaborate to define scopes and design products), and a summary of recent agent actions and costs.
+The CEO logs into the OmniSolo platform. They expect a high-level view of their organisation modeled on the 4 conceptual layers: **Domain Knowledge, Roles, Organization Hierarchy, and themselves as the CEO**. They can view the org chart, active virtual meeting rooms (where roles collaborate to define scopes and design products), and a summary of recent agent actions and costs.
 
 ## 2. Detailed Step-by-Step Breakdown
 

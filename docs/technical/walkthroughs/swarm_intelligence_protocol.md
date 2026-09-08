@@ -2,7 +2,7 @@
 
 # Swarm Intelligence Protocol (OHC-SIP)
 
-The Swarm Intelligence Protocol (OHC-SIP) is the core architectural pillar enabling shared memory and continuous orchestration across the One Human Corp Swarm.
+The Swarm Intelligence Protocol (OHC-SIP) is the core architectural pillar enabling shared memory and continuous orchestration across the OmniSolo Swarm.
 
 ```mermaid
 sequenceDiagram

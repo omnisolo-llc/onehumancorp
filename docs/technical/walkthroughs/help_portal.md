@@ -2,7 +2,7 @@
 
 # OHC Help Portal: Visual Walkthroughs
 
-Welcome to the One Human Corp Help Portal. This guide will walk you through setting up and orchestrating your swarm of agents seamlessly across the Hybrid Architecture.
+Welcome to the OmniSolo Help Portal. This guide will walk you through setting up and orchestrating your swarm of agents seamlessly across the Hybrid Architecture.
 
 ## 1. Getting Started Flow
 

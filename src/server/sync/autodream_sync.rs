@@ -65,7 +65,7 @@ pub async fn process_forecast_tick(db: Arc<DB>) -> Result<(), Box<dyn std::error
         }
 
         let cloud_url = std::env::var("OHC_CLOUD_URL")
-            .unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+            .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string());
         let sync_url = format!("{}/api/v1/sync/autodream", cloud_url);
 
         let client = reqwest::Client::new();

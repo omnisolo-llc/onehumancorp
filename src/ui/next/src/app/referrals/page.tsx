@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PoweredByOHC } from '../components/PoweredByOHC';
+import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import GrowthReferralWidget from '../components/GrowthReferralWidget';
 
 export default function ReferralsPage() {
@@ -48,7 +48,7 @@ export default function ReferralsPage() {
     fetchReferralLink();
   }, []);
 
-  const inviteMessage = `Launch your business online instantly with OHC! Use my invite link: ${referralLink}`;
+  const inviteMessage = `Launch your business online instantly with OmniSolo! Use my invite link: ${referralLink}`;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
@@ -63,7 +63,7 @@ export default function ReferralsPage() {
           <div className="max-w-2xl">
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-4">Grow Together & Earn Rewards</h2>
             <p className="text-gray-600 mb-8">
-              When your friends launch their storefront on OHC, they get priority AI setup, and you earn <strong className="text-gray-900">$50 credit</strong> toward your premium tools.
+              When your friends launch their storefront on OmniSolo, they get priority AI setup, and you earn <strong className="text-gray-900">$50 credit</strong> toward your premium tools.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -89,7 +89,7 @@ export default function ReferralsPage() {
                 <div className="flex-1 flex flex-col items-center text-center relative z-10">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold mb-2">2</div>
                   <h4 className="text-sm font-semibold text-gray-900">They Sign Up</h4>
-                  <p className="text-xs text-gray-500 mt-1">Friend creates their OHC store</p>
+                  <p className="text-xs text-gray-500 mt-1">Friend creates their OmniSolo store</p>
                 </div>
                 <div className="hidden sm:block absolute top-4 left-[50%] right-[16.66%] h-0.5 bg-gray-200 z-0"></div>
                 <div className="flex-1 flex flex-col items-center text-center relative z-10">
@@ -193,7 +193,7 @@ export default function ReferralsPage() {
         </div>
       </main>
 
-      <PoweredByOHC tenantId="my-store" />
+      <PoweredByOmniSolo tenantId="my-store" />
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

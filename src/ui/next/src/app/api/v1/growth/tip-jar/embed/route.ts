@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     const brandingHtml = branding ? `
       <div class="branding">
         <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank">
-          ⚡ Powered by OHC
+          ⚡ Powered by OmniSolo
         </a>
       </div>
     ` : '';

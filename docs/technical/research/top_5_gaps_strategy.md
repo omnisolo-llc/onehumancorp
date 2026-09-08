@@ -2,7 +2,7 @@
 
 # OHC Strategy: Top 5 Urgent Capability Gaps
 
-Based on triangulation of leading AI frameworks (OpenClaw, CrewAI, AutoGen, Claude Code), we have identified the top 5 urgent capability gaps. This document provides actionable designs to merge these features into One Human Corp's architecture, heavily utilizing the OHC Advantage (K8s / LangGraph).
+Based on triangulation of leading AI frameworks (OpenClaw, CrewAI, AutoGen, Claude Code), we have identified the top 5 urgent capability gaps. This document provides actionable designs to merge these features into OmniSolo's architecture, heavily utilizing the OHC Advantage (K8s / LangGraph).
 
 ## 1. Long-Term Episodic Memory
 - **Gap:** Agents suffer from "Amnesia" across disjointed sessions. Passing full context arrays balloons token usage and degrades latency. Cross-session memory persistence using vector databases is missing to recall past user interactions, successful tool uses, and learned preferences.

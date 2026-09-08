@@ -71,7 +71,7 @@ export default function InvoiceGeneratorPage() {
         <section className="glassmorphism p-8 md:p-10 border border-white/40 dark:border-white/10 relative">
           <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Create Professional Invoice</h2>
           <p className="text-gray-600 mb-8 text-sm leading-relaxed">
-            Generate an invoice with a viral loop built-in. Share the link with your client, and they'll see a professional invoice powered by OHC.
+            Generate an invoice with a viral loop built-in. Share the link with your client, and they'll see a professional invoice powered by OmniSolo.
           </p>
 
           <div className="flex flex-col gap-6">

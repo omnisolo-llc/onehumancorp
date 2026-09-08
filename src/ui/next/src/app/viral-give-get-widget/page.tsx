@@ -54,7 +54,7 @@ export default function ViralGiveGetWidgetPage() {
         refId = data.referral_link.split('/').pop() || tenantId;
       }
 
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co';
       setReferralLink(`${baseUrl}/give-get/join?ref=${refId}`);
 
       setTimeout(() => setBoxesActive(true), 200);
@@ -141,7 +141,7 @@ export default function ViralGiveGetWidgetPage() {
                         onChange={handleBrandingToggle}
                         className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
-                    Remove "Powered by OHC" Badge
+                    Remove "Powered by OmniSolo" Badge
                     {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ml-1">PRO</span>}
                 </label>
             </div>
@@ -163,7 +163,7 @@ export default function ViralGiveGetWidgetPage() {
             {!removeBranding && (
                 <div className="absolute -bottom-6 left-0 right-0 text-center">
                    <a href={`/onboarding?ref=${tenantId}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-wider">
-                       ⚡ Powered by OHC
+                       ⚡ Powered by OmniSolo
                    </a>
                 </div>
             )}
@@ -223,7 +223,7 @@ export default function ViralGiveGetWidgetPage() {
              </div>
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
              <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-               Make the Give-Get Generator 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+               Make the Give-Get Generator 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
              </p>
              <button
                onClick={() => { setShowPaywall(false); window.location.href = '/pricing'; }}

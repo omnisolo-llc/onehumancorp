@@ -1,6 +1,6 @@
 # Evaluation of Migrating Backend Code from Go to C++ for Performance
 
-This document evaluates the feasibility and potential benefits of migrating the One Human Corp backend (`src/server`) from Go to C++ to address performance concerns.
+This document evaluates the feasibility and potential benefits of migrating the OmniSolo backend (`src/server`) from Go to C++ to address performance concerns.
 
 ## Current Architecture Context
 
@@ -54,4 +54,4 @@ If the Go backend is experiencing specific performance issues, we should first p
 
 **Recommendation: Do not migrate to C++.**
 
-The One Human Corp backend is primarily an I/O bound orchestration layer. Go provides the ideal balance of concurrent performance, memory safety, developer velocity, and ecosystem support for this workload. Moving to C++ would incur massive rewrite costs, slow down future development, introduce memory safety risks, and provide negligible end-to-end performance improvements.
+The OmniSolo backend is primarily an I/O bound orchestration layer. Go provides the ideal balance of concurrent performance, memory safety, developer velocity, and ecosystem support for this workload. Moving to C++ would incur massive rewrite costs, slow down future development, introduce memory safety risks, and provide negligible end-to-end performance improvements.

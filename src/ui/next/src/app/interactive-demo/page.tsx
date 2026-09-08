@@ -48,7 +48,7 @@ export default function InteractiveDemoPage() {
   };
 
   const claimTrialExtension = async () => {
-    const message = `I just launched an Interactive Demo on OneHumanCorp! It's an amazing way to show off my products. 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenant}`;
+    const message = `I just launched an Interactive Demo on OmniSolo! It's an amazing way to show off my products. 🚀 #OmniSolo #SmallBiz https://cloud.omnisolo.co/invite/${tenant}`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
     window.open(shareUrl, '_blank');
@@ -79,7 +79,7 @@ export default function InteractiveDemoPage() {
     <button style="background: #0071e3; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px;">Start Interactive Demo</button>
   </div>
 ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
-    <a href="${escapeHtmlAttribute(`https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-size: 12px; font-weight: 600;">⚡ Powered by OHC</a>
+    <a href="${escapeHtmlAttribute(`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-size: 12px; font-weight: 600;">⚡ Powered by OmniSolo</a>
   </div>`}
 </div>`;
 
@@ -127,7 +127,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
                 <div className="pt-4 border-t border-gray-100">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-medium text-gray-900 block">Remove "Powered by OHC" Badge</span>
+                      <span className="text-sm font-medium text-gray-900 block">Remove "Powered by OmniSolo" Badge</span>
                       <span className="text-xs text-gray-500">Upgrade to Pro to remove branding</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -182,7 +182,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
 
                   {!removeBranding && (
                     <div className="mt-4 text-center">
-                      <a href="#" className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">⚡ Powered by OHC</a>
+                      <a href="#" className="text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">⚡ Powered by OmniSolo</a>
                     </div>
                   )}
                 </div>
@@ -211,7 +211,7 @@ ${removeBranding ? '' : `  <div style="text-align: center; margin-top: 16px;">
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Interactive Demo 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock advanced analytics.
+              Make the Interactive Demo 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark and unlock advanced analytics.
             </p>
 
             <button

@@ -8,8 +8,8 @@ vi.mock('next/navigation', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
 
-vi.mock('../components/PoweredByOHC', () => ({
-  PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+vi.mock('../components/PoweredByOmniSolo', () => ({
+  PoweredByOmniSolo: () => <div data-testid="powered-by-omnisolo" />,
 }));
 
 describe('MilestoneAlertsPage', () => {
@@ -111,11 +111,11 @@ describe('MilestoneAlertsPage', () => {
     expect(facebookButton).toBeDefined();
   });
 
-  it('renders the PoweredByOHC component', async () => {
+  it('renders the PoweredByOmniSolo component', async () => {
     await act(async () => {
       render(<MilestoneAlertsPage />);
     });
 
-    expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
+    expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
   });
 });

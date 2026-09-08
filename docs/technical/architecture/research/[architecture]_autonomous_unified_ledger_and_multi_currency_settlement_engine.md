@@ -1,7 +1,7 @@
 # Autonomous Unified Ledger & Multi-Currency Settlement Engine
 
 ## Problem Statement
-Currently, OneHumanCorp (OHC) handles payments directly via Stripe, but lacks a robust internal financial ledger to coordinate multi-currency transactions, deposits, split-payments (for future marketplace expansion), and offline/cash settlements across the various personas (like Carlos the handyman or Priya the boutique owner). As our user base grows internationally and expands to complex workflows (e.g. partial deposits, cash-on-delivery, and gift cards), a scalable, multi-tenant Double-Entry Ledger System is required to maintain absolute financial truth.
+Currently, OmniSolo (OHC) handles payments directly via Stripe, but lacks a robust internal financial ledger to coordinate multi-currency transactions, deposits, split-payments (for future marketplace expansion), and offline/cash settlements across the various personas (like Carlos the handyman or Priya the boutique owner). As our user base grows internationally and expands to complex workflows (e.g. partial deposits, cash-on-delivery, and gift cards), a scalable, multi-tenant Double-Entry Ledger System is required to maintain absolute financial truth.
 
 ## Research Report
 Leading platforms (Shopify, Stripe) decouple the payment gateway from the financial state machine. Shopify's "Balance" and Stripe's "Ledger" APIs treat every transaction as a double-entry accounting event. By introducing an internal Ledger, OHC can easily support multi-currency conversion, accurately compute tax liabilities (working with the Legal & Compliance Agent), and provide real-time, trustworthy financial reports via the Finance & Payments Agent ("The Accountant") without directly hammering external API rate limits.

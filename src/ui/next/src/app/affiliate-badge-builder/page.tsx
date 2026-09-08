@@ -6,7 +6,7 @@ import Link from 'next/link';
 export default function AffiliateBadgeBuilderPage() {
   const [tenantId, setTenantId] = useState('my-store');
   const [theme, setTheme] = useState('dark');
-  const [text, setText] = useState('Powered by OHC');
+  const [text, setText] = useState('Powered by OmniSolo');
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
@@ -34,8 +34,8 @@ export default function AffiliateBadgeBuilderPage() {
     return '#fbbf24'; // Yellow
   };
 
-  const embedCode = `<!-- OHC Affiliate Badge -->
-<a href="${typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app'}${badgeUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; border-radius: 9999px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s ease; ${getBadgeStyle()}" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';" onmouseout="this.style.opacity='1'; this.style.transform='none';">
+  const embedCode = `<!-- OmniSolo Affiliate Badge -->
+<a href="${typeof window !== 'undefined' ? window.location.origin : 'https://cloud.omnisolo.co'}${badgeUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; border-radius: 9999px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s ease; ${getBadgeStyle()}" onmouseover="this.style.opacity='0.9'; this.style.transform='translateY(-1px)';" onmouseout="this.style.opacity='1'; this.style.transform='none';">
   <span style="font-size: 16px; color: ${getIconColor()};">⚡</span>
   ${text}
 </a>`;
@@ -60,9 +60,9 @@ export default function AffiliateBadgeBuilderPage() {
           <div className="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-3xl shadow-lg mb-6 text-white">
             ⚡
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold font-outfit text-gray-900 mb-4 tracking-tight">Share OHC & Earn Credits</h2>
+          <h2 className="text-3xl md:text-4xl font-bold font-outfit text-gray-900 mb-4 tracking-tight">Share OmniSolo & Earn Credits</h2>
           <p className="text-gray-600 text-lg leading-relaxed">
-            Create a custom affiliate badge to put on your website, blog, or Link-in-Bio. When another business signs up through your badge, you earn $50 in OHC platform credits!
+            Create a custom affiliate badge to put on your website, blog, or Link-in-Bio. When another business signs up through your badge, you earn $50 in OmniSolo platform credits!
           </p>
         </div>
 
@@ -180,7 +180,7 @@ export default function AffiliateBadgeBuilderPage() {
                <div>
                   <h4 className="font-bold text-indigo-900 text-sm">Earn while you grow</h4>
                   <p className="text-xs text-indigo-800 mt-1 leading-relaxed">
-                    This badge contains your unique affiliate ID ({tenantId}). Whenever someone clicks it and subscribes to OHC, we'll automatically add $50 to your account balance.
+                    This badge contains your unique affiliate ID ({tenantId}). Whenever someone clicks it and subscribes to OmniSolo, we'll automatically add $50 to your account balance.
                   </p>
                </div>
             </div>

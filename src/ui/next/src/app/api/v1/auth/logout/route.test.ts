@@ -136,4 +136,26 @@ describe("POST /api/v1/auth/logout", () => {
     );
     expect(response.status).toBe(400);
   });
+
+  it("accepts an empty browser POST body stream", async () => {
+    const emptyBody = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.close();
+      },
+    });
+    const emptyRequest = request(undefined, { body: emptyBody, duplex: "half" } as RequestInit);
+    expect((await emptyRequest.arrayBuffer()).byteLength).toBe(0);
+    const response = await handleLogout(
+      request(undefined, {
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.close();
+          },
+        }),
+        duplex: "half",
+      } as RequestInit),
+      await dependencies(vi.fn(async () => Response.json({ ok: true })) as typeof fetch),
+    );
+    expect(response.status).toBe(200);
+  });
 });

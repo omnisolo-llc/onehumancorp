@@ -2,7 +2,7 @@
 
 # Hybrid Troubleshooting Guide
 
-Welcome to the One Human Corp troubleshooting guide for the Hybrid Architecture (OHC-HA).
+Welcome to the OmniSolo troubleshooting guide for the Hybrid Architecture (OHC-HA).
 
 ## 1. Cloud vs. Standalone Mode Debugging
 

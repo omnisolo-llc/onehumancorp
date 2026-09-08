@@ -12,7 +12,7 @@
         let response = service.get_help_article(request).await.unwrap().into_inner();
         let article = response.article.unwrap();
         assert_eq!(article.topic, "Getting Started");
-        assert_eq!(article.title, "Welcome to One Human Corp");
+        assert_eq!(article.title, "Welcome to OmniSolo");
 
         // Edge case: Not found
         let request = Request::new(GetHelpArticleRequest {

@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-22
 
 ## 1. Overview
-The "Ecosystem Interoperability" feature establishes the One Human Corp (OHC) "Agentic OS" control plane as the Universal Bus for AI agent swarms. It introduces native framework adapters allowing agents from heterogeneous platforms (OpenClaw, AutoGen, CrewAI, Semantic Kernel) to collaborate seamlessly within a unified OHC environment.
+The "Ecosystem Interoperability" feature establishes the OmniSolo (OHC) "Agentic OS" control plane as the Universal Bus for AI agent swarms. It introduces native framework adapters allowing agents from heterogeneous platforms (OpenClaw, AutoGen, CrewAI, Semantic Kernel) to collaborate seamlessly within a unified OHC environment.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

@@ -1,7 +1,7 @@
 # OHC Mobile-First Design & Operations Research Report
 
 ## 1. Executive Summary
-This research focuses on the absolute necessity of a mobile-first operations paradigm for OneHumanCorp (OHC). Legacy platforms treat mobile apps as supplementary "dashboards" for viewing stats, while requiring a desktop for actual store building and complex management. OHC must enable 100% of business operations—from initial setup to daily execution—on a 375px mobile screen.
+This research focuses on the absolute necessity of a mobile-first operations paradigm for OmniSolo (OHC). Legacy platforms treat mobile apps as supplementary "dashboards" for viewing stats, while requiring a desktop for actual store building and complex management. OHC must enable 100% of business operations—from initial setup to daily execution—on a 375px mobile screen.
 
 ## 2. Competitive Audit: The Mobile Management Gap (Track 1 & 2)
 

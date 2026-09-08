@@ -93,7 +93,7 @@ export default function PublicBioPage() {
               href={`https://ohc.store/join?ref=${tenant}`}
               className={`text-sm font-semibold flex items-center justify-center gap-1 hover:underline ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
             >
-              ⚡ Powered by OHC
+              ⚡ Powered by OmniSolo
             </a>
           </div>
         )}

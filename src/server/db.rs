@@ -73,19 +73,34 @@ pub mod sql_middleware;
 fn database_url_from_environment()
 -> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
     let canonical_direct = std::env::var_os("DATABASE_URL").is_some();
+    let omnisolo_direct = std::env::var_os("OMNISOLO_DATABASE_URL").is_some();
     let legacy_direct = std::env::var_os("OHC_DATABASE_URL").is_some();
-    if canonical_direct && legacy_direct {
+    if [canonical_direct, omnisolo_direct, legacy_direct]
+        .into_iter()
+        .filter(|present| *present)
+        .count()
+        > 1
+    {
         return Err(::server_common::secret_source::SecretSourceError);
     }
 
     let value_environment_variable = if legacy_direct {
         "OHC_DATABASE_URL"
+    } else if omnisolo_direct {
+        "OMNISOLO_DATABASE_URL"
     } else {
         "DATABASE_URL"
     };
+    let file_environment_variable = if legacy_direct {
+        "DATABASE_URL_FILE"
+    } else if omnisolo_direct {
+        "OMNISOLO_DATABASE_URL_FILE"
+    } else {
+        "DATABASE_URL_FILE"
+    };
     ::server_common::secret_source::load_optional_secret(
         value_environment_variable,
-        "DATABASE_URL_FILE",
+        file_environment_variable,
     )?
     .map(|bytes| {
         String::from_utf8(bytes).map_err(|_| ::server_common::secret_source::SecretSourceError)
@@ -203,6 +218,44 @@ async fn ensure_sqlite_column(
 
     sqlx::query(&format!(
         "ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {definition}"
+    ))
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+async fn ensure_mysql_column(
+    pool: &MySqlPool,
+    table: &str,
+    column: &str,
+    definition: &str,
+) -> Result<(), sqlx::Error> {
+    let valid_identifier = |identifier: &str| {
+        !identifier.is_empty()
+            && identifier
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+    };
+    if !valid_identifier(table) || !valid_identifier(column) {
+        return Err(sqlx::Error::Configuration(
+            "invalid internal MySQL migration identifier".into(),
+        ));
+    }
+
+    let exists = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM information_schema.columns
+         WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?",
+    )
+    .bind(table)
+    .bind(column)
+    .fetch_one(pool)
+    .await?;
+    if exists > 0 {
+        return Ok(());
+    }
+
+    sqlx::query(&format!(
+        "ALTER TABLE `{table}` ADD COLUMN `{column}` {definition}"
     ))
     .execute(pool)
     .await?;
@@ -3446,6 +3499,21 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS tenants (
+                        id VARCHAR(255) PRIMARY KEY,
+                        owner_id VARCHAR(255),
+                        name VARCHAR(255),
+                        tier VARCHAR(64) NOT NULL DEFAULT 'free',
+                        plan_tier VARCHAR(64) NOT NULL DEFAULT 'free',
+                        has_claimed_trial_extension BOOLEAN NOT NULL DEFAULT FALSE,
+                        subdomain VARCHAR(255),
+                        default_currency VARCHAR(16) NOT NULL DEFAULT 'USD',
+                        base_currency VARCHAR(16) NOT NULL DEFAULT 'USD',
+                        enabled_currencies JSON NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS users (
                         id VARCHAR(255) PRIMARY KEY,
                         username VARCHAR(255) NOT NULL,
@@ -3465,6 +3533,163 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         expires_at TIMESTAMP NOT NULL,
                         PRIMARY KEY (jti, tenant_id)
                     );
+
+                    CREATE TABLE IF NOT EXISTS tenant_ai_budgets (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        year_month VARCHAR(7) NOT NULL,
+                        actions_used BIGINT NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, year_month)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS application_settings (
+                        `key` VARCHAR(255) PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        updated_by VARCHAR(255)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS seo_discovery_reports (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        month VARCHAR(255) NOT NULL,
+                        plain_language_summary TEXT NOT NULL,
+                        metrics JSON,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_seo_discovery_reports_tenant_id (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS agent_action_requests (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255),
+                        action_type VARCHAR(255) NOT NULL,
+                        status VARCHAR(64) NOT NULL DEFAULT 'Pending',
+                        confidence_score DOUBLE DEFAULT 0,
+                        product_id VARCHAR(255),
+                        payload JSON,
+                        source VARCHAR(255),
+                        agent_type VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_agent_action_requests_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS help_articles (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        category VARCHAR(255) NOT NULL,
+                        title VARCHAR(500) NOT NULL,
+                        desc_text TEXT NOT NULL,
+                        link VARCHAR(1000) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_help_articles_tenant_id (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS video_tutorials (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        id INT NOT NULL,
+                        title VARCHAR(500) NOT NULL,
+                        duration VARCHAR(32) NOT NULL,
+                        video_url VARCHAR(2000) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, id),
+                        INDEX idx_video_tutorials_tenant_id (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS tooltips (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        id VARCHAR(255) NOT NULL,
+                        `text` TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS walkthrough_steps (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        page VARCHAR(255) NOT NULL,
+                        step_order INT NOT NULL,
+                        selector VARCHAR(500) NOT NULL,
+                        title VARCHAR(500) NOT NULL,
+                        `text` TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_walkthrough_steps_tenant_page_order (tenant_id, page, step_order)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_collective (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        name VARCHAR(255) NOT NULL,
+                        location_center TEXT,
+                        radius_meters DOUBLE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_collective_member (
+                        collective_id VARCHAR(255) NOT NULL,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        status VARCHAR(32) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (collective_id, tenant_id),
+                        INDEX idx_collective_member_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS payment_intents (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        payment_id VARCHAR(255) PRIMARY KEY,
+                        idempotency_key VARCHAR(255) NOT NULL,
+                        amount DOUBLE NOT NULL,
+                        currency VARCHAR(16) NOT NULL,
+                        source VARCHAR(64) NOT NULL,
+                        status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                        stripe_payment_intent_id VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE KEY ux_payment_intents_tenant_idempotency (tenant_id, idempotency_key)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ledger_transactions (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        tx_id VARCHAR(255) PRIMARY KEY,
+                        amount DOUBLE NOT NULL,
+                        currency VARCHAR(16) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_ledger_transactions_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ledger_accounts (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        account_id VARCHAR(255) NOT NULL,
+                        currency VARCHAR(16) NOT NULL,
+                        balance DOUBLE NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, account_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ledger_entries (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        entry_id VARCHAR(255) PRIMARY KEY,
+                        tx_id VARCHAR(255) NOT NULL,
+                        account_id VARCHAR(255) NOT NULL,
+                        direction VARCHAR(16) NOT NULL,
+                        amount DOUBLE NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_ledger_entries_tenant_account (tenant_id, account_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ledger_reserves (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        envelope_id VARCHAR(255) NOT NULL,
+                        envelope_type VARCHAR(64) NOT NULL,
+                        balance DOUBLE NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, envelope_id)
+                    );
                 "#;
 
                 for query in schema.split(';') {
@@ -3473,6 +3698,25 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         sqlx::query(trimmed).execute(mysql_pool).await?;
                     }
                 }
+                // Older HeatWave deployments may already have the legacy tenants table.
+                // Guard each additive column through information_schema instead of relying
+                // on MySQL-specific `ADD COLUMN IF NOT EXISTS` support.
+                ensure_mysql_column(
+                    mysql_pool,
+                    "tenants",
+                    "plan_tier",
+                    "VARCHAR(64) NOT NULL DEFAULT 'free'",
+                )
+                .await?;
+                ensure_mysql_column(
+                    mysql_pool,
+                    "tenants",
+                    "base_currency",
+                    "VARCHAR(16) NOT NULL DEFAULT 'USD'",
+                )
+                .await?;
+                ensure_mysql_column(mysql_pool, "tenants", "enabled_currencies", "JSON NULL")
+                    .await?;
 
                 sql_middleware::run_mysql_harness_middleware_migration(mysql_pool).await?;
             }

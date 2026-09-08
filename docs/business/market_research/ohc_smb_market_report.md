@@ -3,13 +3,13 @@
 # OHC Global SMB Market Research Report
 
 ## 1. Executive Summary
-OneHumanCorp (OHC) is uniquely positioned to dominate the small business platform space by focusing on the core problem: existing platforms (Shopify, Wix, Squarespace) require users to be part-time web developers, marketers, and IT administrators. OHC's vision—"anyone can launch and run a real small business from their phone or browser in under 10 minutes"—is an existential threat to the legacy incumbents if executed correctly. Our primary differentiator is the shift from "tools" to "invisible autonomous agents."
+OmniSolo (OHC) is uniquely positioned to dominate the small business platform space by focusing on the core problem: existing platforms (Shopify, Wix, Squarespace) require users to be part-time web developers, marketers, and IT administrators. OHC's vision—"anyone can launch and run a real small business from their phone or browser in under 10 minutes"—is an existential threat to the legacy incumbents if executed correctly. Our primary differentiator is the shift from "tools" to "invisible autonomous agents."
 
 ## 2. Mermaid Competitor Landscape
 
 ```mermaid
 graph TD
-    OHC[OneHumanCorp] -->|Invisible AI Agents| Market
+    OHC[OmniSolo] -->|Invisible AI Agents| Market
     Shopify -->|Complex Plugins| Market
     Wix -->|Manual Setup| Market
     Squarespace -->|Design First| Market

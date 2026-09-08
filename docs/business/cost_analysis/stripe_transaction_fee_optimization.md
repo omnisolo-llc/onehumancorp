@@ -1,10 +1,10 @@
 # Stripe Transaction Fee Optimization Analysis
 
 **Date:** 2026-07-06
-**Goal:** Document the cost savings achieved through Payment Routing optimization and Payout batching in OneHumanCorp.
+**Goal:** Document the cost savings achieved through Payment Routing optimization and Payout batching in OmniSolo.
 
 ## Overview
-OneHumanCorp integrates with Stripe for processing payments and distributing funds to connected accounts. To ensure our operators retain the maximum amount of revenue, we implemented two strategic optimizations:
+OmniSolo integrates with Stripe for processing payments and distributing funds to connected accounts. To ensure our operators retain the maximum amount of revenue, we implemented two strategic optimizations:
 1. **Dynamic Payment Routing:** Automatically selecting between ACH and Credit Card based on transaction amount.
 2. **Payout Batching:** Aggregating small micro-payouts into larger bulk payouts to minimize fixed transfer fees.
 

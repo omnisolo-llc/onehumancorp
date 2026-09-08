@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-17
 
 ## 1. Overview
-One Human Corp (OHC) provides a secure, verifiable identity for every entity in the system, whether human or AI. This is achieved through a "Hybrid Identity" model: OIDC federation for humans and SPIFFE/SPIRE for AI workload identity. This ensures that every tool call or inter-agent message is cryptographically signed and auditable.
+OmniSolo (OHC) provides a secure, verifiable identity for every entity in the system, whether human or AI. This is achieved through a "Hybrid Identity" model: OIDC federation for humans and SPIFFE/SPIRE for AI workload identity. This ensures that every tool call or inter-agent message is cryptographically signed and auditable.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

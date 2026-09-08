@@ -320,7 +320,7 @@ describe("OnboardingWizard", () => {
     // Verify it transitions to Step 5 (Live Screen) on success
     await waitFor(() => {
       screen.getByText("You're Live!");
-      screen.getByText("maya-bakery.ohc.app");
+      screen.getByText("maya-bakery.omnisolo.co");
     });
 
     const startCall = vi

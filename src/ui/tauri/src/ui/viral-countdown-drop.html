@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Viral Countdown Drop - OHC</title>
+  <title>Viral Countdown Drop - OmniSolo</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -168,7 +168,7 @@
 
     <div style="margin-bottom: 24px; display: flex; align-items: center; gap: 8px;">
       <input type="checkbox" id="branding-toggle" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
-      <label for="branding-toggle" style="margin: 0; font-weight: 500;">Include "Powered by OHC" (Earn referral credits)</label>
+      <label for="branding-toggle" style="margin: 0; font-weight: 500;">Include "OmniSolo" (Earn referral credits)</label>
     </div>
 
     <button id="generate-btn" class="btn-primary">Generate Embed Code</button>
@@ -181,7 +181,7 @@
         <div class="timer" id="preview-timer">00:00:00:00</div>
         <p style="font-size: 14px; margin-bottom: 16px;">Share this link to get 1-hour early access!</p>
         <button class="share-btn">Share to Unlock Early Access</button>
-        <div id="preview-branding" style="margin-top: 16px; font-size: 12px; font-weight: 600; color: var(--text-secondary);">⚡ Powered by OHC</div>
+        <div id="preview-branding" style="margin-top: 16px; font-size: 12px; font-weight: 600; color: var(--text-secondary);">⚡ OmniSolo</div>
       </div>
 
       <div class="form-group" style="margin-top: 24px;">
@@ -196,7 +196,7 @@
   <div id="paywall-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
     <div class="glassmorphism" style="max-width: 400px; width: 100%; padding: 32px; text-align: center; position: relative;">
       <h2 style="margin-bottom: 16px;">Pro Feature ✨</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 24px;">Removing the OHC branding is a Pro feature. Upgrade today to fully white-label your widgets and unlock advanced viral loops.</p>
+      <p style="color: var(--text-secondary); margin-bottom: 24px;">Removing the OmniSolo branding is a Pro feature. Upgrade today to fully white-label your widgets and unlock advanced viral loops.</p>
       <button onclick="window.location.href='pricing.html'" class="btn-primary" style="margin-bottom: 12px;">Upgrade to Pro</button>
       <button onclick="document.getElementById('paywall-modal').style.display='none'" style="background: transparent; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer; padding: 8px;">Maybe Later</button>
     </div>
@@ -243,7 +243,7 @@
         document.getElementById('preview-container').style.display = 'block';
 
         // Generate embed code
-        const origin = window.location.origin.includes('localhost') ? 'https://ohc.app' : window.location.origin;
+        const origin = window.location.origin.includes('localhost') ? 'https://omnisolo.co' : window.location.origin;
         const embedUrl = `${origin}/api/v1/growth/countdown/embed?tenant=${tenantId}&title=${encodeURIComponent(title)}&time=${encodeURIComponent(time)}&branding=${includeBranding}`;
 
         document.getElementById('embed-code').value = `<iframe src="${embedUrl}" width="100%" height="250" style="border:none; border-radius:12px; overflow:hidden;" title="Countdown Drop"></iframe>`;

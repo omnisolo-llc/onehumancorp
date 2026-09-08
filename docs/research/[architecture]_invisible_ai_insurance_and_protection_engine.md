@@ -4,7 +4,7 @@
 **Invisible AI-Powered Business Insurance & Risk Protection Engine: Zero-Friction Liability Coverage**
 
 ## 2. Problem Statement
-For OneHumanCorp (OHC) core personas—like **Maya (baker)**, **Carlos (handyman)**, and **Fatima (food cart operator)**—business insurance is an opaque, intimidating, and often neglected requirement.
+For OmniSolo (OHC) core personas—like **Maya (baker)**, **Carlos (handyman)**, and **Fatima (food cart operator)**—business insurance is an opaque, intimidating, and often neglected requirement.
 
 Maya worries about a customer having an allergic reaction to her cakes. Carlos is terrified of accidentally damaging a client's property during a repair. Fatima faces the constant risk of foodborne illness or equipment theft. Currently, getting business insurance requires them to leave OHC, find a broker, fill out endless forms about their projected revenue and safety protocols, and wait days for a quote. This "Insurance Friction" leads many solopreneurs to operate without protection, leaving them one accident away from total financial ruin. They need an invisible partner that uses their OHC business data to provide instant, pay-as-you-go liability protection that scales with their sales.
 

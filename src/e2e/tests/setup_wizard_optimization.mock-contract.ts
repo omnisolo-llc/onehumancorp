@@ -51,7 +51,7 @@ test.describe('Onboarding Wizard Optimization', () => {
     const spanSuffix = domainInputContainer.locator('span');
 
     await expect(spanSuffix).toBeVisible();
-    await expect(spanSuffix).toHaveText('.ohc.app');
+    await expect(spanSuffix).toHaveText('.omnisolo.co');
   });
 
   test('validates domain name min length correctly', async ({ page }) => {

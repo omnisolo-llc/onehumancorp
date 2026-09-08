@@ -3,7 +3,7 @@
 This document contains the required architecture findings and issue brief for the OHC Website & Storefront Builder as requested in GitHub Issue #8439.
 
 ## 1. Overview
-This design document outlines the architecture for the OneHumanCorp (OHC) Website & Storefront Builder. The builder empowers non-technical small business owners (e.g., bakers, handymen, boutique owners) to create, customize, and publish professional, mobile-first storefronts and websites without any coding knowledge. AI agents assist in the background to handle design, layout, content generation, and SEO, abstracting away all complexity.
+This design document outlines the architecture for the OmniSolo (OHC) Website & Storefront Builder. The builder empowers non-technical small business owners (e.g., bakers, handymen, boutique owners) to create, customize, and publish professional, mobile-first storefronts and websites without any coding knowledge. AI agents assist in the background to handle design, layout, content generation, and SEO, abstracting away all complexity.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals

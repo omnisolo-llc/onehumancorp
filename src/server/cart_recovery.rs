@@ -38,7 +38,7 @@ impl Default for CartRecoveryConfig {
             abandoned_after: Duration::minutes(60),
             batch_limit: 50,
             checkout_base_url: std::env::var("OHC_CHECKOUT_BASE_URL")
-                .unwrap_or_else(|_| "https://app.onehumancorp.com".to_string()),
+                .unwrap_or_else(|_| "https://cloud.omnisolo.co".to_string()),
         }
     }
 }
@@ -296,7 +296,7 @@ impl HttpCartRecoveryDeliveryProvider {
             "personalizations": [{
                 "to": [{"email": to}]
             }],
-            "from": {"email": "no-reply@onehumancorp.com"},
+            "from": {"email": "no-reply@omnisolo.co"},
             "subject": payload.subject.as_str(),
             "content": [{"type": "text/plain", "value": payload.body.as_str()}]
         });
@@ -533,7 +533,7 @@ async fn recovery_message_for(
         if let Ok(resp) = llm_client.chat(req).await {
             let generated = resp.message.content.trim();
             if !generated.is_empty() {
-                body = format!("{}\n\n⚡ Powered by OHC", generated);
+                body = format!("{}\n\n⚡ OmniSolo", generated);
             }
         }
     }

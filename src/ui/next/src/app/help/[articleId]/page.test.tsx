@@ -28,7 +28,7 @@ describe('HelpArticlePage', () => {
       ok: true,
       json: () => Promise.resolve({
         title: 'Getting Started',
-        contentHtml: '<p>Welcome to OneHumanCorp!</p>'
+        contentHtml: '<p>Welcome to OmniSolo!</p>'
       })
     });
 
@@ -38,7 +38,7 @@ describe('HelpArticlePage', () => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Welcome to OneHumanCorp!')).toBeInTheDocument();
+    expect(screen.getByText('Welcome to OmniSolo!')).toBeInTheDocument();
   });
 
   it('renders error state on failed fetch', async () => {

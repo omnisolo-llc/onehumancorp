@@ -40,7 +40,7 @@ describe('ChangelogPage', () => {
       render(<ChangelogPage />);
     });
     const link = screen.getByText('Read the full technical changelog on our website →');
-    expect(link).toHaveAttribute('href', 'https://onehumancorp.com/changelog');
+    expect(link).toHaveAttribute('href', 'https://omnisolo.co/changelog');
   });
 
   it('renders paragraph elements for random text', async () => {

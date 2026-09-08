@@ -17,7 +17,7 @@
 
 <div class="glass-container">
   <h2>Mission Brief: The OHC Delta</h2>
-  <p>Based on comprehensive market audits of current Agentic OS architectures, the most critical vulnerability across all frameworks (OpenClaw, AutoGen, CrewAI) is <strong>"Agent Amnesia"</strong> and context window bloat. The One Human Corp (OHC) Swarm will capture market dominance by introducing our Unfair Advantage: <strong>Long-Term Episodic Memory backed by K8s CSI Snapshotting and LangGraph Checkpointers</strong>.</p>
+  <p>Based on comprehensive market audits of current Agentic OS architectures, the most critical vulnerability across all frameworks (OpenClaw, AutoGen, CrewAI) is <strong>"Agent Amnesia"</strong> and context window bloat. The OmniSolo (OHC) Swarm will capture market dominance by introducing our Unfair Advantage: <strong>Long-Term Episodic Memory backed by K8s CSI Snapshotting and LangGraph Checkpointers</strong>.</p>
 
 
 ## Executive Summary

@@ -17,7 +17,7 @@
 
 <div class="glass-container">
   <h2>Mission Brief: The OHC Delta</h2>
-  <p>Based on comprehensive market audits of current Agentic OS architectures, a highly critical vulnerability across all frameworks (e.g., OpenClaw, AutoGen, CrewAI) is the <strong>tight coupling of agents to hardcoded toolsets (OpenAPI schemas or Python functions)</strong>. Agents cannot autonomously discover new tools during runtime. The One Human Corp (OHC) Swarm will capture market dominance by introducing our next Unfair Advantage: <strong>Dynamic Tool Discovery (MCP) & Zero-Trust Synthesis</strong>.</p>
+  <p>Based on comprehensive market audits of current Agentic OS architectures, a highly critical vulnerability across all frameworks (e.g., OpenClaw, AutoGen, CrewAI) is the <strong>tight coupling of agents to hardcoded toolsets (OpenAPI schemas or Python functions)</strong>. Agents cannot autonomously discover new tools during runtime. The OmniSolo (OHC) Swarm will capture market dominance by introducing our next Unfair Advantage: <strong>Dynamic Tool Discovery (MCP) & Zero-Trust Synthesis</strong>.</p>
 
 
 ## Executive Summary

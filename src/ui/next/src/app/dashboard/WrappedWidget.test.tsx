@@ -18,7 +18,7 @@ describe('WrappedWidget', () => {
           topProduct: "Custom Logo Design",
           aiHoursSaved: 42,
         },
-        shareText: "I just reviewed my 2024 business stats on OHC and I'm blown away! I saved 42 hours using AI and served 128 new customers. Start growing your business on OHC:",
+        shareText: "I just reviewed my 2024 business stats on OmniSolo and I'm blown away! I saved 42 hours using AI and served 128 new customers. Start growing your business on OmniSolo:",
       }),
     });
   });

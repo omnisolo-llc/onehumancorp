@@ -31,7 +31,7 @@ test.describe('Viral Countdown Widget', () => {
     expect(codeText).toContain('branding=true');
 
     // Remove branding should trigger paywall if not pro (adminPage doesn't have pro by default)
-    const removeBrandingCheckbox = page.getByLabel(/Remove "Powered by OHC" Badge/);
+    const removeBrandingCheckbox = page.getByLabel(/Remove "OmniSolo" Badge/);
     await removeBrandingCheckbox.check();
 
     // Ensure soft paywall appears
@@ -59,6 +59,6 @@ test.describe('Viral Countdown Widget', () => {
 
     // Should have dark mode color and branding
     expect(text).toContain('#111827');
-    expect(text).toContain('Powered by OHC');
+    expect(text).toContain('OmniSolo');
   });
 });

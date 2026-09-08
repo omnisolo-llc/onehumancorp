@@ -15,6 +15,6 @@ describe('Storefront Embed Widget', () => {
 
     const text = await res.text();
     expect(text).toContain('<!DOCTYPE html>');
-    expect(text).toContain('https://ohc.app?ref=maya-cakes');
+    expect(text).toContain('https://cloud.omnisolo.co?ref=maya-cakes');
   });
 });
