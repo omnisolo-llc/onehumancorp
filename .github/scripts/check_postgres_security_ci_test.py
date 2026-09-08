@@ -94,7 +94,24 @@ def assert_real_yaml_parser_rejects_nested_duplicates() -> None:
     raise AssertionError("real YAML parser accepted a recursively duplicated key")
 
 
+def assert_dependency_audit_blocks_required_check() -> None:
+    import yaml
+    required = yaml.safe_load(WORKFLOW.read_text())["jobs"]["ci-required"]
+    assert "dependency-audit" in required["needs"], "CI Required must wait for dependency audit"
+    step = required["steps"][0]
+    assert step["env"].get("DEPENDENCY_AUDIT_RESULT") == "${{ needs.dependency-audit.result }}"
+    for markdown in ("false", "true"):
+        for audit in ("success", "failure", "cancelled", "skipped"):
+            environment = {key: "success" for key in step["env"]}
+            environment.update(EVENT_NAME="push", MARKDOWN_ONLY=markdown, DEPENDENCY_AUDIT_RESULT=audit)
+            result = subprocess.run(["bash", "--noprofile", "--norc", "-c", step["run"]],
+                                    env=environment, capture_output=True, text=True)
+            expected = audit == "success" or (markdown == "true" and audit == "skipped")
+            assert (result.returncode == 0) == expected, (markdown, audit, result.stdout, result.stderr)
+
+
 def main() -> None:
+    assert_dependency_audit_blocks_required_check()
     assert_bash_env_can_preempt_a_step()
     assert_real_yaml_parser_rejects_unquoted_colon_space()
     assert_parser_absence_fails_closed()
@@ -165,38 +182,38 @@ def main() -> None:
             "unreachable required-result enforcement",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          exit 0\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          exit 0\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result direct early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          if true; then exit 0; fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          if true; then exit 0; fi\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result guarded early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          true; exit 0\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          true; exit 0\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result compound early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          if :; then exit 0; fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          if :; then exit 0; fi\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result colon-guarded early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          if [[ 1 -eq 1 ]]; then\n            exit 0\n          fi\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          if [[ 1 -eq 1 ]]; then\n            exit 0\n          fi\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result multiline early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          exit 00\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          exit 00\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result alternate-zero early success",
         ),
         (
-            "          set -euo pipefail\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
-            "          set -euo pipefail\n          exec /bin/true\n\n          echo \"check-changes: ${CHECK_CHANGES_RESULT}\"",
+            "          set -euo pipefail\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
+            "          set -euo pipefail\n          exec /bin/true\n\n          echo \"dependency-audit: ${DEPENDENCY_AUDIT_RESULT}\"",
             "required-result exec replacement",
         ),
         (

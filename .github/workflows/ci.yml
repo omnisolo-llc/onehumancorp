@@ -797,6 +797,7 @@ jobs:
     name: CI Required
     needs:
       - check-changes
+      - dependency-audit
       - bazel-build
       - bazel-test
       - bazel-test-e2e
@@ -811,6 +812,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}
+          DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}
           BAZEL_BUILD_RESULT: ${{ needs.bazel-build.result }}
           BAZEL_TEST_RESULT: ${{ needs.bazel-test.result }}
@@ -821,6 +823,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "dependency-audit: ${DEPENDENCY_AUDIT_RESULT}"
           echo "check-changes: ${CHECK_CHANGES_RESULT}"
           echo "bazel-build: ${BAZEL_BUILD_RESULT}"
           echo "bazel-test: ${BAZEL_TEST_RESULT}"
@@ -856,12 +859,14 @@ jobs:
           fi
 
           if [[ "$MARKDOWN_ONLY" == "true" ]]; then
+            allow_success_or_skipped "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"
             allow_success_or_skipped "bazel-test" "$BAZEL_TEST_RESULT"
             allow_success_or_skipped "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
             allow_success_or_skipped "kind-e2e" "$KIND_E2E_RESULT"
             allow_success_or_skipped "docker-e2e" "$DOCKER_E2E_RESULT"
             allow_success_or_skipped "postgres-security" "$POSTGRES_SECURITY_RESULT"
           else
+            require_success "dependency-audit" "$DEPENDENCY_AUDIT_RESULT"
             require_success "bazel-test" "$BAZEL_TEST_RESULT"
             require_success "bazel-test-e2e" "$BAZEL_TEST_E2E_RESULT"
             require_success "kind-e2e" "$KIND_E2E_RESULT"
