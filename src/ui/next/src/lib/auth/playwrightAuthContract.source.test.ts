@@ -17,7 +17,7 @@ describe('Playwright authentication source contract', () => {
 
     expect(config).toContain('globalSetup:');
     expect(config).toContain('storageState');
-    expect(config).toContain("baseURL: 'http://127.0.0.1:3000'");
+    expect(config).toContain("baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000'");
     expect(pageFixture).toBeDefined();
     expect(pageFixture).not.toContain('loginAs(page');
   });
@@ -32,7 +32,7 @@ describe('Playwright authentication source contract', () => {
   });
 
   it.each([
-    'dashboard-triage-edit.spec.ts',
+    'dashboard-triage-edit.mock-contract.ts',
     'store-wrapped.spec.ts',
     'subscription_replenishment_feed.spec.ts',
     'hyperlocal-lead-gen.spec.ts',

@@ -624,8 +624,8 @@ impl DB {
                                     if perms.mode() & 0o777 != 0o600 {
                                         tracing::warn!("Insecure permissions on the OmniSolo SQLite key. Fixing them to prevent TOCTOU attacks.");
                                         perms.set_mode(0o600);
-                                        if let Err(e) = file.set_permissions(perms) {
-                                            tracing::error!("Failed to securely update OmniSolo SQLite key permissions: {}", e);
+                                        if file.set_permissions(perms).is_err() {
+                                            tracing::error!("Failed to securely update OmniSolo SQLite key permissions");
                                             std::process::exit(1);
                                         }
                                     }

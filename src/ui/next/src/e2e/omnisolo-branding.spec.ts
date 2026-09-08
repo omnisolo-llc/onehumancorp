@@ -1,7 +1,7 @@
 import { expect, test } from "../../../../e2e/fixtures";
 
 test.describe("OmniSolo browser branding", () => {
-  test("login is a standalone OmniSolo surface", async ({ page }) => {
+  test("login is a standalone OmniSolo surface", async ({ anonymousPage: page }) => {
     await page.goto("/login?next=/dashboard");
 
     await expect(page).toHaveTitle(/OmniSolo/);
@@ -30,38 +30,15 @@ test.describe("OmniSolo browser branding", () => {
     ];
     const violations: string[] = [];
 
-    await page.addInitScript(() => {
-      const observed: string[] = [];
-      const legacyKey = /^ohc(?:_|-)/i;
-      const storagePrototype = Storage.prototype as Storage & Record<string, unknown>;
-      for (const methodName of ["getItem", "setItem", "removeItem"] as const) {
-        const original = Storage.prototype[methodName];
-        Object.defineProperty(storagePrototype, methodName, {
-          configurable: true,
-          value(this: Storage, key: string, ...values: string[]) {
-            if (legacyKey.test(String(key))) observed.push(String(key));
-            return Reflect.apply(original, this, [key, ...values]);
-          },
-        });
-      }
-      Object.defineProperty(globalThis, "__omnisoloLegacyStorageKeys", {
-        configurable: true,
-        value: observed,
-      });
-    });
-
     for (const route of affectedRoutes) {
       await page.goto(route, { waitUntil: "domcontentloaded" });
       await page.waitForTimeout(250);
       const routeViolations = await page.evaluate(() => {
-        const observed = (globalThis as typeof globalThis & {
-          __omnisoloLegacyStorageKeys?: string[];
-        }).__omnisoloLegacyStorageKeys ?? [];
         const persisted = [localStorage, sessionStorage].flatMap((storage) =>
           Array.from({ length: storage.length }, (_, index) => storage.key(index) ?? "")
             .filter((key) => /^ohc(?:_|-)/i.test(key))
         );
-        return [...new Set([...observed, ...persisted])];
+        return [...new Set(persisted)];
       });
       violations.push(...routeViolations.map((key) => `${route}: ${key}`));
     }

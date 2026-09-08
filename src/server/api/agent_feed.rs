@@ -167,8 +167,8 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String, gzip: bool) {
         while let Some(msg) = stream.next().await {
             let payload: String = match msg.get_payload() {
                 Ok(p) => p,
-                Err(e) => {
-                    tracing::error!("Failed to get pubsub payload: {}", e);
+                Err(_) => {
+                    tracing::error!("Failed to decode pubsub message");
                     continue;
                 }
             };

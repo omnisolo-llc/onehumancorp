@@ -1,15 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { E2E_ADMIN_USER, expect, test } from "../../../../e2e/fixtures";
 import { discoverApplicationRoutes } from "./production_route_inventory";
 
-const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-const adminEmail = process.env.OMNISOLO_ADMIN_EMAIL ?? process.env.OHC_ADMIN_EMAIL;
-const adminPassword = process.env.OMNISOLO_ADMIN_PASSWORD ?? process.env.OHC_ADMIN_PASSWORD;
+const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000";
+const adminEmail = process.env.OMNISOLO_ADMIN_EMAIL ?? process.env.OHC_ADMIN_EMAIL ?? E2E_ADMIN_USER.email;
+const adminPassword = process.env.OMNISOLO_ADMIN_PASSWORD ?? process.env.OHC_ADMIN_PASSWORD ?? E2E_ADMIN_USER.password;
 const organizationId = process.env.OMNISOLO_ADMIN_ORGANIZATION_ID
   ?? process.env.OHC_ADMIN_ORGANIZATION_ID
-  ?? "org-1";
+  ?? E2E_ADMIN_USER.organizationId;
 
 async function loginThroughRenderedForm(page: import("@playwright/test").Page) {
-  test.skip(!adminEmail || !adminPassword, "OMNISOLO_ADMIN_EMAIL/OMNISOLO_ADMIN_PASSWORD are required for live smoke tests");
   await page.goto(new URL("/login", baseUrl).toString(), { waitUntil: "domcontentloaded" });
   await page.getByLabel("Email or username").fill(adminEmail!);
   await page.getByLabel("Password").fill(adminPassword!);
@@ -20,7 +19,7 @@ async function loginThroughRenderedForm(page: import("@playwright/test").Page) {
   ]);
 }
 
-test("health check is public and returns a live response", async ({ page }) => {
+test("health check is public and returns a live response", async ({ anonymousPage: page }) => {
   const response = await page.goto(new URL("/healthz", baseUrl).toString(), {
     waitUntil: "domcontentloaded",
   });
@@ -29,7 +28,7 @@ test("health check is public and returns a live response", async ({ page }) => {
   await expect(page.locator("body")).toContainText("ok");
 });
 
-test("all application pages render through the real authenticated service", async ({ page }) => {
+test("all application pages render through the real authenticated service", async ({ anonymousPage: page }) => {
   test.setTimeout(15 * 60_000);
   await loginThroughRenderedForm(page);
   const failures: string[] = [];
@@ -89,7 +88,7 @@ test("all application pages render through the real authenticated service", asyn
   expect(websocketFailures, "failed WebSocket upgrades during the page crawl").toEqual([]);
 });
 
-test("catalog create/read round trip uses the persisted service", async ({ page }) => {
+test("catalog create/read round trip uses the persisted service", async ({ anonymousPage: page }) => {
   await loginThroughRenderedForm(page);
   const name = `OmniSolo live smoke ${Date.now()}`;
   const create = await page.evaluate(async (payload) => {
@@ -116,7 +115,7 @@ test("catalog create/read round trip uses the persisted service", async ({ page 
   expect(products.filter((product: { name?: string }) => product.name === name)).toHaveLength(1);
 });
 
-test("logout removes protected access and retains public route access", async ({ page }) => {
+test("logout removes protected access and retains public route access", async ({ anonymousPage: page }) => {
   test.setTimeout(60_000);
   await loginThroughRenderedForm(page);
   await page.goto(new URL("/dashboard", baseUrl).toString());

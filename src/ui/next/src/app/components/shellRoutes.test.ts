@@ -52,7 +52,6 @@ describe("resolveShellRoute", () => {
     "/staff/manager",
     "/triage",
     "/viral-product-widget",
-    "/login",
   ])("assigns exact shell-owning route %s to the page", (pathname) => {
     expect(resolveShellRoute(pathname).owner).toBe("page");
   });
@@ -106,9 +105,9 @@ describe("resolveShellRoute", () => {
     });
   });
 
-  test("keeps login metadata while allowing the page to own its standalone surface", () => {
+  test("keeps login metadata on its standalone public surface", () => {
     expect(resolveShellRoute("/login")).toEqual({
-      owner: "page",
+      owner: "public",
       title: "Login",
       subtitle: "Access your business workspace.",
     });
