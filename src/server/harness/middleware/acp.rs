@@ -883,7 +883,12 @@ fn decode_update(
                     "unsupported ACP streamed content type: {content_type}"
                 )));
             }
-            let text = required_string(content.get("text"), "ACP text content")?;
+            // Streaming chunks may be empty or contain only whitespace. Unlike
+            // identifiers, their contents must be preserved without trimming.
+            let text = content
+                .get("text")
+                .and_then(Value::as_str)
+                .ok_or_else(|| invalid_response("ACP text content must be a string"))?;
             let event_type = match update_type {
                 "agent_message_chunk" => "assistant.text_chunk",
                 "agent_thought_chunk" => "assistant.reasoning",

@@ -8,7 +8,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
-use tokio::sync::{Mutex, broadcast, mpsc, oneshot};
+use tokio::sync::{Mutex, broadcast, oneshot};
 use tokio::time::timeout;
 
 use super::process_env::apply_isolated_environment;
@@ -165,8 +165,8 @@ struct RuntimeState {
     server_requests: Mutex<HashMap<String, JsonRpcId>>,
     notifications: broadcast::Sender<JsonRpcNotification>,
     server_request_events: broadcast::Sender<JsonRpcServerRequest>,
-    inbound_tx: mpsc::Sender<Result<JsonRpcInbound, JsonRpcError>>,
-    inbound_rx: Mutex<mpsc::Receiver<Result<JsonRpcInbound, JsonRpcError>>>,
+    inbound_tx: broadcast::Sender<Result<JsonRpcInbound, JsonRpcError>>,
+    inbound_rx: Mutex<broadcast::Receiver<Result<JsonRpcInbound, JsonRpcError>>>,
     next_id: AtomicU64,
     request_timeout: Duration,
     include_jsonrpc_header: bool,
@@ -203,7 +203,8 @@ impl JsonRpcProcessRuntime {
         let stdout = take_piped(process.stdout.take(), "stdout")?;
         let (notifications, _) = broadcast::channel(256);
         let (server_request_events, _) = broadcast::channel(256);
-        let (inbound_tx, inbound_rx) = mpsc::channel(256);
+        // Optional diagnostic observation must never backpressure protocol dispatch.
+        let (inbound_tx, inbound_rx) = broadcast::channel(256);
         let runtime = Self {
             inner: Arc::new(RuntimeState {
                 writer: Mutex::new(stdin),
@@ -317,10 +318,13 @@ impl JsonRpcProcessRuntime {
 
     pub async fn next_message(&self) -> Result<JsonRpcInbound, JsonRpcError> {
         let mut receiver = self.inner.inbound_rx.lock().await;
-        receiver
-            .recv()
-            .await
-            .unwrap_or(Err(JsonRpcError::ProcessExited))
+        match receiver.recv().await {
+            Ok(message) => message,
+            Err(broadcast::error::RecvError::Closed) => Err(JsonRpcError::ProcessExited),
+            Err(broadcast::error::RecvError::Lagged(count)) => Err(JsonRpcError::InvalidMessage(
+                format!("diagnostic observer lagged by {count} messages"),
+            )),
+        }
     }
 
     pub async fn respond_server_request(
@@ -428,11 +432,7 @@ impl JsonRpcProcessRuntime {
                 Ok(0) => {
                     self.inner.closed.store(true, Ordering::Release);
                     self.fail_pending(JsonRpcError::ProcessExited).await;
-                    let _ = self
-                        .inner
-                        .inbound_tx
-                        .send(Err(JsonRpcError::ProcessExited))
-                        .await;
+                    let _ = self.inner.inbound_tx.send(Err(JsonRpcError::ProcessExited));
                     break;
                 }
                 Ok(_) if line.trim().is_empty() => continue,
@@ -443,7 +443,7 @@ impl JsonRpcProcessRuntime {
                     Err(error) => {
                         self.inner.closed.store(true, Ordering::Release);
                         self.fail_pending(error.clone()).await;
-                        let _ = self.inner.inbound_tx.send(Err(error)).await;
+                        let _ = self.inner.inbound_tx.send(Err(error));
                         break;
                     }
                 },
@@ -474,7 +474,7 @@ impl JsonRpcProcessRuntime {
                 let _ = self.inner.server_request_events.send(request.clone());
             }
         }
-        let _ = self.inner.inbound_tx.send(Ok(message)).await;
+        let _ = self.inner.inbound_tx.send(Ok(message));
     }
 
     async fn fail_pending(&self, error: JsonRpcError) {
@@ -488,7 +488,7 @@ impl JsonRpcProcessRuntime {
         let error = JsonRpcError::Io(error.to_string());
         self.inner.closed.store(true, Ordering::Release);
         self.fail_pending(error.clone()).await;
-        let _ = self.inner.inbound_tx.send(Err(error)).await;
+        let _ = self.inner.inbound_tx.send(Err(error));
     }
 }
 

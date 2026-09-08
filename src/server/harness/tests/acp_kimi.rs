@@ -645,6 +645,27 @@ sleep 1
 }
 
 #[test]
+fn streamed_text_accepts_empty_and_whitespace_chunks_but_requires_a_string() {
+    let codec = codec(ReasoningEffort::Max);
+    for text in [json!(""), json!("\n "), Value::Null, json!(12)] {
+        let mut state = NativeTurnState::new("kimi-session-1");
+        let result = codec.decode_notification(
+            &notification(json!({
+                "sessionId": "kimi-session-1",
+                "update": {"sessionUpdate": "agent_message_chunk",
+                    "content": {"type": "text", "text": text}}
+            })),
+            &mut state,
+        );
+        if text.is_string() {
+            assert_eq!(result.unwrap().event.payload["content"], text);
+        } else {
+            assert!(result.is_err());
+        }
+    }
+}
+
+#[test]
 fn session_updates_map_streamed_text_reasoning_and_preserve_native_payloads() {
     let codec = codec(ReasoningEffort::Max);
     let mut state = NativeTurnState::new("kimi-session-1");

@@ -1357,13 +1357,25 @@ impl OpenCodeEventDecoder {
                                     Some(completed),
                                     "OpenCode assistant completion time",
                                 )?;
-                                required_string(Some(finish), "OpenCode assistant finish reason")?;
-                                final_text = (!self.text.is_empty()).then(|| self.text.clone());
-                                if !self.terminal_emitted {
-                                    self.terminal_emitted = true;
-                                    terminal = true;
+                                let finish = required_string(
+                                    Some(finish),
+                                    "OpenCode assistant finish reason",
+                                )?;
+                                if finish == "tool-calls" {
+                                    // OpenCode emits a completed assistant message for each
+                                    // model step. Tools and the next assistant message still
+                                    // belong to the admitted user turn.
+                                    self.assistant_message_id = None;
+                                    self.text.clear();
+                                    ("assistant.step_completed", true)
+                                } else {
+                                    final_text = (!self.text.is_empty()).then(|| self.text.clone());
+                                    if !self.terminal_emitted {
+                                        self.terminal_emitted = true;
+                                        terminal = true;
+                                    }
+                                    ("assistant.final", true)
                                 }
-                                ("assistant.final", true)
                             }
                             _ => {
                                 return Err(invalid_response(

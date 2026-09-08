@@ -56,6 +56,27 @@ class KimiAcpBridgeTest(unittest.TestCase):
             self.assertNotIn("secret-canary", config_path.read_text())
             self.assertEqual(stat.S_IMODE(config_path.stat().st_mode), 0o600)
 
+    def test_exact_reasoning_uses_wire_override_without_mutating_native_provider(self):
+        import asyncio
+        import copy
+        bridge = load_bridge()
+        class Provider:
+            def __init__(self):
+                self.options = {"reasoning_effort": "high"}
+            def with_generation_kwargs(self, **kwargs):
+                cloned = copy.copy(self)
+                cloned.options = {**self.options, **kwargs}
+                return cloned
+            async def generate(self, *args, **kwargs):
+                return self.options
+        bridge.bind_requested_reasoning("max", Provider)
+        original = Provider()
+        result = asyncio.run(original.generate("system", [], []))
+        self.assertEqual(result["extra_body"]["reasoning"]["effort"], "max")
+        self.assertEqual(original.options, {"reasoning_effort": "high"})
+        with self.assertRaises(ValueError):
+            bridge.bind_requested_reasoning("unsupported", Provider)
+
     def test_missing_static_route_preserves_upstream_oauth_gate(self):
         bridge = load_bridge()
         with tempfile.TemporaryDirectory() as directory:

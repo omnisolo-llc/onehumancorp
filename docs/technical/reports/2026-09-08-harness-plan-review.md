@@ -72,3 +72,27 @@ The separate [native OmniSolo receipt](2026-09-08-native-omnisolo-acceptance.jso
 records the real writer and fresh reader, all required backend operation receipts,
 provider usage, marker and session cleanup. It is one native acceptance result,
 not a substitute for the twelve-row matrix.
+
+
+## Live acceptance follow-up
+
+The real Codex 0.149.0 and OpenCode 1.18.15 runs now pass writer and fresh-reader
+verification with all four withheld service values. Their operation receipts,
+usage, model binding and cleanup evidence are recorded in
+[Codex acceptance](2026-09-08-native-codex-acceptance.json) and
+[OpenCode acceptance](2026-09-08-native-opencode-acceptance.json).
+The native-first twelve-row matrix remains pending.
+
+These runs exposed an unused diagnostic queue blocking JSON-RPC dispatch after
+256 messages and OpenCode incorrectly treating an intermediate tool-call step
+as terminal. Both have passing regression tests and successful native reruns.
+Kimi's pinned SDK now sends the exact configured reasoning effort through its
+public request override hook; a direct pinned CLI wire probe confirmed `max`.
+Kimi and DeepSeek also emit empty streaming chunks, which their decoders now
+preserve while still rejecting non-string content.
+
+The broader Rust run passed 1,029 tests across 31 suites (three live tests
+ignored), followed by 31 passing ACP/DeepSeek tests covering the streaming fix.
+Strict Clippy passes for all three affected libraries. Full native acceptance
+for the remaining harnesses is still being exercised; these deterministic
+results do not replace it.

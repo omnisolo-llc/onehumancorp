@@ -89,6 +89,31 @@ def prepare_static_provider(environment: MutableMapping[str, str]) -> bool:
     return True
 
 
+def bind_requested_reasoning(effort: str | None, provider_type=None) -> None:
+    """Pin the wire effort despite Kimi's narrower native thinking selector.
+
+    The pinned OpenAI SDK's typed Reasoning model does not admit `max` yet.
+    Its public extra_body hook overrides that field at request serialization.
+    Each generation uses a provider copy; native session state stays unchanged.
+    """
+    if effort is None:
+        return
+    if effort not in {"none", "minimal", "low", "medium", "high", "max"}:
+        raise ValueError("unsupported configured reasoning effort")
+    if provider_type is None:
+        from kosong.contrib.chat_provider.openai_responses import OpenAIResponses
+        provider_type = OpenAIResponses
+    original_generate = provider_type.generate
+
+    async def generate(self, *args, **kwargs):
+        configured = self.with_generation_kwargs(
+            extra_body={"reasoning": {"effort": effort, "summary": "auto"}}
+        )
+        return await original_generate(configured, *args, **kwargs)
+
+    provider_type.generate = generate
+
+
 def _server(static_provider_configured: bool):
     from kimi_cli.acp.server import ACPServer
 
@@ -107,6 +132,8 @@ def main() -> None:
     from kimi_cli.utils.logging import logger
 
     configured = prepare_static_provider(os.environ)
+    if configured:
+        bind_requested_reasoning(os.environ.get("OPENAI_REASONING_EFFORT"))
     enable_logging()
     logger.info("Starting OmniSolo Kimi ACP bridge on stdio")
     asyncio.run(acp.run_agent(_server(configured), use_unstable_protocol=True))

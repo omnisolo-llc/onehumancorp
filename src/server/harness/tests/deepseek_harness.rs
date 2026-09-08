@@ -15,6 +15,31 @@ use server_harness::middleware::protocol::{
 use server_harness::middleware::types::{ModelApiDialect, ReasoningEffort, ResolvedModelSelection};
 use uuid::Uuid;
 
+#[test]
+fn text_and_reasoning_deltas_preserve_empty_and_whitespace_strings() {
+    let codec = DeepSeekHarnessCodec::for_request("/tmp", &request()).unwrap();
+    for kind in ["text-delta", "reasoning-delta"] {
+        for text in [json!(""), json!("\n "), Value::Null, json!(42)] {
+            let mut state = NativeTurnState::new("session-1");
+            let result = codec.decode_notification(
+                &notification(
+                    "session.event",
+                    json!({
+                        "sessionId":"session-1", "event":{"type":"assistant/chunk",
+                            "seq":1,"time":1,"data":{"chunk":{"type":kind,"text":text}}}
+                    }),
+                ),
+                &mut state,
+            );
+            if text.is_string() {
+                assert_eq!(result.unwrap().event.payload["content"], text);
+            } else {
+                assert!(result.is_err());
+            }
+        }
+    }
+}
+
 fn request() -> HarnessSessionRequest {
     let mut request = HarnessSessionRequest::new(
         "tenant-1",

@@ -773,6 +773,68 @@ fn assistant_is_final_only_with_completed_time_and_finish_evidence() {
 }
 
 #[test]
+fn tool_call_completion_keeps_turn_open_for_the_next_assistant_message() {
+    let mut turn = correlation();
+    turn.admitted_user_message_id = Some("user-tools".into());
+    let mut decoder = OpenCodeEventDecoder::new(turn);
+    decoder
+        .decode(assistant_message_event(
+            "start",
+            "assistant-tools",
+            "user-tools",
+            false,
+        ))
+        .unwrap();
+    decoder
+        .decode(text_delta_event(
+            "thinking",
+            "assistant-tools",
+            "Calling a tool",
+        ))
+        .unwrap();
+    let mut step = assistant_message_event("tool-step", "assistant-tools", "user-tools", true);
+    step["properties"]["info"]["finish"] = json!("tool-calls");
+    let step = decoder.decode(step).unwrap().unwrap();
+    assert!(
+        !step.terminal,
+        "a tool call completes a model step, not the native turn"
+    );
+    assert!(step.final_text.is_none());
+    assert!(
+        decoder
+            .decode(assistant_message_event(
+                "next",
+                "assistant-final",
+                "user-tools",
+                false
+            ))
+            .unwrap()
+            .is_some()
+    );
+    decoder
+        .decode(text_delta_event(
+            "answer",
+            "assistant-final",
+            "Retrieved actual service value",
+        ))
+        .unwrap();
+    let done = decoder
+        .decode(assistant_message_event(
+            "done",
+            "assistant-final",
+            "user-tools",
+            true,
+        ))
+        .unwrap()
+        .unwrap();
+    assert!(done.terminal);
+    assert_eq!(
+        done.final_text.as_deref(),
+        Some("Retrieved actual service value")
+    );
+}
+
+#[test]
 fn documented_native_error_union_maps_terminal_outcomes() {
     for (error, expected_type, expected_class) in [
         (

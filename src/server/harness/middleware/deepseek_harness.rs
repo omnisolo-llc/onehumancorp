@@ -370,7 +370,7 @@ fn decode_assistant_chunk(
             "assistant.text_chunk",
             false,
             json!({
-                "content": required_string(chunk.get("text"), "text-delta text")?,
+                "content": streamed_text(chunk.get("text"), "text-delta text")?,
                 "native": native,
             }),
             None,
@@ -380,7 +380,7 @@ fn decode_assistant_chunk(
             "assistant.reasoning",
             false,
             json!({
-                "content": required_string(chunk.get("text"), "reasoning-delta text")?,
+                "content": streamed_text(chunk.get("text"), "reasoning-delta text")?,
                 "native": native,
             }),
             None,
@@ -612,6 +612,15 @@ fn required_object<'a>(
     value
         .as_object()
         .ok_or_else(|| invalid_response(format!("{field} must be an object")))
+}
+
+fn streamed_text<'a>(
+    value: Option<&'a Value>,
+    field: &str,
+) -> Result<&'a str, HarnessAdapterError> {
+    value
+        .and_then(Value::as_str)
+        .ok_or_else(|| invalid_response(format!("{field} must be a string")))
 }
 
 fn required_string<'a>(

@@ -267,3 +267,36 @@ fn json_rpc_error_display_covers_transport_failures() {
         assert!(!error.to_string().is_empty());
     }
 }
+
+#[tokio::test]
+async fn unused_diagnostic_observer_cannot_block_rpc_completion() {
+    let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell(
+        r#"
+read request
+i=0
+while [ "$i" -lt 600 ]; do
+  printf '%s\n' '{"method":"progress","params":{}}'
+  i=$((i + 1))
+done
+printf '%s\n' '{"id":1,"result":{"completed":true}}'
+read request
+"#,
+    ))
+    .await
+    .unwrap();
+    let completion = tokio::time::timeout(
+        Duration::from_secs(3),
+        runtime.request("run", serde_json::Value::Null),
+    )
+    .await;
+    runtime.shutdown().await.unwrap();
+    assert_eq!(
+        completion
+            .expect("unused observer stalled protocol dispatch")
+            .unwrap(),
+        serde_json::json!({"completed":true})
+    );
+    assert!(
+        matches!(runtime.next_message().await, Err(JsonRpcError::InvalidMessage(message)) if message.contains("lagged"))
+    );
+}

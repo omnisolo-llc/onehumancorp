@@ -237,7 +237,7 @@ fn service_prompt(key: &str, value: Option<&str>) -> String {
         }
     }
     format!(
-        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use your native shell tool to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use node fetch or Python urllib, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and the actual stored text values returned by reads (decode byte arrays as UTF-8).",
+        "Execute ALL these scoped local service operations in order: {}. Use the local_service or local_services tool when available (for local_service, pass each operation JSON as the request string). Otherwise use your native shell tool to POST each JSON object to the URL in OMNISOLO_LOCAL_SERVICE_URL plus /operations with Authorization Bearer from OMNISOLO_LOCAL_SERVICE_TOKEN; read these environment variables inside the shell without displaying either value. Use node fetch or Python urllib, do not print browser image bytes. Require successful HTTP status and stop on errors. Do not imitate results or access backend files. Finally output {MARKER} and every string in memory_search.items and the actual stored text values returned by artifact/workspace/cache reads (decode byte arrays as UTF-8). The memory_search response is an object with an items array of strings: include ALL of those strings in the final output, without shortening or replacing values.",
         serde_json::to_string(&operations).unwrap()
     )
 }
@@ -482,7 +482,21 @@ fn validate_live_deliveries(
         return Err("model binding did not preserve OPENAI_REASONING_EFFORT".to_owned());
     }
     if !assistant_text.contains(MARKER) {
-        return Err("provider marker was absent from the final transcript".to_owned());
+        let text: String = assistant_text.chars().take(4096).collect();
+        let events: Vec<_> = deliveries
+            .iter()
+            .filter_map(|delivery| {
+                let payload: Value = serde_json::from_slice(&delivery.payload).ok()?;
+                Some(payload["event_type"].clone())
+            })
+            .collect();
+        let last = deliveries
+            .last()
+            .and_then(|delivery| serde_json::from_slice::<Value>(&delivery.payload).ok())
+            .map(|value| value["payload"].clone());
+        return Err(format!(
+            "provider marker was absent from the final transcript; text={text:?}; events={events:?}; terminal={last:?}"
+        ));
     }
     if !saw_terminal_success {
         return Err("attempt emitted no canonical successful terminal event".to_owned());
@@ -800,8 +814,23 @@ async fn connect_when_ready(
 ) -> HarnessWorkerServiceClient<tonic::transport::Channel> {
     timeout(Duration::from_secs(180), async {
         loop {
-            if let Ok(client) = HarnessWorkerServiceClient::connect(endpoint.to_owned()).await {
-                return client;
+            if let Ok(mut client) = HarnessWorkerServiceClient::connect(endpoint.to_owned()).await {
+                let harness = required_env("OMNISOLO_LIVE_HARNESS_ID");
+                let mut request =
+                    authenticated(server_ohc::harness_middleware::WorkerHealthRequest {
+                        protocol_version: 1,
+                        worker_id: format!("harness-{harness}"),
+                        harness_id: harness.clone(),
+                        pool_id: harness,
+                    });
+                request.set_timeout(Duration::from_secs(2));
+                if client
+                    .health(request)
+                    .await
+                    .is_ok_and(|response| response.into_inner().ready)
+                {
+                    return client;
+                }
             }
             sleep(Duration::from_millis(250)).await;
         }
