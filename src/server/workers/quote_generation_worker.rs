@@ -240,6 +240,7 @@ impl QuoteGenerationWorker {
                 return Err(format!("Failed to update quote: {}", e));
             }
 
+
             for item in line_items {
                 let item_id = Uuid::new_v4();
                 let res = sqlx::query(
@@ -260,6 +261,37 @@ impl QuoteGenerationWorker {
                     return Err(format!("Failed to insert quote line item: {}", e));
                 }
             }
+
+            // Insert into agent_feed_items for Action Required Feed
+            let feed_item_id = Uuid::new_v4().to_string();
+            let proposed_action = serde_json::json!({
+                "type": "APPROVE_QUOTE",
+                "quote_id": entity_uuid,
+                "total_amount_cents": total_amount_cents,
+                "message": format!("Hi! We can help with your request. The estimated cost is ${}. Here is the link to pay the deposit and confirm the booking.", (total_amount_cents as f64) / 100.0)
+            });
+            let context_payload = serde_json::json!({
+                "description": format!("1 New Quote Drafted ({})", payload.inquiry.chars().take(20).collect::<String>()),
+                "inquiry": payload.inquiry,
+                "quote_id": entity_uuid,
+                "total_amount_cents": total_amount_cents
+            });
+
+            let res = sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
+            )
+            .bind(feed_item_id)
+            .bind(&job.tenant_id)
+            .bind("ambassador")
+            .bind(context_payload)
+            .bind(proposed_action)
+            .execute(&mut *tx)
+            .await;
+
+            if let Err(e) = res {
+                return Err(format!("Failed to insert agent feed item: {}", e));
+            }
+
         }
 
         if let Err(e) = tx.commit().await {

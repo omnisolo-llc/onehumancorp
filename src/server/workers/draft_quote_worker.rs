@@ -169,7 +169,36 @@ impl JobHandler for DraftQuoteWorker {
                     .map_err(|e| e.to_string())?;
             }
 
+
+            // Insert into agent_feed_items for Action Required Feed
+            let feed_item_id = Uuid::new_v4().to_string();
+            let proposed_action = serde_json::json!({
+                "type": "APPROVE_QUOTE",
+                "quote_id": quote_id,
+                "total_amount_cents": total_amount_cents,
+                "message": format!("Hi! We can help with your request. The estimated cost is ${}. Here is the link to pay the deposit and confirm the booking.", (total_amount_cents as f64) / 100.0)
+            });
+            let context_payload = serde_json::json!({
+                "description": "1 New Quote Drafted (Insta DM)",
+                "inquiry": inquiry,
+                "quote_id": quote_id,
+                "total_amount_cents": total_amount_cents
+            });
+
+            sqlx::query(
+                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
+            )
+            .bind(feed_item_id)
+            .bind(&tenant_id)
+            .bind("ambassador")
+            .bind(context_payload)
+            .bind(proposed_action)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
             tx.commit().await.map_err(|e| e.to_string())?;
+
 
             Ok(())
         })
