@@ -108,7 +108,7 @@ jobs:
     name: Bazel build (${{ matrix.name }})
     needs:
       - check-changes
-    if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && needs.check-changes.outputs.markdown-only == 'false' }}
+    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     strategy:
@@ -194,13 +194,14 @@ jobs:
             except kind(".*_test rule", //...)
             except filter(".*_test$", //...)
             except attr("tags", "manual", //...)
-            except filter("^//:(\\.aspect_rules_js/node_modules|node_modules)(/|$)", //...)
+            except filter("(\\.aspect_rules_js/node_modules|node_modules)(/|$)", //...)
             except //src/ui/tauri:all
             except //deploy:all
             except //release:all
           ' > build-targets.txt
           xargs -r bazelisk build \
             --config=${{ matrix.bazel_config }} \
+            --config=remote-cache \
             --skip_incompatible_explicit_targets \
             --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
             < build-targets.txt
@@ -361,6 +362,7 @@ jobs:
           echo "Target count: $TARGET_COUNT"
           if [[ "$TARGET_COUNT" -gt 0 ]]; then
             echo "$SHARD_TARGETS" | xargs bazelisk test \
+              --config=remote-cache \
               --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
               --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox
           else
@@ -635,6 +637,7 @@ jobs:
           fi
           bazelisk test //deploy:kind_e2e_test \
             --config="${BAZEL_PLATFORM_CONFIG}" \
+            --config=remote-cache \
             --test_timeout=2700 \
             --nocache_test_results
 
@@ -724,6 +727,7 @@ jobs:
           command -v bazelisk
           bazelisk test //deploy:docker_compose_e2e_test \
             --config=linux \
+            --config=remote-cache \
             --test_timeout=1800 \
             --nocache_test_results
 

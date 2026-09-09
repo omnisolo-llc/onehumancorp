@@ -267,10 +267,15 @@ log "Waiting for one-time admin bootstrap ..."
 timeout 420 docker compose -p "${PROJECT_NAME}" \
   -f "${COMPOSE_FILE}" \
   -f "${REPO_ROOT}/deploy/docker-compose.override.yml" \
-  wait server-init
+  wait server-init || true
 server_init_container="$(compose ps -a -q server-init)"
 if [[ -z "${server_init_container}" ]]; then
   echo "error: could not find server-init container" >&2
+  exit 1
+fi
+server_init_running="$(docker inspect --format '{{.State.Running}}' "${server_init_container}")"
+if [[ "${server_init_running}" == "true" ]]; then
+  echo "error: server-init is still running after wait timeout" >&2
   exit 1
 fi
 server_init_exit="$(docker inspect --format '{{.State.ExitCode}}' "${server_init_container}")"
