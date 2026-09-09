@@ -82,7 +82,20 @@ where
             let conn = self
                 .inner
                 .redis_conn
-                .get_or_try_init(|| async { client.get_multiplexed_tokio_connection().await })
+                .get_or_try_init(|| async {
+                    match tokio::time::timeout(
+                        std::time::Duration::from_millis(250),
+                        client.get_multiplexed_tokio_connection(),
+                    )
+                    .await
+                    {
+                        Ok(res) => res,
+                        Err(_) => Err(redis::RedisError::from(std::io::Error::new(
+                            std::io::ErrorKind::TimedOut,
+                            "Redis connection timed out",
+                        ))),
+                    }
+                })
                 .await
                 .ok()?;
             Some(conn.clone())

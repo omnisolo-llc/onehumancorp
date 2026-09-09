@@ -104,6 +104,20 @@ struct MessageContent {
 }
 
 impl MinimaxClient {
+    pub fn is_mock_key(api_key: &str) -> bool {
+        api_key == "fake-key"
+            || api_key.starts_with("ci-")
+            || api_key.starts_with("mock")
+            || api_key.starts_with("test")
+            || api_key.contains("placeholder")
+            || api_key.is_empty()
+            || cfg!(test)
+    }
+
+    pub fn is_mock(&self) -> bool {
+        Self::is_mock_key(&self.api_key)
+    }
+
     pub fn new(api_key: String) -> Self {
         MinimaxClient {
             api_key,
@@ -145,7 +159,7 @@ impl MinimaxClient {
             return Ok(cached.text);
         }
 
-        if self.api_key == "fake-key" {
+        if self.is_mock() {
             let lower_prompt = optimized_prompt.to_lowercase();
             if lower_prompt.contains("maya") {
                 return Ok(r#"{
@@ -357,7 +371,7 @@ impl MinimaxClient {
             return Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx));
         }
 
-        if self.api_key == "fake-key" {
+        if self.is_mock() {
             let (tx, rx) = tokio::sync::mpsc::channel(1);
             tokio::spawn(async move {
                 let mock_json = r#"{"choices": [{"delta": {"content": "{\"business_name\": \"Generic Business\"}"}}]}"#;
@@ -447,7 +461,7 @@ impl MinimaxClient {
             return Err("circuit breaker open".to_string());
         }
 
-        if self.api_key == "fake-key" {
+        if self.is_mock() {
             return Ok(vec![0.1; 1536]);
         }
 

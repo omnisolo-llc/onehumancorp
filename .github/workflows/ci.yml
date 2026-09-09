@@ -323,7 +323,7 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
+          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-shard{2}-pr{3}', github.workflow, github.job, matrix.shard, github.event.pull_request.number) || format('{0}-{1}-shard{2}', github.workflow, github.job, matrix.shard) }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
@@ -353,7 +353,7 @@ jobs:
       - name: Test fast targets
         run: |
           set -euo pipefail
-          ALL_TARGETS=$(bazelisk query 'kind(test, //...) except attr(tags, "e2e|requires-docker|local|no-sandbox", kind(test, //...))' | sort)
+          ALL_TARGETS=$(bazelisk query 'kind(test, //...) except attr(tags, "manual|e2e|requires-docker|local|no-sandbox", kind(test, //...))' | sort)
           SHARD_TARGETS=$(echo "$ALL_TARGETS" | awk -v shard="${{ matrix.shard }}" -v total="${{ matrix.total }}" 'NR % total == shard')
           echo "=== Testing targets for ${{ matrix.name }} ==="
           echo "$SHARD_TARGETS"
