@@ -21,14 +21,31 @@ impl RedisPool {
     pub async fn get_async_connection(
         &self,
     ) -> Result<redis::aio::ConnectionManager, redis::RedisError> {
-        self.command_connection
-            .get_or_try_init(|| self.client.get_connection_manager())
-            .await
-            .cloned()
+        let fut = self
+            .command_connection
+            .get_or_try_init(|| self.client.get_connection_manager());
+        match tokio::time::timeout(std::time::Duration::from_millis(500), fut).await {
+            Ok(res) => res.cloned(),
+            Err(_) => Err(redis::RedisError::from(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "Redis connection timed out",
+            ))),
+        }
     }
 
     pub async fn get_pubsub(&self) -> Result<redis::aio::PubSub, redis::RedisError> {
-        self.client.get_async_pubsub().await
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            self.client.get_async_pubsub(),
+        )
+        .await
+        {
+            Ok(res) => res,
+            Err(_) => Err(redis::RedisError::from(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "Redis pubsub connection timed out",
+            ))),
+        }
     }
 }
 
@@ -38,9 +55,11 @@ pub fn get_redis_pool() -> Option<&'static Arc<RedisPool>> {
     if crate::is_standalone_runtime() {
         return None;
     }
+    let url = std::env::var("REDIS_URL").ok()?;
+    if url.trim().is_empty() {
+        return None;
+    }
     Some(REDIS_POOL.get_or_init(|| {
-        let url =
-            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
         Arc::new(RedisPool::new(&url).expect("Failed to create Redis pool"))
     }))
 }

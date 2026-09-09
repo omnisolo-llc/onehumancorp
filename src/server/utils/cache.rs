@@ -34,6 +34,19 @@ pub struct HybridCache<T> {
     inner: std::sync::Arc<HybridCacheInner<T>>,
 }
 
+struct FlightGuard<T> {
+    inner: std::sync::Arc<HybridCacheInner<T>>,
+    key: String,
+}
+
+impl<T> Drop for FlightGuard<T> {
+    fn drop(&mut self) {
+        if let Some(flight_group) = self.inner.flight_group.get() {
+            flight_group.remove(&self.key);
+        }
+    }
+}
+
 impl<T> HybridCache<T>
 where
     T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
@@ -69,7 +82,20 @@ where
             let conn = self
                 .inner
                 .redis_conn
-                .get_or_try_init(|| async { client.get_multiplexed_tokio_connection().await })
+                .get_or_try_init(|| async {
+                    match tokio::time::timeout(
+                        std::time::Duration::from_millis(250),
+                        client.get_multiplexed_tokio_connection(),
+                    )
+                    .await
+                    {
+                        Ok(res) => res,
+                        Err(_) => Err(redis::RedisError::from(std::io::Error::new(
+                            std::io::ErrorKind::TimedOut,
+                            "Redis connection timed out",
+                        ))),
+                    }
+                })
                 .await
                 .ok()?;
             Some(conn.clone())
@@ -108,67 +134,87 @@ where
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
     {
         let res = self.get_with_swr(key).await;
-        if let Some((v, is_stale)) = res.clone() {
-            if !is_stale {
-                return Some(v);
+        if let Some((v, is_stale)) = &res {
+            if !*is_stale {
+                return Some(v.clone());
             }
         }
 
         let flight_group = self.get_flight_group();
 
-        let mut rx = {
-            if let Some(tx) = flight_group.get(key) {
+        let (tx_opt, mut rx) = match flight_group.entry(key.to_string()) {
+            dashmap::mapref::entry::Entry::Occupied(entry) => {
                 if let Some((v, true)) = res {
                     return Some(v);
                 }
-                tx.subscribe()
-            } else {
-                let (tx, _rx) = tokio::sync::watch::channel(None);
-                flight_group.insert(key.to_string(), tx.clone());
-
-                if let Some((v, true)) = res {
-                    let cache_clone = self.clone();
-                    let key_clone = key.to_string();
-                    let tags_clone = tags.clone();
-                    tokio::spawn(async move {
-                        if let Some(val) = fetch().await {
-                            cache_clone
-                                .set_with_tags(&key_clone, val.clone(), tags_clone, ttl)
-                                .await;
-                            let _ = tx.send(Some(val));
-                        }
-                        tokio::time::sleep(Duration::from_millis(50)).await;
-                        cache_clone.get_flight_group().remove(&key_clone);
-                    });
-                    return Some(v);
-                } else {
-                    // Miss
-                    if let Some(val) = fetch().await {
-                        self.set_with_tags(key, val.clone(), tags, ttl).await;
-                        let _ = tx.send(Some(val.clone()));
-                        tokio::time::sleep(Duration::from_millis(50)).await;
-                        flight_group.remove(key);
-                        return Some(val);
-                    }
-                    tokio::time::sleep(Duration::from_millis(50)).await;
-                    flight_group.remove(key);
-                    return None;
-                }
+                (None, entry.get().subscribe())
+            }
+            dashmap::mapref::entry::Entry::Vacant(entry) => {
+                let (tx, rx) = tokio::sync::watch::channel(None);
+                entry.insert(tx.clone());
+                (Some(tx), rx)
             }
         };
 
-        {
-            let val = rx.borrow().clone();
-            if val.is_some() {
-                return val;
+        if let Some(tx) = tx_opt {
+            // Leader
+            if let Some((v, true)) = res {
+                // Stale hit: return immediately, fetch in background
+                let cache_clone = self.clone();
+                let key_clone = key.to_string();
+                tokio::spawn(async move {
+                    let _guard = FlightGuard {
+                        inner: cache_clone.inner.clone(),
+                        key: key_clone.clone(),
+                    };
+                    if let Some(val) = fetch().await {
+                        cache_clone
+                            .set_with_tags(&key_clone, val.clone(), tags, ttl)
+                            .await;
+                        let _ = tx.send(Some(val));
+                    }
+                });
+                return Some(v);
+            } else {
+                // Cache miss: fetch now
+                let _guard = FlightGuard {
+                    inner: self.inner.clone(),
+                    key: key.to_string(),
+                };
+                if let Some(val) = fetch().await {
+                    self.set_with_tags(key, val.clone(), tags, ttl).await;
+                    let _ = tx.send(Some(val.clone()));
+                    return Some(val);
+                }
+                return None;
             }
         }
 
-        if rx.changed().await.is_ok() {
-            rx.borrow().clone()
-        } else {
-            rx.borrow().clone()
+        // Follower: wait for leader
+        if let Some(val) = rx.borrow().clone() {
+            return Some(val);
         }
+
+        match tokio::time::timeout(Duration::from_secs(5), rx.changed()).await {
+            Ok(Ok(())) => {
+                if let Some(val) = rx.borrow().clone() {
+                    return Some(val);
+                }
+            }
+            _ => {}
+        }
+
+        // Fallback: check cache in case leader updated cache or completed
+        if let Some(val) = self.get(key).await {
+            return Some(val);
+        }
+
+        // If leader failed/cancelled and cache is still empty, fetch ourselves
+        if let Some(val) = fetch().await {
+            self.set_with_tags(key, val.clone(), tags, ttl).await;
+            return Some(val);
+        }
+        None
     }
 
     pub async fn get_or_fetch_with_swr<F, Fut>(
@@ -181,65 +227,7 @@ where
         F: FnOnce() -> Fut + Send + 'static,
         Fut: std::future::Future<Output = Option<T>> + Send + 'static,
     {
-        let res = self.get_with_swr(key).await;
-        if let Some((v, is_stale)) = res.clone() {
-            if !is_stale {
-                return Some(v);
-            }
-        }
-
-        let flight_group = self.get_flight_group();
-
-        let mut rx = {
-            if let Some(tx) = flight_group.get(key) {
-                if let Some((v, true)) = res {
-                    return Some(v);
-                }
-                tx.subscribe()
-            } else {
-                let (tx, _rx) = tokio::sync::watch::channel(None);
-                flight_group.insert(key.to_string(), tx.clone());
-
-                if let Some((v, true)) = res {
-                    let cache_clone = self.clone();
-                    let key_clone = key.to_string();
-                    tokio::spawn(async move {
-                        if let Some(val) = fetch().await {
-                            cache_clone.set(&key_clone, val.clone(), ttl).await;
-                            let _ = tx.send(Some(val));
-                        }
-                        tokio::time::sleep(Duration::from_millis(50)).await;
-                        cache_clone.get_flight_group().remove(&key_clone);
-                    });
-                    return Some(v);
-                } else {
-                    // Miss
-                    if let Some(val) = fetch().await {
-                        self.set(key, val.clone(), ttl).await;
-                        let _ = tx.send(Some(val.clone()));
-                        tokio::time::sleep(Duration::from_millis(50)).await;
-                        flight_group.remove(key);
-                        return Some(val);
-                    }
-                    tokio::time::sleep(Duration::from_millis(50)).await;
-                    flight_group.remove(key);
-                    return None;
-                }
-            }
-        };
-
-        {
-            let val = rx.borrow().clone();
-            if val.is_some() {
-                return val;
-            }
-        }
-
-        if rx.changed().await.is_ok() {
-            rx.borrow().clone()
-        } else {
-            rx.borrow().clone()
-        }
+        self.get_or_fetch_with_tags_swr(key, Vec::new(), ttl, fetch).await
     }
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
@@ -529,5 +517,38 @@ mod tests_singleflight {
 
         // Fetch should only have been called once despite 10 concurrent requests
         assert_eq!(fetch_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn test_hybrid_cache_singleflight_cancelled_leader() {
+        let cache = HybridCache::<String>::with_capacity(None, 10);
+        let cache_clone = cache.clone();
+
+        let handle = tokio::spawn(async move {
+            cache_clone
+                .get_or_fetch_with_swr(
+                    "cancel_key",
+                    Duration::from_secs(60),
+                    || async {
+                        tokio::time::sleep(Duration::from_secs(10)).await;
+                        Some("val".to_string())
+                    },
+                )
+                .await
+        });
+
+        // Give time for handle to become leader
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        handle.abort(); // Cancel leader!
+
+        // Second caller should not hang forever
+        let res = cache
+            .get_or_fetch_with_swr(
+                "cancel_key",
+                Duration::from_secs(60),
+                || async { Some("recovered".to_string()) },
+            )
+            .await;
+        assert_eq!(res, Some("recovered".to_string()));
     }
 }
