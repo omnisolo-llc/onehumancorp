@@ -1,10 +1,10 @@
 exports_files(["Cargo.toml"])
 
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_omnisolo",
-    srcs = ["mod.rs"],
+    srcs = glob(["src/**/*.rs", "mod.rs", "src/lib.rs", "src/chat/*.rs", "src/chat/**/*.rs"], allow_empty = True),
     edition = "2024",
     rustc_flags = ["--cfg=omnisolo_bazel"],
     visibility = ["//visibility:public"],
@@ -25,5 +25,27 @@ rust_library(
         "//src/proto:harness_middleware_prost",
         "//src/proto:harness_middleware_tonic",
         "@crates//:tonic",
+        "@crates//:tokio",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:uuid",
+        "@crates//:chrono",
+        "@crates//:dashmap",
+        "@crates//:axum",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)
+
+rust_test(
+    name = "server_omnisolo_test",
+    crate = ":server_omnisolo",
+    edition = "2024",
+    rustc_flags = ["--cfg=omnisolo_bazel"],
+    deps = [
+        "@crates//:tokio",
+        "@crates//:uuid",
+        "@crates//:chrono",
     ],
 )
