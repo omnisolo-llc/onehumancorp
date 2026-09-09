@@ -949,16 +949,41 @@ async fn load_department_records(
 ) -> Result<Vec<DepartmentRecord>, sqlx::Error> {
     use sqlx::Row;
 
-    let mut tx = pool.begin().await?;
-    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+    if crate::is_standalone_runtime() {
+        return Ok(Vec::new());
+    }
 
-    let rows = sqlx::query(
+    let mut tx = match tokio::time::timeout(std::time::Duration::from_millis(500), pool.begin()).await {
+        Ok(Ok(tx)) => tx,
+        Ok(Err(e)) => {
+            tracing::warn!("Failed to begin transaction in load_department_records: {}", e);
+            return Ok(Vec::new());
+        }
+        Err(_) => {
+            tracing::warn!("Timed out connecting to DB in load_department_records");
+            return Ok(Vec::new());
+        }
+    };
+
+    let set_context_res = ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await;
+    if let Err(e) = set_context_res {
+        tracing::warn!("Failed to set org context in load_department_records: {}", e);
+        return Ok(Vec::new());
+    }
+
+    let rows = match sqlx::query(
         "SELECT id, department_type FROM agent_departments WHERE tenant_id = $1 AND id IS NOT NULL AND id != '' AND department_type IS NOT NULL AND department_type != '' ORDER BY department_type",
     )
     .bind(tenant_id)
     .fetch_all(&mut *tx)
-    .await?;
-    tx.commit().await?;
+    .await {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::warn!("Failed to fetch department records: {}", e);
+            return Ok(Vec::new());
+        }
+    };
+    let _ = tx.commit().await;
 
     Ok(rows
         .into_iter()
