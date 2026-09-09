@@ -124,3 +124,58 @@ impl ChatService {
         .await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::PgPool;
+
+    #[tokio::test]
+    async fn test_chat_service_methods() {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        let maybe_pool = PgPool::connect(&database_url).await;
+        if maybe_pool.is_err() {
+            return;
+        }
+        let pool = maybe_pool.unwrap();
+
+        let _ = sqlx::query("
+            CREATE TABLE IF NOT EXISTS chat_inboxes (
+                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, name TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS chat_channels (
+                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, inbox_id UUID NOT NULL, channel_type TEXT, config JSONB, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS chat_contacts (
+                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, name TEXT, email TEXT, phone TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS chat_conversations (
+                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, inbox_id UUID NOT NULL, contact_id UUID NOT NULL, assignee_id UUID, status TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id UUID PRIMARY KEY, tenant_id UUID NOT NULL, conversation_id UUID NOT NULL, sender_type TEXT, sender_id UUID, content TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        ").execute(&pool).await;
+
+        let service = ChatService::new(pool);
+        let tenant_id = Uuid::new_v4();
+
+        let inbox = service.create_inbox(tenant_id, "Test Inbox".to_string()).await;
+        assert!(inbox.is_ok());
+        let inbox_id = inbox.unwrap().id;
+
+        let channel = service.create_channel(tenant_id, inbox_id, "whatsapp".to_string(), serde_json::json!({})).await;
+        assert!(channel.is_ok());
+
+        let contact = service.create_contact(tenant_id, Some("John Doe".to_string()), Some("john@example.com".to_string()), None).await;
+        assert!(contact.is_ok());
+        let contact_id = contact.unwrap().id;
+
+        let conversation = service.start_conversation(tenant_id, inbox_id, contact_id, None).await;
+        assert!(conversation.is_ok());
+        let conversation_id = conversation.unwrap().id;
+
+        let message = service.send_message(tenant_id, conversation_id, "user".to_string(), None, "Hello".to_string()).await;
+        assert!(message.is_ok());
+    }
+}
