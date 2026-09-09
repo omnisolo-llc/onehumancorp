@@ -231,9 +231,9 @@ mod tests {
             .fetch_one(&pool).await;
 
         if let Ok(task) = task_result {
-            assert!(task.0.contains("Sarah"));
+            assert!(task.0.contains("Sarah"), "Title did not contain Sarah: {}", task.0);
             assert_eq!(task.1, "PENDING");
-            assert!(task.2.contains("Sarah"));
+            assert!(task.2.contains("Sarah"), "Proposed content did not contain Sarah: {}", task.2);
         }
 
         let _processed_again = LifecycleEngagementWorker::poll(&db)

@@ -262,7 +262,10 @@ impl MinimaxClient {
                     "business_type": "Retail",
                     "categories": ["physical"],
                     "initial_products": [{"name": "Item 1", "price": "10.00"}],
-                    "suggested_features": ["online_store"]
+                    "suggested_features": ["online_store"],
+                    "customer_name": "Sarah",
+                    "customer_email": "sarah@example.com",
+                    "recent_history": []
                 }"#
                 .to_string());
             }
