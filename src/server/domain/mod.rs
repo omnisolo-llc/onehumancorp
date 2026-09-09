@@ -16,7 +16,6 @@ pub mod agent_approvals;
 pub mod booking;
 pub mod estimator;
 pub mod inbox;
-pub mod omnichannel_inbox;
 pub mod incidents;
 pub mod invoice;
 pub mod money;
