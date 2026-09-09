@@ -58,24 +58,19 @@ pub async fn tenant_middleware(req: Request, next: Next) -> Response {
         // Validate query parameters to prevent Tenant Leakage (IDOR)
         if is_multitenant_mode() {
             if let Some(query_str) = req.uri().query() {
-                for part in query_str.split('&') {
-                    let mut kv = part.splitn(2, '=');
-                    if let (Some(k), Some(v)) = (kv.next(), kv.next()) {
-                        let decoded_k =
-                            ::urlencoding::decode(k).unwrap_or(std::borrow::Cow::Borrowed(k));
-                        let decoded_v =
-                            ::urlencoding::decode(v).unwrap_or(std::borrow::Cow::Borrowed(v));
-                        if decoded_k == "tenant_id" || decoded_k == "tenant" {
-                            if !decoded_v.trim().is_empty() && decoded_v.trim() != tenant_id {
-                                return (
-                                    StatusCode::FORBIDDEN,
-                                    axum::Json(json!({
-                                        "error": "FORBIDDEN",
-                                        "message": "Tenant mismatch."
-                                    })),
-                                )
-                                    .into_response();
-                            }
+                // Parse correctly using `form_urlencoded` which is provided by the `url` crate.
+                let params = url::form_urlencoded::parse(query_str.as_bytes());
+                for (k, v) in params {
+                    if k == "tenant_id" || k == "tenant" {
+                        if !v.trim().is_empty() && v.trim() != tenant_id {
+                            return (
+                                StatusCode::FORBIDDEN,
+                                axum::Json(json!({
+                                    "error": "FORBIDDEN",
+                                    "message": "Tenant mismatch."
+                                })),
+                            )
+                                .into_response();
                         }
                     }
                 }
