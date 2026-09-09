@@ -278,12 +278,28 @@ jobs:
         run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
 
   bazel-test:
-    name: Bazel test
+    name: Bazel test (${{ matrix.name }})
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: shard 1/4
+            shard: 0
+            total: 4
+          - name: shard 2/4
+            shard: 1
+            total: 4
+          - name: shard 3/4
+            shard: 2
+            total: 4
+          - name: shard 4/4
+            shard: 3
+            total: 4
     steps:
       - uses: actions/checkout@v6
 
@@ -336,10 +352,21 @@ jobs:
 
       - name: Test fast targets
         run: |
-          bazelisk test \
-            --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
-            --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
-            //...
+          set -euo pipefail
+          ALL_TARGETS=$(bazelisk query 'kind(test, //...) except attr(tags, "e2e|requires-docker|local|no-sandbox", kind(test, //...))' | sort)
+          SHARD_TARGETS=$(echo "$ALL_TARGETS" | awk -v shard="${{ matrix.shard }}" -v total="${{ matrix.total }}" 'NR % total == shard')
+          echo "=== Testing targets for ${{ matrix.name }} ==="
+          echo "$SHARD_TARGETS"
+          TARGET_COUNT=$(echo "$SHARD_TARGETS" | grep -c . || true)
+          echo "Target count: $TARGET_COUNT"
+          if [[ "$TARGET_COUNT" -gt 0 ]]; then
+            echo "$SHARD_TARGETS" | xargs bazelisk test \
+              --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
+              --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox
+          else
+            echo "No targets assigned to this shard."
+          fi
+
 
   bazel-test-e2e:
     name: Bazel UI E2E (${{ matrix.name }})
